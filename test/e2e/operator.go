@@ -41,8 +41,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
+const (
+	aroOperatorNamespace = "openshift-azure-operator"
+)
+
 func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
-	listFunc := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").List
+	listFunc := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List
 	pods := ListK8sObjectWithRetry(
 		ctx, listFunc, metav1.ListOptions{LabelSelector: "app=aro-operator-master"},
 	)
@@ -50,7 +54,7 @@ func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
 		return nil, fmt.Errorf("%d aro-operator-master pods found", len(pods.Items))
 	}
 	body := GetK8sPodLogsWithRetry(
-		ctx, "openshift-azure-operator", pods.Items[0].Name, corev1.PodLogOptions{},
+		ctx, aroOperatorNamespace, pods.Items[0].Name, corev1.PodLogOptions{},
 	)
 
 	rx := regexp.MustCompile(`msg="(Update|Create) ([-a-zA-Z/.]+)`)
@@ -64,6 +68,20 @@ func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
 
 	return result, nil
 }
+
+var _ = Describe("ARO Operator", Label(smoke), func() {
+	It("should have no errors in the operator logs", Serial, func(ctx context.Context) {
+		pods := ListK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List, metav1.ListOptions{})
+		Eventually(func(g Gomega, ctx context.Context) {
+			for _, pod := range pods.Items {
+				// Check the latest 10 minutes of logs.
+				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: to.Int64Ptr(600)}).DoRaw(ctx)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(string(body)).NotTo(ContainSubstring("level=error"))
+			}
+		}, ctx, 10*time.Minute, 30*time.Second).Should(Succeed())
+	})
+})
 
 var _ = Describe("ARO Operator - Internet checking", func() {
 	var originalURLs []string
