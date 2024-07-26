@@ -311,17 +311,24 @@ class EffectiveOutboundIP(msrest.serialization.Model):
 class Identity(msrest.serialization.Model):
     """Identity stores information about the cluster MSI(s) in a workload identity cluster.
 
-    :ivar type:
-    :vartype type: str
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar type: The identity type. Possible values include: "SystemAssigned", "UserAssigned".
+    :vartype type: str or
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ResourceIdentityType
     :ivar principal_id:
     :vartype principal_id: str
     :ivar tenant_id:
     :vartype tenant_id: str
-    :ivar user_assigned_identities: UserAssignedIdentities stores a mapping from resource IDs of
-     managed identities to their client/principal IDs.
+    :ivar user_assigned_identities: Dictionary of :code:`<ClusterUserAssignedIdentity>`.
     :vartype user_assigned_identities: dict[str,
      ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ClusterUserAssignedIdentity]
     """
+
+    _validation = {
+        'principal_id': {'readonly': True},
+        'tenant_id': {'readonly': True},
+    }
 
     _attribute_map = {
         'type': {'key': 'type', 'type': 'str'},
@@ -333,28 +340,22 @@ class Identity(msrest.serialization.Model):
     def __init__(
         self,
         *,
-        type: Optional[str] = None,
-        principal_id: Optional[str] = None,
-        tenant_id: Optional[str] = None,
+        type: Optional[Union[str, "ResourceIdentityType"]] = None,
         user_assigned_identities: Optional[Dict[str, "ClusterUserAssignedIdentity"]] = None,
         **kwargs
     ):
         """
-        :keyword type:
-        :paramtype type: str
-        :keyword principal_id:
-        :paramtype principal_id: str
-        :keyword tenant_id:
-        :paramtype tenant_id: str
-        :keyword user_assigned_identities: UserAssignedIdentities stores a mapping from resource IDs of
-         managed identities to their client/principal IDs.
+        :keyword type: The identity type. Possible values include: "SystemAssigned", "UserAssigned".
+        :paramtype type: str or
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ResourceIdentityType
+        :keyword user_assigned_identities: Dictionary of :code:`<ClusterUserAssignedIdentity>`.
         :paramtype user_assigned_identities: dict[str,
          ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ClusterUserAssignedIdentity]
         """
         super(Identity, self).__init__(**kwargs)
         self.type = type
-        self.principal_id = principal_id
-        self.tenant_id = tenant_id
+        self.principal_id = None
+        self.tenant_id = None
         self.user_assigned_identities = user_assigned_identities
 
 
