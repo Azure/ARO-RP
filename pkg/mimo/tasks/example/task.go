@@ -10,22 +10,28 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
-func ExampleTask(ctx context.Context, th tasks.TaskContext, manifest *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+func ReportClusterVersion(ctx context.Context) error {
+	th, err := mimo.GetTaskContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	ch, err := th.ClientHelper()
 	if err != nil {
-		return api.MaintenanceManifestStateFailed, err.Error()
+		return err
 	}
 
 	cv := &configv1.ClusterVersion{}
 
 	err = ch.GetOne(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
-		return api.MaintenanceManifestStateFailed, fmt.Errorf("unable to get ClusterVersion: %w", err).Error()
+		return fmt.Errorf("unable to get ClusterVersion: %w", err)
 	}
 
-	return api.MaintenanceManifestStateCompleted, fmt.Sprintf("cluster version is: %s", cv.Status.History[0].Version)
+	th.SetResultMessage(fmt.Sprintf("cluster version is: %s", cv.Status.History[0].Version))
+
+	return nil
 }
