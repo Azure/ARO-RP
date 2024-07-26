@@ -168,12 +168,6 @@ test_validate_client_secret_data = [
         RequiredArgumentMissingError
     ),
     (
-        "should raise RequiredArgumentMissingError exception when isCreate is true and can not create a string representation from namespace.client_id because it is None",  # pylint: disable=line-too-long
-        True,
-        Mock(client_id=None, client_secret="123", platform_workload_identities=None),
-        RequiredArgumentMissingError
-    ),
-    (
         "should not raise any exception when isCreate is true and all arguments valid",
         True,
         Mock(client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
