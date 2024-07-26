@@ -108,6 +108,7 @@ from ._azure_red_hat_open_shift_client_enums import (
     OutboundType,
     PreconfiguredNSG,
     ProvisioningState,
+    ResourceIdentityType,
     Visibility,
 )
 
@@ -160,5 +161,6 @@ __all__ = [
     'OutboundType',
     'PreconfiguredNSG',
     'ProvisioningState',
+    'ResourceIdentityType',
     'Visibility',
 ]

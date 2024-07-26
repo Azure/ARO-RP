@@ -197,9 +197,8 @@ func (tw *typeWalker) _define(definitions Definitions, t *types.Named) {
 		name := c[(len(c) - 1)]
 		for _, xname := range tw.xmsEnumList {
 			if xname == name {
-				s.XMSEnum = &XMSEnum{
-					ModelAsString: true,
-					Name:          xname,
+				s.XMSEnum = &XMSEnum{ModelAsString: isModelAsString(xname),
+					Name: xname,
 				}
 			}
 		}
@@ -262,4 +261,9 @@ func getNodeField(nodes []ast.Node) (*ast.Field, bool) {
 	}
 
 	return nil, false
+}
+
+func isModelAsString(name string) bool {
+	// ARM mandates that modelAsString is false for the identity type.
+	return name != "ResourceIdentityType"
 }
