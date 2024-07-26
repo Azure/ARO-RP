@@ -60,7 +60,7 @@ func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
 		return mimo.TerminalError(err)
 	}
 
-	if managedDomain != "" {
+	if managedDomain == "" {
 		th.SetResultMessage("apiserver certificate is not managed")
 		return nil
 	}
