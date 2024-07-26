@@ -146,7 +146,6 @@ func TestMIMODeleteManifest(t *testing.T) {
 			for _, err := range ti.checker.CheckMaintenanceManifests(ti.maintenanceManifestsClient) {
 				t.Error(err)
 			}
-
 		})
 	}
 }

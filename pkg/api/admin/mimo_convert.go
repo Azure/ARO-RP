@@ -38,7 +38,6 @@ func (m maintenanceManifestConverter) ToExternalList(docs []*api.MaintenanceMani
 }
 
 func (m maintenanceManifestConverter) ToInternal(_i interface{}, out *api.MaintenanceManifestDocument) {
-
 	i := _i.(*MaintenanceManifest)
 
 	out.ID = i.ID
