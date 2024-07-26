@@ -46,8 +46,10 @@ func TestTask(t *testing.T) {
 		},
 	)
 	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
-	tc := testtasks.NewFakeTestContext(ctx, _env, log, func() time.Time { return time.Unix(100, 0) }, ch)
-
+	tc := testtasks.NewFakeTestContext(
+		ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
+		testtasks.WithClientHelper(ch),
+	)
 	err := ReportClusterVersion(tc)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(tc.GetResultMessage()).To(Equal("cluster version is: 4.99.123"))
