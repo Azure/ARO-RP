@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/mimo/sets"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
@@ -51,7 +51,7 @@ type service struct {
 	pollTime time.Duration
 	now      func() time.Time
 
-	tasks map[string]tasks.TaskFunc
+	sets map[string]sets.MaintenanceSet
 }
 
 func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbOpenShiftClusters database.OpenShiftClusters, dbMaintenanceManifests database.MaintenanceManifests, m metrics.Emitter) *service {
@@ -77,8 +77,8 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbOpe
 	return s
 }
 
-func (s *service) SetTasks(tasks map[string]tasks.TaskFunc) {
-	s.tasks = tasks
+func (s *service) SetMaintenanceSets(sets map[string]sets.MaintenanceSet) {
+	s.sets = sets
 }
 
 func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
@@ -207,7 +207,7 @@ func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
 	}
 
 	// load in the tasks for the Actuator from the controller
-	a.AddTasks(s.tasks)
+	a.AddMaintenanceSets(s.sets)
 
 	t := time.NewTicker(s.pollTime)
 	defer t.Stop()

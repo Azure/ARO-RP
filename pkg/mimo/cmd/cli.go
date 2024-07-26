@@ -16,8 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
-	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
-	"github.com/Azure/ARO-RP/pkg/mimo/tasks/example"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/service"
@@ -159,9 +157,7 @@ func main() {
 
 					a := actuator.NewService(_env, _env.Logger(), dialer, clusters, manifests, m)
 
-					a.SetTasks(map[string]tasks.TaskFunc{
-						"64d23e34-78c3-4d60-831c-6efb22f08508": example.ExampleTask,
-					})
+					a.SetMaintenanceSets(sets.DEFAULT_MAINTENANCE_SETS)
 
 					sigterm := make(chan os.Signal, 1)
 					done := make(chan struct{})

@@ -20,7 +20,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/mimo/sets"
+	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -84,8 +85,8 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			mmf: manifests,
 			oc:  clusters,
 
-			tasks: map[string]tasks.TaskFunc{},
-			now:   now,
+			sets: map[string]sets.MaintenanceSet{},
+			now:  now,
 		}
 	})
 
@@ -179,8 +180,10 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		})
 
 		It("runs them", func() {
-			a.AddTask("0", func(ctx context.Context, th tasks.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
-				return api.MaintenanceManifestStateCompleted, "done"
+			a.AddMaintenanceSets(map[string]sets.MaintenanceSet{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+					return api.MaintenanceManifestStateCompleted, "done"
+				},
 			})
 
 			didWork, err := a.Process(ctx)
@@ -279,22 +282,21 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		})
 
 		It("runs them", func() {
-
 			ordering := []string{}
 
-			a.AddTask("0", func(ctx context.Context, th tasks.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
-				ordering = append(ordering, "0")
-				return api.MaintenanceManifestStateCompleted, "done"
-			})
-
-			a.AddTask("1", func(ctx context.Context, th tasks.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
-				ordering = append(ordering, "1")
-				return api.MaintenanceManifestStateCompleted, "done"
-			})
-
-			a.AddTask("2", func(ctx context.Context, th tasks.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
-				ordering = append(ordering, "2")
-				return api.MaintenanceManifestStateCompleted, "done"
+			a.AddMaintenanceSets(map[string]sets.MaintenanceSet{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+					ordering = append(ordering, "0")
+					return api.MaintenanceManifestStateCompleted, "done"
+				},
+				"1": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+					ordering = append(ordering, "1")
+					return api.MaintenanceManifestStateCompleted, "done"
+				},
+				"2": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+					ordering = append(ordering, "2")
+					return api.MaintenanceManifestStateCompleted, "done"
+				},
 			})
 
 			didWork, err := a.Process(ctx)

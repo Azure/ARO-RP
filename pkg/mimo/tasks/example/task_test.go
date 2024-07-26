@@ -5,9 +5,8 @@ package example
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 
@@ -16,10 +15,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -29,34 +26,9 @@ func TestTask(t *testing.T) {
 	RegisterTestingT(t)
 	ctx := context.Background()
 
-	mockSubID := "00000000-0000-0000-0000-000000000000"
-	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
-
 	controller := gomock.NewController(t)
 	_env := mock_env.NewMockInterface(controller)
 	_, log := testlog.New()
-
-	fixtures := testdatabase.NewFixture()
-	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
-
-	fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-		Key: strings.ToLower(clusterResourceID),
-		OpenShiftCluster: &api.OpenShiftCluster{
-			ID: clusterResourceID,
-		},
-	})
-
-	manifest := &api.MaintenanceManifestDocument{
-		ClusterResourceID: strings.ToLower(clusterResourceID),
-		MaintenanceManifest: api.MaintenanceManifest{
-			State:     api.MaintenanceManifestStatePending,
-			RunBefore: 60,
-			RunAfter:  0,
-		},
-	}
-
-	err := fixtures.WithOpenShiftClusters(clusters).Create()
-	Expect(err).ToNot(HaveOccurred())
 
 	builder := fake.NewClientBuilder().WithRuntimeObjects(
 		&configv1.ClusterVersion{
@@ -74,12 +46,9 @@ func TestTask(t *testing.T) {
 		},
 	)
 	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
-	tc := testtasks.NewFakeTestContext(_env, log, ch)
+	tc := testtasks.NewFakeTestContext(ctx, _env, log, func() time.Time { return time.Unix(100, 0) }, ch)
 
-	oc, err := clusters.Get(ctx, strings.ToLower(clusterResourceID))
+	err := ReportClusterVersion(tc)
 	Expect(err).ToNot(HaveOccurred())
-	r, text := ExampleTask(ctx, tc, manifest, oc)
-
-	Expect(r).To(Equal(api.MaintenanceManifestStateCompleted))
-	Expect(text).To(Equal("cluster version is: 4.99.123"))
+	Expect(tc.GetResultMessage()).To(Equal("cluster version is: 4.99.123"))
 }
