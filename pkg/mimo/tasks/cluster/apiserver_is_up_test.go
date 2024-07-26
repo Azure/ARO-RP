@@ -34,7 +34,7 @@ func TestAPIServerIsUp(t *testing.T) {
 		{
 			name:    "not found",
 			objects: []runtime.Object{},
-			wantErr: `NonRetryableError: clusteroperators.config.openshift.io "kube-apiserver" not found`,
+			wantErr: `TerminalError: clusteroperators.config.openshift.io "kube-apiserver" not found`,
 		},
 		{
 			name: "not ready",
