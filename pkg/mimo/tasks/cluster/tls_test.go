@@ -102,6 +102,5 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 				g.Expect(tt.check(ch, g)).ToNot(HaveOccurred())
 			}
 		})
-
 	}
 }
