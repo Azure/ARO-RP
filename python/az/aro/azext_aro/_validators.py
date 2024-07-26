@@ -330,13 +330,18 @@ def validate_platform_workload_identities(isCreate):
         if isCreate and not namespace.enable_managed_identity:
             raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing platform workload identities')  # pylint: disable=line-too-long
 
+        names = list(map(lambda identity: identity.operator_name, namespace.platform_workload_identities))
+        duplicates = [n for i, n in enumerate(names) if n in names[:i]]
+        if duplicates:
+            raise InvalidArgumentValueError(f"Platform workload identities {duplicates} were provided multiple times")
+
         for identity in namespace.platform_workload_identities:
             if not is_valid_resource_id(identity.resource_id):
                 identity.resource_id = identity_name_to_resource_id(
                     cmd, namespace, identity.resource_id)
 
             if not is_valid_identity_resource_id(identity.resource_id):
-                raise InvalidArgumentValueError(f"Resource {identity.resource_id} used for platform workload identity {identity.name} is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
+                raise InvalidArgumentValueError(f"Resource {identity.resource_id} used for platform workload identity {identity.operator_name} is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
 
     return _validate_platform_workload_identities
 

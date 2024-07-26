@@ -30,6 +30,7 @@ from azure.cli.core.azclierror import (
 from azure.core.exceptions import ResourceNotFoundError
 import pytest
 
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2024_08_12_preview.models as openshiftcluster
 
 test_validate_cidr_data = [
     (
@@ -1075,16 +1076,29 @@ test_validate_platform_workload_identities_data = [
         None
     ),
     (
-        "create - Should raise InvalidArgumentError if any resource IDs are not for userAssignedIdentities",
+        "create - Should raise InvalidArgumentValueError if any resource IDs are not for userAssignedIdentities",
         True,
         Mock(enable_managed_identity=True,
              subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
              ]),
         InvalidArgumentValueError,
         None
+    ),
+    (
+        "create - Should raise InvalidArgumentValueError if any platform workload is duplicated",
+        True,
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="bar")
+             ]),
+        InvalidArgumentValueError,
+        None,
     ),
     (
         "create - Should convert all identities passed in as names to full resource IDs",
@@ -1093,13 +1107,13 @@ test_validate_platform_workload_identities_data = [
              subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-                 Mock(resource_id="bar")
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="bar")
              ]),
         None,
         [
-            Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-            Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
+            openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+            openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
         ]
     ),
     (
@@ -1109,8 +1123,8 @@ test_validate_platform_workload_identities_data = [
              subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
              ]),
         None,
         None
@@ -1123,15 +1137,28 @@ test_validate_platform_workload_identities_data = [
         None
     ),
     (
-        "update - Should raise InvalidArgumentError if any resource IDs are not for userAssignedIdentities",
+        "update - Should raise InvalidArgumentValueError if any resource IDs are not for userAssignedIdentities",
         False,
         Mock(subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
              ]),
         InvalidArgumentValueError,
         None
+    ),
+    (
+        "update - Should raise InvalidArgumentValueError if any platform workload is duplicated",
+        False,
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="bar")
+             ]),
+        InvalidArgumentValueError,
+        None,
     ),
     (
         "update - Should convert all identities passed in as names to full resource IDs",
@@ -1139,13 +1166,13 @@ test_validate_platform_workload_identities_data = [
         Mock(subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-                 Mock(resource_id="bar")
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="bar")
              ]),
         None,
         [
-            Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-            Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
+            openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+            openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
         ]
     ),
     (
@@ -1154,8 +1181,8 @@ test_validate_platform_workload_identities_data = [
         Mock(subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
              ]),
         None,
         None
