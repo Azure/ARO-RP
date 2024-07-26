@@ -29,6 +29,7 @@ jobs:
       with:
         version: v1.56.2
         args: -v --timeout 15m
+        only-new-issues: true
 
   validate-go:
     name: validate-go
