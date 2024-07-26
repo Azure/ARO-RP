@@ -4,31 +4,71 @@ package actuator
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+	"time"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 type th struct {
+	originalCtx context.Context
+	ctx         context.Context
+
 	env env.Interface
 	log *logrus.Entry
+
+	resultMessage string
 
 	oc *api.OpenShiftClusterDocument
 
 	_ch clienthelper.Interface
 }
 
-func newTaskContext(env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument) tasks.TaskContext {
+// force interface checking
+var _ mimo.TaskContext = &th{}
+
+func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument) *th {
 	return &th{
-		env: env,
-		log: log,
-		oc:  oc,
-		_ch: nil,
+		originalCtx: ctx,
+		ctx:         ctx,
+		env:         env,
+		log:         log,
+		oc:          oc,
+		_ch:         nil,
 	}
+}
+
+func (t *th) RunInTimeout(timeout time.Duration, f func() error) error {
+	newctx, cancel := context.WithTimeout(t.originalCtx, timeout)
+	t.ctx = newctx
+	defer func() {
+		cancel()
+		t.ctx = t.originalCtx
+	}()
+	return f()
+}
+
+// context stuff
+func (t *th) Deadline() (time.Time, bool) {
+	return t.ctx.Deadline()
+}
+
+func (t *th) Done() <-chan struct{} {
+	return t.ctx.Done()
+}
+
+func (t *th) Err() error {
+	return t.ctx.Err()
+}
+
+func (t *th) Value(key any) any {
+	return t.ctx.Value(key)
 }
 
 func (t *th) Environment() env.Interface {
@@ -56,4 +96,16 @@ func (t *th) ClientHelper() (clienthelper.Interface, error) {
 
 func (t *th) Log() *logrus.Entry {
 	return t.log
+}
+
+func (t *th) Now() time.Time {
+	return time.Now()
+}
+
+func (t *th) SetResultMessage(msg string) {
+	t.resultMessage = msg
+}
+
+func (t *th) GetResultMessage() string {
+	return t.resultMessage
 }
