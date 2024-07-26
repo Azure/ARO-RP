@@ -1,10 +1,12 @@
 package mimo
 
-type MIMOErrorVariety int
+import "fmt"
+
+type MIMOErrorVariety string
 
 const (
-	MIMOErrorTypeTransientError MIMOErrorVariety = iota
-	MIMOErrorTypeNonRetryableError
+	MIMOErrorTypeTransientError MIMOErrorVariety = "TransientError"
+	MIMOErrorTypeTerminalError  MIMOErrorVariety = "TerminalError"
 )
 
 type MIMOError interface {
@@ -17,21 +19,36 @@ type wrappedMIMOError struct {
 	variety MIMOErrorVariety
 }
 
-func (f *wrappedMIMOError) MIMOErrorVariety() MIMOErrorVariety {
+func (f wrappedMIMOError) MIMOErrorVariety() MIMOErrorVariety {
 	return f.variety
 }
 
+func (f wrappedMIMOError) Error() string {
+	return fmt.Sprintf("%s: %s", f.variety, f.error.Error())
+}
+
 func NewMIMOError(err error, variety MIMOErrorVariety) MIMOError {
-	return &wrappedMIMOError{
+	return wrappedMIMOError{
 		error:   err,
 		variety: variety,
 	}
 }
 
-func UnretryableError(err error) MIMOError {
-	return NewMIMOError(err, MIMOErrorTypeNonRetryableError)
+func TerminalError(err error) MIMOError {
+	return NewMIMOError(err, MIMOErrorTypeTerminalError)
 }
 
 func TransientError(err error) MIMOError {
 	return NewMIMOError(err, MIMOErrorTypeTransientError)
+}
+
+func IsRetryableError(err error) bool {
+	e, ok := err.(wrappedMIMOError)
+	if !ok {
+		return false
+	}
+	if e.MIMOErrorVariety() == MIMOErrorTypeTransientError {
+		return true
+	}
+	return false
 }
