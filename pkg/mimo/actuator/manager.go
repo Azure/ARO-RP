@@ -17,15 +17,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/mimo/sets"
 )
 
 const maxDequeueCount = 5
 
 type Actuator interface {
 	Process(context.Context) (bool, error)
-	AddTask(string, tasks.TaskFunc)
-	AddTasks(map[string]tasks.TaskFunc)
+	AddMaintenanceSets(map[string]sets.MaintenanceSet)
 }
 
 type actuator struct {
@@ -38,7 +37,7 @@ type actuator struct {
 	oc  database.OpenShiftClusters
 	mmf database.MaintenanceManifests
 
-	tasks map[string]tasks.TaskFunc
+	sets map[string]sets.MaintenanceSet
 }
 
 func NewActuator(
@@ -55,7 +54,7 @@ func NewActuator(
 		clusterResourceID: strings.ToLower(clusterResourceID),
 		oc:                oc,
 		mmf:               mmf,
-		tasks:             make(map[string]tasks.TaskFunc),
+		sets:              make(map[string]sets.MaintenanceSet),
 
 		now: now,
 	}
@@ -63,12 +62,8 @@ func NewActuator(
 	return a, nil
 }
 
-func (a *actuator) AddTask(u string, t tasks.TaskFunc) {
-	a.tasks[u] = t
-}
-
-func (a *actuator) AddTasks(tasks map[string]tasks.TaskFunc) {
-	maps.Copy(a.tasks, tasks)
+func (a *actuator) AddMaintenanceSets(sets map[string]sets.MaintenanceSet) {
+	maps.Copy(a.sets, sets)
 }
 
 func (a *actuator) Process(ctx context.Context) (bool, error) {
@@ -141,12 +136,12 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return false, err // This will include StatusPreconditionFaileds
 	}
 
-	taskContext := newTaskContext(a.env, a.log, oc)
+	taskContext := newTaskContext(ctx, a.env, a.log, oc)
 
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
 		// here
-		f, ok := a.tasks[doc.MaintenanceManifest.MaintenanceSetID]
+		f, ok := a.sets[doc.MaintenanceManifest.MaintenanceSetID]
 		if !ok {
 			a.log.Infof("not found %v", doc.MaintenanceManifest.MaintenanceSetID)
 			continue
@@ -155,7 +150,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		// Attempt a dequeue
 		doc, err = a.mmf.Lease(ctx, a.clusterResourceID, doc.ID)
 		if err != nil {
-			// log and continue if it doesn't work
+			// log and continue to the next task if it doesn't work
 			a.log.Error(err)
 			continue
 		}
@@ -170,8 +165,18 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 			continue
 		}
 
-		// Perform the task
-		state, msg := f(ctx, taskContext, doc, oc)
+		var state api.MaintenanceManifestState
+		var msg string
+
+		// Perform the task with a timeout
+		err = taskContext.RunInTimeout(time.Minute*60, func() error {
+			state, msg = f(taskContext, doc, oc)
+			return taskContext.Err()
+		})
+		if err != nil {
+			a.log.Error(err)
+		}
+
 		_, err = a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, state, &msg)
 		if err != nil {
 			a.log.Error(err)
