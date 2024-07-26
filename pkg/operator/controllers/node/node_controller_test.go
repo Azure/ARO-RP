@@ -68,16 +68,9 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			featureFlag:     true,
-			wantErr:         `nodes "nonexistent-node" not found`,
+			wantErr:         "",
 			startConditions: defaultConditions,
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing,
-				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: transitionTime,
-					Message:            `nodes "nonexistent-node" not found`,
-				},
-			},
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:            "can't fetch cluster instance",

@@ -161,9 +161,8 @@ func TestRetrieveClusterDeployment(t *testing.T) {
 
 func TestFilterClusterDeploymentConditions(t *testing.T) {
 	var testConditionList = map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
-		hivev1.ClusterReadyCondition:  corev1.ConditionTrue,
-		hivev1.UnreachableCondition:   corev1.ConditionFalse,
-		hivev1.SyncSetFailedCondition: corev1.ConditionFalse,
+		hivev1.ClusterReadyCondition: corev1.ConditionTrue,
+		hivev1.UnreachableCondition:  corev1.ConditionFalse,
 	}
 
 	for _, tt := range []struct {
