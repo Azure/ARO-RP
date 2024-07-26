@@ -27,8 +27,8 @@ type OpenShiftCluster struct {
 	Lock sync.Mutex `json:"-"`
 }
 
-// IsWimi checks whether a cluster is a Workload Identity cluster or Service Principal cluster
-func (oc *OpenShiftCluster) IsWorkloadIdentity() bool {
+// UsesWorkloadIdentity checks whether a cluster is a Workload Identity cluster or a Service Principal cluster
+func (oc *OpenShiftCluster) UsesWorkloadIdentity() bool {
 	return oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.ServicePrincipalProfile == nil
 }
 

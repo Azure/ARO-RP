@@ -39,7 +39,7 @@ func (m *manager) createDNS(ctx context.Context) error {
 }
 
 func (m *manager) createOIDC(ctx context.Context) error {
-	if !m.doc.OpenShiftCluster.IsWorkloadIdentity() {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return nil
 	}
 

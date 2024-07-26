@@ -468,7 +468,7 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 }
 
 func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
-	if !o.oc.IsWorkloadIdentity() {
+	if !o.oc.UsesWorkloadIdentity() {
 		return nil
 	}
 
