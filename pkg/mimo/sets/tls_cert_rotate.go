@@ -1,5 +1,8 @@
 package sets
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks/cluster"
@@ -10,6 +13,9 @@ import (
 func TLSCertRotation(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 	s := []steps.Step{
 		steps.Action(cluster.EnsureAPIServerIsUp),
+
+		steps.Action(cluster.RotateAPIServerCertificate),
+		steps.Action(cluster.EnsureAPIServerServingCertificateConfiguration),
 	}
 
 	return run(t, s)

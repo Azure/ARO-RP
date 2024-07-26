@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-chi/chi/v5"
 	chiMiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
@@ -34,7 +35,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
-	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 type statusCodeError int

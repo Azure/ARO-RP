@@ -109,3 +109,11 @@ func (t *th) SetResultMessage(msg string) {
 func (t *th) GetResultMessage() string {
 	return t.resultMessage
 }
+
+func (t *th) GetClusterUUID() string {
+	return t.oc.ID
+}
+
+func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
+	return t.oc.OpenShiftCluster.Properties
+}
