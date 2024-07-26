@@ -16,15 +16,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func TestAPIServerIsUp(t *testing.T) {
+func TestConfigureAPIServerCertificates(t *testing.T) {
 	ctx := context.Background()
+	clusterUUID := uuid.DefaultGenerator.Generate()
 
 	for _, tt := range []struct {
 		name    string
@@ -34,50 +37,16 @@ func TestAPIServerIsUp(t *testing.T) {
 		{
 			name:    "not found",
 			objects: []runtime.Object{},
-			wantErr: `NonRetryableError: clusteroperators.config.openshift.io "kube-apiserver" not found`,
+			wantErr: `NonRetryableError: apiserver.config.openshift.io "cluster" not found`,
 		},
 		{
-			name: "not ready",
+			name: "secrets referenced",
 			objects: []runtime.Object{
-				&configv1.ClusterOperator{
+				&configv1.APIServer{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "kube-apiserver",
+						Name: "cluster",
 					},
-					Status: configv1.ClusterOperatorStatus{
-						Conditions: []configv1.ClusterOperatorStatusCondition{
-							{
-								Type:   configv1.OperatorAvailable,
-								Status: configv1.ConditionFalse,
-							},
-							{
-								Type:   configv1.OperatorProgressing,
-								Status: configv1.ConditionTrue,
-							},
-						},
-					},
-				},
-			},
-			wantErr: `TransientError: kube-apiserver Available=False, Progressing=True`,
-		},
-		{
-			name: "ready",
-			objects: []runtime.Object{
-				&configv1.ClusterOperator{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kube-apiserver",
-					},
-					Status: configv1.ClusterOperatorStatus{
-						Conditions: []configv1.ClusterOperatorStatusCondition{
-							{
-								Type:   configv1.OperatorAvailable,
-								Status: configv1.ConditionTrue,
-							},
-							{
-								Type:   configv1.OperatorProgressing,
-								Status: configv1.ConditionFalse,
-							},
-						},
-					},
+					Spec: configv1.APIServerSpec{},
 				},
 			},
 		},
@@ -86,6 +55,8 @@ func TestAPIServerIsUp(t *testing.T) {
 			g := NewWithT(t)
 			controller := gomock.NewController(t)
 			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().Domain().AnyTimes().Return("example.com")
+
 			_, log := testlog.New()
 
 			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.objects...)
@@ -93,9 +64,14 @@ func TestAPIServerIsUp(t *testing.T) {
 			tc := testtasks.NewFakeTestContext(
 				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
 				testtasks.WithClientHelper(ch),
+				testtasks.WithOpenShiftClusterProperties(clusterUUID, api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Domain: "something.k8s.example.com",
+					},
+				}),
 			)
 
-			err := EnsureAPIServerIsUp(tc)
+			err := EnsureAPIServerServingCertificateConfiguration(tc)
 			if tt.wantErr != "" && err != nil {
 				g.Expect(err).To(MatchError(tt.wantErr))
 			} else if tt.wantErr != "" && err == nil {

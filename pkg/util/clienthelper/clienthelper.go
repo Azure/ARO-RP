@@ -38,6 +38,7 @@ type Interface interface {
 	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
 	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
+	Client() client.Client
 }
 
 type clientHelper struct {
@@ -64,6 +65,10 @@ func NewWithClient(log *logrus.Entry, client client.Client) Interface {
 		log:    log,
 		client: client,
 	}
+}
+
+func (ch *clientHelper) Client() client.Client {
+	return ch.client
 }
 
 func (ch *clientHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error {
