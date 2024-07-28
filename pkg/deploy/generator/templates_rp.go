@@ -160,6 +160,7 @@ func (g *generator) rpTemplate() *arm.Template {
 		}
 
 		t.Resources = append(t.Resources,
+			g.rpServiceKeyvaultDynamic(),
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
 			g.rpLB(),
@@ -335,22 +336,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		)
 	}
 
-	return t
-}
-
-func (g *generator) rpPredeployAKSTemplate() *arm.Template {
-	t := templateStanza()
-
-	// params := []string{"keyvaultPrefix"}
-	// for _, param := range params {
-	// 	p := &arm.TemplateParameter{Type: "string"}
-	// 	p.MaxLength = 24 - max(len(env.ClusterKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
-	// 	t.Parameters[param] = p
-	// }
-	p := &arm.TemplateParameter{Type: "string"}
-	p.MaxLength = 24 - max(len(env.ClusterKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
-	t.Parameters["keyvaultPrefix"] = p
-	t.Resources = append(t.Resources, g.rpServiceKeyvaultDynamic())
 	return t
 }
 

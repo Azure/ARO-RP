@@ -40,7 +40,7 @@ const (
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
-func (d *deployer) PreDeploy(ctx context.Context, hasAKS bool) error {
+func (d *deployer) PreDeploy(ctx context.Context) error {
 	// deploy global rbac
 	err := d.deployRPGlobalSubscription(ctx)
 	if err != nil {
@@ -150,9 +150,6 @@ func (d *deployer) PreDeploy(ctx context.Context, hasAKS bool) error {
 	}
 
 	rpProdPreDeployFile := generator.FileRPProductionPredeploy
-	if hasAKS {
-		rpProdPreDeployFile = generator.FileRPProductionPredeployAks
-	}
 	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, rpProdPreDeployFile, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate)
 	if err != nil {
 		return err

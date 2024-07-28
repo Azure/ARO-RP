@@ -90,12 +90,12 @@ func getDeployer(ctx context.Context, log *logrus.Entry) (pkgdeploy.Deployer, er
 	return deployer, nil
 }
 
-func preDeploy(ctx context.Context, log *logrus.Entry, hasAKS bool) error {
+func preDeploy(ctx context.Context, log *logrus.Entry) error {
 	deployer, err := getDeployer(ctx, log)
 	if err != nil {
 		return err
 	}
-	err = deployer.PreDeploy(ctx, hasAKS)
+	err = deployer.PreDeploy(ctx)
 	if err != nil {
 		return err
 	}
