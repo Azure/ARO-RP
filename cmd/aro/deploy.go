@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func getDeployer(ctx context.Context, log *logrus.Entry) (pkgdeploy.Deployer ,error) {
+func getDeployer(ctx context.Context, log *logrus.Entry) (pkgdeploy.Deployer, error) {
 	// TODO(mjudeikis): Remove this hack in public once we moved to EV2
 	// We are not able to use MSI in public cloud CI as we would need
 	// to have dedicated node pool with MSI where we can controll which jobs are running
@@ -88,10 +88,9 @@ func getDeployer(ctx context.Context, log *logrus.Entry) (pkgdeploy.Deployer ,er
 	}
 
 	return deployer, nil
-
 }
 
-func preDeploy (ctx context.Context, log *logrus.Entry, hasAKS bool) error {
+func preDeploy(ctx context.Context, log *logrus.Entry, hasAKS bool) error {
 	deployer, err := getDeployer(ctx, log)
 	if err != nil {
 		return err
@@ -100,14 +99,13 @@ func preDeploy (ctx context.Context, log *logrus.Entry, hasAKS bool) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Must be last step so we can be sure there are no RPs at older versions
 	// still serving
 	return deployer.SaveVersion(ctx)
 }
 
-func deploy (ctx context.Context, log *logrus.Entry) error {
-
+func deploy(ctx context.Context, log *logrus.Entry) error {
 	deployer, err := getDeployer(ctx, log)
 	if err != nil {
 		return err

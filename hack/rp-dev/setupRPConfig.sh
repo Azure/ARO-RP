@@ -40,3 +40,6 @@ make dev-config.yaml
 # Check if the dev-config.yaml file exists
 [ -f "dev-config.yaml" ] || { echo "File dev-config.yaml does not exist."; exit 1; }
 echo "Success step 2 ✅ - Config file dev-config.yaml has been created"
+
+make pre-deploy-aks # deploy predeployment resources prior to AKS
+echo "Success step 3 ✅ - deploy predeployment resources prior to AKS"
