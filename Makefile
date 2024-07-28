@@ -376,3 +376,16 @@ vendor:
 .PHONY: install-go-tools
 install-go-tools:
 	go install ${GOTESTSUM}
+
+AZURE_PREFIX = zzz
+RP_FULL_DEV_IMAGE= quay.io/medik8s/rp-full-dev:v0.0.1
+ARO_RP_BRANCH = test-local-7755-2
+.PHONY: rp-full-dev
+rp-full-dev:
+	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) --build-arg ARO_RP_BRANCH=$(ARO_RP_BRANCH) -f Dockerfile.rp-full-dev -t $(RP_FULL_DEV_IMAGE) .
+	docker run --rm -it --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name rp-dev-container $(RP_FULL_DEV_IMAGE) /bin/sh
+
+.PHONY: rp-full-dev-clenup
+rp-full-dev-clenup:
+	source ./hack/devtools/rp-dev-helper.sh && AZURE_PREFIX=$(AZURE_PREFIX) clean_rp_dev_env
+# clean_rp_dev_env "zzz-aro-eastus-gwy zzz-aro-eastus-por zzz-aro-eastus-svc zzz-aro-eastus-cls" "zzz-global zzz-subscription zzz-gwy-eastus zzz-aro-eastus"
