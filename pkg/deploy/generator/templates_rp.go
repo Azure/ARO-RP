@@ -327,7 +327,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpClusterKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
-		g.rpServiceKeyvaultDynamic(),
 	)
 
 	if g.production {
@@ -336,6 +335,22 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		)
 	}
 
+	return t
+}
+
+func (g *generator) rpPredeployAKSTemplate() *arm.Template {
+	t := templateStanza()
+
+	// params := []string{"keyvaultPrefix"}
+	// for _, param := range params {
+	// 	p := &arm.TemplateParameter{Type: "string"}
+	// 	p.MaxLength = 24 - max(len(env.ClusterKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
+	// 	t.Parameters[param] = p
+	// }
+	p := &arm.TemplateParameter{Type: "string"}
+	p.MaxLength = 24 - max(len(env.ClusterKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
+	t.Parameters["keyvaultPrefix"] = p
+	t.Resources = append(t.Resources, g.rpServiceKeyvaultDynamic())
 	return t
 }
 

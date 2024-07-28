@@ -112,14 +112,14 @@ ci-clean:
 pre-deploy-aks:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy-aks dev-config.yaml ${LOCATION}
 
-.PHONY: pre-deploy-full
-pre-deploy-full:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy-full dev-config.yaml ${LOCATION}
+.PHONY: pre-deploy
+pre-deploy:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy dev-config.yaml ${LOCATION}
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
-deploy: pre-deploy-full
+deploy: pre-deploy-aks
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml

@@ -31,6 +31,10 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
+		err = g.writeTemplate(g.rpPredeployAKSTemplate(), FileRPProductionPredeployAks)
+		if err != nil {
+			return err
+		}
 		err = g.writeTemplate(g.rpPredeployTemplate(), FileRPProductionPredeploy)
 		if err != nil {
 			return err
@@ -89,10 +93,6 @@ func (g *generator) Artifacts() error {
 			return err
 		}
 		err = g.writeTemplate(g.devDatabaseTemplate(), fileDatabaseDevelopment)
-		if err != nil {
-			return err
-		}
-		err = g.writeTemplate(g.rpPredeployTemplate(), fileRPDevelopmentPredeploy)
 		if err != nil {
 			return err
 		}

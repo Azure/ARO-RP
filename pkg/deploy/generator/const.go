@@ -24,7 +24,6 @@ const (
 	FileClusterPredeploy       = "cluster-development-predeploy.json"
 	fileEnvDevelopment         = "env-development.json"
 	fileDatabaseDevelopment    = "databases-development.json"
-	fileRPDevelopmentPredeploy = "rp-development-predeploy.json"
 	fileRPDevelopment          = "rp-development.json"
 
 	fileMiwiDevelopment = "rp-development-miwi.json"
