@@ -108,10 +108,6 @@ ci-tunnel: fix-macos-vendor
 ci-clean:
 	docker image prune --all --filter="label=aro-*=true"
 
-.PHONY: pre-deploy-aks
-pre-deploy-aks:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy-aks dev-config.yaml ${LOCATION}
-
 .PHONY: pre-deploy
 pre-deploy:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy dev-config.yaml ${LOCATION}
@@ -119,7 +115,7 @@ pre-deploy:
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
-deploy: pre-deploy-aks
+deploy:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml
@@ -379,7 +375,7 @@ install-go-tools:
 
 AZURE_PREFIX = zzz
 RP_FULL_DEV_IMAGE= quay.io/medik8s/rp-full-dev:v0.0.1
-ARO_RP_BRANCH = test-local-7755-2
+ARO_RP_BRANCH = test-local-7755-3
 .PHONY: rp-full-dev
 rp-full-dev:
 	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) --build-arg ARO_RP_BRANCH=$(ARO_RP_BRANCH) -f Dockerfile.rp-full-dev -t $(RP_FULL_DEV_IMAGE) .
