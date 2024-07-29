@@ -6,6 +6,7 @@ import json
 import re
 import uuid
 from os.path import exists
+from collections import Counter
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client, get_subscription_id
 from azure.cli.core.profiles import ResourceType
@@ -331,7 +332,9 @@ def validate_platform_workload_identities(isCreate):
             raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing platform workload identities')  # pylint: disable=line-too-long
 
         names = list(map(lambda identity: identity.operator_name, namespace.platform_workload_identities))
-        duplicates = [n for i, n in enumerate(names) if n in names[:i]]
+        name_counter = Counter()
+        name_counter.update(names)
+        duplicates = [name for name, count in name_counter.items() if count > 1]
         if duplicates:
             raise InvalidArgumentValueError(f"Platform workload identities {duplicates} were provided multiple times")
 
