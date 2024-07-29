@@ -41,8 +41,8 @@ func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) 
 		d.features[feature] = true
 	}
 
-  // Disable applens in local dev environment: ARO-7860
-  d.Environment().PkiIssuerUrlTemplate = ""
+	// Disable applens in local dev environment: ARO-7860
+	d.Environment().PkiIssuerUrlTemplate = ""
 
 	d.prod.clusterGenevaLoggingAccount = version.DevClusterGenevaLoggingAccount
 	d.prod.clusterGenevaLoggingConfigVersion = version.DevClusterGenevaLoggingConfigVersion
