@@ -1,9 +1,5 @@
 run:
   timeout: 10m
-  skip-dirs:
-    - vendor/portal
-    - vendor
-  skip-dirs-use-default: true
   modules-download-mode: vendor
   build-tags:
     - "aro"
@@ -13,7 +9,8 @@ run:
   go: "1.21"
 
 output:
-  format: github-actions
+  formats:
+    - format: colored-line-number
 
 issues:
   max-same-issues: 0
@@ -36,6 +33,9 @@ issues:
       linters:
         - importas
   exclude-use-default: false
+  exclude-dirs:
+    - vendor/portal
+    - vendor
 
 linters-settings:
   stylecheck:
