@@ -31,8 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20231122 "github.com/Azure/ARO-RP/pkg/api/v20231122"
-	mgmtredhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -41,7 +39,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
@@ -59,7 +56,7 @@ type Cluster struct {
 	spGraphClient        *utilgraph.GraphServiceClient
 	deployments          features.DeploymentsClient
 	groups               features.ResourceGroupsClient
-	openshiftclusters    redhatopenshift20231122.OpenShiftClustersClient
+	openshiftclusters    InternalClient
 	securitygroups       network.SecurityGroupsClient
 	subnets              network.SubnetsClient
 	routetables          network.RouteTablesClient
@@ -110,7 +107,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		spGraphClient:     spGraphClient,
 		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		groups:            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclusters: redhatopenshift20231122.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclusters: NewInternalClient(log, environment, authorizer),
 		securitygroups:    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		subnets:           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		routetables:       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -159,7 +156,7 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
 	clusterGet, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
-		if clusterGet.ProvisioningState == mgmtredhatopenshift20231122.Failed {
+		if clusterGet.Properties.ProvisioningState == api.ProvisioningStateFailed {
 			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
 		}
 		c.log.Print("cluster already exists, skipping create")
@@ -378,7 +375,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, err)
 		}
 		errs = append(errs,
-			c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
+			c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
 			c.ensureResourceGroupDeleted(ctx, clusterResourceGroup),
 			c.deleteResourceGroup(ctx, vnetResourceGroup),
@@ -477,19 +474,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20231122.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
-	data, err := json.Marshal(ext)
-	if err != nil {
-		return err
-	}
-
-	ocExt := mgmtredhatopenshift20231122.OpenShiftCluster{}
-	err = json.Unmarshal(data, &ocExt)
-	if err != nil {
-		return err
-	}
-
-	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
 }
 
 var insecureLocalClient *http.Client = &http.Client{
@@ -678,7 +663,7 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	if err != nil {
 		return fmt.Errorf("error getting cluster document: %w", err)
 	}
-	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
+	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, oc.Properties.ServicePrincipalProfile.ClientID)
 	if err != nil {
 		return fmt.Errorf("error getting service principal for cluster: %w", err)
 	}
