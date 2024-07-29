@@ -67,6 +67,9 @@ type Cluster struct {
 	vaultsClient         armkeyvault.VaultsClient
 }
 
+
+const GenerateSubnetMaxTries = 100
+
 func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	if env.IsLocalDevelopmentMode() {
 		if err := env.ValidateVars("AZURE_FP_CLIENT_ID"); err != nil {
@@ -201,7 +204,11 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
-	addressPrefix, masterSubnet, workerSubnet := c.generateSubnets()
+	addressPrefix, masterSubnet, workerSubnet, err := c.generateSubnets()
+  
+  if err != nil {
+    return err
+  }
 
 	var kvName string
 	if len(vnetResourceGroup) > 10 {
@@ -347,25 +354,25 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 }
 
 // ipRangesContainCIDR checks, weather any of the ipRanges overlap with the cidr string. In case cidr isn't valid, false is returned.
-func ipRangesContainCIDR(ipRanges []*net.IPNet, cidr string) bool {
+func ipRangesContainCIDR(ipRanges []*net.IPNet, cidr string) (bool, error){
 	_, cidrNet, err := net.ParseCIDR(cidr)
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	for _, snet := range ipRanges {
 		if snet.Contains(cidrNet.IP) || cidrNet.Contains(snet.IP) {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
-// GetIpRangesFromSubnet converts a given azure subnet to a list if IPNets.
+// GetIPRangesFromSubnet converts a given azure subnet to a list if IPNets.
 // Because an az subnet can cover multiple ipranges, we need to return a slice
 // instead of just a single ip range. This function never errors. If something
 // goes wrong, it instead returns an empty list.
-func GetIpRangesFromSubnet(subnet mgmtnetwork.Subnet) []*net.IPNet {
+func GetIPRangesFromSubnet(subnet mgmtnetwork.Subnet) []*net.IPNet {
 	ipRanges := []*net.IPNet{}
 	if subnet.AddressPrefix != nil {
 		_, ipRange, err := net.ParseCIDR(*subnet.AddressPrefix)
@@ -392,13 +399,13 @@ func GetIpRangesFromSubnet(subnet mgmtnetwork.Subnet) []*net.IPNet {
 // `dev-vnet` in the current resource group
 func (c *Cluster) getAllDevSubnets() ([]mgmtnetwork.Subnet, error) {
 	allSubnets := []mgmtnetwork.Subnet{}
-	availSnetResults, err := c.subnets.List(context.TODO(), c.env.ResourceGroup(), "dev-vnet")
+	availSnetResults, err := c.subnets.List(context.Background(), c.env.ResourceGroup(), "dev-vnet")
 	if err != nil {
 		return allSubnets, err
 	}
 	allSubnets = append(allSubnets, availSnetResults.Values()...)
 	for availSnetResults.NotDone() {
-		err = availSnetResults.NextWithContext(context.TODO())
+		err = availSnetResults.NextWithContext(context.Background())
 		if err != nil {
 			break
 		}
@@ -409,9 +416,10 @@ func (c *Cluster) getAllDevSubnets() ([]mgmtnetwork.Subnet, error) {
 }
 
 
-func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
-	// pick a random 23 in range [10.3.0.0, 10.127.255.0]
-	// 10.0.0.0/16 is used by dev-vnet to host CI
+func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string, err error) {
+  // pick a random 23 in range [10.3.0.0, 10.127.255.0], making sure it doesn't
+  // conflict with other subnets present in out dev-vnet
+  // 10.0.0.0/16 is used by dev-vnet to host CI
 	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
 	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
 
@@ -422,10 +430,11 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 
 	ipRanges := []*net.IPNet{}
 	for _, snet := range allSubnets {
-		ipRanges = append(ipRanges, GetIpRangesFromSubnet(snet)...)
+		ipRanges = append(ipRanges, GetIPRangesFromSubnet(snet)...)
 	}
 
-	for i := 1; i < 100; i++ {
+
+	for i := 1; i < GenerateSubnetMaxTries; i++ {
 		var x, y int
 		// Local Dev clusters are limited to /16 dev-vnet
 		if !c.ci {
@@ -437,13 +446,23 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 		vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
 		masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
 		workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
-		if !ipRangesContainCIDR(ipRanges, workerSubnet) && !ipRangesContainCIDR(ipRanges, masterSubnet) {
-			return vnetPrefix, masterSubnet, workerSubnet
-		}
+
+    masterSubnetOverlaps, err := ipRangesContainCIDR(ipRanges, workerSubnet)
+    if err != nil || masterSubnetOverlaps {
+      continue
+    }
+
+    workerSubnetOverlaps, err := ipRangesContainCIDR(ipRanges, workerSubnet)
+    if err != nil || workerSubnetOverlaps {
+      continue
+    }
+
+		return vnetPrefix, masterSubnet, workerSubnet, nil
 	}
   
-	return vnetPrefix, masterSubnet, workerSubnet
+	return vnetPrefix, masterSubnet, workerSubnet, fmt.Errorf("was not able to generate master and worker subnets after %v tries", GenerateSubnetMaxTries)
 }
+
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
 	c.log.Infof("Deleting cluster %s in resource group %s", clusterName, vnetResourceGroup)
