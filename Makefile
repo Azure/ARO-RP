@@ -377,7 +377,7 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-AZURE_PREFIX = zzz
+AZURE_PREFIX ?= zzz
 RP_FULL_DEV_IMAGE= quay.io/medik8s/rp-full-dev:v0.0.1
 ARO_RP_BRANCH = test-local-7755-2
 .PHONY: rp-full-dev
