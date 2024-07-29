@@ -166,7 +166,7 @@ assign_role_to_identity() {
 create_platform_identity_and_assign_role() {
     local operatorName="${1}"
     local roleDefinitionId="${2}"
-    local identityName="${CLUSTER}-${operatorName}"
+    local identityName="aro-${operatorName}"
     local result=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null)
 
     if [[ ! -z ${result} ]]; then

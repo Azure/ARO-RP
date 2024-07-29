@@ -52,7 +52,7 @@
    ```
 
 1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to 
-mock a cluster MSI. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
+mock a cluster MSI. This script will also create the platform identities, platform identity role assignments, and role assignment on mock cluster MSI to federate the platform identities. Platform identities will be created in resource group `RESOURCEGROUP` and subscription `SUBSCRIPTION`. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
 
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:

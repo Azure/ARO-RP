@@ -8,11 +8,6 @@ if [[ -z "$AZURE_SUBSCRIPTION_ID" ]]; then
     exit 1
 fi
 
-if [[ -z "$CLUSTER" ]]; then
-    echo "Error: CLUSTER is not set."
-    exit 1
-fi
-
 if [[ -z "$RESOURCEGROUP" ]]; then
     echo "Error: RESOURCEGROUP is not set."
     exit 1
