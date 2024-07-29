@@ -17,7 +17,10 @@ clientID=$(get_mock_msi_clientID "$sp")
 tenantID=$(get_mock_msi_tenantID "$sp")
 base64EncodedCert=$(get_mock_msi_cert "$sp")
 
+setup_platform_identity
+cluster_msi_role_assignment "${clientID}"
+
 # Print the extracted values
-echo "Client ID: $clientID"
-echo "Tenant ID: $tenantID"
-echo "Base64 Encoded Certificate: $base64EncodedCert"
+echo "Cluster MSI Client ID: $clientID"
+echo "Cluster MSI Tenant ID: $tenantID"
+echo "Cluster MSI Base64 Encoded Certificate: $base64EncodedCert"

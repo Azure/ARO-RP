@@ -52,7 +52,7 @@
    ```
 
 1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to 
-mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
+mock a cluster MSI. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
 
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:

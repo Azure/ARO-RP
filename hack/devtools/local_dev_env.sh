@@ -219,7 +219,6 @@ cluster_msi_role_assignment() {
     assign_role_to_identity "${principalId}" "${FEDERATED_CREDENTIAL_ROLE_ID}"
 }
 
-
 create_miwi_env_file() {
     echo "INFO: Creating default env config file for managed/workload identity development..."
 
