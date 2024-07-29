@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script creates a mock MSI object to use for local development
+# This script creates a mock cluster MSI object to use for local development
 # We use a service principal and certificate as the mock object
 
 scriptPath=$(realpath "$0")

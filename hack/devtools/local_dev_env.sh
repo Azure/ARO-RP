@@ -7,6 +7,71 @@
 # The steps here are the ones defined in docs/deploy-development-rp.md
 # We recommend to use this script after you understand the steps of the process, not before.
 
+PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
+    {
+        "openShiftVersion": "4.14",
+        "platformWorkloadIdentityRoles": [
+            {
+                "operatorName": "CloudControllerManager",
+                "roleDefinitionName": "Azure RedHat OpenShift Cloud Controller Manager Role",
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+                "serviceAccounts": ["openshift-cloud-controller-manager:cloud-controller-manager"]
+            },
+            {
+                "operatorName": "ClusterIngressOperator",
+                "roleDefinitionName": "Azure RedHat OpenShift Cluster Ingress Operator Role",
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
+                "serviceAccounts": ["openshift-ingress-operator:ingress-operator"]
+            },
+            {
+                "operatorName": "MachineApiOperator",
+                "roleDefinitionName": "Azure RedHat OpenShift Machine API Operator Role",
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0358943c-7e01-48ba-8889-02cc51d78637",
+                "serviceAccounts": ["openshift-machine-api:machine-api-operator"]
+            },
+            {
+                "operatorName": "StorageOperator",
+                "roleDefinitionName": "Azure RedHat OpenShift Storage Operator Role",
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/5b7237c5-45e1-49d6-bc18-a1f62f400748",
+                "serviceAccounts": [
+                    "openshift-cluster-csi-drivers:azure-disk-csi-driver-operator",
+                    "openshift-cluster-csi-drivers:azure-disk-csi-driver-controller-sa"
+                ]
+            },
+            {
+                "operatorName": "NetworkOperator",
+                "roleDefinitionName": "Azure RedHat OpenShift Network Operator Role",
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/be7a6435-15ae-4171-8f30-4a343eff9e8f",
+                "serviceAccounts": ["openshift-cloud-network-config-controller:cloud-network-config-controller"]
+            },
+            {
+                "operatorName": "ImageRegistryOperator",
+                "roleDefinitionName": "Azure RedHat OpenShift Image Registry Operator Role",
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/8b32b316-c2f5-4ddf-b05b-83dacd2d08b5",
+                "serviceAccounts": [
+                    "openshift-image-registry:cluster-image-registry-operator",
+                    "openshift-image-registry:registry"
+                ]
+            },
+            {
+                "operatorName": "AzureFilesStorageOperator",
+                "roleDefinitionName": "Azure RedHat OpenShift Azure Files Storage Operator Role",
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0d7aedc0-15fd-4a67-a412-efad370c947e",
+                "serviceAccounts": [
+                    "openshift-cluster-csi-drivers:azure-file-csi-driver-operator",
+                    "openshift-cluster-csi-drivers:azure-file-csi-driver-controller-sa",
+                    "openshift-cluster-csi-drivers:azure-file-csi-driver-node-sa"
+                ]
+            },
+            {
+                "operatorName": "ServiceOperator",
+                "roleDefinitionName": "Azure RedHat OpenShift Service Operator",
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/4436bae4-7702-4c84-919b-c4069ff25ee2",
+                "serviceAccounts": ["openshift-azure-operator:aro-operator-master"]
+            }
+        ]
+    }
+]'
 
 build_development_az_aro_extension() {
     echo "INFO: Building development az aro extension..."
@@ -70,6 +135,91 @@ create_env_file() {
     fi
 }
 
+get_platform_workloadIdentity_role_sets() {
+    local platformWorkloadIdentityRoles
+   
+    # Parse the JSON data using jq
+    platformWorkloadIdentityRoles=$(echo "${PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS}" | jq -c '.[].platformWorkloadIdentityRoles[]')
+
+    echo "${platformWorkloadIdentityRoles}"
+}
+
+assign_role_to_identity() {
+    local principalId=$1
+    local roleId=$2
+    local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
+    local result=$(az role assignment list --assignee "${principalId}" --role "${roleId}" --scope "${scope}" 2>/dev/null | wc -l)
+
+    if [[ $result -gt 1 ]]; then
+        echo "INFO: Role already assigned to identity: ${principalId}"
+        echo ""
+        return
+    fi
+
+    echo "INFO: Assigning roles to identity: ${principalId}"
+    result=$(az role assignment create --assignee-object-id "${principalId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json)
+
+    echo "Role assignment result: ${result}"
+    echo ""
+}
+
+create_platform_identity_and_assign_role() {
+    local operatorName="${1}"
+    local roleDefinitionId="${2}"
+    local identityName="${CLUSTER}-${operatorName}"
+    local result=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null)
+
+    if [[ ! -z ${result} ]]; then
+        echo "INFO: Platform identity ${identityName} already exists for operator: ${operatorName}"
+        echo ""
+    else
+        echo "INFO: Creating platform identity for operator: ${operatorName}"
+        result=$(az identity create --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+    fi
+
+    # Extract the client ID, principal Id, resource ID and name from the result
+    clientID=$(echo $result | jq -r .clientId)
+    principalId=$(echo $result | jq -r .principalId)
+    resourceId=$(echo $result | jq -r .id)
+    name=$(echo $result | jq -r .name)
+
+    echo "Client ID: $clientID"
+    echo "Principal ID: $principalId"
+    echo "Resource ID: $resourceId"
+    echo "Name: $name"
+    echo ""
+
+    if [[ "${operatorName}" == "MachineApiOperator" || "${operatorName}" == "NetworkOperator" \
+        || "${operatorName}" == "AzureFilesStorageOperator" || "${operatorName}" == "ServiceOperator" ]]; then
+
+        assign_role_to_identity "${principalId}" "${roleDefinitionId}"
+    fi
+}
+
+setup_platform_identity() {
+    local platformWorkloadIdentityRoles=$(get_platform_workloadIdentity_role_sets)
+
+    echo "INFO: Creating platform identities under RG ($RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
+    echo ""
+
+    # Loop through each element under platformWorkloadIdentityRoles
+    while read -r role; do
+        operatorName=$(echo "$role" | jq -r '.operatorName')
+        roleDefinitionId=$(echo "$role" | jq -r '.roleDefinitionId' | awk -F'/' '{print $NF}')
+
+        create_platform_identity_and_assign_role "${operatorName}" "${roleDefinitionId}"
+
+    done <<< "$platformWorkloadIdentityRoles"
+}
+
+cluster_msi_role_assignment() {
+    local clusterAppID="${1}"
+    local FEDERATED_CREDENTIAL_ROLE_ID="ef318e2a-8334-4a05-9e4a-295a196c6a6e"
+    local principalId=$(az ad sp show --id "${clusterAppID}" --query '{objectId: id}' | jq -r .objectId)
+    assign_role_to_identity "${principalId}" "${FEDERATED_CREDENTIAL_ROLE_ID}"
+}
+
+
 create_miwi_env_file() {
     echo "INFO: Creating default env config file for managed/workload identity development..."
 
@@ -77,6 +227,9 @@ create_miwi_env_file() {
     mockClientID=$(get_mock_msi_clientID "$mockMSI")
     mockTenantID=$(get_mock_msi_tenantID "$mockMSI")
     mockCert=$(get_mock_msi_cert "$mockMSI")
+
+    setup_platform_identity
+    cluster_msi_role_assignment "${mockClientID}"
 
     cat >env <<EOF
 export LOCATION=eastus
