@@ -270,7 +270,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		rpPrivateLinkServices:    network.NewPrivateLinkServicesClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer),
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
 
-		dns:     dns.NewManager(_env, localFPAuthorizer),
+		dns:     dns.NewManager(_env, fpCredRPTenant),
 		storage: storage,
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(_env, log, aead, storage),
