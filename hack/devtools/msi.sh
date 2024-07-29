@@ -1,7 +1,22 @@
 #!/bin/bash
 
-# This script creates a mock cluster MSI object to use for local development
-# We use a service principal and certificate as the mock object
+# This script creates a mock cluster MSI object and platform identities to use for local development
+# We use a service principal and certificate as the mock cluster MSI
+
+if [[ -z "$AZURE_SUBSCRIPTION_ID" ]]; then
+    echo "Error: AZURE_SUBSCRIPTION_ID is not set."
+    exit 1
+fi
+
+if [[ -z "$CLUSTER" ]]; then
+    echo "Error: CLUSTER is not set."
+    exit 1
+fi
+
+if [[ -z "$RESOURCEGROUP" ]]; then
+    echo "Error: RESOURCEGROUP is not set."
+    exit 1
+fi
 
 scriptPath=$(realpath "$0")
 scriptDir=$(dirname "$scriptPath")
@@ -13,14 +28,14 @@ if [[ -z "$sp" ]]; then
     echo "Failed to create mock MSI object"
     exit 1
 fi
-clientID=$(get_mock_msi_clientID "$sp")
-tenantID=$(get_mock_msi_tenantID "$sp")
+mockClientID=$(get_mock_msi_clientID "$sp")
+mockTenantID=$(get_mock_msi_tenantID "$sp")
 base64EncodedCert=$(get_mock_msi_cert "$sp")
 
 setup_platform_identity
-cluster_msi_role_assignment "${clientID}"
+cluster_msi_role_assignment "${mockClientID}"
 
 # Print the extracted values
-echo "Cluster MSI Client ID: $clientID"
-echo "Cluster MSI Tenant ID: $tenantID"
+echo "Cluster MSI Client ID: $mockClientID"
+echo "Cluster MSI Tenant ID: $mockTenantID"
 echo "Cluster MSI Base64 Encoded Certificate: $base64EncodedCert"

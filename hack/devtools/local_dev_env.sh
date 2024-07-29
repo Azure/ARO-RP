@@ -145,19 +145,19 @@ get_platform_workloadIdentity_role_sets() {
 }
 
 assign_role_to_identity() {
-    local principalId=$1
+    local objectId=$1
     local roleId=$2
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
-    local result=$(az role assignment list --assignee "${principalId}" --role "${roleId}" --scope "${scope}" 2>/dev/null | wc -l)
+    local result=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null | wc -l)
 
     if [[ $result -gt 1 ]]; then
-        echo "INFO: Role already assigned to identity: ${principalId}"
+        echo "INFO: Role already assigned to identity: ${objectId}"
         echo ""
         return
     fi
 
-    echo "INFO: Assigning roles to identity: ${principalId}"
-    result=$(az role assignment create --assignee-object-id "${principalId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json)
+    echo "INFO: Assigning roles to identity: ${objectId}"
+    result=$(az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json)
 
     echo "Role assignment result: ${result}"
     echo ""
@@ -213,10 +213,12 @@ setup_platform_identity() {
 }
 
 cluster_msi_role_assignment() {
-    local clusterAppID="${1}"
+    local clusterMSIAppID="${1}"
     local FEDERATED_CREDENTIAL_ROLE_ID="ef318e2a-8334-4a05-9e4a-295a196c6a6e"
-    local principalId=$(az ad sp show --id "${clusterAppID}" --query '{objectId: id}' | jq -r .objectId)
-    assign_role_to_identity "${principalId}" "${FEDERATED_CREDENTIAL_ROLE_ID}"
+    local clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' | jq -r .objectId)
+
+    echo "INFO: Assigning role to cluster MSI: ${clusterMSIAppID}"
+    assign_role_to_identity "${clusterMSIObjectID}" "${FEDERATED_CREDENTIAL_ROLE_ID}"
 }
 
 create_miwi_env_file() {
