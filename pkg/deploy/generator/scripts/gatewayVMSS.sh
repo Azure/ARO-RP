@@ -79,18 +79,6 @@ include /etc/logrotate.d
     create 0600 root utmp
     rotate 1
 }
-
-# Maximum log directory size is 100G with this configuration
-# Setting limit to 100G to allow space for other logging services
-# copytruncate is a critical option used to prevent logs from being shipped twice
-${gateway_logdir} {
-    size 20G
-    rotate 5
-    create 0600 root root
-    copytruncate
-    noolddir
-    compress
-}
 EOF
 
 echo "configuring yum repository and running yum update"
@@ -298,7 +286,9 @@ ExecStart=/usr/bin/docker run \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  -v ${gateway_logdir}:/ctr.log:z \
+  --log-driver k8s-file \
+  --log-opt path=${gateway_logdir}/gateway.log \
+  --log-opt max-size=20gb \
   \$RPIMAGE \
   gateway
 ExecStop=/usr/bin/docker stop -t 3600 %N
