@@ -15,11 +15,9 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +36,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -46,7 +43,6 @@ import (
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 //go:embed staticresources
@@ -69,27 +65,18 @@ type operator struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	ch clienthelper.Interface
-	dh dynamichelper.Interface
+	kubernetescli kubernetes.Interface
+	ch            clienthelper.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client clienthelper.Interface, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface) (Operator, error) {
-	restConfig, err := restconfig.RestConfig(env, oc)
-	if err != nil {
-		return nil, err
-	}
-	dh, err := dynamichelper.New(log, restConfig)
-	if err != nil {
-		return nil, err
-	}
-
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, client clienthelper.Interface, kubernetescli kubernetes.Interface) (Operator, error) {
 	return &operator{
 		log: log,
 		env: env,
 		oc:  oc,
 
-		ch: client,
-		dh: dh,
+		kubernetescli: kubernetescli,
+		ch:            client,
 	}, nil
 }
 
@@ -481,12 +468,12 @@ func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 }
 
 func (o *operator) IsReady(ctx context.Context) (bool, error) {
-	ok, err := ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
+	ok, err := ready.CheckDeploymentIsReady(ctx, o.ch, types.NamespacedName{Namespace: pkgoperator.Namespace, Name: "aro-operator-master"})()
 	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-master", ok, err)
 	if !ok || err != nil {
 		return ok, err
 	}
-	ok, err = ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
+	ok, err = ready.CheckDeploymentIsReady(ctx, o.ch, types.NamespacedName{Namespace: pkgoperator.Namespace, Name: "aro-operator-worker"})()
 	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-worker", ok, err)
 	if !ok || err != nil {
 		return ok, err
