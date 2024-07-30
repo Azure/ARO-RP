@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	utilgenerics "github.com/Azure/ARO-RP/pkg/util/generics"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
@@ -534,9 +535,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.client, err = client.New(restConfig, client.Options{
+	client, err := client.New(restConfig, client.Options{
 		Mapper: mapper,
 	})
+
+	m.ch = clienthelper.NewWithClient(m.log, client)
 	return err
 }
 
