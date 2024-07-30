@@ -8,14 +8,16 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcoclientv1 "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NodeIsReady returns true if a Node is considered ready
@@ -87,9 +89,10 @@ func DeploymentIsReady(d *appsv1.Deployment) bool {
 
 // CheckDeploymentIsReady returns a function which polls a Deployment and
 // returns its readiness
-func CheckDeploymentIsReady(ctx context.Context, cli appsv1client.DeploymentInterface, name string) func() (bool, error) {
+func CheckDeploymentIsReady(ctx context.Context, ch clienthelper.Interface, target types.NamespacedName) func() (bool, error) {
 	return func() (bool, error) {
-		d, err := cli.Get(ctx, name, metav1.GetOptions{})
+		d := &appsv1.Deployment{}
+		err := ch.GetOne(ctx, target, d)
 		switch {
 		case kerrors.IsNotFound(err):
 			return false, nil
@@ -108,9 +111,10 @@ func PodIsRunning(p *corev1.Pod) bool {
 
 // CheckPodIsRunning returns a function which polls a Pod and returns if it is
 // running
-func CheckPodIsRunning(ctx context.Context, cli corev1client.PodInterface, name string) func() (bool, error) {
+func CheckPodIsRunning(ctx context.Context, ch clienthelper.Interface, target types.NamespacedName) func() (bool, error) {
 	return func() (bool, error) {
-		p, err := cli.Get(ctx, name, metav1.GetOptions{})
+		p := &corev1.Pod{}
+		err := ch.GetOne(ctx, target, p)
 		switch {
 		case kerrors.IsNotFound(err):
 			return false, nil
@@ -124,18 +128,15 @@ func CheckPodIsRunning(ctx context.Context, cli corev1client.PodInterface, name 
 
 // CheckPodsAreRunning returns a function which polls multiple Pods by label and returns if it is
 // running
-func CheckPodsAreRunning(ctx context.Context, cli corev1client.PodInterface, labels map[string]string) func() (bool, error) {
+func CheckPodsAreRunning(ctx context.Context, ch clienthelper.Interface, lbls map[string]string) func() (bool, error) {
 	return func() (bool, error) {
 		// build the label selector
-		options := metav1.ListOptions{
-			LabelSelector: "",
-		}
-		for key, value := range labels {
-			options.LabelSelector += key + "=" + value
+		options := &client.ListOptions{
+			LabelSelector: labels.SelectorFromSet(lbls),
 		}
 
-		// get list of pods
-		podList, err := cli.List(ctx, options)
+		podList := &corev1.PodList{}
+		err := ch.Client().List(ctx, podList, options)
 
 		// check status from List
 		switch {
@@ -181,9 +182,10 @@ func MachineConfigPoolIsReady(s *mcv1.MachineConfigPool) bool {
 
 // CheckMachineConfigPoolIsReady returns a function which polls a
 // MachineConfigPool and returns its readiness
-func CheckMachineConfigPoolIsReady(ctx context.Context, cli mcoclientv1.MachineConfigPoolInterface, name string) func() (bool, error) {
+func CheckMachineConfigPoolIsReady(ctx context.Context, ch clienthelper.Interface, name string) func() (bool, error) {
 	return func() (bool, error) {
-		s, err := cli.Get(ctx, name, metav1.GetOptions{})
+		mcp := &mcv1.MachineConfigPool{}
+		err := ch.GetOne(ctx, types.NamespacedName{Name: name}, mcp)
 		switch {
 		case kerrors.IsNotFound(err):
 			return false, nil
@@ -191,7 +193,7 @@ func CheckMachineConfigPoolIsReady(ctx context.Context, cli mcoclientv1.MachineC
 			return false, err
 		}
 
-		return MachineConfigPoolIsReady(s), nil
+		return MachineConfigPoolIsReady(mcp), nil
 	}
 }
 
