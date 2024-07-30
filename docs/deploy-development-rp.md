@@ -484,7 +484,7 @@ go run ./hack/monitor
 
 ## Known Issues
 
-1. Trying to use `az aro` CLI in Production, fails wit:
+1. Trying to use `az aro` CLI in Production, fails with:
 ```
 (NoRegisteredProviderFound) No registered resource provider found for location '$LOCATION' and API version '2024-08-12-preview'
 ```
