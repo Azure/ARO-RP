@@ -1,19 +1,31 @@
 # Deploy development RP
 
+## Why to use it?
+This is the **preferred** method. Is a fast way to have your own local development RP setup, while also having a functional cluster.
+It uses hacks scripts around a lot of the setup to make things easier to bootstrap and be more sensible for running off of your local laptop. 
+
+- Check the specific use-case examples where [deploying full RP service](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-full-rp-service-in-dev.md) can be a better match.
+
 ## Prerequisites
 
 1. Your development environment is prepared according to the steps outlined in [Prepare Your Dev Environment](./prepare-your-dev-environment.md)
 
 ## Installing the extension
 
-1. Build the development `az aro` extension:
+1. Check the `env.example` file and copy it by creating your own:
+
+   ```bash
+   cp env.example env
+   ```
+
+2. Build the development `az aro` extension:
 
    ```bash
    . ./env
    make az
    ```
 
-1. Verify the ARO extension is registered:
+3. Verify the ARO extension is registered:
 
    ```bash
    az -v
@@ -421,3 +433,12 @@ To run fake metrics socket:
 ```bash
 go run ./hack/monitor
 ```
+
+## Known Issues
+
+1. Trying to use `az aro` CLI in Production, fails wit:
+```
+NoRegisteredProviderFound) No registered resource provider found for location '$LOCATION' and API version '2024-08-12-preview'
+```
+- Check if`~/.azure/config` there is a block `extensions.dev_sources`. If yes, comment it.
+- Check if env var `AZURE_EXTENSION_DEV_SOURCES` is set. If yes, unset it.
