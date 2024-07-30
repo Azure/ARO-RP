@@ -236,7 +236,7 @@ func (p *prod) InitializeAuthorizers() error {
 		if err != nil {
 			return err
 		}
-		p.miseAuthorizer = miseadapter.NewAuthorizer(os.Getenv("MISE_ADDRESS"))
+		p.miseAuthorizer = miseadapter.NewAuthorizer(os.Getenv("MISE_ADDRESS"), p.log)
 	}
 
 	if !p.FeatureIsSet(FeatureEnforceMISE) {

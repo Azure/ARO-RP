@@ -20,9 +20,10 @@ type miseAdapter struct {
 	log    *logrus.Entry
 }
 
-func NewAuthorizer(miseAddress string) MISEAdapter {
+func NewAuthorizer(miseAddress string, log *logrus.Entry) MISEAdapter {
 	return &miseAdapter{
 		client: New(http.DefaultClient, miseAddress),
+		log:    log,
 	}
 }
 
