@@ -90,7 +90,7 @@ func (c Client) ValidateRequest(ctx context.Context, input Input) (Result, error
 }
 
 func createRequest(ctx context.Context, miseAddress string, input Input) (*http.Request, error) {
-	req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, miseAddress, nil)
+	req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, miseAddress+"/ValidateRequest", nil)
 	if reqErr != nil {
 		return nil, reqErr
 	}
