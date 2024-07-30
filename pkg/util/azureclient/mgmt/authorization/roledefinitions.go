@@ -28,6 +28,7 @@ var _ RoleDefinitionsClient = &roleDefinitionsClient{}
 func NewRoleDefinitionsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) RoleDefinitionsClient {
 	client := mgmtauthorization.NewRoleDefinitionsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &roleDefinitionsClient{
 		RoleDefinitionsClient: client,

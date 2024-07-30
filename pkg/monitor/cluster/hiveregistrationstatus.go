@@ -15,9 +15,8 @@ import (
 )
 
 var clusterDeploymentConditionsExpected = map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
-	hivev1.ClusterReadyCondition:  corev1.ConditionTrue,
-	hivev1.UnreachableCondition:   corev1.ConditionFalse,
-	hivev1.SyncSetFailedCondition: corev1.ConditionFalse,
+	hivev1.ClusterReadyCondition: corev1.ConditionTrue,
+	hivev1.UnreachableCondition:  corev1.ConditionFalse,
 }
 
 func (mon *Monitor) emitHiveRegistrationStatus(ctx context.Context) error {

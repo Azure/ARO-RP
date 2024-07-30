@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/ghodss/yaml"
 	"golang.org/x/crypto/ssh"
+	"sigs.k8s.io/yaml"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
@@ -103,7 +103,6 @@ type Configuration struct {
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
 	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
 	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
-	UseCheckAccess           *string `json:"useCheckAccess,omitempty"`
 }
 
 // Note: if this configuration block is provided, all throughputs must be present and valid

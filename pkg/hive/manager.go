@@ -171,7 +171,6 @@ func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api
 
 	checkConditions := map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
 		hivev1.ProvisionedCondition:                     corev1.ConditionTrue,
-		hivev1.SyncSetFailedCondition:                   corev1.ConditionFalse,
 		hivev1.ControlPlaneCertificateNotFoundCondition: corev1.ConditionFalse,
 		hivev1.UnreachableCondition:                     corev1.ConditionFalse,
 	}

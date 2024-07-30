@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -33,6 +34,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azblob"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -71,27 +73,31 @@ type manager struct {
 	localFpAuthorizer autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
-	spGraphClient         *utilgraph.GraphServiceClient
-	disks                 compute.DisksClient
-	virtualMachines       compute.VirtualMachinesClient
-	interfaces            network.InterfacesClient // TODO: use armInterfaces instead.
-	armInterfaces         armnetwork.InterfacesClient
-	publicIPAddresses     network.PublicIPAddressesClient // TODO: use armPublicIPAddresses instead.
-	armPublicIPAddresses  armnetwork.PublicIPAddressesClient
-	loadBalancers         network.LoadBalancersClient // TODO: use armLoadBalancers instead.
-	armLoadBalancers      armnetwork.LoadBalancersClient
-	privateEndpoints      network.PrivateEndpointsClient
-	securityGroups        network.SecurityGroupsClient
-	deployments           features.DeploymentsClient
-	resourceGroups        features.ResourceGroupsClient
-	resources             features.ResourcesClient
-	privateZones          privatedns.PrivateZonesClient
-	virtualNetworkLinks   privatedns.VirtualNetworkLinksClient
-	roleAssignments       authorization.RoleAssignmentsClient
-	roleDefinitions       authorization.RoleDefinitionsClient
-	denyAssignments       authorization.DenyAssignmentClient
-	fpPrivateEndpoints    network.PrivateEndpointsClient
-	rpPrivateLinkServices network.PrivateLinkServicesClient
+	spGraphClient            *utilgraph.GraphServiceClient
+	disks                    compute.DisksClient
+	virtualMachines          compute.VirtualMachinesClient
+	interfaces               network.InterfacesClient // TODO: use armInterfaces instead.
+	armInterfaces            armnetwork.InterfacesClient
+	publicIPAddresses        network.PublicIPAddressesClient // TODO: use armPublicIPAddresses instead.
+	armPublicIPAddresses     armnetwork.PublicIPAddressesClient
+	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead.
+	armLoadBalancers         armnetwork.LoadBalancersClient
+	privateEndpoints         network.PrivateEndpointsClient // TODO: use armPrivateEndpoints instead.
+	armPrivateEndpoints      armnetwork.PrivateEndpointsClient
+	securityGroups           network.SecurityGroupsClient // TODO: use armSecurityGroups instead.
+	armSecurityGroups        armnetwork.SecurityGroupsClient
+	deployments              features.DeploymentsClient
+	resourceGroups           features.ResourceGroupsClient
+	resources                features.ResourcesClient
+	privateZones             privatedns.PrivateZonesClient
+	virtualNetworkLinks      privatedns.VirtualNetworkLinksClient
+	roleAssignments          authorization.RoleAssignmentsClient
+	roleDefinitions          authorization.RoleDefinitionsClient
+	denyAssignments          authorization.DenyAssignmentClient
+	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead.
+	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
+	rpPrivateLinkServices    network.PrivateLinkServicesClient // TODO: use armRPPrivateLinkServices instead.
+	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -137,7 +143,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	// TODO: Delete once the replace to track2 is done
+	// TODO: Delete once the replacement to track2 is done
 	fpAuthorizer, err := refreshable.NewAuthorizer(_env, subscriptionDoc.Subscription.Properties.TenantID)
 	if err != nil {
 		return nil, err
@@ -148,11 +154,17 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID())
+	if err != nil {
+		return nil, err
+	}
+
 	msiCredential, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO: Delete once the replacement to track2 is done.
 	msiAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
@@ -170,16 +182,15 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
 	clientOptions := arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: _env.Environment().Cloud,
 			Retry: common.RetryOptions,
+			Transport: &http.Client{
+				Transport: customRoundTripper,
+			},
 		},
-	}
-
-	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
-	if err != nil {
-		return nil, err
 	}
 
 	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
@@ -192,45 +203,74 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	armPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredRPTenant, &clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	armSecurityGroupsClient, err := armnetwork.NewSecurityGroupsClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, msiCredential, &clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	rpBlob, err := azblob.NewManager(_env.Environment(), _env.SubscriptionID(), msiCredential)
 	if err != nil {
 		return nil, err
 	}
 
 	return &manager{
-		log:                   log,
-		env:                   _env,
-		db:                    db,
-		dbGateway:             dbGateway,
-		dbOpenShiftVersions:   dbOpenShiftVersions,
-		billing:               billing,
-		doc:                   doc,
-		subscriptionDoc:       subscriptionDoc,
-		fpAuthorizer:          fpAuthorizer,
-		localFpAuthorizer:     localFPAuthorizer,
-		metricsEmitter:        metricsEmitter,
-		disks:                 compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		virtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		interfaces:            network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		armInterfaces:         armInterfacesClient,
-		publicIPAddresses:     network.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		armPublicIPAddresses:  armPublicIPAddressesClient,
-		loadBalancers:         network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		armLoadBalancers:      armLoadBalancersClient,
-		privateEndpoints:      network.NewPrivateEndpointsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		securityGroups:        network.NewSecurityGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		deployments:           features.NewDeploymentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		resourceGroups:        features.NewResourceGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		resources:             features.NewResourcesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		privateZones:          privatedns.NewPrivateZonesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		virtualNetworkLinks:   privatedns.NewVirtualNetworkLinksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		roleAssignments:       authorization.NewRoleAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		roleDefinitions:       authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		denyAssignments:       authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		fpPrivateEndpoints:    network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
-		rpPrivateLinkServices: network.NewPrivateLinkServicesClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer),
+		log:                      log,
+		env:                      _env,
+		db:                       db,
+		dbGateway:                dbGateway,
+		dbOpenShiftVersions:      dbOpenShiftVersions,
+		billing:                  billing,
+		doc:                      doc,
+		subscriptionDoc:          subscriptionDoc,
+		fpAuthorizer:             fpAuthorizer,
+		localFpAuthorizer:        localFPAuthorizer,
+		metricsEmitter:           metricsEmitter,
+		disks:                    compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		virtualMachines:          compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		interfaces:               network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armInterfaces:            armInterfacesClient,
+		publicIPAddresses:        network.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armPublicIPAddresses:     armPublicIPAddressesClient,
+		loadBalancers:            network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armLoadBalancers:         armLoadBalancersClient,
+		privateEndpoints:         network.NewPrivateEndpointsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armPrivateEndpoints:      armPrivateEndpoints,
+		securityGroups:           network.NewSecurityGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armSecurityGroups:        armSecurityGroupsClient,
+		deployments:              features.NewDeploymentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resourceGroups:           features.NewResourceGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resources:                features.NewResourcesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		privateZones:             privatedns.NewPrivateZonesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		virtualNetworkLinks:      privatedns.NewVirtualNetworkLinksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		roleAssignments:          authorization.NewRoleAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		roleDefinitions:          authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		denyAssignments:          authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		fpPrivateEndpoints:       network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
+		armFPPrivateEndpoints:    armFPPrivateEndpoints,
+		rpPrivateLinkServices:    network.NewPrivateLinkServicesClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer),
+		armRPPrivateLinkServices: armRPPrivateLinkServices,
 
-		dns:     dns.NewManager(_env, localFPAuthorizer),
+		dns:     dns.NewManager(_env, fpCredRPTenant),
 		storage: storage,
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(_env, log, aead, storage),

@@ -1,0 +1,31 @@
+parameters:
+  - name: gitBranch
+    type: string
+    default: master
+  - name: azureJson
+    type: string
+    default: $(aro-v4-e2e-devops-spn)
+  - name: secretSA
+    type: string
+    default: rharosecretsdev
+  - name: location
+    type: string
+    default: eastus
+  - name: resourceGroup
+    type: string
+    default: $(AZURE_UNIQUE_PREFIX)-aro-${{ parameters.location }}
+  - name: databaseAccountName
+    type: string
+    default: $(AZURE_UNIQUE_PREFIX)-aro-${{ parameters.location }}
+  - name: keyvaultPrefix
+    type: string
+    default: $(AZURE_UNIQUE_PREFIX)-aro-${{ parameters.location }}
+  - name: dst_acr_name
+    type: string
+    default: $(AZURE_UNIQUE_PREFIX)aro
+  - name: aroImage
+    type: string
+    default: ${{ parameters.dst_acr_name }}.azurecr.io/aro:$(git rev-parse --short=7 HEAD) # do we have git?
+  - name: ocpVersionTag
+    type: string
+    default: latest

@@ -7,7 +7,6 @@ package applens
 
 import (
 	"context"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -60,19 +59,33 @@ func NewClient(endpoint, issuerUrlTemplate, caName, scope string, cred azcore.To
 	return &Client{endpoint: endpoint, pipeline: *pipeline}, nil
 }
 
-func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate, caName string) (*runtime.Pipeline, error) {
-	var cp *x509.CertPool = nil
-	var err error = nil
-	if options == nil {
-		// if provided pki info fetch the correct cert pool
-		// otherwise use the default of nil
-		if issuerUrlTemplate != "" && caName != "" {
-			cp, err = pki.GetTlsCertPool(issuerUrlTemplate, caName)
-			if err != nil {
-				return nil, err
-			}
-		}
-		options = NewClientOptions(cp)
+func getClientOptions(initialOptions *ClientOptions, issuerUrlTemplate, caName string) (*ClientOptions, error) {
+	if initialOptions != nil {
+		return initialOptions, nil
+	}
+
+	if issuerUrlTemplate == "" || caName == "" {
+		return NewClientOptions(nil), nil
+	}
+
+	url := fmt.Sprintf(issuerUrlTemplate, caName)
+	rootCAs, err := pki.FetchDataFromGetIssuerPki(url)
+	if err != nil {
+		return nil, err
+	}
+
+	certPool, err := pki.BuildCertPoolForCaName(rootCAs)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewClientOptions(certPool), nil
+}
+
+func newPipeline(authPolicy []policy.Policy, initialClientOptions *ClientOptions, issuerUrlTemplate, caName string) (*runtime.Pipeline, error) {
+	options, err := getClientOptions(initialClientOptions, issuerUrlTemplate, caName)
+	if err != nil {
+		return nil, err
 	}
 
 	runtimePipeline := runtime.NewPipeline(
@@ -185,7 +198,7 @@ func (c *Client) executeAndEnsureSuccessResponse(request *policy.Request) (*http
 		return nil, err
 	}
 
-	successResponse := (response.StatusCode >= 200 && response.StatusCode < 300) || response.StatusCode == 304
+	successResponse := (response.StatusCode >= 200 && response.StatusCode < 300) || response.StatusCode == http.StatusNotModified
 	if successResponse {
 		return response, nil
 	}

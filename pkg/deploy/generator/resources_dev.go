@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -143,6 +143,9 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 							},
 						},
 					},
+					SecurityProfile: &mgmtcompute.SecurityProfile{
+						SecurityType: mgmtcompute.SecurityTypesTrustedLaunch,
+					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("MicrosoftCBLMariner"),
@@ -155,6 +158,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
+							DiskSizeGB: to.Int32Ptr(64),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
@@ -354,17 +358,16 @@ func (g *generator) devVPN() *arm.Resource {
 }
 
 const (
-	sharedKeyVaultName          = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
-	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
-	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
-	// Conflicts with current development subscription. cannot have two keyvaults with same name
-	SharedKeyVaultNameSuffix          = "-dev-sharedKV"
-	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
+	sharedDiskEncryptionKeyVaultName       = "concat(take(resourceGroup().name,10), '" + SharedDiskEncryptionKeyVaultNameSuffix + "')"
+	sharedDiskEncryptionSetName            = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
+	sharedDiskEncryptionKeyName            = "concat(resourceGroup().name, '-disk-encryption-key')"
+	SharedDiskEncryptionKeyVaultNameSuffix = "-dev-disk-enc"
+	SharedDiskEncryptionSetNameSuffix      = "-disk-encryption-set"
 )
 
 // shared keyvault for keys used for disk encryption sets when creating clusters locally
 func (g *generator) devDiskEncryptionKeyvault() *arm.Resource {
-	return g.keyVault(fmt.Sprintf("[%s]", sharedKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
+	return g.keyVault(fmt.Sprintf("[%s]", sharedDiskEncryptionKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
 }
 
 func (g *generator) devDiskEncryptionKey() *arm.Resource {
@@ -374,7 +377,7 @@ func (g *generator) devDiskEncryptionKey() *arm.Resource {
 			KeySize: to.Int32Ptr(4096),
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName)),
+		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName)),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults/keys"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 	}
@@ -382,17 +385,17 @@ func (g *generator) devDiskEncryptionKey() *arm.Resource {
 	return &arm.Resource{
 		Resource:   key,
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
-		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)},
+		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedDiskEncryptionKeyVaultName)},
 	}
 }
 
 func (g *generator) devDiskEncryptionSet() *arm.Resource {
 	diskEncryptionSet := &mgmtcompute.DiskEncryptionSet{
 		EncryptionSetProperties: &mgmtcompute.EncryptionSetProperties{
-			ActiveKey: &mgmtcompute.KeyVaultAndKeyReference{
-				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
+			ActiveKey: &mgmtcompute.KeyForDiskEncryptionSet{
+				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
 				SourceVault: &mgmtcompute.SourceVault{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)),
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedDiskEncryptionKeyVaultName)),
 				},
 			},
 		},
@@ -400,14 +403,14 @@ func (g *generator) devDiskEncryptionSet() *arm.Resource {
 		Name:     to.StringPtr(fmt.Sprintf("[%s]", sharedDiskEncryptionSetName)),
 		Type:     to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
 		Location: to.StringPtr("[resourceGroup().location]"),
-		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.SystemAssigned},
+		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.DiskEncryptionSetIdentityTypeSystemAssigned},
 	}
 
 	return &arm.Resource{
 		Resource:   diskEncryptionSet,
-		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		APIVersion: azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"),
 		DependsOn: []string{
-			fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', %s, %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName),
+			fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', %s, %s)]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName),
 		},
 	}
 }
@@ -430,7 +433,7 @@ func (g *generator) devDiskEncryptionKeyVaultAccessPolicy() *arm.Resource {
 			},
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/add')]", sharedKeyVaultName)),
+		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/add')]", sharedDiskEncryptionKeyVaultName)),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults/accessPolicies"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 	}

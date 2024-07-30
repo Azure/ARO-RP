@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -1727,7 +1728,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, nil, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2800,7 +2801,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, ti.platformWorkloadIdentityRoleSetsDatabase, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -3133,7 +3134,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, ti.platformWorkloadIdentityRoleSetsDatabase, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -3312,56 +3313,17 @@ func TestValidateIdentityUrl(t *testing.T) {
 		identityURL string
 		cluster     *api.OpenShiftCluster
 		expected    *api.OpenShiftCluster
-		isCreate    bool
 		wantError   error
 	}{
 		{
-			name:        "identity URL is empty, is not wi/mi cluster create",
+			name:        "identity URL is empty",
 			identityURL: "",
 			cluster:     &api.OpenShiftCluster{},
 			expected:    &api.OpenShiftCluster{},
-			isCreate:    false,
+			wantError:   errMissingIdentityParameter,
 		},
 		{
-			name:        "identity URL is empty, is wi/mi cluster create",
-			identityURL: "",
-			cluster:     &api.OpenShiftCluster{},
-			expected:    &api.OpenShiftCluster{},
-			isCreate:    true,
-			wantError:   errMissingIdentityURL,
-		},
-		{
-			name:        "cluster is not wi/mi, identityURL passed",
-			identityURL: "http://foo.bar",
-			cluster: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
-				},
-			},
-			expected: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
-				},
-			},
-			isCreate: true,
-		},
-		{
-			name:        "cluster is not wi/mi, identityURL not passed",
-			identityURL: "",
-			cluster: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
-				},
-			},
-			expected: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
-				},
-			},
-			isCreate: true,
-		},
-		{
-			name: "pass - identity URL passed on wi/mi cluster",
+			name: "pass - identity URL passed",
 			cluster: &api.OpenShiftCluster{
 				Identity: &api.Identity{},
 			},
@@ -3371,12 +3333,52 @@ func TestValidateIdentityUrl(t *testing.T) {
 					IdentityURL: "http://foo.bar",
 				},
 			},
-			isCreate: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateIdentityUrl(tt.cluster, tt.identityURL, tt.isCreate)
-			if err != nil && err != tt.wantError {
+			err := validateIdentityUrl(tt.cluster, tt.identityURL)
+			if !errors.Is(err, tt.wantError) {
+				t.Error(cmp.Diff(err, tt.wantError))
+			}
+
+			if !reflect.DeepEqual(tt.cluster, tt.expected) {
+				t.Error(cmp.Diff(tt.cluster, tt.expected))
+			}
+		})
+	}
+}
+
+func TestValidateIdentityTenantID(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		tenantID  string
+		cluster   *api.OpenShiftCluster
+		expected  *api.OpenShiftCluster
+		wantError error
+	}{
+		{
+			name:      "tenantID is empty",
+			tenantID:  "",
+			cluster:   &api.OpenShiftCluster{},
+			expected:  &api.OpenShiftCluster{},
+			wantError: errMissingIdentityParameter,
+		},
+		{
+			name: "pass - tenantID passed",
+			cluster: &api.OpenShiftCluster{
+				Identity: &api.Identity{},
+			},
+			tenantID: "bogus",
+			expected: &api.OpenShiftCluster{
+				Identity: &api.Identity{
+					TenantID: "bogus",
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateIdentityTenantID(tt.cluster, tt.tenantID)
+			if !errors.Is(err, tt.wantError) {
 				t.Error(cmp.Diff(err, tt.wantError))
 			}
 

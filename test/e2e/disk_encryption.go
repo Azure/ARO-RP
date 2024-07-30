@@ -82,13 +82,15 @@ var _ = Describe("Disk encryption at rest", func() {
 		By("checking that disk encryption at rest is enabled for masters")
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
 		Expect(oc.OpenShiftClusterProperties.MasterProfile).To(Not(BeNil()))
-		Expect(*(*oc.OpenShiftClusterProperties.MasterProfile).DiskEncryptionSetID).NotTo(BeEmpty())
+		Expect(oc.OpenShiftClusterProperties.MasterProfile.DiskEncryptionSetID).NotTo(BeNil())
+		Expect(*oc.OpenShiftClusterProperties.MasterProfile.DiskEncryptionSetID).NotTo(BeEmpty())
 
 		By("checking that disk encryption at rest is enabled for workers")
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
 		Expect(oc.OpenShiftClusterProperties.WorkerProfiles).To(Not(BeNil()))
 		Expect(*oc.OpenShiftClusterProperties.WorkerProfiles).NotTo(BeEmpty())
 		for _, profile := range *oc.OpenShiftClusterProperties.WorkerProfiles {
+			Expect(profile.DiskEncryptionSetID).NotTo(BeNil())
 			Expect(*profile.DiskEncryptionSetID).NotTo(BeEmpty())
 		}
 

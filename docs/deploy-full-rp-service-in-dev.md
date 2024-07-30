@@ -261,10 +261,10 @@
    the RP with a single vm instance, and another VMSS with a single vm for
    Gateway.
 
-1. Create storage account and role assignment required for workload identity clusters
+1. Create additional infrastructure required for workload identity clusters
     ```
     source ./hack/devtools/deploy-shared-env.sh
-    deploy_oic_for_dedicated_rp
+    deploy_miwi_infra_for_dedicated_rp
     ```
 
 1. If you are going to use multiversion, you can now update the OpenShiftVersions DB as per [OpenShift Version insttructions](./deploy-development-rp.md#openshift-version)
@@ -411,3 +411,37 @@
 
     > __NOTE:__ The `az aro` CLI extension must be registered in order to run `az aro` commands against a local or tunneled RP. The usual hack script used to create clusters does not work due to keyvault mirroring requirements. The name of the cluster depends on the DNS zone that was created in an earlier step.
 
+## Recover VPN access
+
+Since setting up your own VPN in an earlier step will overwrite your local secrets, you will lose access to the vpn / vnet gateway that you provisioned in an earlier step if you run `make secrets`. If you don't have a secrets/* backup, you can recover your access using the following steps. Please note that this action will _**OVER WRITE**_ the `secrets/vpn-$LOCATION.ovpn` on your local machine. **DO NOT** run `make secrets-update` after doing this, as you will overwrite the shared secrets for all users.
+
+1. Source all environment variables from earlier, and run the VPN configuration step again:
+
+    ```bash
+    . ./env
+    . ./env-int
+
+    source ./hack/devtools/deploy-shared-env.sh
+    vpn_configuration
+    ```
+
+1. Create new VPN certificates locally:
+
+    ```bash
+    go run ./hack/genkey -ca vpn-ca
+    mv vpn-ca.* secrets
+    go run ./hack/genkey -client -keyFile secrets/vpn-ca.key -certFile secrets/vpn-ca.crt vpn-client
+    mv vpn-client.* secrets
+    ```
+
+1. Update the VPN configuration locally:
+    - Add the new cert and key created above (located in `secrets/vpn-client.pem`) to `secrets/vpn-eastus.ovpn`, replacing the existing configuration.
+
+1. Add the newly created secrets to the `dev-vpn` vnet gateway in `$USER-aro-$LOCATION` resource group:
+    - In portal, navigate to `dev-vpn`, Point-to-site configuration > Root certificates.
+    - Add the new `secrets/vpn-ca.pem` data created above to this configuration.
+
+1. Connect to the VPN:
+    ```bash
+    sudo openvpn secrets/vpn-$LOCATION.ovpn
+    ```

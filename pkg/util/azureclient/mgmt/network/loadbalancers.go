@@ -28,6 +28,7 @@ var _ LoadBalancersClient = &loadBalancersClient{}
 func NewLoadBalancersClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) LoadBalancersClient {
 	client := mgmtnetwork.NewLoadBalancersClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &loadBalancersClient{
 		LoadBalancersClient: client,
@@ -48,6 +49,7 @@ var _ LoadBalancerBackendAddressPoolsClient = &loadBalancerBackendAddressPoolsCl
 func NewLoadBalancerBackendAddressPoolsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) LoadBalancerBackendAddressPoolsClient {
 	client := mgmtnetwork.NewLoadBalancerBackendAddressPoolsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &loadBalancerBackendAddressPoolsClient{
 		LoadBalancerBackendAddressPoolsClient: client,

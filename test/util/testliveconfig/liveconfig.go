@@ -15,7 +15,6 @@ import (
 type testLiveConfig struct {
 	adoptByHive    bool
 	installViaHive bool
-	useCheckAccess bool
 }
 
 func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
@@ -33,10 +32,6 @@ func (t *testLiveConfig) AdoptByHive(ctx context.Context) (bool, error) {
 	return t.adoptByHive, nil
 }
 
-func (t *testLiveConfig) UseCheckAccess(ctx context.Context) (bool, error) {
-	return t.useCheckAccess, nil
-}
-
 func (t *testLiveConfig) DefaultInstallerPullSpecOverride(ctx context.Context) string {
 	if t.installViaHive {
 		return "example/pull:spec"
@@ -44,10 +39,9 @@ func (t *testLiveConfig) DefaultInstallerPullSpecOverride(ctx context.Context) s
 	return ""
 }
 
-func NewTestLiveConfig(adoptByHive, installViaHive, useCheckAccess bool) liveconfig.Manager {
+func NewTestLiveConfig(adoptByHive, installViaHive bool) liveconfig.Manager {
 	return &testLiveConfig{
 		adoptByHive:    adoptByHive,
 		installViaHive: installViaHive,
-		useCheckAccess: useCheckAccess,
 	}
 }

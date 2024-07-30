@@ -104,14 +104,14 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
-		"registry.access.redhat.com/ubi8/go-toolset:1.20.12-5",
+		"registry.access.redhat.com/ubi8/go-toolset:1.21.11-1.1720406008",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
-		"quay.io/app-sre/hive:d7ead609f4",
+		"quay.io/app-sre/hive:b1ac27b248",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 

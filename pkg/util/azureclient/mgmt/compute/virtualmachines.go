@@ -30,6 +30,7 @@ func NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscript
 	client := mgmtcompute.NewVirtualMachinesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 	client.PollingDuration = 30 * time.Minute
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &virtualMachinesClient{
 		VirtualMachinesClient: client,

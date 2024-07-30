@@ -29,6 +29,11 @@ type OpenShiftCluster struct {
 	Lock sync.Mutex `json:"-"`
 }
 
+// UsesWorkloadIdentity checks whether a cluster is a Workload Identity cluster or a Service Principal cluster
+func (oc *OpenShiftCluster) UsesWorkloadIdentity() bool {
+	return oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.ServicePrincipalProfile == nil
+}
+
 // CreatedByType by defines user type, which executed the request
 // This field should match common-types field names for swagger and sdk generation
 type CreatedByType string
@@ -204,9 +209,10 @@ const (
 	// Maintenance tasks that perform work on the cluster
 	//
 
-	MaintenanceTaskEverything MaintenanceTask = "Everything"
-	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskEverything        MaintenanceTask = "Everything"
+	MaintenanceTaskOperator          MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts        MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskSyncClusterObject MaintenanceTask = "SyncClusterObject"
 
 	//
 	// Maintenance tasks for updating customer maintenance signals
@@ -370,6 +376,15 @@ type NetworkProfile struct {
 	LoadBalancerProfile        *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
+// IP address ranges internally used by ARO
+var (
+	JoinCIDRRange []string = []string{
+		"100.64.0.0/16",
+		"169.254.169.0/29",
+		"100.88.0.0/16",
+	}
+)
+
 // PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets
 type PreconfiguredNSG string
 
@@ -523,8 +538,8 @@ const (
 )
 
 type VMSizeStruct struct {
-	CoreCount int
-	Family    string
+	CoreCount int    `json:"coreCount,omitempty"`
+	Family    string `json:"family,omitempty"`
 }
 
 var (
@@ -812,4 +827,5 @@ type Identity struct {
 	Type                   string                 `json:"type,omitempty"`
 	UserAssignedIdentities UserAssignedIdentities `json:"userAssignedIdentities,omitempty"`
 	IdentityURL            string                 `json:"identityURL,omitempty" mutable:"true"`
+	TenantID               string                 `json:"tenantId,omitempty" mutable:"true"`
 }

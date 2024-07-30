@@ -3,13 +3,29 @@
 
 from unittest.mock import Mock, patch
 from azext_aro._validators import (
-    validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_outbound_type,
-    validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_subnet, validate_subnets,
-    validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials,
-    validate_load_balancer_managed_outbound_ip_count
+    validate_cidr,
+    validate_client_id,
+    validate_client_secret,
+    validate_cluster_resource_group,
+    validate_outbound_type,
+    validate_disk_encryption_set,
+    validate_domain,
+    validate_pull_secret,
+    validate_subnet,
+    validate_subnets,
+    validate_visibility,
+    validate_vnet_resource_group_name,
+    validate_worker_count,
+    validate_worker_vm_disk_size_gb,
+    validate_refresh_cluster_credentials,
+    validate_load_balancer_managed_outbound_ip_count,
+    validate_enable_managed_identity,
+    validate_platform_workload_identities,
+    validate_cluster_identity
 )
 from azure.cli.core.azclierror import (
-    InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
+    InvalidArgumentValueError, RequiredArgumentMissingError,
+    CLIInternalError, MutuallyExclusiveArgumentError
 )
 from azure.core.exceptions import ResourceNotFoundError
 import pytest
@@ -87,6 +103,12 @@ test_validate_client_id_data = [
         "should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
         Mock(client_id="12345678123456781234567812345678", client_secret="12345"),
         None
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when enable_managed_identity is true",
+        Mock(client_id="12345678123456781234567812345678",
+             enable_managed_identity=True),
+        MutuallyExclusiveArgumentError
     )
 ]
 
@@ -106,9 +128,15 @@ def test_validate_client_id(test_description, namespace, expected_exception):
 
 test_validate_client_secret_data = [
     (
-        "should not raise any exception when isCreate is false",
+        "should not raise any exception when isCreate is false and enable_managed_identity is None",
         False,
         Mock(client_id=None),
+        None
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when isCreate is false and enable_managed_identity is True",
+        False,
+        Mock(client_secret="123", enable_managed_identity=True),
         None
     ),
     (
@@ -134,6 +162,12 @@ test_validate_client_secret_data = [
         True,
         Mock(client_id=None, client_secret="123"),
         RequiredArgumentMissingError
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when enable_managed_identity is true",
+        True,
+        Mock(client_secret="123", enable_managed_identity=True),
+        MutuallyExclusiveArgumentError
     )
 ]
 
@@ -508,15 +542,15 @@ test_validate_subnet_data = [
 ]
 
 
-@ pytest.mark.parametrize(
+@pytest.mark.parametrize(
     "test_description, namespace, key, is_valid_resource_id_mock_return_value, parse_resource_id_mock_return_value, get_subscription_id_mock_return_value, get_network_vnet_subnet_show_mock_return_value, cmd, expected_exception",
     test_validate_subnet_data,
     ids=[i[0] for i in test_validate_subnet_data]
 )
-@ patch('azext_aro._validators.subnet_show')
-@ patch('azext_aro._validators.get_subscription_id')
-@ patch('azext_aro._validators.parse_resource_id')
-@ patch('azext_aro._validators.is_valid_resource_id')
+@patch('azext_aro._validators.subnet_show')
+@patch('azext_aro._validators.get_subscription_id')
+@patch('azext_aro._validators.parse_resource_id')
+@patch('azext_aro._validators.is_valid_resource_id')
 def test_validate_subnet(
     # Mocked functions:
     is_valid_resource_id_mock, parse_resource_id_mock, get_subscription_id_mock, get_network_vnet_subnet_show_mock,
@@ -668,7 +702,7 @@ test_validate_vnet_resource_group_name_data = [
 )
 def test_validate_vnet_resource_group_name(test_description, namespace, expected_namespace_vnet_resource_group_name):
     validate_vnet_resource_group_name(namespace)
-    assert(namespace.vnet_resource_group_name ==
+    assert (namespace.vnet_resource_group_name ==
            expected_namespace_vnet_resource_group_name)
 
 
@@ -918,3 +952,239 @@ def test_validate_load_balancer_managed_outbound_ip_count(test_description, name
     else:
         with pytest.raises(expected_exception):
             validate_load_balancer_managed_outbound_ip_count(namespace)
+
+
+test_validate_enable_managed_identity_data = [
+    (
+        "Should not raise any exception when empty",
+        Mock(enable_managed_identity=None),
+        None, None,
+    ),
+    (
+        "Should not raise any exception when False",
+        Mock(enable_managed_identity=False),
+        None, None
+    ),
+    (
+        "Should raise InvalidArgumentValueError if client_id is present",
+        Mock(enable_managed_identity=True,
+             client_id="00000000-0000-0000-0000-000000000000", client_secret=None),
+        InvalidArgumentValueError, 'Must not specify --client-id when --enable-managed-identity is True'
+    ),
+    (
+        "Should raise InvalidArgumentValueError if client_secret is present",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret="asdfghjkl"),
+        InvalidArgumentValueError, 'Must not specify --client-secret when --enable-managed-identity is True'
+    ),
+    (
+        "Should raise InvalidArgumentValueError when version is not present",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version=None),
+        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
+    ),
+    (
+        "Should raise InvalidArgumentValueError when version is invalid",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="a"),
+        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
+    ),
+    (
+        "Should raise InvalidArgumentValueError when version < 4.14.0",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="4.13.99"),
+        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
+    ),
+    (
+        "Should raise RequiredArgumentMissingError when no platform workload identities are set",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="4.14.0",
+             platform_workload_identities=[]),
+        RequiredArgumentMissingError, 'Enabling managed identity requires platform workload identities to be provided'
+    ),
+    (
+        "Should raise RequiredArgumentMissingError when cluster identity is not set",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="4.14.0",
+             platform_workload_identities=[Mock(resource_id="foo")],
+             mi_user_assigned=None),
+        RequiredArgumentMissingError, 'Enabling managed identity requires cluster identity to be provided'
+    ),
+    (
+        "Should not raise any exception when valid",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="4.14.0",
+             platform_workload_identities=[Mock(resource_id="foo")],
+             mi_user_assigned="foo"),
+        None, None
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception, expected_exception_message",
+    test_validate_enable_managed_identity_data,
+    ids=[i[0] for i in test_validate_enable_managed_identity_data]
+)
+def test_validate_enable_managed_identity(test_description, namespace, expected_exception, expected_exception_message):
+    if expected_exception is None:
+        validate_enable_managed_identity(namespace)
+    else:
+        with pytest.raises(expected_exception, match=expected_exception_message):
+            validate_enable_managed_identity(namespace)
+
+
+test_validate_platform_workload_identities_data = [
+    (
+        "Should not raise any exception when empty",
+        Mock(platform_workload_identities=None),
+        None,
+        None
+    ),
+    (
+        "Should raise RequiredArgumentMissingError if enable_managed_identity is not present",
+        Mock(enable_managed_identity=None,
+             platform_workload_identities=[]),
+        RequiredArgumentMissingError,
+        None
+    ),
+    (
+        "Should raise RequiredArgumentMissingError if enable_managed_identity is False",
+        Mock(enable_managed_identity=False,
+             platform_workload_identities=[]),
+        RequiredArgumentMissingError,
+        None
+    ),
+    (
+        "Should raise InvalidArgumentError if any resource IDs are not for userAssignedIdentities",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
+             ]),
+        InvalidArgumentValueError,
+        None
+    ),
+    (
+        "Should convert all identities passed in as names to full resource IDs",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 Mock(resource_id="bar")
+             ]),
+        None,
+        [
+            Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+            Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
+        ]
+    ),
+    (
+        "Should not raise any exception when valid",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
+             ]),
+        None,
+        None
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception, expected_identities",
+    test_validate_platform_workload_identities_data,
+    ids=[i[0] for i in test_validate_platform_workload_identities_data]
+)
+def test_validate_platform_workload_identities(test_description, namespace, expected_exception, expected_identities):
+    cli_ctx = Mock(data={'subscription_id': namespace.subscription_id})
+    cmd = Mock(cli_ctx=cli_ctx)
+    if expected_exception is None:
+        validate_platform_workload_identities(cmd, namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_platform_workload_identities(cmd, namespace)
+
+    if expected_identities is not None:
+        for expected, actual in zip(expected_identities, namespace.platform_workload_identities):
+            assert (expected.resource_id == actual.resource_id)
+
+
+test_validate_cluster_identity_data = [
+    (
+        "Should not raise any exception when empty",
+        Mock(mi_user_assigned=None),
+        None,
+        None
+    ),
+    (
+        "Should raise RequiredArgumentMissingError if enable_managed_identity is not present",
+        Mock(enable_managed_identity=None,
+             mi_user_assigned="foo"),
+        RequiredArgumentMissingError,
+        None
+    ),
+    (
+        "Should raise RequiredArgumentMissingError if enable_managed_identity is False",
+        Mock(enable_managed_identity=False,
+             mi_user_assigned="foo"),
+        RequiredArgumentMissingError,
+        None
+    ),
+    (
+        "Should raise InvalidArgumentError if resource ID is not for userAssignedIdentities",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             mi_user_assigned="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
+        InvalidArgumentValueError,
+        None
+    ),
+    (
+        "Should convert identity passed in as name to full resource ID",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             mi_user_assigned="foo"),
+        None,
+        "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"
+    ),
+    (
+        "Should not raise any exception when valid",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             mi_user_assigned="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+        None,
+        None
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception, expected_identity",
+    test_validate_cluster_identity_data,
+    ids=[i[0] for i in test_validate_cluster_identity_data]
+)
+def test_validate_cluster_identity(test_description, namespace, expected_exception, expected_identity):
+    cli_ctx = Mock(data={'subscription_id': namespace.subscription_id})
+    cmd = Mock(cli_ctx=cli_ctx)
+    if expected_exception is None:
+        validate_cluster_identity(cmd, namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_cluster_identity(cmd, namespace)
+
+    if expected_identity is not None:
+        assert (expected_identity == namespace.mi_user_assigned)

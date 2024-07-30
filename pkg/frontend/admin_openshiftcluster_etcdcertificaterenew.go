@@ -164,7 +164,13 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdCertificateRenew(ctx context.Co
 	if err != nil {
 		return err
 	}
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", r.ResourceType, r.ResourceName, r.ResourceGroup)

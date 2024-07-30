@@ -12,6 +12,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/gorilla/mux"
 
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -22,13 +23,16 @@ func TestRegionListPublic(t *testing.T) {
 	fixture := testdatabase.NewFixture().
 		WithOpenShiftClusters(dbOpenShiftClusters)
 
+	dbg := database.NewDBGroup().
+		WithOpenShiftClusters(dbOpenShiftClusters)
+
 	err := fixture.Create()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	p := &portal{
-		dbOpenShiftClusters: dbOpenShiftClusters,
+		dbGroup: dbg,
 	}
 
 	t.Setenv("AZURE_ENVIRONMENT", azureclient.PublicCloud.Environment.Name)
@@ -233,13 +237,16 @@ func TestRegionListFF(t *testing.T) {
 	fixture := testdatabase.NewFixture().
 		WithOpenShiftClusters(dbOpenShiftClusters)
 
+	dbg := database.NewDBGroup().
+		WithOpenShiftClusters(dbOpenShiftClusters)
+
 	err := fixture.Create()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	p := &portal{
-		dbOpenShiftClusters: dbOpenShiftClusters,
+		dbGroup: dbg,
 	}
 
 	t.Setenv("AZURE_ENVIRONMENT", azureclient.USGovernmentCloud.Environment.Name)

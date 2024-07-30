@@ -4,8 +4,11 @@ package fake
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 
 	consolev1 "github.com/openshift/api/console/v1"
+	applyconfigurationsconsolev1 "github.com/openshift/client-go/console/applyconfigurations/console/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -99,6 +102,27 @@ func (c *FakeConsoleCLIDownloads) DeleteCollection(ctx context.Context, opts v1.
 func (c *FakeConsoleCLIDownloads) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *consolev1.ConsoleCLIDownload, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(consoleclidownloadsResource, name, pt, data, subresources...), &consolev1.ConsoleCLIDownload{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*consolev1.ConsoleCLIDownload), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied consoleCLIDownload.
+func (c *FakeConsoleCLIDownloads) Apply(ctx context.Context, consoleCLIDownload *applyconfigurationsconsolev1.ConsoleCLIDownloadApplyConfiguration, opts v1.ApplyOptions) (result *consolev1.ConsoleCLIDownload, err error) {
+	if consoleCLIDownload == nil {
+		return nil, fmt.Errorf("consoleCLIDownload provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(consoleCLIDownload)
+	if err != nil {
+		return nil, err
+	}
+	name := consoleCLIDownload.Name
+	if name == nil {
+		return nil, fmt.Errorf("consoleCLIDownload.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(consoleclidownloadsResource, *name, types.ApplyPatchType, data), &consolev1.ConsoleCLIDownload{})
 	if obj == nil {
 		return nil, err
 	}

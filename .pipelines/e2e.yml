@@ -4,7 +4,7 @@ pr: none
 resources:
   pipelines:
     - pipeline: e2e
-      source: CI
+      source: \Public Cloud ARO pipelines\CI\CI
       trigger: true
   containers:
     - container: container
@@ -52,7 +52,6 @@ jobs:
 
           export CI=true
           . ./hack/e2e/run-rp-and-e2e.sh
-          get_cluster_sp
           deploy_e2e_db
         displayName: Setup (Azure)
 

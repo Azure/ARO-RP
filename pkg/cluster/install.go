@@ -48,6 +48,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	isEverything := task == api.MaintenanceTaskEverything || task == ""
 	isOperator := task == api.MaintenanceTaskOperator
 	isRenewCerts := task == api.MaintenanceTaskRenewCerts
+	isSyncClusterObject := task == api.MaintenanceTaskSyncClusterObject
 
 	stepsToRun := m.getZerothSteps()
 	if isEverything {
@@ -66,6 +67,8 @@ func (m *manager) adminUpdate() []steps.Step {
 		}
 	} else if isRenewCerts {
 		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
+	} else if isSyncClusterObject {
+		stepsToRun = append(stepsToRun, m.getSyncClusterObjectSteps()...)
 	}
 
 	// We don't run this on an operator-only deploy as PUCM scripts then cannot
@@ -83,11 +86,7 @@ func (m *manager) getZerothSteps() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-
-		// TODO: this relies on an authorizer that isn't exposed in the manager
-		// struct, so we'll rebuild the fpAuthorizer and use the error catching
-		// to advance
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+		steps.Action(m.fixupClusterSPObjectID),
 	}
 
 	// Generic fix-up actions that are fairly safe to always take, and don't require a running cluster
@@ -158,6 +157,24 @@ func (m *manager) getOperatorUpdateSteps() []steps.Step {
 		// The following are dependent on initializeOperatorDeployer.
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 		steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
+
+		// Once the ARO Operator is updated, synchronize the Cluster object. This is
+		// done after the ARO Operator is potentially updated so that any flag
+		// changes that happen in the same request only apply on the new Operator.
+		// Otherwise, it is possible for a flag change to occur on the old Operator
+		// version, then require reconciling to a new version a second time (e.g.
+		// DNSMasq changes) with the associated node cyclings for the resource
+		// updates.
+		steps.Action(m.syncClusterObject),
+	}
+
+	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
+}
+
+func (m *manager) getSyncClusterObjectSteps() []steps.Step {
+	steps := []steps.Step{
+		steps.Action(m.initializeOperatorDeployer),
+		steps.Action(m.syncClusterObject),
 	}
 	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
 }
@@ -341,7 +358,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.initializeKubernetesClients),
 		steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
-		steps.Action(m.ensureAROOperator),
+		steps.Action(m.installAROOperator),
 		steps.Action(m.incrInstallPhase),
 	)
 

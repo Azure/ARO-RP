@@ -60,7 +60,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    PULL_SECRET=...
    ```
 
-1. Install [Go 1.20](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.21](https://golang.org/dl) or later, if you haven't already.
 
 1. Install the [Azure
    CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
@@ -473,8 +473,8 @@ each of the bash functions below.
    deploy_env_dev
    # Deploy AKS resources for Hive
    deploy_aks_dev
-   # Deploy storage account and role assignment required for workload identity clusters
-   deploy_oic_dev
+   # Deploy additional infrastructure required for workload identity clusters
+   deploy_miwi_infra_dev
    ```
 
    If you encounter a "VirtualNetworkGatewayCannotUseStandardPublicIP" error

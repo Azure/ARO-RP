@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"math"
 	"net/url"
@@ -42,16 +43,23 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
-	redhatopenshift20230701preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-07-01-preview/redhatopenshift"
+	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/Azure/ARO-RP/test/util/dynamic"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
+
+const (
+	smoke = "smoke"
+)
+
+//go:embed static_resources
+var staticResources embed.FS
 
 var (
 	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
@@ -59,9 +67,8 @@ var (
 )
 
 type clientSet struct {
-	Operations               redhatopenshift20220904.OperationsClient
-	OpenshiftClusters        redhatopenshift20220904.OpenShiftClustersClient
-	OpenshiftClustersPreview redhatopenshift20230701preview.OpenShiftClustersClient
+	Operations        redhatopenshift20231122.OperationsClient
+	OpenshiftClusters redhatopenshift20231122.OpenShiftClustersClient
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient
@@ -74,6 +81,7 @@ type clientSet struct {
 	Storage               storage.AccountsClient
 	LoadBalancers         network.LoadBalancersClient
 
+	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
 	HiveRestConfig     *rest.Config
 	Monitoring         monitoringclient.Interface
@@ -322,6 +330,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	dynamiccli, err := dynamic.NewDynamicClient(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	var hiveRestConfig *rest.Config
 	var hiveClientSet client.Client
 	var hiveAKS *kubernetes.Clientset
@@ -356,9 +369,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		Operations:               redhatopenshift20220904.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClusters:        redhatopenshift20220904.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClustersPreview: redhatopenshift20230701preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operations:        redhatopenshift20231122.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClusters: redhatopenshift20231122.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -374,6 +386,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
+		Dynamic:            dynamiccli,
 		Client:             controllerRuntimeClient,
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,

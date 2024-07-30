@@ -12,9 +12,6 @@ trigger:
       - v2*
 
 pr:
-  branches:
-    include:
-      - master
   paths:
     exclude:
       - docs/*
@@ -22,7 +19,7 @@ pr:
 resources:
   containers:
     - container: golang
-      image: registry.access.redhat.com/ubi8/go-toolset:1.20.12-5
+      image: registry.access.redhat.com/ubi8/go-toolset:1.21.11-1.1720406008
       options: --user=0
     - container: python
       image: registry.access.redhat.com/ubi8/python-39:latest
@@ -32,12 +29,12 @@ variables:
   - template: vars.yml
 
 jobs:
-
   - job: Python_Unit_Tests
     pool:
       name: 1es-aro-ci-pool
     variables:
       HOME: $(Agent.BuildDirectory)
+
     steps:
       - template: ./templates/template-checkout.yml
       - script: |

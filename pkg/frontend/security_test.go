@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -77,7 +78,7 @@ func TestSecurity(t *testing.T) {
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 	auditHook, auditEntry := testlog.NewAudit()
-	f, err := NewFrontend(ctx, auditEntry, log, _env, nil, nil, nil, nil, nil, nil, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil)
+	f, err := NewFrontend(ctx, auditEntry, log, _env, database.NewDBGroup(), api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

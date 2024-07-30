@@ -39,6 +39,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
+type portalDBs interface {
+	database.DatabaseGroupWithOpenShiftClusters
+	database.DatabaseGroupWithPortal
+}
+
 type Runnable interface {
 	Run(context.Context) error
 }
@@ -64,8 +69,7 @@ type portal struct {
 	groupIDs         []string
 	elevatedGroupIDs []string
 
-	dbPortal            database.Portal
-	dbOpenShiftClusters database.OpenShiftClusters
+	dbGroup portalDBs
 
 	dialer proxy.Dialer
 
@@ -94,8 +98,7 @@ func NewPortal(env env.Core,
 	sshKey *rsa.PrivateKey,
 	groupIDs []string,
 	elevatedGroupIDs []string,
-	dbOpenShiftClusters database.OpenShiftClusters,
-	dbPortal database.Portal,
+	dbGroup portalDBs,
 	dialer proxy.Dialer,
 	m metrics.Emitter,
 ) Runnable {
@@ -120,8 +123,7 @@ func NewPortal(env env.Core,
 		groupIDs:         groupIDs,
 		elevatedGroupIDs: elevatedGroupIDs,
 
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbPortal:            dbPortal,
+		dbGroup: dbGroup,
 
 		dialer: dialer,
 
@@ -177,7 +179,17 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 }
 
 func (p *portal) setupServices() (*kubeconfig.Kubeconfig, *prometheus.Prometheus, *ssh.SSH, error) {
-	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer)
+	dbOpenShiftClusters, err := p.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	dbPortal, err := p.dbGroup.Portal()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, dbOpenShiftClusters, dbPortal, p.dialer)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -187,9 +199,9 @@ func (p *portal) setupServices() (*kubeconfig.Kubeconfig, *prometheus.Prometheus
 		return nil, nil, nil, err
 	}
 
-	k := kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer)
+	k := kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, dbOpenShiftClusters, dbPortal, p.dialer)
 
-	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer)
+	prom := prometheus.New(p.log, dbOpenShiftClusters, p.dialer)
 
 	return k, prom, ssh, nil
 }
@@ -361,6 +373,11 @@ func (p *portal) indexPrometheus(w http.ResponseWriter, r *http.Request) {
 
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
 func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
+	dbOpenShiftClusters, err := p.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, err
+	}
+
 	apiVars := mux.Vars(r)
 	subscriptionID := apiVars["subscription"]
 	resourceGroup := apiVars["resourceGroup"]
@@ -370,7 +387,7 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 		return nil, fmt.Errorf("invalid resource ID")
 	}
 
-	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
 		return nil, err
 	}

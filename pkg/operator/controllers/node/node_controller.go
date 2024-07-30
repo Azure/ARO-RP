@@ -11,6 +11,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -64,9 +65,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	node := &corev1.Node{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, node)
 	if err != nil {
+		if kerrors.IsNotFound(err) {
+			r.Log.Debug(fmt.Sprintf("node %s not found", node.Name))
+			return reconcile.Result{}, nil
+		}
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
-
 		return reconcile.Result{}, err
 	}
 

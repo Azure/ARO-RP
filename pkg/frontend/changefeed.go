@@ -16,11 +16,12 @@ func (f *frontend) changefeedOcpVersions(ctx context.Context) {
 	defer recover.Panic(f.baseLog)
 
 	// f.dbOpenShiftVersions will be nil when running unit tests. Return here to avoid nil pointer panic
-	if f.dbOpenShiftVersions == nil {
+	dbOpenShiftVersions, err := f.dbGroup.OpenShiftVersions()
+	if err != nil {
 		return
 	}
 
-	ocpVersionsIterator := f.dbOpenShiftVersions.ChangeFeed()
+	ocpVersionsIterator := dbOpenShiftVersions.ChangeFeed()
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
@@ -31,11 +32,12 @@ func (f *frontend) changefeedOcpVersions(ctx context.Context) {
 func (f *frontend) changefeedRoleSets(ctx context.Context) {
 	defer recover.Panic(f.baseLog)
 
-	if f.dbPlatformWorkloadIdentityRoleSets == nil {
+	dbPlatformWorkloadIdentityRoleSets, err := f.dbGroup.PlatformWorkloadIdentityRoleSets()
+	if err != nil {
 		return
 	}
 
-	roleSetsIterator := f.dbPlatformWorkloadIdentityRoleSets.ChangeFeed()
+	roleSetsIterator := dbPlatformWorkloadIdentityRoleSets.ChangeFeed()
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()

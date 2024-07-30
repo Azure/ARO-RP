@@ -30,7 +30,7 @@ func TestAppLensDetectors(t *testing.T) {
 		resourceID     string
 		detectorID     string
 		getDetector    bool
-		mocks          func(*test, *mock_adminactions.MockAzureActions)
+		mocks          func(*test, *mock_adminactions.MockAppLensActions)
 		method         string
 		wantStatusCode int
 		wantResponse   []byte
@@ -44,7 +44,7 @@ func TestAppLensDetectors(t *testing.T) {
 			resourceID:  fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			detectorID:  "",
 			getDetector: false,
-			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+			mocks: func(tt *test, a *mock_adminactions.MockAppLensActions) {
 				a.EXPECT().
 					AppLensListDetectors(gomock.Any()).
 					Return([]byte(`{"Kind": "test"}`), nil)
@@ -58,7 +58,7 @@ func TestAppLensDetectors(t *testing.T) {
 			resourceID:  fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			detectorID:  "testdetector",
 			getDetector: true,
-			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+			mocks: func(tt *test, a *mock_adminactions.MockAppLensActions) {
 				a.EXPECT().
 					AppLensGetDetector(gomock.Any(), tt.detectorID).
 					Return([]byte(`{"Kind": "test"}`), nil)
@@ -71,7 +71,7 @@ func TestAppLensDetectors(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()
 			defer ti.done()
 
-			a := mock_adminactions.NewMockAzureActions(ti.controller)
+			a := mock_adminactions.NewMockAppLensActions(ti.controller)
 			tt.mocks(tt, a)
 
 			ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -97,7 +97,7 @@ func TestAppLensDetectors(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, nil, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error) {
 				return a, nil
 			}, nil)
 

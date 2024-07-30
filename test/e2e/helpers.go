@@ -29,6 +29,7 @@ var (
 type K8sGetFunc[T kruntime.Object] func(ctx context.Context, name string, options metav1.GetOptions) (T, error)
 type K8sListFunc[T kruntime.Object] func(ctx context.Context, options metav1.ListOptions) (T, error)
 type K8sCreateFunc[T kruntime.Object] func(ctx context.Context, object T, options metav1.CreateOptions) (T, error)
+type K8sUpdateFunc[T kruntime.Object] func(ctx context.Context, object T, options metav1.UpdateOptions) (T, error)
 type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteOptions) error
 
 // GetK8sObjectWithRetry takes a get function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
@@ -85,6 +86,21 @@ func CreateK8sObjectWithRetry[T kruntime.Object](
 	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
 		result, err = createFunc(ctx, obj, options)
+		g.Expect(err).NotTo(HaveOccurred())
+	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
+	return result
+}
+
+// UpdateK8sObjectWithRetry takes an update function and the parameters for it.
+// It then makes the call with some retry logic and returns the result
+// after asserting there were no errors.
+func UpdateK8sObjectWithRetry[T kruntime.Object](
+	ctx context.Context, updateFunc K8sUpdateFunc[T], obj T, options metav1.UpdateOptions,
+) (result T) {
+	GinkgoHelper()
+	var err error
+	Eventually(func(g Gomega, ctx context.Context) {
+		result, err = updateFunc(ctx, obj, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 	return result

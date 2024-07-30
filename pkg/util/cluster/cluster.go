@@ -31,8 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20230904 "github.com/Azure/ARO-RP/pkg/api/v20230904"
-	mgmtredhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -41,9 +39,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	redhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-09-04/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/rolesets"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -57,7 +56,7 @@ type Cluster struct {
 	spGraphClient        *utilgraph.GraphServiceClient
 	deployments          features.DeploymentsClient
 	groups               features.ResourceGroupsClient
-	openshiftclusters    redhatopenshift20230904.OpenShiftClustersClient
+	openshiftclusters    InternalClient
 	securitygroups       network.SecurityGroupsClient
 	subnets              network.SubnetsClient
 	routetables          network.RouteTablesClient
@@ -108,7 +107,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		spGraphClient:     spGraphClient,
 		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		groups:            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclusters: redhatopenshift20230904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclusters: NewInternalClient(log, environment, authorizer),
 		securitygroups:    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		subnets:           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		routetables:       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -132,57 +131,47 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	return c, nil
 }
 
-func (c *Cluster) CreateApp(ctx context.Context, clusterName string) error {
-	c.log.Infof("creating AAD application")
-	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
-	if err != nil {
-		return err
-	}
-
-	c.log.Infof("creating service principal")
-	spID, err := c.createServicePrincipal(ctx, appID)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile("clusterapp.env", []byte(fmt.Sprintf("export AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=%s\nexport AZURE_CLUSTER_APP_ID=%s\nexport AZURE_CLUSTER_APP_SECRET=%s", spID, appID, appSecret)), 0o600)
+type appDetails struct {
+	applicationId     string
+	applicationSecret string
+	SPId              string
 }
 
-func (c *Cluster) DeleteApp(ctx context.Context) error {
-	err := env.ValidateVars(
-		"AZURE_CLUSTER_APP_ID",
-	)
+func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicationDetails appDetails, err error) {
+	c.log.Infof("Creating AAD application")
+	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
 	if err != nil {
-		return err
+		return appDetails{}, err
 	}
 
-	return c.deleteApplication(ctx, os.Getenv("AZURE_CLUSTER_APP_ID"))
+	c.log.Infof("Creating service principal")
+	spID, err := c.createServicePrincipal(ctx, appID)
+	if err != nil {
+		return appDetails{}, err
+	}
+
+	return appDetails{appID, appSecret, spID}, nil
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
 	clusterGet, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
-		if clusterGet.ProvisioningState == mgmtredhatopenshift20230904.Failed {
+		if clusterGet.Properties.ProvisioningState == api.ProvisioningStateFailed {
 			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
 		}
 		c.log.Print("cluster already exists, skipping create")
 		return nil
 	}
 
-	err = env.ValidateVars(
-		"AZURE_FP_SERVICE_PRINCIPAL_ID",
-		"AZURE_CLUSTER_SERVICE_PRINCIPAL_ID",
-		"AZURE_CLUSTER_APP_ID",
-		"AZURE_CLUSTER_APP_SECRET",
-	)
+	fpSPId := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
+	if fpSPId == "" {
+		return fmt.Errorf("fp service principal id is not found")
+	}
+
+	appDetails, err := c.createApp(ctx, clusterName)
 	if err != nil {
 		return err
 	}
-
-	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
-	spID := os.Getenv("AZURE_CLUSTER_SERVICE_PRINCIPAL_ID")
-	appID := os.Getenv("AZURE_CLUSTER_APP_ID")
-	appSecret := os.Getenv("AZURE_CLUSTER_APP_SECRET")
 
 	visibility := api.VisibilityPublic
 
@@ -217,9 +206,9 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if len(vnetResourceGroup) > 10 {
 		// keyvault names need to have a maximum length of 24,
 		// so we need to cut off some chars if the resource group name is too long
-		kvName = vnetResourceGroup[:10] + generator.SharedKeyVaultNameSuffix
+		kvName = vnetResourceGroup[:10] + generator.SharedDiskEncryptionKeyVaultNameSuffix
 	} else {
-		kvName = vnetResourceGroup + generator.SharedKeyVaultNameSuffix
+		kvName = vnetResourceGroup + generator.SharedDiskEncryptionKeyVaultNameSuffix
 	}
 
 	if c.ci {
@@ -239,8 +228,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	parameters := map[string]*arm.ParametersParameter{
 		"clusterName":               {Value: clusterName},
 		"ci":                        {Value: c.ci},
-		"clusterServicePrincipalId": {Value: spID},
-		"fpServicePrincipalId":      {Value: fpSPID},
+		"clusterServicePrincipalId": {Value: appDetails.SPId},
+		"fpServicePrincipalId":      {Value: fpSPId},
 		"vnetAddressPrefix":         {Value: addressPrefix},
 		"masterAddressPrefix":       {Value: masterSubnet},
 		"workerAddressPrefix":       {Value: workerSubnet},
@@ -291,7 +280,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt", rbac.RoleNetworkContributor},
 		{diskEncryptionSetID, rbac.RoleReader},
 	} {
-		for _, principalID := range []string{spID, fpSPID} {
+		for _, principalID := range []string{appDetails.SPId, fpSPId} {
 			for i := 0; i < 5; i++ {
 				_, err = c.roleassignments.Create(
 					ctx,
@@ -330,7 +319,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, diskEncryptionSetID, visibility, osClusterVersion)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, osClusterVersion)
 
 	if err != nil {
 		return err
@@ -375,18 +364,29 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
+	c.log.Infof("Deleting cluster %s in resource group %s", clusterName, vnetResourceGroup)
 	var errs []error
 
-	switch {
-	case c.ci && env.IsLocalDevelopmentMode(): // PR E2E
+	if c.ci {
+		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
+		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
+		if err != nil {
+			c.log.Errorf("CI E2E cluster %s not found in resource group %s", clusterName, vnetResourceGroup)
+			errs = append(errs, err)
+		}
 		errs = append(errs,
+			c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
-			c.deleteVnetPeerings(ctx, vnetResourceGroup),
+			c.ensureResourceGroupDeleted(ctx, clusterResourceGroup),
+			c.deleteResourceGroup(ctx, vnetResourceGroup),
 		)
-	case c.ci: // Prod E2E
-		errs = append(errs, c.deleteClusterResourceGroup(ctx, vnetResourceGroup))
-	default:
+
+		if env.IsLocalDevelopmentMode() { //PR E2E
+			errs = append(errs,
+				c.deleteVnetPeerings(ctx, vnetResourceGroup),
+			)
+		}
+	} else {
 		errs = append(errs,
 			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
@@ -461,7 +461,12 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 
-		err = c.insertDefaultVersionIntoCosmosdb(ctx)
+		err = c.ensureDefaultVersionInCosmosdb(ctx)
+		if err != nil {
+			return err
+		}
+
+		err = c.insertPlatformWorkloadIdentityRoleSetsIntoCosmosdb()
 		if err != nil {
 			return err
 		}
@@ -469,20 +474,18 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20230904.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
-	data, err := json.Marshal(ext)
-	if err != nil {
-		return err
-	}
-
-	ocExt := mgmtredhatopenshift20230904.OpenShiftCluster{}
-	err = json.Unmarshal(data, &ocExt)
-	if err != nil {
-		return err
-	}
-
-	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
 }
+
+var insecureLocalClient *http.Client = &http.Client{
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	},
+}
+
+const localDefaultURL string = "https://localhost:8443"
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {
 	b, err := json.Marshal(&api.Subscription{
@@ -501,22 +504,14 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/subscriptions/"+c.env.SubscriptionID()+"?api-version=2.0", bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/subscriptions/"+c.env.SubscriptionID()+"?api-version=2.0", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
-	cli := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-
-	resp, err := cli.Do(req)
+	resp, err := insecureLocalClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -524,7 +519,51 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 	return resp.Body.Close()
 }
 
-func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
+// getVersionsInCosmosDB connects to the local RP endpoint and queries the
+// available OpenShiftVersions
+func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error) {
+	type getVersionResponse struct {
+		Value []*api.OpenShiftVersion `json:"value"`
+	}
+
+	getRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, localDefaultURL+"/admin/versions", &bytes.Buffer{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating get versions request: %w", err)
+	}
+
+	getRequest.Header.Set("Content-Type", "application/json")
+
+	getResponse, err := insecureLocalClient.Do(getRequest)
+	if err != nil {
+		return nil, fmt.Errorf("error couldn't retrieve versions in cosmos db: %w", err)
+	}
+
+	parsedResponse := getVersionResponse{}
+	decoder := json.NewDecoder(getResponse.Body)
+	err = decoder.Decode(&parsedResponse)
+
+	return parsedResponse.Value, err
+}
+
+// ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
+// cosmos DB IF it doesn't already contain an entry for the default version. It
+// is hardcoded to use the local-RP endpoint `https://localhost:8443`
+//
+// It returns without an error when a default version is already present or a
+// default version was successfully put into the db.
+func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
+	versionsInDB, err := getVersionsInCosmosDB(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query versions in cosmosdb: %w", err)
+	}
+
+	for _, versionFromDB := range versionsInDB {
+		if versionFromDB.Properties.Version == version.DefaultInstallStream.Version.String() {
+			c.log.Debugf("Version %s already in DB. Not overwriting existing one.", version.DefaultInstallStream.Version.String())
+			return nil
+		}
+	}
+
 	defaultVersion := version.DefaultInstallStream
 	b, err := json.Marshal(&api.OpenShiftVersion{
 		Properties: api.OpenShiftVersionProperties{
@@ -540,11 +579,31 @@ func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/admin/versions", bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/versions", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := insecureLocalClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+func (c *Cluster) insertPlatformWorkloadIdentityRoleSetsIntoCosmosdb() error {
+	b, err := json.Marshal(rolesets.DefaultPlatformWorkloadIdentityRoleSet)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/admin/platformworkloadidentityrolesets/", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	cli := &http.Client{
@@ -604,7 +663,7 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	if err != nil {
 		return fmt.Errorf("error getting cluster document: %w", err)
 	}
-	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
+	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, oc.Properties.ServicePrincipalProfile.ClientID)
 	if err != nil {
 		return fmt.Errorf("error getting service principal for cluster: %w", err)
 	}
@@ -642,13 +701,28 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 	return nil
 }
 
-func (c *Cluster) deleteClusterResourceGroup(ctx context.Context, resourceGroup string) error {
+func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
+	c.log.Printf("deleting resource group %s", resourceGroupName)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+		_, err := c.groups.Get(ctx, resourceGroupName)
+		if azureerrors.ResourceGroupNotFound(err) {
+			c.log.Infof("finished deleting resource group %s", resourceGroupName)
+			return true, nil
+		}
+		return false, fmt.Errorf("failed to delete resource group %s with %s", resourceGroupName, err)
+	}, timeoutCtx.Done())
+}
+
+func (c *Cluster) deleteResourceGroup(ctx context.Context, resourceGroup string) error {
+	c.log.Printf("deleting resource group %s", resourceGroup)
 	if _, err := c.groups.Get(ctx, resourceGroup); err != nil {
 		c.log.Printf("error getting resource group %s, skipping deletion: %v", resourceGroup, err)
 		return nil
 	}
 
-	c.log.Printf("deleting resource group %s", resourceGroup)
 	if err := c.groups.DeleteAndWait(ctx, resourceGroup); err != nil {
 		return fmt.Errorf("error deleting resource group: %w", err)
 	}

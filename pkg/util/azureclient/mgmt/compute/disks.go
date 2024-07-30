@@ -28,6 +28,7 @@ var _ DisksClient = &disksClient{}
 func NewDisksClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) DisksClient {
 	client := mgmtcompute.NewDisksClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &disksClient{
 		DisksClient: client,

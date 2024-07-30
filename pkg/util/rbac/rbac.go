@@ -21,6 +21,7 @@ const (
 	RoleOwner                        = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
 	RoleReader                       = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
 	RoleStorageBlobDataContributor   = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
+	RoleKeyVaultSecretsOfficer       = "b86a8fe4-44ce-4948-aee5-eccb2c155cd7"
 )
 
 // ResourceRoleAssignment returns a Resource granting roleID on the resource of

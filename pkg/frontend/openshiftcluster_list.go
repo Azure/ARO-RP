@@ -25,13 +25,18 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 	subscriptionId := chi.URLParam(r, "subscriptionId")
 
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		reply(log, w, nil, nil, err)
+	}
+
 	b, err := f._getOpenShiftClusters(ctx, log, r, f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConverter, func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 		prefix := "/subscriptions/" + subscriptionId + "/"
 		if resourceGroupName != "" {
 			prefix += "resourcegroups/" + resourceGroupName + "/"
 		}
 
-		return f.dbOpenShiftClusters.ListByPrefix(subscriptionId, prefix, skipToken)
+		return dbOpenShiftClusters.ListByPrefix(subscriptionId, prefix, skipToken)
 	})
 	reply(log, w, nil, b, err)
 }

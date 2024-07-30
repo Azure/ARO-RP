@@ -74,14 +74,14 @@ func NewMasterKeyAuthorizer(ctx context.Context, log *logrus.Entry, token azcore
 }
 
 func NewTokenAuthorizer(ctx context.Context, log *logrus.Entry, cred azcore.TokenCredential, databaseAccountName string, scopes []string) (cosmosdb.Authorizer, error) {
-	acquireToken := func() (token string, newExpiration time.Time, err error) {
-		tk, err := cred.GetToken(ctx, azcorepolicy.TokenRequestOptions{Scopes: scopes})
+	acquireToken := func(contxt context.Context) (token string, newExpiration time.Time, err error) {
+		tk, err := cred.GetToken(contxt, azcorepolicy.TokenRequestOptions{Scopes: scopes})
 		if err != nil {
 			return "", time.Time{}, err
 		}
 		return tk.Token, tk.ExpiresOn, nil
 	}
-	tk, expiration, err := acquireToken()
+	tk, expiration, err := acquireToken(ctx)
 	if err != nil {
 		return nil, err
 	}

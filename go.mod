@@ -1,6 +1,6 @@
 module github.com/Azure/ARO-RP
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
@@ -18,6 +18,7 @@ require (
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/Azure/go-autorest/autorest/validation v0.3.1
 	github.com/Azure/go-autorest/tracing v0.6.0
+	github.com/Azure/msi-dataplane v0.0.3
 	github.com/alvaroloes/enumer v1.1.2
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
@@ -29,12 +30,11 @@ require (
 	github.com/coreos/ignition/v2 v2.14.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-logr/logr v1.4.2
 	github.com/go-test/deep v1.1.0
-	github.com/gofrs/uuid v4.2.0+incompatible
+	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/mock v1.6.0
 	github.com/google/gnostic v0.5.7-v3refs
@@ -46,7 +46,7 @@ require (
 	github.com/gorilla/sessions v1.2.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/itchyny/gojq v0.12.13
-	github.com/jewzaam/go-cosmosdb v0.0.0-20240603205015-e096456eff37
+	github.com/jewzaam/go-cosmosdb v0.0.0-20240723075448-058185e3c66d
 	github.com/jongio/azidext/go/azidext v0.5.0
 	github.com/microsoft/kiota-abstractions-go v1.2.0
 	github.com/microsoft/kiota-http-go v1.0.0
@@ -55,14 +55,14 @@ require (
 	github.com/microsoft/kiota-serialization-multipart-go v1.0.0
 	github.com/microsoft/kiota-serialization-text-go v1.0.0
 	github.com/microsoftgraph/msgraph-sdk-go-core v1.0.0
-	github.com/onsi/ginkgo/v2 v2.13.1
-	github.com/onsi/gomega v1.30.0
+	github.com/onsi/ginkgo/v2 v2.17.1
+	github.com/onsi/gomega v1.33.0
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20221109005544-7de84dff5081
 	github.com/opencontainers/runtime-spec v1.1.1-0.20230922153023-c0e90434df2a
-	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
-	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
+	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
+	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
-	github.com/openshift/hive/apis v0.0.0-20240529172037-d7ead609f495
+	github.com/openshift/hive/apis v0.0.0-20240627073933-b1ac27b24815
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d
 	github.com/pires/go-proxyproto v0.6.2
@@ -84,9 +84,9 @@ require (
 	golang.org/x/text v0.16.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	gopkg.in/go-jose/go-jose.v2 v2.6.1
-	k8s.io/api v0.30.1
+	k8s.io/api v0.30.2
 	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.30.1
+	k8s.io/apimachinery v0.30.2
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.26.2
 	k8s.io/code-generator v0.25.16
@@ -95,6 +95,7 @@ require (
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/controller-tools v0.9.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -146,6 +147,8 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
+	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -159,6 +162,9 @@ require (
 	github.com/go-openapi/strfmt v0.21.7 // indirect
 	github.com/go-openapi/swag v0.22.4 // indirect
 	github.com/go-openapi/validate v0.22.1 // indirect
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/go-playground/validator/v10 v10.22.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/gobuffalo/flect v0.2.5 // indirect
@@ -175,7 +181,7 @@ require (
 	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/gnostic v0.6.8 // indirect
-	github.com/gorilla/schema v1.2.1 // indirect
+	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
@@ -188,6 +194,7 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20230213213521-fdfea0d469b6 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -274,7 +281,7 @@ require (
 	k8s.io/apiserver v0.26.2 // indirect
 	k8s.io/component-base v0.26.2 // indirect
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
-	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-aggregator v0.24.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
@@ -282,20 +289,11 @@ require (
 	sigs.k8s.io/kustomize/api v0.12.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.9 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 	tags.cncf.io/container-device-interface v0.6.2 // indirect
 )
 
 // strip cloud.google.com/go dependencies -- these are not required as dependencies
 exclude (
-	cloud.google.com/go v0.100.1
-	cloud.google.com/go v0.100.2
-	cloud.google.com/go v0.102.0
-	cloud.google.com/go v0.102.1
-	cloud.google.com/go v0.104.0
-	cloud.google.com/go v0.105.0
-	cloud.google.com/go v0.107.0
-	cloud.google.com/go v0.110.0
 	cloud.google.com/go v0.37.4
 	cloud.google.com/go v0.41.0
 	cloud.google.com/go v0.44.1
@@ -314,6 +312,14 @@ exclude (
 	cloud.google.com/go v0.81.0
 	cloud.google.com/go v0.97.0
 	cloud.google.com/go v0.99.0
+	cloud.google.com/go v0.100.1
+	cloud.google.com/go v0.100.2
+	cloud.google.com/go v0.102.0
+	cloud.google.com/go v0.102.1
+	cloud.google.com/go v0.104.0
+	cloud.google.com/go v0.105.0
+	cloud.google.com/go v0.107.0
+	cloud.google.com/go v0.110.0
 	cloud.google.com/go/accessapproval v1.4.0
 	cloud.google.com/go/accessapproval v1.5.0
 	cloud.google.com/go/accessapproval v1.6.0
@@ -353,33 +359,33 @@ exclude (
 	cloud.google.com/go/area120 v0.6.0
 	cloud.google.com/go/area120 v0.7.0
 	cloud.google.com/go/area120 v0.7.1
-	cloud.google.com/go/artifactregistry v1.11.1
-	cloud.google.com/go/artifactregistry v1.11.2
-	cloud.google.com/go/artifactregistry v1.12.0
-	cloud.google.com/go/artifactregistry v1.13.0
 	cloud.google.com/go/artifactregistry v1.6.0
 	cloud.google.com/go/artifactregistry v1.7.0
 	cloud.google.com/go/artifactregistry v1.8.0
 	cloud.google.com/go/artifactregistry v1.9.0
-	cloud.google.com/go/asset v1.10.0
-	cloud.google.com/go/asset v1.11.1
-	cloud.google.com/go/asset v1.12.0
-	cloud.google.com/go/asset v1.13.0
+	cloud.google.com/go/artifactregistry v1.11.1
+	cloud.google.com/go/artifactregistry v1.11.2
+	cloud.google.com/go/artifactregistry v1.12.0
+	cloud.google.com/go/artifactregistry v1.13.0
 	cloud.google.com/go/asset v1.5.0
 	cloud.google.com/go/asset v1.7.0
 	cloud.google.com/go/asset v1.8.0
 	cloud.google.com/go/asset v1.9.0
-	cloud.google.com/go/assuredworkloads v1.10.0
+	cloud.google.com/go/asset v1.10.0
+	cloud.google.com/go/asset v1.11.1
+	cloud.google.com/go/asset v1.12.0
+	cloud.google.com/go/asset v1.13.0
 	cloud.google.com/go/assuredworkloads v1.5.0
 	cloud.google.com/go/assuredworkloads v1.6.0
 	cloud.google.com/go/assuredworkloads v1.7.0
 	cloud.google.com/go/assuredworkloads v1.8.0
 	cloud.google.com/go/assuredworkloads v1.9.0
-	cloud.google.com/go/automl v1.12.0
+	cloud.google.com/go/assuredworkloads v1.10.0
 	cloud.google.com/go/automl v1.5.0
 	cloud.google.com/go/automl v1.6.0
 	cloud.google.com/go/automl v1.7.0
 	cloud.google.com/go/automl v1.8.0
+	cloud.google.com/go/automl v1.12.0
 	cloud.google.com/go/baremetalsolution v0.3.0
 	cloud.google.com/go/baremetalsolution v0.4.0
 	cloud.google.com/go/baremetalsolution v0.5.0
@@ -391,6 +397,7 @@ exclude (
 	cloud.google.com/go/beyondcorp v0.4.0
 	cloud.google.com/go/beyondcorp v0.5.0
 	cloud.google.com/go/bigquery v1.0.1
+	cloud.google.com/go/bigquery v1.8.0
 	cloud.google.com/go/bigquery v1.42.0
 	cloud.google.com/go/bigquery v1.43.0
 	cloud.google.com/go/bigquery v1.44.0
@@ -398,13 +405,12 @@ exclude (
 	cloud.google.com/go/bigquery v1.48.0
 	cloud.google.com/go/bigquery v1.49.0
 	cloud.google.com/go/bigquery v1.50.0
-	cloud.google.com/go/bigquery v1.8.0
-	cloud.google.com/go/billing v1.12.0
-	cloud.google.com/go/billing v1.13.0
 	cloud.google.com/go/billing v1.4.0
 	cloud.google.com/go/billing v1.5.0
 	cloud.google.com/go/billing v1.6.0
 	cloud.google.com/go/billing v1.7.0
+	cloud.google.com/go/billing v1.12.0
+	cloud.google.com/go/billing v1.13.0
 	cloud.google.com/go/binaryauthorization v1.1.0
 	cloud.google.com/go/binaryauthorization v1.2.0
 	cloud.google.com/go/binaryauthorization v1.3.0
@@ -413,10 +419,10 @@ exclude (
 	cloud.google.com/go/certificatemanager v1.3.0
 	cloud.google.com/go/certificatemanager v1.4.0
 	cloud.google.com/go/certificatemanager v1.6.0
-	cloud.google.com/go/channel v1.11.0
-	cloud.google.com/go/channel v1.12.0
 	cloud.google.com/go/channel v1.8.0
 	cloud.google.com/go/channel v1.9.0
+	cloud.google.com/go/channel v1.11.0
+	cloud.google.com/go/channel v1.12.0
 	cloud.google.com/go/cloudbuild v1.3.0
 	cloud.google.com/go/cloudbuild v1.4.0
 	cloud.google.com/go/cloudbuild v1.6.0
@@ -425,13 +431,18 @@ exclude (
 	cloud.google.com/go/clouddms v1.3.0
 	cloud.google.com/go/clouddms v1.4.0
 	cloud.google.com/go/clouddms v1.5.0
-	cloud.google.com/go/cloudtasks v1.10.0
 	cloud.google.com/go/cloudtasks v1.5.0
 	cloud.google.com/go/cloudtasks v1.6.0
 	cloud.google.com/go/cloudtasks v1.7.0
 	cloud.google.com/go/cloudtasks v1.8.0
 	cloud.google.com/go/cloudtasks v1.9.0
+	cloud.google.com/go/cloudtasks v1.10.0
 	cloud.google.com/go/compute v0.1.0
+	cloud.google.com/go/compute v1.3.0
+	cloud.google.com/go/compute v1.5.0
+	cloud.google.com/go/compute v1.6.0
+	cloud.google.com/go/compute v1.6.1
+	cloud.google.com/go/compute v1.7.0
 	cloud.google.com/go/compute v1.10.0
 	cloud.google.com/go/compute v1.12.0
 	cloud.google.com/go/compute v1.12.1
@@ -440,34 +451,29 @@ exclude (
 	cloud.google.com/go/compute v1.18.0
 	cloud.google.com/go/compute v1.19.0
 	cloud.google.com/go/compute v1.19.1
-	cloud.google.com/go/compute v1.3.0
-	cloud.google.com/go/compute v1.5.0
-	cloud.google.com/go/compute v1.6.0
-	cloud.google.com/go/compute v1.6.1
-	cloud.google.com/go/compute v1.7.0
 	cloud.google.com/go/compute/metadata v0.1.0
 	cloud.google.com/go/compute/metadata v0.2.1
 	cloud.google.com/go/compute/metadata v0.2.3
 	cloud.google.com/go/contactcenterinsights v1.3.0
 	cloud.google.com/go/contactcenterinsights v1.4.0
 	cloud.google.com/go/contactcenterinsights v1.6.0
+	cloud.google.com/go/container v1.6.0
+	cloud.google.com/go/container v1.7.0
 	cloud.google.com/go/container v1.13.1
 	cloud.google.com/go/container v1.14.0
 	cloud.google.com/go/container v1.15.0
-	cloud.google.com/go/container v1.6.0
-	cloud.google.com/go/container v1.7.0
 	cloud.google.com/go/containeranalysis v0.5.1
 	cloud.google.com/go/containeranalysis v0.6.0
 	cloud.google.com/go/containeranalysis v0.7.0
 	cloud.google.com/go/containeranalysis v0.9.0
-	cloud.google.com/go/datacatalog v1.12.0
-	cloud.google.com/go/datacatalog v1.13.0
 	cloud.google.com/go/datacatalog v1.3.0
 	cloud.google.com/go/datacatalog v1.5.0
 	cloud.google.com/go/datacatalog v1.6.0
 	cloud.google.com/go/datacatalog v1.7.0
 	cloud.google.com/go/datacatalog v1.8.0
 	cloud.google.com/go/datacatalog v1.8.1
+	cloud.google.com/go/datacatalog v1.12.0
+	cloud.google.com/go/datacatalog v1.13.0
 	cloud.google.com/go/dataflow v0.6.0
 	cloud.google.com/go/dataflow v0.7.0
 	cloud.google.com/go/dataflow v0.8.0
@@ -486,9 +492,9 @@ exclude (
 	cloud.google.com/go/dataplex v1.4.0
 	cloud.google.com/go/dataplex v1.5.2
 	cloud.google.com/go/dataplex v1.6.0
-	cloud.google.com/go/dataproc v1.12.0
 	cloud.google.com/go/dataproc v1.7.0
 	cloud.google.com/go/dataproc v1.8.0
+	cloud.google.com/go/dataproc v1.12.0
 	cloud.google.com/go/dataqna v0.5.0
 	cloud.google.com/go/dataqna v0.6.0
 	cloud.google.com/go/dataqna v0.7.0
@@ -516,12 +522,12 @@ exclude (
 	cloud.google.com/go/dlp v1.6.0
 	cloud.google.com/go/dlp v1.7.0
 	cloud.google.com/go/dlp v1.9.0
-	cloud.google.com/go/documentai v1.10.0
-	cloud.google.com/go/documentai v1.16.0
-	cloud.google.com/go/documentai v1.18.0
 	cloud.google.com/go/documentai v1.7.0
 	cloud.google.com/go/documentai v1.8.0
 	cloud.google.com/go/documentai v1.9.0
+	cloud.google.com/go/documentai v1.10.0
+	cloud.google.com/go/documentai v1.16.0
+	cloud.google.com/go/documentai v1.18.0
 	cloud.google.com/go/domains v0.6.0
 	cloud.google.com/go/domains v0.7.0
 	cloud.google.com/go/domains v0.8.0
@@ -533,23 +539,23 @@ exclude (
 	cloud.google.com/go/essentialcontacts v1.3.0
 	cloud.google.com/go/essentialcontacts v1.4.0
 	cloud.google.com/go/essentialcontacts v1.5.0
-	cloud.google.com/go/eventarc v1.10.0
-	cloud.google.com/go/eventarc v1.11.0
 	cloud.google.com/go/eventarc v1.7.0
 	cloud.google.com/go/eventarc v1.8.0
+	cloud.google.com/go/eventarc v1.10.0
+	cloud.google.com/go/eventarc v1.11.0
 	cloud.google.com/go/filestore v1.3.0
 	cloud.google.com/go/filestore v1.4.0
 	cloud.google.com/go/filestore v1.5.0
 	cloud.google.com/go/filestore v1.6.0
 	cloud.google.com/go/firestore v1.1.0
 	cloud.google.com/go/firestore v1.9.0
-	cloud.google.com/go/functions v1.10.0
-	cloud.google.com/go/functions v1.12.0
-	cloud.google.com/go/functions v1.13.0
 	cloud.google.com/go/functions v1.6.0
 	cloud.google.com/go/functions v1.7.0
 	cloud.google.com/go/functions v1.8.0
 	cloud.google.com/go/functions v1.9.0
+	cloud.google.com/go/functions v1.10.0
+	cloud.google.com/go/functions v1.12.0
+	cloud.google.com/go/functions v1.13.0
 	cloud.google.com/go/gaming v1.5.0
 	cloud.google.com/go/gaming v1.6.0
 	cloud.google.com/go/gaming v1.7.0
@@ -561,10 +567,10 @@ exclude (
 	cloud.google.com/go/gkeconnect v0.5.0
 	cloud.google.com/go/gkeconnect v0.6.0
 	cloud.google.com/go/gkeconnect v0.7.0
+	cloud.google.com/go/gkehub v0.9.0
 	cloud.google.com/go/gkehub v0.10.0
 	cloud.google.com/go/gkehub v0.11.0
 	cloud.google.com/go/gkehub v0.12.0
-	cloud.google.com/go/gkehub v0.9.0
 	cloud.google.com/go/gkemulticloud v0.3.0
 	cloud.google.com/go/gkemulticloud v0.4.0
 	cloud.google.com/go/gkemulticloud v0.5.0
@@ -573,14 +579,14 @@ exclude (
 	cloud.google.com/go/gsuiteaddons v1.4.0
 	cloud.google.com/go/gsuiteaddons v1.5.0
 	cloud.google.com/go/iam v0.1.0
-	cloud.google.com/go/iam v0.11.0
-	cloud.google.com/go/iam v0.12.0
-	cloud.google.com/go/iam v0.13.0
 	cloud.google.com/go/iam v0.3.0
 	cloud.google.com/go/iam v0.5.0
 	cloud.google.com/go/iam v0.6.0
 	cloud.google.com/go/iam v0.7.0
 	cloud.google.com/go/iam v0.8.0
+	cloud.google.com/go/iam v0.11.0
+	cloud.google.com/go/iam v0.12.0
+	cloud.google.com/go/iam v0.13.0
 	cloud.google.com/go/iap v1.4.0
 	cloud.google.com/go/iap v1.5.0
 	cloud.google.com/go/iap v1.6.0
@@ -593,13 +599,13 @@ exclude (
 	cloud.google.com/go/iot v1.4.0
 	cloud.google.com/go/iot v1.5.0
 	cloud.google.com/go/iot v1.6.0
-	cloud.google.com/go/kms v1.10.0
-	cloud.google.com/go/kms v1.10.1
 	cloud.google.com/go/kms v1.4.0
 	cloud.google.com/go/kms v1.5.0
 	cloud.google.com/go/kms v1.6.0
 	cloud.google.com/go/kms v1.8.0
 	cloud.google.com/go/kms v1.9.0
+	cloud.google.com/go/kms v1.10.0
+	cloud.google.com/go/kms v1.10.1
 	cloud.google.com/go/language v1.4.0
 	cloud.google.com/go/language v1.6.0
 	cloud.google.com/go/language v1.7.0
@@ -627,21 +633,21 @@ exclude (
 	cloud.google.com/go/memcache v1.6.0
 	cloud.google.com/go/memcache v1.7.0
 	cloud.google.com/go/memcache v1.9.0
-	cloud.google.com/go/metastore v1.10.0
 	cloud.google.com/go/metastore v1.5.0
 	cloud.google.com/go/metastore v1.6.0
 	cloud.google.com/go/metastore v1.7.0
 	cloud.google.com/go/metastore v1.8.0
-	cloud.google.com/go/monitoring v1.12.0
-	cloud.google.com/go/monitoring v1.13.0
+	cloud.google.com/go/metastore v1.10.0
 	cloud.google.com/go/monitoring v1.7.0
 	cloud.google.com/go/monitoring v1.8.0
-	cloud.google.com/go/networkconnectivity v1.10.0
-	cloud.google.com/go/networkconnectivity v1.11.0
+	cloud.google.com/go/monitoring v1.12.0
+	cloud.google.com/go/monitoring v1.13.0
 	cloud.google.com/go/networkconnectivity v1.4.0
 	cloud.google.com/go/networkconnectivity v1.5.0
 	cloud.google.com/go/networkconnectivity v1.6.0
 	cloud.google.com/go/networkconnectivity v1.7.0
+	cloud.google.com/go/networkconnectivity v1.10.0
+	cloud.google.com/go/networkconnectivity v1.11.0
 	cloud.google.com/go/networkmanagement v1.4.0
 	cloud.google.com/go/networkmanagement v1.5.0
 	cloud.google.com/go/networkmanagement v1.6.0
@@ -661,14 +667,14 @@ exclude (
 	cloud.google.com/go/orchestration v1.3.0
 	cloud.google.com/go/orchestration v1.4.0
 	cloud.google.com/go/orchestration v1.6.0
-	cloud.google.com/go/orgpolicy v1.10.0
 	cloud.google.com/go/orgpolicy v1.4.0
 	cloud.google.com/go/orgpolicy v1.5.0
-	cloud.google.com/go/osconfig v1.10.0
-	cloud.google.com/go/osconfig v1.11.0
+	cloud.google.com/go/orgpolicy v1.10.0
 	cloud.google.com/go/osconfig v1.7.0
 	cloud.google.com/go/osconfig v1.8.0
 	cloud.google.com/go/osconfig v1.9.0
+	cloud.google.com/go/osconfig v1.10.0
+	cloud.google.com/go/osconfig v1.11.0
 	cloud.google.com/go/oslogin v1.4.0
 	cloud.google.com/go/oslogin v1.5.0
 	cloud.google.com/go/oslogin v1.6.0
@@ -708,11 +714,11 @@ exclude (
 	cloud.google.com/go/recommender v1.7.0
 	cloud.google.com/go/recommender v1.8.0
 	cloud.google.com/go/recommender v1.9.0
-	cloud.google.com/go/redis v1.10.0
-	cloud.google.com/go/redis v1.11.0
 	cloud.google.com/go/redis v1.7.0
 	cloud.google.com/go/redis v1.8.0
 	cloud.google.com/go/redis v1.9.0
+	cloud.google.com/go/redis v1.10.0
+	cloud.google.com/go/redis v1.11.0
 	cloud.google.com/go/resourcemanager v1.3.0
 	cloud.google.com/go/resourcemanager v1.4.0
 	cloud.google.com/go/resourcemanager v1.5.0
@@ -721,11 +727,11 @@ exclude (
 	cloud.google.com/go/resourcesettings v1.3.0
 	cloud.google.com/go/resourcesettings v1.4.0
 	cloud.google.com/go/resourcesettings v1.5.0
+	cloud.google.com/go/retail v1.8.0
+	cloud.google.com/go/retail v1.9.0
 	cloud.google.com/go/retail v1.10.0
 	cloud.google.com/go/retail v1.11.0
 	cloud.google.com/go/retail v1.12.0
-	cloud.google.com/go/retail v1.8.0
-	cloud.google.com/go/retail v1.9.0
 	cloud.google.com/go/run v0.2.0
 	cloud.google.com/go/run v0.3.0
 	cloud.google.com/go/run v0.8.0
@@ -736,28 +742,28 @@ exclude (
 	cloud.google.com/go/scheduler v1.7.0
 	cloud.google.com/go/scheduler v1.8.0
 	cloud.google.com/go/scheduler v1.9.0
-	cloud.google.com/go/secretmanager v1.10.0
 	cloud.google.com/go/secretmanager v1.6.0
 	cloud.google.com/go/secretmanager v1.8.0
 	cloud.google.com/go/secretmanager v1.9.0
-	cloud.google.com/go/security v1.10.0
-	cloud.google.com/go/security v1.12.0
-	cloud.google.com/go/security v1.13.0
+	cloud.google.com/go/secretmanager v1.10.0
 	cloud.google.com/go/security v1.5.0
 	cloud.google.com/go/security v1.7.0
 	cloud.google.com/go/security v1.8.0
 	cloud.google.com/go/security v1.9.0
+	cloud.google.com/go/security v1.10.0
+	cloud.google.com/go/security v1.12.0
+	cloud.google.com/go/security v1.13.0
 	cloud.google.com/go/securitycenter v1.13.0
 	cloud.google.com/go/securitycenter v1.14.0
 	cloud.google.com/go/securitycenter v1.15.0
 	cloud.google.com/go/securitycenter v1.16.0
 	cloud.google.com/go/securitycenter v1.18.1
 	cloud.google.com/go/securitycenter v1.19.0
+	cloud.google.com/go/servicecontrol v1.4.0
+	cloud.google.com/go/servicecontrol v1.5.0
 	cloud.google.com/go/servicecontrol v1.10.0
 	cloud.google.com/go/servicecontrol v1.11.0
 	cloud.google.com/go/servicecontrol v1.11.1
-	cloud.google.com/go/servicecontrol v1.4.0
-	cloud.google.com/go/servicecontrol v1.5.0
 	cloud.google.com/go/servicedirectory v1.4.0
 	cloud.google.com/go/servicedirectory v1.5.0
 	cloud.google.com/go/servicedirectory v1.6.0
@@ -778,22 +784,22 @@ exclude (
 	cloud.google.com/go/spanner v1.41.0
 	cloud.google.com/go/spanner v1.44.0
 	cloud.google.com/go/spanner v1.45.0
-	cloud.google.com/go/speech v1.14.1
-	cloud.google.com/go/speech v1.15.0
 	cloud.google.com/go/speech v1.6.0
 	cloud.google.com/go/speech v1.7.0
 	cloud.google.com/go/speech v1.8.0
 	cloud.google.com/go/speech v1.9.0
+	cloud.google.com/go/speech v1.14.1
+	cloud.google.com/go/speech v1.15.0
 	cloud.google.com/go/storage v1.0.0
+	cloud.google.com/go/storage v1.5.0
+	cloud.google.com/go/storage v1.6.0
+	cloud.google.com/go/storage v1.8.0
+	cloud.google.com/go/storage v1.9.0
 	cloud.google.com/go/storage v1.14.0
 	cloud.google.com/go/storage v1.23.0
 	cloud.google.com/go/storage v1.27.0
 	cloud.google.com/go/storage v1.28.1
 	cloud.google.com/go/storage v1.29.0
-	cloud.google.com/go/storage v1.5.0
-	cloud.google.com/go/storage v1.6.0
-	cloud.google.com/go/storage v1.8.0
-	cloud.google.com/go/storage v1.9.0
 	cloud.google.com/go/storagetransfer v1.5.0
 	cloud.google.com/go/storagetransfer v1.6.0
 	cloud.google.com/go/storagetransfer v1.7.0
@@ -818,17 +824,17 @@ exclude (
 	cloud.google.com/go/translate v1.5.0
 	cloud.google.com/go/translate v1.6.0
 	cloud.google.com/go/translate v1.7.0
+	cloud.google.com/go/video v1.8.0
+	cloud.google.com/go/video v1.9.0
 	cloud.google.com/go/video v1.12.0
 	cloud.google.com/go/video v1.13.0
 	cloud.google.com/go/video v1.14.0
 	cloud.google.com/go/video v1.15.0
-	cloud.google.com/go/video v1.8.0
-	cloud.google.com/go/video v1.9.0
-	cloud.google.com/go/videointelligence v1.10.0
 	cloud.google.com/go/videointelligence v1.6.0
 	cloud.google.com/go/videointelligence v1.7.0
 	cloud.google.com/go/videointelligence v1.8.0
 	cloud.google.com/go/videointelligence v1.9.0
+	cloud.google.com/go/videointelligence v1.10.0
 	cloud.google.com/go/vision v1.2.0
 	cloud.google.com/go/vision/v2 v2.2.0
 	cloud.google.com/go/vision/v2 v2.3.0
@@ -854,11 +860,11 @@ exclude (
 	cloud.google.com/go/websecurityscanner v1.3.0
 	cloud.google.com/go/websecurityscanner v1.4.0
 	cloud.google.com/go/websecurityscanner v1.5.0
-	cloud.google.com/go/workflows v1.10.0
 	cloud.google.com/go/workflows v1.6.0
 	cloud.google.com/go/workflows v1.7.0
 	cloud.google.com/go/workflows v1.8.0
 	cloud.google.com/go/workflows v1.9.0
+	cloud.google.com/go/workflows v1.10.0
 )
 
 // remove old github.com/google, github.com/googleapis/ google.golang.org dependencies
@@ -885,6 +891,12 @@ exclude (
 	github.com/google/uuid v1.1.2
 	github.com/google/uuid v1.2.0
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20200911160855-bcd43fbb19e8
+	google.golang.org/api v0.3.1
+	google.golang.org/api v0.3.2
+	google.golang.org/api v0.4.0
+	google.golang.org/api v0.7.0
+	google.golang.org/api v0.8.0
+	google.golang.org/api v0.9.0
 	google.golang.org/api v0.13.0
 	google.golang.org/api v0.14.0
 	google.golang.org/api v0.15.0
@@ -897,12 +909,9 @@ exclude (
 	google.golang.org/api v0.26.0
 	google.golang.org/api v0.28.0
 	google.golang.org/api v0.29.0
-	google.golang.org/api v0.3.1
-	google.golang.org/api v0.3.2
 	google.golang.org/api v0.30.0
 	google.golang.org/api v0.35.0
 	google.golang.org/api v0.36.0
-	google.golang.org/api v0.4.0
 	google.golang.org/api v0.40.0
 	google.golang.org/api v0.41.0
 	google.golang.org/api v0.43.0
@@ -919,9 +928,6 @@ exclude (
 	google.golang.org/api v0.59.0
 	google.golang.org/api v0.61.0
 	google.golang.org/api v0.62.0
-	google.golang.org/api v0.7.0
-	google.golang.org/api v0.8.0
-	google.golang.org/api v0.9.0
 	google.golang.org/appengine v1.1.0
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
@@ -958,8 +964,8 @@ exclude (
 	google.golang.org/protobuf v1.23.1-0.20200526195155-81db48ad09cc
 	google.golang.org/protobuf v1.24.0
 	google.golang.org/protobuf v1.25.0
-	google.golang.org/protobuf v1.26.0
 	google.golang.org/protobuf v1.26.0-rc.1
+	google.golang.org/protobuf v1.26.0
 	google.golang.org/protobuf v1.27.1
 	google.golang.org/protobuf v1.28.0
 	google.golang.org/protobuf v1.28.1
@@ -987,16 +993,16 @@ exclude (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
 	github.com/Azure/go-ansiterm v0.0.0-20210608223527-2377c96fe795
+	github.com/Azure/go-autorest/autorest v0.9.0
 	github.com/Azure/go-autorest/autorest v0.11.12
 	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest v0.11.24
 	github.com/Azure/go-autorest/autorest v0.11.27
-	github.com/Azure/go-autorest/autorest v0.9.0
+	github.com/Azure/go-autorest/autorest/adal v0.9.5
 	github.com/Azure/go-autorest/autorest/adal v0.9.13
 	github.com/Azure/go-autorest/autorest/adal v0.9.18
 	github.com/Azure/go-autorest/autorest/adal v0.9.20
 	github.com/Azure/go-autorest/autorest/adal v0.9.22
-	github.com/Azure/go-autorest/autorest/adal v0.9.5
 	github.com/Azure/go-autorest/autorest/mocks v0.4.1
 	github.com/Azure/go-autorest/autorest/to v0.3.0
 	github.com/Azure/go-autorest/autorest/validation v0.1.0
@@ -1010,8 +1016,8 @@ exclude (
 	github.com/cilium/ebpf v0.4.0
 	// exclude old containerd versions
 	github.com/containerd/cgroups v1.0.1
-	github.com/containerd/containerd v1.2.10
 	github.com/containerd/containerd v1.2.7
+	github.com/containerd/containerd v1.2.10
 	github.com/containerd/containerd v1.3.0
 	github.com/containerd/containerd v1.3.2
 	github.com/containerd/containerd v1.4.1
@@ -1026,8 +1032,8 @@ exclude (
 	github.com/containerd/containerd v1.5.2
 	github.com/containerd/containerd v1.5.7
 	github.com/containerd/containerd v1.5.9
-	github.com/containerd/stargz-snapshotter/estargz v0.12.0
 	github.com/containerd/stargz-snapshotter/estargz v0.4.1
+	github.com/containerd/stargz-snapshotter/estargz v0.12.0
 	github.com/containers/storage v1.43.0
 	// remove ancient dockers
 	github.com/docker/distribution v0.0.0-20180920194744-16128bbac47f
@@ -1070,12 +1076,12 @@ exclude (
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/client_model v0.3.0
+	github.com/prometheus/common v0.4.1
 	github.com/prometheus/common v0.10.0
 	github.com/prometheus/common v0.15.0
 	github.com/prometheus/common v0.26.0
 	github.com/prometheus/common v0.28.0
 	github.com/prometheus/common v0.32.1
-	github.com/prometheus/common v0.4.1
 	github.com/prometheus/procfs v0.0.2
 	github.com/prometheus/procfs v0.6.0
 	github.com/prometheus/procfs v0.7.3
@@ -1127,8 +1133,8 @@ exclude (
 	go.opentelemetry.io/otel/sdk v0.20.0
 	go.opentelemetry.io/otel/sdk/metric v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0
-	go.opentelemetry.io/proto/otlp v0.19.0
 	go.opentelemetry.io/proto/otlp v0.7.0
+	go.opentelemetry.io/proto/otlp v0.19.0
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5
 	go.uber.org/atomic v1.4.0
 	go.uber.org/atomic v1.7.0
@@ -1152,11 +1158,11 @@ exclude (
 	gopkg.in/yaml.v2 v2.2.4
 	gopkg.in/yaml.v2 v2.2.8
 	gopkg.in/yaml.v2 v2.3.0
-	gopkg.in/yaml.v3 v3.0.0
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.0
 )
 
 // trim old golang.org/x/ and github.com/golang/ items
@@ -1186,8 +1192,8 @@ exclude (
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838
-	golang.org/x/crypto v0.14.0
 	golang.org/x/crypto v0.6.0
+	golang.org/x/crypto v0.14.0
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	golang.org/x/lint v0.0.0-20190930215403-16217165b5de
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
@@ -1227,14 +1233,14 @@ exclude (
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
 	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
-	golang.org/x/net v0.10.0
-	golang.org/x/net v0.17.0
 	golang.org/x/net v0.2.0
 	golang.org/x/net v0.4.0
 	golang.org/x/net v0.6.0
 	golang.org/x/net v0.7.0
 	golang.org/x/net v0.8.0
 	golang.org/x/net v0.9.0
+	golang.org/x/net v0.10.0
+	golang.org/x/net v0.17.0
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
@@ -1340,25 +1346,24 @@ exclude (
 	golang.org/x/sys v0.0.0-20220908164124-27713097b956
 	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2
 	golang.org/x/sys v0.1.0
-	golang.org/x/sys v0.13.0
 	golang.org/x/sys v0.2.0
 	golang.org/x/sys v0.3.0
 	golang.org/x/sys v0.5.0
 	golang.org/x/sys v0.6.0
 	golang.org/x/sys v0.7.0
 	golang.org/x/sys v0.8.0
+	golang.org/x/sys v0.13.0
 	golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
-	golang.org/x/term v0.13.0
 	golang.org/x/term v0.2.0
 	golang.org/x/term v0.3.0
 	golang.org/x/term v0.5.0
 	golang.org/x/term v0.6.0
 	golang.org/x/term v0.7.0
 	golang.org/x/term v0.8.0
-	golang.org/x/text v0.13.0
+	golang.org/x/term v0.13.0
 	golang.org/x/text v0.3.0
 	golang.org/x/text v0.3.2
 	golang.org/x/text v0.3.3
@@ -1372,6 +1377,7 @@ exclude (
 	golang.org/x/text v0.7.0
 	golang.org/x/text v0.8.0
 	golang.org/x/text v0.9.0
+	golang.org/x/text v0.13.0
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
@@ -1398,12 +1404,12 @@ exclude (
 	golang.org/x/tools v0.0.0-20201224043029-2b0845dc783e
 	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
 	golang.org/x/tools v0.1.1
-	golang.org/x/tools v0.1.10
-	golang.org/x/tools v0.1.10-0.20220218145154-897bd77cd717
-	golang.org/x/tools v0.1.12
 	golang.org/x/tools v0.1.2
 	golang.org/x/tools v0.1.5
 	golang.org/x/tools v0.1.9
+	golang.org/x/tools v0.1.10-0.20220218145154-897bd77cd717
+	golang.org/x/tools v0.1.10
+	golang.org/x/tools v0.1.12
 	golang.org/x/tools v0.3.0
 	golang.org/x/tools v0.6.0
 	golang.org/x/tools v0.7.0
@@ -1503,13 +1509,13 @@ exclude (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.0.0
 	k8s.io/klog/v2 v2.2.0
-	k8s.io/klog/v2 v2.30.0
 	k8s.io/klog/v2 v2.4.0
+	k8s.io/klog/v2 v2.8.0
+	k8s.io/klog/v2 v2.9.0
+	k8s.io/klog/v2 v2.30.0
 	k8s.io/klog/v2 v2.40.1
 	k8s.io/klog/v2 v2.60.1
 	k8s.io/klog/v2 v2.70.1
-	k8s.io/klog/v2 v2.8.0
-	k8s.io/klog/v2 v2.9.0
 	k8s.io/kube-aggregator v0.0.0
 	k8s.io/kube-aggregator v0.18.0-beta.2
 	k8s.io/kube-aggregator v0.23.0
@@ -1541,8 +1547,8 @@ exclude (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.25
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.30
 	sigs.k8s.io/controller-runtime v0.7.0
-	sigs.k8s.io/controller-runtime v0.9.0
 	sigs.k8s.io/controller-runtime v0.9.0-beta.1.0.20210512131817-ce2f0c92d77e
+	sigs.k8s.io/controller-runtime v0.9.0
 	sigs.k8s.io/controller-tools v0.2.8
 	sigs.k8s.io/controller-tools v0.3.0
 	sigs.k8s.io/controller-tools v0.4.1
@@ -1578,7 +1584,7 @@ replace (
 	k8s.io/kubectl => k8s.io/kubectl v0.25.16
 	k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
-	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
+	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.9.0
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
@@ -1588,8 +1594,8 @@ replace (
 // OpenShift pins
 replace (
 	github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
-	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
+	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
 	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
 	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e

@@ -43,7 +43,12 @@ func (f *frontend) newStreamAzureAction(ctx context.Context, r *http.Request, lo
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",

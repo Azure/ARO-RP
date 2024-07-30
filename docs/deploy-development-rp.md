@@ -51,6 +51,9 @@
    SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
    ```
 
+1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to 
+mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
+
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:
 
@@ -64,6 +67,9 @@
      `eastus`).
    * `RP_MODE`: Set to `development` to use a development RP running at
      https://localhost:8443/.
+   * `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
+   * `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
+   * `MOCK_MSI_TENANT_ID`: Tenant ID for service principal that mocks cluster MSI (see previous step).
 
 1. Create your own RP database:
 
@@ -93,29 +99,43 @@
    make runlocal-rp
    ```
 
-1. To create a cluster, EITHER follow the instructions in [Create, access, and
-   manage an Azure Red Hat OpenShift 4 Cluster][1].  Note that as long as the
-   `RP_MODE` environment variable is set to `development`, the `az aro` client
-   will connect to your local RP.
+1. To create a cluster, use one of the following methods:
+   1. Manually create the cluster using the public documentation.
+         
+      Before following the instructions in [Create, access, and manage an Azure Red
+      Hat OpenShift 4 Cluster][1], you will need to manually register your subscription to your local RP:
+      ```bash
+      $ curl -k -X PUT   -H 'Content-Type: application/json'   -d '{
+      "state": "Registered",
+      "properties": {
+         "tenantId": "'"$AZURE_TENANT_ID"'",
+         "registeredFeatures": [
+             {
+                 "name": "Microsoft.RedHatOpenShift/RedHatEngineering",
+                 "state": "Registered"
+             }
+         ]
+      }
+      }' "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
+      ```
 
-   OR use the create utility:
+      Note that as long as the `RP_MODE` environment variable is set to `development`, the `az aro` client will
+      connect to your local RP.
 
-   ```bash
-   # Create the application to run the cluster as and load it
-   CLUSTER=<cluster-name> go run ./hack/cluster createapp
-   source clusterapp.env
-   # Create the cluster
-   CLUSTER=<cluster-name> go run ./hack/cluster create
-   ```
+   1. use the create utility:
 
-   Later the cluster can be deleted as follows:
+      ```bash
+      # Create the cluster
+      CLUSTER=<cluster-name> go run ./hack/cluster create
+      ```
 
-   ```bash
-   CLUSTER=<cluster-name> go run ./hack/cluster delete
-   CLUSTER=<cluster-name> go run ./hack/cluster deleteapp
-   ```
+      Later the cluster can be deleted as follows:
+   
+      ```bash
+      CLUSTER=<cluster-name> go run ./hack/cluster delete
+      ```
 
-   By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.
+      By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.
 
    > __NOTE:__ If the cluster creation fails with `unable to connect to Podman socket...dial unix ///run/user/1000/podman/podman.sock: connect: no such file or directory`, then you will need enable podman user socket by executing : `systemctl --user enable --now podman.socket`, and re-run the installation.
 

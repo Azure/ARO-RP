@@ -32,6 +32,7 @@ type SubjectAttributes struct {
 	AltSecId         string   `json:"altsecid,omitempty"`
 	IdentityProvider string   `json:"idp,omitempty"`
 	Issuer           string   `json:"iss,omitempty"`
+	ClaimName        string   `json:"_claim_names,omitempty"`
 }
 
 // ActionInfo contains an action the query checks whether the subject

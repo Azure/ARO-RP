@@ -17,8 +17,8 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/ghodss/yaml"
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -26,7 +26,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/yaml"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -39,8 +41,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
+const (
+	aroOperatorNamespace = "openshift-azure-operator"
+)
+
 func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
-	listFunc := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").List
+	listFunc := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List
 	pods := ListK8sObjectWithRetry(
 		ctx, listFunc, metav1.ListOptions{LabelSelector: "app=aro-operator-master"},
 	)
@@ -48,7 +54,7 @@ func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
 		return nil, fmt.Errorf("%d aro-operator-master pods found", len(pods.Items))
 	}
 	body := GetK8sPodLogsWithRetry(
-		ctx, "openshift-azure-operator", pods.Items[0].Name, corev1.PodLogOptions{},
+		ctx, aroOperatorNamespace, pods.Items[0].Name, corev1.PodLogOptions{},
 	)
 
 	rx := regexp.MustCompile(`msg="(Update|Create) ([-a-zA-Z/.]+)`)
@@ -62,6 +68,20 @@ func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
 
 	return result, nil
 }
+
+var _ = Describe("ARO Operator", Label(smoke), func() {
+	It("should have no errors in the operator logs", Serial, func(ctx context.Context) {
+		pods := ListK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List, metav1.ListOptions{})
+		Eventually(func(g Gomega, ctx context.Context) {
+			for _, pod := range pods.Items {
+				// Check the latest 10 minutes of logs.
+				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: to.Int64Ptr(600)}).DoRaw(ctx)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(string(body)).NotTo(ContainSubstring("level=error"))
+			}
+		}, ctx, 10*time.Minute, 30*time.Second).Should(Succeed())
+	})
+})
 
 var _ = Describe("ARO Operator - Internet checking", func() {
 	var originalURLs []string
@@ -483,7 +503,6 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 	const (
 		imageConfigFlag  = operator.ImageConfigEnabled
 		optionalRegistry = "quay.io"
-		timeout          = 5 * time.Minute
 	)
 	var requiredRegistries []string
 	var imageConfig *configv1.Image
@@ -717,5 +736,57 @@ var _ = Describe("ARO Operator - Cloud Provider Config ConfigMap", func() {
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(disableOutboundSNAT).To(BeTrue())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	})
+})
+
+var _ = Describe("ARO Operator - Control Plane MachineSets", func() {
+	const (
+		cpmsEnabled = operator.CPMSEnabled
+	)
+
+	getCpmsOrNil := func(ctx context.Context, name string, options metav1.GetOptions) (*machinev1.ControlPlaneMachineSet, error) {
+		cpms, err := clients.MachineAPI.MachineV1().ControlPlaneMachineSets("openshift-machine-api").Get(ctx, name, options)
+		if err != nil && !kerrors.IsNotFound(err) {
+			return nil, err
+		}
+		return cpms, nil
+	}
+
+	BeforeEach(func(ctx context.Context) {
+		if err := discovery.ServerSupportsVersion(clients.Kubernetes.Discovery(), machinev1.GroupVersion); err != nil {
+			Skip("Cluster does not support machinev1 API, CPMS controller not present")
+		}
+	})
+
+	It("should ensure CPMS is Inactive", func(ctx context.Context) {
+		By("checking whether CPMS is disabled in ARO operator config")
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(cpmsEnabled) {
+			Skip("CPMS is enabled (controller disabled), skipping test")
+		}
+
+		By("checking whether CPMS is set to Inactive")
+
+		cpms := GetK8sObjectWithRetry(ctx, getCpmsOrNil, "cluster", metav1.GetOptions{})
+		Expect(cpms).To(Or(
+			BeNil(),
+			HaveField("Spec.State", Equal(machinev1.ControlPlaneMachineSetStateInactive)),
+		))
+
+		if cpms != nil {
+			By("ensuring CPMS is reset to Inactive if enabled")
+			cpms.Spec.State = machinev1.ControlPlaneMachineSetStateActive
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := clients.MachineAPI.MachineV1().ControlPlaneMachineSets("openshift-machine-api").Update(ctx, cpms, metav1.UpdateOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+			Eventually(func(g Gomega, ctx context.Context) {
+				cpms := GetK8sObjectWithRetry(ctx, getCpmsOrNil, "cluster", metav1.GetOptions{})
+				g.Expect(cpms).To(HaveField("Spec.State", Equal(machinev1.ControlPlaneMachineSetStateInactive)))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+		}
 	})
 })

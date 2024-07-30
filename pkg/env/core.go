@@ -26,6 +26,7 @@ const (
 	COMPONENT_MIRROR              ServiceComponent = "MIRROR"
 	COMPONENT_PORTAL              ServiceComponent = "PORTAL"
 	COMPONENT_UPDATE_OCP_VERSIONS ServiceComponent = "UPDATE_OCP_VERSIONS"
+	COMPONENT_UPDATE_ROLE_SETS    ServiceComponent = "UPDATE_ROLE_SETS"
 	COMPONENT_DEPLOY              ServiceComponent = "DEPLOY"
 	COMPONENT_TOOLING             ServiceComponent = "TOOLING"
 )
@@ -37,7 +38,7 @@ type Core interface {
 	IsLocalDevelopmentMode() bool
 	IsCI() bool
 	NewMSITokenCredential() (azcore.TokenCredential, error)
-	NewMSIAuthorizer(...string) (autorest.Authorizer, error)
+	NewMSIAuthorizer(scope string) (autorest.Authorizer, error)
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
 
@@ -53,6 +54,8 @@ type core struct {
 
 	component    ServiceComponent
 	componentLog *logrus.Entry
+
+	msiAuthorizers map[string]autorest.Authorizer
 }
 
 func (c *core) IsLocalDevelopmentMode() bool {
@@ -109,6 +112,7 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		isCI:                   isCI,
 		component:              component,
 		componentLog:           componentLog,
+		msiAuthorizers:         map[string]autorest.Authorizer{},
 	}, nil
 }
 
@@ -131,5 +135,6 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
 	return &core{
 		InstanceMetadata:       im,
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
+		msiAuthorizers:         map[string]autorest.Authorizer{},
 	}, nil
 }

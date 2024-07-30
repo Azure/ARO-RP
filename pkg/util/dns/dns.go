@@ -9,13 +9,15 @@ import (
 	"net/http"
 	"strings"
 
-	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
 )
 
 const (
@@ -31,14 +33,18 @@ type Manager interface {
 
 type manager struct {
 	env        env.Interface
-	recordsets dns.RecordSetsClient
+	recordsets armdns.RecordSetsClient
 }
 
-func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manager {
+func NewManager(env env.Interface, tokenCredential azcore.TokenCredential) Manager {
+	options := arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: env.Environment().Cloud,
+		},
+	}
 	return &manager{
-		env: env,
-
-		recordsets: dns.NewRecordSetsClient(env.Environment(), env.SubscriptionID(), localFPAuthorizer),
+		env:        env,
+		recordsets: armdns.NewRecordSetsClient(env.SubscriptionID(), tokenCredential, &options),
 	}
 }
 
@@ -48,9 +54,9 @@ func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return err
 	}
 
-	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A)
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
 	if err == nil {
-		if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
+		if rs.Properties.Metadata[resourceID] == nil || *rs.Properties.Metadata[resourceID] != oc.ID {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateDomain, "", "The provided domain '%s' is already in use by a cluster.", oc.Properties.ClusterProfile.Domain)
 		}
 
@@ -74,12 +80,12 @@ func (m *manager) Update(ctx context.Context, oc *api.OpenShiftCluster, ip strin
 		return err
 	}
 
-	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A)
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
 	if err != nil {
 		return err
 	}
 
-	if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
+	if rs.Properties.Metadata[resourceID] == nil || *rs.Properties.Metadata[resourceID] != oc.ID {
 		return fmt.Errorf("recordset %q already registered", "api."+prefix)
 	}
 
@@ -93,7 +99,7 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 	}
 
 	var isCreate bool
-	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, mgmtdns.A)
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, nil)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
 		isCreate = true
@@ -101,23 +107,26 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 
 	// If record exists and routerIP already match - skip CreateOrUpdate
 	if err == nil && !isCreate {
-		for _, a := range *rs.ARecords {
-			if *a.Ipv4Address == routerIP {
+		for _, a := range rs.Properties.ARecords {
+			if *a.IPv4Address == routerIP {
 				return nil
 			}
 		}
 	}
 
-	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, mgmtdns.A, mgmtdns.RecordSet{
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
+	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, sdkdns.RecordSet{
+		Properties: &sdkdns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
-			ARecords: &[]mgmtdns.ARecord{
+			ARecords: []*sdkdns.ARecord{
 				{
-					Ipv4Address: &routerIP,
+					IPv4Address: &routerIP,
 				},
 			},
 		},
-	}, "", "")
+	}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
+		IfMatch:     nil,
+		IfNoneMatch: nil,
+	})
 
 	return err
 }
@@ -128,7 +137,7 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return err
 	}
 
-	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A)
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
 		return nil
@@ -137,16 +146,20 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return err
 	}
 
-	if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
+	if rs.Properties.Metadata[resourceID] == nil || *rs.Properties.Metadata[resourceID] != oc.ID {
 		return nil
 	}
 
-	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, mgmtdns.A, "")
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
+		IfMatch: to.StringPtr(""),
+	})
 	if err != nil {
 		return err
 	}
 
-	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A, *rs.Etag)
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
+		IfMatch: rs.Etag,
+	})
 
 	return err
 }
@@ -157,8 +170,8 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 		return err
 	}
 
-	rs := mgmtdns.RecordSet{
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
+	rs := sdkdns.RecordSet{
+		Properties: &sdkdns.RecordSetProperties{
 			Metadata: map[string]*string{
 				resourceID: &oc.ID,
 			},
@@ -167,14 +180,18 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 	}
 
 	if ip != "" {
-		rs.ARecords = &[]mgmtdns.ARecord{
+		rs.Properties.ARecords = []*sdkdns.ARecord{
 			{
-				Ipv4Address: &ip,
+				IPv4Address: &ip,
 			},
 		}
 	}
 
-	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A, rs, ifMatch, ifNoneMatch)
+	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, rs,
+		&sdkdns.RecordSetsClientCreateOrUpdateOptions{
+			IfMatch:     &ifMatch,
+			IfNoneMatch: &ifNoneMatch,
+		})
 
 	return err
 }
