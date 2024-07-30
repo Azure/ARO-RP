@@ -327,7 +327,7 @@ const (
 
 // Identity stores information about the cluster MSI(s) in a workload identity cluster.
 type Identity struct {
-	Type                   ResourceIdentityType                           `json:"type,omitempty"`
+	Type                   ResourceIdentityType                   `json:"type,omitempty"`
 	PrincipalID            string                                 `json:"principalId,omitempty" swagger:"readOnly"`
 	TenantID               string                                 `json:"tenantId,omitempty" swagger:"readOnly"`
 	UserAssignedIdentities map[string]ClusterUserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
