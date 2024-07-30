@@ -84,7 +84,7 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 // storageAccount will return storage account resource.
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.
-func (m *manager) storageAccount(name, region string, ocpSubnets []string, encrypted bool) *arm.Resource {
+func (m *manager) storageAccount(name, region string, ocpSubnets []string, encrypted bool, allowSharedKeyAccess bool) *arm.Resource {
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
@@ -138,6 +138,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 				VirtualNetworkRules: &virtualNetworkRules,
 				DefaultAction:       "Deny",
 			},
+			AllowSharedKeyAccess: to.BoolPtr(allowSharedKeyAccess),
 		},
 		Name:     &name,
 		Location: &region,

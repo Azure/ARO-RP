@@ -30,8 +30,8 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
-			m.storageAccount(clusterStorageAccountName, m.doc.OpenShiftCluster.Location, ocpSubnets, false),
-			m.storageAccount(registryStorageAccountName, m.doc.OpenShiftCluster.Location, ocpSubnets, false),
+			m.storageAccount(clusterStorageAccountName, m.doc.OpenShiftCluster.Location, ocpSubnets, false, false),
+			m.storageAccount(registryStorageAccountName, m.doc.OpenShiftCluster.Location, ocpSubnets, false, true),
 		},
 	}
 
