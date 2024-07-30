@@ -1,4 +1,11 @@
-# Deploy an Entire RP Development Service
+# Deploy an entire RP Development Service
+
+## When to use it?
+
+- Test the gateway and clusters' interactions with it.
+- Test the actual VMSS instances we run the RP and gateway on.
+- Test our deployments (since full-service uses mostly the same deployment setup as production).
+- Test any Hive cluster changes without messing with the shared development Hive clusters.
 
 ## Prerequisites
 
