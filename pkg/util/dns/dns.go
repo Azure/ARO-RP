@@ -12,12 +12,12 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
+	azerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
 )
 
 const (
@@ -63,8 +63,7 @@ func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return nil
 	}
 
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
+	if azerrors.IsNotFoundError(err) {
 		err = nil
 	}
 	if err != nil {
@@ -100,8 +99,7 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 
 	var isCreate bool
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, nil)
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
+	if azerrors.IsNotFoundError(err) {
 		isCreate = true
 	}
 
@@ -138,8 +136,7 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 	}
 
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
+	if azerrors.IsNotFoundError(err) {
 		return nil
 	}
 	if err != nil {
