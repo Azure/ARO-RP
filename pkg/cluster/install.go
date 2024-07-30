@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/containerinstall"
 	"github.com/Azure/ARO-RP/pkg/database"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	utilgenerics "github.com/Azure/ARO-RP/pkg/util/generics"
@@ -511,11 +510,6 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	m.samplescli, err = samplesclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	m.arocli, err = aroclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

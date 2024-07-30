@@ -39,7 +39,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -89,7 +88,6 @@ type clientSet struct {
 	Client             client.Client
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
-	AROClusters        aroclient.Interface
 	ConfigClient       configclient.Interface
 	SecurityClient     securityclient.Interface
 	Project            projectclient.Interface
@@ -315,11 +313,6 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	arocli, err := aroclient.NewForConfig(restconfig)
-	if err != nil {
-		return nil, err
-	}
-
 	configcli, err := configclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
@@ -391,7 +384,6 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,
-		AROClusters:        arocli,
 		Project:            projectcli,
 		ConfigClient:       configcli,
 		SecurityClient:     securitycli,

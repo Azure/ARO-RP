@@ -27,7 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -46,7 +46,7 @@ type Monitor struct {
 	maocli     machineclient.Interface
 	mcocli     mcoclient.Interface
 	m          metrics.Emitter
-	arocli     aroclient.Interface
+	ch         clienthelper.Interface
 
 	ocpclientset  client.Client
 	hiveclientset client.Client
@@ -96,11 +96,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	arocli, err := aroclient.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	// lazy discovery will not attempt to reach out to the apiserver immediately
 	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
 	if err != nil {
@@ -113,6 +108,8 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	if err != nil {
 		return nil, err
 	}
+
+	ch := clienthelper.NewWithClient(log, ocpclientset)
 
 	hiveclientset, err := getHiveClientSet(hiveRestConfig)
 	if err != nil {
@@ -131,7 +128,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		configcli:     configcli,
 		maocli:        maocli,
 		mcocli:        mcocli,
-		arocli:        arocli,
+		ch:            ch,
 		m:             m,
 		ocpclientset:  ocpclientset,
 		hiveclientset: hiveclientset,

@@ -30,7 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -115,7 +114,6 @@ type manager struct {
 	configcli        configclient.Interface
 	samplescli       samplesclient.Interface
 	securitycli      securityclient.Interface
-	arocli           aroclient.Interface
 	imageregistrycli imageregistryclient.Interface
 
 	installViaHive     bool

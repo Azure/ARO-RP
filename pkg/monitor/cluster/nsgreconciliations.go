@@ -7,19 +7,19 @@ import (
 	"context"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	subnetscontroller "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func (mon *Monitor) emitNSGReconciliation(ctx context.Context) error {
-	co, err := mon.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	cluster := &arov1alpha1.Cluster{}
+	err := mon.ch.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 	if err != nil {
 		return err
 	}
 
-	updated, err := annotationUpdated(co.Annotations)
+	updated, err := annotationUpdated(cluster.Annotations)
 	if err != nil {
 		return err
 	}
