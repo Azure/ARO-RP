@@ -438,7 +438,7 @@ go run ./hack/monitor
 
 1. Trying to use `az aro` CLI in Production, fails wit:
 ```
-NoRegisteredProviderFound) No registered resource provider found for location '$LOCATION' and API version '2024-08-12-preview'
+(NoRegisteredProviderFound) No registered resource provider found for location '$LOCATION' and API version '2024-08-12-preview'
 ```
 - Check if`~/.azure/config` there is a block `extensions.dev_sources`. If yes, comment it.
 - Check if env var `AZURE_EXTENSION_DEV_SOURCES` is set. If yes, unset it.
