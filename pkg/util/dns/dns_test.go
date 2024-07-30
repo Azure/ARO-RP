@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
@@ -55,7 +55,7 @@ func TestCreate(t *testing.T) {
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{},
-					}, autorest.DetailedError{
+					}, &azcore.ResponseError{
 						StatusCode: http.StatusNotFound,
 					})
 
@@ -487,7 +487,7 @@ func TestDelete(t *testing.T) {
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{},
-					}, autorest.DetailedError{
+					}, &azcore.ResponseError{
 						StatusCode: http.StatusNotFound,
 					})
 			},
