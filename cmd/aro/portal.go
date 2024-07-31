@@ -152,12 +152,10 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		hostname = "localhost:8444"
 	}
 
-	address := "localhost:8444"
-	sshAddress := "localhost:2222"
+	address := ":8444"
+	sshAddress := ":2222"
 	if !_env.IsLocalDevelopmentMode() {
 		hostname = os.Getenv("PORTAL_HOSTNAME")
-		address = ":8444"
-		sshAddress = ":2222"
 	}
 
 	l, err := net.Listen("tcp", address)
