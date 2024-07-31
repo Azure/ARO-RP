@@ -35,11 +35,11 @@ $(ENUMER): $(BINGO_DIR)/enumer.mod
 	@echo "(re)installing $(GOBIN)/enumer-v1.1.2"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=enumer.mod -o=$(GOBIN)/enumer-v1.1.2 "github.com/alvaroloes/enumer"
 
-GENCOSMOSDB := $(GOBIN)/gencosmosdb-v0.0.0-20240723075448-058185e3c66d
+GENCOSMOSDB := $(GOBIN)/gencosmosdb-v0.0.0-20240729051124-c9cf2c4f6aa1
 $(GENCOSMOSDB): $(BINGO_DIR)/gencosmosdb.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/gencosmosdb-v0.0.0-20240723075448-058185e3c66d"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gencosmosdb.mod -o=$(GOBIN)/gencosmosdb-v0.0.0-20240723075448-058185e3c66d "github.com/jewzaam/go-cosmosdb/cmd/gencosmosdb"
+	@echo "(re)installing $(GOBIN)/gencosmosdb-v0.0.0-20240729051124-c9cf2c4f6aa1"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gencosmosdb.mod -o=$(GOBIN)/gencosmosdb-v0.0.0-20240729051124-c9cf2c4f6aa1 "github.com/jewzaam/go-cosmosdb/cmd/gencosmosdb"
 
 GO_BINDATA := $(GOBIN)/go-bindata-v3.1.2+incompatible
 $(GO_BINDATA): $(BINGO_DIR)/go-bindata.mod
