@@ -234,8 +234,7 @@ pyenv:
 	. pyenv/bin/activate && \
 		pip install -U pip && \
 		pip install -r requirements.txt && \
-		azdev setup -r . && \
-		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
+		azdev setup -r .
 
 .PHONY: secrets
 secrets:
