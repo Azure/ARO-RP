@@ -311,13 +311,21 @@ type ClusterUserAssignedIdentity struct {
 	PrincipalID string `json:"principalId,omitempty"`
 }
 
-// UserAssignedIdentities stores a mapping from resource IDs of managed identities to their client/principal IDs.
-type UserAssignedIdentities map[string]ClusterUserAssignedIdentity
+// The identity type.
+type ResourceIdentityType string
+
+// IdentityType constants
+const (
+	IdentitySystemAssigned ResourceIdentityType = "SystemAssigned"
+	IdentityUserAssigned   ResourceIdentityType = "UserAssigned"
+)
 
 // Identity stores information about the cluster MSI(s) in a workload identity cluster.
 type Identity struct {
-	Type                   string                 `json:"type,omitempty"`
-	UserAssignedIdentities UserAssignedIdentities `json:"userAssignedIdentities,omitempty"`
+	Type                   ResourceIdentityType                   `json:"type,omitempty"`
+	PrincipalID            string                                 `json:"principalId,omitempty" swagger:"readOnly"`
+	TenantID               string                                 `json:"tenantId,omitempty" swagger:"readOnly"`
+	UserAssignedIdentities map[string]ClusterUserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
 }
 
 // CreatedByType by defines user type, which executed the request

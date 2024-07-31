@@ -68,6 +68,13 @@ class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     SUCCEEDED = "Succeeded"
     UPDATING = "Updating"
 
+class ResourceIdentityType(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
+    """The identity type.
+    """
+
+    SYSTEM_ASSIGNED = "SystemAssigned"
+    USER_ASSIGNED = "UserAssigned"
+
 class Visibility(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """Visibility represents visibility.
     """

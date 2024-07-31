@@ -1904,10 +1904,21 @@
       "type": "object",
       "properties": {
         "type": {
-          "type": "string"
+          "$ref": "#/definitions/ResourceIdentityType"
+        },
+        "principalId": {
+          "type": "string",
+          "readOnly": true
+        },
+        "tenantId": {
+          "type": "string",
+          "readOnly": true
         },
         "userAssignedIdentities": {
-          "$ref": "#/definitions/UserAssignedIdentities"
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ClusterUserAssignedIdentity"
+          }
         }
       }
     },
@@ -2394,6 +2405,18 @@
         "modelAsString": true
       }
     },
+    "ResourceIdentityType": {
+      "description": "The identity type.",
+      "enum": [
+        "SystemAssigned",
+        "UserAssigned"
+      ],
+      "type": "string",
+      "x-ms-enum": {
+        "name": "ResourceIdentityType",
+        "modelAsString": false
+      }
+    },
     "Secret": {
       "description": "Secret represents a secret.",
       "type": "object",
@@ -2613,13 +2636,6 @@
     "UpgradeableTo": {
       "description": "UpgradeableTo stores a single OpenShift version a workload identity cluster can be upgraded to",
       "type": "string"
-    },
-    "UserAssignedIdentities": {
-      "description": "UserAssignedIdentities stores a mapping from resource IDs of managed identities to their client/principal IDs.",
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/definitions/ClusterUserAssignedIdentity"
-      }
     },
     "VMSize": {
       "description": "VM size availability varies by region.\nIf a node contains insufficient compute resources (memory, cpu, etc.), pods might fail to run correctly.\nFor more details on restricted VM sizes, see: https://docs.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes",
