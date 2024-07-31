@@ -205,10 +205,6 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		p.gatewayDomains = append(p.gatewayDomains, p.acrDomain, acrDataDomain)
 	}
 
-	if err := ValidateVars(OIDCStorageAccountName); err != nil {
-		return nil, err
-	}
-
 	p.ARMHelper, err = newARMHelper(ctx, log, p)
 	if err != nil {
 		return nil, err
