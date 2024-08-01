@@ -5,7 +5,9 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,8 +19,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/Azure/ARO-RP/test/util/dynamic"
 )
 
 var (
@@ -223,4 +229,74 @@ func (p Project) VerifyProjectIsDeleted(ctx context.Context) {
 		_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
 		g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+}
+
+func loadResourcesFromYaml(file string) (objs []unstructured.Unstructured, err error) {
+	manifest, err := staticResources.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = manifest.Close()
+	}()
+	dec := yaml.NewYAMLOrJSONDecoder(manifest, 4096)
+	// It can't load multiple objects from a single file, so we need to loop through the file and load them one by one.
+	for {
+		var obj unstructured.Unstructured
+		err := dec.Decode(&obj)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
+		objs = append(objs, obj)
+	}
+	return objs, nil
+}
+
+func createResources(ctx context.Context, objs ...unstructured.Unstructured) (result []unstructured.Unstructured) {
+	GinkgoHelper()
+	By("Creating resources")
+	for _, obj := range objs {
+		By(fmt.Sprintf("- Creating %s %s/%s", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
+		cli, err := clients.Dynamic.GetClient(&obj)
+		Expect(err).NotTo(HaveOccurred())
+		result = append(result, *CreateK8sObjectWithRetry(ctx, cli.Create, &obj, metav1.CreateOptions{}))
+	}
+	return result
+}
+
+func cleanupResources(ctx context.Context, objs ...unstructured.Unstructured) {
+	GinkgoHelper()
+	By("Cleaning up resources")
+	clis := make([]dynamic.ResourceClient, len(objs))
+	var err error
+	for i, obj := range objs {
+		By(fmt.Sprintf("- Deleting %s %s/%s", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
+		clis[i], err = clients.Dynamic.GetClient(&obj)
+		Expect(err).NotTo(HaveOccurred())
+		// Trigger deletion of all resources first otherwise some deletions may fail due to dependencies.
+		Eventually(func(g Gomega, ctx context.Context) {
+			err = clis[i].Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+			g.Expect(err == nil || kerrors.IsNotFound(err)).To(BeTrue())
+		}, DefaultTimeout, PollingInterval, ctx).Should(Succeed())
+	}
+	for i, obj := range objs {
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err = clis[i].Get(ctx, obj.GetName(), metav1.GetOptions{})
+			g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+		}, DefaultTimeout, PollingInterval, ctx).Should(Succeed())
+		By(fmt.Sprintf("- Deleted %s %s/%s", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
+	}
+}
+
+func expectPodRunning(ctx context.Context, namespace, name string) {
+	GinkgoHelper()
+	By("Checking the pod is running")
+	Eventually(func(g Gomega, ctx context.Context) {
+		pod, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(pod.Status.Phase).To(Equal(corev1.PodRunning))
+	}, DefaultEventuallyTimeout, PollingInterval, ctx).Should(Succeed())
 }
