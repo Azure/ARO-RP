@@ -516,6 +516,21 @@ func (mr *MockSubnetsClientMockRecorder) Get(arg0, arg1, arg2, arg3, arg4 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSubnetsClient)(nil).Get), arg0, arg1, arg2, arg3, arg4)
 }
 
+// List mocks base method.
+func (m *MockSubnetsClient) List(arg0 context.Context, arg1, arg2 string) (network.SubnetListResultPage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret0, _ := ret[0].(network.SubnetListResultPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockSubnetsClientMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSubnetsClient)(nil).List), arg0, arg1, arg2)
+}
+
 // MockVirtualNetworksClient is a mock of VirtualNetworksClient interface.
 type MockVirtualNetworksClient struct {
 	ctrl     *gomock.Controller
