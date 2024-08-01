@@ -21,9 +21,9 @@ fi
 # Extract version and pullspec from const.go
 OPENSHIFT_VERSION=$(awk -F'[(,)]' '/NewVersion/ {gsub(/ /, ""); print $2"."$3"."$4; exit}' "$CONST_GO_PATH")
 OCP_PULLSPEC=$(awk -F'"' '/PullSpec:/ {print $2; exit}' "$CONST_GO_PATH")
-INSTALLER_PULLSPEC="arointsvc.azurecr.io/aro-installer:release-$OPENSHIFT_VERSION"
 
-# Print the fetched values for verification
+# Set the INSTALLER_PULLSPEC
+INSTALLER_PULLSPEC="arointsvc.azurecr.io/aro-installer:release-$OPENSHIFT_VERSION"
 echo "Using OpenShift version: $OPENSHIFT_VERSION"
 echo "Using OCP_PULLSPEC: $OCP_PULLSPEC"
 echo "Using INSTALLER_PULLSPEC: $INSTALLER_PULLSPEC"
