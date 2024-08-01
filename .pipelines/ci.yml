@@ -60,6 +60,11 @@ jobs:
         target: golang
 
       - script: |
+          echo "##vso[task.prependpath]$(go env GOPATH)/bin"
+        displayName: Add GOBIN to path
+        target: golang
+
+      - script: |
           set -xe
           make generate
           [[ -z "$(git status -s)" ]]
