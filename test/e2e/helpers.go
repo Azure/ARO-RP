@@ -5,11 +5,15 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	projectv1 "github.com/openshift/api/project/v1"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
@@ -223,4 +227,61 @@ func (p Project) VerifyProjectIsDeleted(ctx context.Context) {
 		_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
 		g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+}
+
+func loadResourcesFromYaml(file string) (objs []unstructured.Unstructured, err error) {
+	manifest, err := staticResources.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = manifest.Close()
+	}()
+	dec := yaml.NewYAMLOrJSONDecoder(manifest, 4096)
+	// It can't load multiple objects from a single file, so we need to loop through the file and load them one by one.
+	for {
+		var obj unstructured.Unstructured
+		err := dec.Decode(&obj)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
+		objs = append(objs, obj)
+	}
+	return objs, nil
+}
+
+func createResources(ctx context.Context, objs ...unstructured.Unstructured) (result []unstructured.Unstructured) {
+	GinkgoHelper()
+	By("Creating resources")
+	for _, obj := range objs {
+		By(fmt.Sprintf("- Creating %s %s/%s", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
+		cli, err := clients.Dynamic.GetClient(&obj)
+		Expect(err).NotTo(HaveOccurred())
+		result = append(result, *CreateK8sObjectWithRetry(ctx, cli.Create, &obj, metav1.CreateOptions{}))
+	}
+	return result
+}
+
+func cleanupResources(ctx context.Context, objs ...unstructured.Unstructured) {
+	GinkgoHelper()
+	By("Cleaning up resources")
+	for _, obj := range objs {
+		By(fmt.Sprintf("- Deleting %s %s/%s", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
+		cli, err := clients.Dynamic.GetClient(&obj)
+		Expect(err).NotTo(HaveOccurred())
+		CleanupK8sResource[*unstructured.Unstructured](ctx, cli, obj.GetName())
+	}
+}
+
+func expectPodRunning(ctx context.Context, namespace, name string) {
+	GinkgoHelper()
+	By("Checking the pod is running")
+	Eventually(func(g Gomega, ctx context.Context) {
+		pod, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(pod.Status.Phase).To(Equal(corev1.PodRunning))
+	}, DefaultEventuallyTimeout, 10*time.Second, ctx).Should(Succeed())
 }
