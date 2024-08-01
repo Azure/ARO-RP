@@ -86,8 +86,7 @@ jobs:
         condition: succeededOrFailed()
 
       - script: |
-          set -xe
-          ./hack/goruntool.sh gocov-xml convert cover.out | ./hack/goruntool.sh gocov-xml > coverage.xml
+          make xmlcov
         displayName: ⚙️ Process Reports
         condition: succeededOrFailed()
         target: golang

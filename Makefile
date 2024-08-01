@@ -20,6 +20,8 @@ GATEKEEPER_VERSION = v3.15.1
 # Golang version go mod tidy compatibility
 GOLANG_VERSION ?= 1.21
 
+include .bingo/Variables.mk
+
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif
@@ -90,7 +92,7 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 .PHONY: client
-client: generate
+client: generate $(GOIMPORTS)
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
 
 .PHONY: ci-rp
@@ -130,27 +132,27 @@ ifeq ($(shell uname -s),Darwin)
 endif
 
 .PHONY: generate
-generate:
+generate: install-tools
 	go generate ./...
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
 .PHONY: generate-operator-apiclient
-generate-operator-apiclient:
-	./hack/goruntool.sh client-gen --clientset-name versioned --input-base ./pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package ./pkg/operator/clientset --go-header-file ./hack/licenses/boilerplate.go.txt
+generate-operator-apiclient: $(GOIMPORTS) $(CLIENT_GEN)
+	$(CLIENT_GEN) --clientset-name versioned --input-base ./pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package ./pkg/operator/clientset --go-header-file ./hack/licenses/boilerplate.go.txt
 	gofmt -s -w ./pkg/operator/clientset
-	./hack/goruntool.sh goimports -local=github.com/Azure/ARO-RP -e -w ./pkg/operator/clientset ./pkg/operator/apis
+	$(GOIMPORTS) -local=github.com/Azure/ARO-RP -e -w ./pkg/operator/clientset ./pkg/operator/apis
 
 .PHONY: generate-guardrails
 generate-guardrails:
 	cd pkg/operator/controllers/guardrails/policies && ./scripts/generate.sh > /dev/null
 
 .PHONY: generate-kiota
-generate-kiota:
+generate-kiota: $(GOIMPORTS)
 	kiota generate --clean-output -l go -o ./pkg/util/graph/graphsdk -n "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk" -d hack/graphsdk/openapi.yaml -c GraphBaseServiceClient --additional-data=False --backing-store=True
 	find ./pkg/util/graph/graphsdk -type f -name "*.go"  -exec sed -i'' -e 's\github.com/azure/aro-rp\github.com/Azure/ARO-RP\g' {} +
 	gofmt -s -w pkg/util/graph/graphsdk
-	./hack/goruntool.sh goimports -w -local=github.com/Azure/ARO-RP pkg/util/graph/graphsdk
+	$(GOIMPORTS) -w -local=github.com/Azure/ARO-RP pkg/util/graph/graphsdk
 	go run ./hack/validate-imports pkg/util/graph/graphsdk
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
@@ -273,9 +275,9 @@ test-e2e: e2e.test
 test-go: generate build-all validate-go lint-go unit-test-go
 
 .PHONY: validate-go
-validate-go:
+validate-go: $(GOIMPORTS)
 	gofmt -s -w cmd hack pkg test
-	./hack/goruntool.sh goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
+	$(GOIMPORTS) -w -local=github.com/Azure/ARO-RP cmd hack pkg test
 	go run ./hack/validate-imports cmd hack pkg test
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
@@ -296,16 +298,16 @@ validate-fips:
 	hack/fips/validate-fips.sh ./aro
 
 .PHONY: unit-test-go
-unit-test-go:
-	./hack/goruntool.sh gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+unit-test-go: $(GOTESTSUM)
+	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 
 .PHONY: unit-test-go-coverpkg
-unit-test-go-coverpkg:
-	./hack/goruntool.sh gotestsum --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+unit-test-go-coverpkg: $(GOTESTSUM)
+	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 .PHONY: lint-go
 lint-go:
-	./hack/goruntool.sh golangci-lint run --verbose
+	$(GOLANGCI_LINT) run --verbose
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
@@ -363,3 +365,10 @@ vendor:
 	hack/update-go-module-dependencies.sh
 	$(MAKE) go-verify
 
+.PHONY: xmlcov
+xmlcov: $(GOCOV_XML)
+	$(GOCOV_XML) convert cover.out | $(GOCOV_XML) > coverage.xml
+
+.PHONY: install-tools
+install-tools: $(BINGO)
+	$(BINGO) get -l
