@@ -52,6 +52,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if _env.IsLocalDevelopmentMode() {
 		keys = []string{
 			"PULL_SECRET",
+			env.OIDCStorageAccountName,
 		}
 	} else {
 		keys = []string{
@@ -61,6 +62,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
+			env.OIDCStorageAccountName,
 		}
 
 		if _, found := os.LookupEnv("PULL_SECRET"); found {

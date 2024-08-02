@@ -23,8 +23,8 @@ func TestMockMSIMiddleware(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if req.Header.Get(dataplane.MsiIdentityURLHeader) != mockIdentityURL {
-		t.Errorf("Expected %s, got %s", mockIdentityURL, req.Header.Get(dataplane.MsiIdentityURLHeader))
+	if req.Header.Get(dataplane.MsiIdentityURLHeader) != MockIdentityURL {
+		t.Errorf("Expected %s, got %s", MockIdentityURL, req.Header.Get(dataplane.MsiIdentityURLHeader))
 	}
 	if req.Header.Get(dataplane.MsiTenantHeader) != mockTenantID {
 		t.Errorf("Expected %s, got %s", mockTenantID, req.Header.Get(dataplane.MsiTenantHeader))
