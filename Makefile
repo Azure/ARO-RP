@@ -366,8 +366,8 @@ vendor:
 	$(MAKE) go-verify
 
 .PHONY: xmlcov
-xmlcov: $(GOCOV_XML)
-	$(GOCOV_XML) convert cover.out | $(GOCOV_XML) > coverage.xml
+xmlcov: $(GOCOV) $(GOCOV_XML)
+	$(GOCOV) convert cover.out | $(GOCOV_XML) > coverage.xml
 
 .PHONY: install-tools
 install-tools: $(BINGO)

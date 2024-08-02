@@ -59,6 +59,12 @@ $(GOCOV_XML): $(BINGO_DIR)/gocov-xml.mod
 	@echo "(re)installing $(GOBIN)/gocov-xml-v1.1.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gocov-xml.mod -o=$(GOBIN)/gocov-xml-v1.1.0 "github.com/AlekSi/gocov-xml"
 
+GOCOV := $(GOBIN)/gocov-v1.1.0
+$(GOCOV): $(BINGO_DIR)/gocov.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/gocov-v1.1.0"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gocov.mod -o=$(GOBIN)/gocov-v1.1.0 "github.com/axw/gocov/gocov"
+
 GOIMPORTS := $(GOBIN)/goimports-v0.23.0
 $(GOIMPORTS): $(BINGO_DIR)/goimports.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
