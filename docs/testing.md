@@ -38,7 +38,7 @@ E2e tests can be run in CI with the `/azp run e2e` command in your GitHub PR.
 
 E2e tests can also be run locally as follows:
 - Make sure that you meet the requirements from [Prepare the database and run the rp](./deploy-development-rp.md) (do not create the database yet)
-- Source the [helper script](../hack/e2e/run-rp-and-e2e.sh) to set the proper ENV variables. If you run the tests locally, run  `export LOCAL_E2E=true` env before sourcing the helper file.
+- Source the [helper script](../hack/e2e/run-rp-and-e2e.sh) to set the proper ENV variables.
 - Run the rp
 - Validate the RP is running properly by hitting the `/healthz` route
 - Register a subscription where to run the e2e
@@ -53,19 +53,34 @@ These steps can be acheived using commands below.  Look at the [e2e helper
 file](../hack/e2e/run-rp-and-e2e.sh) to understand each of the bash functions
 below.
 
+## Smoke tests
+
+We have some other tests under `test/e2e` that are not part of the CI.
+These tests are labelled as `smoke` and are supposed to be run to check the basic functionality of the OCP cluster.
+They can be used as a gap analysis for new OCP versions or the installer updates.
+
+You can run the smoke tests by running the following command:
+
+```bash
+E2E_LABEL=smoke make test-e2e
+```
+
+If you want to run both e2e and smoke tests:
+
+```bash
+E2E_LABEL= make test-e2e
+```
+
 ### Run a specific test
 
 End to end tests are run using ginkgo. You can run subsets of tests or ignore some tests by following the [ginkgo documentation](https://onsi.github.io/ginkgo/#filtering-specs)
-
-
 
 ```bash
 # source your environment file
 . ./secrets/env
 
-# set the CLUSTER and LOCAL_E2E env if you are testing locally
+# set the CLUSTER env if you are testing locally
 export CLUSTER=<cluster-name>
-export LOCAL_E2E="true"
 
 # source the e2e helper file
 . ./hack/e2e/run-rp-and-e2e.sh
@@ -99,4 +114,16 @@ kill_rp
 
 # Delete the DB
 clean_e2e_db
+```
+
+If you already created a dev cluster, you can run the e2e tests just by running the following command:
+
+```bash
+CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
+```
+
+For smoke tests:
+
+```bash
+CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> E2E_LABEL=smoke make test-e2e
 ```
