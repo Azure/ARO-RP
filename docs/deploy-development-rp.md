@@ -482,7 +482,7 @@ To run fake metrics socket:
 go run ./hack/monitor
 ```
 
-## Known Issues
+## Troubleshooting
 
 1. Trying to use `az aro` CLI in Production, fails with:
 ```
