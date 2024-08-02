@@ -40,7 +40,6 @@ var DefaultInstallStream = Stream{
 
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
-	// Latest stable release is 2.0.20240628
 	// https://github.com/microsoft/azurelinux/releases
 	return acrDomain + "/fluentbit:1.9.10-cm20240628@sha256:1d0b1789f4eb06f5c74fa5def306bd5095852882f63d91578ef589e8eab18765"
 }
@@ -54,7 +53,7 @@ func MdmImage(acrDomain string) string {
 // MdsdImage contains the location of the MDSD container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/distroless/genevamdsd:mariner_20240711.1@sha256:20266be8d3de71ceaf6b864e70e295de5eecb5f796aad92bc303efcaf179a365"
+	return acrDomain + "/distroless/genevamdsd:mariner_20240711.1@sha256:86d73d9df70aca71c54bbfbdf6402a2cc1ddd9cbbebf3d6a0319de5950b10382"
 }
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
