@@ -299,15 +299,25 @@ type UpgradeableTo string
 
 // PlatformWorkloadIdentity stores information representing a single workload identity.
 type PlatformWorkloadIdentity struct {
+	// The name of the operator for which the PlatformWorkloadIdentity is used for
 	OperatorName string `json:"operatorName,omitempty" mutable:"true"`
-	ResourceID   string `json:"resourceId,omitempty" mutable:"true"`
-	ClientID     string `json:"clientId,omitempty" swagger:"readOnly" mutable:"true"`
-	ObjectID     string `json:"objectId,omitempty" swagger:"readOnly" mutable:"true"`
+
+	// The resource ID of the PlatformWorkloadIdentity resource
+	ResourceID string `json:"resourceId,omitempty" mutable:"true"`
+
+	// The ClientID of the PlatformWorkloadIdentity resource
+	ClientID string `json:"clientId,omitempty" swagger:"readOnly" mutable:"true"`
+
+	// The ObjectID of the PlatformWorkloadIdentity resource
+	ObjectID string `json:"objectId,omitempty" swagger:"readOnly" mutable:"true"`
 }
 
 // ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
 type ClusterUserAssignedIdentity struct {
-	ClientID    string `json:"clientId,omitempty"`
+	// The ClientID of the ClusterUserAssignedIdentity resource
+	ClientID string `json:"clientId,omitempty"`
+
+	// The PrincipalID of the ClusterUserAssignedIdentity resource
 	PrincipalID string `json:"principalId,omitempty"`
 }
 
@@ -322,9 +332,16 @@ const (
 
 // Identity stores information about the cluster MSI(s) in a workload identity cluster.
 type Identity struct {
-	Type                   ResourceIdentityType                   `json:"type,omitempty"`
-	PrincipalID            string                                 `json:"principalId,omitempty" swagger:"readOnly"`
-	TenantID               string                                 `json:"tenantId,omitempty" swagger:"readOnly"`
+	// The type of the Identity resource.
+	Type ResourceIdentityType `json:"type,omitempty"`
+
+	// The PrincipalID of the Identity resource.
+	PrincipalID string `json:"principalId,omitempty" swagger:"readOnly"`
+
+	// The TenantID provided by the MSI RP
+	TenantID string `json:"tenantId,omitempty" swagger:"readOnly"`
+
+	// A map of ClusterUserAssigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.
 	UserAssignedIdentities map[string]ClusterUserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
 }
 
