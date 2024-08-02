@@ -4,6 +4,7 @@ trigger:
   branches:
     include:
       - master
+      - loki/pipeline-swarm
   paths:
     exclude:
       - docs/*
@@ -12,6 +13,9 @@ trigger:
       - v2*
 
 pr:
+  branches:
+    include:
+      - loki/pipeline-swarm
   paths:
     exclude:
       - docs/*
