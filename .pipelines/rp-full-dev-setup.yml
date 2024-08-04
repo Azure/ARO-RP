@@ -27,7 +27,7 @@ parameters:
   - name: keyvaultPrefix
     type: string
     default: ' '
-  - name: dst_acr_name
+  - name: dstAcrName
     type: string
     default: ' '
   - name: aroImage
@@ -92,7 +92,7 @@ jobs:
       - template: ./templates/rp-dev/template-mirror-images_to_acr.yml
         parameters:
           mirrorTag: ${{ parameters.ocpVersionTag }}
-          dst_acr_name: ${{ parameters.dst_acr_name }}
+          dstAcrName: ${{ parameters.dstAcrName }}
 
       # 8) Final preperation before deploying RP
       - template: ./templates/rp-dev/template-prepare-rp-deploy.yml

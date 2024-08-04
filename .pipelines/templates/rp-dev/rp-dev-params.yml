@@ -14,7 +14,7 @@ parameters:
   - name: keyvaultPrefix
     type: string
     default: ' '
-  - name: dst_acr_name
+  - name: dstAcrName
     type: string
     default: ' '
   - name: aroImage

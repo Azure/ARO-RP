@@ -39,12 +39,12 @@ steps:
       [ -z "${{ parameters.resourceGroup }}" ] && export RESOURCEGROUP="${AZURE_PREFIX}-aro-${LOCATION}" || export RESOURCEGROUP="${{ parameters.resourceGroup }}"
       [ -z "${{ parameters.databaseAccountName }}" ] && export DATABASE_ACCOUNT_NAME="${AZURE_PREFIX}-aro-${LOCATION}" || export DATABASE_ACCOUNT_NAME="${{ parameters.databaseAccountName }}"
       [ -z "${{ parameters.keyvaultPrefix }}" ] && export KEYVAULT_PREFIX="${AZURE_PREFIX}-aro-${LOCATION}" || export KEYVAULT_PREFIX="${{ parameters.keyvaultPrefix }}"
-      [ -z "${{ parameters.dst_acr_name }}" ] && export DST_ACR_NAME="$(AZURE_PREFIX)aro" || export DST_ACR_NAME="${{ parameters.dst_acr_name }}"
+      [ -z "${{ parameters.dstAcrName }}" ] && export DST_ACR_NAME="$(AZURE_PREFIX)aro" || export DST_ACR_NAME="${{ parameters.dstAcrName }}"
 
       # TODO- Is it needed here?
       # Export ARO image with a default value based on dst ACR name and git commit
       gitCommit=$(git rev-parse --short=7 HEAD)
-      [ -z "${{ parameters.aroImage }}" ] && export ARO_IMAGE=${{ parameters.dst_acr_name }}.azurecr.io/aro:${gitCommit} || export ARO_IMAGE="${{ parameters.aroImage }}"
+      [ -z "${{ parameters.aroImage }}" ] && export ARO_IMAGE=${{ parameters.dstAcrName }}.azurecr.io/aro:${gitCommit} || export ARO_IMAGE="${{ parameters.aroImage }}"
 
       # Generate SSH key
       ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
