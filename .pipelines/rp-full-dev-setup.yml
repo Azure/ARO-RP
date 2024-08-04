@@ -47,7 +47,7 @@ jobs:
 
       # 4) Semi deploy ...
       - script: make deploy # use different target which will succeed and won't fail
-        name: semi-deploy-aro-rp-dev
+        name: semi_deploy_aro_rp_dev
         displayName: 🚀 semi-deploy RP
 
       # 5) Deploy VPN Gateway & AKS
@@ -55,7 +55,7 @@ jobs:
           source ./hack/devtools/deploy-shared-env.sh
           deploy_vpn_for_dedicated_rp
           deploy_aks_dev
-        name: deploy-vpn-gateway
+        name: deploy_vpn_gateway
         displayName: 🚀 Deploy VPN Gateway and AKS
 
       # 6) Install Hive
@@ -79,14 +79,14 @@ jobs:
 
       # 9) Fully deploy RP
       - script: make deploy
-        name: full-deploy-aro-rp-dev
+        name: full_deploy_aro_rp_dev
         displayName: 🚀 Fully deploy ARO RP Setup
 
       # 10) Create SA and Role assignment
       - script: |
           source ./hack/devtools/deploy-shared-env.sh
           deploy_oic_for_dedicated_rp
-        name: create-sa-role
+        name: create_sa_role
         displayName: ⚙️ Create storage account and role assignment
 ## few more steps would be added (e.g., cluster creation)
 

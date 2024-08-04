@@ -21,7 +21,7 @@ steps:
       for file in "${files[@]}"; do
         [ -f "$expected_dir/$file" ] || { echo "File '$file' does not exist inside the directory '$expected_dir'."; exit 1; }
       done
-    name: download-secrets
+    name: download_secrets
     displayName: 🔑 Downloading certificates and secrets from storage account
 
   - script: |
@@ -31,7 +31,7 @@ steps:
       export KEYVAULT_PREFIX=${{ parameters.keyvaultPrefix }} ARO_IMAGE=${{ parameters.aroImage }}
       # Source environment variables from the secrets file
       source secrets/env
-
+ 
       # Generate SSH key
       ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
 
@@ -40,5 +40,5 @@ steps:
 
       # Check if the dev-config.yaml file exists
       [ -f "dev-config.yaml" ] || { echo "File dev-config.yaml does not exist."; exit 1; }
-    name: generate-rp-dev-config
+    name: generate_rp_dev_config
     displayName: ⚙️ Generating RP development config yaml (dev-config.yaml)
