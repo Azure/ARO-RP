@@ -35,16 +35,17 @@ import (
 )
 
 type Interface interface {
+	client.Reader
+	client.Writer
 	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
 	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
-	Client() client.Client
 }
 
 type clientHelper struct {
-	log *logrus.Entry
+	client.Client
 
-	client client.Client
+	log *logrus.Entry
 }
 
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
@@ -63,12 +64,8 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 func NewWithClient(log *logrus.Entry, client client.Client) Interface {
 	return &clientHelper{
 		log:    log,
-		client: client,
+		Client: client,
 	}
-}
-
-func (ch *clientHelper) Client() client.Client {
-	return ch.client
 }
 
 func (ch *clientHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error {
@@ -79,7 +76,7 @@ func (ch *clientHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersi
 	a.SetGroupVersionKind(gvk)
 
 	ch.log.Infof("Delete kind %s ns %s name %s", gvk.Kind, key.Namespace, key.Name)
-	err := ch.client.Delete(ctx, a)
+	err := ch.Delete(ctx, a)
 	if kerrors.IsNotFound(err) {
 		return nil
 	}
@@ -92,7 +89,7 @@ func (ch *clientHelper) GetOne(ctx context.Context, key types.NamespacedName, ob
 		return errors.New("can't convert object")
 	}
 
-	return ch.client.Get(ctx, key, newObj)
+	return ch.Get(ctx, key, newObj)
 }
 
 // Ensure that one or more objects match their desired state.  Only update
@@ -130,10 +127,10 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 			return fmt.Errorf("object of kind %s can't be made a client.Object", gvk.String())
 		}
 
-		err = ch.client.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, oldObj)
+		err = ch.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, oldObj)
 		if kerrors.IsNotFound(err) {
 			ch.log.Infof("Create %s", keyFunc(gvk.GroupKind(), newObj.GetNamespace(), newObj.GetName()))
-			return ch.client.Create(ctx, newObj)
+			return ch.Create(ctx, newObj)
 		}
 		if err != nil {
 			return err
@@ -143,7 +140,7 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 			return err
 		}
 		ch.log.Infof("Update %s: %s", keyFunc(gvk.GroupKind(), candidate.GetNamespace(), candidate.GetName()), diff)
-		return ch.client.Update(ctx, candidate)
+		return ch.Update(ctx, candidate)
 	})
 }
 
