@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	MockIdentityURL    = "https://bogus.identity.azure-int.net/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/Microsoft.ApiManagement/service/test/credentials?tid=00000000-0000-0000-0000-000000000000&oid=00000000-0000-0000-0000-000000000000&aid=00000000-0000-0000-0000-000000000000"
+	MockIdentityURL    = "https://bogus.identity.azure.net/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/Microsoft.ApiManagement/service/test/credentials?tid=00000000-0000-0000-0000-000000000000&oid=00000000-0000-0000-0000-000000000000&aid=00000000-0000-0000-0000-000000000000"
 	mockTenantIDEnvVar = "MOCK_MSI_TENANT_ID"
 )
 
