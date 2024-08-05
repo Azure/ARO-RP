@@ -12,13 +12,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
-func EnsureTLSSecretFromKeyvault(ctx context.Context, env env.Interface, ch clienthelper.Interface, target types.NamespacedName, certificateName string) error {
-	bundle, err := env.ClusterKeyvault().GetSecret(ctx, certificateName)
+func EnsureTLSSecretFromKeyvault(ctx context.Context, kv keyvault.Manager, ch clienthelper.Writer, target types.NamespacedName, certificateName string) error {
+	bundle, err := kv.GetSecret(ctx, certificateName)
 	if err != nil {
 		return err
 	}
@@ -38,6 +38,8 @@ func EnsureTLSSecretFromKeyvault(ctx context.Context, env env.Interface, ch clie
 		cb = append(cb, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})...)
 	}
 
+	privateKey := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b})
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      target.Name,
@@ -45,7 +47,7 @@ func EnsureTLSSecretFromKeyvault(ctx context.Context, env env.Interface, ch clie
 		},
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       cb,
-			corev1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+			corev1.TLSPrivateKeyKey: privateKey,
 		},
 		Type: corev1.SecretTypeTLS,
 	}
