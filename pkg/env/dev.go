@@ -37,6 +37,7 @@ func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) 
 		FeatureRequireD2sV3Workers,
 		FeatureDisableReadinessDelay,
 		FeatureRequireOIDCStorageWebEndpoint,
+		FeatureUseMockMsiRp,
 	} {
 		d.features[feature] = true
 	}

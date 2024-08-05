@@ -36,6 +36,7 @@ const (
 	FeatureDisableReadinessDelay
 	FeatureEnableOCMEndpoints
 	FeatureRequireOIDCStorageWebEndpoint
+	FeatureUseMockMsiRp
 )
 
 const (
@@ -55,6 +56,7 @@ const (
 	GatewayKeyvaultSuffix            = "-gwy"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
+	ClusterMsiKeyVaultSuffix         = "-msi"
 	RPPrivateEndpointPrefix          = "rp-pe-"
 	ProxyHostName                    = "PROXY_HOSTNAME"
 	OIDCBlobDirectoryPrefix          = "oic-"
