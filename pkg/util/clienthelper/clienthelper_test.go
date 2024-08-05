@@ -1366,7 +1366,7 @@ func TestMergeApply(t *testing.T) {
 				})
 
 			ch := &clientHelper{
-				client: clientFake,
+				Client: clientFake,
 				log:    logrus.NewEntry(logrus.StandardLogger()),
 			}
 
