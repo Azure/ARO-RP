@@ -28,12 +28,11 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 	}
 
 	env := th.Environment()
-
 	secretName := th.GetClusterUUID() + "-apiserver"
 
 	for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
 		err = cluster.EnsureTLSSecretFromKeyvault(
-			ctx, env, ch, types.NamespacedName{Namespace: namespace, Name: secretName}, secretName,
+			ctx, env.ClusterKeyvault(), ch, types.NamespacedName{Namespace: namespace, Name: secretName}, secretName,
 		)
 		if err != nil {
 			return err
@@ -91,7 +90,7 @@ func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
 			},
 		}
 
-		err = ch.Client().Update(ctx, apiserver)
+		err = ch.Update(ctx, apiserver)
 		if err != nil {
 			if kerrors.IsConflict(err) {
 				return err

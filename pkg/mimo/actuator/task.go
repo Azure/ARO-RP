@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -85,12 +87,19 @@ func (t *th) ClientHelper() (clienthelper.Interface, error) {
 		return nil, err
 	}
 
-	ch, err := clienthelper.New(t.log, restConfig)
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
 	if err != nil {
 		return nil, err
 	}
 
-	t._ch = ch
+	client, err := client.New(restConfig, client.Options{
+		Mapper: mapper,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	t._ch = clienthelper.NewWithClient(t.log, client)
 	return t._ch, nil
 }
 
