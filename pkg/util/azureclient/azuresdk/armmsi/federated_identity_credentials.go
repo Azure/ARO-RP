@@ -6,10 +6,11 @@ package armmsi
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 )
 
 // FederatedIdentityCredentialsClient is a minimal interface for azure FederatedIdentityCredentialsClient
