@@ -237,7 +237,8 @@ export ARO_IMAGE=arointsvc.azurecr.io/aro:latest
 export RP_MODE=development # to use a development RP running at https://localhost:8443/
 export MOCK_MSI_CLIENT_ID="$mockClientID"
 export MOCK_MSI_TENANT_ID="$mockTenantID"
-export MOCK_MSI_CERT="$mockCert"
+export MOCK_MSI_CERT="$mockCert
+export PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"
 
 source secrets/env
 EOF
