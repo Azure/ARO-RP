@@ -158,9 +158,7 @@ assign_role_to_identity() {
     fi
 
     echo "INFO: Assigning roles to identity: ${objectId}"
-    result=$(az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json)
-
-    echo "Role assignment result: ${result}"
+    az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
     echo ""
 }
 
