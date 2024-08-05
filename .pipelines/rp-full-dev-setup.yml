@@ -12,12 +12,15 @@ variables:
 # ---------
 
 parameters:
+  - name: azurePrefix
+    type: string
+    default: zzz
   - name: secretSA
     type: string
     default: rharosecretsdev
   - name: location
     type: string
-    default: eastus
+    default: westeurope
   - name: resourceGroup
     type: string
     default: ' '
@@ -63,6 +66,7 @@ jobs:
       # 3) Generate RP Dev configuration file
       - template: ./templates/rp-dev/template-generate-rp-dev-config.yml
         parameters:
+          azurePrefix: ${{ parameters.azurePrefix }}
           secretSA: ${{ parameters.secretSA }}
           location: ${{ parameters.location }}
           resourceGroup: ${{ parameters.resourceGroup }}
@@ -99,7 +103,7 @@ jobs:
         parameters:
           rpResourceGroup: ${{ parameters.resourceGroup }}
           rpVmssName: rp-vmss-
-          gwyResourceGroup: $(AZURE_UNIQUE_PREFIX)-gwy-${{ parameters.location }}
+          gwyResourceGroup: $(AZURE_PREFIX)-gwy-${{ parameters.location }}
           gwyVmssName: gateway-vmss-
 
       # 9) Fully deploy RP

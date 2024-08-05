@@ -1,4 +1,5 @@
 parameters:
+  azurePrefix: ""
   secretSA: ""
   location: ""
   resourceGroup: ""
@@ -9,8 +10,9 @@ parameters:
 steps:
   - script: |
       set -e
-      # Fetch the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
-      SECRET_SA_ACCOUNT_NAME=${{ parameters.secretSA }} && make secrets
+      # export the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
+      az account set -s fe16a035-e540-4ab7-80d9-373fa9a3d6ae
+      export SECRET_SA_ACCOUNT_NAME=${{ parameters.secretSA }} && make secrets
       # TODO resolve certificates issues
 
       # Define the expected directory and file names
@@ -32,7 +34,7 @@ steps:
       # Source environment variables from the secrets file
       source secrets/env
       
-      export AZURE_PREFIX=${{ variables.AZURE_PREFIX }} NO_CACHE=${{ variables.NO_CACHE }} ARO_INSTALL_VIA_HIVE=${{ variables.ARO_INSTALL_VIA_HIVE }}
+      export AZURE_PREFIX=${{ parameters.azurePrefix }} NO_CACHE=${{ variables.NO_CACHE }} ARO_INSTALL_VIA_HIVE=${{ variables.ARO_INSTALL_VIA_HIVE }}
       export ARO_ADOPT_BY_HIVE=${{ variables.ARO_ADOPT_BY_HIVE }} DATABASE_NAME=${{ variables.DATABASE_NAME }}
 
       # Export environment variables from parameters
