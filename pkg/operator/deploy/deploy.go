@@ -29,7 +29,6 @@ import (
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -39,6 +38,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
@@ -63,20 +63,20 @@ type Operator interface {
 }
 
 type operator struct {
-	log *logrus.Entry
-	env env.Interface
-	oc  *api.OpenShiftCluster
-
-	arocli          aroclient.Interface
-	client          client.Client
-	extensionscli   extensionsclient.Interface
-	kubernetescli   kubernetes.Interface
-	operatorcli     operatorclient.Interface
-	dh              dynamichelper.Interface
+	log             *logrus.Entry
+	env             env.Interface
+	oc              *api.OpenShiftCluster
 	subscriptiondoc *api.SubscriptionDocument
+
+	arocli        aroclient.Interface
+	client        clienthelper.Interface
+	extensionscli extensionsclient.Interface
+	kubernetescli kubernetes.Interface
+	operatorcli   operatorclient.Interface
+	dh            dynamichelper.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client client.Client, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface, subscriptionDoc *api.SubscriptionDocument) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client clienthelper.Interface, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface, subscriptionDoc *api.SubscriptionDocument) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
