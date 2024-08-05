@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
-	"github.com/Azure/msi-dataplane/internal/swagger"
+	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/go-playground/validator/v10"
 )
 

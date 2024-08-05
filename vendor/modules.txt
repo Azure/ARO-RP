@@ -70,12 +70,21 @@ github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.4.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault
+# github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.2.0
+## explicit; go 1.18
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2 v2.2.1
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.5.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage
+# github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.1.0
+## explicit; go 1.18
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets
+# github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.1
+## explicit; go 1.18
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal
 # github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob
@@ -120,10 +129,11 @@ github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 ## explicit; go 1.12
 github.com/Azure/go-autorest/tracing
-# github.com/Azure/msi-dataplane v0.0.3
+# github.com/Azure/msi-dataplane v0.0.4
 ## explicit; go 1.21
-github.com/Azure/msi-dataplane/internal/swagger
 github.com/Azure/msi-dataplane/pkg/dataplane
+github.com/Azure/msi-dataplane/pkg/dataplane/swagger
+github.com/Azure/msi-dataplane/pkg/store
 # github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2
 ## explicit; go 1.18
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache
