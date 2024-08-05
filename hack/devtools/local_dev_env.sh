@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Local development environment script.
 # Execute this script from the root folder of the repo (ARO-RP).
