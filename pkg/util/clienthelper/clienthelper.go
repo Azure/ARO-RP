@@ -34,12 +34,22 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-type Interface interface {
-	client.Reader
+type Writer interface {
 	client.Writer
-	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
+	// Ensure applies self-contained objects to a Kubernetes API, merging
+	// client-side if required.
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
+	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
+}
+
+type Reader interface {
+	client.Reader
 	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
+}
+
+type Interface interface {
+	Reader
+	Writer
 }
 
 type clientHelper struct {
