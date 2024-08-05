@@ -189,6 +189,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"DisableReadinessDelay",
 				"EnableOCMEndpoints",
 				"RequireOIDCStorageWebEndpoint",
+				"UseMockMsiRp",
 			},
 			// TODO update this to support FF
 			RPImagePrefix:                     to.StringPtr(azureUniquePrefix + "aro.azurecr.io/aro"),
