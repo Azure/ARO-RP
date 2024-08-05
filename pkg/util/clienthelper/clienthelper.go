@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -56,19 +55,6 @@ type clientHelper struct {
 	client.Client
 
 	log *logrus.Entry
-}
-
-func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
-	mapper, err := apiutil.NewDynamicRESTMapper(restconfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := client.New(restconfig, client.Options{Mapper: mapper})
-	if err != nil {
-		return nil, err
-	}
-	return NewWithClient(log, client), nil
 }
 
 func NewWithClient(log *logrus.Entry, client client.Client) Interface {
