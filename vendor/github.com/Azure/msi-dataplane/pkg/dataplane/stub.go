@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/msi-dataplane/internal/swagger"
+	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 )
 
 // Hash table to store identities for dataplane
