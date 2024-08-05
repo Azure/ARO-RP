@@ -44,7 +44,6 @@ type Writer interface {
 type Reader interface {
 	client.Reader
 	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
-	Client() client.Client
 }
 
 type Interface interface {
@@ -63,10 +62,6 @@ func NewWithClient(log *logrus.Entry, client client.Client) Interface {
 		log:    log,
 		Client: client,
 	}
-}
-
-func (ch *clientHelper) Client() client.Client {
-	return ch.client
 }
 
 func (ch *clientHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error {
