@@ -5,13 +5,21 @@ package cluster
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
+	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
+	"github.com/Azure/msi-dataplane/pkg/store"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -27,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -35,7 +44,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -124,6 +135,10 @@ type manager struct {
 
 	aroOperatorDeployer deploy.Operator
 
+	msiDataplane                           *dataplane.ManagedIdentityClient
+	clusterMsiKeyVaultStore                *store.MsiKeyVaultStore
+	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
+
 	now func() time.Time
 
 	openShiftClusterDocumentVersioner openShiftClusterDocumentVersioner
@@ -178,16 +193,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
-	clientOptions := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: _env.Environment().Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
-		},
-	}
+	clientOptions := getClientOptions(_env.Environment())
 
 	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
 	if err != nil {
@@ -235,14 +241,8 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
-	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		err = platformWorkloadIdentityRolesByVersion.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
-		if err != nil {
-			return nil, err
-		}
-	}
 
-	return &manager{
+	m := &manager{
 		log:                      log,
 		env:                      _env,
 		db:                       db,
@@ -277,17 +277,125 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
 
-		dns:     dns.NewManager(_env, fpCredRPTenant),
-		storage: storage,
-		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		graph:   graph.NewManager(_env, log, aead, storage),
-		rpBlob:  rpBlob,
-
+		dns:                                    dns.NewManager(_env, fpCredRPTenant),
+		storage:                                storage,
+		subnet:                                 subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		graph:                                  graph.NewManager(_env, log, aead, storage),
+		rpBlob:                                 rpBlob,
 		installViaHive:                         installViaHive,
 		adoptViaHive:                           adoptByHive,
 		hiveClusterManager:                     hiveClusterManager,
 		now:                                    func() time.Time { return time.Now() },
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
-	}, nil
+	}
+
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		err = m.platformWorkloadIdentityRolesByVersion.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
+		if err != nil {
+			return nil, err
+		}
+
+		cloud := ""
+		switch strings.ToUpper(_env.Environment().Name) {
+		case dataplane.AzurePublicCloud:
+			cloud = dataplane.AzurePublicCloud
+		case dataplane.AzureUSGovCloud:
+			cloud = dataplane.AzureUSGovCloud
+		}
+
+		if cloud == "" {
+			return nil, errors.New("could not determine which Azure Cloud to use to instantiate MSI dataplane client")
+		}
+
+		msiDataplaneClientOptions := clientOptions.ClientOptions
+
+		if _env.FeatureIsSet(env.FeatureUseMockMsiRp) {
+			keysToValidate := []string{
+				"MOCK_MSI_CLIENT_ID",
+				"MOCK_MSI_CERT",
+				"MOCK_MSI_TENANT_ID",
+			}
+
+			if err = env.ValidateVars(keysToValidate...); err != nil {
+				return nil, err
+			}
+
+			msiResourceId, err := m.clusterMsiResourceId()
+			if err != nil {
+				return nil, err
+			}
+
+			// Every attribute on the NestedCredentialsObject needs to be set for the mock MSI
+			// dataplane to be happy.
+			placeholder := "placeholder"
+			msiDataplaneClientOptions.Transport = dataplane.NewStub([]*dataplane.CredentialsObject{
+				{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{
+							{
+								ClientID:                   to.StringPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
+								ClientSecret:               to.StringPtr(os.Getenv("MOCK_MSI_CERT")),
+								TenantID:                   to.StringPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
+								ResourceID:                 to.StringPtr(msiResourceId.String()),
+								AuthenticationEndpoint:     &placeholder,
+								CannotRenewAfter:           &placeholder,
+								ClientSecretURL:            &placeholder,
+								MtlsAuthenticationEndpoint: &placeholder,
+								NotAfter:                   &placeholder,
+								NotBefore:                  &placeholder,
+								RenewAfter:                 &placeholder,
+								CustomClaims: &swagger.CustomClaims{
+									XMSAzNwperimid: []*string{&placeholder},
+									XMSAzTm:        &placeholder,
+								},
+								ObjectID: &placeholder,
+							},
+						},
+					},
+				},
+			})
+		}
+
+		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpCredRPTenant, _env.Environment().ManagedIdentityRPScope)
+		msiDataplane, err := dataplane.NewClient(cloud, authenticatorPolicy, &msiDataplaneClientOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		clusterMsiKeyVaultName := os.Getenv(env.KeyvaultPrefix) + env.ClusterMsiKeyVaultSuffix
+		if _env.IsLocalDevelopmentMode() {
+			prefix := os.Getenv("RESOURCEGROUP")
+			if len(prefix) > 10 {
+				prefix = prefix[:10]
+			}
+			clusterMsiKeyVaultName = prefix + generator.SharedMSIKeyVaultNameSuffix
+		}
+
+		clusterMsiKeyVaultURL := fmt.Sprintf("https://%s.vault.azure.net", clusterMsiKeyVaultName)
+		clusterMsiSecretsClient, err := azsecrets.NewClient(clusterMsiKeyVaultURL, msiCredential, &clientOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		m.msiDataplane = msiDataplane
+		m.clusterMsiKeyVaultStore = store.NewMsiKeyVaultStore(clusterMsiSecretsClient)
+	}
+
+	return m, nil
+}
+
+// getClientOptions returns a new arm.ClientOptions object to use when
+// instantiating Azure clients.
+func getClientOptions(aroEnv *azureclient.AROEnvironment) arm.ClientOptions {
+	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
+	return arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: aroEnv.Cloud,
+			Retry: common.RetryOptions,
+			Transport: &http.Client{
+				Transport: customRoundTripper,
+			},
+		},
+	}
 }
