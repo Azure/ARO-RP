@@ -365,7 +365,7 @@ const (
 
 // shared keyvault for keys used for disk encryption sets when creating clusters locally
 func (g *generator) devDiskEncryptionKeyvault() *arm.Resource {
-	return g.keyVault(fmt.Sprintf("[%s]", sharedDiskEncryptionKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
+	return g.keyVault(fmt.Sprintf("[%s]", sharedDiskEncryptionKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, false, nil)
 }
 
 func (g *generator) devDiskEncryptionKey() *arm.Resource {

@@ -85,7 +85,7 @@ func (g *generator) clusterWorkerSubnet() *arm.Resource {
 }
 
 func (g *generator) diskEncryptionKeyVault() *arm.Resource {
-	vaultResource := g.keyVault("[parameters('kvName')]", &[]mgmtkeyvault.AccessPolicyEntry{}, "[parameters('ci')]", nil)
+	vaultResource := g.keyVault("[parameters('kvName')]", &[]mgmtkeyvault.AccessPolicyEntry{}, "[parameters('ci')]", false, nil)
 
 	return vaultResource
 }

@@ -56,6 +56,7 @@
                 },
                 "accessPolicies": [],
                 "enabledForDiskEncryption": true,
+                "enableRbacAuthorization": true,
                 "enablePurgeProtection": true
             },
             "apiVersion": "2019-09-01"

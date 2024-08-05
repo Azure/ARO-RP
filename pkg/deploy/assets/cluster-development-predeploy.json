@@ -104,6 +104,7 @@
                 },
                 "accessPolicies": [],
                 "enabledForDiskEncryption": true,
+                "enableRbacAuthorization": false,
                 "enablePurgeProtection": true
             },
             "condition": "[parameters('ci')]",
