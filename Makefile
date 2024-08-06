@@ -5,6 +5,7 @@ ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 NO_CACHE ?= true
+PODMAN_VOLUME_OVERLAY=$(shell if [[ $$(getenforce) == "Enforcing" ]]; then echo ":O"; else echo ""; fi 2>/dev/null)
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -342,3 +343,37 @@ vendor:
 .PHONY: install-go-tools
 install-go-tools:
 	go install ${GOTESTSUM}
+
+.PHONY: ansible-image
+ansible-image:
+	docker image exists aro-ansible:$(VERSION) || docker build . -f Dockerfile.ansible --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE) --tag aro-ansible:$(VERSION)
+
+LOCATION := eastus
+CLUSTERPREFIX := $(USER)
+CLUSTERPATTERN := basic
+CLEANUP := False
+SSH_CONFIG_DIR := $(HOME)/.ssh/
+SSH_KEY_BASENAME := id_rsa
+ifneq ($(CLUSTERPATTERN),*)
+	CLUSTERFILTER = -l $(CLUSTERPATTERN)
+endif
+ifeq ($(VERBOSE),False)
+	SKIP_VERBOSE = --skip-tags verbose
+endif
+
+.PHONY: cluster
+cluster: ansible-image cluster-deploy cluster-cleanup
+	@true
+.PHONY: cluster-deploy
+cluster-deploy:
+	docker run --rm -it -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) -v ./ansible:/ansible$(PODMAN_VOLUME_OVERLAY) -v $(SSH_CONFIG_DIR):/root/.ssh$(PODMAN_VOLUME_OVERLAY) aro-ansible:$(VERSION) -i hosts.yaml $(CLUSTERFILTER) -e location=$(LOCATION) -e CLUSTERPREFIX=$(CLUSTERPREFIX) -e CLEANUP=$(CLEANUP) -e SSH_KEY_BASENAME=$(SSH_KEY_BASENAME) $(SKIP_VERBOSE) deploy.playbook.yaml
+.PHONY: cluster-cleanup
+cluster-cleanup:
+	@if [ "${CLEANUP}" == "True" ]; \
+	then \
+		docker run --rm -it -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) -v ./ansible:/ansible$(PODMAN_VOLUME_OVERLAY) -v $(SSH_CONFIG_DIR):/root/.ssh$(PODMAN_VOLUME_OVERLAY) aro-ansible:$(VERSION) -i hosts.yaml $(CLUSTERFILTER) -e location=$(LOCATION) -e CLUSTERPREFIX=$(CLUSTERPREFIX) -e CLEANUP=$(CLEANUP) -e SSH_KEY_BASENAME=$(SSH_KEY_BASENAME) $(SKIP_VERBOSE) cleanup.playbook.yaml; \
+	fi
+
+.PHONY: lint-ansible
+lint-ansible:
+	cd ansible; ansible-lint -c .ansible_lint.yaml

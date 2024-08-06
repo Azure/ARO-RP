@@ -1,0 +1,47 @@
+---
+- name: create_resourcegroup | Get subscription info
+  azure.azcollection.azure_rm_subscription_info:
+  delegate_to: localhost
+  register: sub_status
+- name: create_resourcegroup | Debug sub_status
+  ansible.builtin.debug:
+    # msg: Using subscription {{ sub_status.subscriptions[0].display_name }} {{ sub_info.subscriptions[0].subscription_id }}
+    var: sub_status
+  tags:
+    - verbose
+- name: create_resourcegroup | Select subscription
+  ansible.builtin.set_fact:
+    sub_info: "{{ sub_status.subscriptions[0] }}"
+- name: create_resourcegroup | Debug sub_info
+  ansible.builtin.debug:
+    var: sub_info
+  tags:
+    - verbose
+- name: create_resourcegroup | Get current user info
+  delegate_to: localhost
+  register: signedinuser_output
+  ansible.builtin.command:
+    argv: ["az", "ad", "signed-in-user", "show", "-o=yaml"]
+- name: create_resourcegroup | Set fact currentuser_info
+  ansible.builtin.set_fact:
+    currentuser_info: "{{ signedinuser_output.stdout | from_yaml }}"
+- name: create_resourcegroup | Debug currentuser_info
+  ansible.builtin.debug:
+    var: currentuser_info
+  tags:
+    - verbose
+- name: create_resourcegroup | Resource group
+  azure.azcollection.azure_rm_resourcegroup:
+    name: "{{ resource_group }}"
+    location: "{{ location }}"
+    tags:
+      createdby: "{{ currentuser_info.userPrincipalName }}"
+      createdwith: "ansible"
+      purge: "true"
+  delegate_to: localhost
+  register: rg_info
+- name: create_resourcegroup | Debug rg_info
+  ansible.builtin.debug:
+    var: rg_info
+  tags:
+    - verbose

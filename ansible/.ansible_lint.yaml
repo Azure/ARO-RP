@@ -1,0 +1,10 @@
+profile: production
+exclude_paths: []
+use_default_rules: true
+skip_list:
+  - no-changed-when
+enable_list:
+  - args
+  - empty-string-compare
+  - no-same-owner
+  - name[prefix]
