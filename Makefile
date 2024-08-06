@@ -411,7 +411,12 @@ validate-fips:
 
 .PHONY: unit-test-go
 unit-test-go:
-	go run ${GOTESTSUM} --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+	docker build -t my-image:latest .
+	podman create --name test-container my-image:latest
+	podman start test-container
+	podman exec test-container go run ${GOTESTSUM} --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+	podman stop test-container
+	podman rm test-container
 
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg:

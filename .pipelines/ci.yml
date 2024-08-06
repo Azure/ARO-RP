@@ -23,6 +23,7 @@ pr:
     exclude:
       - docs/*
 
+
 resources:
   containers:
     - container: golang
@@ -113,3 +114,23 @@ stages:
             crane push $(ob_outputDirectory)/image.tar "${{ parameters.ACRUrl }}/${{ parameters.ImageRepository }}:${{ parameters.ImageTag }}"
             crane push $(ob_outputDirectory)/image.tar "${{ parameters.ACRUrl }}/${{ parameters.ImageRepository }}:latest"
           displayName: 'Pushing Docker Image to ACR'
+      
+    - job: Extract_Coverage_Report
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - checkout: self
+        - script: |
+            set -eux
+            # Create a container from the build cache and copy the coverage file
+            podman create --name coverage-container my-image:latest
+            podman cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out
+            podman rm coverage-container
+          displayName: 'Extract Coverage Report from Container'
+
+        # Publish the coverage report to Azure DevOps
+        - task: PublishCodeCoverageResults@1
+          inputs:
+            codeCoverageTool: Cobertura
+            summaryFileLocation: $(Build.SourcesDirectory)/cover.out
+          displayName: 'Publish Code Coverage Results'
