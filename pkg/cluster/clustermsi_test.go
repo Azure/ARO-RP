@@ -8,9 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
@@ -20,6 +17,10 @@ import (
 	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEnsureClusterMsiCertificate(t *testing.T) {
