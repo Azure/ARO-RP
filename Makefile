@@ -132,6 +132,8 @@ endif
 
 .PHONY: generate
 generate:
+	pwd
+	go list -m
 	go generate ./...
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
