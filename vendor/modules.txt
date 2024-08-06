@@ -134,6 +134,7 @@ github.com/Azure/go-autorest/tracing
 github.com/Azure/msi-dataplane/pkg/dataplane
 github.com/Azure/msi-dataplane/pkg/dataplane/swagger
 github.com/Azure/msi-dataplane/pkg/store
+github.com/Azure/msi-dataplane/pkg/store/mock_kvclient
 # github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2
 ## explicit; go 1.18
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache
@@ -1405,6 +1406,9 @@ go.starlark.net/resolve
 go.starlark.net/starlark
 go.starlark.net/starlarkstruct
 go.starlark.net/syntax
+# go.uber.org/mock v0.4.0
+## explicit; go 1.20
+go.uber.org/mock/gomock
 # golang.org/x/crypto v0.26.0
 ## explicit; go 1.20
 golang.org/x/crypto/blowfish

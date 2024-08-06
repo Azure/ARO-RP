@@ -11,14 +11,18 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/golang/mock/gomock"
+	"github.com/Azure/msi-dataplane/pkg/store"
+	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
+	deprecratedgomock "github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -54,25 +58,25 @@ func TestDeleteNic(t *testing.T) {
 			name: "nic is in succeeded provisioning state",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
 				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
+				networkInterfaces.EXPECT().Get(deprecratedgomock.Any(), clusterRG, nicName, "").Return(nic, nil)
+				networkInterfaces.EXPECT().DeleteAndWait(deprecratedgomock.Any(), clusterRG, nicName).Return(nil)
 			},
 		},
 		{
 			name: "nic is in failed provisioning state",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
 				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
+				networkInterfaces.EXPECT().Get(deprecratedgomock.Any(), clusterRG, nicName, "").Return(nic, nil)
+				networkInterfaces.EXPECT().CreateOrUpdateAndWait(deprecratedgomock.Any(), clusterRG, nicName, nic).Return(nil)
+				networkInterfaces.EXPECT().DeleteAndWait(deprecratedgomock.Any(), clusterRG, nicName).Return(nil)
 			},
 		},
 		{
 			name: "provisioning state is failed and CreateOrUpdateAndWait returns error",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
 				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(fmt.Errorf("Failed to update"))
+				networkInterfaces.EXPECT().Get(deprecratedgomock.Any(), clusterRG, nicName, "").Return(nic, nil)
+				networkInterfaces.EXPECT().CreateOrUpdateAndWait(deprecratedgomock.Any(), clusterRG, nicName, nic).Return(fmt.Errorf("Failed to update"))
 			},
 			wantErr: "Failed to update",
 		},
@@ -82,15 +86,15 @@ func TestDeleteNic(t *testing.T) {
 				notFound := autorest.DetailedError{
 					StatusCode: http.StatusNotFound,
 				}
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, notFound)
+				networkInterfaces.EXPECT().Get(deprecratedgomock.Any(), clusterRG, nicName, "").Return(nic, notFound)
 			},
 		},
 		{
 			name: "DeleteAndWait returns error",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
 				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(fmt.Errorf("Failed to delete"))
+				networkInterfaces.EXPECT().Get(deprecratedgomock.Any(), clusterRG, nicName, "").Return(nic, nil)
+				networkInterfaces.EXPECT().DeleteAndWait(deprecratedgomock.Any(), clusterRG, nicName).Return(fmt.Errorf("Failed to delete"))
 			},
 			wantErr: "Failed to delete",
 		},
@@ -98,7 +102,7 @@ func TestDeleteNic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
+			controller := deprecratedgomock.NewController(t)
 			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
@@ -185,11 +189,11 @@ func TestShouldDeleteResourceGroup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
+			controller := deprecratedgomock.NewController(t)
 			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
-			resourceGroups.EXPECT().Get(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.getResourceGroup, tt.getErr)
+			resourceGroups.EXPECT().Get(deprecratedgomock.Any(), deprecratedgomock.Eq(managedRGName)).Return(tt.getResourceGroup, tt.getErr)
 
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -253,11 +257,11 @@ func TestDeleteResourceGroup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
+			controller := deprecratedgomock.NewController(t)
 			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
-			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Times(1).Return(tt.deleteErr)
+			resourceGroups.EXPECT().DeleteAndWait(deprecratedgomock.Any(), deprecratedgomock.Eq(managedRGName)).Times(1).Return(tt.deleteErr)
 
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -340,7 +344,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
+			controller := deprecratedgomock.NewController(t)
 			defer controller.Finish()
 
 			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
@@ -359,6 +363,127 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 			if tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 			}
+		})
+	}
+}
+
+func TestDeleteClusterMsiCertificate(t *testing.T) {
+	ctx := context.Background()
+	mockGuid := "00000000-0000-0000-0000-000000000000"
+	clusterRGName := "aro-cluster"
+	miName := "aro-cluster-msi"
+	miResourceId := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+
+	tests := []struct {
+		name    string
+		doc     *api.OpenShiftClusterDocument
+		mocks   func(*mockkvclient.MockKeyVaultClient)
+		wantErr string
+	}{
+		{
+			name: "success - cluster doc has nil Identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID:               mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{},
+			},
+		},
+		{
+			name: "success - cluster doc has non-nil Identity but no Identity.UserAssignedIdentities",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.Identity{},
+				},
+			},
+		},
+		{
+			name: "success - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.Identity{
+						UserAssignedIdentities: api.UserAssignedIdentities{},
+					},
+				},
+			},
+		},
+		{
+			name: "error - error getting cluster MSI secret name (this theoretically won't happen, but...)",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.Identity{
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							"not a valid MI resource ID": api.ClusterUserAssignedIdentity{
+								ClientID:    mockGuid,
+								PrincipalID: mockGuid,
+							},
+						},
+					},
+				},
+			},
+			wantErr: "invalid resource ID: resource id 'not a valid MI resource ID' must start with '/'",
+		},
+		{
+			name: "error - error deleting cluster MSI certificate from key vault",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.Identity{
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							miResourceId: api.ClusterUserAssignedIdentity{
+								ClientID:    mockGuid,
+								PrincipalID: mockGuid,
+							},
+						},
+					},
+				},
+			},
+			mocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
+				kvclient.EXPECT().DeleteSecret(gomock.Any(), fmt.Sprintf("%s-%s", mockGuid, miName), gomock.Any()).Times(1).Return(azsecrets.DeleteSecretResponse{}, fmt.Errorf("error in DeleteSecret"))
+			},
+			wantErr: "error in DeleteSecret",
+		},
+		{
+			name: "success - successfully delete certificate",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.Identity{
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							miResourceId: api.ClusterUserAssignedIdentity{
+								ClientID:    mockGuid,
+								PrincipalID: mockGuid,
+							},
+						},
+					},
+				},
+			},
+			mocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
+				kvclient.EXPECT().DeleteSecret(gomock.Any(), fmt.Sprintf("%s-%s", mockGuid, miName), gomock.Any()).Times(1).Return(azsecrets.DeleteSecretResponse{}, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			m := manager{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				doc: tt.doc,
+			}
+
+			mockKvClient := mockkvclient.NewMockKeyVaultClient(controller)
+			if tt.mocks != nil {
+				tt.mocks(mockKvClient)
+			}
+
+			m.clusterMsiKeyVaultStore = store.NewMsiKeyVaultStore(mockKvClient)
+
+			err := m.deleteClusterMsiCertificate(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
