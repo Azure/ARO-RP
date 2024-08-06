@@ -134,7 +134,7 @@ endif
 generate:
 	pwd
 	go list -m
-	go generate ./...
+	go generate -v ./...
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
