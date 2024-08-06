@@ -115,7 +115,7 @@ It uses hacks scripts around a lot of the setup to make things easier to bootstr
       Hat OpenShift 4 Cluster][1], you will need to manually register your subscription to your local RP:
 
       ```bash
-      $ curl -k -X PUT   -H 'Content-Type: application/json'   -d '{
+      curl -k -X PUT   -H 'Content-Type: application/json'   -d '{
       "state": "Registered",
       "properties": {
          "tenantId": "'"$AZURE_TENANT_ID"'",

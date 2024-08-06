@@ -27,7 +27,7 @@ This will download the latest source, reset to the hash specified in HIVE_IMAGE_
 
 1. Connect to the appropriate aks vpn
    1. vpn-aks-westeurope.ovpn
-   2. vpn-aks-australiaeast.ovpn
+   2. vpn-aks-eastus.ovpn
    3. vpn-aks-australiaeast.ovpn
 2. Ensure you have the latest AKS kubeconfig  
     ```bash
