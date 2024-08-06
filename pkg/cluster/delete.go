@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -368,7 +369,12 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 		return err
 	}
 
-	return m.clusterMsiKeyVaultStore.DeleteCredentialsObject(ctx, secretName)
+	err = m.clusterMsiKeyVaultStore.DeleteCredentialsObject(ctx, secretName)
+	if azcoreErr, ok := err.(*azcore.ResponseError); !ok || azcoreErr.StatusCode != 404 {
+		return err
+	}
+
+	return nil
 }
 
 func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
