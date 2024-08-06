@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-echo "Make sure to be logining in to Azure prior to running this script"
+echo "##### Make sure to be logining in to Azure prior to running this script ####"
 source hack/rp-dev/setupRPConfig.sh $AZURE_PREFIX # setup config file
 # make pre-deploy-aks # deploy predeployment resources prior to AKS
 make pre-deploy # deploy predeployment resources prior to AKS

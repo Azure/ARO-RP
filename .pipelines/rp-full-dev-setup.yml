@@ -20,7 +20,7 @@ parameters:
     default: rharosecretsdev
   - name: location
     type: string
-    default: westeurope
+    default: eastus
   - name: resourceGroup
     type: string
     default: ' '
