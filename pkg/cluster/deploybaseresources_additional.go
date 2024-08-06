@@ -21,7 +21,7 @@ import (
 
 func (m *manager) denyAssignment() *arm.Resource {
 	excludePrincipals := []mgmtauthorization.Principal{}
-	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile != nil && m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil {
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		for _, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
 				ID:   &identity.ObjectID,
