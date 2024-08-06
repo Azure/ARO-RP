@@ -1,9 +1,9 @@
 # Azure DevOps Pipeline running CI
-
 trigger:
   branches:
     include:
       - master
+      - loki/pipeline-swarm
       - loki/pipeline-swarm
   paths:
     exclude:
@@ -11,8 +11,11 @@ trigger:
   tags:
     include:
       - v2*
-
 pr:
+  branches:
+    include:
+      - master  
+      - loki/pipeline-swarm
   branches:
     include:
       - loki/pipeline-swarm
@@ -23,7 +26,7 @@ pr:
 resources:
   containers:
     - container: golang
-      image: registry.access.redhat.com/ubi8/go-toolset:1.21.11-1.1720406008
+      image: registry.access.redhat.com/ubi8/go-toolset:1.20.12-5
       options: --user=0
     - container: python
       image: registry.access.redhat.com/ubi8/python-39:latest
@@ -32,85 +35,81 @@ resources:
 variables:
   - template: vars.yml
 
-jobs:
-  - job: Python_Unit_Tests
-    pool:
-      name: 1es-aro-ci-pool
-    variables:
-      HOME: $(Agent.BuildDirectory)
+parameters:
+  - name: ImageRepository
+    type: string
+    default: 'my-image-repo'
+  - name: ImageTag
+    type: string
+    default: 'latest'
+  - name: ACRUrl
+    type: string
+    default: 'myregistry.azurecr.io'
 
-    steps:
-      - template: ./templates/template-checkout.yml
-      - script: |
-          set -xe
-          make test-python
-          [[ -z "$(git status -s)" ]]
-        displayName: 🧪Run Python Unit Tests
-        target: python
+stages:
+- stage: NEW_HOTNESS
+  jobs:
+    - job: Build_Lint_Test_RP_Portal
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export NO_CACHE=true
+            if [[ "$BUILD_REASON" == "PullRequest" ]]; then
+              export TAG="$BUILD_SOURCEBRANCH"
+            fi
+            make ci  # Run the `make ci` command instead of `make ci-rp`
 
-  - job: Golang_Unit_Tests
-    pool:
-      name: 1es-aro-ci-pool
-    variables:
-      GOCACHE: /tmp/gocache
-    steps:
-      - template: ./templates/template-checkout.yml
+    - job: Build_and_Test_Az_ARO_Extension
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export NO_CACHE=true
+            make azext-aro
 
-      - script: |
-          set -xe
-          go version
-          go env
-        displayName: Print Go version & env
-        target: golang
+    - job: Lint_Az_ARO_Extension
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            make test-python
 
-      - script: |
-          set -xe
-          make generate
-          [[ -z "$(git status -s)" ]]
-        displayName: ⚙️ Run Golang code generate
-        target: golang
+    - job: Pull_And_Push_Image_To_ACR
+      pool:
+        vmImage: 'ubuntu-latest'
+      variables:
+        ob_outputDirectory: '$(Build.SourcesDirectory)/out'
+        IMAGE_TAG: ${{ parameters.ImageTag }}
+        REPOSITORY: ${{ parameters.ImageRepository }}
+        ACRFQDN: ${{ parameters.ACRUrl }}
+      steps:
+        - checkout: self
 
-      - script: |
-          set -xe
-          make build-all
-          [[ -z "$(git status -s)" ]]
-        displayName: 🕵️ Build Golang code
-        target: golang
+        # Pull the Docker image using crane
+        - script: |
+            set -eux
+            sudo apt-get update
+            sudo apt-get install -y golang
+            export PATH=$PATH:~/go/bin/
+            go install github.com/google/go-containerregistry/cmd/crane@latest
+            mkdir -p $(ob_outputDirectory)
+            crane pull ${{ parameters.ACRUrl }}/${{ parameters.ImageRepository }}:${{ parameters.ImageTag }} $(ob_outputDirectory)/image.tar
+          displayName: 'Pulling Docker Image using Crane'
 
-      - script: |
-          set -xe
-          make unit-test-go
-        displayName: 🧪 Run Golang unit tests
-        target: golang
-
-      - task: PublishTestResults@2
-        displayName: 📊 Publish tests results
-        inputs:
-          testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-        condition: succeededOrFailed()
-
-      - script: |
-          set -xe
-          go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
-        displayName: ⚙️ Process Reports
-        condition: succeededOrFailed()
-        target: golang
-
-      - task: PublishCodeCoverageResults@1
-        displayName: 📈 Publish code coverage
-        inputs:
-          codeCoverageTool: Cobertura
-          summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
-          failIfCoverageEmpty: false
-        condition: succeededOrFailed()
-        target: golang
-
-  - job: Lint_Admin_Portal
-    pool:
-      name: 1es-aro-ci-pool
-    steps:
-      - template: ./templates/template-checkout.yml
-      - script: |
-          set -xe
-          make lint-admin-portal
-        displayName: 🧹 Lint Admin Portal
+        # Push the Docker image to ACR
+        - script: |
+            set -eux
+            az login --service-principal -u $(SP_APP_ID) -p $(SP_SECRET) --tenant $(TENANT_ID)
+            ACRName=$(echo "${{ parameters.ACRUrl }}" | cut -f1 -d'.')
+            export token=$(az acr login --name ${ACRName} --expose-token --output tsv --query accessToken)
+            crane auth login "${{ parameters.ACRUrl }}" -u "00000000-0000-0000-0000-000000000000" -p "${token}"
+            crane push $(ob_outputDirectory)/image.tar "${{ parameters.ACRUrl }}/${{ parameters.ImageRepository }}:${{ parameters.ImageTag }}"
+            crane push $(ob_outputDirectory)/image.tar "${{ parameters.ACRUrl }}/${{ parameters.ImageRepository }}:latest"
+          displayName: 'Pushing Docker Image to ACR'
