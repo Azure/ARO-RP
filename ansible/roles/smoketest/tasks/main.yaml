@@ -1,0 +1,20 @@
+# https://docs.google.com/spreadsheets/d/10J67BFSdHzaNRChnm6q046Q9WPOnLEJutXzG_bwYGzc
+- name: Health checks
+  ansible.builtin.include_tasks:
+    file: health_check.yaml
+- name: Create new project
+  ansible.builtin.include_tasks:
+    file: new_project.yaml
+- name: Provision all StorageClasses
+  ansible.builtin.include_tasks:
+    file: provision_pvs.yaml
+- name: Scale nodes
+  ansible.builtin.include_tasks:
+    file: scale_nodes.yaml
+- name: PREVIEW - Scale outboundips
+  when: AZAROEXT_VERSION is defined
+  ansible.builtin.include_tasks:
+    file: scale_outboundips.yaml
+- name: Refresh credentials
+  ansible.builtin.include_tasks:
+    file: refresh_credentials.yaml

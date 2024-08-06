@@ -1,0 +1,407 @@
+---
+all:
+  vars:
+    upgrade_paths:
+      to_415: &upgrade_to_415
+        #
+        # https://access.redhat.com/labs/ocpupgradegraph/update_path?channel=stable-4.13&arch=x86_64&is_show_hot_fix=false&current_ocp_version=4.12.25&target_ocp_version=4.15.22
+        - from: "4.12"
+          channel: stable-4.13
+          version: 4.13.45
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+        - from: "4.13"
+          channel: stable-4.14
+          version: 4.14.33
+          allow-not-recommended: true
+          admin_acks:
+            - { "data": { "ack-4.13-kube-1.27-api-removals-in-4.14": "true" } }
+        - from: "4.14"
+          channel: stable-4.15
+          version: 4.15.23
+      to_416: &upgrade_to_416
+        #
+        # https://access.redhat.com/labs/ocpupgradegraph/update_path?channel=stable-4.13&arch=x86_64&is_show_hot_fix=false&current_ocp_version=4.12.25&target_ocp_version=4.15.22
+        - from: "4.12"
+          channel: stable-4.13
+          version: 4.13.43
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+        - from: "4.13"
+          channel: stable-4.14
+          version: 4.14.33
+          allow-not-recommended: true
+          admin_acks:
+            - { "data": { "ack-4.13-kube-1.27-api-removals-in-4.14": "true" } }
+        - from: "4.14"
+          channel: stable-4.15
+          version: 4.15.23
+        - from: "4.15"
+          channel: stable-4.16
+          version: 4.16.4
+          admin_acks:
+            - { "data": { "ack-4.15-kube-1.29-api-removals-in-4.16": "true" } }
+      fast_413: &upgrade_fast_413
+        - from: "4.12"
+          channel: fast-4.13
+          version: latest
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+          allow-not-recommended: true
+      fast_414: &upgrade_fast_414
+        - from: "4.12"
+          channel: stable-4.13
+          version: 4.13.43
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+        - from: "4.13"
+          channel: fast-4.14
+          version: latest
+          admin_acks:
+            - { "data": { "ack-4.13-kube-1.27-api-removals-in-4.14": "true" } }
+      fast_415: &upgrade_fast_415
+        - from: "4.12.25"
+          channel: stable-4.13
+          version: 4.12.61
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+        - from: "4.12.61"
+          channel: stable-4.13
+          version: 4.13.46
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+        - from: "4.13"
+          channel: stable-4.14
+          version: 4.14.34
+          allow-not-recommended: true
+          admin_acks:
+            - { "data": { "ack-4.13-kube-1.27-api-removals-in-4.14": "true" } }
+        - from: "4.14"
+          channel: fast-4.15
+          version: latest
+          allow-not-recommended: true
+      fast_416: &upgrade_fast_416
+        #
+        # https://access.redhat.com/labs/ocpupgradegraph/update_path?channel=stable-4.13&arch=x86_64&is_show_hot_fix=false&current_ocp_version=4.12.25&target_ocp_version=4.15.22
+        - from: "4.12"
+          channel: stable-4.13
+          version: 4.13.43
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+        - from: "4.13"
+          channel: stable-4.14
+          version: 4.14.33
+          allow-not-recommended: true
+          admin_acks:
+            - { "data": { "ack-4.13-kube-1.27-api-removals-in-4.14": "true" } }
+        - from: "4.14"
+          channel: stable-4.15
+          version: 4.15.23
+        - from: "4.15"
+          channel: fast-4.16
+          version: latest
+          allow-not-recommended: true
+          admin_acks:
+            - { "data": { "ack-4.15-kube-1.29-api-removals-in-4.16": "true" } }
+      upgrade_41345_41346: &upgrade_41345_41346
+        - from: "4.12"
+          channel: stable-4.13
+          version: 4.13.43
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+        - from: "4.13"
+          channel: stable-4.13
+          version: 4.13.46
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+      upgrade_41346: &upgrade_41346
+        - from: "4.12"
+          channel: stable-4.13
+          version: 4.13.46
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+          admin_acks:
+            - { "data": { "ack-4.12-kube-1.26-api-removals-in-4.13": "true" } }
+        - from: "4.13.40"
+          channel: stable-4.13
+          version: 4.13.46
+          allow-not-recommended: true # Because ARODNSWrongBootSequence
+
+standard_clusters:
+  # "standard" in the sense that the unspecialized standard_cluster role will work
+  # See byok_cluster for an example that is not "standard"
+  hosts:
+    basic:
+      # The simplest possible cluster
+      name: aro
+    preview:
+      name: aro
+      AZAROEXT_VERSION: 1.0.9
+
+    # Upgrade paths
+    412to416:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_to_416
+    413to416:
+      name: aro
+      version: 4.13.40
+      upgrade: *upgrade_to_416
+    414to416:
+      name: aro
+      version: 4.14.16
+      upgrade: *upgrade_to_416
+    412to415:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_to_415
+    413to415:
+      name: aro
+      version: 4.13.40
+      upgrade: *upgrade_to_415
+    414to415:
+      name: aro
+      version: 4.14.16
+      upgrade: *upgrade_to_415
+    412to41345to41346:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_41345_41346
+    412to41346:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_41346
+    413to41346:
+      name: aro
+      version: 4.13.40
+      upgrade: *upgrade_41346
+    fast-413:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_fast_413
+    fast-414:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_fast_414
+    fast-415:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_fast_415
+    enc:
+      # Basic cluster with encryption-at-host enabled
+      name: aro-414
+      version: 4.14.16
+      master_size: Standard_E8s_v5
+      master_encryption_at_host: true
+      worker_size: Standard_D4s_v5
+      worker_encryption_at_host: true
+    enc-412to416:
+      name: aro
+      version: 4.12.25
+      master_size: Standard_E8s_v5
+      master_encryption_at_host: true
+      worker_size: Standard_D4s_v5
+      worker_encryption_at_host: true
+      upgrade: *upgrade_to_416
+    enc-412to415:
+      name: aro
+      version: 4.12.25
+      master_size: Standard_E8s_v5
+      master_encryption_at_host: true
+      worker_size: Standard_D4s_v5
+      worker_encryption_at_host: true
+      upgrade: *upgrade_to_415
+
+  vars:
+    resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    master_size: Standard_D8s_v3
+    worker_cidr: 10.0.2.0/23
+    worker_size: Standard_D4s_v3
+  children:
+    baddns_clusters:
+    encrypted_clusters:
+    private_clusters:
+    udr_clusters:
+
+baddns_clusters:
+  # Custom DNS pointing to something that doesn't work to make sure
+  # we still work with uncooperative DNS servers
+  # https://learn.microsoft.com/en-us/azure/openshift/howto-custom-dns
+  hosts:
+    baddns412:
+      version: 4.12.25
+    private_baddns412:
+      version: 4.12.25
+      apiserver_visibility: Private
+      ingress_visibility: Private
+      domain: baddns.private
+    baddns413:
+      version: 4.13.40
+    private_baddns413:
+      version: 4.13.40
+      apiserver_visibility: Private
+      ingress_visibility: Private
+      domain: baddns.private
+    baddns414:
+      version: 4.14.16
+    private_baddns414:
+      version: 4.14.16
+      apiserver_visibility: Private
+      ingress_visibility: Private
+      domain: baddns.private
+    baddns-412to415:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_to_415
+    baddns-412to416:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_to_416
+    baddns-p-412to415:
+      name: aro
+      version: 4.12.25
+      apiserver_visibility: Private
+      ingress_visibility: Private
+      domain: baddns.private
+      upgrade: *upgrade_to_415
+  vars:
+    name: aro
+    resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"
+    HAS_INTERNET: false
+    dns_servers:
+      - 172.16.0.0
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    master_size: Standard_D8s_v3
+    worker_cidr: 10.0.2.0/23
+    worker_size: Standard_D4s_v3
+
+byok_clusters:
+  # Cluster with customer-managed disk encryption key
+  # https://learn.microsoft.com/en-us/azure/openshift/howto-byok
+  hosts:
+    byok414:
+      name: aro-414
+      resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"
+      version: 4.14.16
+    byok413:
+      name: aro-413
+      resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"
+      version: 4.13.40
+    byok-412to415:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_to_415
+  vars:
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    master_size: Standard_E8s_v5
+    worker_cidr: 10.0.2.0/23
+    worker_size: Standard_D4s_v5
+
+encrypted_clusters:
+  # Basic cluster with encryption-at-host enabled
+  hosts:
+    enc413:
+      name: aro
+      version: 4.13.40
+    enc414:
+      name: aro
+      version: 4.14.16
+  vars:
+    resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    worker_cidr: 10.0.2.0/23
+    master_size: Standard_E8s_v5
+    master_encryption_at_host: true
+    worker_size: Standard_D4s_v5
+    worker_encryption_at_host: true
+
+private_clusters:
+  hosts:
+    private:
+      # Simple private cluster, no UDR
+      name: aro
+      resource_group: "{{ CLUSTERPREFIX }}-private-{{ location }}"
+    private-412to415:
+      name: aro
+      version: 4.12.25
+      upgrade: *upgrade_to_415
+  vars:
+    apiserver_visibility: Private
+    ingress_visibility: Private
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    master_size: Standard_D8s_v3
+    worker_cidr: 10.0.2.0/23
+    worker_size: Standard_D4s_v3
+
+udr_clusters:
+  # https://learn.microsoft.com/en-us/azure/openshift/howto-create-private-cluster-4x
+  hosts:
+    udr414:
+      name: aro-414
+      version: 4.14.16
+      HAS_INTERNET: false
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+    udr_no_null414:
+      name: aro-414
+      version: 4.14.16
+      routes:
+        - name: To Internet
+          address_prefix: 0.0.0.0/0
+          next_hop_type: internet
+    udr413:
+      name: aro-413
+      version: 4.13.40
+      HAS_INTERNET: false
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+    udr-412to415:
+      name: aro
+      version: 4.12.25
+      HAS_INTERNET: false
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+      upgrade: *upgrade_to_415
+    udr-412to416:
+      name: aro
+      version: 4.12.25
+      HAS_INTERNET: false
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+      upgrade: *upgrade_to_416
+    udr-415to416:
+      name: aro
+      version: 4.15.27
+      HAS_INTERNET: false
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+      upgrade: *upgrade_to_416
+  vars:
+    resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    worker_cidr: 10.0.2.0/23
+    apiserver_visibility: Private
+    ingress_visibility: Private
+    outbound_type: UserDefinedRouting

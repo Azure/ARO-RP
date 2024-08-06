@@ -1,0 +1,60 @@
+---
+standard_clusters:
+  children:
+    baddns_clusters:
+    udr_clusters:
+
+baddns_clusters:
+  # Custom DNS pointing to something that doesn't work to make sure
+  # we still work with uncooperative DNS servers
+  # https://learn.microsoft.com/en-us/azure/openshift/howto-custom-dns
+  hosts:
+    baddns41225:
+      version: 4.12.25
+    baddns41260:
+      version: 4.12.60
+    baddns413:
+      version: 4.13.40
+    baddns414:
+      version: 4.14.16
+    baddns415:
+      version: 4.15.27
+  vars:
+    name: aro
+    resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"
+    HAS_INTERNET: false
+    dns_servers:
+      - 172.16.0.0
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    master_size: Standard_D8s_v3
+    worker_cidr: 10.0.2.0/23
+    worker_size: Standard_D4s_v3
+
+udr_clusters:
+  # https://learn.microsoft.com/en-us/azure/openshift/howto-create-private-cluster-4x
+  hosts:
+    udr41225:
+      version: 4.12.25
+    udr41260:
+      version: 4.12.60
+    udr413:
+      version: 4.13.40
+    udr414:
+      version: 4.14.16
+    udr415:
+      version: 4.15.27
+  vars:
+    name: aro
+    resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"
+    HAS_INTERNET: false
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    worker_cidr: 10.0.2.0/23
+    apiserver_visibility: Private
+    ingress_visibility: Private
+    outbound_type: UserDefinedRouting
+    routes:
+      - name: Blackhole
+        address_prefix: 0.0.0.0/0
+        next_hop_type: none

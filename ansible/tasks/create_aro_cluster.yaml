@@ -1,0 +1,676 @@
+---
+- name: create_aro_cluster | Set up a jumphost for private clusters
+  when: apiserver_visibility | d("Public") == "Private"
+  ansible.builtin.include_tasks:
+    file: ../tasks/create_jumphost.yaml
+
+- name: create_aro_cluster | Enable preview az aro extension
+  when: AZAROEXT_VERSION is defined
+  block:
+    - name: create_aro_cluster | Install specifc azaroext version
+      ansible.builtin.command:
+        argv:
+          - az
+          - extension
+          - add
+          - --source=https://arosvc.blob.core.windows.net/azext/aro-{{ AZAROEXT_VERSION }}-py2.py3-none-any.whl
+          - --upgrade
+          - --yes
+      delegate_to: localhost
+      register: azaroext_install
+      changed_when: azaroext_install.rc == 0
+    - name: create_aro_cluster | Debug azaroext_install
+      ansible.builtin.debug:
+        var: azaroext_install
+      tags:
+        - verbose
+    - name: create_aro_cluster | List az extensions
+      ansible.builtin.command:
+        argv: ["az", "extension", "list"]
+      delegate_to: localhost
+      register: az_extension_list
+      changed_when: false
+    - name: create_aro_cluster | Show az extensions
+      ansible.builtin.debug:
+        var: az_extension_list.stdout_lines
+    # - name: create_aro_cluster | Download azaroext
+    #   ansible.builtin.get_url:
+    #     url: https://arosvc.blob.core.windows.net/azext/aro-{{ AZAROEXT_VERSION }}-py2.py3-none-any.whl
+    #     dest: /tmp/aro-{{ AZAROEXT_VERSION }}-py2.py3-none-any.whl
+    #     mode: "0644"
+    #   delegate: "{{ delegation }}"
+    #   register: download_aroazext
+    # - name: create_aro_cluster | Install azaroext
+    #   when: download_aroazext is changed
+    #   ansible.builtin.command:
+    #     argv:
+    #       - az
+    #       - extension
+    #       - add
+    #       - -s="/tmp/aro-{{ AZAROEXT_VERSION }}-py2.py3-none-any.whl"
+
+# TODO: Create clusters with azure_rm_openshiftmanagedcluster if possible
+# - name: Create cluster service principal
+#   azure.azcollection.azure_rm_adserviceprincipal:
+#     delegate_to: localhost
+#     app_id: "{{ name | to_uuid }}"
+#     tenant: "{{ sub_info.tenant_id }}"
+#   register: csp_info
+# - ansible.builtin.debug: var=csp_info
+# - name: Create cluster service principal
+#   ansible.builtin.command:
+#     delegate_to: localhost
+#     argv: [
+#       "az", "ad", "sp", "create-for-rbac",
+#       "-n", "{{ name }}-sp",
+#       "--role", "contributor",
+#       "--scopes", "{{ rg_info.state.id }}"
+#     ]
+#   register: sp_info
+# - ansible.builtin.debug: var=sp_info
+# - name: Create aro cluster
+#   azure.azcollection.azure_rm_openshiftmanagedcluster:
+#     delegate_to: localhost
+#     name: "{{ name }}"
+#     resource_group: "{{ resource_group }}"
+#     location: "{{ location }}"
+#     service_principal_profile:
+#       client_id: "{{ csp_info.state.client_id }}"
+#       client_secret: "{{ csp_info.state.client_secret }}"
+#     worker_profiles:
+#       - name: "worker"
+#         vm_size: "Standard_D4s_v3"
+#         subnet_id: "{{ worker_subnet_state.state.id }}"
+#     master_profile:
+#       vm_size: "Standard_D4s_v3"
+#       subnet_id: "{{ master_subnet_state.state.id }}"
+
+# In case ansible was stopped and then re-run on a cluster that's still creating or deleting
+- name: create_aro_cluster | Wait for cluster to finish creating or deleting
+  azure.azcollection.azure_rm_openshiftmanagedcluster_info:
+    name: "{{ name }}"
+    resource_group: "{{ resource_group }}"
+  delegate_to: localhost
+  register: aro_cluster_create_wait
+  failed_when: |
+    aro_cluster_create_wait.clusters.properties.provisioningState | d ("") == "Creating"
+    or aro_cluster_create_wait.clusters.properties.provisioningState | d ("") == "Deleting"
+  retries: 60
+  delay: 60
+
+- name: create_aro_cluster | Get cluster status
+  azure.azcollection.azure_rm_openshiftmanagedcluster_info:
+    name: "{{ name }}"
+    resource_group: "{{ resource_group }}"
+  delegate_to: localhost
+  register: aro_cluster_state
+  failed_when: aro_cluster_state.clusters.properties.provisioningState | d ("") == "Failed"
+- name: create_aro_cluster | Debug aro_cluster_state
+  when: aro_cluster_state.clusters.id | d("") != ""
+  ansible.builtin.debug:
+    var: aro_cluster_state
+  tags:
+    - verbose
+- name: create_aro_cluster | Create aro cluster
+  when: aro_cluster_state.clusters.id | d("") == ""
+  ansible.builtin.command:
+    argv: "{{ argv | reject('equalto', omit) | list }}"
+  vars:
+    argv:
+      - az
+      - aro
+      - create
+      - --name={{ name }}
+      - --resource-group={{ resource_group }}
+      - --location={{ location }}
+      - --master-subnet=master
+      - --subscription={{ sub_info.subscription_id }}
+      - --vnet=aro-vnet
+      - --worker-subnet=worker
+      - "{% if apiserver_visibility is defined %}--apiserver-visibility={{ apiserver_visibility }}{% else %}{{ omit }}{% endif %}"
+      - "{% if byok_des_status is defined and byok_des_status.state.provisioning_state == 'Succeeded'
+        %}--disk-encryption-set={{ byok_des_status.state.id }}{% else %}{{ omit }}{% endif %}"
+      - "{% if cluster_resource_group is defined %}--cluster-resource-group={{ cluster_resource_group }}{% else %}{{ omit }}{% endif %}"
+      - "{% if domain is defined %}--domain={{ domain }}{% else %}{{ omit }}{% endif %}"
+      - "{% if enable_preconfigured_nsg is defined %}--enable-preconfigured-nsg={{ enable_preconfigured_nsg }}{% else %}{{ omit }}{% endif %}"
+      - "{% if fips_validated_modules is defined %}--fips-validated-modules={{ fips_validated_modules }}{% else %}{{ omit }}{% endif %}"
+      - "{% if ingress_visibility is defined %}--ingress-visibility={{ ingress_visibility }}{% else %}{{ omit }}{% endif %}"
+      - "{% if loadbalancer_ip_count is defined %}--load-balancer-managed-outbound-ip-count {{ loadbalancer_ip_count }}{% else %}{{ omit }}{% endif %}"
+      - "{% if master_encryption_at_host is defined %}--master-encryption-at-host={{ master_encryption_at_host }}{% else %}{{ omit }}{% endif %}"
+      - "{% if master_vm_size is defined %}--master-vm-size={{ master_vm_size }}{% else %}{{ omit }}{% endif %}"
+      - "{% if outbound_type is defined %}--outbound-type={{ outbound_type }}{% else %}{{ omit }}{% endif %}"
+      - "{% if pod_cidr is defined %}--pod-cidr={{ pod_cidr }}{% else %}{{ omit }}{% endif %}"
+      - "{% if service_cidr is defined %}--service-cidr={{ service_cidr }}{% else %}{{ omit }}{% endif %}"
+      - "{% if version is defined %}--version={{ version }}{% else %}{{ omit }}{% endif %}"
+      - "{% if worker_encryption_at_host is defined %}--worker-encryption-at-host={{ worker_encryption_at_host }}{% else %}{{ omit }}{% endif %}"
+      - "{% if worker_count is defined %}--worker-count={{ worker_count }}{% else %}{{ omit }}{% endif %}"
+      - "{% if worker_vm_size is defined %}--worker-vm-size={{ worker_vm_size }}{% else %}{{ omit }}{% endif %}"
+      - --tags
+      - createdby={{ currentuser_info.userPrincipalName }} createdwith=ansible purge=true
+      - -o=yaml
+  register: az_aro_create_output
+  ignore_errors: true
+  failed_when: az_aro_create_output == ""
+  changed_when: az_aro_create_output.rc == 0
+  delegate_to: localhost
+- name: create_aro_cluster | Check az aro create output
+  when: '"ERROR:" in az_aro_create_output.get("stderr", "")'
+  ansible.builtin.fail:
+    msg: "az aro create failed with the message {{ az_aro_create_output.stderr }}"
+- name: create_aro_cluster | Get cluster status
+  azure.azcollection.azure_rm_openshiftmanagedcluster_info:
+    name: "{{ name }}"
+    resource_group: "{{ resource_group }}"
+  delegate_to: localhost
+  register: aro_cluster_state
+  failed_when: aro_cluster_state.clusters.properties.provisioningState | d ("") == "Failed"
+- name: create_aro_cluster | Debug aro_cluster_state
+  ansible.builtin.debug:
+    var: aro_cluster_state
+  tags:
+    - verbose
+
+- name: create_aro_cluster | Show cluster and deployment state
+  ansible.builtin.debug:
+    msg:
+      - "Cluster provisioning state: {{ aro_cluster_state.clusters.properties.provisioningState | d('Unknown') }}"
+# - name: create_aro_cluster | Get resources deployment state
+#   azure.azcollection.azure_rm_deployment_info:
+#     # azure_rm_deployment_info does not include error details!
+#     name: resources
+#     resource_group: "{{ aro_cluster_state.clusters.properties.clusterProfile.resourceGroupId | basename }}"
+#   delegate_to: localhost
+#   register: resource_deployment_state
+# - name: create_aro_cluster | Debug resource_deployment_state
+#   ansible.builtin.debug:
+#     var: resource_deployment_state
+- name: create_aro_cluster | Get resources deployment failure details
+  ansible.builtin.command:
+    argv:
+      - az
+      - deployment
+      - group
+      - show
+      - -n=resources
+      - -g
+      - "{{ aro_cluster_state.clusters.properties.clusterProfile.resourceGroupId | basename }}"
+      - -o=yaml
+  delegate_to: localhost
+  register: resources_deployment_details_output
+  ignore_errors: true
+  changed_when: resources_deployment_details_output.rc == 0
+- name: create_aro_cluster | Set fact resource_deployment_details
+  when: resources_deployment_details_output is success
+  ansible.builtin.set_fact:
+    resources_deployment_details: "{{ resources_deployment_details_output.stdout | from_yaml }}"
+- name: create_aro_cluster | Show resources deployment details
+  when: resources_deployment_details_output is success
+  ansible.builtin.debug:
+    msg: "Deployment `resources` state: {{ resources_deployment_details.properties.provisioningState }}"
+- name: create_aro_cluster | Show resources deployment failure details
+  when: resources_deployment_details is success and resources_deployment_details.properties.provisioningState != "Succeeded"
+  ansible.builtin.debug:
+    var: resources_deployment_details.properties.error
+# - name: create_aro_cluster | Get storage deployment state
+#   azure.azcollection.azure_rm_deployment_info:
+#     # azure_rm_deployment_info does not include error details!
+#     name: storage
+#     resource_group: "{{ aro_cluster_state.clusters.properties.clusterProfile.resourceGroupId | basename }}"
+#   delegate_to: localhost
+#   register: storage_deployment_state
+# - name: create_aro_cluster | Debug storage_deployment_state
+#   ansible.builtin.debug:
+#     var: storage_deployment_state
+- name: create_aro_cluster | Get storage deployment failure details
+  ansible.builtin.command:
+    argv:
+      - az
+      - group
+      - deployment
+      - show
+      - -n=storage
+      - -g
+      - "{{ aro_cluster_state.clusters.properties.clusterProfile.resourceGroupId | basename }}"
+      - -o=yaml
+  delegate_to: localhost
+  register: storage_deployment_details_output
+  ignore_errors: true
+  changed_when: storage_deployment_details_output.rc == 0
+- name: create_aro_cluster | Set fact storage_deployment_details
+  when: storage_deployment_details_output is success
+  ansible.builtin.set_fact:
+    storage_deployment_details: "{{ storage_deployment_details_output.stdout | from_yaml }}"
+- name: create_aro_cluster | Show storage deployment details
+  when: storage_deployment_details_output is success
+  ansible.builtin.debug:
+    msg: "Deployment `storage` state: {{ storage_deployment_details.properties.provisioningState }}"
+- name: create_aro_cluster | Show storage deployment failure details
+  when: storage_deployment_details is success and storage_deployment_details.properties.provisioningState != "Succeeded"
+  ansible.builtin.debug:
+    var: storage_deployment_details.properties.error
+
+- name: create_aro_cluster | Fail if provisioningState is not Succeeded
+  when: aro_cluster_state.clusters.properties.provisioningState != "Succeeded"
+  block:
+    - name: create_aro_cluster | Print az aro create stdout
+      ansible.builtin.debug:
+        var: az_aro_create_output.stdout_lines
+    - name: create_aro_cluster | Print az aro create stderr
+      ansible.builtin.debug:
+        var: az_aro_create_output.stderr_lines
+    - name: create_aro_cluster | Check cluster status
+      ansible.builtin.fail:
+        msg: Cluster creation did not succeed
+
+- name: create_aro_cluster | Configure jumphost /etc/hosts entry for custom DNS - apiserver
+  when: apiserver_visibility | d("Public") == "Private" and domain is defined
+  ansible.builtin.command:
+    argv:
+      - "az"
+      - "vm"
+      - "run-command"
+      - "invoke"
+      - "--name"
+      - "jumphost"
+      - "--resource-group"
+      - "{{ resource_group }}"
+      - "--command-id"
+      - "RunShellScript"
+      - "--scripts"
+      - "echo {{ aro_cluster_state.apiserverProfile.ip }} {{ aro_cluster_state.clusters.properties.apiserverProfile.url
+        | urlsplit('hostname') }} >> /etc/hosts"
+      - "-o=yaml"
+  delegate_to: localhost
+  register: az_vm_runcommand_jumphost
+  changed_when: az_vm_runcommand_jumphost.rc == 0
+- name: create_aro_cluster | Configure jumphost /etc/hosts entry for custom DNS - ingress
+  when: apiserver_visibility | d("Public") == "Private" and domain is defined
+  ansible.builtin.command:
+    argv:
+      - "az"
+      - "vm"
+      - "run-command"
+      - "invoke"
+      - "--name"
+      - "jumphost"
+      - "--resource-group"
+      - "{{ resource_group }}"
+      - "--command-id"
+      - "RunShellScript"
+      - "--scripts"
+      - "echo {{ aro_cluster_state.ingressProfiles[0].ip }} {{
+        aro_cluster_state.clusters.properties.consoleProfile.url | urlsplit('hostname') }} {{
+        aro_cluster_state.clusters.properties.consoleProfile.url
+        | urlsplit('hostname')
+        | replace('console-openshift-console', 'downloads-openshift-console')
+        }} >> /etc/hosts"
+      - "-o=yaml"
+  delegate_to: localhost
+  register: az_vm_runcommand_jumphost
+  changed_when: az_vm_runcommand_jumphost.rc == 0
+
+- name: create_aro_cluster | Get cluster kubeconfig
+  ansible.builtin.command:
+    argv:
+      - "az"
+      - "aro"
+      - "get-admin-kubeconfig"
+      - "--name={{ name }}"
+      - "--resource-group={{ resource_group }}"
+      - "-f=/tmp/{{ inventory_hostname }}.kubeconfig"
+    creates: "/tmp/{{ inventory_hostname }}.kubeconfig"
+  delegate_to: localhost
+- name: create_aro_cluster | Copy cluster kubeconfig to jumphost
+  when: delegation != "localhost"
+  ansible.builtin.copy:
+    src: /tmp/{{ inventory_hostname }}.kubeconfig
+    dest: /tmp/{{ inventory_hostname }}.kubeconfig
+    mode: "0644"
+  delegate_to: "{{ delegation }}"
+
+- name: create_aro_cluster | Cluster api certificate
+  community.crypto.get_certificate:
+    host: "{{ aro_cluster_state.clusters.properties.apiserverProfile.url | urlsplit('hostname') }}"
+    port: "{{ aro_cluster_state.clusters.properties.apiserverProfile.url | urlsplit('port') }}"
+    get_certificate_chain: true
+  retries: 6
+  delay: 10
+  delegate_to: "{{ delegation }}"
+  register: apiserver_certificate
+- name: create_aro_cluster | Debug apiserver_certificate
+  ansible.builtin.debug:
+    var: apiserver_certificate
+  tags:
+    - verbose
+
+- name: create_aro_cluster | Cluster healthz
+  ansible.builtin.uri:
+    url: "{{ aro_cluster_state.clusters.properties.apiserverProfile.url }}healthz"
+    return_content: true
+    validate_certs: false
+    status_code:
+      - 200
+  retries: 6
+  delay: 10
+  register: api_healthz
+  failed_when: api_healthz.status != 200 or api_healthz.content != "ok"
+  delegate_to: "{{ delegation }}"
+- name: create_aro_cluster | Debug api_healthz
+  ansible.builtin.debug:
+    var: api_healthz
+  tags:
+    - verbose
+
+- name: create_aro_cluster | Get apiserver configuration
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: config.openshift.io/v1
+    kind: APIServer
+    name: cluster
+    validate_certs: false
+  register: apiserver_cluster
+  delegate_to: "{{ delegation }}"
+- name: create_aro_cluster | Debug apiserver_cluster
+  ansible.builtin.debug:
+    var: apiserver_cluster
+  tags:
+    - verbose
+
+- name: create_aro_cluster | Get serving certificate
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: v1
+    namespace: openshift-config
+    kind: Secret
+    name: "{{ apiserver_cluster.resources[0].spec.servingCerts.namedCertificates[0].servingCertificate.name }}"
+    validate_certs: false
+  register: apiserver_servingcert
+  delegate_to: "{{ delegation }}"
+- name: create_aro_cluster | Debug apiserver_servingcert
+  ansible.builtin.debug:
+    msg: '{{ apiserver_servingcert.resources[0].data["tls.crt"] | b64decode }}'
+  tags:
+    - verbose
+
+- name: create_aro_cluster | Trust the cluster's certificate (Debian version)
+  when: delegation != "localhost"
+  block:
+    - name: create_aro_cluster | Install serving certificate locally
+      ansible.builtin.copy:
+        dest: /usr/local/share/ca-certificates/{{ inventory_hostname }}.crt
+        content: "{% for item in apiserver_certificate.verified_chain %}{{ item }}{% endfor %}"
+        mode: "0644"
+        owner: root
+        group: root
+      become: true
+      delegate_to: "{{ delegation }}"
+      register: cluster_ca_certificate
+    - name: create_aro_cluster | Update CA Certificates
+      when: cluster_ca_certificate is changed # noqa no-handler
+      ansible.builtin.command:
+        argv: ["update-ca-certificates"]
+      become: true
+      delegate_to: "{{ delegation }}"
+      register: update_ca_certificates
+      changed_when: true
+    - name: create_aro_cluster | Debug update_ca_certificates
+      ansible.builtin.debug:
+        var: update_ca_certificates.stdout_lines
+      tags:
+        - verbose
+- name: create_aro_cluster | Trust the cluster's certificate (RHEL version)
+  when: delegation == "localhost"
+  block:
+    - name: create_aro_cluster | Install serving certificate locally
+      ansible.builtin.copy:
+        dest: /etc/pki/ca-trust/source/anchors/{{ inventory_hostname }}.crt
+        content: "{% for item in apiserver_certificate.verified_chain %}{{ item }}{% endfor %}"
+        mode: "0644"
+        owner: root
+        group: root
+      become: true
+      delegate_to: "{{ delegation }}"
+      register: cluster_ca_certificate
+    - name: create_aro_cluster | Update CA Certificates
+      when: cluster_ca_certificate is changed # noqa no-handler
+      ansible.builtin.command:
+        argv: ["update-ca-trust"]
+      become: true
+      delegate_to: "{{ delegation }}"
+      register: update_ca_certificates
+      changed_when: true
+    - name: create_aro_cluster | Debug update_ca_certificates
+      ansible.builtin.debug:
+        var: update_ca_certificates.stdout_lines
+      tags:
+        - verbose
+
+- name: create_aro_cluster | Install current version release-image signature to make CVO happy
+  when: apiserver_visibility | d("Public") == "Private"
+  block:
+    - name: create_aro_cluster | Get clusterversion version
+      kubernetes.core.k8s_info:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: config.openshift.io/v1
+        kind: ClusterVersion
+        name: version
+      delegate_to: "{{ delegation }}"
+      register: oc_get_clusterversion
+    - name: create_aro_cluster | Get current version
+      ansible.builtin.set_fact:
+        clusterversion_version: "{{ oc_get_clusterversion.resources[0].status.desired.version }}"
+    - name: create_aro_cluster | Get image for disconnected clusters
+      ansible.builtin.set_fact:
+        ocp_explicit_image: |-
+          {{
+            lookup("ansible.builtin.url",
+              "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/" + clusterversion_version + "/release.txt")
+            | regex_search("(?<=Pull From: )(?P<image_url>[a-z0-9.\-/@:]+)")
+          }}
+    - name: create_aro_cluster | Get image signature # noqa: command-instead-of-module
+      when: ocp_explicit_image is defined
+      ansible.builtin.shell: |
+        set -o pipefail
+        curl -s "https://mirror.openshift.com/pub/openshift-v4/signatures/openshift/release/{{ image_sig_string }}/signature-1" | base64 -w0
+      vars:
+        image_sig_string: '{{ ocp_explicit_image | regex_replace("^.+@", "") | replace(":", "=") }}'
+      register: ocp_explicit_image_sig
+      delegate_to: localhost
+      changed_when: false
+    # This does not work, see https://github.com/ansible/ansible/issues/11594
+    # - name: create_aro_cluster | Get image signature for disconnected clusters
+    #   when: ocp_explicit_image is defined
+    #   ansible.builtin.set_fact:
+    #     ocp_explicit_image_sig: |-
+    #       {{
+    #         lookup("ansible.builtin.url",
+    #           "https://mirror.openshift.com/pub/openshift-v4/signatures/openshift/release/"
+    #           + ocp_explicit_image | regex_replace("^.+@", "") | replace(":", "=")
+    #           + "/signature-1", split_lines='false') | b64encode
+    #       }}
+    - name: create_aro_cluster | Apply image signature
+      # Use older method, directly creating the signature ConfigMap
+      # https://docs.openshift.com/container-platform/4.7/updating/updating-restricted-network-cluster.html#update-configuring-image-signature
+      when: ocp_explicit_image_sig is defined
+      kubernetes.core.k8s:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: v1
+        kind: ConfigMap
+        namespace: openshift-config-managed
+        name: release-image-{{ clusterversion_version }}
+        resource_definition: |
+          metadata:
+            labels:
+              release.openshift.io/verification-signatures: ""
+          binaryData:
+            {{ ocp_explicit_image | regex_replace("^.+@", "") | replace(":", "-") }}: "{{ ocp_explicit_image_sig.stdout }}"
+      delegate_to: "{{ delegation }}"
+
+- name: create_aro_cluster | Wait for clusterversion to become Available and not Progressing
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: config.openshift.io/v1
+    kind: ClusterVersion
+    name: version
+  delegate_to: "{{ delegation }}"
+  register: oc_get_clusterversion
+  vars:
+    clusterversion_conditions: |
+      {{ oc_get_clusterversion.resources[0].status.conditions
+         | items2dict(key_name="type", value_name="status") }}
+  failed_when: |
+    clusterversion_conditions.get("Available", "False") != "True"
+    or clusterversion_conditions.get("Progressing", "False") == "True"
+  retries: 30
+  delay: 60
+- name: create_aro_cluster | Debug oc_get_clusterversion spec
+  ansible.builtin.debug:
+    var: oc_get_clusterversion.resources[0].spec
+  tags:
+    - verbose
+- name: create_aro_cluster | Debug oc_get_clusterversion conditions
+  ansible.builtin.debug:
+    var: oc_get_clusterversion.resources[0].status.conditions
+  tags:
+    - verbose
+
+- name: create_aro_cluster | Wait for cluster operators to stop progressing
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: config.openshift.io/v1
+    kind: ClusterOperator
+  delegate_to: "{{ delegation }}"
+  register: oc_get_co
+  vars:
+    clusteroperator_progressing: |-
+      {% set comma = joiner(",") %}
+      [{%- for co in oc_get_co.resources -%}
+        {%- for c in co.status.conditions -%}
+          {%- if c.type == "Progressing" and c.status == "True" -%}
+            {{ comma() }}"{{ co.metadata.name }}"
+          }{%- endif %}{% endfor -%}
+      {%- endfor -%}
+      ]
+  failed_when: clusteroperator_progressing | length > 0
+  retries: 30
+  delay: 60
+
+- name: create_aro_cluster | Validate clusterversion status conditions
+  ansible.builtin.fail:
+    msg: "Cluster is failing"
+  when: item.type == "Failing" and item.status == "True" or
+    item.type == "Available" and item.status == "False"
+  loop: "{{ oc_get_clusterversion.resources[0].status.conditions }}"
+  retries: 20
+  delay: 60
+
+- name: create_aro_cluster | Get nodes
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: v1
+    kind: Node
+  delegate_to: "{{ delegation }}"
+  register: oc_get_nodes
+  retries: 3
+  delay: 60 # A few retries in case the certificate hasn't finished rolling out
+- name: create_aro_cluster | Validate node conditions
+  loop: |
+    {% set comma = joiner(",") %}
+    [{%- for node in oc_get_nodes.resources -%}
+      {%- for c in node.status.conditions -%}
+        {{ comma() }}
+        {
+          "name": "{{ node.metadata.name }}",
+          "condition": {{ c }}
+        }{%- endfor -%}
+    {%- endfor -%}
+    ]
+  when: (item.condition.type == "Ready" and item.condition.status != "True") or
+    (item.condition.type != "Ready" and item.condition.status != "False")
+  ansible.builtin.fail:
+    msg: "Condition {{ item.condition.type }} is not acceptible on node {{ item.name }}"
+
+- name: create_aro_cluster | Validate cluster operator conditions
+  loop: |
+    {% set comma = joiner(",") %}
+    [{%- for co in oc_get_co.resources -%}
+      {%- for c in co.status.conditions -%}
+        {%- if c.type == "Available" or c.type == "Degraded" -%}
+        {{ comma() }}
+        {
+          "name": "{{ co.metadata.name }}",
+          "condition": {{ c }}
+        }{%- endif %}{% endfor -%}
+    {%- endfor -%}
+    ]
+  when: (item.condition.type == "Available" and item.condition.status != "True") or
+    (item.condition.type == "Degraded" and item.condition.status != "False")
+  ansible.builtin.fail:
+    msg: "Cluster operator {{ item.name }} {{ item.condition.type }} is {{ item.condition.status }}."
+
+- name: create_aro_cluster | Get cluster operators
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: config.openshift.io/v1
+    kind: ClusterOperator
+  delegate_to: "{{ delegation }}"
+  register: oc_get_co
+- name: create_aro_cluster | Validate cluster operator conditions
+  loop: |
+    {% set comma = joiner(",") %}
+    [{%- for co in oc_get_co.resources -%}
+      {%- for c in co.status.conditions -%}
+        {%- if c.type == "Available" or c.type == "Degraded" -%}
+        {{ comma() }}
+        {
+          "name": "{{ co.metadata.name }}",
+          "condition": {{ c }}
+        }{%- endif %}{% endfor -%}
+    {%- endfor -%}
+    ]
+  when: (item.condition.type == "Available" and item.condition.status != "True") or
+    (item.condition.type == "Degraded" and item.condition.status != "False")
+  ansible.builtin.fail:
+    msg: "Cluster operator {{ item.name }} {{ item.condition.type }} is {{ item.condition.status }}."
+
+- name: create_aro_cluster | Install `oc` binary from cluster
+  ansible.builtin.unarchive:
+    creates: /usr/local/bin/oc
+    src: >
+      {{ aro_cluster_state.clusters.properties.consoleProfile.url
+         | replace('console-openshift-console', 'downloads-openshift-console')
+      }}/amd64/linux/oc.tar
+    remote_src: true
+    dest: /usr/local/bin/
+    include: ["oc"]
+    mode: "0755"
+    owner: root
+    group: root
+  become: true
+  delegate_to: "{{ delegation }}"
+- name: create_aro_cluster | Get oc version
+  ansible.builtin.command:
+    argv: "{{ argv | reject('equalto', omit) | list }}"
+  vars:
+    argv:
+      - oc
+      - version
+      - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+  delegate_to: "{{ delegation }}"
+  register: oc_version
+  changed_when: oc_version.rc == 0
+  retries: 3
+  delay: 60 # A few retries in case the certificate hasn't finished rolling out
+- name: create_aro_cluster | Show oc version
+  ansible.builtin.debug:
+    var: oc_version.stdout_lines
+  tags:
+    - verbose
+
+- name: create_aro_cluster | Begin upgrade process
+  loop: "{{ upgrade }}"
+  loop_control:
+    loop_var: upgrade_item
+  when: upgrade is defined
+  ansible.builtin.include_tasks:
+    file: ../tasks/upgrade_cluster.yaml

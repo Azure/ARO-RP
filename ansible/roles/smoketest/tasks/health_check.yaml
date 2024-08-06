@@ -1,0 +1,54 @@
+# All operator are healty All cluster operators are healthy. oc get co
+# ARO operator pods are running Check that the aro operator pods are running and that no restarts are happening.
+# oc get pods -n openshift-azure-operator
+# ARO operator has no errors Check operator logs.
+# oc logs -n openshift-azure-operator -l app=aro-operator-master
+# oc logs -n openshift-azure-operator -l app=aro-operator-worker"
+# ARO logging pods are running Check that the aro operator pods are running and that no restarts are happening.
+# oc get pods -n openshift-azure-logging
+# No alerts in Alert manager Log in to web console Observe > Alerting and check alerts.
+# az aro list-credentials -g $RESOURCEGROUP -n $CLUSTER
+# oc get route -n openshift-console console -o jsonpath='{.spec.host}'
+# Check ARO conditions Run the following command and check the results"
+# oc get cluster/cluster -o jsonpath='{.status.conditions}' | jq
+# Check Node health Run and check results
+# oc get nodes
+- name: health_check | Get ARO cluster operator
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: config.openshift.io/v1
+    kind: ClusterOperator
+    name: aro
+  delegate_to: "{{ delegation }}"
+  register: oc_get_co_aro
+- name: health_check | Get ARO deployment aro-operator-master
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: apps/v1
+    kind: Deployment
+    name: aro-operator-master
+  delegate_to: "{{ delegation }}"
+  register: deployment_aro_operator_master
+- name: health_check | Get ARO deployment aro-operator-worker
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: apps/v1
+    kind: Deployment
+    name: aro-operator-worker
+  delegate_to: "{{ delegation }}"
+  register: deployment_aro_operator_worker
+- name: health_check | Verify ARO cluster operator is Available
+  when: item.type == "Available" and item.status != "True"
+  ansible.builtin.fail:
+    msg: "ARO operator is not available"
+  loop: "{{ oc_get_co_aro.resources[0].status.conditions }}"
+- name: health_check | Verify deployment aro-operator-master
+  when: item.status.availableReplicas < 1
+  ansible.builtin.fail:
+    msg: "aro-operator-master replicas {{ item.status.availableReplicas }}"
+  loop: "{{ deployment_aro_operator_master.resources }}"
+- name: health_check | Verify deployment aro-operator-worker
+  when: item.status.availableReplicas < 1
+  ansible.builtin.fail:
+    msg: "aro-operator-worker replicas {{ item.status.availableReplicas }}"
+  loop: "{{ deployment_aro_operator_worker.resources }}"
