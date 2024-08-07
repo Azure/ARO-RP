@@ -14,5 +14,5 @@ var unitFile string
 //go:embed scripts/aro-dnsmasq-pre.sh.gotmpl
 var preScriptFile string
 
-//go:embed scripts/99-dnsmasq-restart.gotmpl
-var restartScript string
+//go:embed scripts/99-dnsmasq-fixup-resolvconf.gotmpl
+var dispatcherDnsmasqScriptFile string

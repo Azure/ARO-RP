@@ -12,7 +12,7 @@ const (
 	CheckerEnabled                     = "aro.checker.enabled"
 	CPMSEnabled                        = "aro.cpms.enabled"
 	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
-	RestartDnsmasqEnabled              = "aro.restartdnsmasq.enabled"
+	DispatcherScriptDnsmasqEnabled     = "aro.dispatcherscriptdnsmasq.enabled"
 	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
 	ImageConfigEnabled                 = "aro.imageconfig.enabled"
 	IngressEnabled                     = "aro.ingress.enabled"
@@ -50,7 +50,7 @@ func DefaultOperatorFlags() map[string]string {
 		CheckerEnabled:                     FlagTrue,
 		CPMSEnabled:                        FlagFalse,
 		DnsmasqEnabled:                     FlagTrue,
-		RestartDnsmasqEnabled:              FlagFalse,
+		DispatcherScriptDnsmasqEnabled:     FlagTrue,
 		GenevaLoggingEnabled:               FlagTrue,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,
