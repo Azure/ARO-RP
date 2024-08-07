@@ -99,3 +99,7 @@ func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cli
 
 	return credential, nil
 }
+
+func (d *dev) MsiRpEndpoint() string {
+	return "https://iamaplaceholder.com"
+}

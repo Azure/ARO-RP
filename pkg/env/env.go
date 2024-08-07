@@ -98,6 +98,7 @@ type Interface interface {
 	ACRDomain() string
 	OIDCStorageAccountName() string
 	OIDCEndpoint() string
+	MsiRpEndpoint() string
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 
