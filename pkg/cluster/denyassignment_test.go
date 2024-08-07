@@ -63,6 +63,20 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			},
 		},
 		{
+			name: "needs create - ServicePrincipalProfile - missing SPObjectID",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+						ServicePrincipalProfile: &api.ServicePrincipalProfile{},
+					},
+				},
+			},
+			mocks: func(client *mock_features.MockDeploymentsClient) {},
+		},
+		{
 			name: "needs create - PlatformWorkloadIdentityProfile",
 			doc: &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -99,6 +113,28 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 					},
 				}).Return(nil)
 			},
+		},
+		{
+			name: "needs create - PlatformWorkloadIdentityProfile - missing ObjectID",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: "anything",
+									ClientID:     "11111111-1111-1111-1111-111111111111",
+									ResourceID:   "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name",
+								},
+							},
+						},
+					},
+				},
+			},
+			mocks: func(client *mock_features.MockDeploymentsClient) {},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
