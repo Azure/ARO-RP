@@ -373,8 +373,8 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-AZURE_PREFIX = zzz
-RP_FULL_DEV_IMAGE= quay.io/medik8s/rp-full-dev:v0.0.1
+AZURE_PREFIX = xxx
+RP_FULL_DEV_IMAGE= quay.io/medik8s/rp-full-dev:v0.0.2
 ARO_RP_BRANCH = razo7/ARO-2222
 .PHONY: rp-full-dev
 rp-full-dev:

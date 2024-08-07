@@ -11,7 +11,9 @@ steps:
   - script: |
       set -e
       # export the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
-      az account set -s fe16a035-e540-4ab7-80d9-373fa9a3d6ae
+      # az account set -s fe16a035-e540-4ab7-80d9-373fa9a3d6ae
+      az account list -o table 
+      az account show
       export SECRET_SA_ACCOUNT_NAME=${{ parameters.secretSA }} && make secrets
       # TODO resolve certificates issues
 
