@@ -81,10 +81,11 @@ type frontend struct {
 
 	aead encryption.AEAD
 
-	hiveClusterManager    hive.ClusterManager
-	kubeActionsFactory    kubeActionsFactory
-	azureActionsFactory   azureActionsFactory
-	appLensActionsFactory appLensActionsFactory
+	hiveClusterManager     hive.ClusterManager
+	syncSetResourceManager hive.SyncSetResourceManager
+	kubeActionsFactory     kubeActionsFactory
+	azureActionsFactory    azureActionsFactory
+	appLensActionsFactory  appLensActionsFactory
 
 	skuValidator       SkuValidator
 	quotaValidator     QuotaValidator
@@ -124,6 +125,7 @@ func NewFrontend(ctx context.Context,
 	clusterm metrics.Emitter,
 	aead encryption.AEAD,
 	hiveClusterManager hive.ClusterManager,
+	syncSetResourceManager hive.SyncSetResourceManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
 	appLensActionsFactory appLensActionsFactory,
@@ -151,15 +153,16 @@ func NewFrontend(ctx context.Context,
 			AdminAuth: _env.AdminClientAuthorizer(),
 			ArmAuth:   _env.ArmClientAuthorizer(),
 		},
-		dbGroup:               dbGroup,
-		apis:                  apis,
-		m:                     middleware.MetricsMiddleware{Emitter: m},
-		maintenanceMiddleware: middleware.MaintenanceMiddleware{Emitter: clusterm},
-		aead:                  aead,
-		hiveClusterManager:    hiveClusterManager,
-		kubeActionsFactory:    kubeActionsFactory,
-		azureActionsFactory:   azureActionsFactory,
-		appLensActionsFactory: appLensActionsFactory,
+		dbGroup:                dbGroup,
+		apis:                   apis,
+		m:                      middleware.MetricsMiddleware{Emitter: m},
+		maintenanceMiddleware:  middleware.MaintenanceMiddleware{Emitter: clusterm},
+		aead:                   aead,
+		hiveClusterManager:     hiveClusterManager,
+		syncSetResourceManager: syncSetResourceManager,
+		kubeActionsFactory:     kubeActionsFactory,
+		azureActionsFactory:    azureActionsFactory,
+		appLensActionsFactory:  appLensActionsFactory,
 
 		quotaValidator:     quotaValidator{},
 		skuValidator:       skuValidator{},
@@ -306,6 +309,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.Get("/serialconsole", f.getAdminOpenShiftClusterSerialConsole)
 
 				r.Get("/clusterdeployment", f.getAdminHiveClusterDeployment)
+				r.Get("/clustersyncresources", f.getAdminHiveSyncsetResources)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/redeployvm", f.postAdminOpenShiftClusterRedeployVM)
 

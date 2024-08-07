@@ -8,12 +8,13 @@ import (
 	context "context"
 	reflect "reflect"
 
-	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
-	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
+
+	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 // MockCore is a mock of Core interface.
