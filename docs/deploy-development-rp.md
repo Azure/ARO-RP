@@ -85,7 +85,7 @@ It uses hacks scripts around a lot of the setup to make things easier to bootstr
    ```bash
    az deployment group create \
      -g "$RESOURCEGROUP" \
-     -n "databases-development-$USER" \
+     -n "databases-development-${AZURE_PREFIX:-$USER}" \
      --template-file pkg/deploy/assets/databases-development.json \
      --parameters \
        "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
