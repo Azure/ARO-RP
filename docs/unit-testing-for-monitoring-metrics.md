@@ -56,7 +56,7 @@ Before you start make sure:
 
 variables before you start the monitor. 
 
-The [deploy script](../hack/local-monitor-testing/deploy_MDM_VM.sh) deploys such a VM called $AZUREPREFIX-mdm-link on Azure, configures it and installs the mdm container.
+The [deploy script](../hack/local-monitor-testing/deploy_MDM_VM.sh) deploys such a VM called $AZURE_PREFIX-mdm-link on Azure, configures it and installs the mdm container.
 
 The [start network script](../hack/local-monitor-testing/startMDMNetwork.sh) can then be used to established the network connection as depicted in the diagram. 
 

@@ -75,11 +75,11 @@ list_Azure_deployment_names() {
 create_Azure_deployment() {
     echo "INFO: Creating Azure deployment..."
     # use unique prefix for Azure resources when it is set, otherwise use your user's name
-    export AZUREPREFIX="${AZURE_PREFIX:-$USER}"
+    export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
 
     az deployment group create \
         -g "$RESOURCEGROUP" \
-        -n "databases-development-$AZUREPREFIX" \
+        -n "databases-development-$AZURE_PREFIX" \
         --template-file pkg/deploy/assets/databases-development.json \
         --parameters \
         "databaseAccountName=$DATABASE_ACCOUNT_NAME" \

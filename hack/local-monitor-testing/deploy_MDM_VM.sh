@@ -11,12 +11,12 @@ MDMSOURCEENVIRONMENT=$LOCATION
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE=$HOSTNAME
 # use unique prefix for Azure resources when it is set, otherwise use your user's name
-export AZUREPREFIX="${AZURE_PREFIX:-$USER}"
+export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
 
 echo "Using:"
 
 echo "Resourcegroup = $RESOURCEGROUP"
-echo "AzureUniquePrefix = $AZUREPREFIX"
+echo "AzurePrefix = $AZURE_PREFIX"
 echo "HOSTNAME      = $HOSTNAME"
 echo "Containername = $NAME"
 echo "Location      = $LOCATION"
@@ -27,7 +27,7 @@ echo "MDMSOURCEENV  = $MDMSOURCEENVIRONMENT"
 echo "MDMSOURCEROLE  = $MDMSOURCEROLE"
 echo "MDMSOURCEROLEINSTANCE  = $MDMSOURCEROLEINSTANCE"
 
-VMName="$AZUREPREFIX-mdm-link"
+VMName="$AZURE_PREFIX-mdm-link"
 
 CLOUDUSER="cloud-user"
 

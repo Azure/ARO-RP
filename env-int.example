@@ -1,10 +1,10 @@
 . ./env
 
 # Overrides for a full int-like local environment
-export RESOURCEGROUP=$AZUREPREFIX-aro-$LOCATION
-export DATABASE_ACCOUNT_NAME=$AZUREPREFIX-aro-$LOCATION
+export RESOURCEGROUP=$AZURE_PREFIX-aro-$LOCATION
+export DATABASE_ACCOUNT_NAME=$AZURE_PREFIX-aro-$LOCATION
 export DATABASE_NAME=ARO
-export KEYVAULT_PREFIX=$AZUREPREFIX-aro-$LOCATION
+export KEYVAULT_PREFIX=$AZURE_PREFIX-aro-$LOCATION
 export KEYVAULT_PREFIX=${KEYVAULT_PREFIX::20}
-export ARO_IMAGE=${AZUREPREFIX}aro.azurecr.io/aro:$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
-export FLUENTBIT_IMAGE=${AZUREPREFIX}aro.azurecr.io/fluentbit:latest
+export ARO_IMAGE=${AZURE_PREFIX}aro.azurecr.io/aro:$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
+export FLUENTBIT_IMAGE=${AZURE_PREFIX}aro.azurecr.io/fluentbit:latest

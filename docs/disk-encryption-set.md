@@ -31,9 +31,9 @@ Follow [tutorial-create-cluster](https://docs.microsoft.com/en-us/azure/openshif
   - set additional env variables
 ```bash
 # use a unique prefix for Azure resources when it is set, otherwise use your user's name
-export AZUREPREFIX="${AZURE_PREFIX:-$USER}"
-export KEYVAULT_NAME=$AZUREPREFIX-enckv
-export KEYVAULT_KEY_NAME=$AZUREPREFIX-key
+export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
+export KEYVAULT_NAME=$AZURE_PREFIX-enckv
+export KEYVAULT_KEY_NAME=$AZURE_PREFIX-key
 export DISK_ENCRYPTION_SET_NAME=$RESOURCEGROUP-disk-encryption-set
 ```
   - create the KeyVault and Key

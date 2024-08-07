@@ -400,8 +400,8 @@ az ad app credential reset \
 
    ```bash
    # use a unique prefix for Azure resources when it is set, otherwise use your user's name
-   export AZUREPREFIX="${AZURE_PREFIX:-$USER}"
    cat >secrets/env <<EOF
+   export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
    export AZURE_TENANT_ID='$AZURE_TENANT_ID'
    export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
@@ -420,7 +420,7 @@ az ad app credential reset \
    export AZURE_GATEWAY_CLIENT_SECRET='$AZURE_GATEWAY_CLIENT_SECRET'
    export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
    export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
-   export DATABASE_NAME="\$AZUREPREFIX"
+   export DATABASE_NAME="\$AZURE_PREFIX"
    export RP_MODE='development'
    export PULL_SECRET='$PULL_SECRET'
    export SECRET_SA_ACCOUNT_NAME='$SECRET_SA_ACCOUNT_NAME'
