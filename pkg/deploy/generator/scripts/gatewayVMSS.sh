@@ -40,12 +40,7 @@ for attempt in {1..60}; do
 done
 
 echo "configuring logrotate"
-
-# gateway_logdir is a readonly variable that specifies the host path mount point for the gateway container log file
-# for the purpose of rotating the gateway logs
-declare -r gateway_logdir='/var/log/aro-gateway'
-
-cat >/etc/logrotate.conf <<EOF
+cat >/etc/logrotate.conf <<'EOF'
 # see "man logrotate" for details
 # rotate log files weekly
 weekly
@@ -79,18 +74,6 @@ include /etc/logrotate.d
     create 0600 root utmp
     rotate 1
 }
-
-# Maximum log directory size is 100G with this configuration
-# Setting limit to 100G to allow space for other logging services
-# copytruncate is a critical option used to prevent logs from being shipped twice
-${gateway_logdir} {
-    size 20G
-    rotate 5
-    create 0600 root root
-    copytruncate
-    noolddir
-    compress
-}
 EOF
 
 echo "configuring yum repository and running yum update"
@@ -116,6 +99,14 @@ for attempt in {1..60}; do
   # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
   if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
+
+# Ensure podman's log driver is journald so that we don't fill up the drive
+# with logs
+# https://github.com/containers/common/blob/main/pkg/config/containers.conf
+cat >/etc/containers/containers.conf <<'EOF'
+[containers]
+log_driver = "journald"
+EOF
 
 echo "applying firewall rules"
 # https://access.redhat.com/security/cve/cve-2020-13401
@@ -280,7 +271,6 @@ Wants=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-gateway
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/mkdir -p ${gateway_logdir}
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
@@ -298,7 +288,6 @@ ExecStart=/usr/bin/docker run \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  -v ${gateway_logdir}:/ctr.log:z \
   \$RPIMAGE \
   gateway
 ExecStop=/usr/bin/docker stop -t 3600 %N

@@ -101,6 +101,14 @@ yum -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-secu
   if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
 
+# Ensure podman's log driver is journald so that we don't fill up the drive
+# with logs
+# https://github.com/containers/common/blob/main/pkg/config/containers.conf
+cat >/etc/containers/containers.conf <<'EOF'
+[containers]
+log_driver = "journald"
+EOF
+
 # https://access.redhat.com/security/cve/cve-2020-13401
 echo "applying firewall rules"
 cat >/etc/sysctl.d/02-disable-accept-ra.conf <<'EOF'
