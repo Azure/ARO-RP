@@ -46,11 +46,13 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 
 		t.Run(string(authorizerType), func(t *testing.T) {
 			for _, tt := range []struct {
-				name        string
-				oc          *api.OpenShiftCluster
-				actionInfos []remotepdp.ActionInfo
-				mocks       func(*mock_compute.MockDiskEncryptionSetsClient, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc)
-				wantErr     string
+				name                string
+				oc                  *api.OpenShiftCluster
+				actionInfos         []remotepdp.ActionInfo
+				platformIdentities  []api.PlatformWorkloadIdentity
+				platformIdentityMap map[string][]string
+				mocks               func(*mock_compute.MockDiskEncryptionSetsClient, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc)
+				wantErr             string
 			}{
 				{
 					name: "no disk encryption set provided",
@@ -77,6 +79,57 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
 							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("eastus")}, nil)
+					},
+				},
+				{
+					name: "pass - MIWI Cluster",
+					oc: &api.OpenShiftCluster{
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								DiskEncryptionSetID: fakeDesID1,
+							},
+							WorkerProfiles: []api.WorkerProfile{{
+								DiskEncryptionSetID: fakeDesID1,
+							}},
+						},
+					},
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							Return(validDiskEncryptionAuthorizationDecision, nil)
+						diskEncryptionSets.EXPECT().
+							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
+							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("eastus")}, nil)
+					},
+					platformIdentities: platformIdentities,
+					platformIdentityMap: map[string][]string{
+						"Dummy": platformIdentity1SubnetActions,
+					},
+				},
+				{
+					name: "Success - MIWI Cluster - No intersecting Subnet Actions",
+					oc: &api.OpenShiftCluster{
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								DiskEncryptionSetID: fakeDesID1,
+							},
+							WorkerProfiles: []api.WorkerProfile{{
+								DiskEncryptionSetID: fakeDesID1,
+							}},
+						},
+					},
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						diskEncryptionSets.EXPECT().
+							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
+							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("eastus")}, nil)
+					},
+					platformIdentities: platformIdentities,
+					platformIdentityMap: map[string][]string{
+						"Dummy": platformIdentity1SubnetActionsNoIntersect,
 					},
 				},
 				{
@@ -228,7 +281,34 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 								cancel()
 							})
 					},
-					wantErr: fmt.Sprintf("400: %s: properties.masterProfile.diskEncryptionSetId: The %s service principal does not have Reader permission on disk encryption set '%s'.", wantErrCode, authorizerType, fakeDesID1),
+					wantErr: fmt.Sprintf("400: %s: properties.masterProfile.diskEncryptionSetId: The %s service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Reader permission on disk encryption set '%s'.", wantErrCode, authorizerType, fakeDesID1),
+				},
+				{
+					name: "Fail - MIWI Cluster - permissions don't exist on diskEncryptionSet",
+					oc: &api.OpenShiftCluster{
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								DiskEncryptionSetID: fakeDesID1,
+							},
+							WorkerProfiles: []api.WorkerProfile{{
+								DiskEncryptionSetID: fakeDesID2,
+							}},
+						},
+					},
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							Do(func(arg0, arg1 interface{}) {
+								cancel()
+							})
+					},
+					platformIdentities: platformIdentities,
+					platformIdentityMap: map[string][]string{
+						"Dummy": platformIdentity1SubnetActions,
+					},
+					wantErr: fmt.Sprintf("400: %s: properties.masterProfile.diskEncryptionSetId: The Dummy platform managed identity does not have required permissions on disk encryption set '%s'.", wantErrCode, fakeDesID1),
 				},
 				{
 					name: "one of the disk encryption set permissions not found",
@@ -305,12 +385,18 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					}
 
 					dv := &dynamic{
+						appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
 						azEnv:                      &azureclient.PublicCloud,
 						authorizerType:             authorizerType,
 						log:                        logrus.NewEntry(logrus.StandardLogger()),
 						diskEncryptionSets:         diskEncryptionSetsClient,
 						pdpClient:                  remotePDPClient,
 						checkAccessSubjectInfoCred: tokenCred,
+					}
+
+					if tt.platformIdentities != nil {
+						dv.platformIdentities = tt.platformIdentities
+						dv.platformIdentitiesActionsMap = tt.platformIdentityMap
 					}
 
 					err := dv.ValidateDiskEncryptionSets(ctx, tt.oc)
