@@ -23,7 +23,7 @@ func GatewayEnabled(cluster *arov1alpha1.Cluster) bool {
 // ShouldUsePodSecurityStandard is an admissions controller
 // for pods which replaces pod security policies, enabled on
 // OpenShift 4.11 and up
-func ShouldUsePodSecurityStandard(ctx context.Context, client client.Client) (bool, error) {
+func ShouldUsePodSecurityStandard(ctx context.Context, client client.Reader) (bool, error) {
 	cv := &configv1.ClusterVersion{}
 
 	err := client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
