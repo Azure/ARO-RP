@@ -9,7 +9,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
@@ -27,7 +27,8 @@ var aroOperatorConditionsExpected = map[string]operatorv1.ConditionStatus{
 }
 
 func (mon *Monitor) emitAroOperatorConditions(ctx context.Context) error {
-	cluster, err := mon.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	cluster := &arov1alpha1.Cluster{}
+	err := mon.ch.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -15,6 +16,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("Cluster Operators", Label(smoke), func() {
@@ -39,8 +41,9 @@ var _ = Describe("Cluster Operators", Label(smoke), func() {
 var _ = Describe("ARO Operator", Label(smoke), func() {
 	It("should meet all conditions", func(ctx context.Context) {
 		Eventually(func(g Gomega, ctx context.Context) {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
+			co := &arov1alpha1.Cluster{}
+			err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
+			g.Expect(err).ToNot(HaveOccurred())
 
 			var skipConditions = []string{
 				"DefaultIngressCertificate", // This is not enabled in dev clusters and clusters with custom domains.

@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/yaml"
@@ -87,7 +88,8 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	var originalURLs []string
 	BeforeEach(func(ctx context.Context) {
 		By("saving the original URLs")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		co := &arov1alpha1.Cluster{}
+		err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
 		if kerrors.IsNotFound(err) {
 			Skip("skipping tests as aro-operator is not deployed")
 		}
@@ -98,20 +100,22 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	AfterEach(func(ctx context.Context) {
 		By("restoring the original URLs")
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			co := &arov1alpha1.Cluster{}
+			err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
 			if err != nil {
 				return err
 			}
 			co.Spec.InternetChecker.URLs = originalURLs
-			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
+			clients.Client.Client().Update(ctx, co)
 			return err
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the original conditions")
 		Eventually(func(g Gomega, ctx context.Context) {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
+			co := &arov1alpha1.Cluster{}
+			err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
+			g.Expect(err).ToNot(HaveOccurred())
 
 			g.Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
 			g.Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
@@ -121,20 +125,21 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	It("sets InternetReachableFromMaster and InternetReachableFromWorker to false when URL is not reachable", func(ctx context.Context) {
 		By("setting a deliberately unreachable URL")
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			co := &arov1alpha1.Cluster{}
+			err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
 			if err != nil {
 				return err
 			}
 			co.Spec.InternetChecker.URLs = []string{"https://localhost:1234/shouldnotexist"}
-			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
-			return err
+			return clients.Client.Client().Update(ctx, co)
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the expected conditions to be set")
 		Eventually(func(g Gomega, ctx context.Context) {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
+			co := &arov1alpha1.Cluster{}
+			err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
+			g.Expect(err).ToNot(HaveOccurred())
 
 			g.Expect(conditions.IsFalse(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
 			g.Expect(conditions.IsFalse(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
@@ -278,8 +283,9 @@ var _ = Describe("ARO Operator - Conditions", func() {
 
 	It("must have all the conditions on the cluster resource set to true", func(ctx context.Context) {
 		Eventually(func(g Gomega, ctx context.Context) {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
+			co := &arov1alpha1.Cluster{}
+			err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
+			g.Expect(err).ToNot(HaveOccurred())
 
 			for _, condition := range arov1alpha1.ClusterChecksTypes() {
 				g.Expect(conditions.IsTrue(co.Status.Conditions, condition)).To(BeTrue(), "Condition %s", condition)
@@ -385,8 +391,9 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	BeforeEach(func(ctx context.Context) {
 		// TODO remove this when GA
 		By("checking if preconfiguredNSG is enabled")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		co := &arov1alpha1.Cluster{}
+		err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
+		Expect(err).ToNot(HaveOccurred())
 		if co.Spec.OperatorFlags[operator.AzureSubnetsNsgManaged] == operator.FlagFalse {
 			Skip("preconfiguredNSG is enabled, skipping test")
 		}
@@ -452,8 +459,9 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(*s.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
 
-				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-				g.Expect(err).NotTo(HaveOccurred())
+				co := &arov1alpha1.Cluster{}
+				err = clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
+				g.Expect(err).ToNot(HaveOccurred())
 				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		}
@@ -541,9 +549,9 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 
 	BeforeEach(func(ctx context.Context) {
 		By("checking whether Image config reconciliation is enabled in ARO operator config")
-		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
+		instance := &arov1alpha1.Cluster{}
+		err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+		Expect(err).ToNot(HaveOccurred())
 		if !instance.Spec.OperatorFlags.GetSimpleBoolean(imageConfigFlag) {
 			Skip("ImageConfig Controller is not enabled, skipping test")
 		}
@@ -667,8 +675,9 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 	)
 
 	It("Controller Manager must be restored if deleted", func(ctx context.Context) {
-		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		instance := &arov1alpha1.Cluster{}
+		err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+		Expect(err).ToNot(HaveOccurred())
 
 		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
 			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
@@ -689,8 +698,9 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 	})
 
 	It("Audit must be restored if deleted", func(ctx context.Context) {
-		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		instance := &arov1alpha1.Cluster{}
+		err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+		Expect(err).ToNot(HaveOccurred())
 
 		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
 			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
@@ -719,8 +729,9 @@ var _ = Describe("ARO Operator - Cloud Provider Config ConfigMap", func() {
 
 	It("must have disableOutboundSNAT set to true", func(ctx context.Context) {
 		By("checking whether CloudProviderConfig reconciliation is enabled in ARO operator config")
-		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		instance := &arov1alpha1.Cluster{}
+		err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+		Expect(err).ToNot(HaveOccurred())
 
 		if !instance.Spec.OperatorFlags.GetSimpleBoolean(cpcControllerEnabled) {
 			Skip("CloudProviderConfig Controller is not enabled, skipping test")
@@ -760,8 +771,9 @@ var _ = Describe("ARO Operator - Control Plane MachineSets", func() {
 
 	It("should ensure CPMS is Inactive", func(ctx context.Context) {
 		By("checking whether CPMS is disabled in ARO operator config")
-		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		instance := &arov1alpha1.Cluster{}
+		err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+		Expect(err).ToNot(HaveOccurred())
 
 		if instance.Spec.OperatorFlags.GetSimpleBoolean(cpmsEnabled) {
 			Skip("CPMS is enabled (controller disabled), skipping test")

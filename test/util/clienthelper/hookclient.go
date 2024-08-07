@@ -14,6 +14,7 @@ import (
 
 type getFunc func(key client.ObjectKey, obj client.Object) error
 type hookFunc func(obj client.Object) error
+type listFunc func(obj client.ObjectList, opts ...client.ListOption) error
 
 type HookingClient struct {
 	f client.WithWatch
@@ -23,6 +24,7 @@ type HookingClient struct {
 	preCreateHook []hookFunc
 	preUpdateHook []hookFunc
 	prePatchHook  []hookFunc
+	preListHook   []listFunc
 
 	postGetHook    []getFunc
 	postDeleteHook []hookFunc
@@ -46,6 +48,7 @@ func NewHookingClient(c client.WithWatch) *HookingClient {
 		preCreateHook: []hookFunc{},
 		preUpdateHook: []hookFunc{},
 		prePatchHook:  []hookFunc{},
+		preListHook:   []listFunc{},
 
 		postGetHook:    []getFunc{},
 		postDeleteHook: []hookFunc{},
@@ -100,6 +103,10 @@ func (c *HookingClient) WithPrePatchHook(f hookFunc) *HookingClient {
 	c.prePatchHook = append(c.prePatchHook, f)
 	return c
 }
+func (c *HookingClient) WithPreListHook(f listFunc) *HookingClient {
+	c.preListHook = append(c.preListHook, f)
+	return c
+}
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.Get]
 func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
@@ -126,6 +133,12 @@ func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj clien
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.List]
 func (c *HookingClient) List(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
+	for _, h := range c.preListHook {
+		err := h(obj, opts...)
+		if err != nil {
+			return err
+		}
+	}
 	return c.f.List(ctx, obj, opts...)
 }
 

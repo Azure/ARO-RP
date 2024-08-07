@@ -9,14 +9,19 @@ import (
 	"testing"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -475,12 +480,10 @@ func TestCheckPodIsRunning(t *testing.T) {
 		},
 	}
 
-	clientset := fake.NewSimpleClientset()
-	_, err := clientset.CoreV1().Pods("default").Create(ctx, pod, metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("error creating pod: %v", err)
-	}
-	_, err = CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), pod.ObjectMeta.Name)()
+	client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(pod).Build())
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+
+	_, err := CheckPodIsRunning(ctx, ch, types.NamespacedName{Namespace: "default", Name: pod.ObjectMeta.Name})()
 	if err != nil {
 		t.Fatalf("error getting running pod: %v", err)
 	}
@@ -495,8 +498,10 @@ func TestCheckPodIsRunningNotFound(t *testing.T) {
 		},
 	}
 
-	clientset := fake.NewSimpleClientset()
-	ok, err := CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), pod.ObjectMeta.Name)()
+	client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects().Build())
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+
+	ok, err := CheckPodIsRunning(ctx, ch, types.NamespacedName{Namespace: "default", Name: pod.ObjectMeta.Name})()
 	if ok {
 		t.Fatalf("error getting running pod: %v", err)
 	}
@@ -504,13 +509,13 @@ func TestCheckPodIsRunningNotFound(t *testing.T) {
 
 func TestCheckPodIsRunningError(t *testing.T) {
 	ctx := context.Background()
-
-	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return true, &corev1.Pod{}, errors.New("error getting pod")
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().Build())
+	c.WithPreGetHook(func(key client.ObjectKey, obj client.Object) error {
+		return errors.New("error getting pod")
 	})
-	_, err := CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), "")()
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
 
+	_, err := CheckPodIsRunning(ctx, ch, types.NamespacedName{Namespace: "default", Name: "name"})()
 	if err == nil {
 		t.Fatalf("check pod is found: %v", err)
 	}
@@ -519,18 +524,9 @@ func TestCheckPodIsRunningError(t *testing.T) {
 func TestCheckDeploymentIsReady(t *testing.T) {
 	ctx := context.Background()
 
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deployment-not-found",
-			Namespace: "default",
-		},
-	}
-	clientset := fake.NewSimpleClientset()
-	_, err := clientset.AppsV1().Deployments("default").Create(ctx, deployment, metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("error creating deployment: %v", err)
-	}
-	_, err = CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.ObjectMeta.Name)()
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects().Build())
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+	_, err := CheckDeploymentIsReady(ctx, ch, types.NamespacedName{Namespace: "default", Name: "notfound"})()
 
 	if err != nil {
 		t.Fatalf("check deployement is not ready: %v", err)
@@ -545,8 +541,10 @@ func TestCheckDeploymentIsReadyNotFound(t *testing.T) {
 			Namespace: "default",
 		},
 	}
-	clientset := fake.NewSimpleClientset()
-	ok, _ := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.ObjectMeta.Name)()
+
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects().Build())
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+	ok, _ := CheckDeploymentIsReady(ctx, ch, types.NamespacedName{Namespace: "default", Name: deployment.ObjectMeta.Name})()
 
 	if ok {
 		t.Fatalf("check deployment is found")
@@ -555,12 +553,12 @@ func TestCheckDeploymentIsReadyNotFound(t *testing.T) {
 
 func TestCheckDeploymentIsReadyError(t *testing.T) {
 	ctx := context.Background()
-
-	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "deployments", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return true, &appsv1.Deployment{}, errors.New("error getting deployment")
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().Build())
+	c.WithPreGetHook(func(key client.ObjectKey, obj client.Object) error {
+		return errors.New("error getting deployment")
 	})
-	_, err := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), "")()
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+	_, err := CheckDeploymentIsReady(ctx, ch, types.NamespacedName{Namespace: "default", Name: "something"})()
 
 	if err == nil {
 		t.Fatalf("check deployment error is: %v", err)
@@ -575,12 +573,9 @@ func TestCheckMachineConfigPoolIsReady(t *testing.T) {
 			Name: "machineconfigpool-not-found",
 		},
 	}
-	clientset := mcofake.NewSimpleClientset()
-	_, err := clientset.MachineconfigurationV1().MachineConfigPools().Create(ctx, machineconfigpool, metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("error creating machineconfigpool: %v", err)
-	}
-	_, err = CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), machineconfigpool.ObjectMeta.Name)()
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(machineconfigpool).Build())
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+	_, err := CheckMachineConfigPoolIsReady(ctx, ch, machineconfigpool.ObjectMeta.Name)()
 
 	if err != nil {
 		t.Fatalf("check machineconfigpool is not ready: %v", err)
@@ -589,13 +584,10 @@ func TestCheckMachineConfigPoolIsReady(t *testing.T) {
 
 func TestCheckMachineConfigPoolIsReadyNotFound(t *testing.T) {
 	ctx := context.Background()
-	machineconfigpool := &mcv1.MachineConfigPool{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "machineconfigpool-not-found",
-		},
-	}
-	clientset := mcofake.NewSimpleClientset()
-	ok, _ := CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), machineconfigpool.ObjectMeta.Name)()
+
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects().Build())
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+	ok, _ := CheckMachineConfigPoolIsReady(ctx, ch, "not-found")()
 
 	if ok {
 		t.Fatalf("check machineconfigpool is found")
@@ -605,11 +597,13 @@ func TestCheckMachineConfigPoolIsReadyNotFound(t *testing.T) {
 func TestCheckMachineConfigPoolIsReadyError(t *testing.T) {
 	ctx := context.Background()
 
-	clientset := mcofake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "machineconfigpools", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return true, &mcv1.MachineConfigPool{}, errors.New("error getting machineconfigpool")
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().Build())
+	c.WithPreGetHook(func(key client.ObjectKey, obj client.Object) error {
+		return errors.New("error getting mcp")
 	})
-	_, err := CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), "")()
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+
+	_, err := CheckMachineConfigPoolIsReady(ctx, ch, "willerror")()
 
 	if err == nil {
 		t.Fatalf("check machineconfigpool error is: %v", err)
@@ -620,33 +614,62 @@ func TestCheckPodsAreRunning(t *testing.T) {
 	ctx := context.Background()
 	labels := make(map[string]string)
 	labels["app"] = "running"
-	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return false, &corev1.PodList{Items: []corev1.Pod{
-			{ObjectMeta: metav1.ObjectMeta{
-				Name:      "one-pod",
-				Namespace: "default",
-				Labels:    map[string]string{"app": "running"},
-			},
-			},
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "one-pod",
+			Namespace: "default",
+			Labels:    map[string]string{"app": "running"},
 		},
-		}, errors.New("error listing pods")
-	})
-	ok, _ := CheckPodsAreRunning(ctx, clientset.CoreV1().Pods("default"), labels)()
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+		},
+	}
+
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(pod).Build())
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+
+	ok, _ := CheckPodsAreRunning(ctx, ch, labels)()
 	if !ok {
 		t.Fatalf("check pods are not running: %v", ok)
 	}
 }
+
+func TestCheckPodsAreRunningNotRunning(t *testing.T) {
+	ctx := context.Background()
+	labels := make(map[string]string)
+	labels["app"] = "running"
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "one-pod",
+			Namespace: "default",
+			Labels:    map[string]string{"app": "running"},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodUnknown,
+		},
+	}
+
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(pod).Build())
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+
+	ok, _ := CheckPodsAreRunning(ctx, ch, labels)()
+	if ok {
+		t.Fatalf("check pods are running: %v", ok)
+	}
+}
+
 func TestCheckPodsAreReadyError(t *testing.T) {
 	ctx := context.Background()
 
-	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return true, &corev1.PodList{}, errors.New("error getting pods")
+	c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().Build())
+	c.WithPreListHook(func(obj client.ObjectList, opts ...client.ListOption) error {
+		return errors.New("error getting pods")
 	})
+	ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+
 	labels := make(map[string]string)
 	labels["app"] = "running"
-	_, err := CheckPodsAreRunning(ctx, clientset.CoreV1().Pods(""), labels)()
+	_, err := CheckPodsAreRunning(ctx, ch, labels)()
 
 	if err == nil {
 		t.Fatalf("check pod error is: %v", err)

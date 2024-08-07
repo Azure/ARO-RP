@@ -19,11 +19,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/operator"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -131,16 +133,17 @@ var _ = Describe("Cluster", Serial, func() {
 			// but we cannot PUCM in prod, and dev clusters have ACLs set to allow
 			By("checking the storage account vnet rules to verify that they include the cluster subnets")
 
-			cluster, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			cluster := &arov1alpha1.Cluster{}
+			err = clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Poke the ARO storage account controller to reconcile
 			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = operator.FlagFalse
-			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
+			clients.Client.Client().Update(ctx, cluster)
 			Expect(err).NotTo(HaveOccurred())
 
 			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = operator.FlagTrue
-			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
+			clients.Client.Client().Update(ctx, cluster)
 			Expect(err).NotTo(HaveOccurred())
 
 			rgName := stringutils.LastTokenByte(cluster.Spec.ClusterResourceGroupID, '/')
