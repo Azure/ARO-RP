@@ -25,8 +25,7 @@ func Split(subnetID string) (string, string, error) {
 	return strings.Join(parts[:len(parts)-2], "/"), parts[len(parts)-1], nil
 }
 
-// NetworkSecurityGroupID returns the NetworkSecurityGroup ID for a given subnet
-// ID
+// NetworkSecurityGroupID returns the NetworkSecurityGroup ID for a given subnet ID
 func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, error) {
 	infraID := oc.Properties.InfraID
 	if infraID == "" {
