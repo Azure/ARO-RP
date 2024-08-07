@@ -141,12 +141,60 @@ func TestInstallAROOperator(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "install success",
+			name: "install success with service principal",
 			doc: &api.OpenShiftClusterDocument{
 				Key: strings.ToLower(key),
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: key,
 					Properties: api.OpenShiftClusterProperties{
+						ServicePrincipalProfile: &api.ServicePrincipalProfile{},
+						IngressProfiles: []api.IngressProfile{
+							{
+								Visibility: api.VisibilityPublic,
+								Name:       "default",
+							},
+						},
+						ProvisioningState: api.ProvisioningStateAdminUpdating,
+						ClusterProfile: api.ClusterProfile{
+							Version: "4.8.18",
+						},
+						NetworkProfile: api.NetworkProfile{
+							APIServerPrivateEndpointIP: "1.2.3.4",
+						},
+					},
+				},
+			},
+			mocks: func(dep *mock_deploy.MockOperator) {
+				dep.EXPECT().
+					Install(gomock.Any()).
+					Return(nil)
+			},
+		},
+		{
+			name: "install success with identity",
+			doc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(key),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: key,
+					Identity: &api.Identity{
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							"fakeIdentity": api.ClusterUserAssignedIdentity{
+								ClientID:    "fake",
+								PrincipalID: "alsoFake",
+							},
+						},
+					},
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: "openshift-azure-operator",
+									ObjectID:     "00000000-0000-0000-0000-000000000000",
+									ClientID:     "11111111-1111-1111-1111-111111111111",
+									ResourceID:   "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name",
+								},
+							},
+						},
 						IngressProfiles: []api.IngressProfile{
 							{
 								Visibility: api.VisibilityPublic,
