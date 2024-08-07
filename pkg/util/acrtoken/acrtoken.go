@@ -44,6 +44,10 @@ const (
 )
 
 func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
+	fmt.Println("Entering method NewManager")
+	fmt.Println("env: ", env)
+	fmt.Println("ResourceID: ", env.ACRResourceID())
+
 	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
 		return nil, err
@@ -155,9 +159,6 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 // generateTokenPassword takes an existing ACR token and generates
 // a password for the specified password name
 func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
-	const hoursInADay = 24
-	const acrTokenLifeInDays = 90
-
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
 		Name:    passwordName,
