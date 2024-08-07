@@ -1,11 +1,9 @@
 #!/bin/bash -e
-
-# Export environment variables from parameters
-paramsFile=".pipelines/templates/rp-dev/rp-dev-params.yml"
-
 # TODO - check if needed
 export USER=dummy
-secretSA=$(grep -A 2 secretSA $paramsFile | grep 'default:' | awk '{print $2}')
+# paramsFile=".pipelines/templates/rp-dev/rp-dev-params.yml"
+# secretSA=$(grep -A 2 secretSA $paramsFile| grep 'default:' | awk '{print $2}')
+secretSA=rharosecretsdev
 # Export the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
 az account set -s fe16a035-e540-4ab7-80d9-373fa9a3d6ae
 export SECRET_SA_ACCOUNT_NAME=$secretSA && make secrets
@@ -19,14 +17,13 @@ files=("env" "dev-ca.crt" "dev-client.crt")
 for file in "${files[@]}"; do
   [ -f "$expected_dir/$file" ] || { echo "File '$file' does not exist inside the directory '$expected_dir'."; exit 1; }
 done
-# Based on the var file .pipelines/templates/rp-dev/rp-dev-vars.yml
-export AZURE_PREFIX=$1 NO_CACHE=true ARO_INSTALL_VIA_HIVE=true ARO_ADOPT_BY_HIVE=true DATABASE_NAME=ARO
-export LOCATION=$(grep -A 2 location $paramsFile| grep 'default:' | awk '{print $2}' | head -n 1)
+# export LOCATION=$(grep -A 2 location $paramsFile| grep 'default:' | awk '{print $2}' | head -n 1)
+export LOCATION=eastus
 # Source environment variables from the secrets file
 source secrets/env
 echo "Success step 1 ✅ - Directory '$expected_dir' has been created with files - ${files[@]}"
 
-
+export AZURE_PREFIX=$1 NO_CACHE=true ARO_INSTALL_VIA_HIVE=true ARO_ADOPT_BY_HIVE=true DATABASE_NAME=ARO
 
 azure_resource_name=${AZURE_PREFIX}-aro-$LOCATION
 # TODO truncate to 20 characters
