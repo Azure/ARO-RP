@@ -51,3 +51,7 @@ func ClusterVersionIsLessThan4_4(ctx context.Context, configcli configclient.Int
 	// 4.3 uses SRV records for etcd
 	return v.Lt(NewVersion(4, 4)), nil
 }
+
+func IsClusterUpgrading(cv *configv1.ClusterVersion) bool {
+	return cv.Spec.DesiredUpdate != nil
+}
