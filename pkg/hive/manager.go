@@ -10,6 +10,7 @@ import (
 	"sort"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	"github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,6 +53,74 @@ type clusterManager struct {
 	kubernetescli kubernetes.Interface
 
 	dh dynamichelper.Interface
+}
+
+// Define the interface for SyncSetResourceManager
+type SyncSetResourceManager interface {
+	GetSyncSetResources(ctx context.Context, namespace string) (*v1alpha1.ClusterSyncList, error)
+}
+
+// Implement the syncSetResourceManager struct
+type syncSetResourceManager struct {
+	log           *logrus.Entry
+	env           env.Core
+	hiveClientset client.Client
+}
+
+// ListClusterSyncs lists ClusterSync resources in the specified namespace
+func (srm *syncSetResourceManager) GetSyncSetResources(ctx context.Context, namespace string) (*v1alpha1.ClusterSyncList, error) {
+
+	clusterSyncList := &v1alpha1.ClusterSyncList{}
+
+	listOpts := &client.ListOptions{
+		Namespace: namespace,
+	}
+
+	err := srm.hiveClientset.List(ctx, clusterSyncList, listOpts)
+	if err != nil {
+		srm.log.Errorf("Failed to list ClusterSync resources: %v", err)
+		return nil, err
+	}
+
+	return clusterSyncList, nil
+}
+
+func NewClusterSyncFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (SyncSetResourceManager, error) {
+	adoptByHive, err := env.LiveConfig().AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	installViaHive, err := env.LiveConfig().InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !adoptByHive && !installViaHive {
+		log.Infof("hive is disabled, skipping creation of syncSetResourceManager")
+		return nil, nil
+	}
+	hiveShard := 1
+	hiveRestConfig, err := env.LiveConfig().HiveRestConfig(ctx, hiveShard)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
+	}
+	return NewClusterSyncFromConfig(log, env, hiveRestConfig)
+}
+
+// NewFromConfig creates a ClusterManager.
+// It MUST NOT take cluster or subscription document as values
+// in these structs can be change during the lifetime of the cluster manager.
+func NewClusterSyncFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (SyncSetResourceManager, error) {
+	hiveClientset, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &syncSetResourceManager{
+		log: log,
+		env: _env,
+
+		hiveClientset: hiveClientset,
+	}, nil
 }
 
 // NewFromEnv can return a nil ClusterManager when hive features are disabled. This exists to support regions where we don't have hive,
