@@ -132,19 +132,19 @@ def load_arguments(self, _):
                    validator=validate_load_balancer_managed_outbound_ip_count,
                    options_list=['--load-balancer-managed-outbound-ip-count', '--lb-ip-count'])
 
-        c.argument('enable_managed_identity', arg_group='Identity', arg_type=get_three_state_flag(),
+        c.argument('enable_managed_identity', arg_group='Identity', is_preview=True, arg_type=get_three_state_flag(),
+                   help='Enable managed identity for this cluster.',
                    options_list=['--enable-managed-identity', '--enable-mi'],
-                   validator=validate_enable_managed_identity,
-                   help='Enable managed identity for this cluster.', is_preview=True)
-        c.argument('platform_workload_identities', arg_group='Identity',
-                   help='Assign a platform workload identity used within the cluster', is_preview=True,
+                   validator=validate_enable_managed_identity)
+        c.argument('platform_workload_identities', arg_group='Identity', is_preview=True,
+                   help='Assign a platform workload identity used within the cluster',
                    options_list=['--assign-platform-workload-identity', '--assign-platform-wi'],
-                   validator=validate_platform_workload_identities,
+                   validator=validate_platform_workload_identities(isCreate=True),
                    action=AROPlatformWorkloadIdentityAddAction, nargs='+')
-        c.argument('mi_user_assigned', arg_group='Identity',
+        c.argument('mi_user_assigned', arg_group='Identity', is_preview=True,
+                   help='Set the user managed identity on the cluster.',
                    options_list=['--mi-user-assigned', '--assign-cluster-identity'],
-                   validator=validate_cluster_identity,
-                   help='Set the user managed identity on the cluster.')
+                   validator=validate_cluster_identity)
 
     with self.argument_context('aro update') as c:
         c.argument('client_secret',
@@ -155,6 +155,11 @@ def load_arguments(self, _):
                    help='Refresh cluster application credentials.',
                    options_list=['--refresh-credentials'],
                    validator=validate_refresh_cluster_credentials)
+        c.argument('platform_workload_identities', arg_group='Identity',
+                   help='Assign a platform workload identity used within the cluster', is_preview=True,
+                   options_list=['--assign-platform-workload-identity', '--assign-platform-wi'],
+                   validator=validate_platform_workload_identities(isCreate=False),
+                   action=AROPlatformWorkloadIdentityAddAction, nargs='+')
 
     with self.argument_context('aro get-admin-kubeconfig') as c:
         c.argument('file',

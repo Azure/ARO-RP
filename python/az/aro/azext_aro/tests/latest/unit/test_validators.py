@@ -30,6 +30,7 @@ from azure.cli.core.azclierror import (
 from azure.core.exceptions import ResourceNotFoundError
 import pytest
 
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2024_08_12_preview.models as openshiftcluster
 
 test_validate_cidr_data = [
     (
@@ -85,30 +86,34 @@ test_validate_client_id_data = [
         None
     ),
     (
+        "should raise MutuallyExclusiveArgumentError when enable_managed_identity is true",
+        Mock(client_id="12345678123456781234567812345678", enable_managed_identity=True),
+        MutuallyExclusiveArgumentError
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when platform_workload_identities is present",
+        Mock(client_id="12345678123456781234567812345678", platform_workload_identities=[Mock(resource_id='Foo')]),
+        MutuallyExclusiveArgumentError
+    ),
+    (
         "should raise InvalidArgumentValueError when it can not create a UUID from namespace.client_id",
-        Mock(client_id="invalid_client_id"),
+        Mock(client_id="invalid_client_id", platform_workload_identities=None),
         InvalidArgumentValueError
     ),
     (
-        "should raise RequiredArgumentMissingError when can not crate a string representation from namespace.client_secret because is None",
-        Mock(client_id="12345678123456781234567812345678", client_secret=None),
+        "should raise RequiredArgumentMissingError when can not create a string representation from namespace.client_secret because is None",
+        Mock(client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret=None),
         RequiredArgumentMissingError
     ),
     (
-        "should raise RequiredArgumentMissingError when can not crate a string representation from namespace.client_secret because it is an empty string",
-        Mock(client_id="12345678123456781234567812345678", client_secret=""),
+        "should raise RequiredArgumentMissingError when can not create a string representation from namespace.client_secret because it is an empty string",
+        Mock(client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret=""),
         RequiredArgumentMissingError
     ),
     (
         "should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
-        Mock(client_id="12345678123456781234567812345678", client_secret="12345"),
+        Mock(client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret="12345"),
         None
-    ),
-    (
-        "should raise MutuallyExclusiveArgumentError when enable_managed_identity is true",
-        Mock(client_id="12345678123456781234567812345678",
-             enable_managed_identity=True),
-        MutuallyExclusiveArgumentError
     )
 ]
 
@@ -128,47 +133,53 @@ def test_validate_client_id(test_description, namespace, expected_exception):
 
 test_validate_client_secret_data = [
     (
-        "should not raise any exception when isCreate is false and enable_managed_identity is None",
-        False,
-        Mock(client_id=None),
-        None
-    ),
-    (
-        "should raise MutuallyExclusiveArgumentError when isCreate is false and enable_managed_identity is True",
-        False,
-        Mock(client_secret="123", enable_managed_identity=True),
-        None
-    ),
-    (
         "should not raise any exception when namespace.client_secret is None",
         True,
         Mock(client_secret=None),
         None
     ),
     (
-        "should raise RequiredArgumentMissingError exception when namespace.client_id is None and client_secret is not None",
-        True,
-        Mock(client_id=None, client_secret="123"),
-        RequiredArgumentMissingError
-    ),
-    (
-        "should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because it is empty",
-        True,
-        Mock(client_id="", client_secret="123"),
-        RequiredArgumentMissingError
-    ),
-    (
-        "should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because it is None",
-        True,
-        Mock(client_id=None, client_secret="123"),
-        RequiredArgumentMissingError
-    ),
-    (
-        "should raise MutuallyExclusiveArgumentError when enable_managed_identity is true",
+        "should raise MutuallyExclusiveArgumentError when enable_managed_identity is True",
         True,
         Mock(client_secret="123", enable_managed_identity=True),
         MutuallyExclusiveArgumentError
-    )
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when isCreate is true and platform_workload_identities is present",
+        True,
+        Mock(client_secret="123", platform_workload_identities=[Mock(resource_id='Foo')]),
+        MutuallyExclusiveArgumentError
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when isCreate is false and platform_workload_identities is present",
+        False,
+        Mock(client_secret="123", platform_workload_identities=[Mock(resource_id='Foo')]),
+        MutuallyExclusiveArgumentError
+    ),
+    (
+        "should raise RequiredArgumentMissingError exception when isCreate is true, namespace.client_id is None, and client_secret is not None",  # pylint: disable=line-too-long
+        True,
+        Mock(client_id=None, client_secret="123", platform_workload_identities=None),
+        RequiredArgumentMissingError
+    ),
+    (
+        "should raise RequiredArgumentMissingError exception when isCreate is true and can not create a string representation from namespace.client_id because it is empty",  # pylint: disable=line-too-long
+        True,
+        Mock(client_id="", client_secret="123", platform_workload_identities=None),
+        RequiredArgumentMissingError
+    ),
+    (
+        "should not raise any exception when isCreate is true and all arguments valid",
+        True,
+        Mock(client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
+        None
+    ),
+    (
+        "should not raise any exception when isCreate is false and all arguments valid",
+        False,
+        Mock(client_secret="123", platform_workload_identities=None),
+        None
+    ),
 ]
 
 
@@ -1042,59 +1053,136 @@ def test_validate_enable_managed_identity(test_description, namespace, expected_
 
 test_validate_platform_workload_identities_data = [
     (
-        "Should not raise any exception when empty",
+        "create - Should not raise any exception when empty",
+        True,
         Mock(platform_workload_identities=None),
         None,
         None
     ),
     (
-        "Should raise RequiredArgumentMissingError if enable_managed_identity is not present",
+        "create - Should raise RequiredArgumentMissingError if enable_managed_identity is not present",
+        True,
         Mock(enable_managed_identity=None,
              platform_workload_identities=[]),
         RequiredArgumentMissingError,
         None
     ),
     (
-        "Should raise RequiredArgumentMissingError if enable_managed_identity is False",
+        "create - Should raise RequiredArgumentMissingError if enable_managed_identity is False",
+        True,
         Mock(enable_managed_identity=False,
              platform_workload_identities=[]),
         RequiredArgumentMissingError,
         None
     ),
     (
-        "Should raise InvalidArgumentError if any resource IDs are not for userAssignedIdentities",
+        "create - Should raise InvalidArgumentValueError if any resource IDs are not for userAssignedIdentities",
+        True,
         Mock(enable_managed_identity=True,
              subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
              ]),
         InvalidArgumentValueError,
         None
     ),
     (
-        "Should convert all identities passed in as names to full resource IDs",
+        "create - Should raise InvalidArgumentValueError if any platform workload is duplicated",
+        True,
         Mock(enable_managed_identity=True,
              subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-                 Mock(resource_id="bar")
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="bar")
+             ]),
+        InvalidArgumentValueError,
+        None,
+    ),
+    (
+        "create - Should convert all identities passed in as names to full resource IDs",
+        True,
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="bar")
              ]),
         None,
         [
-            Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-            Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
+            openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+            openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
         ]
     ),
     (
-        "Should not raise any exception when valid",
+        "create - Should not raise any exception when valid",
+        True,
         Mock(enable_managed_identity=True,
              subscription_id="00000000-0000-0000-0000-000000000000",
              resource_group_name="resourceGroup",
              platform_workload_identities=[
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
-                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
+             ]),
+        None,
+        None
+    ),
+    (
+        "update - Should not raise any exception when empty",
+        False,
+        Mock(platform_workload_identities=None),
+        None,
+        None
+    ),
+    (
+        "update - Should raise InvalidArgumentValueError if any resource IDs are not for userAssignedIdentities",
+        False,
+        Mock(subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
+             ]),
+        InvalidArgumentValueError,
+        None
+    ),
+    (
+        "update - Should raise InvalidArgumentValueError if any platform workload is duplicated",
+        False,
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="bar")
+             ]),
+        InvalidArgumentValueError,
+        None,
+    ),
+    (
+        "update - Should convert all identities passed in as names to full resource IDs",
+        False,
+        Mock(subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="bar")
+             ]),
+        None,
+        [
+            openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+            openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
+        ]
+    ),
+    (
+        "update - Should not raise any exception when valid",
+        False,
+        Mock(subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="foo", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 openshiftcluster.PlatformWorkloadIdentity(operator_name="bar", resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
              ]),
         None,
         None
@@ -1103,18 +1191,18 @@ test_validate_platform_workload_identities_data = [
 
 
 @pytest.mark.parametrize(
-    "test_description, namespace, expected_exception, expected_identities",
+    "test_description, isCreate, namespace, expected_exception, expected_identities",
     test_validate_platform_workload_identities_data,
     ids=[i[0] for i in test_validate_platform_workload_identities_data]
 )
-def test_validate_platform_workload_identities(test_description, namespace, expected_exception, expected_identities):
+def test_validate_platform_workload_identities(test_description, isCreate, namespace, expected_exception, expected_identities):
     cli_ctx = Mock(data={'subscription_id': namespace.subscription_id})
     cmd = Mock(cli_ctx=cli_ctx)
     if expected_exception is None:
-        validate_platform_workload_identities(cmd, namespace)
+        validate_platform_workload_identities(isCreate)(cmd, namespace)
     else:
         with pytest.raises(expected_exception):
-            validate_platform_workload_identities(cmd, namespace)
+            validate_platform_workload_identities(isCreate)(cmd, namespace)
 
     if expected_identities is not None:
         for expected, actual in zip(expected_identities, namespace.platform_workload_identities):
