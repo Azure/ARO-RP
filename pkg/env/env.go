@@ -99,6 +99,7 @@ type Interface interface {
 	OIDCStorageAccountName() string
 	OIDCEndpoint() string
 	OIDCKeyBitSize() int
+	MsiRpEndpoint() string
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 

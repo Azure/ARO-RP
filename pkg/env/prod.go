@@ -385,3 +385,7 @@ func (p *prod) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cl
 
 	return credential, nil
 }
+
+func (p *prod) MsiRpEndpoint() string {
+	return fmt.Sprintf("https://%s", os.Getenv("MSI_RP_ENDPOINT"))
+}

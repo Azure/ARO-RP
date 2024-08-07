@@ -478,6 +478,20 @@ func (mr *MockInterfaceMockRecorder) Logger() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockInterface)(nil).Logger))
 }
 
+// MsiRpEndpoint mocks base method.
+func (m *MockInterface) MsiRpEndpoint() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MsiRpEndpoint")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// MsiRpEndpoint indicates an expected call of MsiRpEndpoint.
+func (mr *MockInterfaceMockRecorder) MsiRpEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MsiRpEndpoint", reflect.TypeOf((*MockInterface)(nil).MsiRpEndpoint))
+}
+
 // NewLiveConfigManager mocks base method.
 func (m *MockInterface) NewLiveConfigManager(arg0 context.Context) (liveconfig.Manager, error) {
 	m.ctrl.T.Helper()

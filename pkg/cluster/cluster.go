@@ -357,7 +357,8 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 			})
 		}
 
-		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpCredRPTenant, _env.Environment().ManagedIdentityRPScope)
+		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpCredRPTenant, _env.MsiRpEndpoint())
+
 		msiDataplane, err := dataplane.NewClient(cloud, authenticatorPolicy, &msiDataplaneClientOptions)
 		if err != nil {
 			return nil, err

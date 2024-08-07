@@ -173,6 +173,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			GlobalSubscriptionID:        to.StringPtr(_env.SubscriptionID()),
 			MDMFrontendURL:              to.StringPtr("https://global.ppe.microsoftmetrics.com/"),
 			MDSDEnvironment:             to.StringPtr(version.DevGenevaLoggingEnvironment),
+			MsiRpEndpoint:               to.StringPtr("https://iamaplaceholder.com"),
 			PortalAccessGroupIDs: []string{
 				os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"),
 			},
