@@ -27,13 +27,15 @@ function killProcesses() {
 
 BASE=$( git rev-parse --show-toplevel)
 SOCKETFILE="$BASE/cmd/aro/mdm_statsd.socket"
+# use unique prefix for Azure resources when it is set, otherwise use your user's name
+export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
 
 echo "Using:"
 
 echo "Resourcegroup = $RESOURCEGROUP"
-echo "User          = $USER"
+echo "AzurePrefix   = $AZURE_PREFIX"
 
-VMName="$USER-mdm-link"
+VMName="$AZURE_PREFIX-mdm-link"
 CLOUDUSER="cloud-user"
 
 echo "Looking for a VM called $VMName and its public IP"
