@@ -1,5 +1,4 @@
 # Azure DevOps Pipeline running CI
-
 trigger:
   branches:
     include:
@@ -11,7 +10,6 @@ trigger:
   tags:
     include:
       - v2*
-
 pr:
   branches:
     include:
@@ -19,98 +17,49 @@ pr:
   paths:
     exclude:
       - docs/*
-
-resources:
-  containers:
-    - container: golang
-      image: registry.access.redhat.com/ubi8/go-toolset:1.21.11-1.1720406008
-      options: --user=0
-    - container: python
-      image: registry.access.redhat.com/ubi8/python-39:latest
-      options: --user=0
-
 variables:
   - template: vars.yml
+stages:
+- stage: NEW_HOTNESS
+  jobs:
+    - job: Build_Lint_Test_RP_And_Portal
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export NO_CACHE=true
+            make ci-rp
+    - job: Build_and_Test_Az_ARO_Extension
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export NO_CACHE=true
+            make azext-aro
+    - job: Lint_Az_ARO_Extension
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            make test-python
 
-jobs:
-  - job: Python_Unit_Tests
-    pool:
-      name: 1es-aro-ci-pool
-    variables:
-      HOME: $(Agent.BuildDirectory)
-
-    steps:
-      - template: ./templates/template-checkout.yml
-      - script: |
-          set -xe
-          make test-python
-          [[ -z "$(git status -s)" ]]
-        displayName: 🧪Run Python Unit Tests
-        target: python
-
-  - job: Golang_Unit_Tests
-    pool:
-      name: 1es-aro-ci-pool
-    variables:
-      GOCACHE: /tmp/gocache
-    steps:
-      - template: ./templates/template-checkout.yml
-
-      - script: |
-          set -xe
-          go version
-          go env
-        displayName: Print Go version & env
-        target: golang
-
-      - script: |
-          set -xe
-          make generate
-          [[ -z "$(git status -s)" ]]
-        displayName: ⚙️ Run Golang code generate
-        target: golang
-
-      - script: |
-          set -xe
-          make build-all
-          [[ -z "$(git status -s)" ]]
-        displayName: 🕵️ Build Golang code
-        target: golang
-
-      - script: |
-          set -xe
-          make unit-test-go
-        displayName: 🧪 Run Golang unit tests
-        target: golang
-
-      - task: PublishTestResults@2
-        displayName: 📊 Publish tests results
-        inputs:
-          testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-        condition: succeededOrFailed()
-
-      - script: |
-          set -xe
-          go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
-        displayName: ⚙️ Process Reports
-        condition: succeededOrFailed()
-        target: golang
-
-      - task: PublishCodeCoverageResults@1
-        displayName: 📈 Publish code coverage
-        inputs:
-          codeCoverageTool: Cobertura
-          summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
-          failIfCoverageEmpty: false
-        condition: succeededOrFailed()
-        target: golang
-
-  - job: Lint_Admin_Portal
-    pool:
-      name: 1es-aro-ci-pool
-    steps:
-      - template: ./templates/template-checkout.yml
-      - script: |
-          set -xe
-          make lint-admin-portal
-        displayName: 🧹 Lint Admin Portal
+- stage: Golang_Code_Generation
+  jobs:
+    - job: Run_Golang_Code_Generate
+      displayName: "⚙️ Run Golang code generate"
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            make generate
+            [[ -z "$(git status -s)" ]]
+          displayName: "Run Golang Code Generate"
+          target: golang

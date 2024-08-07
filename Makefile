@@ -96,9 +96,10 @@ client: generate
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(RP_IMAGE_LOCAL)
+	echo "Building image $(RP_IMAGE_LOCAL):$(VERSION)"
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE):$(VERSION)
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE):$(VERSION)
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(RP_IMAGE_LOCAL):$(VERSION)
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
