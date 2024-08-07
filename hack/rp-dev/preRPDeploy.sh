@@ -1,5 +1,26 @@
 #!/bin/bash -e
 
+# Define the number of retries
+RETRY_LIMIT=3
+
+# Define a function to run a command with retry logic
+run_with_retry() {
+    local n=1
+    local command="$@"
+    until [ $n -ge $((RETRY_LIMIT+1)) ]
+    do
+        echo "Attempt $n: $command"
+        $command && break || {
+            echo "Command failed. Attempt $n/$RETRY_LIMIT."
+            ((n++))
+            if [ $n -ge $((RETRY_LIMIT+1)) ]; then
+                echo "Command failed after $RETRY_LIMIT attempts."
+                return 1
+            fi
+        }
+    done
+}
+
 source ./hack/devtools/deploy-shared-env.sh
 deploy_vpn_for_dedicated_rp
 echo "Success step 4a 🚀 - VPN has been deployed"
@@ -13,6 +34,9 @@ screen -dmS connect_dev_vpn bash -c "sudo openvpn secrets/vpn-$LOCATION.ovpn; sl
 make aks.kubeconfig
 HOME=/usr ./hack/hive-generate-config.sh # HOME is default to /usr which isn't in PATH
 KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive-dev-install.sh
+if [ $? -ne 0 ]; then
+    echo "Command failed but continue due to known error when waiting for too short time after applying the hive-operator deployment: 'KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive-dev-install.sh'"
+fi
 echo "Success step 5 ✅ - Hive has been installed"
 
 export DST_ACR_NAME=${AZURE_PREFIX}aro
@@ -22,7 +46,8 @@ export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login 
 docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "$DST_ACR_NAME.azurecr.io"
 echo "Success step 6a ✈️ 🏷️ - Login to ACR"
 
-go run -tags containers_image_openpgp,exclude_graphdriver_btrfs ./cmd/aro mirror latest
+echo "Running OCP images mirroing with retry logic"
+run_with_retry go run -tags containers_image_openpgp,exclude_graphdriver_btrfs ./cmd/aro mirror latest
 echo "Success step 6b ✈️ 📦 - Mirror OCP images"
 
 source ./hack/devtools/rp-dev-helper.sh

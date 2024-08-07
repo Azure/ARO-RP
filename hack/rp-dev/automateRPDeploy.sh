@@ -6,5 +6,5 @@ source hack/rp-dev/setupRPConfig.sh $AZURE_PREFIX # setup config file
 make pre-deploy # deploy predeployment resources prior to AKS
 echo "Success step 3 ✅ - deploy predeployment resources prior to AKS"
 ./hack/rp-dev/preRPDeploy.sh
-make deploy
+make go-verify deploy
 echo "Success step 8 ✅ - fully deploy all the resources for ARO RP"
