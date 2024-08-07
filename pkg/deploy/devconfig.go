@@ -82,12 +82,18 @@ func DevConfig(_env env.Core) (*Config, error) {
 		return nil, err
 	}
 
-	keyvaultPrefix := os.Getenv("USER") + "-aro-" + _env.Location()
+	// use unique prefix for Azure resources when it is set, otherwise use your user's name
+	azureUniquePrefix := os.Getenv("AZURE_PREFIX")
+	if azureUniquePrefix == "" {
+		azureUniquePrefix = os.Getenv("USER")
+	}
+
+	keyvaultPrefix := azureUniquePrefix + "-aro-" + _env.Location()
 	if len(keyvaultPrefix) > 20 {
 		keyvaultPrefix = keyvaultPrefix[:20]
 	}
 
-	oidcStorageAccountName := os.Getenv("USER") + _env.Location()
+	oidcStorageAccountName := azureUniquePrefix + _env.Location()
 	if len(oidcStorageAccountName) >= 21 {
 		oidcStorageAccountName = oidcStorageAccountName[:21]
 	}
@@ -98,21 +104,21 @@ func DevConfig(_env env.Core) (*Config, error) {
 			{
 				Location:                 _env.Location(),
 				SubscriptionID:           _env.SubscriptionID(),
-				GatewayResourceGroupName: os.Getenv("USER") + "-gwy-" + _env.Location(),
-				RPResourceGroupName:      os.Getenv("USER") + "-aro-" + _env.Location(),
+				GatewayResourceGroupName: azureUniquePrefix + "-gwy-" + _env.Location(),
+				RPResourceGroupName:      azureUniquePrefix + "-aro-" + _env.Location(),
 				Configuration: &Configuration{
 					AzureCloudName:              &_env.Environment().ActualCloudName,
-					DatabaseAccountName:         to.StringPtr(os.Getenv("USER") + "-aro-" + _env.Location()),
-					GatewayStorageAccountDomain: to.StringPtr(os.Getenv("USER") + "gwy" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
+					DatabaseAccountName:         to.StringPtr(azureUniquePrefix + "-aro-" + _env.Location()),
+					GatewayStorageAccountDomain: to.StringPtr(azureUniquePrefix + "gwy" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 					KeyvaultDNSSuffix:           &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:              &keyvaultPrefix,
-					StorageAccountDomain:        to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
+					StorageAccountDomain:        to.StringPtr(azureUniquePrefix + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 					OIDCStorageAccountName:      to.StringPtr(oidcStorageAccountName),
 				},
 			},
 		},
 		Configuration: &Configuration{
-			ACRResourceID:                to.StringPtr("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + os.Getenv("USER") + "-global/providers/Microsoft.ContainerRegistry/registries/" + os.Getenv("USER") + "aro"),
+			ACRResourceID:                to.StringPtr("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + azureUniquePrefix + "-global/providers/Microsoft.ContainerRegistry/registries/" + azureUniquePrefix + "aro"),
 			AdminAPICABundle:             to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			AdminAPIClientCertCommonName: &clientCert.Subject.CommonName,
 			ARMAPICABundle:               to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
@@ -123,7 +129,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ClusterMDSDAccount:           to.StringPtr(version.DevClusterGenevaLoggingAccount),
 			ClusterMDSDConfigVersion:     to.StringPtr(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterMDSDNamespace:         to.StringPtr(version.DevClusterGenevaLoggingNamespace),
-			ClusterParentDomainName:      to.StringPtr(os.Getenv("USER") + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
+			ClusterParentDomainName:      to.StringPtr(azureUniquePrefix + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
 			CosmosDB: &CosmosDBConfiguration{
 				StandardProvisionedThroughput: 1000,
 				PortalProvisionedThroughput:   400,
@@ -144,7 +150,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),
 			},
-			FluentbitImage:       to.StringPtr(version.FluentbitImage(os.Getenv("USER") + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
+			FluentbitImage:       to.StringPtr(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
 			FPClientID:           to.StringPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
 			FPServicePrincipalID: to.StringPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
 			GatewayDomains: []string{
@@ -163,7 +169,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			GatewayMDSDConfigVersion:    to.StringPtr(version.DevGatewayGenevaLoggingConfigVersion),
 			GatewayVMSSCapacity:         to.IntPtr(1),
 			GlobalResourceGroupLocation: to.StringPtr(_env.Location()),
-			GlobalResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-global"),
+			GlobalResourceGroupName:     to.StringPtr(azureUniquePrefix + "-global"),
 			GlobalSubscriptionID:        to.StringPtr(_env.SubscriptionID()),
 			MDMFrontendURL:              to.StringPtr("https://global.ppe.microsoftmetrics.com/"),
 			MDSDEnvironment:             to.StringPtr(version.DevGenevaLoggingEnvironment),
@@ -185,17 +191,17 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"RequireOIDCStorageWebEndpoint",
 			},
 			// TODO update this to support FF
-			RPImagePrefix:                     to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
+			RPImagePrefix:                     to.StringPtr(azureUniquePrefix + "aro.azurecr.io/aro"),
 			RPMDMAccount:                      to.StringPtr(version.DevRPGenevaMetricsAccount),
 			RPMDSDAccount:                     to.StringPtr(version.DevRPGenevaLoggingAccount),
 			RPMDSDConfigVersion:               to.StringPtr(version.DevRPGenevaLoggingConfigVersion),
 			RPMDSDNamespace:                   to.StringPtr(version.DevRPGenevaLoggingNamespace),
-			RPParentDomainName:                to.StringPtr(os.Getenv("USER") + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
-			RPVersionStorageAccountName:       to.StringPtr(os.Getenv("USER") + "rpversion"),
+			RPParentDomainName:                to.StringPtr(azureUniquePrefix + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
+			RPVersionStorageAccountName:       to.StringPtr(azureUniquePrefix + "rpversion"),
 			RPVMSSCapacity:                    to.IntPtr(1),
 			SSHPublicKey:                      to.StringPtr(string(sshPublicKey)),
 			SubscriptionResourceGroupLocation: to.StringPtr(_env.Location()),
-			SubscriptionResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-subscription"),
+			SubscriptionResourceGroupName:     to.StringPtr(azureUniquePrefix + "-subscription"),
 			VMSSCleanupEnabled:                to.BoolPtr(true),
 			VMSize:                            to.StringPtr("Standard_D2s_v3"),
 
