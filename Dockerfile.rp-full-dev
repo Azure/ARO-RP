@@ -1,0 +1,23 @@
+FROM registry.access.redhat.com/ubi8/toolbox:8.10
+
+# Needed for installing packages
+USER root 
+
+RUN dnf install https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm -y \
+    && dnf install make golang azure-cli -y \
+    && dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y \
+    && dnf install screen openvpn -y \
+    && dnf install jq docker device-mapper-devel skopeo -y \
+    && dnf clean all -y
+
+ARG ARO_RP_BRANCH
+ENV ARO_RP_DIRECTORY=/home/ARO-RP
+RUN git clone https://github.com/Azure/ARO-RP.git ${ARO_RP_DIRECTORY}\
+    && cd ${ARO_RP_DIRECTORY} \
+    && git checkout ${ARO_RP_BRANCH}
+
+ARG AZURE_PREFIX
+ENV AZURE_PREFIX=${AZURE_PREFIX}
+
+WORKDIR ${ARO_RP_DIRECTORY}
+# ENTRYPOINT ["hack/rp-dev/automateRPDeploy.sh"] TODO: Uncomment this line when this file is working automaticllay
