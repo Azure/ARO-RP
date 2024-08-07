@@ -67,6 +67,47 @@ build-all:
 aro: check-release generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
+
+# Target to create docker secrets
+.PHONY: docker-secrets
+docker-secrets: aks.kubeconfig
+	docker secret rm --ignore aks.kubeconfig
+	docker secret create aks.kubeconfig ./aks.kubeconfig
+
+	docker secret rm --ignore proxy-client.key
+	docker secret create proxy-client.key ./secrets/proxy-client.key
+
+	docker secret rm --ignore proxy-client.crt
+	docker secret create proxy-client.crt ./secrets/proxy-client.crt
+
+	docker secret rm --ignore proxy.crt
+	docker secret create proxy.crt ./secrets/proxy.crt
+
+.PHONY: runlocal-portal
+runlocal-portal: ci-rp docker-secrets
+	podman run \
+		--rm \
+		--cap-drop net_raw \
+		-e RP_MODE \
+		-e AZURE_SUBSCRIPTION_ID \
+		-e AZURE_TENANT_ID \
+		-e LOCATION \
+		-e RESOURCEGROUP \
+		-e AZURE_PORTAL_CLIENT_ID \
+		-e AZURE_PORTAL_ELEVATED_GROUP_IDS \
+		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
+		-e AZURE_RP_CLIENT_SECRET \
+		-e AZURE_RP_CLIENT_ID \
+		-e KEYVAULT_PREFIX \
+		-e DATABASE_ACCOUNT_NAME \
+		-e DATABASE_NAME \
+		-e NO_NPM=1 \
+		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
+		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
+		--secret proxy.crt,target=/app/secrets/proxy.crt \
+		--network=host \
+		$(RP_IMAGE_LOCAL) portal
+
 .PHONY: runlocal-rp
 runlocal-rp:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
