@@ -23,10 +23,10 @@ const (
 	msiCertValidityDays = 90
 )
 
-// ensureClusterMsiCertificate leverages the MSI dataplane module to create a new MSI
-// certificate (if needed) and store the certificate in the cluster MSI key vault. It
-// does not concern itself with whether an existing certificate is valid or not; that
-// can be left to the certificate refresher component.
+// ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
+// backing certificate (if needed) and store the certificate in the cluster MSI key
+// vault. It does not concern itself with whether an existing certificate is valid
+// or not; that can be left to the certificate refresher component.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	secretName, err := m.clusterMsiSecretName()
 	if err != nil {

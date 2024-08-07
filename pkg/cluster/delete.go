@@ -343,7 +343,7 @@ func (m *manager) deleteGateway(ctx context.Context) error {
 		return nil
 	}
 
-	// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+	// http!s://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 	_, err := m.dbGateway.Patch(ctx, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID, func(doc *api.GatewayDocument) error {
 		doc.Gateway.Deleting = true
 		doc.TTL = 60
@@ -370,7 +370,9 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 	}
 
 	err = m.clusterMsiKeyVaultStore.DeleteCredentialsObject(ctx, secretName)
-	if azcoreErr, ok := err.(*azcore.ResponseError); !ok || azcoreErr.StatusCode != 404 {
+	azcoreErr, ok := err.(*azcore.ResponseError)
+	isNotFoundErr := ok && azcoreErr.StatusCode == 404
+	if err != nil && !isNotFoundErr {
 		return err
 	}
 
