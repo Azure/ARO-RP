@@ -378,3 +378,8 @@ rp-full-dev: # Build and run a rp-full-dev container for automating rp-full-dev
 		-f Dockerfile.rp-full-dev \
 		-t $(RP_FULL_DEV_IMAGE) .
 	docker run --rm -it --user=0 --privileged -v /dev/shm:/dev/shm -v "${HOME}/.azure:/root/.azure" --device /dev/net/tun --name rp-full-dev-container $(RP_FULL_DEV_IMAGE)
+
+.PHONY: rp-full-dev-clenup
+rp-full-dev-clenup: # Clean all the rp-full-dev resources by deleting ResourceGroups and KeyVaults
+	source ./hack/devtools/rp-dev-helper.sh && AZURE_PREFIX=$(AZURE_PREFIX) clean_rp_dev_env
+# OR clean_rp_dev_env "zzz-aro-eastus-gwy zzz-aro-eastus-por zzz-aro-eastus-svc zzz-aro-eastus-cls" "zzz-global zzz-subscription zzz-gwy-eastus zzz-aro-eastus"
