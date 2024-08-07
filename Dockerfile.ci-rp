@@ -32,10 +32,6 @@ WORKDIR /app
 ENV GOPATH=/root/go
 ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
 
-# Install golangci-lint and verify
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.56.2 && \
-    golangci-lint --version || (echo "golangci-lint not found" && exit 1)
-
 # Copy dependencies and source files
 COPY go.mod go.sum ./
 COPY vendor vendor
@@ -45,18 +41,19 @@ COPY hack hack
 COPY cmd cmd
 COPY pkg pkg
 COPY test test
+COPY .bingo .bingo
+COPY Makefile Makefile
 
 # Ensure JS assets are available before generating Go code
 COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build
 
 # Lint, generate, build, and test
-RUN golangci-lint run --verbose
-RUN go generate ./...
-RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./cmd/aro
+RUN make lint-go
+RUN make aro -o check-release
 RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
 
 # Additional tests
-RUN go run gotest.tools/gotestsum@v1.11.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+RUN make unit-test-go
 RUN hack/fips/validate-fips.sh ./aro
 
 ###############################################################################

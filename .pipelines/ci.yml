@@ -64,6 +64,11 @@ jobs:
         target: golang
 
       - script: |
+          echo "##vso[task.prependpath]$(go env GOPATH)/bin"
+        displayName: Add GOBIN to path
+        target: golang
+
+      - script: |
           set -xe
           make generate
           [[ -z "$(git status -s)" ]]
@@ -90,8 +95,7 @@ jobs:
         condition: succeededOrFailed()
 
       - script: |
-          set -xe
-          go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
+          make xmlcov
         displayName: ⚙️ Process Reports
         condition: succeededOrFailed()
         target: golang
