@@ -196,6 +196,33 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 	}
 
 	// then dynamic resources
+	if o.oc.UsesWorkloadIdentity() {
+		var operatorIdentity *api.PlatformWorkloadIdentity // use a pointer to make it easy to check if we found an identity below
+		for _, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if i.OperatorName == pkgoperator.OperatorIdentityName {
+				operatorIdentity = &i
+			}
+		}
+
+		if operatorIdentity == nil {
+			return nil, errors.New(fmt.Sprintf("operator identity %s not found", pkgoperator.OperatorIdentityName))
+		}
+
+		results = append(results, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: pkgoperator.Namespace,
+				Name:      pkgoperator.OperatorIdentitySecretName,
+			},
+			StringData: map[string]string{
+				"azure_client_id":            operatorIdentity.ClientID,
+				"azure_tenant_id":            o.env.TenantID(),
+				"azure_region":               o.oc.Location,
+				"azure_subscription_id":      o.env.SubscriptionID(),
+				"azure_federated_token_file": pkgoperator.OperatorTokenFile,
+			},
+		})
+	}
+
 	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utilpem.Encode(key)
 	if err != nil {
