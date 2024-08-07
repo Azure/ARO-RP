@@ -29,14 +29,14 @@ steps:
               --nsdname "$ns" >/dev/null
           done
       done
-    name: dns-domain-and-certificate-keyvault
+    name: dns_domain_and_certificate_keyvault
     displayName: ⚙️ Update the DNS Child Domains and the certificates in keyvault
 
   - script: |
       set -e
       gitCommit=$(git rev-parse --short=7 HEAD)
       az vmss delete -g ${{ parameters.rpResourceGroup }} --name ${{ parameters.rpVmssName }}-$gitCommit  --force-deletion
-    name: delete-rp-vmss
+    name: delete_rp_vmss
     displayName: ⚙️ Delete RP VMSS
     continueOnError: false
 
@@ -44,6 +44,6 @@ steps:
       set -e
       gitCommit=$(git rev-parse --short=7 HEAD)
       az vmss delete -g ${{ parameters.gwyResourceGroup }} --name ${{ parameters.gwyVmssName }}-$gitCommit  --force-deletion
-    name: delete-gwy-vmss
+    name: delete_gwy_vmss
     displayName: ⚙️ Delete GWY VMSS
     continueOnError: false

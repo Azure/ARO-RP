@@ -1,4 +1,5 @@
 parameters:
+  azurePrefix: ""
   secretSA: ""
   location: ""
   resourceGroup: ""
@@ -9,7 +10,10 @@ parameters:
 steps:
   - script: |
       set -e
-      # Export the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
+      # export the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
+      # az account set -s fe16a035-e540-4ab7-80d9-373fa9a3d6ae
+      az account list -o table 
+      az account show
       export SECRET_SA_ACCOUNT_NAME=${{ parameters.secretSA }} && make secrets
 
       # Define the expected directory and file names
@@ -21,16 +25,29 @@ steps:
       for file in "${files[@]}"; do
         [ -f "$expected_dir/$file" ] || { echo "File '$file' does not exist inside the directory '$expected_dir'."; exit 1; }
       done
-    name: download-secrets
+    name: download_secrets
     displayName: 🔑 Downloading certificates and secrets from storage account
 
   - script: |
       set -e
-      # Export environment variables from parameters
-      export LOCATION=${{ parameters.location }} RESOURCEGROUP=${{ parameters.resourceGroup }} DATABASE_ACCOUNT_NAME=${{ parameters.databaseAccountName }}
-      export KEYVAULT_PREFIX=${{ parameters.keyvaultPrefix }} ARO_IMAGE=${{ parameters.aroImage }}
+      # Export LOCATION variable from parameter
+      [ -z "${{ parameters.location }}" ] && export LOCATION=eastus ||  export LOCATION="${{ parameters.location }}"
       # Source environment variables from the secrets file
       source secrets/env
+      
+      export AZURE_PREFIX=${{ parameters.azurePrefix }} NO_CACHE=${{ variables.NO_CACHE }} ARO_INSTALL_VIA_HIVE=${{ variables.ARO_INSTALL_VIA_HIVE }}
+      export ARO_ADOPT_BY_HIVE=${{ variables.ARO_ADOPT_BY_HIVE }} DATABASE_NAME=${{ variables.DATABASE_NAME }}
+
+      # Export environment variables from parameters
+      [ -z "${{ parameters.resourceGroup }}" ] && export RESOURCEGROUP="${AZURE_PREFIX}-aro-${LOCATION}" || export RESOURCEGROUP="${{ parameters.resourceGroup }}"
+      [ -z "${{ parameters.databaseAccountName }}" ] && export DATABASE_ACCOUNT_NAME="${AZURE_PREFIX}-aro-${LOCATION}" || export DATABASE_ACCOUNT_NAME="${{ parameters.databaseAccountName }}"
+      [ -z "${{ parameters.keyvaultPrefix }}" ] && export KEYVAULT_PREFIX="${AZURE_PREFIX}-aro-${LOCATION}" || export KEYVAULT_PREFIX="${{ parameters.keyvaultPrefix }}"
+      [ -z "${{ parameters.dstAcrName }}" ] && export DST_ACR_NAME="$(AZURE_PREFIX)aro" || export DST_ACR_NAME="${{ parameters.dstAcrName }}"
+
+      # TODO- Is it needed here or in template-mirror-images_to_acr.yml?
+      # Export ARO image with a default value based on dst ACR name and git commit
+      gitCommit=$(git rev-parse --short=7 HEAD)
+      [ -z "${{ parameters.aroImage }}" ] && export ARO_IMAGE=${{ parameters.dstAcrName }}.azurecr.io/aro:${gitCommit} || export ARO_IMAGE="${{ parameters.aroImage }}"
 
       # Generate SSH key
       ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
@@ -40,5 +57,5 @@ steps:
 
       # Check if the dev-config.yaml file exists
       [ -f "dev-config.yaml" ] || { echo "File dev-config.yaml does not exist."; exit 1; }
-    name: generate-rp-dev-config
+    name: generate_rp_dev_config
     displayName: ⚙️ Generating RP development config yaml (dev-config.yaml)
