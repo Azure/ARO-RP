@@ -7,12 +7,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/apparentlymart/go-cidr/cidr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -88,17 +93,18 @@ func (m *manager) createOrUpdateRouterIPFromCluster(ctx context.Context) error {
 	return err
 }
 
+// createOrUpdateRouterIPEarly prepares IP address for the API server early
 func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	var ipAddress string
 	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
-		ip, err := m.publicIPAddresses.Get(ctx, resourceGroup, infraID+"-default-v4", "")
+		ip, err := m.armPublicIPAddresses.Get(ctx, resourceGroup, infraID+"-default-v4", nil)
 		if err != nil {
 			return err
 		}
-		ipAddress = *ip.IPAddress
+		ipAddress = *ip.Properties.IPAddress
 	} else {
 		// there's no way to reserve private IPs in Azure, so we pick the
 		// highest free address in the subnet (i.e., there's a race here). Azure
@@ -110,7 +116,16 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 
 		workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
 		workerSubnetId := workerProfiles[0].SubnetID
-		ipAddress, err = m.subnet.GetHighestFreeIP(ctx, workerSubnetId)
+
+		r, err := arm.ParseResourceID(workerSubnetId)
+		if err != nil {
+			return err
+		}
+		subnet, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, &armnetwork.SubnetsClientGetOptions{Expand: to.StringPtr("ipConfigurations")})
+		if err != nil {
+			return err
+		}
+		ipAddress, err = getHighestFreeIP(&subnet.Subnet)
 		if err != nil {
 			return err
 		}
@@ -129,6 +144,54 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+// getHighestFreeIP retrieves the highest free private IP address in the given subnetID.
+func getHighestFreeIP(subnet *armnetwork.Subnet) (string, error) {
+	// grab the first addressPrefix in the subnet
+	var (
+		subnetCIDR *net.IPNet
+		err        error
+	)
+	if subnet.Properties.AddressPrefix != nil {
+		_, subnetCIDR, err = net.ParseCIDR(*subnet.Properties.AddressPrefix)
+	} else if len(subnet.Properties.AddressPrefixes) > 0 {
+		_, subnetCIDR, err = net.ParseCIDR(*subnet.Properties.AddressPrefixes[0])
+	} else {
+		// subnet must have at least one address prefix, so it shouldn't be called.
+		return "", fmt.Errorf("addressPrefix is not found in the subnet")
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	bottom, top := cidr.AddressRange(subnetCIDR)
+
+	allocated := map[string]struct{}{}
+
+	// first four addresses and the broadcast address are reserved:
+	// https://docs.microsoft.com/en-us/azure/virtual-network/private-ip-addresses#allocation-method
+	for i, ip := 0, bottom; i < 4 && !ip.Equal(top); i, ip = i+1, cidr.Inc(ip) {
+		allocated[ip.String()] = struct{}{}
+	}
+	allocated[top.String()] = struct{}{}
+
+	if subnet.Properties.IPConfigurations != nil {
+		for _, ipconfig := range subnet.Properties.IPConfigurations {
+			if ipconfig.Properties.PrivateIPAddress != nil {
+				allocated[*ipconfig.Properties.PrivateIPAddress] = struct{}{}
+			}
+		}
+	}
+
+	for ip := top; !ip.Equal(cidr.Dec(bottom)); ip = cidr.Dec(ip) {
+		if _, ok := allocated[ip.String()]; !ok {
+			return ip.String(), nil
+		}
+	}
+
+	return "", nil
 }
 
 func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
@@ -212,12 +275,12 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	pe, err := m.privateEndpoints.Get(ctx, resourceGroup, infraID+"-pe", "networkInterfaces")
+	pe, err := m.armPrivateEndpoints.Get(ctx, resourceGroup, infraID+"-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: ptr.To("networkInterfaces")})
 	if err != nil {
 		return err
 	}
 
-	pls, err := m.rpPrivateLinkServices.Get(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", "")
+	pls, err := m.armRPPrivateLinkServices.Get(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", nil)
 	if err != nil {
 		return err
 	}
@@ -227,18 +290,18 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 	// call to the resource graph service, but it's not worth the effort to do
 	// that here.
 	var linkIdentifier string
-	for _, conn := range *pls.PrivateEndpointConnections {
-		if !strings.EqualFold(*conn.PrivateEndpoint.ID, *pe.ID) {
+	for _, conn := range pls.Properties.PrivateEndpointConnections {
+		if !strings.EqualFold(*conn.Properties.PrivateEndpoint.ID, *pe.ID) {
 			continue
 		}
 
-		linkIdentifier = *conn.LinkIdentifier
+		linkIdentifier = *conn.Properties.LinkIdentifier
 
-		if !strings.EqualFold(*conn.PrivateLinkServiceConnectionState.Status, "Approved") {
-			conn.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
-			conn.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
+		if !strings.EqualFold(*conn.Properties.PrivateLinkServiceConnectionState.Status, "Approved") {
+			conn.Properties.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
+			conn.Properties.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
 
-			_, err = m.rpPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, conn)
+			_, err = m.armRPPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, *conn, nil)
 			if err != nil {
 				return err
 			}
@@ -280,7 +343,7 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP = *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress
+		doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP = *pe.Properties.NetworkInterfaces[0].Properties.IPConfigurations[0].Properties.PrivateIPAddress
 		doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID = linkIdentifier
 		return nil
 	})
