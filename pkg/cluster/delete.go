@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -343,13 +344,36 @@ func (m *manager) deleteGateway(ctx context.Context) error {
 		return nil
 	}
 
-	// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+	// http!s://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 	_, err := m.dbGateway.Patch(ctx, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID, func(doc *api.GatewayDocument) error {
 		doc.Gateway.Deleting = true
 		doc.TTL = 60
 		return nil
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) /* already gone */ {
+		return err
+	}
+
+	return nil
+}
+
+func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
+	// The cluster MSI may have been deleted prior to cluster deletion. If that's the case
+	// we will have already deleted the certificate.
+	if m.doc.OpenShiftCluster.Identity == nil || m.doc.OpenShiftCluster.Identity.UserAssignedIdentities == nil || len(m.doc.OpenShiftCluster.Identity.UserAssignedIdentities) == 0 {
+		m.log.Warning("skipping cluster MSI certificate deletion because cluster MSI has already been deleted")
+		return nil
+	}
+
+	secretName, err := m.clusterMsiSecretName()
+	if err != nil {
+		return err
+	}
+
+	err = m.clusterMsiKeyVaultStore.DeleteCredentialsObject(ctx, secretName)
+	azcoreErr, ok := err.(*azcore.ResponseError)
+	isNotFoundErr := ok && azcoreErr.StatusCode == 404
+	if err != nil && !isNotFoundErr {
 		return err
 	}
 
@@ -456,6 +480,14 @@ func (m *manager) Delete(ctx context.Context) error {
 	err = m.deleteGatewayAndWait(ctx)
 	if err != nil {
 		return err
+	}
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		m.log.Printf("deleting cluster MSI certificate")
+		err = m.deleteClusterMsiCertificate(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = m.deleteResourcesAndResourceGroup(ctx)

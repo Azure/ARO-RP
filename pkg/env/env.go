@@ -36,6 +36,7 @@ const (
 	FeatureDisableReadinessDelay
 	FeatureEnableOCMEndpoints
 	FeatureRequireOIDCStorageWebEndpoint
+	FeatureUseMockMsiRp
 )
 
 const (
@@ -55,6 +56,7 @@ const (
 	GatewayKeyvaultSuffix            = "-gwy"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
+	ClusterMsiKeyVaultSuffix         = "-msi"
 	RPPrivateEndpointPrefix          = "rp-pe-"
 	ProxyHostName                    = "PROXY_HOSTNAME"
 	OIDCBlobDirectoryPrefix          = "oic-"
@@ -96,6 +98,7 @@ type Interface interface {
 	ACRDomain() string
 	OIDCStorageAccountName() string
 	OIDCEndpoint() string
+	MsiRpEndpoint() string
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 

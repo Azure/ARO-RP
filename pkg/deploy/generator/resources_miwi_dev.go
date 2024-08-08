@@ -64,7 +64,7 @@ func (g *generator) oicRoleAssignment() *arm.Resource {
 // devMSIKeyvault returns an arm.Resource representing a shared key vault to be used for persisting mock MSI certificates when
 // the RP is running in local development mode.
 func (g *generator) devMSIKeyvault() *arm.Resource {
-	return g.keyVault(fmt.Sprintf("[%s]", SharedMSIKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
+	return g.keyVault(fmt.Sprintf("[%s]", SharedMSIKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, true, nil)
 }
 
 // devMSIKeyvaultRBAC returns an arm.Resource representing a role assignment that grants the local development mode's mock RP identity
