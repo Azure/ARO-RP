@@ -26,6 +26,11 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 			}
 		}
 	} else {
+		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil {
+			m.log.Print("skipping createOrUpdateDenyAssignment: ServicePrincipalProfile is empty")
+			return nil
+		}
+
 		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
 			m.log.Print("skipping createOrUpdateDenyAssignment: SPObjectID is empty")
 			return nil

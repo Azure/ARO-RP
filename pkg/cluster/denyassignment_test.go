@@ -63,6 +63,19 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			},
 		},
 		{
+			name: "needs create - ServicePrincipalProfile - missing ServicePrincipalProfile",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+					},
+				},
+			},
+			mocks: func(client *mock_features.MockDeploymentsClient) {},
+		},
+		{
 			name: "needs create - ServicePrincipalProfile - missing SPObjectID",
 			doc: &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{
