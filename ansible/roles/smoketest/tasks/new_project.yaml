@@ -1,0 +1,202 @@
+#  oc project default (this test assumes we are using the default ns)
+#  oc new-app --image=nginx && oc expose svc/nginx
+#  oc get deployment,pod,route,svc
+#  curl -I --silent http://<hostname you get from the route>
+
+
+# "Apply the following yml file:
+  # apiVersion: v1
+  # kind: PersistentVolumeClaim
+  # metadata:
+  #   name: azurefile-csi
+  # spec:
+  #   storageClassName: azurefile-csi
+  #   accessModes:
+  #     - ReadWriteOnce
+  #   resources:
+  #     requests:
+  #       storage: 3Gi
+  # ---
+  # apiVersion: v1
+  # kind: PersistentVolumeClaim
+  # metadata:
+  #   name: managed-csi
+  # spec:
+  #   storageClassName: managed-csi
+  #   accessModes:
+  #     - ReadWriteOnce
+  #   resources:
+  #     requests:
+  #       storage: 3Gi
+  # ---
+  # apiVersion: v1
+  # kind: PersistentVolumeClaim
+  # metadata:
+  #   name: managed-csi-encrypted-cmk
+  # spec:
+  #   storageClassName: managed-csi-encrypted-cmk
+  #   accessModes:
+  #     - ReadWriteOnce
+  #   resources:
+  #     requests:
+  #       storage: 3Gi
+  # "
+
+# TODO: Push the required images to the cluster's internal registry so it will work on disconnected clusters.
+- name: new_project | Test basic cluster functionality by deploying some resources
+  when: outbound_type | d("LoadBalancer") != "UserDefinedRouting"
+  block:
+    - name: new_project | Change to default project
+      ansible.builtin.command:
+        argv: "{{ argv | reject('equalto', omit) | list }}"
+      vars:
+        argv:
+          - oc
+          - project
+          - default
+          - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+      delegate_to: "{{ delegation }}"
+
+    - name: new_project | Get nginx service
+      kubernetes.core.k8s_info:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: v1
+        namespace: default
+        kind: Service
+        name: nginx
+      delegate_to: "{{ delegation }}"
+      register: nginx_service
+      ignore_errors: true
+    - name: new_project | Clean up old `oc new-app`
+      when: nginx_service is success and nginx_service.resources | length > 0
+      ansible.builtin.command:
+        argv: "{{ argv | reject('equalto', omit) | list }}"
+      vars:
+        argv:
+          - oc
+          - delete
+          - service,deployment,imagestream
+          - nginx
+          - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+      delegate_to: "{{ delegation }}"
+
+    - name: new_project | Get nginx route
+      kubernetes.core.k8s_info:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: route.openshift.io/v1
+        namespace: default
+        kind: Route
+        name: nginx
+      delegate_to: "{{ delegation }}"
+      register: nginx_route
+      ignore_errors: true
+    - name: new_project | Clean up old route
+      when: nginx_route is success and nginx_route.resources | length > 0
+      ansible.builtin.command:
+        argv: "{{ argv | reject('equalto', omit) | list }}"
+      vars:
+        argv:
+          - oc
+          - delete
+          - route
+          - nginx
+          - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+      delegate_to: "{{ delegation }}"
+
+    - name: new_project | Create new app `nginx`
+      ansible.builtin.command:
+        argv: "{{ argv | reject('equalto', omit) | list }}"
+      vars:
+        argv:
+          - oc
+          - new-app
+          - --image=nginx
+          - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+      delegate_to: "{{ delegation }}"
+    - name: new_project | Expose `nginx`
+      ansible.builtin.command:
+        argv: "{{ argv | reject('equalto', omit) | list }}"
+      vars:
+        argv:
+          - oc
+          - expose
+          - svc/nginx
+          - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+      delegate_to: "{{ delegation }}"
+    - name: new_project | Get deployment,pod,route,service
+      ansible.builtin.command:
+        argv: "{{ argv | reject('equalto', omit) | list }}"
+      vars:
+        argv:
+          - oc
+          - get
+          - deployment,pod,route,service
+          - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+      register: oc_get_nginx_deployment_pod_route_service
+      delegate_to: "{{ delegation }}"
+    - name: new_project | Show deployment,pod,route,service
+      ansible.builtin.debug:
+        var: oc_get_nginx_deployment_pod_route_service.stdout_lines
+    - name: new_project | Get nginx service
+      kubernetes.core.k8s_info:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: route.openshift.io/v1
+        namespace: default
+        kind: Route
+        name: nginx
+      delegate_to: "{{ delegation }}"
+      register: nginx_route
+    - name: new_project | Debug nginx route
+      ansible.builtin.debug:
+        var: nginx_route
+      tags:
+        - verbose
+
+
+    - name: new_project | Create nginx Deployment
+      kubernetes.core.k8s:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: apps/v1
+        namespace: default
+        kind: Deployment
+        name: nginx-deployment
+        resource_definition:
+          spec:
+            selector:
+              matchLabels:
+                app: nginx
+            replicas: 2 # tells deployment to run 2 pods matching the template
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+                    ports:
+                      - containerPort: 80
+                        name: http-web-svc
+        wait: true
+      delegate_to: "{{ delegation }}"
+
+    - name: new_project | Create nginx-lb lb Service
+      kubernetes.core.k8s:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: v1
+        namespace: default
+        kind: Service
+        name: nginx-lb
+        resource_definition:
+          metadata:
+            annotations:
+              service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+          spec:
+            type: LoadBalancer
+            selector:
+              app: nginx
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: http-web-svc
+      delegate_to: "{{ delegation }}"

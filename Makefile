@@ -6,6 +6,7 @@ E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 
 E2E_LABEL ?= !smoke
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 NO_CACHE ?= true
+PODMAN_VOLUME_OVERLAY=$(shell if [[ $$(getenforce) == "Enforcing" ]]; then echo ":O"; else echo ""; fi 2>/dev/null)
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -367,3 +368,29 @@ vendor:
 .PHONY: install-go-tools
 install-go-tools:
 	go install ${GOTESTSUM}
+
+.PHONY: ansible-image
+ansible-image:
+	docker image exists aro-ansible:$(VERSION) || docker build . -f Dockerfile.ansible --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE) --tag aro-ansible:$(VERSION)
+
+.PHONY: cluster
+LOCATION := eastus
+CLUSTERPREFIX := $(USER)
+CLUSTERPATTERN := basic
+CLEANUP := False
+SSH_CONFIG_DIR := $(HOME)/.ssh/
+SSH_KEY_BASENAME := id_rsa
+ifneq ($(CLUSTERPATTERN),*)
+	CLUSTERFILTER = -l $(CLUSTERPATTERN)
+endif
+ifeq ($(VERBOSE),False)
+	SKIP_VERBOSE = --skip-tags verbose
+endif
+# Note: When running this from a pipeline, don't mount the ansible directory (omit -v ./ansible:/ansible),
+# use the one baked into the ansible image in order to ensure that the Ansible resources used correspond to the desired commit.
+cluster: ansible-image
+	docker run --rm -it -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) -v ./ansible:/ansible$(PODMAN_VOLUME_OVERLAY) -v $(SSH_CONFIG_DIR):/root/.ssh$(PODMAN_VOLUME_OVERLAY) aro-ansible:$(VERSION) -i hosts.yaml $(CLUSTERFILTER) -e location=$(LOCATION) -e CLUSTERPREFIX=$(CLUSTERPREFIX) -e CLEANUP=$(CLEANUP) -e SSH_KEY_BASENAME=$(SSH_KEY_BASENAME) $(SKIP_VERBOSE) playbook.yaml
+
+.PHONY: lint-ansible
+lint-ansible:
+	cd ansible; ansible-lint -c .ansible_lint.yaml

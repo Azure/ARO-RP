@@ -1,0 +1,31 @@
+---
+# az aro update succeeds in rotating certs and SP:
+#      backup azure secret: oc get secret/azure-credentials -n kube-system -o yaml > ac.old.yaml
+#      run az aro update --refresh-credentials
+#      check azure secret again and verify that azure_client_secret was updated there
+- name: Get original secret/azure-credentials
+  ansible.builtin.command:
+    argv: ["oc", "get", "secret/azure-credentials", "-n", "kube-system", "-o=yaml"]
+  register: oc_get_azure_credentials
+- name: Az aro update refresh-credentials
+  ansible.builtin.command:
+    argv: ["az", "aro", "update", "--name={{ name }}",
+           "--resource-group={{ resource_group }}", "--refresh-credentials", "-o=yaml"]
+  delegate_to: localhost
+- name: Wait for provisioningState to become Succeeded
+  azure.azcollection.azure_rm_openshiftmanagedcluster_info:
+    name: "{{ name }}"
+    resource_group: "{{ resource_group }}"
+  delegate_to: localhost
+  register: cluster_status
+  until: cluster_status.clusters.properties.provisioningState == 'Succeeded'
+  retries: 6
+  delay: 10
+- name: Get new secret/azure-credentials
+  ansible.builtin.command:
+    argv: ["oc", "get", "secret/azure-credentials", "-n", "kube-system", "-o=yaml"]
+  register: oc_get_azure_credentials_new
+- name: Verify secrets have changed
+  when: oc_get_azure_credentials.stdout == oc_get_azure_credentials_new.stdout
+  ansible.builtin.fail:
+    msg: "Secret/azure-credentials did not change after `az aro update`"

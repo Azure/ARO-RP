@@ -1,0 +1,14 @@
+simple_clusters:
+  hosts:
+    sre-shared-cluster:
+      name: sre-shared-cluster
+      resource_group: sre-shared-cluster
+      location: eastus
+      version: 4.12.25
+      cluster_resource_group: aro-a
+  vars:
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    master_size: Standard_D8s_v3
+    worker_cidr: 10.0.2.0/23
+    worker_size: Standard_D4s_v3

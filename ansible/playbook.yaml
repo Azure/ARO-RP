@@ -1,0 +1,27 @@
+---
+- name: Deploy simple clusters
+  hosts: standard_clusters
+  gather_facts: false
+  serial: "{{ max_simultaneous_clusters | default(1) }}"
+  environment:
+    AZURE_CORE_SURVEY_MESSAGE: "false"
+  roles:
+    - standard_cluster
+    - smoketest
+- name: Bring your own keys disk encryption
+  hosts: byok_clusters
+  gather_facts: false
+  serial: "{{ max_simultaneous_clusters | default(1) }}"
+  environment:
+    AZURE_CORE_SURVEY_MESSAGE: "false"
+  roles:
+    - byok_cluster
+    - smoketest
+- name: Cleanup clusters
+  hosts: all
+  gather_facts: false
+  serial: "{{ max_simultaneous_clusters | default(1) }}"
+  environment:
+    AZURE_CORE_SURVEY_MESSAGE: "false"
+  roles:
+    - cleanup

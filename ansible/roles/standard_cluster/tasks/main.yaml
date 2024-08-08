@@ -1,0 +1,9 @@
+- name: Create resource group
+  ansible.builtin.include_tasks:
+    file: ../tasks/create_resourcegroup.yaml
+- name: Create vnet and subnets
+  ansible.builtin.include_tasks:
+    file: ../tasks/create_vnet.yaml
+- name: Create aro cluster
+  ansible.builtin.include_tasks:
+    file: ../tasks/create_aro_cluster.yaml

@@ -1,0 +1,49 @@
+ARG REGISTRY
+ARG VERSION
+
+###############################################################################
+# ansible is the base Python image with ansible and azure-cli
+###############################################################################
+FROM ${REGISTRY}/ubi9/python-311:1-66 AS ansible
+# Versions
+# pipx https://pypi.org/project/pipx/#history
+# azure-cli https://pypi.org/project/azure-cli/#history
+# ansible https://pypi.org/project/ansible/#history
+# ansible.azcollection https://galaxy.ansible.com/ui/repo/published/azure/azcollection/
+ARG PIPX_VERSION=1.6.0 \
+    ANSIBLE_VERSION=10.2.0 \
+    AZURE_CLI_VERSION=2.62.0 \
+    ANSIBLE_AZCOLLECTION_VERSION=2.3.0
+
+# Have Ansible to print task timing information
+ENV ANSIBLE_CALLBACKS_ENABLED=profile_tasks
+USER root
+COPY ansible /ansible
+WORKDIR /ansible
+
+# Using pipx here because ansible and azure-cli have differing required core Azure modules
+# They each need a separate venv to avoid collisions
+RUN ${APP_ROOT}/bin/pip install "pipx==${PIPX_VERSION}" && \
+    ${APP_ROOT}/bin/pipx install "azure-cli==${AZURE_CLI_VERSION}" && \
+    ${APP_ROOT}/bin/pipx install "ansible==${ANSIBLE_VERSION}" --include-deps && \
+    ${APP_ROOT}/bin/pipx runpip ansible install -r "/ansible/ansible-requirements.txt" && \
+    ${HOME}/.local/bin/ansible-galaxy collection install "azure.azcollection==${ANSIBLE_AZCOLLECTION_VERSION}" && \
+    ${APP_ROOT}/bin/pipx runpip ansible install -r "${HOME}/.ansible/collections/ansible_collections/azure/azcollection/requirements-azure.txt" && \
+    ${APP_ROOT}/bin/pipx list && \
+    rm -rf ${HOME}/.ansible ${HOME}/.azure
+
+###############################################################################
+# linter takes the ansible image and injects ansible-lint. Ansible-lint needs
+# ansible itself and all ansible modules and python modules installed to correctly lint
+###############################################################################
+FROM ansible AS linter
+ARG ANSIBLE_LINT_VERSION=24.7.0
+RUN ${APP_ROOT}/bin/pipx inject --include-apps ansible "ansible-lint==${ANSIBLE_LINT_VERSION}" && \
+    ${HOME}/.local/bin/ansible-lint -v -c /ansible/.ansible_lint.yaml --project-dir /ansible --format sarif | tee /opt/app-root/src/sarif.txt
+
+###############################################################################
+# Final image is the base image plus ansible-lint's output
+###############################################################################
+FROM ansible
+COPY --from=linter /opt/app-root/src/sarif.txt /opt/app-root/src/sarif.txt
+ENTRYPOINT ["/opt/app-root/src/.local/bin/ansible-playbook"]

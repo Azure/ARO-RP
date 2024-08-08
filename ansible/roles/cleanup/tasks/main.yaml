@@ -1,0 +1,7 @@
+---
+- name: Delete aro cluster
+  ansible.builtin.include_tasks:
+    file: ../tasks/delete_aro_cluster.yaml
+- name: Delete resource group
+  ansible.builtin.include_tasks:
+    file: ../tasks/delete_resourcegroup.yaml

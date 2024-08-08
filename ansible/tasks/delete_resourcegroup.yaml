@@ -1,0 +1,9 @@
+---
+- name: delete_resourcegroup | Delete resource group
+  when: CLEANUP is defined and CLEANUP == "True"
+  azure.azcollection.azure_rm_resourcegroup:
+    name: "{{ resource_group }}"
+    location: "{{ location }}"
+    force_delete_nonempty: true
+    state: absent
+  delegate_to: localhost

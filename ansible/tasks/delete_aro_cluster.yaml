@@ -1,0 +1,63 @@
+---
+- name: delete_aro_cluster | Check if cluster already exists
+  ansible.builtin.command:
+    argv: ["az", "aro", "show", "--name={{ name }}", "--resource-group={{ resource_group }}", "-o=yaml"]
+  delegate_to: localhost
+  register: aro_existing_cluster
+  ignore_errors: true
+- name: delete_aro_cluster | Set fact aro_cluster
+  when: aro_existing_cluster is success
+  ansible.builtin.set_fact:
+    aro_cluster_state: "{{ aro_existing_cluster.stdout | from_yaml }}"
+- name: delete_aro_cluster | Delete aro cluster
+  when: CLEANUP is defined and CLEANUP == "True"
+  azure.azcollection.azure_rm_openshiftmanagedcluster:
+    name: "{{ name }}"
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    state: absent
+  delegate_to: localhost
+
+- name: delete_aro_cluster | Delete service principal and app
+  when: CLEANUP is defined and CLEANUP == "True"
+        and aro_cluster_state is defined
+        and aro_cluster_state.servicePrincipalProfile.clientId is defined
+  block:
+    - name: delete_aro_cluster | Get service principal
+      ansible.builtin.command:
+        argv: ["az", "ad", "sp", "show", "--id={{ aro_cluster_state.servicePrincipalProfile.clientId }}", "-o=yaml"]
+      delegate_to: localhost
+      register: aro_ad_sp_output
+    - name: delete_aro_cluster | Set fact aro_ad_sp_info
+      when: aro_ad_sp_output is success
+      ansible.builtin.set_fact:
+        aro_ad_sp_info: "{{ aro_ad_sp_output.stdout | from_yaml }}"
+    - name: delete_aro_cluster | Debug aro_ad_sp_info
+      ansible.builtin.debug:
+        var: aro_ad_sp_info
+      tags:
+        - verbose
+    - name: delete_aro_cluster | Delete service principal
+      ansible.builtin.command:
+        argv:
+          - az
+          - ad
+          - sp
+          - delete
+          - --id={{ aro_ad_sp_info.id }}
+      # azure.azcollection.azure_rm_adserviceprincipal:
+      #   app_id: "{{ aro_ad_sp_info.id }}"
+      #   state: absent
+      delegate_to: localhost
+    - name: delete_aro_cluster | Delete ad application
+      ansible.builtin.command:
+        argv:
+          - az
+          - ad
+          - app
+          - delete
+          - --id={{ aro_ad_sp_info.appId }}
+      # azure.azcollection.azure_rm_adapplication:
+      #   app_id: "{{ aro_ad_sp_info.appId }}"
+      #   state: absent
+      delegate_to: localhost

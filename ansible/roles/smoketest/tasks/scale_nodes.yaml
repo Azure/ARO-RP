@@ -1,0 +1,67 @@
+- name: scale_nodes | Get machinesets
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: machine.openshift.io/v1beta1
+    namespace: openshift-machine-api
+    kind: MachineSet
+  delegate_to: "{{ delegation }}"
+  register: oc_get_machineset
+
+- name: scale_nodes | Select a machineset to scale
+  ansible.builtin.set_fact:
+    candidate_machineset: "{{ oc_get_machineset.resources[0] }}"
+- name: scale_nodes | Show selected machineset
+  ansible.builtin.debug:
+    msg: "Scaling will be performed on {{ candidate_machineset.metadata.name }}"
+
+- name: scale_nodes | Scale down machineset
+  kubernetes.core.k8s:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: machine.openshift.io/v1beta1
+    namespace: openshift-machine-api
+    kind: MachineSet
+    name: "{{ candidate_machineset.metadata.name }}"
+    state: patched
+    resource_definition:
+      spec:
+        replicas: 0
+  delegate_to: "{{ delegation }}"
+
+- name: scale_nodes | Wait for scale down
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: machine.openshift.io/v1beta1
+    namespace: openshift-machine-api
+    kind: MachineSet
+    name: "{{ candidate_machineset.metadata.name }}"
+  delegate_to: "{{ delegation }}"
+  register: oc_get_machineset_item
+  failed_when: oc_get_machineset_item.resources[0].status.replicas != 0
+  retries: 30
+  delay: 20
+
+- name: scale_nodes | Scale up machineset
+  kubernetes.core.k8s:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: machine.openshift.io/v1beta1
+    namespace: openshift-machine-api
+    kind: MachineSet
+    name: "{{ candidate_machineset.metadata.name }}"
+    state: patched
+    resource_definition:
+      spec:
+        replicas: 1
+  delegate_to: "{{ delegation }}"
+
+- name: scale_nodes | Wait for scale up
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: machine.openshift.io/v1beta1
+    namespace: openshift-machine-api
+    kind: MachineSet
+    name: "{{ candidate_machineset.metadata.name }}"
+  delegate_to: "{{ delegation }}"
+  register: oc_get_machineset_item
+  failed_when: oc_get_machineset_item.resources[0].status.readyReplicas != 1
+  retries: 30
+  delay: 20
