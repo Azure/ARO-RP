@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -17,9 +18,23 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 	}
 
 	// needed for AdminUpdate so it would not block other steps
-	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
-		m.log.Print("skipping createOrUpdateDenyAssignment: SPObjectID is empty")
-		return nil
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		for _, i := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if i.ObjectID == "" {
+				m.log.Print(fmt.Sprintf("skipping createOrUpdateDenyAssignment: ObjectID for identity %s is empty", i.OperatorName))
+				return nil
+			}
+		}
+	} else {
+		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil {
+			m.log.Print("skipping createOrUpdateDenyAssignment: ServicePrincipalProfile is empty")
+			return nil
+		}
+
+		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
+			m.log.Print("skipping createOrUpdateDenyAssignment: SPObjectID is empty")
+			return nil
+		}
 	}
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
