@@ -201,6 +201,7 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		for _, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if i.OperatorName == pkgoperator.OperatorIdentityName {
 				operatorIdentity = &i
+				break
 			}
 		}
 
