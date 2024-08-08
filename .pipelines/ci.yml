@@ -65,6 +65,7 @@ jobs:
 
       - script: |
           set -xe
+          whoami
           yum -y install \
             conmon \
             containers-common \
