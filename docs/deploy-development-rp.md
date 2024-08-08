@@ -481,6 +481,55 @@ To run fake metrics socket:
 ```bash
 go run ./hack/monitor
 ```
+### Run the RP and create a Hive cluster
+
+**Steps to perform on Mac**
+1. Mount your local MacOS filesystem into the podman machine:
+```bash
+podman machine init --now --cpus=4 --memory=4096 -v $HOME:$HOME
+```
+2. Use the openvpn config file (which is now mounted inside the podman machine) to start the VPN connection:
+```bash
+podman machine ssh
+sudo rpm-ostree install openvpn
+sudo systemctl reboot
+podman machine ssh
+sudo openvpn --config /Users/<user_name>/go/src/github.com/Azure/ARO-RP/secrets/vpn-aks-westeurope.ovpn --daemon --writepid vpnpid
+ps aux | grep openvpn
+```
+### Instructions for Modifying Environment File
+**Update the env File**
+- Open the `env` file.
+-  Update env file instructions: set `OPENSHIFT_VERSION`, update `INSTALLER_PULLSPEC` and `OCP_PULLSPEC`, mention quay.io for SHA256 hash.
+-  Update INSTALLER_PULLSPEC with the appropriate name and tag, typically matching the OpenShift version, e.g., `release-4.13.`(for more detail see the `env.example`)
+* Source the environment file before creating the cluster using the `setup_resources.sh` script(Added the updated env in the PR)
+```bash
+cd /hack
+./setup_resources.sh
+```
+* Once the cluster create verify connectivity with the ARO cluster:
+- Download the admin kubeconfig file
+```bash
+az aro get-admin-kubeconfig --name <cluster_name> --resource-group v4-westeurope --file ~/.kube/aro-admin-kubeconfig
+```
+- Set the KUBECONFIG environment variable
+```bash
+export KUBECONFIG=~/.kube/aro-admin-kubeconfig
+```
+- Verify connectivity with the ARO cluster
+```bash
+kubectl get nodes
+```
+```bash
+kubectl get nodes
+NAME                                                  STATUS   ROLES                  AGE   VERSION
+shpaitha-aro-cluster-4sp5c-master-0                   Ready    control-plane,master   39m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-master-1                   Ready    control-plane,master   39m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-master-2                   Ready    control-plane,master   39m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-worker-westeurope1-j9c76   Ready    worker                 29m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-worker-westeurope2-j9zrs   Ready    worker                 27m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-worker-westeurope3-56tk7   Ready    worker                 28m   v1.25.11+1485cc9 
+```
 
 ## Troubleshooting
 
