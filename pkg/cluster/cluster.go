@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/Azure/msi-dataplane/pkg/store"
@@ -31,6 +30,7 @@ import (
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
@@ -334,10 +334,10 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 					CredentialsObject: swagger.CredentialsObject{
 						ExplicitIdentities: []*swagger.NestedCredentialsObject{
 							{
-								ClientID:                   to.StringPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
-								ClientSecret:               to.StringPtr(os.Getenv("MOCK_MSI_CERT")),
-								TenantID:                   to.StringPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
-								ResourceID:                 to.StringPtr(msiResourceId.String()),
+								ClientID:                   ptr.To(os.Getenv("MOCK_MSI_CLIENT_ID")),
+								ClientSecret:               ptr.To(os.Getenv("MOCK_MSI_CERT")),
+								TenantID:                   ptr.To(os.Getenv("MOCK_MSI_TENANT_ID")),
+								ResourceID:                 ptr.To(msiResourceId.String()),
 								AuthenticationEndpoint:     &placeholder,
 								CannotRenewAfter:           &placeholder,
 								ClientSecretURL:            &placeholder,
