@@ -65,7 +65,8 @@ jobs:
 
       - script: |
           set -xe
-          tdnf install -y gpgme device-mapper-libs btrfs-progs-devel
+          whoami
+          sudo tdnf install -y gpgme device-mapper-libs btrfs-progs-devel
           go generate -v ./pkg/cluster
           make generate
           [[ -z "$(git status -s)" ]]
