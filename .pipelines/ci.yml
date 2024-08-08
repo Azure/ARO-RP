@@ -23,7 +23,7 @@ pr:
 resources:
   containers:
     - container: golang
-      image: mcr.microsoft.com/oss/go/microsoft/golang:1.21.13-1-cbl-mariner2.0-amd64
+      image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
       options: --user=0
     - container: python
       image: registry.access.redhat.com/ubi8/python-39:latest
@@ -66,7 +66,7 @@ jobs:
       - script: |
           set -xe
           whoami
-          sudo tdnf install -y gpgme device-mapper-libs btrfs-progs-devel
+          sudo tdnf install -y gpgme device-mapper-libs btrfs-progs-devel golang
           go generate -v ./pkg/cluster
           make generate
           [[ -z "$(git status -s)" ]]
