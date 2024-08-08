@@ -23,7 +23,7 @@ pr:
 resources:
   containers:
     - container: golang
-      image: registry.access.redhat.com/ubi8/go-toolset:1.21.11-1.1720406008
+      image: mcr.microsoft.com/oss/go/microsoft/golang:1.21.13-1-cbl-mariner2.0-amd64
       options: --user=0
     - container: python
       image: registry.access.redhat.com/ubi8/python-39:latest
@@ -66,14 +66,6 @@ jobs:
       - script: |
           set -xe
           whoami
-          yum -y install \
-            conmon \
-            containers-common \
-            crun \
-            iptables \
-            netavark \
-            nftables \
-            slirp4netns
           go generate -v ./pkg/cluster
           make generate
           [[ -z "$(git status -s)" ]]
