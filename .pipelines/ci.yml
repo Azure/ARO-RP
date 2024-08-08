@@ -65,6 +65,7 @@ jobs:
 
       - script: |
           set -xe
+          go generate -v ./pkg/cluster
           make generate
           [[ -z "$(git status -s)" ]]
         displayName: ⚙️ Run Golang code generate
