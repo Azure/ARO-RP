@@ -108,10 +108,17 @@ ci-tunnel: fix-macos-vendor
 ci-clean:
 	docker image prune --all --filter="label=aro-*=true"
 
+.PHONY: pre-deploy-no-aks
+pre-deploy-no-aks:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro pre-deploy-no-aks dev-config.yaml ${LOCATION}
+
+.PHONY: pre-deploy-full
+pre-deploy-full:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro pre-deploy-full dev-config.yaml ${LOCATION}
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
-deploy:
+deploy: pre-deploy-full # TODO might not be needed
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml
@@ -367,3 +374,19 @@ vendor:
 .PHONY: install-go-tools
 install-go-tools:
 	go install ${GOTESTSUM}
+
+AZURE_PREFIX ?= zzz
+RP_FULL_DEV_IMAGE ?= quay.io/medik8s/rp-full-dev:v0.0.1
+ARO_RP_BRANCH ?= razo7/ARO-9327
+.PHONY: rp-full-dev
+rp-full-dev: # Build and run a rp-full-dev container for automating rp-full-dev
+	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
+		--build-arg ARO_RP_BRANCH=$(ARO_RP_BRANCH) \
+		-f Dockerfile.rp-full-dev \
+		-t $(RP_FULL_DEV_IMAGE) .
+	docker run --rm -it --user=0 --privileged -v /dev/shm:/dev/shm -v "${HOME}/.azure:/root/.azure" --device /dev/net/tun --name rp-full-dev-container $(RP_FULL_DEV_IMAGE)
+
+.PHONY: rp-full-dev-clenup
+rp-full-dev-clenup: # Clean all the rp-full-dev resources by deleting ResourceGroups and KeyVaults
+	source ./hack/devtools/rp-dev-helper.sh && AZURE_PREFIX=$(AZURE_PREFIX) clean_rp_dev_env
+# OR clean_rp_dev_env "zzz-aro-eastus-gwy zzz-aro-eastus-por zzz-aro-eastus-svc zzz-aro-eastus-cls" "zzz-global zzz-subscription zzz-gwy-eastus zzz-aro-eastus"

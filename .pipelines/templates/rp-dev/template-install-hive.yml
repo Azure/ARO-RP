@@ -10,5 +10,5 @@ steps:
       make aks.kubeconfig
       ./hack/hive-generate-config.sh
       KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive-dev-install.sh
-    name: install-hive
+    name: install_hive
     displayName: 🚀 Installing Hive into AKS
