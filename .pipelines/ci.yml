@@ -65,10 +65,7 @@ jobs:
 
       - script: |
           set -xe
-          whoami
-          echo $PKG_CONFIG_PATH
-          sudo tdnf install -y gpgme device-mapper-libs btrfs-progs-devel golang
-          go generate -v ./pkg/cluster
+          sudo tdnf install -y gpgme-devel lvm2-devel btrfs-progs-devel golang
           make generate
           [[ -z "$(git status -s)" ]]
         displayName: ⚙️ Run Golang code generate
