@@ -19,6 +19,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -578,6 +579,69 @@ func TestTestEnsureUpgradeAnnotation(t *testing.T) {
 				if !reflect.DeepEqual(actualAnnotations, tt.wantAnnotation) {
 					t.Errorf("actual annotation: %v, wanted %v", tt.annotation, tt.wantAnnotation)
 				}
+			}
+		})
+	}
+}
+
+func TestGenerateOperatorIdentitySecret(t *testing.T) {
+	tests := []struct {
+		Name           string
+		Operator       *operator
+		ExpectedSecret *corev1.Secret
+		ExpectError    bool
+	}{
+		{
+			Name: "valid cluster operator",
+			Operator: &operator{
+				oc: &api.OpenShiftCluster{
+					Location: "eastus1",
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: pkgoperator.OperatorIdentityName,
+									ClientID:     "11111111-1111-1111-1111-111111111111",
+								},
+							},
+						},
+					},
+				},
+				subscriptiondoc: &api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000000",
+					Subscription: &api.Subscription{
+						Properties: &api.SubscriptionProperties{
+							TenantID: "22222222-2222-2222-2222-222222222222",
+						},
+					},
+				},
+			},
+			ExpectedSecret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      pkgoperator.OperatorIdentitySecretName,
+					Namespace: pkgoperator.Namespace,
+				},
+				// StringData is only converted to Data in live kubernetes
+				StringData: map[string]string{
+					"azure_client_id":            "11111111-1111-1111-1111-111111111111",
+					"azure_tenant_id":            "22222222-2222-2222-2222-222222222222",
+					"azure_region":               "eastus1",
+					"azure_subscription_id":      "00000000-0000-0000-0000-000000000000",
+					"azure_federated_token_file": pkgoperator.OperatorTokenFile,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			actualSecret, err := test.Operator.generateOperatorIdentitySecret()
+			if test.ExpectError == (err == nil) {
+				t.Errorf("generateOperatorIdentitySecret() %s: ExpectError: %t, actual error: %s\n", test.Name, test.ExpectError, err)
+			}
+
+			if !reflect.DeepEqual(actualSecret, test.ExpectedSecret) {
+				t.Errorf("generateOperatorIdentitySecret() %s:\nexpected:\n%+v\n\ngot:\n%+v\n", test.Name, test.ExpectedSecret, actualSecret)
 			}
 		})
 	}

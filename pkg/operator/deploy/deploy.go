@@ -199,31 +199,12 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 
 	// then dynamic resources
 	if o.oc.UsesWorkloadIdentity() {
-		var operatorIdentity *api.PlatformWorkloadIdentity // use a pointer to make it easy to check if we found an identity below
-		for _, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			if i.OperatorName == pkgoperator.OperatorIdentityName {
-				operatorIdentity = &i
-				break
-			}
+		operatorIdentitySecret, err := o.generateOperatorIdentitySecret()
+		if err != nil {
+			return nil, err
 		}
 
-		if operatorIdentity == nil {
-			return nil, errors.New(fmt.Sprintf("operator identity %s not found", pkgoperator.OperatorIdentityName))
-		}
-
-		results = append(results, &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: pkgoperator.Namespace,
-				Name:      pkgoperator.OperatorIdentitySecretName,
-			},
-			StringData: map[string]string{
-				"azure_client_id":            operatorIdentity.ClientID,
-				"azure_tenant_id":            o.subscriptiondoc.Subscription.Properties.TenantID,
-				"azure_region":               o.oc.Location,
-				"azure_subscription_id":      o.subscriptiondoc.ID,
-				"azure_federated_token_file": pkgoperator.OperatorTokenFile,
-			},
-		})
+		results = append(results, operatorIdentitySecret)
 	}
 
 	key, cert := o.env.ClusterGenevaLoggingSecret()
@@ -257,6 +238,34 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 			},
 		},
 	), nil
+}
+
+func (o *operator) generateOperatorIdentitySecret() (*corev1.Secret, error) {
+	var operatorIdentity *api.PlatformWorkloadIdentity // use a pointer to make it easy to check if we found an identity below
+	for _, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		if i.OperatorName == pkgoperator.OperatorIdentityName {
+			operatorIdentity = &i
+			break
+		}
+	}
+
+	if operatorIdentity == nil {
+		return nil, fmt.Errorf("operator identity %s not found", pkgoperator.OperatorIdentityName)
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: pkgoperator.Namespace,
+			Name:      pkgoperator.OperatorIdentitySecretName,
+		},
+		StringData: map[string]string{
+			"azure_client_id":            operatorIdentity.ClientID,
+			"azure_tenant_id":            o.subscriptiondoc.Subscription.Properties.TenantID,
+			"azure_region":               o.oc.Location,
+			"azure_subscription_id":      o.subscriptiondoc.ID,
+			"azure_federated_token_file": pkgoperator.OperatorTokenFile,
+		},
+	}, nil
 }
 
 func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
