@@ -1,5 +1,7 @@
 #!/bin/bash
-set -e
+set -o errexit
+set -o nounset
+set -o pipefail
 
 # Local development environment script.
 # Execute this script from the root folder of the repo (ARO-RP).
@@ -177,10 +179,10 @@ create_platform_identity_and_assign_role() {
     fi
 
     # Extract the client ID, principal Id, resource ID and name from the result
-    clientID=$(echo $result | jq -r .clientId)
-    principalId=$(echo $result | jq -r .principalId)
-    resourceId=$(echo $result | jq -r .id)
-    name=$(echo $result | jq -r .name)
+    clientID=$(jq -r .clientId <<<"${result}")
+    principalId=$(jq -r .principalId <<<"${result}")
+    resourceId=$(jq -r .id <<<"${result}")
+    name=$(jq -r .name <<<"${result}")
 
     echo "Client ID: $clientID"
     echo "Principal ID: $principalId"
