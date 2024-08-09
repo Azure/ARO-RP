@@ -67,15 +67,16 @@ type operator struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	arocli        aroclient.Interface
-	client        client.Client
-	extensionscli extensionsclient.Interface
-	kubernetescli kubernetes.Interface
-	operatorcli   operatorclient.Interface
-	dh            dynamichelper.Interface
+	arocli          aroclient.Interface
+	client          client.Client
+	extensionscli   extensionsclient.Interface
+	kubernetescli   kubernetes.Interface
+	operatorcli     operatorclient.Interface
+	dh              dynamichelper.Interface
+	subscriptiondoc *api.SubscriptionDocument
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client client.Client, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client client.Client, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface, subscriptionDoc *api.SubscriptionDocument) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -90,12 +91,13 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 		env: env,
 		oc:  oc,
 
-		arocli:        arocli,
-		client:        client,
-		extensionscli: extensionscli,
-		kubernetescli: kubernetescli,
-		operatorcli:   operatorcli,
-		dh:            dh,
+		arocli:          arocli,
+		client:          client,
+		extensionscli:   extensionscli,
+		kubernetescli:   kubernetescli,
+		operatorcli:     operatorcli,
+		dh:              dh,
+		subscriptiondoc: subscriptionDoc,
 	}, nil
 }
 
@@ -216,9 +218,9 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 			},
 			StringData: map[string]string{
 				"azure_client_id":            operatorIdentity.ClientID,
-				"azure_tenant_id":            o.env.TenantID(),
+				"azure_tenant_id":            o.subscriptiondoc.Subscription.Properties.TenantID,
 				"azure_region":               o.oc.Location,
-				"azure_subscription_id":      o.env.SubscriptionID(),
+				"azure_subscription_id":      o.subscriptiondoc.ID,
 				"azure_federated_token_file": pkgoperator.OperatorTokenFile,
 			},
 		})
