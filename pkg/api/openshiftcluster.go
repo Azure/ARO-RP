@@ -168,7 +168,7 @@ type OpenShiftClusterProperties struct {
 	// UserAdminKubeconfig is derived admin kubeConfig with shorter live span
 	UserAdminKubeconfig SecureBytes `json:"userAdminKubeconfig,omitempty"`
 
-	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
+	RegistryProfiles []RegistryProfile `json:"registryProfiles,omitempty"`
 
 	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
 

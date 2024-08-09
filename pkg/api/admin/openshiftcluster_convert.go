@@ -163,6 +163,17 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
+	if oc.Properties.RegistryProfiles != nil {
+		out.Properties.RegistryProfiles = make([]RegistryProfile, 0, len(oc.Properties.RegistryProfiles))
+		for _, p := range oc.Properties.RegistryProfiles {
+			out.Properties.RegistryProfiles = append(out.Properties.RegistryProfiles, RegistryProfile{
+				Name:     p.Name,
+				Username: p.Username,
+				Expiry:   p.Expiry,
+			})
+		}
+	}
+
 	if oc.Properties.Install != nil {
 		out.Properties.Install = &Install{
 			Now:   oc.Properties.Install.Now,
@@ -407,9 +418,10 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 
 	out.Properties.RegistryProfiles = nil
 	if oc.Properties.RegistryProfiles != nil {
-		out.Properties.RegistryProfiles = make([]*api.RegistryProfile, len(oc.Properties.RegistryProfiles))
+		out.Properties.RegistryProfiles = make([]api.RegistryProfile, len(oc.Properties.RegistryProfiles))
 		for i := range oc.Properties.RegistryProfiles {
 			out.Properties.RegistryProfiles[i].Name = oc.Properties.RegistryProfiles[i].Name
+			out.Properties.RegistryProfiles[i].Username = oc.Properties.RegistryProfiles[i].Username
 			out.Properties.RegistryProfiles[i].Expiry = oc.Properties.RegistryProfiles[i].Expiry
 		}
 	}
