@@ -6,12 +6,12 @@ set -o pipefail
 # This script creates a mock cluster MSI object and platform identities to use for local development
 # We use a service principal and certificate as the mock cluster MSI
 
-if [[ -z "$AZURE_SUBSCRIPTION_ID" ]]; then
+if [[ -z "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
     echo "Error: AZURE_SUBSCRIPTION_ID is not set."
     exit 1
 fi
 
-if [[ -z "$RESOURCEGROUP" ]]; then
+if [[ -z "${RESOURCEGROUP:-}" ]]; then
     echo "Error: RESOURCEGROUP is not set."
     exit 1
 fi
