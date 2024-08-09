@@ -96,7 +96,7 @@ set_storage_account() {
 
 ask_to_create_default_env_config() {
     local answer
-    read -p "Do you want to create a default env file? (existing one will be overwritten, if any) (y / n) " answer
+    read -r -p "Do you want to create a default env file? (existing one will be overwritten, if any) (y / n) " answer
 
     if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
         create_env_file
@@ -110,7 +110,7 @@ ask_to_create_default_env_config() {
 # We use a service principal and certificate as the mock MSI object
 create_mock_msi() {
     appName="mock-msi-$(openssl rand -base64 9 | tr -dc 'a-zA-Z0-9' | head -c 6)"
-    az ad sp create-for-rbac --name $appName --create-cert --output json
+    az ad sp create-for-rbac --name "$appName" --create-cert --output json
 }
 
 get_mock_msi_clientID() {
@@ -123,14 +123,14 @@ get_mock_msi_tenantID() {
 
 get_mock_msi_cert() {
     certFilePath=$(echo "$1" | jq -r '.fileWithCertAndPrivateKey')
-    base64EncodedCert=$(base64 -w 0 $certFilePath)
-    rm $certFilePath
-    echo $base64EncodedCert
+    base64EncodedCert=$(base64 -w 0 "$certFilePath")
+    rm "$certFilePath"
+    echo "$base64EncodedCert"
 }
 
 create_env_file() {
     local answer
-    read -p "Do you want to create an env file for Managed/Workload identity development? " answer
+    read -r -p "Do you want to create an env file for Managed/Workload identity development? " answer
     if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
         create_miwi_env_file
     else 
@@ -138,9 +138,7 @@ create_env_file() {
     fi
 }
 
-get_platform_workloadIdentity_role_sets() {
-    local platformWorkloadIdentityRoles
-   
+get_platform_workloadIdentity_role_sets() {   
     # Parse the JSON data using jq
     platformWorkloadIdentityRoles=$(echo "${PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS}" | jq -c '.[].platformWorkloadIdentityRoles[]')
 
@@ -151,8 +149,8 @@ assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
-    local result=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null | wc -l)
-
+    
+    result=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null | wc -l)
     if [[ $result -gt 1 ]]; then
         echo "INFO: Role already assigned to identity: ${objectId}"
         echo ""
@@ -168,9 +166,9 @@ create_platform_identity_and_assign_role() {
     local operatorName="${1}"
     local roleDefinitionId="${2}"
     local identityName="aro-${operatorName}"
-    local result=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null)
-
-    if [[ ! -z ${result} ]]; then
+    
+    identity=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null)
+    if [[ -n ${identity} ]]; then
         echo "INFO: Platform identity ${identityName} already exists for operator: ${operatorName}"
         echo ""
     else
@@ -198,7 +196,9 @@ create_platform_identity_and_assign_role() {
 }
 
 setup_platform_identity() {
-    local platformWorkloadIdentityRoles=$(get_platform_workloadIdentity_role_sets)
+    local platformWorkloadIdentityRoles
+    
+    platformWorkloadIdentityRoles=$(get_platform_workloadIdentity_role_sets)
 
     echo "INFO: Creating platform identities under RG ($RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
     echo ""
@@ -216,7 +216,9 @@ setup_platform_identity() {
 cluster_msi_role_assignment() {
     local clusterMSIAppID="${1}"
     local FEDERATED_CREDENTIAL_ROLE_ID="ef318e2a-8334-4a05-9e4a-295a196c6a6e"
-    local clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' | jq -r .objectId)
+    local clusterMSIObjectID
+    
+    clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' | jq -r .objectId)
 
     echo "INFO: Assigning role to cluster MSI: ${clusterMSIAppID}"
     assign_role_to_identity "${clusterMSIObjectID}" "${FEDERATED_CREDENTIAL_ROLE_ID}"
@@ -261,7 +263,7 @@ EOF
 
 ask_to_create_Azure_deployment() {
     local answer
-    read -p "Create Azure deployment in the current subscription ($AZURE_SUBSCRIPTION_ID)? (y / n / l (list existing deployments)) " answer
+    read -p -r "Create Azure deployment in the current subscription ($AZURE_SUBSCRIPTION_ID)? (y / n / l (list existing deployments)) " answer
 
     if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
         create_Azure_deployment
@@ -277,7 +279,7 @@ ask_to_create_Azure_deployment() {
 
 list_Azure_deployment_names() {
     echo "INFO: Existing deployment names in the current subscription ($AZURE_SUBSCRIPTION_ID):"
-    az deployment group list --resource-group $RESOURCEGROUP | jq '[ .[] | {deployment_name: ( .id ) | split("/deployments/")[1] } | .deployment_name ]'
+    az deployment group list --resource-group "$RESOURCEGROUP" | jq '[ .[] | {deployment_name: ( .id ) | split("/deployments/")[1] } | .deployment_name ]'
 }
 
 create_Azure_deployment() {
