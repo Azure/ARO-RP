@@ -36,167 +36,125 @@ variables:
   - template: vars.yml
 
 stages:
-- stage: NotContainerized
-  dependsOn: Containerized
-  jobs:
-    - job: Python_Unit_Tests
-      pool:
-        name: 1es-aro-ci-pool
-      variables:
-        HOME: $(Agent.BuildDirectory)
+  - stage: NotContainerized
+    dependsOn: Containerized
+    jobs:
+      - job: Python_Unit_Tests
+        pool:
+          name: 1es-aro-ci-pool
+        variables:
+          HOME: $(Agent.BuildDirectory)
 
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            make test-python
-            [[ -z "$(git status -s)" ]]
-          displayName: 🧪Run Python Unit Tests
-          target: python
+        steps:
+          - template: ./templates/template-checkout.yml
+          - script: |
+              set -xe
+              make test-python
+              [[ -z "$(git status -s)" ]]
+            displayName: 🧪Run Python Unit Tests
+            target: python
 
-    - job: Golang_Unit_Tests
-      pool:
-        name: 1es-aro-ci-pool
-      variables:
-        GOCACHE: /tmp/gocache
-      steps:
-        - template: ./templates/template-checkout.yml
+      - job: Golang_Unit_Tests
+        pool:
+          name: 1es-aro-ci-pool
+        variables:
+          GOCACHE: /tmp/gocache
+        steps:
+          - template: ./templates/template-checkout.yml
 
-        - script: |
-            set -xe
-            go version
-            go env
-          displayName: Print Go version & env
-          target: golang
+          - script: |
+              set -xe
+              go version
+              go env
+            displayName: Print Go version & env
+            target: golang
 
-        - script: |
-            echo "##vso[task.prependpath]$(go env GOPATH)/bin"
-          displayName: Add GOBIN to path
-          target: golang
+          - script: |
+              echo "##vso[task.prependpath]$(go env GOPATH)/bin"
+            displayName: Add GOBIN to path
+            target: golang
 
-        - script: |
-            set -xe
-            # Required for podman 5
-            sudo tdnf install -y gpgme-devel lvm2-devel btrfs-progs-devel golang-1.21.11-1.cm2
-            make generate
-            [[ -z "$(git status -s)" ]]
-          displayName: ⚙️ Run Golang code generate
-          target: golang
+          - script: |
+              set -xe
+              # Required for podman 5
+              sudo tdnf install -y gpgme-devel lvm2-devel btrfs-progs-devel golang-1.21.11-1.cm2
+              make generate
+              [[ -z "$(git status -s)" ]]
+            displayName: ⚙️ Run Golang code generate
+            target: golang
 
-        - script: |
-            set -xe
-            make build-all
-            [[ -z "$(git status -s)" ]]
-          displayName: 🕵️ Build Golang code
-          target: golang
+          - script: |
+              set -xe
+              make build-all
+              [[ -z "$(git status -s)" ]]
+            displayName: 🕵️ Build Golang code
+            target: golang
 
-        - script: |
-            set -xe
-            make unit-test-go
-          displayName: 🧪 Run Golang unit tests
-          target: golang
+          - script: |
+              set -xe
+              make unit-test-go
+            displayName: 🧪 Run Golang unit tests
+            target: golang
 
-        - task: PublishTestResults@2
-          displayName: 📊 Publish tests results
-          inputs:
-            testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-          condition: succeededOrFailed()
+          - task: PublishTestResults@2
+            displayName: 📊 Publish tests results
+            inputs:
+              testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+            condition: succeededOrFailed()
 
-        - script: |
-            make xmlcov
-          displayName: ⚙️ Process Reports
-          condition: succeededOrFailed()
-          target: golang
+          - script: |
+              make xmlcov
+            displayName: ⚙️ Process Reports
+            condition: succeededOrFailed()
+            target: golang
 
-        - task: PublishCodeCoverageResults@1
-          displayName: 📈 Publish code coverage
-          inputs:
-            codeCoverageTool: Cobertura
-            summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
-            failIfCoverageEmpty: false
-          condition: succeededOrFailed()
-          target: golang
+          - task: PublishCodeCoverageResults@2
+            displayName: 📈 Publish code coverage
+            inputs:
+              codeCoverageTool: Cobertura
+              summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
+              failIfCoverageEmpty: false
+            condition: succeededOrFailed()
+            target: golang
 
-    - job: Lint_Admin_Portal
-      pool:
-        name: 1es-aro-ci-pool
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            make lint-admin-portal
-          displayName: 🧹 Lint Admin Portal
-- stage: Containerized
-  dependsOn: []
-  jobs:
-    - job: Build_Lint_Test_RP_And_Portal
-      pool:
-        name: 1es-aro-ci-pool
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            export NO_CACHE=true
+      - job: Lint_Admin_Portal
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - template: ./templates/template-checkout.yml
+          - script: |
+              set -xe
+              make lint-admin-portal
+            displayName: 🧹 Lint Admin Portal
 
-            # Install podman
-            sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-            sudo dnf install -y podman make
-            which podman
-            podman --version
-            whoami
+  - stage: Containerized
+    dependsOn: []
+    jobs:
+      - template: templates/template-podman.yml
+        parameters:
+          jobName: 'Build_Test_And_Push_Az_ARO_Extension'
+          makeCommand: 'make ci-azext-aro'
+          repository: 'my-image-repo'
+          acrFQDN: 'arosvcdev.azurecr.io'
+          imageRepoName: 'azext-aro'
+          pushLatest: true
 
-            # Start podman service
-            . ./hack/e2e/utils.sh
-            run_podman
-            validate_podman_running
+      # Lint Az ARO Extension
+      - template: templates/template-podman.yml
+        parameters:
+          jobName: 'Lint_Az_ARO_Extension'
+          makeCommand: 'make test-python'
+          repository: 'my-image-repo'
+          acrFQDN: 'arosvcdev.azurecr.io'
+          imageRepoName: 'azext-aro'
+          pushLatest: true
 
-            # run build
-            export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
-            make ci-rp
-
-            # Stop podman
-            kill_podman
-          target: ubi8
-
-    - job: Build_and_Test_Az_ARO_Extension
-      pool:
-        name: 1es-aro-ci-pool
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            export NO_CACHE=true
-
-            # Install podman
-            sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-            sudo dnf install -y podman make
-            which podman
-            podman --version
-            whoami
-
-            # Start podman service
-            . ./hack/e2e/utils.sh
-            run_podman
-            validate_podman_running
-
-            # run build
-            export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
-            make ci-azext-aro
-
-            # Stop podman
-            kill_podman
-          target: ubi8
-
-    - job: Lint_Az_ARO_Extension
-      pool:
-        name: 1es-aro-ci-pool
-      variables:
-        HOME: $(Agent.BuildDirectory)
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
-            make test-python
-            [[ -z "$(git status -s)" ]]
-          target: python
+      # Build, Lint, and Test RP and Portal (with coverage publishing inside this template)
+      - template: templates/template-podman.yml
+        parameters:
+          jobName: 'Build_Lint_Test_RP_And_Portal'
+          makeCommand: 'make ci-rp'
+          repository: 'my-image-repo'
+          acrFQDN: 'arosvcdev.azurecr.io'
+          imageRepoName: 'aro'
+          pushLatest: true

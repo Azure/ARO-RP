@@ -421,10 +421,13 @@ ci-rp: fix-macos-vendor
 	@RP_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
 	if [ -n "$$RP_IMAGE_ID" ]; then \
 		echo "Tagging RP Image $$RP_IMAGE_ID as $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)"; \
-		podman $(PODMAN_REMOTE_ARGS) tag $$RP_IMAGE_ID $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
+		podman $(PODMAN_REMOTE_ARGS) create --name extract_cover_out $$RP_IMAGE_ID; \
+		podman $(PODMAN_REMOTE_ARGS) cp extract_cover_out:/app/cover.out ./cover.out; \
+		podman $(PODMAN_REMOTE_ARGS) rm extract_cover_out; \
 	else \
 		echo "No RP Image found with label stage=rp-build-cache-layer"; \
 	fi
+
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
