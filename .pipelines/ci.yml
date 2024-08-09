@@ -35,7 +35,7 @@ resources:
       options: --user=0
 
 variables:
-  - template: vars.yml
+  - group: YourActualVariableGroupName  # Replace with the name of your variable group
 
 resources:
   containers:
@@ -82,7 +82,6 @@ stages:
         ob_outputDirectory: '$(Build.SourcesDirectory)/out'
         IMAGE_TAG: $(Build.SourceBranchName)
         REPOSITORY: 'my-image-repo'
-        ACRFQDN: 'myregistry.azurecr.io'
       steps:
         - checkout: self
 
@@ -94,18 +93,18 @@ stages:
             export PATH=$PATH:~/go/bin/
             go install github.com/google/go-containerregistry/cmd/crane@latest
             mkdir -p $(ob_outputDirectory)
-            crane pull $(ACRFQDN)/$(REPOSITORY):$(IMAGE_TAG) $(ob_outputDirectory)/image.tar
+            crane pull $(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG) $(ob_outputDirectory)/image.tar
           displayName: 'Pulling Docker Image using Crane'
 
         # Push the Docker image to ACR
         - script: |
             set -eux
             az login --service-principal -u $(SP_APP_ID) -p $(SP_SECRET) --tenant $(TENANT_ID)
-            ACRName=$(echo "$(ACRFQDN)" | cut -f1 -d'.')
+            ACRName=$(echo "$(ACR_FQDN)" | cut -f1 -d'.')
             export token=$(az acr login --name ${ACRName} --expose-token --output tsv --query accessToken)
-            crane auth login "$(ACRFQDN)" -u "00000000-0000-0000-0000-000000000000" -p "${token}"
-            crane push $(ob_outputDirectory)/image.tar "$(ACRFQDN)/$(REPOSITORY):$(IMAGE_TAG)"
-            crane push $(ob_outputDirectory)/image.tar "$(ACRFQDN)/$(REPOSITORY):latest"
+            crane auth login "$(ACR_FQDN)" -u "00000000-0000-0000-0000-000000000000" -p "${token}"
+            crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG)"
+            crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):latest"
           displayName: 'Pushing Docker Image to ACR'
       
     - job: Extract_Coverage_Report
