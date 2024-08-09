@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -36,7 +38,16 @@ type manager struct {
 	registries containerregistry.RegistriesClient
 }
 
+const (
+	HoursInADay        = 24
+	ACRTokenLifeInDays = 90
+)
+
 func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
+	fmt.Println("Entering method NewManager")
+	fmt.Println("env: ", env)
+	fmt.Println("ResourceID: ", env.ACRResourceID())
+
 	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
 		return nil, err
@@ -64,9 +75,12 @@ func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProf
 }
 
 func (m *manager) NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
+	var tokenExpiration = time.Now().UTC().Add(time.Hour * HoursInADay * ACRTokenLifeInDays)
+
 	return &api.RegistryProfile{
 		Name:     fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix),
 		Username: "token-" + uuid.DefaultGenerator.Generate(),
+		Expiry:   &date.Time{Time: tokenExpiration},
 	}
 }
 
@@ -148,6 +162,7 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtco
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
 		Name:    passwordName,
+		Expiry:  rp.Expiry,
 	})
 	if err != nil {
 		return "", err
