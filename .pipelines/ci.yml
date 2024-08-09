@@ -35,7 +35,7 @@ resources:
       options: --user=0
 
 variables:
-  - group: YourActualVariableGroupName  # Replace with the name of your variable group
+  - group: VariableGroupName  # Replace with the name of variable group
 
 resources:
   containers:
