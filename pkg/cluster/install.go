@@ -543,7 +543,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 // initializeKubernetesClients initializes clients which are used
 // once the cluster is up later on in the install process.
 func (m *manager) initializeOperatorDeployer(ctx context.Context) (err error) {
-	m.aroOperatorDeployer, err = deploy.New(m.log, m.env, m.doc.OpenShiftCluster, m.arocli, m.client, m.extensionscli, m.kubernetescli, m.operatorcli)
+	m.aroOperatorDeployer, err = deploy.New(m.log, m.env, m.doc.OpenShiftCluster, m.arocli, m.client, m.extensionscli, m.kubernetescli, m.operatorcli, m.subscriptionDoc)
 	return
 }
 
