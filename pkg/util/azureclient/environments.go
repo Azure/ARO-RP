@@ -4,14 +4,19 @@ package azureclient
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 )
 
@@ -101,6 +106,21 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 	return AROEnvironment{}, fmt.Errorf("cloud environment %q is unsupported by ARO", name)
 }
 
+// ArmClientOptions returns an arm.ClientOptions to be passed in when instantiating
+// Azure SDK for Go clients.
+func (e *AROEnvironment) ArmClientOptions() arm.ClientOptions {
+	customRoundTripper := NewCustomRoundTripper(http.DefaultTransport)
+	return arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+			Retry: common.RetryOptions,
+			Transport: &http.Client{
+				Transport: customRoundTripper,
+			},
+		},
+	}
+}
+
 func (e *AROEnvironment) ClientCertificateCredentialOptions() *azidentity.ClientCertificateCredentialOptions {
 	return &azidentity.ClientCertificateCredentialOptions{
 		ClientOptions: azcore.ClientOptions{
@@ -155,4 +175,25 @@ func (e *AROEnvironment) NewGraphServiceClient(tokenCredential azcore.TokenCrede
 	client.GetAdapter().SetBaseUrl(e.MicrosoftGraphEndpoint + "v1.0")
 
 	return client, nil
+}
+
+// CloudNameForMsiDataplane returns the cloud name to be passed in when instantiating
+// an MSI dataplane client or an error if it encounters an issue getting the correct
+// cloud name. This function might seem a little strange, but it's necessary because
+// the cloud names stored in the AROEnvironments are in all-caps, whereas the ones
+// defined as constants in the dataplane module are in camel case.
+func (e *AROEnvironment) CloudNameForMsiDataplane() (string, error) {
+	cloud := ""
+	switch strings.ToUpper(e.Name) {
+	case dataplane.AzurePublicCloud:
+		cloud = dataplane.AzurePublicCloud
+	case dataplane.AzureUSGovCloud:
+		cloud = dataplane.AzureUSGovCloud
+	}
+
+	if cloud == "" {
+		return "", errors.New("could not determine which Azure Cloud to use to instantiate MSI dataplane client")
+	}
+
+	return cloud, nil
 }

@@ -18,6 +18,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+const (
+	SharedMSIKeyVaultNameSuffix = "-dev-msi"
+)
+
 type dev struct {
 	*prod
 }
@@ -100,4 +104,12 @@ func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cli
 
 func (d *dev) MsiRpEndpoint() string {
 	return "https://iamaplaceholder.com"
+}
+
+func (d *dev) ClusterMsiKeyVaultName() string {
+	prefix := os.Getenv("RESOURCEGROUP")
+	if len(prefix) > 10 {
+		prefix = prefix[:10]
+	}
+	return prefix + SharedMSIKeyVaultNameSuffix
 }

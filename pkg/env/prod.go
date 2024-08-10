@@ -320,6 +320,10 @@ func (p *prod) ClusterKeyvault() keyvault.Manager {
 	return p.clusterKeyvault
 }
 
+func (p *prod) ClusterMsiKeyVaultName() string {
+	return os.Getenv(KeyvaultPrefix) + ClusterMsiKeyVaultSuffix
+}
+
 func (p *prod) Domain() string {
 	return os.Getenv("DOMAIN_NAME")
 }

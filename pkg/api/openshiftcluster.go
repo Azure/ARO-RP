@@ -4,8 +4,11 @@ package api
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"sync"
 	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 )
 
 // OpenShiftCluster represents an OpenShift cluster
@@ -30,6 +33,29 @@ type OpenShiftCluster struct {
 // UsesWorkloadIdentity checks whether a cluster is a Workload Identity cluster or a Service Principal cluster
 func (oc *OpenShiftCluster) UsesWorkloadIdentity() bool {
 	return oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.ServicePrincipalProfile == nil
+}
+
+// ClusterMsiResourceId returns the resource ID of the cluster MSI or an error
+// if it encounters an issue while grabbing the resource ID from the cluster
+// doc. It is written under the assumption that there is only one cluster MSI
+// and will have to be refactored if we ever use more than one.
+func (oc *OpenShiftCluster) ClusterMsiResourceId() (*arm.ResourceID, error) {
+	var clusterMsi *arm.ResourceID
+	if oc.Identity != nil && oc.Identity.UserAssignedIdentities != nil {
+		for msiResourceId := range oc.Identity.UserAssignedIdentities {
+			var err error
+			clusterMsi, err = arm.ParseResourceID(msiResourceId)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if clusterMsi == nil {
+		return nil, errors.New("could not find cluster MSI in cluster doc")
+	}
+
+	return clusterMsi, nil
 }
 
 // CreatedByType by defines user type, which executed the request

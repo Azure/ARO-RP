@@ -84,6 +84,7 @@ type Interface interface {
 	ClusterGenevaLoggingNamespace() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClusterKeyvault() keyvault.Manager
+	ClusterMsiKeyVaultName() string
 	Domain() string
 	FeatureIsSet(Feature) bool
 	// TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.

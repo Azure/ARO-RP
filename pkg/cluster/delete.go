@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -25,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	azuresdkerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
@@ -343,7 +343,7 @@ func (m *manager) deleteGateway(ctx context.Context) error {
 		return nil
 	}
 
-	// http!s://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+	// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 	_, err := m.dbGateway.Patch(ctx, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID, func(doc *api.GatewayDocument) error {
 		doc.Gateway.Deleting = true
 		doc.TTL = 60
@@ -370,13 +370,11 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 	}
 
 	err = m.clusterMsiKeyVaultStore.DeleteCredentialsObject(ctx, secretName)
-	azcoreErr, ok := err.(*azcore.ResponseError)
-	isNotFoundErr := ok && azcoreErr.StatusCode == 404
-	if err != nil && !isNotFoundErr {
-		return err
+	if err == nil || azuresdkerrors.IsNotFoundError(err) {
+		return nil
 	}
 
-	return nil
+	return err
 }
 
 func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {

@@ -15,11 +15,14 @@ import (
 	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/Azure/msi-dataplane/pkg/store"
 	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
+	deprecatedgomock "github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -72,6 +75,7 @@ Response contained no body
 		name             string
 		doc              *api.OpenShiftClusterDocument
 		msiDataplaneStub policy.ClientOptions
+		envMocks         func(*mock_env.MockInterface)
 		kvClientMocks    func(*mockkvclient.MockKeyVaultClient)
 		wantErr          string
 	}{
@@ -195,6 +199,9 @@ Response contained no body
 					},
 				}),
 			},
+			envMocks: func(mockEnv *mock_env.MockInterface) {
+				mockEnv.EXPECT().FeatureIsSet(env.FeatureUseMockMsiRp).Return(true)
+			},
 			kvClientMocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
 				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, gomock.Any(), gomock.Any()).Times(1).Return(azsecrets.GetSecretResponse{}, secretNotFoundError)
 				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), gomock.Any()).Times(1).Return(azsecrets.SetSecretResponse{}, nil)
@@ -207,9 +214,18 @@ Response contained no body
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			deprecatedgomockController := deprecatedgomock.NewController(t)
+			defer deprecatedgomockController.Finish()
+
+			mockEnv := mock_env.NewMockInterface(deprecatedgomockController)
+			if tt.envMocks != nil {
+				tt.envMocks(mockEnv)
+			}
+
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				doc: tt.doc,
+				env: mockEnv,
 			}
 
 			msiDataplane, err := dataplane.NewClient(dataplane.AzurePublicCloud, nil, &tt.msiDataplaneStub)
@@ -289,87 +305,6 @@ func TestClusterMsiSecretName(t *testing.T) {
 			if result != tt.wantResult {
 				t.Error(result)
 			}
-		})
-	}
-}
-
-func TestClusterMsiResourceId(t *testing.T) {
-	mockGuid := "00000000-0000-0000-0000-000000000000"
-	clusterRGName := "aro-cluster"
-	miName := "aro-cluster-msi"
-	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
-
-	tests := []struct {
-		name    string
-		doc     *api.OpenShiftClusterDocument
-		wantErr string
-	}{
-		{
-			name: "error - cluster doc has nil Identity",
-			doc: &api.OpenShiftClusterDocument{
-				OpenShiftCluster: &api.OpenShiftCluster{},
-			},
-			wantErr: "could not find cluster MSI in cluster doc",
-		},
-		{
-			name: "error - cluster doc has non-nil Identity but nil Identity.UserAssignedIdentities",
-			doc: &api.OpenShiftClusterDocument{
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{},
-				},
-			},
-			wantErr: "could not find cluster MSI in cluster doc",
-		},
-		{
-			name: "error - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
-			doc: &api.OpenShiftClusterDocument{
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{},
-					},
-				},
-			},
-			wantErr: "could not find cluster MSI in cluster doc",
-		},
-		{
-			name: "error - invalid resource ID (theoretically not possible, but still)",
-			doc: &api.OpenShiftClusterDocument{
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							"Hi hello I'm not a valid resource ID": api.ClusterUserAssignedIdentity{},
-						},
-					},
-				},
-			},
-			wantErr: "invalid resource ID: resource id 'Hi hello I'm not a valid resource ID' must start with '/'",
-		},
-		{
-			name: "success",
-			doc: &api.OpenShiftClusterDocument{
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				doc: tt.doc,
-			}
-
-			_, err := m.clusterMsiResourceId()
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

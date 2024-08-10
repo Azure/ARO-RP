@@ -10,6 +10,7 @@ import (
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
@@ -19,8 +20,7 @@ var (
 	storageAccountName         string = "parameters('oidcStorageAccountName')"
 	resourceTypeStorageAccount string = "Microsoft.Storage/storageAccounts"
 
-	SharedMSIKeyVaultName       = "concat(take(resourceGroup().name,10), '" + SharedMSIKeyVaultNameSuffix + "')"
-	SharedMSIKeyVaultNameSuffix = "-dev-msi"
+	SharedMSIKeyVaultName = "concat(take(resourceGroup().name,10), '" + env.SharedMSIKeyVaultNameSuffix + "')"
 )
 
 func (g *generator) oicStorageAccount() *arm.Resource {

@@ -5,22 +5,21 @@ package cluster
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/Azure/msi-dataplane/pkg/store"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 )
 
 const (
-	msiCertValidityDays = 90
+	mockMsiCertValidityDays = 90
 )
 
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
@@ -40,7 +39,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 		return err
 	}
 
-	clusterMsiResourceId, err := m.clusterMsiResourceId()
+	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
 	if err != nil {
 		return err
 	}
@@ -57,7 +56,22 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	}
 
 	now := time.Now()
-	expirationDate := now.AddDate(0, 0, msiCertValidityDays)
+
+	var expirationDate time.Time
+	if m.env.FeatureIsSet(env.FeatureUseMockMsiRp) {
+		expirationDate = now.AddDate(0, 0, mockMsiCertValidityDays)
+	} else {
+		if msiCredObj.CredentialsObject.ExplicitIdentities == nil || len(msiCredObj.CredentialsObject.ExplicitIdentities) == 0 || msiCredObj.CredentialsObject.ExplicitIdentities[0] == nil || msiCredObj.CredentialsObject.ExplicitIdentities[0].NotAfter == nil {
+			return errors.New("unable to pull NotAfter from the MSI CredentialsObject")
+		}
+
+		// The swagger API spec for the MI RP specifies that NotAfter will be "in the format 2017-03-01T14:11:00Z".
+		expirationDate, err = time.Parse(time.RFC3339, *msiCredObj.CredentialsObject.ExplicitIdentities[0].NotAfter)
+		if err != nil {
+			return err
+		}
+	}
+
 	secretProperties := store.SecretProperties{
 		Enabled:   true,
 		Expires:   expirationDate,
@@ -81,54 +95,35 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 		return err
 	}
 
-	// This code assumes that there is only one cluster MSI and will have to be
-	// refactored if we ever use more than one.
-	if kvSecret.CredentialsObject.ExplicitIdentities == nil {
-		return errors.New("found nil ExplicitIdentities in cluster MSI CredentialsObject")
-	} else if len(kvSecret.CredentialsObject.ExplicitIdentities) == 0 {
-		return errors.New("found empty ExplicitIdentities in cluster MSI CredentialsObject")
-	} else if len(kvSecret.CredentialsObject.ExplicitIdentities) > 1 {
-		m.log.Warning("unexpectedly found more than one entry in ExplicitIdentities in cluster MSI CredentialsObject; will attempt to instantiate a cluster MSI credential using the first one")
-	}
-
-	if kvSecret.CredentialsObject.ExplicitIdentities[0].ClientID == nil {
-		return errors.New("found nil ClientID while parsing cluster MSI CredentialsObject")
-	}
-	if kvSecret.CredentialsObject.ExplicitIdentities[0].TenantID == nil {
-		return errors.New("found nil TenantID while parsing cluster MSI CredentialsObject")
-	}
-	if kvSecret.CredentialsObject.ExplicitIdentities[0].ClientSecret == nil {
-		return errors.New("found nil ClientSecret while parsing cluster MSI CredentialsObject")
-	}
-
-	clientId := *kvSecret.CredentialsObject.ExplicitIdentities[0].ClientID
-	tenantId := *kvSecret.CredentialsObject.ExplicitIdentities[0].TenantID
-	certData := *kvSecret.CredentialsObject.ExplicitIdentities[0].ClientSecret
-
-	decodedCertData, err := base64.StdEncoding.DecodeString(certData)
+	cloud, err := m.env.Environment().CloudNameForMsiDataplane()
 	if err != nil {
 		return err
 	}
 
-	certs, key, err := azidentity.ParseCertificates(decodedCertData, nil)
+	uaIdentities, err := dataplane.NewUserAssignedIdentities(kvSecret.CredentialsObject, cloud)
 	if err != nil {
 		return err
 	}
 
-	cred, err := azidentity.NewClientCertificateCredential(tenantId, clientId, certs, key, m.env.Environment().ClientCertificateCredentialOptions())
+	msiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	if err != nil {
+		return err
+	}
+
+	azureCred, err := uaIdentities.GetCredential(msiResourceId.String())
 	if err != nil {
 		return err
 	}
 
 	// Note that we are assuming that all of the platform MIs are in the same subscription.
-	resourceId, err := arm.ParseResourceID(m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].ResourceID)
+	pwiResourceId, err := arm.ParseResourceID(m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].ResourceID)
 	if err != nil {
 		return err
 	}
 
-	subId := resourceId.SubscriptionID
-	clientOptions := getClientOptions(m.env.Environment())
-	clusterMsiFederatedIdentityCredentials, err := armmsi.NewFederatedIdentityCredentialsClient(subId, cred, &clientOptions)
+	subId := pwiResourceId.SubscriptionID
+	clientOptions := m.env.Environment().ArmClientOptions()
+	clusterMsiFederatedIdentityCredentials, err := armmsi.NewFederatedIdentityCredentialsClient(subId, azureCred, &clientOptions)
 	if err != nil {
 		return err
 	}
@@ -140,33 +135,10 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 // clusterMsiSecretName returns the name to store the cluster MSI certificate under in
 // the cluster MSI key vault.
 func (m *manager) clusterMsiSecretName() (string, error) {
-	clusterMsi, err := m.clusterMsiResourceId()
+	clusterMsi, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
 	if err != nil {
 		return "", err
 	}
 
 	return fmt.Sprintf("%s-%s", m.doc.ID, clusterMsi.Name), nil
-}
-
-// clusterMsiResourceId returns the resource ID of the cluster MSI or an error
-// if it encounters an issue while grabbing the resource ID from the cluster
-// doc. It is written under the assumption that there is only one cluster MSI
-// and will have to be refactored if we ever use more than one.
-func (m *manager) clusterMsiResourceId() (*arm.ResourceID, error) {
-	var clusterMsi *arm.ResourceID
-	if m.doc.OpenShiftCluster.Identity != nil && m.doc.OpenShiftCluster.Identity.UserAssignedIdentities != nil {
-		for msiResourceId := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
-			var err error
-			clusterMsi, err = arm.ParseResourceID(msiResourceId)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	if clusterMsi == nil {
-		return nil, errors.New("could not find cluster MSI in cluster doc")
-	}
-
-	return clusterMsi, nil
 }

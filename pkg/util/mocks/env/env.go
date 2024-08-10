@@ -203,6 +203,20 @@ func (mr *MockInterfaceMockRecorder) ClusterKeyvault() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterKeyvault", reflect.TypeOf((*MockInterface)(nil).ClusterKeyvault))
 }
 
+// ClusterMsiKeyVaultName mocks base method.
+func (m *MockInterface) ClusterMsiKeyVaultName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterMsiKeyVaultName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ClusterMsiKeyVaultName indicates an expected call of ClusterMsiKeyVaultName.
+func (mr *MockInterfaceMockRecorder) ClusterMsiKeyVaultName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterMsiKeyVaultName", reflect.TypeOf((*MockInterface)(nil).ClusterMsiKeyVaultName))
+}
+
 // Component mocks base method.
 func (m *MockInterface) Component() string {
 	m.ctrl.T.Helper()
