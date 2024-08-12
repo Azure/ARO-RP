@@ -169,7 +169,6 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry, otelAudit *audit.Audit) 
 				if err := otelAudit.SendAuditMessage(r.Context(), &auditMsg); err != nil {
 					log.Printf("Portal - Error sending audit message: %v", err)
 				}
-
 			}()
 
 			h.ServeHTTP(w, r)
