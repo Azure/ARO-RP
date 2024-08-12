@@ -48,3 +48,8 @@ feature flags defined in pkg/env/env.go.  At the time of writing these include:
 * RequireOIDCStorageWebEndpoint: Since Azure Front Door is only present for INT and PROD, there is a need to determine the web endpoint of the OIDC Storage Account after its creation.
 Format of web endpoint(It uses Azure DNS Zone endpoint):- **https://[storage-account].z[00-99].web.storage.azure.net** .
 Used in development only.
+
+* UseMockMsiRp: The MSI RP is only present in PROD, so this feature flag is used
+  in local development, full service development, and INT to tell the RP to use a
+  mocked version of the MSI dataplane for the cluster MSI. Only relevant to
+  clusters that have a cluster MSI.
