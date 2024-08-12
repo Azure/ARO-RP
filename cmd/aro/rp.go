@@ -38,10 +38,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
+	auditlog "github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
-func rp(ctx context.Context, log, audit *logrus.Entry, otelAudit *otelaudit.Audit) error {
+func rp(ctx context.Context, log, audit *logrus.Entry, otelAudit *auditlog.Audit) error {
 	stop := make(chan struct{})
 
 	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)

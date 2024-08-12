@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
-	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
 )
 
 type logResponseWriter struct {
@@ -56,7 +55,7 @@ type LogMiddleware struct {
 	Hostname        string
 	Location        string
 	AuditLog        *logrus.Entry
-	OtelAudit       *otelaudit.Audit
+	OtelAudit       *audit.Audit
 	BaseLog         *logrus.Entry
 }
 
@@ -145,55 +144,52 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 		})
 
 		auditMsg := msgs.Msg{Type: msgs.ControlPlane}
-		auditRec := otelaudit.GetAuditRecord()
+		auditRec := audit.GetAuditRecord()
 
 		callerIpAddress, err := msgs.ParseAddr(r.RemoteAddr)
 		if err != nil {
 			log.Printf("Error parsing remote address: %s, error: %v", r.RemoteAddr, err)
 		}
 
-		auditRec{
-			CallerIpAddress: callerIpAddress,
-			CallerIdentities: map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry{
-				msgs.ApplicationID: []msgs.CallerIdentityEntry{
-					{
-						Identity:    audit.CallerIdentityTypeApplicationID,
-						Description: "Client application ID",
-					},
-				},
-				// Need to revisit this
-				// msgs.ObjectID: []msgs.CallerIdentityEntry{
-				// 	{
-				// 		Identity:    audit.CallerIdentityTypeObjectID,
-				// 		Description: "Client Object ID",
-				// 	},
-				// },
-				// msgs.UPN: []msgs.CallerIdentityEntry{
-				// 	{
-				// 		Identity:    correlationData.ClientPrincipalName,
-				// 		Description: "Client principal name",
-				// 	},
-				// },
-			},
-			OperationCategories: []msgs.OperationCategory{msgs.ResourceManagement},
-			CustomData:          otelaudit.GetCustomData(),
-			TargetResources: map[string][]msgs.TargetResourceEntry{
-				auditTargetResourceType(r): []msgs.TargetResourceEntry{
-					{
-						Name:   r.URL.Path,
-						Region: l.Location,
-					},
+		auditRec.CallerIpAddress = callerIpAddress
+		auditRec.CallerIdentities = map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry{
+			msgs.ApplicationID: {
+				{
+					Identity:    audit.CallerIdentityTypeApplicationID,
+					Description: "Client application ID",
 				},
 			},
-			CallerAccessLevels:   "Caller admin AccessLevels",
-			OperationAccessLevel: "Portal Admin Operation AccessLevel",
-			OperationName:        operationName,
-			// OperationResultDescription: fmt.Sprintf("%s %s", r.Method, r.URL.Path),
-			CallerAgent:                  r.UserAgent(),
-			OperationCategoryDescription: "Client Resource Management via frontend",
-			OperationType:                otelaudit.GetOperationType(r.Method),
-			// OperationResult:
+			// Need to revisit this
+			// msgs.ObjectID: []msgs.CallerIdentityEntry{
+			// 	{
+			// 		Identity:    audit.CallerIdentityTypeObjectID,
+			// 		Description: "Client Object ID",
+			// 	},
+			// },
+			// msgs.UPN: []msgs.CallerIdentityEntry{
+			// 	{
+			// 		Identity:    correlationData.ClientPrincipalName,
+			// 		Description: "Client principal name",
+			// 	},
+			// },
 		}
+		auditRec.OperationCategories = []msgs.OperationCategory{msgs.ResourceManagement}
+		auditRec.CustomData = audit.GetCustomData()
+		auditRec.TargetResources = map[string][]msgs.TargetResourceEntry{
+			auditTargetResourceType(r): {
+				{
+					Name:   r.URL.Path,
+					Region: l.Location,
+				},
+			},
+		}
+		auditRec.CallerAccessLevels = []string{"Caller admin AccessLevels"}
+		auditRec.OperationAccessLevel = "Frontend Admin Operation AccessLevel"
+		auditRec.OperationName = operationName
+		// OperationResultDescription: fmt.Sprintf("%s %s", r.Method, r.URL.Path),
+		auditRec.CallerAgent = r.UserAgent()
+		auditRec.OperationCategoryDescription = "Client Resource Management via frontend"
+		auditRec.OperationType = audit.GetOperationType(r.Method)
 
 		defer func() {
 			statusCode := w.(*logResponseWriter).statusCode
@@ -224,9 +220,9 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 				},
 			}).Info(audit.DefaultLogMessage)
 
-			auditMsg.Record = auditRec
+			auditMsg.Record = *auditRec
 
-			if err := l.OtelAudit.Client.SendAuditMessage(r.Context(), &auditMsg); err != nil {
+			if err := l.OtelAudit.SendAuditMessage(r.Context(), &auditMsg); err != nil {
 				log.Printf("Frontend - Error sending audit message: %v", err)
 			}
 		}()

@@ -2,7 +2,6 @@ package audit
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/microsoft/go-otel-audit/audit"
@@ -15,18 +14,16 @@ type Audit struct {
 }
 
 // New creates a new audit client based on the connection type (uds or tcp)
-func New(connectionType string) (*Audit, error) {
+func New(connectionType string) *Audit {
 	audit := &Audit{}
 
 	if strings.ToLower(connectionType) == "uds" {
 		audit.newUDSCon()
-	} else if strings.ToLower(connectionType) == "tcp" {
-		audit.newTCPCon("localhost:8080")
 	} else {
-		return nil, errors.New("invalid connection type")
+		audit.newTCPCon("localhost:8080")
 	}
 
-	return audit, nil
+	return audit
 }
 
 func (a *Audit) newUDSCon() {
@@ -73,8 +70,8 @@ func (a *Audit) SendAuditMessage(ctx context.Context, msg *msgs.Msg) error {
 	return a.Client.Send(ctx, *msg)
 }
 
-func GetCustomData() *map[string]string {
-	return &map[string]string{}
+func GetCustomData() map[string]any {
+	return map[string]any{}
 }
 
 func GetOperationType(method string) msgs.OperationType {
