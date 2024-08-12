@@ -21,7 +21,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
+	auditlog "github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -76,7 +76,7 @@ type aad struct {
 
 func NewAAD(log *logrus.Entry,
 	audit *logrus.Entry,
-	otelAudit *otelaudit.Audit,
+	otelAudit *auditlog.Audit,
 	env env.Core,
 	baseAccessLog *logrus.Entry,
 	hostname string,

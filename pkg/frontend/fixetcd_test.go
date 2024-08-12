@@ -515,7 +515,7 @@ func TestFixEtcd(t *testing.T) {
 			})
 
 			f, err := NewFrontend(ctx,
-				ti.audit,
+				ti.audit, ti.otelAudit,
 				ti.log,
 				ti.env,
 				ti.dbGroup,

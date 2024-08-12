@@ -20,12 +20,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
+	auditlog "github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry, otelAudit *otelaudit.Audit) error {
+func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry, otelAudit *auditlog.Audit) error {
 	_env, err := env.NewCore(ctx, log, env.COMPONENT_PORTAL)
 	if err != nil {
 		return err

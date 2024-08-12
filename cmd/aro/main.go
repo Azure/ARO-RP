@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
+	auditlog "github.com/Azure/ARO-RP/pkg/util/log/audit"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -39,7 +39,7 @@ func main() {
 	ctx := context.Background()
 	audit := utillog.GetAuditEntry()
 
-	otelAudit := otelaudit.New("uds")
+	otelAudit := auditlog.New("uds")
 	defer otelAudit.Client.Close(context.Background())
 
 	log := utillog.GetLogger()

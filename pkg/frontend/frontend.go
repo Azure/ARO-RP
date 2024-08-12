@@ -32,7 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -58,7 +58,7 @@ type appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftClus
 
 type frontend struct {
 	auditLog  *logrus.Entry
-	otelAudit *otelaudit.Audit
+	otelAudit *audit.Audit
 	baseLog   *logrus.Entry
 	env       env.Interface
 
@@ -118,7 +118,7 @@ type Runnable interface {
 // NewFrontend returns a new runnable frontend
 func NewFrontend(ctx context.Context,
 	auditLog *logrus.Entry,
-	otelAudit *otelaudit.Audit,
+	otelAudit *audit.Audit,
 	baseLog *logrus.Entry,
 	_env env.Interface,
 	dbGroup frontendDBs,
