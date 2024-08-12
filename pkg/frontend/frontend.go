@@ -32,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -56,9 +57,10 @@ type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluste
 type appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error)
 
 type frontend struct {
-	auditLog *logrus.Entry
-	baseLog  *logrus.Entry
-	env      env.Interface
+	auditLog  *logrus.Entry
+	otelAudit *otelaudit.Audit
+	baseLog   *logrus.Entry
+	env       env.Interface
 
 	logMiddleware         middleware.LogMiddleware
 	validateMiddleware    middleware.ValidateMiddleware
@@ -116,6 +118,7 @@ type Runnable interface {
 // NewFrontend returns a new runnable frontend
 func NewFrontend(ctx context.Context,
 	auditLog *logrus.Entry,
+	otelAudit *otelaudit.Audit,
 	baseLog *logrus.Entry,
 	_env env.Interface,
 	dbGroup frontendDBs,
@@ -136,10 +139,12 @@ func NewFrontend(ctx context.Context,
 			Hostname:        _env.Hostname(),
 			BaseLog:         baseLog.WithField("component", "access"),
 			AuditLog:        auditLog,
+			OtelAudit:       otelAudit,
 		},
-		baseLog:  baseLog,
-		auditLog: auditLog,
-		env:      _env,
+		baseLog:   baseLog,
+		auditLog:  auditLog,
+		otelAudit: otelAudit,
+		env:       _env,
 		apiVersionMiddleware: middleware.ApiVersionValidator{
 			APIs: api.APIs,
 		},

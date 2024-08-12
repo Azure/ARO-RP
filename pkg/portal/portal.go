@@ -36,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/ssh"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
@@ -51,6 +52,7 @@ type Runnable interface {
 type portal struct {
 	env           env.Core
 	audit         *logrus.Entry
+	otelAudit     *otelaudit.Audit
 	log           *logrus.Entry
 	baseAccessLog *logrus.Entry
 	l             net.Listener
@@ -83,6 +85,7 @@ type portal struct {
 
 func NewPortal(env env.Core,
 	audit *logrus.Entry,
+	otelAudit *otelaudit.Audit,
 	log *logrus.Entry,
 	baseAccessLog *logrus.Entry,
 	l net.Listener,
@@ -105,6 +108,7 @@ func NewPortal(env env.Core,
 	return &portal{
 		env:           env,
 		audit:         audit,
+		otelAudit:     otelAudit,
 		log:           log,
 		baseAccessLog: baseAccessLog,
 		l:             l,
@@ -162,7 +166,7 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 	allGroups := append([]string{}, p.groupIDs...)
 	allGroups = append(allGroups, p.elevatedGroupIDs...)
 
-	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
+	p.aad, err = middleware.NewAAD(p.log, p.audit, p.otelAudit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
 	if err != nil {
 		return nil, err
 	}
