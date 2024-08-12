@@ -38,9 +38,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
 )
 
-func rp(ctx context.Context, log, audit *logrus.Entry) error {
+func rp(ctx context.Context, log, audit *logrus.Entry, otelAudit *otelaudit.Audit) error {
 	stop := make(chan struct{})
 
 	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)
@@ -170,7 +171,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions)
 
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
+	f, err := frontend.NewFrontend(ctx, audit, otelAudit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}

@@ -11,12 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/microsoft/go-otel-audit/audit/msgs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
+	otelaudit "github.com/Azure/ARO-RP/pkg/util/log/audit/otel_audit"
 )
 
 type logResponseWriter struct {
@@ -54,6 +56,7 @@ type LogMiddleware struct {
 	Hostname        string
 	Location        string
 	AuditLog        *logrus.Entry
+	OtelAudit       *otelaudit.Audit
 	BaseLog         *logrus.Entry
 }
 
@@ -141,6 +144,57 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 			},
 		})
 
+		auditMsg := msgs.Msg{Type: msgs.ControlPlane}
+		auditRec := otelaudit.GetAuditRecord()
+
+		callerIpAddress, err := msgs.ParseAddr(r.RemoteAddr)
+		if err != nil {
+			log.Printf("Error parsing remote address: %s, error: %v", r.RemoteAddr, err)
+		}
+
+		auditRec{
+			CallerIpAddress: callerIpAddress,
+			CallerIdentities: map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry{
+				msgs.ApplicationID: []msgs.CallerIdentityEntry{
+					{
+						Identity:    audit.CallerIdentityTypeApplicationID,
+						Description: "Client application ID",
+					},
+				},
+				// Need to revisit this
+				// msgs.ObjectID: []msgs.CallerIdentityEntry{
+				// 	{
+				// 		Identity:    audit.CallerIdentityTypeObjectID,
+				// 		Description: "Client Object ID",
+				// 	},
+				// },
+				// msgs.UPN: []msgs.CallerIdentityEntry{
+				// 	{
+				// 		Identity:    correlationData.ClientPrincipalName,
+				// 		Description: "Client principal name",
+				// 	},
+				// },
+			},
+			OperationCategories: []msgs.OperationCategory{msgs.ResourceManagement},
+			CustomData:          otelaudit.GetCustomData(),
+			TargetResources: map[string][]msgs.TargetResourceEntry{
+				auditTargetResourceType(r): []msgs.TargetResourceEntry{
+					{
+						Name:   r.URL.Path,
+						Region: l.Location,
+					},
+				},
+			},
+			CallerAccessLevels:   "Caller admin AccessLevels",
+			OperationAccessLevel: "Portal Admin Operation AccessLevel",
+			OperationName:        operationName,
+			// OperationResultDescription: fmt.Sprintf("%s %s", r.Method, r.URL.Path),
+			CallerAgent:                  r.UserAgent(),
+			OperationCategoryDescription: "Client Resource Management via frontend",
+			OperationType:                otelaudit.GetOperationType(r.Method),
+			// OperationResult:
+		}
+
 		defer func() {
 			statusCode := w.(*logResponseWriter).statusCode
 			log.WithFields(logrus.Fields{
@@ -151,8 +205,12 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 			}).Print("sent response")
 
 			resultType := audit.ResultTypeSuccess
+			auditRec.OperationResult = msgs.Success
+
 			if statusCode >= http.StatusBadRequest {
 				resultType = audit.ResultTypeFail
+				auditRec.OperationResult = msgs.Failure
+				auditRec.OperationResultDescription = fmt.Sprintf("Status code: %d", statusCode)
 			}
 
 			if r.URL.Path == "/healthz/ready" {
@@ -165,6 +223,12 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 					ResultDescription: fmt.Sprintf("Status code: %d", statusCode),
 				},
 			}).Info(audit.DefaultLogMessage)
+
+			auditMsg.Record = auditRec
+
+			if err := l.OtelAudit.Client.SendAuditMessage(r.Context(), &auditMsg); err != nil {
+				log.Printf("Frontend - Error sending audit message: %v", err)
+			}
 		}()
 
 		h.ServeHTTP(w, r)
