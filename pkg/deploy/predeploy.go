@@ -340,10 +340,6 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-	// if !isCreate {
-	// 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
-	// 	Value: isCreate,
-	// 	}
 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
 		Value: isCreate,
 	}

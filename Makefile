@@ -384,7 +384,11 @@ rp-full-dev: # Build and run a rp-full-dev container for automating rp-full-dev
 		--build-arg ARO_RP_BRANCH=$(ARO_RP_BRANCH) \
 		-f Dockerfile.rp-full-dev \
 		-t $(RP_FULL_DEV_IMAGE) .
-	docker run --rm -it --user=0 --privileged -v /dev/shm:/dev/shm -v "${HOME}/.azure:/root/.azure" --device /dev/net/tun --name rp-full-dev-container $(RP_FULL_DEV_IMAGE)
+	docker run --rm -it --user=0 --privileged \
+		-v /dev/shm:/dev/shm \
+		-v "${HOME}/.azure:/root/.azure" \
+		--device /dev/net/tun \
+		--name rp-full-dev-container $(RP_FULL_DEV_IMAGE)
 
 .PHONY: rp-full-dev-clenup
 rp-full-dev-clenup: # Clean all the rp-full-dev resources by deleting ResourceGroups and KeyVaults

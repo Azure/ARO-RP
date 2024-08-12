@@ -328,11 +328,11 @@ func (g *generator) rpPredeployTemplate(hasAKS bool) *arm.Template {
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
 	)
-	
+
 	if hasAKS {
 		t.Resources = append(t.Resources, g.rpServiceKeyvaultDynamic())
 	}
-	
+
 	if g.production {
 		t.Resources = append(t.Resources,
 			g.rpSecurityGroupForPortalSourceAddressPrefixes(),

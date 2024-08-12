@@ -15,8 +15,7 @@ extract_image_tag() {
         fi
     done
 
-    
-    local return_line=$(grep -A 1 "func $1" "$2" | grep 'return')
+    local return_line=$(grep -A 2 "func $1" "$2" | grep 'return')
     echo "$return_line" | sed 's/.*"\(.*\)@sha256.*/\1/'
 }
 

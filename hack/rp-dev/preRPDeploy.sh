@@ -41,7 +41,7 @@ echo "Success step 6e ✈️ 📦 - Copy Fluenbit image to ACR"
 echo "Success step 6 ✅ - Mirror repos to ACR"
 
 export PARENT_DOMAIN_NAME=osadev.cloud
-export PARENT_DOMAIN_RESOURCEGROUP=dns
+# export PARENT_DOMAIN_RESOURCEGROUP=dns
 export GLOBAL_RESOURCEGROUP=${AZURE_PREFIX}-global
 
 for DOMAIN_NAME in ${AZURE_PREFIX}-clusters.$PARENT_DOMAIN_NAME ${AZURE_PREFIX}-rp.$PARENT_DOMAIN_NAME; do

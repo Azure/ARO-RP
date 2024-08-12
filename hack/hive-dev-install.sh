@@ -79,7 +79,5 @@ $KUBECTL apply -f ./hack/hive-config/hive-additional-install-log-regexes.yaml
 $KUBECTL apply -f ./hack/hive-config/hive-deployment.yaml
 
 $KUBECTL wait --timeout=5m --for=condition=Available --namespace $HIVE_OPERATOR_NS deployment/hive-operator
-$KUBECTL wait --timeout=5m --for=condition=Available --namespace $HIVE_OPERATOR_NS deployment/hive-controllers
-$KUBECTL wait --timeout=5m --for=condition=Ready --namespace $HIVE_OPERATOR_NS pod --selector "control-plane=clustersync"
 
 echo -e "\nHive is installed."
