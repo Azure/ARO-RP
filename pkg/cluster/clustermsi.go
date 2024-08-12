@@ -123,7 +123,7 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 
 	subId := pwiResourceId.SubscriptionID
 	clientOptions := m.env.Environment().ArmClientOptions()
-	clusterMsiFederatedIdentityCredentials, err := armmsi.NewFederatedIdentityCredentialsClient(subId, azureCred, &clientOptions)
+	clusterMsiFederatedIdentityCredentials, err := armmsi.NewFederatedIdentityCredentialsClient(subId, azureCred, clientOptions)
 	if err != nil {
 		return err
 	}

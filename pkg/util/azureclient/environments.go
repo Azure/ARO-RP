@@ -108,9 +108,9 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 
 // ArmClientOptions returns an arm.ClientOptions to be passed in when instantiating
 // Azure SDK for Go clients.
-func (e *AROEnvironment) ArmClientOptions() arm.ClientOptions {
+func (e *AROEnvironment) ArmClientOptions() *arm.ClientOptions {
 	customRoundTripper := NewCustomRoundTripper(http.DefaultTransport)
-	return arm.ClientOptions{
+	return &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: e.Cloud,
 			Retry: common.RetryOptions,

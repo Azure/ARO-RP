@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
@@ -101,6 +103,7 @@ type Interface interface {
 	OIDCEndpoint() string
 	OIDCKeyBitSize() int
 	MsiRpEndpoint() string
+	MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy.ClientOptions, error)
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 

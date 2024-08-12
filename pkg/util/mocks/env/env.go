@@ -12,6 +12,8 @@ import (
 	reflect "reflect"
 
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
@@ -490,6 +492,21 @@ func (m *MockInterface) Logger() *logrus.Entry {
 func (mr *MockInterfaceMockRecorder) Logger() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockInterface)(nil).Logger))
+}
+
+// MsiDataplaneClientOptions mocks base method.
+func (m *MockInterface) MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy.ClientOptions, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MsiDataplaneClientOptions", msiResourceId)
+	ret0, _ := ret[0].(*policy.ClientOptions)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MsiDataplaneClientOptions indicates an expected call of MsiDataplaneClientOptions.
+func (mr *MockInterfaceMockRecorder) MsiDataplaneClientOptions(msiResourceId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MsiDataplaneClientOptions", reflect.TypeOf((*MockInterface)(nil).MsiDataplaneClientOptions), msiResourceId)
 }
 
 // MsiRpEndpoint mocks base method.

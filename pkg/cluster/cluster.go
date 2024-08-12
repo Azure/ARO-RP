@@ -7,14 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/Azure/msi-dataplane/pkg/store"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
@@ -27,7 +25,6 @@ import (
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
@@ -189,37 +186,37 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 	clientOptions := _env.Environment().ArmClientOptions()
 
-	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredRPTenant, &clientOptions)
+	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredRPTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armSecurityGroupsClient, err := armnetwork.NewSecurityGroupsClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armSecurityGroupsClient, err := armnetwork.NewSecurityGroupsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, msiCredential, &clientOptions)
+	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, msiCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -303,52 +300,14 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		}
 
 		msiDataplaneClientOptions := clientOptions.ClientOptions
+		msiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+		if err != nil {
+			return nil, err
+		}
 
-		if _env.FeatureIsSet(env.FeatureUseMockMsiRp) {
-			keysToValidate := []string{
-				"MOCK_MSI_CLIENT_ID",
-				"MOCK_MSI_CERT",
-				"MOCK_MSI_TENANT_ID",
-			}
-
-			if err = env.ValidateVars(keysToValidate...); err != nil {
-				return nil, err
-			}
-
-			msiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
-			if err != nil {
-				return nil, err
-			}
-
-			// Every attribute on the NestedCredentialsObject needs to be set for the mock MSI
-			// dataplane to be happy.
-			placeholder := "placeholder"
-			msiDataplaneClientOptions.Transport = dataplane.NewStub([]*dataplane.CredentialsObject{
-				{
-					CredentialsObject: swagger.CredentialsObject{
-						ExplicitIdentities: []*swagger.NestedCredentialsObject{
-							{
-								ClientID:                   ptr.To(os.Getenv("MOCK_MSI_CLIENT_ID")),
-								ClientSecret:               ptr.To(os.Getenv("MOCK_MSI_CERT")),
-								TenantID:                   ptr.To(os.Getenv("MOCK_MSI_TENANT_ID")),
-								ResourceID:                 ptr.To(msiResourceId.String()),
-								AuthenticationEndpoint:     ptr.To(_env.Environment().Cloud.ActiveDirectoryAuthorityHost),
-								CannotRenewAfter:           &placeholder,
-								ClientSecretURL:            &placeholder,
-								MtlsAuthenticationEndpoint: &placeholder,
-								NotAfter:                   &placeholder,
-								NotBefore:                  &placeholder,
-								RenewAfter:                 &placeholder,
-								CustomClaims: &swagger.CustomClaims{
-									XMSAzNwperimid: []*string{&placeholder},
-									XMSAzTm:        &placeholder,
-								},
-								ObjectID: &placeholder,
-							},
-						},
-					},
-				},
-			})
+		msiDataplaneClientOptions, err := _env.MsiDataplaneClientOptions(msiResourceId)
+		if err != nil {
+			return nil, err
 		}
 
 		cloud, err := _env.Environment().CloudNameForMsiDataplane()
@@ -357,14 +316,14 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		}
 
 		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpCredRPTenant, _env.MsiRpEndpoint())
-		msiDataplane, err := dataplane.NewClient(cloud, authenticatorPolicy, &msiDataplaneClientOptions)
+		msiDataplane, err := dataplane.NewClient(cloud, authenticatorPolicy, msiDataplaneClientOptions)
 		if err != nil {
 			return nil, err
 		}
 
 		clusterMsiKeyVaultName := _env.ClusterMsiKeyVaultName()
 		clusterMsiKeyVaultURL := fmt.Sprintf("https://%s.vault.azure.net", clusterMsiKeyVaultName)
-		clusterMsiSecretsClient, err := azsecrets.NewClient(clusterMsiKeyVaultURL, msiCredential, &clientOptions)
+		clusterMsiSecretsClient, err := azsecrets.NewClient(clusterMsiKeyVaultURL, msiCredential, clientOptions)
 		if err != nil {
 			return nil, err
 		}

@@ -41,7 +41,7 @@ func (oc *OpenShiftCluster) UsesWorkloadIdentity() bool {
 // and will have to be refactored if we ever use more than one.
 func (oc *OpenShiftCluster) ClusterMsiResourceId() (*arm.ResourceID, error) {
 	var clusterMsi *arm.ResourceID
-	if oc.Identity != nil && oc.Identity.UserAssignedIdentities != nil {
+	if oc.Identity != nil && oc.Identity.UserAssignedIdentities != nil && len(oc.Identity.UserAssignedIdentities) == 1 {
 		for msiResourceId := range oc.Identity.UserAssignedIdentities {
 			var err error
 			clusterMsi, err = arm.ParseResourceID(msiResourceId)
@@ -52,7 +52,7 @@ func (oc *OpenShiftCluster) ClusterMsiResourceId() (*arm.ResourceID, error) {
 	}
 
 	if clusterMsi == nil {
-		return nil, errors.New("could not find cluster MSI in cluster doc")
+		return nil, errors.New("could not find cluster MSI in cluster doc or unexpectedly found more than one cluster MSI")
 	}
 
 	return clusterMsi, nil

@@ -14,12 +14,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
+	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -392,4 +397,53 @@ func (p *prod) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cl
 
 func (p *prod) MsiRpEndpoint() string {
 	return fmt.Sprintf("https://%s", os.Getenv("MSI_RP_ENDPOINT"))
+}
+
+func (p *prod) MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy.ClientOptions, error) {
+	armClientOptions := p.Environment().ArmClientOptions()
+	clientOptions := armClientOptions.ClientOptions
+
+	if p.FeatureIsSet(FeatureUseMockMsiRp) {
+		keysToValidate := []string{
+			"MOCK_MSI_CLIENT_ID",
+			"MOCK_MSI_CERT",
+			"MOCK_MSI_TENANT_ID",
+		}
+
+		if err := ValidateVars(keysToValidate...); err != nil {
+			return nil, err
+		}
+
+		// Every attribute on the NestedCredentialsObject needs to be set for the mock MSI
+		// dataplane to be happy.
+		placeholder := "placeholder"
+		clientOptions.Transport = dataplane.NewStub([]*dataplane.CredentialsObject{
+			{
+				CredentialsObject: swagger.CredentialsObject{
+					ExplicitIdentities: []*swagger.NestedCredentialsObject{
+						{
+							ClientID:                   ptr.To(os.Getenv("MOCK_MSI_CLIENT_ID")),
+							ClientSecret:               ptr.To(os.Getenv("MOCK_MSI_CERT")),
+							TenantID:                   ptr.To(os.Getenv("MOCK_MSI_TENANT_ID")),
+							ResourceID:                 ptr.To(msiResourceId.String()),
+							AuthenticationEndpoint:     ptr.To(p.Environment().Cloud.ActiveDirectoryAuthorityHost),
+							CannotRenewAfter:           &placeholder,
+							ClientSecretURL:            &placeholder,
+							MtlsAuthenticationEndpoint: &placeholder,
+							NotAfter:                   &placeholder,
+							NotBefore:                  &placeholder,
+							RenewAfter:                 &placeholder,
+							CustomClaims: &swagger.CustomClaims{
+								XMSAzNwperimid: []*string{&placeholder},
+								XMSAzTm:        &placeholder,
+							},
+							ObjectID: &placeholder,
+						},
+					},
+				},
+			},
+		})
+	}
+
+	return &clientOptions, nil
 }

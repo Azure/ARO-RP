@@ -298,7 +298,16 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 }
 
 func (m *manager) bootstrap() []steps.Step {
-	s := []steps.Step{
+	s := []steps.Step{}
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.ensureClusterMsiCertificate),
+			steps.Action(m.initializeClusterMsiClients),
+		)
+	}
+
+	s = append(s,
 		// TODO: Uncomment this when Rajdeep's dynamic validation merges
 		//steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.ensurePreconfiguredNSG),
@@ -309,14 +318,9 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.populateMTUSize),
 		steps.Action(m.createDNS),
 		steps.Action(m.createOIDC),
-	}
+	)
 
-	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		s = append(s,
-			steps.Action(m.ensureClusterMsiCertificate),
-			steps.Action(m.initializeClusterMsiClients),
-		)
-	} else {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
 			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			// TODO: this relies on an authorizer that isn't exposed in the manager
