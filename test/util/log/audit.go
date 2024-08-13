@@ -5,6 +5,7 @@ package log
 
 import (
 	"encoding/json"
+	"log"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -25,7 +26,11 @@ func NewAudit() (*test.Hook, *logrus.Entry) {
 }
 
 func NewOtelAudit(connectionType string) *audit.Audit {
-	return &audit.Audit{}
+	audit := audit.New("uds", true)
+
+	//TODO: gnir - Rmove after testing in INT
+	log.Printf("Frontend - NewOtelAudit %v", audit)
+	return audit
 }
 
 // AssertAuditPayload compares the audit payloads in `h` with the given expected

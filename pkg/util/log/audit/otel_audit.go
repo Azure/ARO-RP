@@ -5,27 +5,41 @@ package audit
 
 import (
 	"context"
+	"log"
 	"strings"
 
-	"github.com/microsoft/go-otel-audit/audit"
+	otelaudit "github.com/microsoft/go-otel-audit/audit"
 	"github.com/microsoft/go-otel-audit/audit/conn"
 	"github.com/microsoft/go-otel-audit/audit/msgs"
 )
 
 type Audit struct {
-	Client *audit.Client
+	Client           *otelaudit.Client
+	SendAuditMessage func(a *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error
 }
 
 // New creates a new audit client based on the connection type (uds or tcp)
-func New(connectionType string) *Audit {
+func New(connectionType string, isTest bool) *Audit {
 	audit := &Audit{}
 
-	if strings.ToLower(connectionType) == "uds" {
+	if strings.EqualFold(connectionType, "uds") {
 		audit.newUDSCon()
 	} else {
 		audit.newTCPCon("localhost:8080")
 	}
 
+	if isTest {
+		audit.SendAuditMessage = func(c *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error {
+			return nil
+		}
+	} else {
+		audit.SendAuditMessage = func(c *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error {
+			return c.Send(ctx, *msg)
+		}
+	}
+
+	//TODO: gnir - Rmove after testing in INT
+	log.Printf("Frontend - Client %v", audit)
 	return audit
 }
 
@@ -44,10 +58,14 @@ func (a *Audit) newTCPCon(addr string) {
 }
 
 func (a *Audit) smartClient(cc func() (conn.Audit, error)) error {
-	c, err := audit.New(cc)
+	c, err := otelaudit.New(cc)
+
+	//TODO: gnir - Rmove after testing in INT
+	log.Printf("Frontend - Smart Client %v, %v", c, err)
 	if err != nil {
 		return err
 	}
+
 	a.Client = c
 
 	return nil
@@ -67,10 +85,6 @@ func GetAuditMessage(t msgs.Type) (*msgs.Msg, error) {
 	}
 
 	return &msg, nil
-}
-
-func (a *Audit) SendAuditMessage(ctx context.Context, msg *msgs.Msg) error {
-	return a.Client.Send(ctx, *msg)
 }
 
 func GetCustomData() map[string]any {
