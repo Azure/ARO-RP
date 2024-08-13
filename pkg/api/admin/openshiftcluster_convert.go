@@ -416,16 +416,6 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 	}
 
-	out.Properties.RegistryProfiles = nil
-	if oc.Properties.RegistryProfiles != nil {
-		out.Properties.RegistryProfiles = make([]api.RegistryProfile, len(oc.Properties.RegistryProfiles))
-		for i := range oc.Properties.RegistryProfiles {
-			out.Properties.RegistryProfiles[i].Name = oc.Properties.RegistryProfiles[i].Name
-			out.Properties.RegistryProfiles[i].Username = oc.Properties.RegistryProfiles[i].Username
-			out.Properties.RegistryProfiles[i].Expiry = oc.Properties.RegistryProfiles[i].Expiry
-		}
-	}
-
 	// out.Properties.RegistryProfiles is not converted. The field is immutable and does not have to be converted.
 	// Other fields are converted and this breaks the pattern, however this converting this field creates an issue
 	// with filling the out.Properties.RegistryProfiles[i].Password as default is "" which erases the original value.

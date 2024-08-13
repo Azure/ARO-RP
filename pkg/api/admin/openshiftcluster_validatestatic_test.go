@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/date"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/validate"
-	"github.com/Azure/go-autorest/autorest/date"
 )
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
@@ -636,7 +637,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.RegistryProfiles[0].Username = "someothertestuser"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles['test'].username: Changing property 'properties.registryProfiles['test'].username' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
 		},
 		{
 			name: "registryProfiles expiry change is not allowed",
@@ -650,7 +651,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.RegistryProfiles[0].Expiry = toDate(time.Now().UTC().Add(time.Hour * 24 * 30))
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles['test'].expiry: Changing property 'properties.registryProfiles['test'].expiry' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
 		},
 		{
 			name: "maintenanceTask change to Everything is allowed",
