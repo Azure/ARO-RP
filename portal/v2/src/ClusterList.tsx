@@ -131,9 +131,8 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         onRender: (item: ICluster) => {
           const href = useHref(item.resourceId)
           const onClick = useLinkClickHandler(item.resourceId)
-          // @ts-ignore
           return (
-            <Link href={href} onClick={(ev) => onClick(ev)}>
+            <Link href={href} onClick={(ev) => onClick(ev as React.MouseEvent<HTMLAnchorElement>)}>
               {item.name}
             </Link>
           )
