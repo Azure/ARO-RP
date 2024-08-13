@@ -22,20 +22,19 @@ type Audit struct {
 func New(connectionType string, isTest bool) *Audit {
 	audit := &Audit{}
 
-	if strings.EqualFold(connectionType, "uds") {
-		audit.newUDSCon()
-	} else {
-		audit.newTCPCon("localhost:8080")
-	}
-
 	if isTest {
+		audit.newNoOpCon()
 		audit.SendAuditMessage = func(c *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error {
 			return nil
 		}
 	} else {
-		audit.SendAuditMessage = func(c *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error {
-			return c.Send(ctx, *msg)
+		if strings.EqualFold(connectionType, "uds") {
+			audit.newUDSCon()
+		} else {
+			audit.newTCPCon("localhost:8080")
 		}
+
+		audit.SendAuditMessage = func(c *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error { return c.Send(ctx, *msg) }
 	}
 
 	//TODO: gnir - Rmove after testing in INT
@@ -53,6 +52,13 @@ func (a *Audit) newUDSCon() {
 func (a *Audit) newTCPCon(addr string) {
 	cc := func() (conn.Audit, error) {
 		return conn.NewTCPConn(addr)
+	}
+	a.smartClient(cc)
+}
+
+func (a *Audit) newNoOpCon() {
+	cc := func() (conn.Audit, error) {
+		return conn.NewNoOP(), nil
 	}
 	a.smartClient(cc)
 }
