@@ -9,7 +9,7 @@ import {
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
+  ICommandBarItemProps,
 } from "@fluentui/react"
 import { overviewKey } from "../ClusterDetail"
 
@@ -89,11 +89,7 @@ export function OverviewWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-      <CommandBar
-        items={_items}
-        ariaLabel="Refresh"
-        styles={controlStyles}
-      />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <OverviewComponent
           item={data}
           clusterName={props.currentCluster != null ? props.currentCluster.name : ""}

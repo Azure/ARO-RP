@@ -31,8 +31,8 @@ export const ToolIcons = forwardRef<any, ToolIconsProps>(
         if (result?.status === 200) {
           const blob = new Blob([result.request.response])
           const fileDownloadUrl = URL.createObjectURL(blob)
-          const filename = parseContentDisposition(result.headers["content-disposition"] || '').parameters
-            .filename
+          const filename = parseContentDisposition(result.headers["content-disposition"] || "")
+            .parameters.filename
           setData({ content: fileDownloadUrl, name: filename })
         } else {
           setError(result)
@@ -49,7 +49,7 @@ export const ToolIcons = forwardRef<any, ToolIconsProps>(
     const _onCopyResourceID = (resourceId: any) => {
       navigator.clipboard.writeText(resourceId)
     }
-    
+
     const _onSSHClick = (resourceId: any) => {
       const modal = sshBox
       if (modal && modal.current) {
@@ -70,27 +70,25 @@ export const ToolIcons = forwardRef<any, ToolIconsProps>(
     return (
       <>
         <TooltipHost content={`Copy Resource ID`}>
-              <IconButton
-                iconProps={{ iconName: "Copy" }}
-                aria-label="Copy Resource ID"
-                onClick={_onCopyResourceID.bind({},resourceId)}
-              />
+          <IconButton
+            iconProps={{ iconName: "Copy" }}
+            aria-label="Copy Resource ID"
+            onClick={_onCopyResourceID.bind({}, resourceId)}
+          />
         </TooltipHost>
         <TooltipHost content={`Prometheus`}>
-              <IconButton
-                iconProps={{ iconName: "BIDashboard" }}
-                aria-label="Prometheus"
-                href={
-                  resourceId + (+(version) >= 4.11 ? `/prometheus` : `/prometheus/graph`)
-                }
-              />
+          <IconButton
+            iconProps={{ iconName: "BIDashboard" }}
+            aria-label="Prometheus"
+            href={resourceId + (+version >= 4.11 ? `/prometheus` : `/prometheus/graph`)}
+          />
         </TooltipHost>
         <TooltipHost content={`SSH`}>
-              <IconButton
-                iconProps={{ iconName: "CommandPrompt" }}
-                aria-label="SSH"
-                onClick={() => _onSSHClick(resourceId)}
-              />
+          <IconButton
+            iconProps={{ iconName: "CommandPrompt" }}
+            aria-label="SSH"
+            onClick={() => _onSSHClick(resourceId)}
+          />
         </TooltipHost>
         <TooltipHost content={`Download Kubeconfig`}>
           <IconButton

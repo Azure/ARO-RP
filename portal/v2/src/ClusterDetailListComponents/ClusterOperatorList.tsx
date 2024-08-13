@@ -1,16 +1,16 @@
-import * as React from 'react';
+import * as React from "react"
 import { useState, useEffect } from "react"
-import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from '@fluentui/react';
-import { Link } from '@fluentui/react/lib/Link';
-import { IColumn } from '@fluentui/react/lib/DetailsList';
-import { ShimmeredDetailsList } from '@fluentui/react/lib/ShimmeredDetailsList';
-import { IClusterOperator } from './ClusterOperatorsWrapper';
-import { ClusterOperatorsComponent } from './ClusterOperator';
-import { _copyAndSort } from '../Utilities';
+import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from "@fluentui/react"
+import { Link } from "@fluentui/react/lib/Link"
+import { IColumn } from "@fluentui/react/lib/DetailsList"
+import { ShimmeredDetailsList } from "@fluentui/react/lib/ShimmeredDetailsList"
+import { IClusterOperator } from "./ClusterOperatorsWrapper"
+import { ClusterOperatorsComponent } from "./ClusterOperator"
+import { _copyAndSort } from "../Utilities"
 
 export declare interface IClusterOperatorList {
-  name: string;
-  available: string;
+  name: string
+  available: string
 }
 
 interface ClusterOperatorComponentProps {
@@ -23,30 +23,34 @@ export interface IClusterOperatorListState {
   clusterName: string
 }
 
-export class ClusterOperatorListComponent extends React.Component<ClusterOperatorComponentProps, IClusterOperatorListState> {
-  
+export class ClusterOperatorListComponent extends React.Component<
+  ClusterOperatorComponentProps,
+  IClusterOperatorListState
+> {
   constructor(props: ClusterOperatorComponentProps) {
-      super(props)
+    super(props)
 
-      this.state = {
-          clusterOperators: this.props.clusterOperators,
-          clusterName: this.props.clusterName,
-      }
+    this.state = {
+      clusterOperators: this.props.clusterOperators,
+      clusterName: this.props.clusterName,
+    }
   }
-
 
   public render() {
     return (
-        <ClusterOperatorListHelperComponent clusterOperators={this.state.clusterOperators} clusterName={this.state.clusterName}/>
-      )
+      <ClusterOperatorListHelperComponent
+        clusterOperators={this.state.clusterOperators}
+        clusterName={this.state.clusterName}
+      />
+    )
   }
 }
 
 export function ClusterOperatorListHelperComponent(props: {
-     clusterOperators: IClusterOperator[],
-     clusterName: string
+  clusterOperators: IClusterOperator[]
+  clusterName: string
 }) {
-    const [columns, setColumns] = useState<IColumn[]>([
+  const [columns, setColumns] = useState<IColumn[]>([
     {
       key: "clusterOperatorName",
       name: "Name",
@@ -97,7 +101,7 @@ export function ClusterOperatorListHelperComponent(props: {
       isSortedDescending: false,
       isSorted: true,
       showSortIconWhenUnsorted: true,
-    }
+    },
   ])
 
   const [clusterOperatorList, setClusterOperatorList] = useState<IClusterOperatorList[]>([])
@@ -107,8 +111,8 @@ export function ClusterOperatorListHelperComponent(props: {
 
   useEffect(() => {
     setClusterOperatorList(createClusterOperatorList(props.clusterOperators))
-    const newColumns: IColumn[] = columns.slice();
-    newColumns.forEach(col => {
+    const newColumns: IColumn[] = columns.slice()
+    newColumns.forEach((col) => {
       col.onColumnClick = _onColumnClick
     })
     setColumns(newColumns)
@@ -116,8 +120,7 @@ export function ClusterOperatorListHelperComponent(props: {
     if (clusterOperatorList.length > 0) {
       SetShimmerVisibility(false)
     }
-
-  }, [props.clusterOperators, clusterOperatorList] )
+  }, [props.clusterOperators, clusterOperatorList])
 
   function _onClusterOperatorInfoLinkClick(operator: string) {
     setClusterOperatorDetailsVisible(!clusterOperatorDetailsVisible)
@@ -125,15 +128,15 @@ export function ClusterOperatorListHelperComponent(props: {
   }
 
   function _onColumnClick(event: React.MouseEvent<HTMLElement>, column: IColumn): void {
-    let clusterOperatorLocal: IClusterOperatorList[] = clusterOperatorList;
-  
-    let isSortedDescending = column.isSortedDescending;
+    let clusterOperatorLocal: IClusterOperatorList[] = clusterOperatorList
+
+    let isSortedDescending = column.isSortedDescending
     if (column.isSorted) {
-      isSortedDescending = !isSortedDescending;
+      isSortedDescending = !isSortedDescending
     }
 
     // Sort the items.
-    clusterOperatorLocal = _copyAndSort(clusterOperatorLocal, column.fieldName!, isSortedDescending);
+    clusterOperatorLocal = _copyAndSort(clusterOperatorLocal, column.fieldName!, isSortedDescending)
     setClusterOperatorList(clusterOperatorLocal)
 
     const newColumns: IColumn[] = columns.slice()
@@ -151,14 +154,14 @@ export function ClusterOperatorListHelperComponent(props: {
   }
 
   function createClusterOperatorList(operators: IClusterOperator[]): IClusterOperatorList[] {
-    return operators.map(operator => {
-        return {
-          name: operator.name,
-          available: operator.available,
-          progressing: operator.progressing,
-          degraded: operator.degraded
-        }
-      })
+    return operators.map((operator) => {
+      return {
+        name: operator.name,
+        available: operator.available,
+        progressing: operator.progressing,
+        degraded: operator.degraded,
+      }
+    })
   }
 
   const backIconStyles: Partial<IIconStyles> = {
@@ -172,38 +175,44 @@ export function ClusterOperatorListHelperComponent(props: {
       },
     },
   }
-  
-  const backIconProp = {iconName: "back"}
+
+  const backIconProp = { iconName: "back" }
   function _onClickBackToClusterOperatorList() {
     setClusterOperatorDetailsVisible(false)
   }
 
-    return (
+  return (
     <Stack>
       <StackItem>
-        {
-          clusterOperatorDetailsVisible
-          ?
+        {clusterOperatorDetailsVisible ? (
           <Stack>
             <Stack.Item>
-              <IconButton styles={backIconStyles} onClick={_onClickBackToClusterOperatorList} iconProps={backIconProp} />
+              <IconButton
+                styles={backIconStyles}
+                onClick={_onClickBackToClusterOperatorList}
+                iconProps={backIconProp}
+              />
             </Stack.Item>
-            <ClusterOperatorsComponent clusterOperators={props.clusterOperators} clusterName={props.clusterName} clusterOperatorName={currentClusterOperator}/>
+            <ClusterOperatorsComponent
+              clusterOperators={props.clusterOperators}
+              clusterName={props.clusterName}
+              clusterOperatorName={currentClusterOperator}
+            />
           </Stack>
-          :
+        ) : (
           <div>
-          <ShimmeredDetailsList
-            setKey="clusterOperatorList"
-            compact={true}
-            items={clusterOperatorList}
-            columns={columns}
-            selectionMode={SelectionMode.none}
-            enableShimmer={shimmerVisibility}
-            ariaLabelForShimmer="Content is being fetched"
-            ariaLabelForGrid="Item details"
-          />
+            <ShimmeredDetailsList
+              setKey="clusterOperatorList"
+              compact={true}
+              items={clusterOperatorList}
+              columns={columns}
+              selectionMode={SelectionMode.none}
+              enableShimmer={shimmerVisibility}
+              ariaLabelForShimmer="Content is being fetched"
+              ariaLabelForGrid="Item details"
+            />
           </div>
-        }
+        )}
       </StackItem>
     </Stack>
   )

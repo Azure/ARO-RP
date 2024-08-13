@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, MutableRefObject, Component } from "react"
 import {
-  Stack,  
+  Stack,
   MessageBarType,
   MessageBar,
   CommandBar,
@@ -8,7 +8,7 @@ import {
   Separator,
   Text,
   IMessageBarStyles,
-  mergeStyleSets,  
+  mergeStyleSets,
   TextField,
   Link,
 } from "@fluentui/react"
@@ -133,7 +133,11 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
           const href = useHref(item.resourceId)
           const onClick = useLinkClickHandler(item.resourceId)
           // @ts-ignore
-          return (<Link href={href} onClick={(ev) => onClick(ev)}>{item.name}</Link>)
+          return (
+            <Link href={href} onClick={(ev) => onClick(ev)}>
+              {item.name}
+            </Link>
+          )
         },
         isPadded: true,
       },
@@ -233,8 +237,13 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         data: "string",
         isPadded: true,
         onRender: (item: ICluster) => (
-          <Stack horizontal verticalAlign="center" className={classNames.iconContainer}>           
-            <ToolIcons resourceId={item.resourceId} csrfToken={props.csrfToken} version={Number(item.version)} sshBox={props.sshModalRef}/>            
+          <Stack horizontal verticalAlign="center" className={classNames.iconContainer}>
+            <ToolIcons
+              resourceId={item.resourceId}
+              csrfToken={props.csrfToken}
+              version={Number(item.version)}
+              sshBox={props.sshModalRef}
+            />
           </Stack>
         ),
       },

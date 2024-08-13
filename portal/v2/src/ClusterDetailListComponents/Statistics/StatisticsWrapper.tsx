@@ -15,7 +15,7 @@ import {
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
+  ICommandBarItemProps,
 } from "@fluentui/react"
 
 export interface IMetricValue {
@@ -132,11 +132,7 @@ export function StatisticsWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <CommandBar
-          items={_items}
-          ariaLabel="Refresh"
-          styles={controlStyles}
-        />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <StatisticsComponent
           metrics={metrics}
           fetchStatus={fetching}

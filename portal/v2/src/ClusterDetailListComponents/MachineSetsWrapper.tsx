@@ -7,7 +7,7 @@ import {
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
+  ICommandBarItemProps,
 } from "@fluentui/react"
 import { machineSetsKey } from "../ClusterDetail"
 import { MachineSetsListComponent } from "./MachineSetsList"
@@ -108,7 +108,7 @@ export function MachineSetsWrapper(props: WrapperProps) {
       float: "right",
     },
   }
-  
+
   const _items: ICommandBarItemProps[] = [
     {
       key: "refresh",
@@ -128,15 +128,17 @@ export function MachineSetsWrapper(props: WrapperProps) {
       } else {
         setError(result)
       }
-      if(props.currentCluster) {
+      if (props.currentCluster) {
         setFetching(props.currentCluster.name)
       }
     }
 
-    if (props.detailPanelSelected.toLowerCase() == machineSetsKey && 
-        fetching === "" &&
-        props.loaded &&
-        props.currentCluster) {
+    if (
+      props.detailPanelSelected.toLowerCase() == machineSetsKey &&
+      fetching === "" &&
+      props.loaded &&
+      props.currentCluster
+    ) {
       setFetching("FETCHING")
       fetchMachineSets(props.currentCluster).then(onData)
     }
@@ -146,11 +148,7 @@ export function MachineSetsWrapper(props: WrapperProps) {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <CommandBar
-          items={_items}
-          ariaLabel="Refresh"
-          styles={controlStyles}
-        />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <MachineSetsListComponent
           machineSets={data!}
           ref={state}

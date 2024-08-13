@@ -25,7 +25,9 @@ export const fetchClusters = async (): Promise<AxiosResponse | null> => {
   }
 }
 
-export const fetchClusterInfo = async (cluster: IClusterCoordinates): Promise<AxiosResponse | null> => {
+export const fetchClusterInfo = async (
+  cluster: IClusterCoordinates
+): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
       "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name
@@ -59,7 +61,9 @@ export const fetchNodes = async (cluster: IClusterCoordinates): Promise<AxiosRes
   }
 }
 
-export const fetchMachines = async (cluster: IClusterCoordinates): Promise<AxiosResponse | null> => {
+export const fetchMachines = async (
+  cluster: IClusterCoordinates
+): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
       "/api/" +
@@ -77,7 +81,9 @@ export const fetchMachines = async (cluster: IClusterCoordinates): Promise<Axios
   }
 }
 
-export const fetchMachineSets = async (cluster: IClusterCoordinates): Promise<AxiosResponse | null> => {
+export const fetchMachineSets = async (
+  cluster: IClusterCoordinates
+): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
       "/api/" +
@@ -95,10 +101,15 @@ export const fetchMachineSets = async (cluster: IClusterCoordinates): Promise<Ax
   }
 }
 
-export const fetchClusterOperators = async (cluster: IClusterCoordinates): Promise<AxiosResponse | null> => {
+export const fetchClusterOperators = async (
+  cluster: IClusterCoordinates
+): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
-      ["/api", cluster.subscription, cluster.resourceGroup, cluster.name, "clusteroperators"].join("/"))
+      ["/api", cluster.subscription, cluster.resourceGroup, cluster.name, "clusteroperators"].join(
+        "/"
+      )
+    )
     return result
   } catch (e: any) {
     const err = e.response as AxiosResponse

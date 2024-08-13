@@ -8,7 +8,7 @@ import {
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
+  ICommandBarItemProps,
 } from "@fluentui/react"
 import { machinesKey } from "../ClusterDetail"
 import { WrapperProps } from "../ClusterDetailList"
@@ -106,7 +106,7 @@ export function MachinesWrapper(props: WrapperProps) {
       } else {
         setError(result)
       }
-      if(props.currentCluster) {
+      if (props.currentCluster) {
         setFetching(props.currentCluster.name)
       }
     }
@@ -126,11 +126,7 @@ export function MachinesWrapper(props: WrapperProps) {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <CommandBar
-          items={_items}
-          ariaLabel="Refresh"
-          styles={controlStyles}
-        />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <MachinesListComponent
           machines={data!}
           ref={state}
