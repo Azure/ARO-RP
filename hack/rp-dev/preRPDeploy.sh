@@ -41,7 +41,6 @@ echo "Success step 6e ✈️ 📦 - Copy Fluenbit image to ACR"
 echo "Success step 6 ✅ - Mirror repos to ACR"
 
 export PARENT_DOMAIN_NAME=osadev.cloud
-# export PARENT_DOMAIN_RESOURCEGROUP=dns
 export GLOBAL_RESOURCEGROUP=${AZURE_PREFIX}-global
 
 for DOMAIN_NAME in ${AZURE_PREFIX}-clusters.$PARENT_DOMAIN_NAME ${AZURE_PREFIX}-rp.$PARENT_DOMAIN_NAME; do
@@ -67,23 +66,23 @@ echo "Success step 7a ✅ - Update DNS Child Domains"
 az keyvault certificate import \
     --vault-name "$KEYVAULT_PREFIX-svc" \
     --name rp-mdm \
-    --file secrets/rp-metrics-int.pem >/dev/null
+    --file secrets/rp-mdm-self-signed.pem >/dev/null
 az keyvault certificate import \
     --vault-name "$KEYVAULT_PREFIX-gwy" \
     --name gwy-mdm \
-    --file secrets/rp-metrics-int.pem >/dev/null
+    --file secrets/gwy-mdm-self-signed.pem >/dev/null
 az keyvault certificate import \
     --vault-name "$KEYVAULT_PREFIX-svc" \
     --name rp-mdsd \
-    --file secrets/rp-logging-int.pem >/dev/null
+    --file secrets/rp-mdsd-self-signed.pem >/dev/null
 az keyvault certificate import \
     --vault-name "$KEYVAULT_PREFIX-gwy" \
     --name gwy-mdsd \
-    --file secrets/rp-logging-int.pem >/dev/null
+    --file secrets/gwy-mdsd-self-signed.pem >/dev/null
 az keyvault certificate import \
     --vault-name "$KEYVAULT_PREFIX-svc" \
     --name cluster-mdsd \
-    --file secrets/cluster-logging-int.pem >/dev/null
+    --file secrets/cluster-mdsd-self-signed.pem >/dev/null
 az keyvault certificate import \
     --vault-name "$KEYVAULT_PREFIX-svc" \
     --name dev-arm \

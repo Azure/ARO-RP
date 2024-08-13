@@ -28,9 +28,6 @@ azure_resource_name=${AZURE_PREFIX}-aro-$LOCATION
 export RESOURCEGROUP=$azure_resource_name DATABASE_ACCOUNT_NAME=$azure_resource_name KEYVAULT_PREFIX=$azure_resource_name
 gitCommit=$(git rev-parse --short=7 HEAD)
 export ARO_IMAGE=${AZURE_PREFIX}aro.azurecr.io/aro:$gitCommit
-# TODO - check if needed
-# Generate SSH key
-ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
 
 # Run the make command to generate dev-config.yaml
 make dev-config.yaml
