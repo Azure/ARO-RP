@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { AxiosResponse } from "axios"
 import { fetchClusterInfo } from "../Request"
 import { IClusterCoordinates } from "../App"
 import { OverviewComponent } from "./Overview"
@@ -9,7 +8,7 @@ import {
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
+  ICommandBarItemProps,
 } from "@fluentui/react"
 import { overviewKey } from "../ClusterDetail"
 
@@ -22,7 +21,7 @@ export function OverviewWrapper(props: {
   loaded: boolean
 }) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const [fetching, setFetching] = useState("")
 
   const errorBar = (): any => {
@@ -65,9 +64,9 @@ export function OverviewWrapper(props: {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }
@@ -89,11 +88,7 @@ export function OverviewWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-      <CommandBar
-        items={_items}
-        ariaLabel="Refresh"
-        styles={controlStyles}
-      />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <OverviewComponent
           item={data}
           clusterName={props.currentCluster != null ? props.currentCluster.name : ""}

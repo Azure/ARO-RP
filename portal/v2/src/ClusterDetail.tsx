@@ -12,7 +12,6 @@ import {
   IconButton,
   IIconStyles,
 } from "@fluentui/react"
-import { AxiosResponse } from "axios"
 import { fetchClusterInfo } from "./Request"
 import { IClusterCoordinates, headerStyles } from "./App"
 import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
@@ -85,7 +84,7 @@ export function ClusterDetailPanel(props: {
   loaded: string
 }) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const [fetching, setFetching] = useState("")
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false) // panel controls
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
@@ -97,7 +96,7 @@ export function ClusterDetailPanel(props: {
     },
   })
   const onDismiss = useLinkClickHandler("/")
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const params = useParams()
   const currentCluster = useMemo<IClusterCoordinates | null>(() => {
@@ -106,7 +105,7 @@ export function ClusterDetailPanel(props: {
         subscription: params.subscriptionId,
         resourceGroup: params.resourceGroupName,
         name: params.resourceName,
-        resourceId: `/subscriptions/${params.subscriptionId}/resourcegroups/${params.resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/${params.resourceName}`
+        resourceId: `/subscriptions/${params.subscriptionId}/resourcegroups/${params.resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/${params.resourceName}`,
       }
     }
     return null
@@ -132,19 +131,19 @@ export function ClusterDetailPanel(props: {
           name: "Overview",
           key: overviewKey,
           url: overviewKey,
-          icon: 'Info',
+          icon: "Info",
         },
         {
           name: "Nodes",
           key: nodesKey,
           url: nodesKey,
-          icon: 'BranchCommit',
+          icon: "BranchCommit",
         },
         {
           name: "Machines",
           key: machinesKey,
           url: machinesKey,
-          icon: 'ConnectVirtualMachine',
+          icon: "ConnectVirtualMachine",
         },
         {
           name: "MachineSets",
@@ -177,10 +176,10 @@ export function ClusterDetailPanel(props: {
           icon: "BIDashboard",
         },
         {
-          name: 'ClusterOperators',
+          name: "ClusterOperators",
           key: clusterOperatorsKey,
           url: clusterOperatorsKey,
-          icon: 'Shapes',
+          icon: "Shapes",
         },
       ],
     },
@@ -210,9 +209,9 @@ export function ClusterDetailPanel(props: {
     }
     const resourceID = currentCluster.resourceId
 
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
         setDataLoaded(true)
       } else {
         setError(result)
@@ -276,7 +275,7 @@ export function ClusterDetailPanel(props: {
       },
     })
   }
- 
+
   const onRenderHeader = (): ReactElement => {
     return (
       <>
@@ -294,15 +293,22 @@ export function ClusterDetailPanel(props: {
             <Icon styles={headerIconStyles} iconName="openshift-svg"></Icon>
           </Stack.Item>
           <Stack.Item>
-            <div id="ClusterDetailName" className={headerStyles.titleText}>{currentCluster?.name}</div>
-            <div className={headerStyles.subtitleText}>Cluster</div>                        
-            <ToolIcons resourceId={currentCluster ? currentCluster?.resourceId : ""} version={Number(data?.version) !== undefined ? Number(data?.version) : 0} csrfToken={props.csrfToken} sshBox={props.sshBox}/>
+            <div id="ClusterDetailName" className={headerStyles.titleText}>
+              {currentCluster?.name}
+            </div>
+            <div className={headerStyles.subtitleText}>Cluster</div>
+            <ToolIcons
+              resourceId={currentCluster ? currentCluster?.resourceId : ""}
+              version={Number(data?.version) !== undefined ? Number(data?.version) : 0}
+              csrfToken={props.csrfToken}
+              sshBox={props.sshBox}
+            />
           </Stack.Item>
         </Stack>
       </>
     )
   }
-  
+
   return (
     <Panel
       id="ClusterDetailPanel"

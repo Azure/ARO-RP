@@ -1,17 +1,16 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from 'axios';
-import { fetchNodes } from '../Request';
-import { NodesListComponent } from './NodesList';
+import { fetchNodes } from "../Request"
+import { NodesListComponent } from "./NodesList"
 import {
   IMessageBarStyles,
   MessageBar,
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
- } from '@fluentui/react';
-import { nodesKey } from "../ClusterDetail";
-import { WrapperProps } from "../ClusterDetailList";
+  ICommandBarItemProps,
+} from "@fluentui/react"
+import { nodesKey } from "../ClusterDetail"
+import { WrapperProps } from "../ClusterDetailList"
 
 export interface ICondition {
   status: string
@@ -60,7 +59,7 @@ const controlStyles = {
 
 export function NodesWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const state = useRef<NodesListComponent>(null)
 
   const [fetching, setFetching] = useState("")
@@ -144,13 +143,13 @@ export function NodesWrapper(props: WrapperProps) {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }
-      if(props.currentCluster) {
+      if (props.currentCluster) {
         setFetching(props.currentCluster.name)
       }
     }
@@ -170,11 +169,7 @@ export function NodesWrapper(props: WrapperProps) {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <CommandBar
-          items={_items}
-          ariaLabel="Refresh"
-          styles={controlStyles}
-        />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <NodesListComponent
           nodes={data!}
           ref={state}

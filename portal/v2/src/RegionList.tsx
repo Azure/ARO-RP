@@ -1,17 +1,26 @@
 import { Component } from "react"
-import { Nav, INavLinkGroup, INavStyles, IRenderGroupHeaderProps, IRenderFunction, Stack, Text, TextField } from "@fluentui/react"
+import {
+  Nav,
+  INavLinkGroup,
+  INavStyles,
+  IRenderGroupHeaderProps,
+  IRenderFunction,
+  Stack,
+  Text,
+  TextField,
+} from "@fluentui/react"
 
 const navStyles: Partial<INavStyles> = {
   chevronIcon: {
-    visibility: 'hidden'
+    visibility: "hidden",
   },
   navItem: {
-    height: "35px"
+    height: "35px",
   },
   link: {
-    height: "35px"
-  }
-};
+    height: "35px",
+  },
+}
 
 interface RegionComponentProps {
   item: IRegionList
@@ -30,9 +39,7 @@ export interface IRegion {
   url: string
 }
 
-
-
-export class RegionComponent extends Component<RegionComponentProps,IRegionComponentState> {
+export class RegionComponent extends Component<RegionComponentProps, IRegionComponentState> {
   private _allItems: IRegion[]
 
   constructor(props: RegionComponentProps | Readonly<RegionComponentProps>) {
@@ -40,37 +47,47 @@ export class RegionComponent extends Component<RegionComponentProps,IRegionCompo
     this._allItems = this.props.item.regions
 
     this.state = {
-      items: this._allItems
-    };
+      items: this._allItems,
+    }
   }
 
   public render() {
     const items = this.state.items
     var navGroups: INavLinkGroup[] = [
       {
-        name: 'Regions',
-        links: items
-      }
+        name: "Regions",
+        links: items,
+      },
     ]
     return (
       <Stack>
-        <Nav onRenderGroupHeader={this._onRenderGroupHeader} styles={navStyles} groups={navGroups}  />
+        <Nav
+          onRenderGroupHeader={this._onRenderGroupHeader}
+          styles={navStyles}
+          groups={navGroups}
+        />
         <Text>{this.props.item.regions.length == 0 && "No extra regions within this cloud"}</Text>
       </Stack>
     )
   }
 
-  private _onChangeText = (ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, text?: string): void => {
+  private _onChangeText = (
+    ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>,
+    text?: string
+  ): void => {
     this.setState({
-      items: text ? this._allItems.filter(i => i.name.toLowerCase().indexOf(text.toLowerCase()) > -1) : this._allItems,
-    });
-  };
+      items: text
+        ? this._allItems.filter((i) => i.name.toLowerCase().indexOf(text.toLowerCase()) > -1)
+        : this._allItems,
+    })
+  }
 
-  private  _onRenderGroupHeader: IRenderFunction<IRenderGroupHeaderProps> = (props): JSX.Element => {
+  private _onRenderGroupHeader: IRenderFunction<IRenderGroupHeaderProps> = (props): JSX.Element => {
     return (
       <Stack>
         <h3>{props?.name}</h3>
         <TextField label="Filter by name:" onChange={this._onChangeText} />
-      </Stack>);
-  };
+      </Stack>
+    )
+  }
 }
