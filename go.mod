@@ -2,7 +2,7 @@ module github.com/Azure/ARO-RP
 
 go 1.22.2
 
-toolchain go1.22.5
+toolchain go1.22.6
 
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
@@ -50,7 +50,7 @@ require (
 	github.com/itchyny/gojq v0.12.13
 	github.com/jewzaam/go-cosmosdb v0.0.0-20240723075448-058185e3c66d
 	github.com/jongio/azidext/go/azidext v0.5.0
-	github.com/microsoft/go-otel-audit v0.0.0-20240712191739-6bc31f9b8579
+	github.com/microsoft/go-otel-audit v0.0.0-20240809190925-7d070eed3ccd
 	github.com/microsoft/kiota-abstractions-go v1.2.0
 	github.com/microsoft/kiota-http-go v1.0.0
 	github.com/microsoft/kiota-serialization-form-go v1.0.0
@@ -80,11 +80,11 @@ require (
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.12
 	github.com/vincent-petithory/dataurl v1.0.0
-	golang.org/x/crypto v0.24.0
-	golang.org/x/net v0.26.0
+	golang.org/x/crypto v0.26.0
+	golang.org/x/net v0.28.0
 	golang.org/x/oauth2 v0.17.0
-	golang.org/x/sync v0.7.0
-	golang.org/x/text v0.16.0
+	golang.org/x/sync v0.8.0
+	golang.org/x/text v0.17.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	gopkg.in/go-jose/go-jose.v2 v2.6.1
 	k8s.io/api v0.30.2
@@ -273,8 +273,8 @@ require (
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
-	golang.org/x/term v0.21.0 // indirect
+	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
