@@ -109,6 +109,7 @@ export const RequestSSH = async (
     method: "POST",
     body: JSON.stringify({ master: machine }),
     headers: {
+      "Content-Type": "application/json",
       "X-CSRF-Token": csrfToken,
     },
   })
