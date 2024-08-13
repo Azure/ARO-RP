@@ -35,7 +35,7 @@ export const fetchClusters = async (): Promise<Response> => {
 }
 
 export const fetchClusterInfo = async (cluster: IClusterCoordinates): Promise<Response> => {
-  return doFetch(urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name))
+  return doFetch(urlJoin("/", "api", cluster.subscription, cluster.resourceGroup, cluster.name))
 }
 
 export const fetchInfo = async (): Promise<Response> => {
@@ -43,24 +43,33 @@ export const fetchInfo = async (): Promise<Response> => {
 }
 
 export const fetchNodes = async (cluster: IClusterCoordinates): Promise<Response> => {
-  return doFetch(urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name, "nodes"))
+  return doFetch(
+    urlJoin("/", "api", cluster.subscription, cluster.resourceGroup, cluster.name, "nodes")
+  )
 }
 
 export const fetchMachines = async (cluster: IClusterCoordinates): Promise<Response> => {
   return doFetch(
-    urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name, "machines")
+    urlJoin("/", "api", cluster.subscription, cluster.resourceGroup, cluster.name, "machines")
   )
 }
 
 export const fetchMachineSets = async (cluster: IClusterCoordinates): Promise<Response> => {
   return doFetch(
-    urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name, "machine-sets")
+    urlJoin("/", "api", cluster.subscription, cluster.resourceGroup, cluster.name, "machine-sets")
   )
 }
 
 export const fetchClusterOperators = async (cluster: IClusterCoordinates): Promise<Response> => {
   return doFetch(
-    urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name, "clusteroperators")
+    urlJoin(
+      "/",
+      "api",
+      cluster.subscription,
+      cluster.resourceGroup,
+      cluster.name,
+      "clusteroperators"
+    )
   )
 }
 
@@ -83,7 +92,7 @@ export const RequestKubeconfig = async (
   csrfToken: string,
   resourceID: string
 ): Promise<Response> => {
-  return doFetch(urlJoin("api", resourceID, "kubeconfig", "new"), {
+  return doFetch(urlJoin("/", resourceID, "kubeconfig", "new"), {
     method: "POST",
     headers: {
       "X-CSRF-Token": csrfToken,
@@ -96,7 +105,7 @@ export const RequestSSH = async (
   machine: string,
   resourceID: string
 ): Promise<Response> => {
-  return doFetch(urlJoin("api", resourceID, "ssh", "new"), {
+  return doFetch(urlJoin("/", resourceID, "ssh", "new"), {
     method: "POST",
     body: JSON.stringify({ master: machine }),
     headers: {
@@ -116,6 +125,7 @@ export const fetchStatistics = async (
 
   const url = new URL(
     urlJoin(
+      "/",
       "api",
       cluster.subscription,
       cluster.resourceGroup,
