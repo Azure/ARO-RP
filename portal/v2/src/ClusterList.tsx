@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, MutableRefObject, Component } from "react"
 import {
-  Stack,  
+  Stack,
   MessageBarType,
   MessageBar,
   CommandBar,
@@ -8,7 +8,7 @@ import {
   Separator,
   Text,
   IMessageBarStyles,
-  mergeStyleSets,  
+  mergeStyleSets,
   TextField,
   Link,
 } from "@fluentui/react"
@@ -21,7 +21,6 @@ import {
 } from "@fluentui/react/lib/DetailsList"
 import { fetchClusters } from "./Request"
 import { ToolIcons } from "./ToolIcons"
-import { AxiosResponse } from "axios"
 import { ICluster, headerStyles } from "./App"
 import { useHref, useLinkClickHandler } from "react-router-dom"
 
@@ -132,8 +131,11 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         onRender: (item: ICluster) => {
           const href = useHref(item.resourceId)
           const onClick = useLinkClickHandler(item.resourceId)
-          // @ts-ignore
-          return (<Link href={href} onClick={(ev) => onClick(ev)}>{item.name}</Link>)
+          return (
+            <Link href={href} onClick={(ev) => onClick(ev as React.MouseEvent<HTMLAnchorElement>)}>
+              {item.name}
+            </Link>
+          )
         },
         isPadded: true,
       },
@@ -233,8 +235,13 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         data: "string",
         isPadded: true,
         onRender: (item: ICluster) => (
-          <Stack horizontal verticalAlign="center" className={classNames.iconContainer}>           
-            <ToolIcons resourceId={item.resourceId} csrfToken={props.csrfToken} version={Number(item.version)} sshBox={props.sshModalRef}/>            
+          <Stack horizontal verticalAlign="center" className={classNames.iconContainer}>
+            <ToolIcons
+              resourceId={item.resourceId}
+              csrfToken={props.csrfToken}
+              version={Number(item.version)}
+              sshBox={props.sshModalRef}
+            />
           </Stack>
         ),
       },
@@ -315,7 +322,7 @@ export function ClusterList(props: {
   csrfTokenAvailable: string
 }) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const state = useRef<ClusterListComponent>(null)
   const [fetching, setFetching] = useState("")
 
@@ -342,9 +349,9 @@ export function ClusterList(props: {
   }
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }

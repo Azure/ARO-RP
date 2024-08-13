@@ -3,10 +3,10 @@ env:
   es2021: true
   node: true
 extends:
-  - 'plugin:react/recommended'
+  - "plugin:react/recommended"
   - "eslint:recommended"
   - "plugin:react/jsx-runtime"
-parser: '@typescript-eslint/parser'
+parser: "@typescript-eslint/parser"
 parserOptions:
   ecmaFeatures:
     jsx: true
@@ -14,7 +14,7 @@ parserOptions:
   sourceType: module
 plugins:
   - react
-  - '@typescript-eslint'
+  - "@typescript-eslint"
 settings:
   react:
     createClass: "createReactClass"
