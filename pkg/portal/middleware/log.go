@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/microsoft/go-otel-audit/audit/msgs"
@@ -107,7 +108,7 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry, otelAudit *audit.Audit) 
 			auditMsg := msgs.Msg{Type: msgs.ControlPlane}
 			auditRec := audit.GetAuditRecord()
 
-			callerIpAddress, err := msgs.ParseAddr(r.RemoteAddr)
+			callerIpAddress, err := msgs.ParseAddr(strings.Split(r.RemoteAddr, ":")[0])
 			if err != nil {
 				log.Printf("Error parsing remote address: %s, error: %v", r.RemoteAddr, err)
 			}
