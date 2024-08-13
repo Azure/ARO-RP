@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { AxiosResponse } from "axios"
 import { IClusterCoordinates } from "../../App"
 import { StatisticsComponent } from "./StatisticsComponent"
 import { fetchStatistics } from "../../Request"
@@ -15,7 +14,7 @@ import {
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
+  ICommandBarItemProps,
 } from "@fluentui/react"
 
 export interface IMetricValue {
@@ -38,7 +37,7 @@ export function StatisticsWrapper(props: {
   graphHeight: number
   graphWidth: number
 }) {
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const [metrics, setMetrics] = useState<IMetrics[]>([])
   const [fetching, setFetching] = useState("")
   const [localDuration, setLocalDuration] = useState(props.duration)
@@ -99,10 +98,10 @@ export function StatisticsWrapper(props: {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
         setFetching("success")
-        updateData(result.data)
+        updateData(await result.json())
         setError(null)
       } else {
         setError(result)
@@ -132,11 +131,7 @@ export function StatisticsWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <CommandBar
-          items={_items}
-          ariaLabel="Refresh"
-          styles={controlStyles}
-        />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <StatisticsComponent
           metrics={metrics}
           fetchStatus={fetching}

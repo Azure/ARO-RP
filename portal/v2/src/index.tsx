@@ -1,7 +1,7 @@
-import {createRoot} from "react-dom/client"
+import { createRoot } from "react-dom/client"
 import App from "./App"
 import { mergeStyles } from "@fluentui/react"
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from "react-router-dom"
 
 import { initializeIcons } from "@fluentui/font-icons-mdl2"
 initializeIcons()
@@ -18,8 +18,8 @@ mergeStyles({
 const router = createBrowserRouter([
   {
     path: "/*",
-    element: (<App/>)
-  }
+    element: <App />,
+  },
 ])
 
 createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />)
