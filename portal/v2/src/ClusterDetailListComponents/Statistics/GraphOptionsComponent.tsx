@@ -1,9 +1,25 @@
-import { TimePicker, IComboBox, DatePicker, IDatePickerStyles, Stack, Text, TooltipHost, IStackStyles, IconButton, mergeStyleSets } from "@fluentui/react"
+import {
+  TimePicker,
+  IComboBox,
+  DatePicker,
+  IDatePickerStyles,
+  Stack,
+  Text,
+  TooltipHost,
+  IStackStyles,
+  IconButton,
+  mergeStyleSets,
+} from "@fluentui/react"
 import { iconButtonStyles } from "./Statistics"
 
-export function GraphOptionsComponent(props: {duration: string, setDuration: React.Dispatch<React.SetStateAction<string>> , endDate: Date, setEndDate: React.Dispatch<React.SetStateAction<Date>>}): any {    
-  const calculatorAddition =  { iconName: "CalculatorAddition" }
-  const calculatorSubtract =  { iconName: "CalculatorSubtract" }
+export function GraphOptionsComponent(props: {
+  duration: string
+  setDuration: React.Dispatch<React.SetStateAction<string>>
+  endDate: Date
+  setEndDate: React.Dispatch<React.SetStateAction<Date>>
+}): any {
+  const calculatorAddition = { iconName: "CalculatorAddition" }
+  const calculatorSubtract = { iconName: "CalculatorSubtract" }
   const _increaseDuration = () => {
     let setToDuration = getIncreaseDurationMap().get(props.duration)
     if (setToDuration != undefined) {
@@ -37,26 +53,36 @@ export function GraphOptionsComponent(props: {duration: string, setDuration: Rea
     },
   })
 
-  const datePickerStyles: Partial<IDatePickerStyles> = { root: { maxWidth: 145, marginTop: 5, } };
-  const timePickerStyles: Partial<IDatePickerStyles> = { root: { maxWidth: 75, marginLeft: 5, marginRight: 5 } };
-  const onTimeChange = (event: React.FormEvent<IComboBox>, date: Date) => {        
+  const datePickerStyles: Partial<IDatePickerStyles> = { root: { maxWidth: 145, marginTop: 5 } }
+  const timePickerStyles: Partial<IDatePickerStyles> = {
+    root: { maxWidth: 75, marginLeft: 5, marginRight: 5 },
+  }
+  const onTimeChange = (event: React.FormEvent<IComboBox>, date: Date) => {
     var localDate = new Date()
-    localDate.setUTCFullYear(props.endDate.getFullYear(), props.endDate.getMonth(), props.endDate.getDate())
-    localDate.setUTCHours(date.getHours());
-    localDate.setUTCMinutes(date.getMinutes());
-    props.setEndDate(localDate)        
-    };
-  const onDateChange = (date: Date | null | undefined): void => { 
-    let localDate: Date = new Date();
+    localDate.setUTCFullYear(
+      props.endDate.getFullYear(),
+      props.endDate.getMonth(),
+      props.endDate.getDate()
+    )
+    localDate.setUTCHours(date.getHours())
+    localDate.setUTCMinutes(date.getMinutes())
+    props.setEndDate(localDate)
+  }
+  const onDateChange = (date: Date | null | undefined): void => {
+    let localDate: Date = new Date()
     localDate.setUTCFullYear(date!.getFullYear(), date!.getMonth(), date!.getDate())
-    localDate.setHours(props.endDate.getHours());
-    localDate.setMinutes(props.endDate.getMinutes());
-    props.setEndDate(localDate)  
-    };
-    
+    localDate.setHours(props.endDate.getHours())
+    localDate.setMinutes(props.endDate.getMinutes())
+    props.setEndDate(localDate)
+  }
+
   return (
     <Stack horizontal verticalAlign="center">
-      <Stack horizontal verticalAlign="center" className={classNames.iconContainer} /* style={{ boxShadow: theme.effects.elevation8 }}*/>
+      <Stack
+        horizontal
+        verticalAlign="center"
+        className={classNames.iconContainer} /* style={{ boxShadow: theme.effects.elevation8 }}*/
+      >
         <TooltipHost>
           <IconButton
             onClick={_decreaseDuration}
@@ -67,7 +93,7 @@ export function GraphOptionsComponent(props: {duration: string, setDuration: Rea
         <TooltipHost>
           <Text styles={durationStyle}>{props.duration}</Text>
         </TooltipHost>
-        <TooltipHost >
+        <TooltipHost>
           <IconButton
             onClick={_increaseDuration}
             iconProps={calculatorAddition}
@@ -75,7 +101,13 @@ export function GraphOptionsComponent(props: {duration: string, setDuration: Rea
           />
         </TooltipHost>
       </Stack>
-      <Stack horizontal verticalAlign="center" className={dateTimePickerStyles.iconContainer}  /* style={{ boxShadow: theme.effects.elevation8 }}*/>
+      <Stack
+        horizontal
+        verticalAlign="center"
+        className={
+          dateTimePickerStyles.iconContainer
+        } /* style={{ boxShadow: theme.effects.elevation8 }}*/
+      >
         <DatePicker
           styles={datePickerStyles}
           placeholder="End Date"
@@ -119,7 +151,7 @@ export const convertToUTC = (date: Date): Date => {
   localDate.setFullYear(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
   localDate.setHours(date.getUTCHours())
   localDate.setMinutes(date.getUTCMinutes())
-  
+
   return localDate
 }
 
@@ -174,4 +206,3 @@ const getDecreaseDurationMap = (): Map<string, string> => {
 
   return decreaseDurationMap
 }
-
