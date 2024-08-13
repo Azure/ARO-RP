@@ -222,7 +222,9 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 
 			auditMsg.Record = *auditRec
 
-			if err := l.OtelAudit.SendAuditMessage(r.Context(), &auditMsg); err != nil {
+			//TODO: gnir - Rmove after testing in INT
+			log.Printf("Frontend - Error sending audit message: %v", l.OtelAudit)
+			if err := l.OtelAudit.SendAuditMessage(l.OtelAudit.Client, r.Context(), &auditMsg); err != nil {
 				log.Printf("Frontend - Error sending audit message: %v", err)
 			}
 		}()
