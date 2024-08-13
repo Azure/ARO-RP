@@ -1,138 +1,79 @@
-import axios, { AxiosResponse } from "axios"
+import urlJoin from "url-join"
 import { IClusterCoordinates } from "./App"
 import { convertTimeToHours } from "./ClusterDetailListComponents/Statistics/GraphOptionsComponent"
 
-const OnError = (err: AxiosResponse): AxiosResponse | null => {
+const OnError = (err: Response): Response => {
   if (err.status === 403) {
     var href = "/api/login"
     if (document.location.pathname !== "/") {
       href += "?redirect_uri=" + document.location.pathname
     }
     document.location.href = href
-    return null
+    return err
   } else {
     return err
   }
 }
 
-export const fetchClusters = async (): Promise<AxiosResponse | null> => {
+const doFetch = async (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const result = fetch(url, init)
+
   try {
-    const result = await axios("/api/clusters")
-    return result
+    const g = await result
+    if (!g.ok) {
+      return OnError(g)
+    }
+    return g
   } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
+    console.error(e)
+    return result
   }
 }
 
-export const fetchClusterInfo = async (
-  cluster: IClusterCoordinates
-): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios(
-      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name
-    )
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
+export const fetchClusters = async (): Promise<Response> => {
+  return doFetch("/api/clusters")
 }
 
-export const fetchInfo = async (): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios("/api/info")
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
+export const fetchClusterInfo = async (cluster: IClusterCoordinates): Promise<Response> => {
+  return doFetch(urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name))
 }
 
-export const fetchNodes = async (cluster: IClusterCoordinates): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios(
-      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/nodes"
-    )
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
+export const fetchInfo = async (): Promise<Response> => {
+  return doFetch("/api/info")
 }
 
-export const fetchMachines = async (
-  cluster: IClusterCoordinates
-): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios(
-      "/api/" +
-        cluster.subscription +
-        "/" +
-        cluster.resourceGroup +
-        "/" +
-        cluster.name +
-        "/machines"
-    )
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
+export const fetchNodes = async (cluster: IClusterCoordinates): Promise<Response> => {
+  return doFetch(urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name, "nodes"))
 }
 
-export const fetchMachineSets = async (
-  cluster: IClusterCoordinates
-): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios(
-      "/api/" +
-        cluster.subscription +
-        "/" +
-        cluster.resourceGroup +
-        "/" +
-        cluster.name +
-        "/machine-sets"
-    )
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
+export const fetchMachines = async (cluster: IClusterCoordinates): Promise<Response> => {
+  return doFetch(
+    urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name, "machines")
+  )
 }
 
-export const fetchClusterOperators = async (
-  cluster: IClusterCoordinates
-): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios(
-      ["/api", cluster.subscription, cluster.resourceGroup, cluster.name, "clusteroperators"].join(
-        "/"
-      )
-    )
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
+export const fetchMachineSets = async (cluster: IClusterCoordinates): Promise<Response> => {
+  return doFetch(
+    urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name, "machine-sets")
+  )
 }
 
-export const fetchRegions = async (): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios("/api/regions")
-    return result
-  } catch (e: any) {
-    let err = e.response as AxiosResponse
-    return OnError(err)
-  }
+export const fetchClusterOperators = async (cluster: IClusterCoordinates): Promise<Response> => {
+  return doFetch(
+    urlJoin("api", cluster.subscription, cluster.resourceGroup, cluster.name, "clusteroperators")
+  )
+}
+
+export const fetchRegions = async (): Promise<Response> => {
+  return doFetch("/api/regions")
 }
 
 export const ProcessLogOut = async (): Promise<any> => {
   try {
-    const result = await axios({ method: "POST", url: "/api/logout" })
+    const result = await doFetch("/api/logout", { method: "POST" })
     return result
   } catch (e: any) {
-    const err = e.response as AxiosResponse
+    const err = e.response as Response
     console.log(err)
   }
   document.location.href = "/api/login"
@@ -141,20 +82,27 @@ export const ProcessLogOut = async (): Promise<any> => {
 export const RequestKubeconfig = async (
   csrfToken: string,
   resourceID: string
-): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios({
-      method: "POST",
-      url: resourceID + "/kubeconfig/new",
-      headers: {
-        "X-CSRF-Token": csrfToken,
-      },
-    })
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
+): Promise<Response> => {
+  return doFetch(urlJoin("api", resourceID, "kubeconfig", "new"), {
+    method: "POST",
+    headers: {
+      "X-CSRF-Token": csrfToken,
+    },
+  })
+}
+
+export const RequestSSH = async (
+  csrfToken: string,
+  machine: string,
+  resourceID: string
+): Promise<Response> => {
+  return doFetch(urlJoin("api", resourceID, "ssh", "new"), {
+    method: "POST",
+    body: JSON.stringify({ master: machine }),
+    headers: {
+      "X-CSRF-Token": csrfToken,
+    },
+  })
 }
 
 export const fetchStatistics = async (
@@ -162,16 +110,22 @@ export const fetchStatistics = async (
   statisticsName: string,
   duration: string,
   endDate: Date
-): Promise<AxiosResponse | null> => {
+): Promise<Response> => {
   duration = convertTimeToHours(duration)
   let endDateJSON = endDate.toJSON()
-  try {
-    const result = await axios(
-      `/api/${cluster.subscription}/${cluster.resourceGroup}/${cluster.name}/statistics/${statisticsName}?duration=${duration}&endtime=${endDateJSON}`
+
+  const url = new URL(
+    urlJoin(
+      "api",
+      cluster.subscription,
+      cluster.resourceGroup,
+      cluster.name,
+      "statistics",
+      statisticsName
     )
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
+  )
+  url.searchParams.append("duration", duration)
+  url.searchParams.append("endtime", endDateJSON)
+
+  return doFetch(url)
 }

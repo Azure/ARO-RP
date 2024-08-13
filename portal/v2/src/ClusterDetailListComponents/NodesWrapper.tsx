@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from "axios"
 import { fetchNodes } from "../Request"
 import { NodesListComponent } from "./NodesList"
 import {
@@ -60,7 +59,7 @@ const controlStyles = {
 
 export function NodesWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const state = useRef<NodesListComponent>(null)
 
   const [fetching, setFetching] = useState("")
@@ -144,9 +143,9 @@ export function NodesWrapper(props: WrapperProps) {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }

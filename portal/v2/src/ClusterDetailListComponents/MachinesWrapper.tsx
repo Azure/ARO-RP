@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from "axios"
 import { fetchMachines } from "../Request"
 import { MachinesListComponent } from "./MachinesList"
 import {
@@ -26,7 +25,7 @@ export interface IMachine {
 
 export function MachinesWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const state = useRef<MachinesListComponent>(null)
   const [fetching, setFetching] = useState("")
 
@@ -100,9 +99,9 @@ export function MachinesWrapper(props: WrapperProps) {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }

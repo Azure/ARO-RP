@@ -21,7 +21,6 @@ import {
 } from "@fluentui/react/lib/DetailsList"
 import { fetchClusters } from "./Request"
 import { ToolIcons } from "./ToolIcons"
-import { AxiosResponse } from "axios"
 import { ICluster, headerStyles } from "./App"
 import { useHref, useLinkClickHandler } from "react-router-dom"
 
@@ -324,7 +323,7 @@ export function ClusterList(props: {
   csrfTokenAvailable: string
 }) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const state = useRef<ClusterListComponent>(null)
   const [fetching, setFetching] = useState("")
 
@@ -351,9 +350,9 @@ export function ClusterList(props: {
   }
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }

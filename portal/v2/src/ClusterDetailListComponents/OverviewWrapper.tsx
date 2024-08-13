@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { AxiosResponse } from "axios"
 import { fetchClusterInfo } from "../Request"
 import { IClusterCoordinates } from "../App"
 import { OverviewComponent } from "./Overview"
@@ -22,7 +21,7 @@ export function OverviewWrapper(props: {
   loaded: boolean
 }) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const [fetching, setFetching] = useState("")
 
   const errorBar = (): any => {
@@ -65,9 +64,9 @@ export function OverviewWrapper(props: {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }

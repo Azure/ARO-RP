@@ -1,5 +1,4 @@
 import { IconButton, TooltipHost } from "@fluentui/react"
-import { AxiosResponse } from "axios"
 import { RequestKubeconfig } from "./Request"
 import { MutableRefObject, useEffect, useLayoutEffect } from "react"
 import { useState } from "react"
@@ -22,16 +21,16 @@ type FileDownload = {
 export const ToolIcons = forwardRef<any, ToolIconsProps>(
   ({ csrfToken, resourceId, version, sshBox }) => {
     const [data, setData] = useState<FileDownload>({ name: "", content: "" })
-    const [error, setError] = useState<AxiosResponse | null>(null)
+    const [error, setError] = useState<Response | null>(null)
     const [fetching, setFetching] = useState("DONE")
     const buttonRef = useRef<HTMLAnchorElement | null>(null)
 
     useEffect(() => {
-      const onData = (result: AxiosResponse | null) => {
-        if (result?.status === 200) {
-          const blob = new Blob([result.request.response])
+      const onData = async (result: Response) => {
+        if (result.status === 200) {
+          const blob = await result.blob()
           const fileDownloadUrl = URL.createObjectURL(blob)
-          const filename = parseContentDisposition(result.headers["content-disposition"] || "")
+          const filename = parseContentDisposition(result.headers.get("content-disposition") || "")
             .parameters.filename
           setData({ content: fileDownloadUrl, name: filename })
         } else {

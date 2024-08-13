@@ -12,7 +12,6 @@ import {
   IconButton,
   IIconStyles,
 } from "@fluentui/react"
-import { AxiosResponse } from "axios"
 import { fetchClusterInfo } from "./Request"
 import { IClusterCoordinates, headerStyles } from "./App"
 import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
@@ -85,7 +84,7 @@ export function ClusterDetailPanel(props: {
   loaded: string
 }) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const [fetching, setFetching] = useState("")
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false) // panel controls
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
@@ -210,9 +209,9 @@ export function ClusterDetailPanel(props: {
     }
     const resourceID = currentCluster.resourceId
 
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
         setDataLoaded(true)
       } else {
         setError(result)

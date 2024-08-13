@@ -15,7 +15,6 @@ import {
   FontSizes,
 } from "@fluentui/react"
 import { PrimaryButton, IconButton } from "@fluentui/react/lib/Button"
-import axios, { AxiosResponse } from "axios"
 import React, {
   useState,
   useImperativeHandle,
@@ -23,6 +22,7 @@ import React, {
   forwardRef,
   MutableRefObject,
 } from "react"
+import { RequestSSH } from "./Request"
 
 const cancelIcon: IIconProps = { iconName: "Cancel" }
 const copyIcon: IIconProps = { iconName: "Copy" }
@@ -97,7 +97,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
   const [machineName, setMachineName] = useState<IDropdownOption>()
   const [requestable, { setTrue: setRequestable, setFalse: setUnrequestable }] = useBoolean(false)
   const [data, setData] = useState<{ command: string; password: string } | null>()
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
 
   useImperativeHandle(ref, () => ({
     LoadSSH: (item: string) => {
@@ -114,15 +114,8 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
     async function fetchData() {
       try {
         setError(null)
-        const result = await axios({
-          method: "post",
-          url: resourceID + "/ssh/new",
-          data: {
-            master: machineName?.key,
-          },
-          headers: { "X-CSRF-Token": csrfToken.current },
-        })
-        setData(result.data)
+        const result = await RequestSSH(csrfToken.current, machineName?.key as string, resourceID)
+        setData(await result.json())
         setRequestable()
       } catch (error: any) {
         setRequestable()

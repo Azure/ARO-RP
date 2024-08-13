@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from "axios"
 import { fetchClusterOperators } from "../Request"
 import {
   IMessageBarStyles,
@@ -30,7 +29,7 @@ export interface IClusterOperator {
 
 export function ClusterOperatorsWrapper(props: WrapperProps) {
   const [operators, setOperators] = useState<IClusterOperator[]>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const state = useRef<ClusterOperatorListComponent>(null)
 
   const [fetching, setFetching] = useState("")
@@ -102,9 +101,9 @@ export function ClusterOperatorsWrapper(props: WrapperProps) {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }
