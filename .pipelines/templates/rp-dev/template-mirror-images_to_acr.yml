@@ -1,11 +1,13 @@
 parameters:
   mirrorTag: ""
   dstAcrName: ""
+  userPullSecret: ""
+  pullSecret: ""
 steps:
   - script: |
       set -e
-      export SRC_AUTH_QUAY=$(echo $USER_PULL_SECRET | jq -r '.auths."quay.io".auth')
-      export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
+      export SRC_AUTH_QUAY=$(echo ${{ parameters.userPullSecret }} | jq -r '.auths."quay.io".auth')
+      export SRC_AUTH_REDHAT=$(echo ${{ parameters.userPullSecret }} | jq -r '.auths."registry.redhat.io".auth')
       export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${{ parameters.dstAcrName }} --expose-token | jq -r .accessToken) | base64 -w0)
       docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "${{ parameters.dstAcrName }}.azurecr.io"
     name: acr_login
@@ -13,7 +15,7 @@ steps:
 
   - script: |
       set -e
-      go run ./cmd/aro mirror ${{ parameters.mirrorTag }}
+      go run -tags containers_image_openpgp,exclude_graphdriver_btrfs ./cmd/aro mirror ${{ parameters.mirrorTag }}
     name: mirror_ocp_images_to_acr
     displayName: ⚙️ Mirror OCP Images to ACR
 
@@ -22,13 +24,14 @@ steps:
       source ./hack/rp-dev-helper.sh
       mdm_image_tag=$(get_digest_tag "MdmImage")
       mdsd_image_tag=$(get_digest_tag "MdsdImage")
-
-      az acr import --name ${{ parameters.dstAcrName }}.azurecr.io/${mdm_image_tag} --source linuxgeneva-microsoft.azurecr.io/${mdm_image_tag}
-      az acr import --name ${{ parameters.dstAcrName }}.azurecr.io/${mdsd_image_tag} --source linuxgeneva-microsoft.azurecr.io/${mdsd_image_tag}
+      az acr import --name ${{ parameters.dstAcrName }}.azurecr.io${mdm_image_tag} --source linuxgeneva-microsoft.azurecr.io${mdm_image_tag}
+      az acr import --name ${{ parameters.dstAcrName }}.azurecr.io${mdsd_image_tag} --source linuxgeneva-microsoft.azurecr.io${mdsd_image_tag}
     name: import_mdm_mdsd_images_to_acr
     displayName: ⚙️ Import MDM and MDSD images to ACR
 
-  - script: make publish-image-aro-multistage
+  - script: |
+      set -e
+      make publish-image-aro-multistage
     name: import_aro_image_to_acr
     displayName: ⚙️ Build, push and import ARO image to ACR
 
@@ -36,6 +39,6 @@ steps:
       set -e
       source ./hack/rp-dev-helper.sh
       fluentbit_image_tag=$(get_digest_tag "FluentbitImage")
-      copy_digest_tag $PULL_SECRET, "arointsvc", ${{ parameters.dstAcrName }}, $fluentbit_image_tag
+      copy_digest_tag ${{ parameters.pullSecret }}, "arointsvc", ${{ parameters.dstAcrName }}, $fluentbit_image_tag
     name: build_push_aro_fluenbit_images_to_acr
     displayName: ⚙️ Copy fluentbit image to ACR

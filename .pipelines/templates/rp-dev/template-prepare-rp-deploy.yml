@@ -29,8 +29,53 @@ steps:
               --nsdname "$ns" >/dev/null
           done
       done
-    name: dns_domain_and_certificate_keyvault
-    displayName: ⚙️ Update the DNS Child Domains and the certificates in keyvault
+    name: dns_domain
+    displayName: ⚙️ Update the DNS Child Domains
+
+  - script: |
+      set -e
+      az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name rp-mdm \
+        --file secrets/rp-mdm-self-signed.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-gwy" \
+          --name gwy-mdm \
+          --file secrets/gwy-mdm-self-signed.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-svc" \
+          --name rp-mdsd \
+          --file secrets/rp-mdsd-self-signed.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-gwy" \
+          --name gwy-mdsd \
+          --file secrets/gwy-mdsd-self-signed.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-svc" \
+          --name cluster-mdsd \
+          --file secrets/cluster-mdsd-self-signed.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-svc" \
+          --name dev-arm \
+          --file secrets/arm.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-svc" \
+          --name rp-firstparty \
+          --file secrets/firstparty.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-svc" \
+          --name rp-server \
+          --file secrets/localhost.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-por" \
+          --name portal-server \
+          --file secrets/localhost.pem >/dev/null
+      az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-por" \
+          --name portal-client \
+          --file secrets/portal-client.pem >/dev/null
+    name: certs_keyvault
+    displayName: ⚙️ Import certificates to keyvault
 
   - script: |
       set -e

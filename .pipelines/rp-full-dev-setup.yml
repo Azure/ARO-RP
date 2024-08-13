@@ -44,7 +44,7 @@ resources:
   containers:
     - container: container
       image: registry.access.redhat.com/ubi8/toolbox:8.10
-      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name rp-dev-container # Root (and full sysetme) user privileges, shared memory between host and container, and access to the TUN device for network tunneling
+      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name rp-dev-ado-container # Root (and full sysetme) user privileges, shared memory between host and container, and access to the TUN device for network tunneling
 
 jobs:
   - job: Full_RP_dev_setup_deployment
@@ -75,16 +75,18 @@ jobs:
           aroImage: ${{ parameters.aroImage }}
 
       # 4) Semi deploy ...
-      - script: make deploy # use different target which will succeed and won't fail
-        name: semi_deploy_aro_rp_dev
-        displayName: 🚀 semi-deploy RP
+      - script: make pre-deploy-no-aks 
+        name: semi_deploy_no_aks_aro_rp_dev
+        displayName: 🚀 pre-deploy-no-aks RP
 
       # 5) Deploy VPN Gateway & AKS
       - script: |
           source ./hack/devtools/deploy-shared-env.sh
           deploy_vpn_for_dedicated_rp
+          echo "Success step 4a 🚀 - VPN has been deployed"
           deploy_aks_dev
-        name: deploy_vpn_gateway
+          echo "Success step 4b 🚀 - AKS has been deployed"
+        name: deploy_aks
         displayName: 🚀 Deploy VPN Gateway and AKS
 
       # 6) Install Hive
@@ -97,6 +99,8 @@ jobs:
         parameters:
           mirrorTag: ${{ parameters.ocpVersionTag }}
           dstAcrName: ${{ parameters.dstAcrName }}
+          userPullSecret: $USER_PULL_SECRET
+          pullSecret: $PULL_SECRET
 
       # 8) Final preperation before deploying RP
       - template: ./templates/rp-dev/template-prepare-rp-deploy.yml
