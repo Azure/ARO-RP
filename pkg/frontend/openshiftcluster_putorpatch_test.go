@@ -1947,8 +1947,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Version = defaultVersion
 				oc.Identity = &v20240812preview.Identity{
 					Type: "UserAssigned",
-					UserAssignedIdentities: v20240812preview.UserAssignedIdentities{
-						mockMiResourceId: v20240812preview.ClusterUserAssignedIdentity{},
+					UserAssignedIdentities: map[string]v20240812preview.ClusterUserAssignedIdentity{
+						mockMiResourceId: {},
 					},
 				}
 				oc.Properties.PlatformWorkloadIdentityProfile = &v20240812preview.PlatformWorkloadIdentityProfile{
@@ -2018,8 +2018,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Identity: &api.Identity{
 							Type: "UserAssigned",
-							UserAssignedIdentities: api.UserAssignedIdentities{
-								mockMiResourceId: api.ClusterUserAssignedIdentity{},
+							UserAssignedIdentities: map[string]api.ClusterUserAssignedIdentity{
+								mockMiResourceId: {},
 							},
 							IdentityURL: middleware.MockIdentityURL,
 							TenantID:    mockGuid,
@@ -2100,8 +2100,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				SystemData: &v20240812preview.SystemData{},
 				Identity: &v20240812preview.Identity{
 					Type: "UserAssigned",
-					UserAssignedIdentities: v20240812preview.UserAssignedIdentities{
-						mockMiResourceId: v20240812preview.ClusterUserAssignedIdentity{},
+					UserAssignedIdentities: map[string]v20240812preview.ClusterUserAssignedIdentity{
+						mockMiResourceId: {},
 					},
 				},
 				Properties: v20240812preview.OpenShiftClusterProperties{
