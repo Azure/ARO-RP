@@ -1,19 +1,18 @@
-import * as React from 'react';
+import * as React from "react"
 import { useState, useEffect } from "react"
-import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from '@fluentui/react';
-import { Link } from '@fluentui/react/lib/Link';
-import { IColumn } from '@fluentui/react/lib/DetailsList';
-import { ShimmeredDetailsList } from '@fluentui/react/lib/ShimmeredDetailsList';
-import { IMachineSet } from "./MachineSetsWrapper";
+import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from "@fluentui/react"
+import { Link } from "@fluentui/react/lib/Link"
+import { IColumn } from "@fluentui/react/lib/DetailsList"
+import { ShimmeredDetailsList } from "@fluentui/react/lib/ShimmeredDetailsList"
+import { IMachineSet } from "./MachineSetsWrapper"
 import { MachineSetsComponent } from "./MachineSets"
-import { _copyAndSort } from '../Utilities';
-
+import { _copyAndSort } from "../Utilities"
 
 export declare interface IMachineSetsList {
-  name?: string;
-  desiredReplicas: string;
-  currentReplicas: string;
-  publicLoadBalancer?: string;
+  name?: string
+  desiredReplicas: string
+  currentReplicas: string
+  publicLoadBalancer?: string
   storageType?: string
 }
 
@@ -27,30 +26,31 @@ export interface IMachineSetsListState {
   clusterName: string
 }
 
-export class MachineSetsListComponent extends React.Component<MachineSetsListComponentProps, IMachineSetsListState> {
-  
+export class MachineSetsListComponent extends React.Component<
+  MachineSetsListComponentProps,
+  IMachineSetsListState
+> {
   constructor(props: MachineSetsListComponentProps) {
-      super(props)
+    super(props)
 
-      this.state = {
-          machineSets: this.props.machineSets,
-          clusterName: this.props.clusterName,
-      }      
+    this.state = {
+      machineSets: this.props.machineSets,
+      clusterName: this.props.clusterName,
+    }
   }
-  
-  
+
   public render() {
     return (
-        <MachineSetsListHelperComponent machineSets={this.state.machineSets} clusterName={this.state.clusterName}/>
-      )
+      <MachineSetsListHelperComponent
+        machineSets={this.state.machineSets}
+        clusterName={this.state.clusterName}
+      />
+    )
   }
 }
 
-export function MachineSetsListHelperComponent(props: {
-     machineSets: any,
-     clusterName: string
-}) {
-    const [columns, setColumns] = useState<IColumn[]>([
+export function MachineSetsListHelperComponent(props: { machineSets: any; clusterName: string }) {
+  const [columns, setColumns] = useState<IColumn[]>([
     {
       key: "machineName",
       name: "Name",
@@ -108,7 +108,7 @@ export function MachineSetsListHelperComponent(props: {
       isSorted: true,
       isSortedDescending: false,
       showSortIconWhenUnsorted: true,
-    }
+    },
   ])
 
   const [machineSetsList, setMachineSetsList] = useState<IMachineSetsList[]>([])
@@ -116,14 +116,13 @@ export function MachineSetsListHelperComponent(props: {
   const [currentMachine, setCurrentMachine] = useState<string>("")
   const [shimmerVisibility, SetShimmerVisibility] = useState<boolean>(true)
 
-
   useEffect(() => {
     setMachineSetsList(createMachineSetsList(props.machineSets))
-  }, [props.machineSets] );
+  }, [props.machineSets])
 
   useEffect(() => {
-    const newColumns: IColumn[] = columns.slice();
-    newColumns.forEach(col => {
+    const newColumns: IColumn[] = columns.slice()
+    newColumns.forEach((col) => {
       col.onColumnClick = _onColumnClick
     })
     setColumns(newColumns)
@@ -131,7 +130,6 @@ export function MachineSetsListHelperComponent(props: {
     if (machineSetsList.length > 0) {
       SetShimmerVisibility(false)
     }
-    
   }, [machineSetsList])
 
   function _onMachineInfoLinkClick(machine: string) {
@@ -140,15 +138,15 @@ export function MachineSetsListHelperComponent(props: {
   }
 
   function _onColumnClick(event: React.MouseEvent<HTMLElement>, column: IColumn): void {
-    let machineLocal: IMachineSetsList[] = machineSetsList;
-    
-    let isSortedDescending = column.isSortedDescending;
+    let machineLocal: IMachineSetsList[] = machineSetsList
+
+    let isSortedDescending = column.isSortedDescending
     if (column.isSorted) {
-      isSortedDescending = !isSortedDescending;
+      isSortedDescending = !isSortedDescending
     }
 
     // Sort the items.
-    machineLocal = _copyAndSort(machineLocal, column.fieldName!, isSortedDescending);
+    machineLocal = _copyAndSort(machineLocal, column.fieldName!, isSortedDescending)
     setMachineSetsList(machineLocal)
 
     const newColumns: IColumn[] = columns.slice()
@@ -165,13 +163,19 @@ export function MachineSetsListHelperComponent(props: {
     })
 
     setColumns(newColumns)
-    }
+  }
 
-    function createMachineSetsList(MachineSets: IMachineSet[]): IMachineSetsList[] {
-        return MachineSets.map(machineSet => {
-            return {name: machineSet.name, desiredReplicas: machineSet.desiredReplicas!, currentReplicas: machineSet.replicas!, publicLoadBalancer: machineSet.publicLoadBalancerName, storageType: machineSet.accountStorageType}
-        })
-    }
+  function createMachineSetsList(MachineSets: IMachineSet[]): IMachineSetsList[] {
+    return MachineSets.map((machineSet) => {
+      return {
+        name: machineSet.name,
+        desiredReplicas: machineSet.desiredReplicas!,
+        currentReplicas: machineSet.replicas!,
+        publicLoadBalancer: machineSet.publicLoadBalancerName,
+        storageType: machineSet.accountStorageType,
+      }
+    })
+  }
 
   const backIconStyles: Partial<IIconStyles> = {
     root: {
@@ -184,8 +188,8 @@ export function MachineSetsListHelperComponent(props: {
       },
     },
   }
-  
-  const backIconProp = {iconName: "back"}
+
+  const backIconProp = { iconName: "back" }
   function _onClickBackToMachineList() {
     setMachineSetsDetailsVisible(false)
   }
@@ -193,28 +197,34 @@ export function MachineSetsListHelperComponent(props: {
   return (
     <Stack>
       <StackItem>
-        {
-          machineSetsDetailsVisible
-          ?
+        {machineSetsDetailsVisible ? (
           <Stack>
             <Stack.Item>
-              <IconButton styles={backIconStyles} onClick={_onClickBackToMachineList} iconProps={backIconProp} />
+              <IconButton
+                styles={backIconStyles}
+                onClick={_onClickBackToMachineList}
+                iconProps={backIconProp}
+              />
             </Stack.Item>
-            <MachineSetsComponent machineSets={props.machineSets} clusterName={props.clusterName} machineSetName={currentMachine}/>
+            <MachineSetsComponent
+              machineSets={props.machineSets}
+              clusterName={props.clusterName}
+              machineSetName={currentMachine}
+            />
           </Stack>
-          :
+        ) : (
           <div>
-          <ShimmeredDetailsList
-            setKey="none"
-            items={machineSetsList}
-            columns={columns}
-            enableShimmer={shimmerVisibility}
-            selectionMode={SelectionMode.none}
-            ariaLabelForShimmer="Content is being fetched"
-            ariaLabelForGrid="Item details"
-          />
+            <ShimmeredDetailsList
+              setKey="none"
+              items={machineSetsList}
+              columns={columns}
+              enableShimmer={shimmerVisibility}
+              selectionMode={SelectionMode.none}
+              ariaLabelForShimmer="Content is being fetched"
+              ariaLabelForGrid="Item details"
+            />
           </div>
-        }
+        )}
       </StackItem>
     </Stack>
   )

@@ -6,10 +6,20 @@ import { NodesWrapper } from "./ClusterDetailListComponents/NodesWrapper"
 import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper"
 import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper"
 import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
-import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
+import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper"
 
 import { IClusterCoordinates } from "./App"
-import { apiStatisticsKey, clusterOperatorsKey, dnsStatisticsKey, ingressStatisticsKey, kcmStatisticsKey, machineSetsKey, machinesKey, nodesKey, overviewKey } from "./ClusterDetail"
+import {
+  apiStatisticsKey,
+  clusterOperatorsKey,
+  dnsStatisticsKey,
+  ingressStatisticsKey,
+  kcmStatisticsKey,
+  machineSetsKey,
+  machinesKey,
+  nodesKey,
+  overviewKey,
+} from "./ClusterDetail"
 
 interface ClusterDetailComponentProps {
   item: IClusterDetails
@@ -48,15 +58,101 @@ export function ClusterDetailComponent(props: ClusterDetailComponentProps) {
   return (
     <Routes>
       <Route path="" element={<Navigate to="overview" />} />
-      <Route path="overview" element={<OverviewWrapper clusterName={props.cluster?.name!} currentCluster={props.cluster!} detailPanelSelected={overviewKey} loaded={props.isDataLoaded} />} />
-      <Route path="nodes" element={<NodesWrapper currentCluster={props.cluster!} detailPanelSelected={nodesKey} loaded={props.isDataLoaded} />} />
-      <Route path="machines" element={<MachinesWrapper currentCluster={props.cluster!} detailPanelSelected={machinesKey} loaded={props.isDataLoaded} />} />
-      <Route path="machinesets" element={<MachineSetsWrapper currentCluster={props.cluster!} detailPanelSelected={machineSetsKey} loaded={props.isDataLoaded} />} />
-      <Route path="apistatistics" element={<Statistics currentCluster={props.cluster!} detailPanelSelected={apiStatisticsKey} loaded={props.isDataLoaded} statisticsType="api" />} />
-      <Route path="kcmstatistics" element={<Statistics currentCluster={props.cluster!} detailPanelSelected={kcmStatisticsKey} loaded={props.isDataLoaded} statisticsType="kcm" />} />
-      <Route path="dnsstatistics" element={<Statistics currentCluster={props.cluster!} detailPanelSelected={dnsStatisticsKey} loaded={props.isDataLoaded} statisticsType="dns" />} />
-      <Route path="ingressstatistics" element={<Statistics currentCluster={props.cluster!} detailPanelSelected={ingressStatisticsKey} loaded={props.isDataLoaded} statisticsType="ingress" />} />
-      <Route path="clusteroperators" element={<ClusterOperatorsWrapper currentCluster={props.cluster!} detailPanelSelected={clusterOperatorsKey} loaded={props.isDataLoaded} />} />
+      <Route
+        path="overview"
+        element={
+          <OverviewWrapper
+            clusterName={props.cluster?.name!}
+            currentCluster={props.cluster!}
+            detailPanelSelected={overviewKey}
+            loaded={props.isDataLoaded}
+          />
+        }
+      />
+      <Route
+        path="nodes"
+        element={
+          <NodesWrapper
+            currentCluster={props.cluster!}
+            detailPanelSelected={nodesKey}
+            loaded={props.isDataLoaded}
+          />
+        }
+      />
+      <Route
+        path="machines"
+        element={
+          <MachinesWrapper
+            currentCluster={props.cluster!}
+            detailPanelSelected={machinesKey}
+            loaded={props.isDataLoaded}
+          />
+        }
+      />
+      <Route
+        path="machinesets"
+        element={
+          <MachineSetsWrapper
+            currentCluster={props.cluster!}
+            detailPanelSelected={machineSetsKey}
+            loaded={props.isDataLoaded}
+          />
+        }
+      />
+      <Route
+        path="apistatistics"
+        element={
+          <Statistics
+            currentCluster={props.cluster!}
+            detailPanelSelected={apiStatisticsKey}
+            loaded={props.isDataLoaded}
+            statisticsType="api"
+          />
+        }
+      />
+      <Route
+        path="kcmstatistics"
+        element={
+          <Statistics
+            currentCluster={props.cluster!}
+            detailPanelSelected={kcmStatisticsKey}
+            loaded={props.isDataLoaded}
+            statisticsType="kcm"
+          />
+        }
+      />
+      <Route
+        path="dnsstatistics"
+        element={
+          <Statistics
+            currentCluster={props.cluster!}
+            detailPanelSelected={dnsStatisticsKey}
+            loaded={props.isDataLoaded}
+            statisticsType="dns"
+          />
+        }
+      />
+      <Route
+        path="ingressstatistics"
+        element={
+          <Statistics
+            currentCluster={props.cluster!}
+            detailPanelSelected={ingressStatisticsKey}
+            loaded={props.isDataLoaded}
+            statisticsType="ingress"
+          />
+        }
+      />
+      <Route
+        path="clusteroperators"
+        element={
+          <ClusterOperatorsWrapper
+            currentCluster={props.cluster!}
+            detailPanelSelected={clusterOperatorsKey}
+            loaded={props.isDataLoaded}
+          />
+        }
+      />
     </Routes>
   )
 }

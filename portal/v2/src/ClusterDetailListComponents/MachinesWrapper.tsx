@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from "axios"
 import { fetchMachines } from "../Request"
 import { MachinesListComponent } from "./MachinesList"
 import {
@@ -8,7 +7,7 @@ import {
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
+  ICommandBarItemProps,
 } from "@fluentui/react"
 import { machinesKey } from "../ClusterDetail"
 import { WrapperProps } from "../ClusterDetailList"
@@ -26,7 +25,7 @@ export interface IMachine {
 
 export function MachinesWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const state = useRef<MachinesListComponent>(null)
   const [fetching, setFetching] = useState("")
 
@@ -100,13 +99,13 @@ export function MachinesWrapper(props: WrapperProps) {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }
-      if(props.currentCluster) {
+      if (props.currentCluster) {
         setFetching(props.currentCluster.name)
       }
     }
@@ -126,11 +125,7 @@ export function MachinesWrapper(props: WrapperProps) {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <CommandBar
-          items={_items}
-          ariaLabel="Refresh"
-          styles={controlStyles}
-        />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <MachinesListComponent
           machines={data!}
           ref={state}

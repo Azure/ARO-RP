@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from "axios"
 import { fetchMachineSets } from "../Request"
 import {
   IMessageBarStyles,
@@ -7,7 +6,7 @@ import {
   MessageBarType,
   Stack,
   CommandBar,
-  ICommandBarItemProps
+  ICommandBarItemProps,
 } from "@fluentui/react"
 import { machineSetsKey } from "../ClusterDetail"
 import { MachineSetsListComponent } from "./MachineSetsList"
@@ -41,7 +40,7 @@ export interface IManagedDisk {
 
 export function MachineSetsWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const state = useRef<MachineSetsListComponent>(null)
   const [fetching, setFetching] = useState("")
 
@@ -108,7 +107,7 @@ export function MachineSetsWrapper(props: WrapperProps) {
       float: "right",
     },
   }
-  
+
   const _items: ICommandBarItemProps[] = [
     {
       key: "refresh",
@@ -122,21 +121,23 @@ export function MachineSetsWrapper(props: WrapperProps) {
   ]
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        updateData(await result.json())
       } else {
         setError(result)
       }
-      if(props.currentCluster) {
+      if (props.currentCluster) {
         setFetching(props.currentCluster.name)
       }
     }
 
-    if (props.detailPanelSelected.toLowerCase() == machineSetsKey && 
-        fetching === "" &&
-        props.loaded &&
-        props.currentCluster) {
+    if (
+      props.detailPanelSelected.toLowerCase() == machineSetsKey &&
+      fetching === "" &&
+      props.loaded &&
+      props.currentCluster
+    ) {
       setFetching("FETCHING")
       fetchMachineSets(props.currentCluster).then(onData)
     }
@@ -146,11 +147,7 @@ export function MachineSetsWrapper(props: WrapperProps) {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <CommandBar
-          items={_items}
-          ariaLabel="Refresh"
-          styles={controlStyles}
-        />
+        <CommandBar items={_items} ariaLabel="Refresh" styles={controlStyles} />
         <MachineSetsListComponent
           machineSets={data!}
           ref={state}

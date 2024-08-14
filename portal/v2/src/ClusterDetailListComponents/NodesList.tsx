@@ -1,16 +1,16 @@
-import * as React from 'react';
+import * as React from "react"
 import { useState, useEffect } from "react"
-import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from '@fluentui/react';
-import { Link } from '@fluentui/react/lib/Link';
-import { IColumn } from '@fluentui/react/lib/DetailsList';
-import { ShimmeredDetailsList } from '@fluentui/react/lib/ShimmeredDetailsList';
-import { INode } from "./NodesWrapper";
+import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from "@fluentui/react"
+import { Link } from "@fluentui/react/lib/Link"
+import { IColumn } from "@fluentui/react/lib/DetailsList"
+import { ShimmeredDetailsList } from "@fluentui/react/lib/ShimmeredDetailsList"
+import { INode } from "./NodesWrapper"
 import { NodesComponent } from "./Nodes"
-import { _copyAndSort } from '../Utilities';
+import { _copyAndSort } from "../Utilities"
 
 export declare interface INodeList {
-  name: string;
-  status: string;
+  name: string
+  status: string
   schedulable: string
   instanceType?: string
 }
@@ -26,29 +26,22 @@ export interface INodeListState {
 }
 
 export class NodesListComponent extends React.Component<NodeListComponentProps, INodeListState> {
-  
   constructor(props: NodeListComponentProps) {
-      super(props)
+    super(props)
 
-      this.state = {
-          nodes: this.props.nodes,
-          clusterName: this.props.clusterName,
-      }
+    this.state = {
+      nodes: this.props.nodes,
+      clusterName: this.props.clusterName,
+    }
   }
-  
-  
+
   public render() {
-    return (
-        <NodeListHelperComponent nodes={this.state.nodes} clusterName={this.state.clusterName}/>
-      )
+    return <NodeListHelperComponent nodes={this.state.nodes} clusterName={this.state.clusterName} />
   }
 }
 
-export function NodeListHelperComponent(props: {
-     nodes: any,
-     clusterName: string
-}) {
-    const [columns, setColumns] = useState<IColumn[]>([
+export function NodeListHelperComponent(props: { nodes: any; clusterName: string }) {
+  const [columns, setColumns] = useState<IColumn[]>([
     {
       key: "nodeName",
       name: "Name",
@@ -99,7 +92,7 @@ export function NodeListHelperComponent(props: {
       isSortedDescending: false,
       isSorted: true,
       showSortIconWhenUnsorted: true,
-    }
+    },
   ])
 
   const [nodeList, setNodesList] = useState<INodeList[]>([])
@@ -109,11 +102,11 @@ export function NodeListHelperComponent(props: {
 
   useEffect(() => {
     setNodesList(createNodeList(props.nodes))
-  }, [props.nodes] );
+  }, [props.nodes])
 
   useEffect(() => {
-    const newColumns: IColumn[] = columns.slice();
-    newColumns.forEach(col => {
+    const newColumns: IColumn[] = columns.slice()
+    newColumns.forEach((col) => {
       col.onColumnClick = _onColumnClick
     })
     setColumns(newColumns)
@@ -121,8 +114,7 @@ export function NodeListHelperComponent(props: {
     if (nodeList.length > 0) {
       SetShimmerVisibility(false)
     }
-
-  }, [nodeList] )
+  }, [nodeList])
 
   function _onNodeInfoLinkClick(node: string) {
     setNodesDetailsVisible(!nodeDetailsVisible)
@@ -130,15 +122,15 @@ export function NodeListHelperComponent(props: {
   }
 
   function _onColumnClick(event: React.MouseEvent<HTMLElement>, column: IColumn): void {
-    let nodeLocal: INodeList[] = nodeList;
-  
-    let isSortedDescending = column.isSortedDescending;
+    let nodeLocal: INodeList[] = nodeList
+
+    let isSortedDescending = column.isSortedDescending
     if (column.isSorted) {
-      isSortedDescending = !isSortedDescending;
+      isSortedDescending = !isSortedDescending
     }
 
     // Sort the items.
-    nodeLocal = _copyAndSort(nodeLocal, column.fieldName!, isSortedDescending);
+    nodeLocal = _copyAndSort(nodeLocal, column.fieldName!, isSortedDescending)
     setNodesList(nodeLocal)
 
     const newColumns: IColumn[] = columns.slice()
@@ -156,19 +148,29 @@ export function NodeListHelperComponent(props: {
   }
 
   function createNodeList(nodes: INode[]): INodeList[] {
-    return nodes.map(node => {
+    return nodes.map((node) => {
       let schedulable: string = "True"
       let instanceType: string = node.labels?.get("node.kubernetes.io/instance-type")!
 
-      if (node.conditions![3].status === "True") {        
-        node.taints?.forEach(taint => {
+      if (node.conditions![3].status === "True") {
+        node.taints?.forEach((taint) => {
           schedulable = taint.key === "node.kubernetes.io/unschedulable" ? "False" : "True"
         })
 
-        return {name: node.name, status: "Ready", schedulable: schedulable!, instanceType: instanceType}
+        return {
+          name: node.name,
+          status: "Ready",
+          schedulable: schedulable!,
+          instanceType: instanceType,
+        }
       } else {
         schedulable = "--"
-        return {name: node.name, status: "Not Ready", schedulable: schedulable!, instanceType: instanceType}
+        return {
+          name: node.name,
+          status: "Not Ready",
+          schedulable: schedulable!,
+          instanceType: instanceType,
+        }
       }
     })
   }
@@ -184,37 +186,43 @@ export function NodeListHelperComponent(props: {
       },
     },
   }
-  
-  const backIconProp = {iconName: "back"}
+
+  const backIconProp = { iconName: "back" }
   function _onClickBackToNodeList() {
     setNodesDetailsVisible(false)
   }
 
-    return (
+  return (
     <Stack>
       <StackItem>
-        {
-          nodeDetailsVisible
-          ?
+        {nodeDetailsVisible ? (
           <Stack>
             <Stack.Item>
-              <IconButton styles={backIconStyles} onClick={_onClickBackToNodeList} iconProps={backIconProp} />
+              <IconButton
+                styles={backIconStyles}
+                onClick={_onClickBackToNodeList}
+                iconProps={backIconProp}
+              />
             </Stack.Item>
-            <NodesComponent nodes={props.nodes} clusterName={props.clusterName} nodeName={currentNode}/>
+            <NodesComponent
+              nodes={props.nodes}
+              clusterName={props.clusterName}
+              nodeName={currentNode}
+            />
           </Stack>
-          :
+        ) : (
           <div>
-          <ShimmeredDetailsList
-            setKey="nodeList"
-            items={nodeList}
-            columns={columns}
-            selectionMode={SelectionMode.none}
-            enableShimmer={shimmerVisibility}
-            ariaLabelForShimmer="Content is being fetched"
-            ariaLabelForGrid="Item details"
-          />
+            <ShimmeredDetailsList
+              setKey="nodeList"
+              items={nodeList}
+              columns={columns}
+              selectionMode={SelectionMode.none}
+              enableShimmer={shimmerVisibility}
+              ariaLabelForShimmer="Content is being fetched"
+              ariaLabelForGrid="Item details"
+            />
           </div>
-        }
+        )}
       </StackItem>
     </Stack>
   )
