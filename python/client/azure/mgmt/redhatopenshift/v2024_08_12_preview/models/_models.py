@@ -162,9 +162,9 @@ class ClusterProfile(msrest.serialization.Model):
 class ClusterUserAssignedIdentity(msrest.serialization.Model):
     """ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
 
-    :ivar client_id:
+    :ivar client_id: The ClientID of the ClusterUserAssignedIdentity resource.
     :vartype client_id: str
-    :ivar principal_id:
+    :ivar principal_id: The PrincipalID of the ClusterUserAssignedIdentity resource.
     :vartype principal_id: str
     """
 
@@ -178,9 +178,9 @@ class ClusterUserAssignedIdentity(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword client_id:
+        :keyword client_id: The ClientID of the ClusterUserAssignedIdentity resource.
         :paramtype client_id: str
-        :keyword principal_id:
+        :keyword principal_id: The PrincipalID of the ClusterUserAssignedIdentity resource.
         :paramtype principal_id: str
         """
         super(ClusterUserAssignedIdentity, self).__init__(**kwargs)
@@ -284,14 +284,16 @@ class Identity(msrest.serialization.Model):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar type: The identity type. Possible values include: "SystemAssigned", "UserAssigned".
+    :ivar type: The type of the Identity resource. Possible values include: "SystemAssigned",
+     "UserAssigned".
     :vartype type: str or
      ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ResourceIdentityType
-    :ivar principal_id:
+    :ivar principal_id: The PrincipalID of the Identity resource.
     :vartype principal_id: str
-    :ivar tenant_id:
+    :ivar tenant_id: The TenantID provided by the MSI RP.
     :vartype tenant_id: str
-    :ivar user_assigned_identities: Dictionary of :code:`<ClusterUserAssignedIdentity>`.
+    :ivar user_assigned_identities: A map of ClusterUserAssigned identities attached to the
+     cluster, specified in a type required by Microsoft's Managed Identity team.
     :vartype user_assigned_identities: dict[str,
      ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ClusterUserAssignedIdentity]
     """
@@ -313,10 +315,12 @@ class Identity(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword type: The identity type. Possible values include: "SystemAssigned", "UserAssigned".
+        :keyword type: The type of the Identity resource. Possible values include: "SystemAssigned",
+         "UserAssigned".
         :paramtype type: str or
          ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ResourceIdentityType
-        :keyword user_assigned_identities: Dictionary of :code:`<ClusterUserAssignedIdentity>`.
+        :keyword user_assigned_identities: A map of ClusterUserAssigned identities attached to the
+         cluster, specified in a type required by Microsoft's Managed Identity team.
         :paramtype user_assigned_identities: dict[str,
          ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ClusterUserAssignedIdentity]
         """
@@ -1284,13 +1288,14 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar operator_name:
+    :ivar operator_name: The name of the operator for which the PlatformWorkloadIdentity is used
+     for.
     :vartype operator_name: str
-    :ivar resource_id:
+    :ivar resource_id: The resource ID of the PlatformWorkloadIdentity resource.
     :vartype resource_id: str
-    :ivar client_id:
+    :ivar client_id: The ClientID of the PlatformWorkloadIdentity resource.
     :vartype client_id: str
-    :ivar object_id:
+    :ivar object_id: The ObjectID of the PlatformWorkloadIdentity resource.
     :vartype object_id: str
     """
 
@@ -1311,9 +1316,10 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword operator_name:
+        :keyword operator_name: The name of the operator for which the PlatformWorkloadIdentity is used
+         for.
         :paramtype operator_name: str
-        :keyword resource_id:
+        :keyword resource_id: The resource ID of the PlatformWorkloadIdentity resource.
         :paramtype resource_id: str
         """
         super(PlatformWorkloadIdentity, self).__init__(**kwargs)

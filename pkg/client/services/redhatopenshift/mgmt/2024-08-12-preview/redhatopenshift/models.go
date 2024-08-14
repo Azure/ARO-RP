@@ -108,7 +108,9 @@ type ClusterProfile struct {
 // ClusterUserAssignedIdentity clusterUserAssignedIdentity stores information about a user-assigned managed
 // identity in a predefined format required by Microsoft's Managed Identity team.
 type ClusterUserAssignedIdentity struct {
-	ClientID    *string `json:"clientId,omitempty"`
+	// ClientID - The ClientID of the ClusterUserAssignedIdentity resource
+	ClientID *string `json:"clientId,omitempty"`
+	// PrincipalID - The PrincipalID of the ClusterUserAssignedIdentity resource
 	PrincipalID *string `json:"principalId,omitempty"`
 }
 
@@ -145,12 +147,13 @@ type EffectiveOutboundIP struct {
 
 // Identity identity stores information about the cluster MSI(s) in a workload identity cluster.
 type Identity struct {
-	// Type - Possible values include: 'SystemAssigned', 'UserAssigned'
+	// Type - The type of the Identity resource. Possible values include: 'SystemAssigned', 'UserAssigned'
 	Type ResourceIdentityType `json:"type,omitempty"`
-	// PrincipalID - READ-ONLY
+	// PrincipalID - READ-ONLY; The PrincipalID of the Identity resource.
 	PrincipalID *string `json:"principalId,omitempty"`
-	// TenantID - READ-ONLY
-	TenantID               *string                                 `json:"tenantId,omitempty"`
+	// TenantID - READ-ONLY; The TenantID provided by the MSI RP
+	TenantID *string `json:"tenantId,omitempty"`
+	// UserAssignedIdentities - A map of ClusterUserAssigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.
 	UserAssignedIdentities map[string]*ClusterUserAssignedIdentity `json:"userAssignedIdentities"`
 }
 
@@ -1521,11 +1524,13 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 // PlatformWorkloadIdentity platformWorkloadIdentity stores information representing a single workload
 // identity.
 type PlatformWorkloadIdentity struct {
+	// OperatorName - The name of the operator for which the PlatformWorkloadIdentity is used for
 	OperatorName *string `json:"operatorName,omitempty"`
-	ResourceID   *string `json:"resourceId,omitempty"`
-	// ClientID - READ-ONLY
+	// ResourceID - The resource ID of the PlatformWorkloadIdentity resource
+	ResourceID *string `json:"resourceId,omitempty"`
+	// ClientID - READ-ONLY; The ClientID of the PlatformWorkloadIdentity resource
 	ClientID *string `json:"clientId,omitempty"`
-	// ObjectID - READ-ONLY
+	// ObjectID - READ-ONLY; The ObjectID of the PlatformWorkloadIdentity resource
 	ObjectID *string `json:"objectId,omitempty"`
 }
 
