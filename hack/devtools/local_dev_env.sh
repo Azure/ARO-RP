@@ -16,25 +16,25 @@ PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
         "platformWorkloadIdentityRoles": [
             {
                 "operatorName": "CloudControllerManager",
-                "roleDefinitionName": "Azure RedHat OpenShift Cloud Controller Manager Role",
+                "roleDefinitionName": "Azure Red Hat OpenShift Cloud Controller Manager Role",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
                 "serviceAccounts": ["openshift-cloud-controller-manager:cloud-controller-manager"]
             },
             {
                 "operatorName": "ClusterIngressOperator",
-                "roleDefinitionName": "Azure RedHat OpenShift Cluster Ingress Operator Role",
+                "roleDefinitionName": "Azure Red Hat OpenShift Cluster Ingress Operator Role",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
                 "serviceAccounts": ["openshift-ingress-operator:ingress-operator"]
             },
             {
                 "operatorName": "MachineApiOperator",
-                "roleDefinitionName": "Azure RedHat OpenShift Machine API Operator Role",
+                "roleDefinitionName": "Azure Red Hat OpenShift Machine API Operator Role",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0358943c-7e01-48ba-8889-02cc51d78637",
                 "serviceAccounts": ["openshift-machine-api:machine-api-operator"]
             },
             {
                 "operatorName": "StorageOperator",
-                "roleDefinitionName": "Azure RedHat OpenShift Storage Operator Role",
+                "roleDefinitionName": "Azure Red Hat OpenShift Storage Operator Role",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/5b7237c5-45e1-49d6-bc18-a1f62f400748",
                 "serviceAccounts": [
                     "openshift-cluster-csi-drivers:azure-disk-csi-driver-operator",
@@ -43,13 +43,13 @@ PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
             },
             {
                 "operatorName": "NetworkOperator",
-                "roleDefinitionName": "Azure RedHat OpenShift Network Operator Role",
+                "roleDefinitionName": "Azure Red Hat OpenShift Network Operator Role",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/be7a6435-15ae-4171-8f30-4a343eff9e8f",
                 "serviceAccounts": ["openshift-cloud-network-config-controller:cloud-network-config-controller"]
             },
             {
                 "operatorName": "ImageRegistryOperator",
-                "roleDefinitionName": "Azure RedHat OpenShift Image Registry Operator Role",
+                "roleDefinitionName": "Azure Red Hat OpenShift Image Registry Operator Role",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/8b32b316-c2f5-4ddf-b05b-83dacd2d08b5",
                 "serviceAccounts": [
                     "openshift-image-registry:cluster-image-registry-operator",
@@ -58,7 +58,7 @@ PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
             },
             {
                 "operatorName": "AzureFilesStorageOperator",
-                "roleDefinitionName": "Azure RedHat OpenShift Azure Files Storage Operator Role",
+                "roleDefinitionName": "Azure Red Hat OpenShift Azure Files Storage Operator Role",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0d7aedc0-15fd-4a67-a412-efad370c947e",
                 "serviceAccounts": [
                     "openshift-cluster-csi-drivers:azure-file-csi-driver-operator",
@@ -68,7 +68,7 @@ PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
             },
             {
                 "operatorName": "ServiceOperator",
-                "roleDefinitionName": "Azure RedHat OpenShift Service Operator",
+                "roleDefinitionName": "Azure Red Hat OpenShift Service Operator Role",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/4436bae4-7702-4c84-919b-c4069ff25ee2",
                 "serviceAccounts": ["openshift-azure-operator:aro-operator-master"]
             }
