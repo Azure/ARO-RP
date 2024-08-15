@@ -9,10 +9,10 @@
 # In case the binary that is trying to execute does not exist,
 # the script will print a message with instructions to download the binary and will exit with a non-zero exit code.
 
-if ! command -v ~/go/bin/golangci-lint &> /dev/null
+if ! command -v golangci-lint &> /dev/null
 then
     echo "ERROR: golangci-lint could not be found, Go linting aborted. To install it visit https://golangci-lint.run/usage/install/#local-installation"
     exit 1
 else
-    ~/go/bin/golangci-lint run --verbose
+    golangci-lint run --verbose
 fi
