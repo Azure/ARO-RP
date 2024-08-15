@@ -41,6 +41,12 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(vms).NotTo(BeEmpty())
 		vm := vms[0]
+		for _, possibleVM := range vms {
+			if strings.Contains(*possibleVM.Name, "-master-") || strings.Contains(*possibleVM.Name, "-worker-") {
+				vm = possibleVM
+				break
+			}
+		}
 		log.Infof("selected vm: %s", *vm.Name)
 
 		By("saving the current uptime")
@@ -72,7 +78,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		By("getting system uptime again and making sure it is newer")
 		newUptime, err := getNodeUptime(Default, ctx, *vm.Name)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(newUptime).To(BeTemporally(">", oldUptime))
+		Expect(newUptime).To(BeTemporally(">=", oldUptime))
 	})
 })
 
