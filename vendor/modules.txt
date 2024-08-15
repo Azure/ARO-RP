@@ -863,8 +863,8 @@ github.com/mattn/go-shellwords
 # github.com/mattn/go-sqlite3 v1.14.18
 ## explicit; go 1.16
 github.com/mattn/go-sqlite3
-# github.com/microsoft/go-otel-audit v0.0.0-20240815162013-cf1d59567dff => github.com/gouthamMN/go-otel-audit v0.0.1
-## explicit; go 1.21.11
+# github.com/microsoft/go-otel-audit v0.0.0-20240815162013-cf1d59567dff => github.com/gouthamMN/go-otel-audit v0.0.0
+## explicit; go 1.21.3
 github.com/microsoft/go-otel-audit/audit
 github.com/microsoft/go-otel-audit/audit/base
 github.com/microsoft/go-otel-audit/audit/conn

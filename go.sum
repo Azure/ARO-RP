@@ -364,8 +364,8 @@ github.com/gorilla/securecookie v1.1.2/go.mod h1:NfCASbcHqRSY+3a8tlWJwsQap2VX5pw
 github.com/gorilla/sessions v1.2.2 h1:lqzMYz6bOfvn2WriPUjNByzeXIlVzURcPmgMczkmTjY=
 github.com/gorilla/sessions v1.2.2/go.mod h1:ePLdVu+jbEgHH+KWw8I1z2wqd0BAdAQh/8LRvBeoNcQ=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
-github.com/gouthamMN/go-otel-audit v0.0.1 h1:IDiOjcB9MCn8xiSVgtrDfQtaVuaX5XvDDCUV/siLwlM=
-github.com/gouthamMN/go-otel-audit v0.0.1/go.mod h1:sfG+7xwjIsOSlgFypbR5RB9kkwR988U5XfJWQ6pCfMA=
+github.com/gouthamMN/go-otel-audit v0.0.0 h1:ki54KMhDKPaTN4evExoOxsIdy4UBcw9juwlNJOjpHaE=
+github.com/gouthamMN/go-otel-audit v0.0.0/go.mod h1:bLzrt+/yLlwBDsxOWYteXUxfTQhG1I58yswNDaVcOIw=
 github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 h1:+ngKgrYPPJrOjhax5N+uePQ0Fh1Z7PheYoUI/0nzkPA=
 github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3/go.mod h1:o//XUCC/F+yRGJoPO/VU0GSB0f8Nhgmxx0VIRUvaC0w=

@@ -1,8 +1,8 @@
 module github.com/Azure/ARO-RP
 
-go 1.21.11
+go 1.21.3
 
-toolchain go1.23.0
+toolchain go1.21.11
 
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
@@ -1613,4 +1613,4 @@ replace (
 )
 
 // go-otel-audit pins
-replace github.com/microsoft/go-otel-audit v0.0.0-20240815162013-cf1d59567dff => github.com/gouthamMN/go-otel-audit v0.0.1
+replace github.com/microsoft/go-otel-audit v0.0.0-20240815162013-cf1d59567dff => github.com/gouthamMN/go-otel-audit v0.0.0
