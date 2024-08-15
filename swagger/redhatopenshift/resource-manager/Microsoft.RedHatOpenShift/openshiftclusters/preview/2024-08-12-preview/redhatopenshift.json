@@ -2351,7 +2351,7 @@
       "type": "object",
       "properties": {
         "operatorName": {
-          "description": "The name of the operator for which the PlatformWorkloadIdentity is used for",
+          "description": "The name of the operator the PlatformWorkloadIdentity is to be used for",
           "type": "string"
         },
         "resourceId": {

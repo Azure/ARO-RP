@@ -828,7 +828,7 @@ type UpgradeableTo string
 type PlatformWorkloadIdentity struct {
 	MissingFields
 
-	// The name of the operator for which the PlatformWorkloadIdentity is used for
+	// The name of the operator the PlatformWorkloadIdentity is to be used for
 	OperatorName string `json:"operatorName,omitempty"`
 
 	// The resource ID of the PlatformWorkloadIdentity resource
