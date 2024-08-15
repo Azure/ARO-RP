@@ -241,23 +241,17 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"''')\n'",
 	)
 
-	var sb strings.Builder
-
 	// VMSS extensions only support one custom script
 	// Because of this, the util-*.sh scripts are prefixed to the bootstrapping script
 	// main is called at the end of the bootstrapping script, so appending them will not work
-	sb.WriteString(string(scriptUtilCommon))
-	sb.WriteString(string(scriptUtilPackages))
-	sb.WriteString(string(scriptUtilServices))
-	sb.WriteString(string(scriptUtilSystem))
-	sb.WriteString("\n#Start of gatewayVMSS.sh\n")
-	sb.WriteString(string(scriptGatewayVMSS))
-
-	trailer := base64.StdEncoding.EncodeToString([]byte(sb.String()))
-
+	bootstrapScript := scriptUtilCommon +
+		scriptUtilPackages +
+		scriptUtilServices +
+		scriptUtilSystem +
+		scriptGatewayVMSS
+	trailer := base64.StdEncoding.EncodeToString([]byte(bootstrapScript))
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
-
-	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
+	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
@@ -362,7 +356,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 									AutoUpgradeMinorVersion: to.BoolPtr(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
-										"script": script,
+										"script": customScript,
 									},
 								},
 							},

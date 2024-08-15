@@ -8,22 +8,22 @@ import (
 )
 
 //go:embed scripts/devProxyVMSS.sh
-var scriptDevProxyVMSS []byte
+var scriptDevProxyVMSS string
 
 //go:embed scripts/gatewayVMSS.sh
-var scriptGatewayVMSS []byte
+var scriptGatewayVMSS string
 
 //go:embed scripts/rpVMSS.sh
-var scriptRpVMSS []byte
+var scriptRpVMSS string
 
 //go:embed scripts/util-system.sh
-var scriptUtilSystem []byte
+var scriptUtilSystem string
 
 //go:embed scripts/util-services.sh
-var scriptUtilServices []byte
+var scriptUtilServices string
 
 //go:embed scripts/util-packages.sh
-var scriptUtilPackages []byte
+var scriptUtilPackages string
 
 //go:embed scripts/util-common.sh
-var scriptUtilCommon []byte
+var scriptUtilCommon string

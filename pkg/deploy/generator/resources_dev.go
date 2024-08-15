@@ -101,15 +101,9 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	var sb strings.Builder
-
-	sb.WriteString(string(scriptDevProxyVMSS))
-
-	trailer := base64.StdEncoding.EncodeToString([]byte(sb.String()))
-
+	trailer := base64.StdEncoding.EncodeToString([]byte(scriptDevProxyVMSS))
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
-
-	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
+	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
@@ -217,7 +211,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 									AutoUpgradeMinorVersion: to.BoolPtr(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
-										"script": script,
+										"script": customScript,
 									},
 								},
 							},
