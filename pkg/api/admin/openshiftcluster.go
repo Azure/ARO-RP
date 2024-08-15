@@ -428,7 +428,7 @@ type UpgradeableTo string
 
 // PlatformWorkloadIdentity stores information representing a single workload identity.
 type PlatformWorkloadIdentity struct {
-	// The name of the operator for which the PlatformWorkloadIdentity is used for
+	// The name of the operator the PlatformWorkloadIdentity is to be used for
 	OperatorName string `json:"operatorName,omitempty"`
 
 	// The resource ID of the PlatformWorkloadIdentity resource
