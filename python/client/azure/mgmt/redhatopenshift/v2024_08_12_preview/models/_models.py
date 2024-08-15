@@ -1288,8 +1288,7 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar operator_name: The name of the operator for which the PlatformWorkloadIdentity is used
-     for.
+    :ivar operator_name: The name of the operator the PlatformWorkloadIdentity is to be used for.
     :vartype operator_name: str
     :ivar resource_id: The resource ID of the PlatformWorkloadIdentity resource.
     :vartype resource_id: str
@@ -1316,7 +1315,7 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword operator_name: The name of the operator for which the PlatformWorkloadIdentity is used
+        :keyword operator_name: The name of the operator the PlatformWorkloadIdentity is to be used
          for.
         :paramtype operator_name: str
         :keyword resource_id: The resource ID of the PlatformWorkloadIdentity resource.
