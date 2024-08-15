@@ -1524,7 +1524,7 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 // PlatformWorkloadIdentity platformWorkloadIdentity stores information representing a single workload
 // identity.
 type PlatformWorkloadIdentity struct {
-	// OperatorName - The name of the operator for which the PlatformWorkloadIdentity is used for
+	// OperatorName - The name of the operator the PlatformWorkloadIdentity is to be used for
 	OperatorName *string `json:"operatorName,omitempty"`
 	// ResourceID - The resource ID of the PlatformWorkloadIdentity resource
 	ResourceID *string `json:"resourceId,omitempty"`
