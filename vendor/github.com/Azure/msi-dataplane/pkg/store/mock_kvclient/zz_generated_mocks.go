@@ -71,6 +71,20 @@ func (mr *MockKeyVaultClientMockRecorder) GetSecret(ctx, name, version, options 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockKeyVaultClient)(nil).GetSecret), ctx, name, version, options)
 }
 
+// NewListDeletedSecretPropertiesPager mocks base method.
+func (m *MockKeyVaultClient) NewListDeletedSecretPropertiesPager(options *azsecrets.ListDeletedSecretPropertiesOptions) *runtime.Pager[azsecrets.ListDeletedSecretPropertiesResponse] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewListDeletedSecretPropertiesPager", options)
+	ret0, _ := ret[0].(*runtime.Pager[azsecrets.ListDeletedSecretPropertiesResponse])
+	return ret0
+}
+
+// NewListDeletedSecretPropertiesPager indicates an expected call of NewListDeletedSecretPropertiesPager.
+func (mr *MockKeyVaultClientMockRecorder) NewListDeletedSecretPropertiesPager(options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewListDeletedSecretPropertiesPager", reflect.TypeOf((*MockKeyVaultClient)(nil).NewListDeletedSecretPropertiesPager), options)
+}
+
 // NewListSecretPropertiesPager mocks base method.
 func (m *MockKeyVaultClient) NewListSecretPropertiesPager(options *azsecrets.ListSecretPropertiesOptions) *runtime.Pager[azsecrets.ListSecretPropertiesResponse] {
 	m.ctrl.T.Helper()

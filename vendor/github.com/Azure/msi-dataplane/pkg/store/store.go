@@ -2,11 +2,16 @@ package store
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
+)
+
+var (
+	errNilSecretValue = errors.New("secret value is nil")
 )
 
 type MsiKeyVaultStore struct {
@@ -49,6 +54,9 @@ func (s *MsiKeyVaultStore) GetCredentialsObject(ctx context.Context, secretName 
 		return nil, err
 	}
 
+	if secret.Value == nil {
+		return nil, errNilSecretValue
+	}
 	var credentialsObject dataplane.CredentialsObject
 	if err := credentialsObject.UnmarshalJSON([]byte(*secret.Value)); err != nil {
 		return nil, err
@@ -80,6 +88,11 @@ func (s *MsiKeyVaultStore) GetCredentialsObject(ctx context.Context, secretName 
 // Get a pager for listing credentials objects from the key vault.
 func (s *MsiKeyVaultStore) GetCredentialsObjectPager() *runtime.Pager[azsecrets.ListSecretPropertiesResponse] {
 	return s.kvClient.NewListSecretPropertiesPager(nil)
+}
+
+// Get a pager for listing deleted credentials objects from the key vault.
+func (s *MsiKeyVaultStore) GetDeletedCredentialsObjectPager() *runtime.Pager[azsecrets.ListDeletedSecretPropertiesResponse] {
+	return s.kvClient.NewListDeletedSecretPropertiesPager(nil)
 }
 
 // Purge a deleted credentials object from the key vault using the specified secret name.
