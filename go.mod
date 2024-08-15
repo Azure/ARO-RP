@@ -1,6 +1,6 @@
 module github.com/Azure/ARO-RP
 
-go 1.21
+go 1.21.11
 
 toolchain go1.23.0
 
@@ -50,7 +50,7 @@ require (
 	github.com/itchyny/gojq v0.12.13
 	github.com/jewzaam/go-cosmosdb v0.0.0-20240723075448-058185e3c66d
 	github.com/jongio/azidext/go/azidext v0.5.0
-	github.com/microsoft/go-otel-audit v0.0.0-20240809190925-7d070eed3ccd
+	github.com/microsoft/go-otel-audit v0.0.0-20240815162013-cf1d59567dff
 	github.com/microsoft/kiota-abstractions-go v1.2.0
 	github.com/microsoft/kiota-http-go v1.0.0
 	github.com/microsoft/kiota-serialization-form-go v1.0.0
@@ -155,7 +155,6 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
-	github.com/go-json-experiment/json v0.0.0-20240418180308-af2d5061e6c2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.21.4 // indirect
 	github.com/go-openapi/errors v0.20.4 // indirect
@@ -1612,3 +1611,6 @@ replace (
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )
+
+// go-otel-audit pins
+replace github.com/microsoft/go-otel-audit v0.0.0-20240815162013-cf1d59567dff => github.com/gouthamMN/go-otel-audit v0.0.1

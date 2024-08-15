@@ -31,7 +31,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/go-json-experiment/json"
+	"encoding/json"
+
 	"github.com/vmihailenco/msgpack/v4"
 	"golang.org/x/exp/constraints"
 )
