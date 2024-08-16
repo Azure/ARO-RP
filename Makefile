@@ -6,6 +6,7 @@ E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 
 E2E_LABEL ?= !smoke
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 NO_CACHE ?= true
+PODMAN_REMOTE_ARGS ?=
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -74,21 +75,21 @@ aro: check-release generate
 # Target to create podman secrets
 .PHONY: podman-secrets
 podman-secrets: aks.kubeconfig
-	podman secret rm --ignore aks.kubeconfig
-	podman secret create aks.kubeconfig ./aks.kubeconfig
+	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore aks.kubeconfig
+	podman $(PODMAN_REMOTE_ARGS) secret create aks.kubeconfig ./aks.kubeconfig
 
-	podman secret rm --ignore proxy-client.key
-	podman secret create proxy-client.key ./secrets/proxy-client.key
+	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.key
+	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.key ./secrets/proxy-client.key
 
-	podman secret rm --ignore proxy-client.crt
-	podman secret create proxy-client.crt ./secrets/proxy-client.crt
+	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.crt
+	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.crt ./secrets/proxy-client.crt
 
-	podman secret rm --ignore proxy.crt
-	podman secret create proxy.crt ./secrets/proxy.crt
+	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy.crt
+	podman $(PODMAN_REMOTE_ARGS) secret create proxy.crt ./secrets/proxy.crt
 
 .PHONY: runlocal-portal
 runlocal-portal: ci-rp podman-secrets
-	podman \
+	podman $(PODMAN_REMOTE_ARGS) \
 		run \
 		--name aro-portal \
 		--rm \
@@ -117,7 +118,7 @@ runlocal-portal: ci-rp podman-secrets
 # Target to run the local RP
 .PHONY: runlocal-rp
 runlocal-rp: ci-rp podman-secrets
-	podman \
+	podman $(PODMAN_REMOTE_ARGS) \
 		run \
 		--name aro-rp \
 		--rm \
@@ -177,7 +178,7 @@ az: pyenv
 
 .PHONY: azext-aro
 azext-aro:
-	podman \
+	podman $(PODMAN_REMOTE_ARGS) \
 		build . \
 		-f Dockerfile.ci-azext-aro \
 		--platform=linux/amd64 \
@@ -197,7 +198,7 @@ client: generate
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	podman \
+	podman $(PODMAN_REMOTE_ARGS) \
 		build . \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
@@ -205,10 +206,10 @@ ci-rp: fix-macos-vendor
 		--build-arg ARO_VERSION=$(VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
-	podman tag \
+	podman $(PODMAN_REMOTE_ARGS) tag \
 		$(shell podman image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
 		$(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)
-	podman tag \
+	podman $(PODMAN_REMOTE_ARGS) tag \
 		$(shell podman image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
 		$(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)
 
