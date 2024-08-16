@@ -34,8 +34,7 @@ type service struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 
-	dbOpenShiftClusters    database.OpenShiftClusters
-	dbMaintenanceManifests database.MaintenanceManifests
+	dbGroup actuatorDBs
 
 	m        metrics.Emitter
 	mu       sync.RWMutex
@@ -54,14 +53,18 @@ type service struct {
 	sets map[string]sets.MaintenanceSet
 }
 
-func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbOpenShiftClusters database.OpenShiftClusters, dbMaintenanceManifests database.MaintenanceManifests, m metrics.Emitter) *service {
+type actuatorDBs interface {
+	database.DatabaseGroupWithOpenShiftClusters
+	database.DatabaseGroupWithMaintenanceManifests
+}
+
+func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter) *service {
 	s := &service{
 		env:     env,
 		baseLog: log,
 		dialer:  dialer,
 
-		dbOpenShiftClusters:    dbOpenShiftClusters,
-		dbMaintenanceManifests: dbMaintenanceManifests,
+		dbGroup: dbg,
 
 		m:        m,
 		stopping: &atomic.Bool{},
@@ -127,8 +130,13 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 // Temporary method of updating without the changefeed -- the reason why is
 // complicated
 func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClusterDocument) (map[string]*api.OpenShiftClusterDocument, error) {
+	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, err
+	}
+
 	// Fetch all of the cluster UUIDs
-	i, err := s.dbOpenShiftClusters.GetAllResourceIDs(ctx, "")
+	i, err := dbOpenShiftClusters.GetAllResourceIDs(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +208,19 @@ func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
 
 	log := utillog.EnrichWithResourceID(s.baseLog, id)
 
-	a, err := NewActuator(context.Background(), s.env, log, id, s.dbOpenShiftClusters, s.dbMaintenanceManifests, s.now)
+	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	dbMaintenanceManifests, err := s.dbGroup.MaintenanceManifests()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	a, err := NewActuator(context.Background(), s.env, log, id, dbOpenShiftClusters, dbMaintenanceManifests, s.now)
 	if err != nil {
 		log.Error(err)
 		return
