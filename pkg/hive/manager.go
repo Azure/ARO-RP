@@ -42,6 +42,7 @@ type ClusterManager interface {
 	IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
+	GetClusterSyncforClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SyncConditionType, error)
 }
 
 type clusterManager struct {
@@ -261,4 +262,17 @@ func (hr *clusterManager) installLogsForLatestDeployment(ctx context.Context, cd
 	latestProvision := provisions[0]
 
 	return latestProvision.Spec.InstallLog, nil
+}
+
+func (hr *clusterManager) GetClusterSyncforClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SyncConditionType, error) {
+	cs := &hivev1alpha1.SyncConditionType{}
+	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
+		Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		Name:      ClusterDeploymentName,
+	}, cs)
+	if err != nil {
+		return nil, err
+	}
+
+	return cs, nil
 }
