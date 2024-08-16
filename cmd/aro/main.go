@@ -39,7 +39,7 @@ func main() {
 	ctx := context.Background()
 	audit := utillog.GetAuditEntry()
 
-	otelAudit := auditlog.New("uds", false)
+	otelAudit := auditlog.New("tcp", false)
 	defer otelAudit.Client.Close(context.Background())
 
 	log := utillog.GetLogger()

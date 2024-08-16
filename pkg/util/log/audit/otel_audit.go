@@ -31,7 +31,7 @@ func New(connectionType string, isTest bool) *Audit {
 		if strings.EqualFold(connectionType, "uds") {
 			audit.newUDSCon()
 		} else {
-			audit.newTCPCon("localhost:8080")
+			audit.newTCPCon("localhost:29230")
 		}
 
 		audit.SendAuditMessage = func(c *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error { return c.Send(ctx, *msg) }
