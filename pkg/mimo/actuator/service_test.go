@@ -96,8 +96,9 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		now := func() time.Time { return time.Unix(120, 0) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
+		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
 
-		svc = NewService(_env, log, nil, clusters, manifests, m)
+		svc = NewService(_env, log, nil, dbg, m)
 		svc.now = now
 
 	})
