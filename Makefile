@@ -42,9 +42,13 @@ else
 	REGISTRY = $(RP_IMAGE_ACR)
 endif
 
-RP_IMAGE_LOCAL ?= aro
-ARO_PORTAL_BUILD_IMAGE ?= $(RP_IMAGE_LOCAL)-portal-build
-ARO_BUILDER_IMAGE ?= $(RP_IMAGE_LOCAL)-builder
+# local images
+LOCAL_ARO_RP_IMAGE ?= aro
+LOCAL_ARO_PORTAL_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-portal-build
+LOCAL_ARO_RP_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-build
+LOCAL_AZ_EXT_ARO_IMAGE ?= azext-aro
+
+# prod images
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
 
@@ -84,9 +88,12 @@ podman-secrets: aks.kubeconfig
 
 .PHONY: runlocal-portal
 runlocal-portal: ci-rp podman-secrets
-	podman run \
+	podman \
+		run \
 		--name aro-portal \
 		--rm \
+		-p 127.0.0.1:8444:8444 \
+		-p 127.0.0.1:2222:2222 \
 		--cap-drop net_raw \
 		-e RP_MODE \
 		-e AZURE_SUBSCRIPTION_ID \
@@ -105,15 +112,16 @@ runlocal-portal: ci-rp podman-secrets
 		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		-p 127.0.0.1:8444:8444 \
-		-p 127.0.0.1:2222:2222 \
-		$(RP_IMAGE_LOCAL) portal
+		$(LOCAL_ARO_RP_IMAGE) portal
 
 # Target to run the local RP
 .PHONY: runlocal-rp
 runlocal-rp: ci-rp podman-secrets
-	podman run --rm -p 127.0.0.1:8443:8443 \
+	podman \
+		run \
 		--name aro-rp \
+		--rm \
+		-p 127.0.0.1:8443:8443 \
 		-w /app \
 		-e ARO_IMAGE \
 		-e RP_MODE="development" \
@@ -157,7 +165,7 @@ runlocal-rp: ci-rp podman-secrets
 		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(RP_IMAGE_LOCAL) rp
+		$(LOCAL_ARO_RP_IMAGE) rp
 
 .PHONY: az
 az: pyenv
@@ -169,7 +177,12 @@ az: pyenv
 
 .PHONY: azext-aro
 azext-aro:
-	podman build --platform=linux/amd64 . -f Dockerfile.ci-azext-aro --no-cache=$(NO_CACHE) -t azext-aro:latest
+	podman \
+		build . \
+		-f Dockerfile.ci-azext-aro \
+		--platform=linux/amd64 \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_AZ_EXT_ARO_IMAGE):$(VERSION)
 
 .PHONY: clean
 clean:
@@ -184,9 +197,20 @@ client: generate
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	podman build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE)
-	podman build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE)
-	podman build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(RP_IMAGE_LOCAL)
+	podman \
+		build . \
+		-f Dockerfile.ci-rp \
+		--ulimit=nofile=4096:4096 \
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
+	podman tag \
+		$(shell podman image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
+		$(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)
+	podman tag \
+		$(shell podman image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
+		$(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor

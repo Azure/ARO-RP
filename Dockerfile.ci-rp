@@ -18,6 +18,7 @@ RUN npm audit --omit=dev # Run audit without dev dependencies
 # Copying the rest of the source and build
 COPY --chown=root:root portal/v2/ ./
 RUN npm run lint && npm run build
+LABEL stage="portal-build-cache-layer"
 
 ###############################################################################
 # Stage 2: Compile the Golang RP code
@@ -58,6 +59,7 @@ RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure
 # Additional tests
 RUN go run gotest.tools/gotestsum@v1.11.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 RUN hack/fips/validate-fips.sh ./aro
+LABEL stage="rp-build-cache-layer"
 
 ###############################################################################
 # Stage 3: final is our slim image with minimal layers and tools
