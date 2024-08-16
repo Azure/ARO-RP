@@ -79,6 +79,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.2
 	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.26.0
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/net v0.28.0
 	golang.org/x/oauth2 v0.17.0
 	golang.org/x/sync v0.8.0
