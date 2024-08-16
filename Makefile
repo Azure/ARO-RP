@@ -67,23 +67,23 @@ build-all:
 aro: check-release generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
-# Target to create docker secrets
-.PHONY: docker-secrets
-docker-secrets: aks.kubeconfig
-	docker secret rm --ignore aks.kubeconfig
-	docker secret create aks.kubeconfig ./aks.kubeconfig
+# Target to create podman secrets
+.PHONY: podman-secrets
+podman-secrets: aks.kubeconfig
+	podman secret rm --ignore aks.kubeconfig
+	podman secret create aks.kubeconfig ./aks.kubeconfig
 
-	docker secret rm --ignore proxy-client.key
-	docker secret create proxy-client.key ./secrets/proxy-client.key
+	podman secret rm --ignore proxy-client.key
+	podman secret create proxy-client.key ./secrets/proxy-client.key
 
-	docker secret rm --ignore proxy-client.crt
-	docker secret create proxy-client.crt ./secrets/proxy-client.crt
+	podman secret rm --ignore proxy-client.crt
+	podman secret create proxy-client.crt ./secrets/proxy-client.crt
 
-	docker secret rm --ignore proxy.crt
-	docker secret create proxy.crt ./secrets/proxy.crt
+	podman secret rm --ignore proxy.crt
+	podman secret create proxy.crt ./secrets/proxy.crt
 
 .PHONY: runlocal-portal
-runlocal-portal: ci-rp docker-secrets
+runlocal-portal: ci-rp podman-secrets
 	podman run \
 		--name aro-portal \
 		--rm \
@@ -111,8 +111,8 @@ runlocal-portal: ci-rp docker-secrets
 
 # Target to run the local RP
 .PHONY: runlocal-rp
-runlocal-rp: ci-rp docker-secrets
-	docker run --rm -p 127.0.0.1:8443:8443 \
+runlocal-rp: ci-rp podman-secrets
+	podman run --rm -p 127.0.0.1:8443:8443 \
 		--name aro-rp \
 		-w /app \
 		-e ARO_IMAGE \
@@ -169,7 +169,7 @@ az: pyenv
 
 .PHONY: azext-aro
 azext-aro:
-	docker build --platform=linux/amd64 . -f Dockerfile.ci-azext-aro --no-cache=$(NO_CACHE) -t azext-aro:latest
+	podman build --platform=linux/amd64 . -f Dockerfile.ci-azext-aro --no-cache=$(NO_CACHE) -t azext-aro:latest
 
 .PHONY: clean
 clean:
@@ -184,17 +184,17 @@ client: generate
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(RP_IMAGE_LOCAL)
+	podman build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE)
+	podman build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE)
+	podman build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(RP_IMAGE_LOCAL)
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
-	docker build . -f Dockerfile.ci-tunnel --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE) -t aro-tunnel:$(VERSION)
+	podman build . -f Dockerfile.ci-tunnel --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE) -t aro-tunnel:$(VERSION)
 
 .PHONY: ci-clean
 ci-clean:
-	docker image prune --all --filter="label=aro-*=true"
+	podman image prune --all --filter="label=aro-*=true"
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
