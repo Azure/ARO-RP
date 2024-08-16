@@ -15,8 +15,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
@@ -201,6 +203,39 @@ func TestCreateDeploymentData(t *testing.T) {
 				Image:                        operatorImageWithTag,
 				Version:                      operatorImageTag,
 				SupportsPodSecurityAdmission: true,
+			},
+		},
+		{
+			name: "workload identity detected",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageWithTag)
+				// set so that UsesWorkloadIdentity() returns true
+				oc.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
+			},
+			clusterVersion: "4.10.0",
+			expected: deploymentData{
+				Image:                operatorImageWithTag,
+				Version:              operatorImageTag,
+				UsesWorkloadIdentity: true,
+				TokenVolumeMountPath: pkgoperator.OperatorTokenFile,
+			},
+		},
+		{
+			name: "service principal detected",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageWithTag)
+				// set so that UsesWorkloadIdentity() returns false
+				oc.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{}
+			},
+			clusterVersion: "4.10.0",
+			expected: deploymentData{
+				Image:                operatorImageWithTag,
+				Version:              operatorImageTag,
+				UsesWorkloadIdentity: false,
 			},
 		},
 	} {
@@ -642,6 +677,53 @@ func TestGenerateOperatorIdentitySecret(t *testing.T) {
 
 			if !reflect.DeepEqual(actualSecret, test.ExpectedSecret) {
 				t.Errorf("generateOperatorIdentitySecret() %s:\nexpected:\n%+v\n\ngot:\n%+v\n", test.Name, test.ExpectedSecret, actualSecret)
+			}
+		})
+	}
+}
+
+func TestTemplateManifests(t *testing.T) {
+	tests := []struct {
+		Name           string
+		DeploymentData deploymentData
+		ExpectError    bool
+	}{
+		{
+			Name: "service principal data",
+			DeploymentData: deploymentData{
+				Image:                        "someImage",
+				Version:                      "someVersion",
+				IsLocalDevelopment:           false,
+				SupportsPodSecurityAdmission: false,
+				UsesWorkloadIdentity:         false,
+			},
+		},
+		{
+			Name: "workload identity data",
+			DeploymentData: deploymentData{
+				Image:                        "someImage",
+				Version:                      "someVersion",
+				IsLocalDevelopment:           false,
+				SupportsPodSecurityAdmission: false,
+				UsesWorkloadIdentity:         true,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			actualBytes, err := templateManifests(test.DeploymentData)
+			if test.ExpectError == (err == nil) {
+				t.Errorf("templateManifests() %s: ExpectError: %t, actual error: %s\n", test.Name, test.ExpectError, err)
+			}
+
+			for _, fileBytes := range actualBytes {
+				var resource *kruntime.Object
+				err := yaml.Unmarshal(fileBytes, resource)
+
+				if test.ExpectError == (err == nil) {
+					t.Errorf("templateManifests() %s: ExpectError: %t, actual error: %s\n", test.Name, test.ExpectError, err)
+				}
 			}
 		})
 	}

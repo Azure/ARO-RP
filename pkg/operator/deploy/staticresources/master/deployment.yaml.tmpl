@@ -34,11 +34,16 @@ spec:
             secretKeyRef:
               name: azure-cloud-credentials
               key: azure_client_id
+        {{ if .UsesWorkloadIdentity }}
+        - name: AZURE_FEDERATED_TOKEN_FILE
+          value: "{{ .TokenVolumeMountPath }}"
+        {{ else }}
         - name: AZURE_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
               name: azure-cloud-credentials
               key: azure_client_secret
+        {{ end }}
         - name: AZURE_TENANT_ID
           valueFrom:
             secretKeyRef:
@@ -63,6 +68,12 @@ spec:
             - ALL
           runAsNonRoot: true  
         {{ end }}            
+        {{ if .UsesWorkloadIdentity }}
+        volumeMounts:
+        - mountPath: "{{ .TokenVolumeMountPath }}"
+          name: bound-sa-token
+          readOnly: true
+        {{ end }}
       nodeSelector:
         node-role.kubernetes.io/master: ""
       {{ if .SupportsPodSecurityAdmission }}
@@ -79,4 +90,14 @@ spec:
         operator: Exists
       - effect: NoSchedule
         operator: Exists
-
+      {{ if .UsesWorkloadIdentity }}
+      volumes:
+      - name: bound-sa-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: openshift
+              expirationSeconds: 3600
+              path: token
+      {{ end }}
