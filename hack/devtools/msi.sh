@@ -4,8 +4,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-set -euxo pipefail
-
 # This script creates a mock cluster MSI object and platform identities to use for local development
 # We use a service principal and certificate as the mock cluster MSI
 

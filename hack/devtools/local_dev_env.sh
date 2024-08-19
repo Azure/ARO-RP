@@ -4,8 +4,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-set -euxo pipefail
-
 # Local development environment script.
 # Execute this script from the root folder of the repo (ARO-RP).
 # This script is aimed to provide an automatic and easy way to prepare 
@@ -152,18 +150,19 @@ assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
-    local role_count
+    local roles
     
-    if ! role_count=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null); then
-        echo "ERROR: Failed to list role assignments for identity: ${objectId}"
+    if ! roles=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null); then
+        # If the role assignment list fails, we assume the identity is newly created and we can proceed with the role assignment
+        echo "INFO: Unable to list role assignments for identity: ${objectId}"
     fi
 
-    if [[ $role_count -gt 1 ]]; then
-        echo "INFO: Role already assigned to identity: ${objectId}"
-        echo ""
-    else
+    if [ "$roles" == "" ] || [ "$roles" == "[]" ] ; then
         echo "INFO: Assigning role to identity: ${objectId}"
         az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
+        echo ""
+    else
+        echo "INFO: Role already assigned to identity: ${objectId}"
         echo ""
     fi
 }
