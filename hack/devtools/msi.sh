@@ -4,8 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# Trap errors and print a custom error message with line number and command
-trap 'echo "Error on line $LINENO: $BASH_COMMAND"; exit 1' ERR
+set -euxo pipefail
 
 # This script creates a mock cluster MSI object and platform identities to use for local development
 # We use a service principal and certificate as the mock cluster MSI

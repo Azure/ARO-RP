@@ -4,8 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# Trap errors and print a custom error message with line number and command
-trap 'echo "Error on line $LINENO: $BASH_COMMAND"; exit 1' ERR
+set -euxo pipefail
 
 # Local development environment script.
 # Execute this script from the root folder of the repo (ARO-RP).
@@ -153,37 +152,41 @@ assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
+    local role_count
     
-    result=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null | wc -l)
-    if [[ $result -gt 1 ]]; then
-        echo "INFO: Role already assigned to identity: ${objectId}"
-        echo ""
-        return
+    if ! role_count=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null); then
+        echo "ERROR: Failed to list role assignments for identity: ${objectId}"
     fi
 
-    echo "INFO: Assigning roles to identity: ${objectId}"
-    az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
-    echo ""
+    if [[ $role_count -gt 1 ]]; then
+        echo "INFO: Role already assigned to identity: ${objectId}"
+        echo ""
+    else
+        echo "INFO: Assigning role to identity: ${objectId}"
+        az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
+        echo ""
+    fi
 }
 
 create_platform_identity_and_assign_role() {
     local operatorName="${1}"
     local roleDefinitionId="${2}"
     local identityName="aro-${operatorName}"
-    
-    if ! az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null; then
+    local identity
+
+    if ! identity=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null); then
         echo "INFO: Creating platform identity for operator: ${operatorName}"
-        result=$(az identity create --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+        identity=$(az identity create --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
     else
         echo "INFO: Platform identity ${identityName} already exists for operator: ${operatorName}"
         echo ""
     fi
 
     # Extract the client ID, principal Id, resource ID and name from the result
-    clientID=$(jq -r .clientId <<<"${result}")
-    principalId=$(jq -r .principalId <<<"${result}")
-    resourceId=$(jq -r .id <<<"${result}")
-    name=$(jq -r .name <<<"${result}")
+    clientID=$(jq -r .clientId <<<"${identity}")
+    principalId=$(jq -r .principalId <<<"${identity}")
+    resourceId=$(jq -r .id <<<"${identity}")
+    name=$(jq -r .name <<<"${identity}")
 
     echo "Client ID: $clientID"
     echo "Principal ID: $principalId"
@@ -191,6 +194,8 @@ create_platform_identity_and_assign_role() {
     echo "Name: $name"
     echo ""
 
+    # The following operators require a role assignment since they need access to customer BYO virtual network
+    # RP will be responsible for other role assignments
     if [[ "${operatorName}" == "MachineApiOperator" || "${operatorName}" == "NetworkOperator" \
         || "${operatorName}" == "AzureFilesStorageOperator" || "${operatorName}" == "ServiceOperator" ]]; then
 
