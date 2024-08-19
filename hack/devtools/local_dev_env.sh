@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -o nounset
+set -o pipefail
+
 # Local development environment script.
 # Execute this script from the root folder of the repo (ARO-RP).
 # This script is aimed to provide an automatic and easy way to prepare 
