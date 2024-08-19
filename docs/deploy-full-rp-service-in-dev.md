@@ -20,6 +20,22 @@
       to the tag expected by aro deployer
     - with a dirty tag, it's not clear what's actually in the image
 
+## Containerize and automate the int-like Development RP
+
+The [manual int-like Development RP deployment](#deploying-an-int-like-development-rp) is automated using scripts and functions that ease the process, and reduce the setup toll. User must be first logged in to Azure locally (with Azure CLI), since the local Azure credentials (from `${HOME}/.azure`) are copied to the container.
+Afterward automate the RP dev env using a container:
+
+   ```bash
+    AZURE_PREFIX=zzz SKIP_DEPLOYMENTS=true make rp-full-dev
+   ```
+
+- AZURE_PREFIX must be unique to avoid Azure resources collision between other deveolopers.
+- SKIP_DEPLOYMENTS is set to `true` by default and it can be used to skip Azure API calls when the Azure resources were already created.
+ Set it to `false` to always deploy(/redploy) all the Azure resources.
+- Use the cleanup target `rp-full-dev-clenup` to remove the main 4 ResourceGroups and 4 KeyVaults and create a clean Azure environment based on AZURE_PREFIX and LOCATION
+(e.g., `AZURE_PREFIX=zzz LOCATION=eastus make rp-full-dev-clenup`)
+
+
 ## Deploying an int-like Development RP
 
 1. Fetch the most up-to-date secrets specifying `SECRET_SA_ACCOUNT_NAME` to the
@@ -218,23 +234,23 @@
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdm \
-        --file secrets/rp-metrics-int.pem >/dev/null
+        --file secrets/rp-mdm-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-gwy" \
         --name gwy-mdm \
-        --file secrets/rp-metrics-int.pem >/dev/null
+        --file secrets/gwy-mdm-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdsd \
-        --file secrets/rp-logging-int.pem >/dev/null
+        --file secrets/rp-mdsd-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-gwy" \
         --name gwy-mdsd \
-        --file secrets/rp-logging-int.pem >/dev/null
+        --file secrets/gwy-mdsd-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name cluster-mdsd \
-        --file secrets/cluster-logging-int.pem >/dev/null
+        --file secrets/cluster-mdsd-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name dev-arm \

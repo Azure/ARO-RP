@@ -16,7 +16,7 @@ setup_rp_config() {
   az account set -s fe16a035-e540-4ab7-80d9-373fa9a3d6ae
   export SECRET_SA_ACCOUNT_NAME=rharosecretsdev && make secrets
 
-  source hack/devtools/rp-dev-helper.sh && verify_downloading_secrets
+  source hack/devtools/rp_dev_helper.sh && verify_downloading_secrets
 
   export LOCATION=eastus
   # Source environment variables from the secrets file
@@ -26,7 +26,7 @@ setup_rp_config() {
   export AZURE_PREFIX=$1 SKIP_DEPLOYMENTS=$2 NO_CACHE=true ARO_INSTALL_VIA_HIVE=true ARO_ADOPT_BY_HIVE=true DATABASE_NAME=ARO
 
   azure_resource_name=${AZURE_PREFIX}-aro-$LOCATION
-  # TODO truncate to 20 characters
+  azure_resource_name=${azure_resource_name:0:20}
   export RESOURCEGROUP=$azure_resource_name DATABASE_ACCOUNT_NAME=$azure_resource_name KEYVAULT_PREFIX=$azure_resource_name
   gitCommit=$(git rev-parse --short=7 HEAD)
   export ARO_IMAGE=${AZURE_PREFIX}aro.azurecr.io/aro:$gitCommit
@@ -50,29 +50,29 @@ pre_deploy_resources() {
     fi
 
     num_deployment=0
-    check_azure_deployment ${AZURE_PREFIX}-global rp-global-${LOCATION} && num_deployment=$(( num_deployment + 1))
-    check_azure_deployment ${AZURE_PREFIX}-subscription rp-production-subscription-${LOCATION} && num_deployment=$(( num_deployment + 1))
+    check_deployment ${AZURE_PREFIX}-global rp-global-${LOCATION} && num_deployment=$(( num_deployment + 1))
+    check_deployment ${AZURE_PREFIX}-subscription rp-production-subscription-${LOCATION} && num_deployment=$(( num_deployment + 1))
     for deployment in "gateway-production-predeploy" "gateway-production-managed-identity"; do
-        check_azure_deployment ${AZURE_PREFIX}-gwy-${LOCATION} $deployment  && num_deployment=$(( num_deployment + 1))
+        check_deployment ${AZURE_PREFIX}-gwy-${LOCATION} $deployment  && num_deployment=$(( num_deployment + 1))
     done
     for deployment in "rp-production-managed-identity" "rp-production-predeploy-no-aks"; do
-        check_azure_deployment ${RESOURCEGROUP} $deployment  && num_deployment=$(( num_deployment + 1))
+        check_deployment ${RESOURCEGROUP} $deployment  && num_deployment=$(( num_deployment + 1))
     done
 
     if [[ $num_deployment -lt 6 ]]; then
         echo -e "deploy predeployment resources prior to AKS.\n" 
         make pre-deploy-no-aks
     else
-        echo -e "All the six deployments exists. ⏩📋 Predeployment was skipped.\n"
+        echo "All the 6 deployments exists. ⏩📋 Predeployment was skipped"
     fi
     echo -e "Success step 3 ✅ - deploy pre-deployment resources prior to AKS\n"
 }
 
 add_hive(){
   source hack/devtools/deploy-shared-env.sh
-  check_azure_deployment ${RESOURCEGROUP} dev-vpn && echo "⏩📋 VPN deployment was skipped" \
+  check_deployment ${RESOURCEGROUP} dev-vpn && echo "⏩📋 VPN deployment was skipped" \
   || deploy_vpn_for_dedicated_rp && echo "Success step 4a 🚀 - VPN has been deployed"
-  check_azure_deployment ${RESOURCEGROUP} aks-development && echo "⏩📋 VPN deployment was skipped" \
+  check_deployment ${RESOURCEGROUP} aks-development && echo "⏩📋 VPN deployment was skipped" \
   || deploy_aks_dev && echo "Success step 4b 🚀 - AKS has been deployed"
   echo -e "Success step 4 ✅ - VPN & AKS have been deployed\n"
 
@@ -92,7 +92,7 @@ mirror_images() {
   docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "$DST_ACR_NAME.azurecr.io"
   echo "Success step 6a ✈️ 🏷️ - Login to ACR"
 
-  if ! check_acr_repos ${AZURE_PREFIX}-global; then
+  if [[  "${SKIP_DEPLOYMENTS}" == "false" ]] || ! check_acr_repos ${AZURE_PREFIX}-global ; then
     make go-verify
     echo "Success step 6b - Add Vendor directory"
 
@@ -163,24 +163,28 @@ fully_deploy_resources() {
     fi
 
     num_deployment=0
-    check_azure_deployment ${AZURE_PREFIX}-global rp-global-${LOCATION} && num_deployment=$(( num_deployment + 1))
-    check_azure_deployment ${AZURE_PREFIX}-subscription rp-production-subscription-${LOCATION} && num_deployment=$(( num_deployment + 1))
+    check_deployment ${AZURE_PREFIX}-global rp-global-${LOCATION} && num_deployment=$(( num_deployment + 1))
+    check_deployment ${AZURE_PREFIX}-subscription rp-production-subscription-${LOCATION} && num_deployment=$(( num_deployment + 1))
 
     gitCommit=$(git rev-parse --short=7 HEAD)
     for deployment in "gateway-production-predeploy" "gateway-production-managed-identity" "gateway-production-${gitCommit}"; do
-        check_azure_deployment ${AZURE_PREFIX}-gwy-${LOCATION} $deployment  && num_deployment=$(( num_deployment + 1))
+        check_deployment ${AZURE_PREFIX}-gwy-${LOCATION} $deployment  && num_deployment=$(( num_deployment + 1))
     done
     for deployment in "rp-production-managed-identity" "rp-production-predeploy" "rpServiceKeyvaultDynamic" "dev-vpn" "aks-development" "rp-production-${gitCommit}"; do
-        check_azure_deployment ${RESOURCEGROUP} $deployment  && num_deployment=$(( num_deployment + 1))
+        check_deployment ${RESOURCEGROUP} $deployment  && num_deployment=$(( num_deployment + 1))
     done
 
     if [[ $num_deployment -lt 11 ]]; then
         echo -e "Fully deploy RP and GYW deployments.\n" 
         make go-verify deploy
     else
-        echo -e "All the 11 deployments exists. ⏩📋 Full deployments of RP and GYW was skipped.\n"
+        echo "All the 11 deployments exists. ⏩📋 Full deployments of RP and GYW was skipped."
     fi
 
+    # Verify VMSS have been provisioned successfully
+    gitCommit=$(git rev-parse --short=7 HEAD)
+    check_vmss ${AZURE_PREFIX}-aro-$LOCATION rp-vmss-$gitCommit
+    check_vmss ${AZURE_PREFIX}-gwy-$LOCATION gateway-vmss-$gitCommit
     echo "Success step 8 ✅ - fully deploy all the resources for ARO RP and GWY VMSSs"
 }
 

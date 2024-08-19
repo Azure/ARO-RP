@@ -42,7 +42,7 @@ check_jq_installed() {
 }
 
 # Function to check deployment existance and provisioning state
-check_azure_deployment() {
+check_deployment() {
     # Check if exactly two non-empty arguments are provided
     if [[ $# -ne 2 ]]; then
         echo "Usage $0 <ResourceGroup> <DeploymentName>. Please try again"
@@ -51,11 +51,6 @@ check_azure_deployment() {
     local resource_group=$1
     local deployment_name=$2
 
-    # Don't skip deployment creation when SKIP_DEPLOYMENTS is set to "false" 
-    if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
-        echo "'SKIP_DEPLOYMENTS' env var is set to false. Don't skip deploying '${deployment_name}' in resource group '${resource_group}'"
-        return 1
-    fi
 
     # Check if the ResourceGroup exists
     resource_group_info=$(az group show --resource-group "${resource_group}" 2>/dev/null)
@@ -80,10 +75,10 @@ check_azure_deployment() {
     provisioning_state=$(echo "${deployment_info}" | jq -r '.properties.provisioningState')
     # Check if the provisioning state is 'Succeeded'
     if [[ "${provisioning_state}" == "Succeeded" ]]; then
-        echo "Deployment '${deployment_name}' in resource group '${resource_group}' has succeeded."
+        echo "Deployment '${deployment_name}' in resource group '${resource_group}' has provisioned successfully."
         return 0
     else
-        echo "Deployment '${deployment_name}' in resource group '${resource_group}' has not succeeded. Current state: ${provisioning_state}"
+        echo "Deployment '${deployment_name}' in resource group '${resource_group}' has not provisioned successfully. Current state: ${provisioning_state}"
         return 1
     fi
 }
@@ -226,7 +221,7 @@ import_geneva_image() {
         az acr import --name $DST_ACR_NAME.azurecr.io$2 --source linuxgeneva-microsoft.azurecr.io$2
         echo "Imported $1 to ACR $DST_ACR_NAME"
     else
-        echo "⏭️📦 Skip importing $1 to ACR $DST_ACR_NAME, since it already exist. Can not run twice"
+        echo "⏭️📦 Skip importing $1 to ACR $DST_ACR_NAME, since it already exist. Import can not run twice"
     fi
 }
 
@@ -340,13 +335,46 @@ check_and_import_certificates (){
         --name ${cert} \
         --file secrets/localhost.pem >/dev/null
 
-    cert="portal-server"
+    cert="portal-client"
     check_keyvault_certificate ${KEYVAULT_PREFIX}-por ${cert} && echo -e "⏭️🔑💼 Skip import for certificate ${cert}\n" \
     || echo -e "Import certificate ${cert}\n" && az keyvault certificate import \
         --vault-name "${KEYVAULT_PREFIX}-por" \
         --name ${cert} \
         --file secrets/portal-client.pem >/dev/null
 }
+
+# Function to check VMSS existance and its provisioning state
+check_vmss() {
+    # Check if exactly non-empty two arguments are provided
+    if [[ $# -ne 2 ]]; then
+        echo "Usage $0 <ResourceGroup> <Name>. Please try again"
+        exit 1
+    fi
+
+    # Check if the VMSS exists
+    vmss_info=$(az vmss show --resource-group $1 --name $2 2>/dev/null)
+    if [ -z "${vmss_info}" ]; then
+        echo "VMSS '$2' in Resource group '$1' does not exist."
+        return 1
+    fi
+
+    # Check if jq is installed
+    if ! check_jq_installed; then
+        exit 1
+    fi
+
+    # Extract the provisioning state using jq
+    provisioning_state=$(echo "${vmss_info}" | jq -r '.properties.provisioningState')
+    # Check if the provisioning state is 'Succeeded'
+    if [[ "${provisioning_state}" == "Succeeded" ]]; then
+        echo "VMSS '$2' in Resource group '$1' has provisioned successfully."
+        return 0
+    else
+        echo "VMSS '$2' in Resource group '$1' has not provisioned successfully. Current state: ${provisioning_state}."
+        return 1
+    fi
+}
+
 
 # Function to cleanup all the created resources from the full aro RP dev
 clean_rp_dev_env() {
@@ -407,7 +435,7 @@ clean_rp_dev_env() {
 }
 
 # Example usage
-# check_azure_deployment  "<ResourceGroup>"" "<DeploymentName>""
+# check_deployment  "<ResourceGroup>"" "<DeploymentName>""
 # check_jq_installed
 # extract_image_tag "<FUNCTION_NAME>" "<FILE_TO_EXTRACT>"
 # get_digest_tag "FluentbitImage"
