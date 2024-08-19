@@ -112,7 +112,7 @@ semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
 mkdir -p /var/log/journal
 
 for attempt in {1..60}; do
-  yum -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman-docker openssl-perl python3 && break
+  yum -y install clamav azsec-clamav azsec-monitor-2.25.0-385 azure-cli azure-mdsd azure-security podman-docker openssl-perl python3 && break
   # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
   if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
