@@ -78,7 +78,7 @@ func TestEnrichConditionTimeoutError(t *testing.T) {
 		{
 			desc:     "test conditionfail for func - clusterVersionReady",
 			function: s.clusterVersionReady,
-			wantErr:  "500: DeploymentFailed: : Cluster Verion is not reporting status as ready. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Cluster Version is not reporting status as ready. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - clusterVersionReady",

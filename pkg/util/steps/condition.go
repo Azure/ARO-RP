@@ -28,7 +28,7 @@ var timeoutConditionErrors = map[string]string{
 	"minimumWorkerNodesReady":                "Minimum number of worker nodes have not been successfully created.",
 	"operatorConsoleExists":                  "Console Cluster Operator has failed to initialize successfully.",
 	"operatorConsoleReady":                   "Console Cluster Operator has not started successfully.",
-	"clusterVersionReady":                    "Cluster Verion is not reporting status as ready.",
+	"clusterVersionReady":                    "Cluster Version is not reporting status as ready.",
 	"ingressControllerReady":                 "Ingress Cluster Operator has not started successfully.",
 	"aroDeploymentReady":                     "ARO Cluster Operator has failed to initialize successfully.",
 	"ensureAROOperatorRunningDesiredVersion": "ARO Cluster Operator is not running desired version.",
