@@ -41,7 +41,7 @@ import (
 	auditlog "github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
-func rp(ctx context.Context, log, audit *logrus.Entry, otelAudit *auditlog.Audit) error {
+func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	stop := make(chan struct{})
 
 	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)
@@ -170,6 +170,9 @@ func rp(ctx context.Context, log, audit *logrus.Entry, otelAudit *auditlog.Audit
 		WithOpenShiftVersions(dbOpenShiftVersions).
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions)
+
+	otelAudit := auditlog.New("uds", false)
+	defer otelAudit.Client.Close(ctx)
 
 	f, err := frontend.NewFrontend(ctx, audit, otelAudit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {

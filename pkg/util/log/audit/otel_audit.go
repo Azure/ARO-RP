@@ -33,8 +33,6 @@ func New(connectionType string, isTest bool) *Audit {
 		} else {
 			audit.newTCPCon("localhost:29230")
 		}
-
-		audit.SendAuditMessage = func(c *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error { return c.Send(ctx, *msg) }
 	}
 
 	//TODO: gnir - Rmove after testing in INT
@@ -71,6 +69,8 @@ func (a *Audit) smartClient(cc func() (conn.Audit, error)) error {
 	if err != nil {
 		return err
 	}
+
+	a.SendAuditMessage = func(c *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error { return c.Send(ctx, *msg) }
 
 	a.Client = c
 

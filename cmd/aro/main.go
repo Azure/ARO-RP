@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	auditlog "github.com/Azure/ARO-RP/pkg/util/log/audit"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -39,9 +38,6 @@ func main() {
 	ctx := context.Background()
 	audit := utillog.GetAuditEntry()
 
-	otelAudit := auditlog.New("tcp", false)
-	defer otelAudit.Client.Close(context.Background())
-
 	log := utillog.GetLogger()
 
 	go func() {
@@ -66,10 +62,10 @@ func main() {
 		err = monitor(ctx, log)
 	case "rp":
 		checkArgs(1)
-		err = rp(ctx, log, audit, otelAudit)
+		err = rp(ctx, log, audit)
 	case "portal":
 		checkArgs(1)
-		err = portal(ctx, log, audit, otelAudit)
+		err = portal(ctx, log, audit)
 	case "operator":
 		checkArgs(2)
 		err = operator(ctx, log)

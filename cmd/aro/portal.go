@@ -25,7 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry, otelAudit *auditlog.Audit) error {
+func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	_env, err := env.NewCore(ctx, log, env.COMPONENT_PORTAL)
 	if err != nil {
 		return err
@@ -172,6 +172,9 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry, otelAud
 	}
 
 	log.Printf("listening %s", address)
+
+	otelAudit := auditlog.New("uds", false)
+	defer otelAudit.Client.Close(ctx)
 
 	p := pkgportal.NewPortal(_env, audit, otelAudit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
 
