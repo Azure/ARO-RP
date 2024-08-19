@@ -170,21 +170,18 @@ create_platform_identity_and_assign_role() {
     local operatorName="${1}"
     local roleDefinitionId="${2}"
     local identityName="aro-${operatorName}"
-    
-    identity=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null)
-    if [[ -n ${identity} ]]; then
-        echo "INFO: Platform identity ${identityName} already exists for operator: ${operatorName}"
-        echo ""
-    else
+    local identity
+
+    if ! identity=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null); then
         echo "INFO: Creating platform identity for operator: ${operatorName}"
-        result=$(az identity create --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+        identity=$(az identity create --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
     fi
 
     # Extract the client ID, principal Id, resource ID and name from the result
-    clientID=$(jq -r .clientId <<<"${result}")
-    principalId=$(jq -r .principalId <<<"${result}")
-    resourceId=$(jq -r .id <<<"${result}")
-    name=$(jq -r .name <<<"${result}")
+    clientID=$(jq -r .clientId <<<"${identity}")
+    principalId=$(jq -r .principalId <<<"${identity}")
+    resourceId=$(jq -r .id <<<"${identity}")
+    name=$(jq -r .name <<<"${identity}")
 
     echo "Client ID: $clientID"
     echo "Principal ID: $principalId"
@@ -192,6 +189,8 @@ create_platform_identity_and_assign_role() {
     echo "Name: $name"
     echo ""
 
+    # The following operators require a role assignment since they need access to customer BYO virtual network
+    # RP will be responsible for other role assignments
     if [[ "${operatorName}" == "MachineApiOperator" || "${operatorName}" == "NetworkOperator" \
         || "${operatorName}" == "AzureFilesStorageOperator" || "${operatorName}" == "ServiceOperator" ]]; then
 
