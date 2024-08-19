@@ -1,7 +1,11 @@
 #!/bin/bash
 
+set -o errexit
 set -o nounset
 set -o pipefail
+
+# Trap errors and print a custom error message with line number and command
+trap 'echo "Error on line $LINENO: $BASH_COMMAND"; exit 1' ERR
 
 # Local development environment script.
 # Execute this script from the root folder of the repo (ARO-RP).
@@ -130,7 +134,7 @@ get_mock_msi_cert() {
 
 create_env_file() {
     local answer
-    read -r -p "Do you want to create an env file for Managed/Workload identity development? " answer
+    read -r -p "Do you want to create an env file for Managed/Workload identity development? (y / n) " answer
     if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
         create_miwi_env_file
     else 
@@ -167,13 +171,12 @@ create_platform_identity_and_assign_role() {
     local roleDefinitionId="${2}"
     local identityName="aro-${operatorName}"
     
-    identity=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null)
-    if [[ -n ${identity} ]]; then
-        echo "INFO: Platform identity ${identityName} already exists for operator: ${operatorName}"
-        echo ""
-    else
+    if ! az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null; then
         echo "INFO: Creating platform identity for operator: ${operatorName}"
         result=$(az identity create --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+    else
+        echo "INFO: Platform identity ${identityName} already exists for operator: ${operatorName}"
+        echo ""
     fi
 
     # Extract the client ID, principal Id, resource ID and name from the result
@@ -310,13 +313,13 @@ run_the_RP() {
 }
 
 main() {
-    build_development_az_aro_extension
-    verify_aro_extension
-    set_storage_account
+    #build_development_az_aro_extension
+    #verify_aro_extension
+    #set_storage_account
     ask_to_create_default_env_config
-    source_env
-    ask_to_create_Azure_deployment
-    run_the_RP
+    #source_env
+    #ask_to_create_Azure_deployment
+    #run_the_RP
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
