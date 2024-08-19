@@ -51,6 +51,12 @@ check_azure_deployment() {
     local resource_group=$1
     local deployment_name=$2
 
+    # Don't skip deployment creation when SKIP_DEPLOYMENTS is set to "false" 
+    if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
+        echo "'SKIP_DEPLOYMENTS' env var is set to false. Don't skip deploying '${deployment_name}' in resource group '${resource_group}'"
+        return 1
+    fi
+
     # Check if the ResourceGroup exists
     resource_group_info=$(az group show --resource-group "${resource_group}" 2>/dev/null)
     if [ -z "${resource_group_info}" ]; then
@@ -148,13 +154,18 @@ check_acr_repo() {
         exit 1
     fi
 
+    # Don't skip deployment creation when SKIP_DEPLOYMENTS is set to "false" 
+    if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
+        echo "'SKIP_DEPLOYMENTS' env var is set to false. Don't skip ACR repo mirroring for repository $2."
+        return 1
+    fi
+
     # Get the repository tag
     repo_tag=$(az acr repository show-tags --name "$1" --repository "$2" -o tsv | tr '\n' ' ')
 
     # Check if the repository tag is empty
     if [[ -n "$repo_tag" ]]; then
         echo "Repository '$2' in ACR '$1' exists with tag '${repo_tag}'."
-        export REPOrepo_tag
         return 0
     else
         echo "Repository '$2' doesn't exist in ACR '$1'."
@@ -174,6 +185,12 @@ check_acr_repos() {
         exit 1
     fi
 
+    # Don't skip deployment creation when SKIP_DEPLOYMENTS is set to "false"    
+    if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
+        echo "'SKIP_DEPLOYMENTS' env var is set to false. Don't skip acr repo mirroring in ResourceGroup $1"
+        return 1
+    fi
+   
     # Check if jq is installed
     if ! check_jq_installed; then
         exit 1
@@ -219,6 +236,12 @@ check_keyvault_certificate() {
     if [[ $# -ne 2 ]]; then
         echo "Usage $0 <KeyVault> <Certificate>. Please try again"
         exit 1
+    fi
+
+    # Don't skip deployment creation when SKIP_DEPLOYMENTS is set to "false" 
+    if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
+        echo "'SKIP_DEPLOYMENTS' env var is set to false. Don't skip keyvault's certificate import"
+        return 1
     fi
 
     # Check if the Key Vault exists

@@ -57,10 +57,17 @@ verify_tools
 
 if [ $( $KUBECTL get namespace $HIVE_OPERATOR_NS -o yaml 2>/dev/null | wc -l ) -ne 0 ]; then
 	echo "hive is already installed in the namespace"
-	echo -n "would you like to reapply the configs? (y/N): "
-	read answer
-	if [[ "$answer" != "y" ]]; then
+	if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
+		echo "'SKIP_DEPLOYMENTS' env var is set to false. ❌⏩ Don't skip Hive installation, and try to reinstall it"
+    elif [[ "${SKIP_DEPLOYMENTS}" == "true" ]]; then
+		echo "'SKIP_DEPLOYMENTS' env var is set to true. ⏩📋 Skip Hive installation"
 		exit
+	else
+		echo -n "would you like to reapply the configs? (y/N): "
+		read answer
+		if [[ "$answer" != "y" ]]; then
+			exit
+		fi
 	fi
 else
 	$KUBECTL create namespace $HIVE_OPERATOR_NS
@@ -79,7 +86,5 @@ $KUBECTL apply -f ./hack/hive-config/hive-additional-install-log-regexes.yaml
 $KUBECTL apply -f ./hack/hive-config/hive-deployment.yaml
 
 $KUBECTL wait --timeout=5m --for=condition=Available --namespace $HIVE_OPERATOR_NS deployment/hive-operator
-$KUBECTL wait --timeout=5m --for=condition=Available --namespace $HIVE_OPERATOR_NS deployment/hive-controllers
-$KUBECTL wait --timeout=5m --for=condition=Ready --namespace $HIVE_OPERATOR_NS pod --selector "control-plane=clustersync"
 
 echo -e "\nHive is installed."
