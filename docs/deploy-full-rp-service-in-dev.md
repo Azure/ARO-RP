@@ -154,11 +154,14 @@
         Run the following commands to mirror two Microsoft Geneva images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1).
 
         ```bash
-            export GENEVAMDM_IMAGE_TAG=distroless/genevamdm:2.2024.517.533-b73893-20240522t0954 && az acr import --name $DST_ACR_NAME.azurecr.io/$GENEVAMDM_IMAGE_TAG --source linuxgeneva-microsoft.azurecr.io/$GENEVAMDM_IMAGE_TAG
-            export GENEVAMDSD_IMAGE_TAG=distroless/genevamdsd:mariner_20240524.1 && az acr import --name $DST_ACR_NAME.azurecr.io/$GENEVAMDSD_IMAGE_TAG --source linuxgeneva-microsoft.azurecr.io/$GENEVAMDSD_IMAGE_TAG
+            source hack/devtools/rp_dev_helper.sh
+            mdm_image_tag=$(get_digest_tag "MdmImage")
+            az acr import --name $DST_ACR_NAME.azurecr.io$mdm_image_tag --source linuxgeneva-microsoft.azurecr.io$mdm_image_tag
+            mdsd_image_tag=$(get_digest_tag "MdsdImage")
+            az acr import --name $DST_ACR_NAME.azurecr.io$mdsd_image_tag --source linuxgeneva-microsoft.azurecr.io$mdsd_image_tag
         ```
 
-   1. Push the ARO and Fluentbit images to your ACR
+   1. Push the ARO image to your ACR
 
         > If running this step from a VM separate from your workstation, ensure the commit tag used to build the image matches the commit tag where `make deploy` is run.
 
@@ -179,7 +182,14 @@
 
         ```bash
         make publish-image-aro-multistage
-        make publish-image-fluentbit
+        ```
+
+    1. Copy the Fluentbit image from arointsvc ACR to your ACR
+
+        ```bash
+        source hack/devtools/rp_dev_helper.sh
+        fluentbit_image_tag=$(get_digest_tag "FluentbitImage")
+        copy_digest_tag $PULL_SECRET "arointsvc" $DST_ACR_NAME $fluentbit_image_tag
         ```
 
 1. Update the DNS Child Domains
