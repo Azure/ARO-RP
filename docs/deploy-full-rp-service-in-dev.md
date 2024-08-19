@@ -109,7 +109,7 @@
         KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive-dev-install.sh
         ```
 
-1. Mirror the OpenShift images to your new ACR
+1. Mirror the OpenShift images to your new Azure Container Registry (ACR)
     <!-- TODO (bv) allow mirroring through a pipeline would be faster and a nice to have -->
     > __NOTE:__ Running the mirroring through a VM in Azure rather than a local workstation is recommended for better performance.
     > __NOTE:__ Value of `USER_PULL_SECRET` variable comes from the secrets, which are sourced via `env-int` file
@@ -132,24 +132,24 @@
 
       > The `latest` argument will take the DefaultInstallStream from `pkg/util/version/const.go` and mirror that version
 
-      ```bash
-      go run ./cmd/aro mirror latest
-      ```
+        ```bash
+        go run ./cmd/aro mirror latest
+        ```
 
       > __Troubleshooting:__ There could be some issues when mirroring the images to the ACR related to missing _devmapper_ or _btrfs_ (usually with "fatal error: btrfs/ioctl.h: No such file or directory" error) packages.
       If respectively installing _device-mapper-devel_ or _btrfs-progs-devel_ packages won't help, then you may ignore them as follows:
 
-    ```bash
-      go run -tags=exclude_graphdriver_devicemapper,exclude_graphdriver_btrfs ./cmd/aro mirror latest
-    ```
+        ```bash
+        go run -tags=exclude_graphdriver_devicemapper,exclude_graphdriver_btrfs ./cmd/aro mirror latest
+        ```
 
-      If you are going to test or work with multi-version installs, then you should mirror any additional versions as well, for example for 4.11.21 it would be
+        If you are going to test or work with multi-version installs, then you should mirror any additional versions as well, for example for 4.11.21 it would be
 
-      ```bash
-      go run ./cmd/aro mirror 4.11.21
-      ```
+        ```bash
+        go run ./cmd/aro mirror 4.11.21
+        ```
 
-    1. Mirror genevamdm and genevamdsd images from upstream distroless Geneva MDM/MDSD to your ACR
+   1. Mirror upstream distroless Geneva MDM/MDSD images to your ACR
 
         Run the following commands to mirror two Microsoft Geneva images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1).
 
@@ -158,7 +158,7 @@
             export GENEVAMDSD_IMAGE_TAG=distroless/genevamdsd:mariner_20240524.1 && az acr import --name $DST_ACR_NAME.azurecr.io/$GENEVAMDSD_IMAGE_TAG --source linuxgeneva-microsoft.azurecr.io/$GENEVAMDSD_IMAGE_TAG
         ```
 
-    1. Push the ARO and Fluentbit images to your ACR
+   1. Push the ARO and Fluentbit images to your ACR
 
         > If running this step from a VM separate from your workstation, ensure the commit tag used to build the image matches the commit tag where `make deploy` is run.
 
