@@ -444,3 +444,7 @@ rp-full-dev: # Build and run a rp-full-dev container for automating rp-full-dev
 		-v "${HOME}/.azure:/root/.azure" \
 		--device /dev/net/tun \
 		--name rp-full-dev-container $(RP_FULL_DEV_IMAGE)
+
+.PHONY: rp-full-dev-clenup # Run rp-full-dev-clenup target with AZURE_PREFIX and LOCATION
+rp-full-dev-clenup: # Clean all the rp-full-dev resources by deleting ResourceGroups and KeyVaults
+	source hack/devtools/rp_dev_helper.sh && clean_rp_dev_env
