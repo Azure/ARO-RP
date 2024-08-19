@@ -130,7 +130,7 @@ get_mock_msi_cert() {
 
 create_env_file() {
     local answer
-    read -r -p "Do you want to create an env file for Managed/Workload identity development? " answer
+    read -r -p "Do you want to create an env file for Managed/Workload identity development? (y / n) " answer
     if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
         create_miwi_env_file
     else 
