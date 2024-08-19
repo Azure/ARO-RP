@@ -1,7 +1,4 @@
 #!/bin/bash
-set -o errexit
-set -o nounset
-set -o pipefail
 
 # Local development environment script.
 # Execute this script from the root folder of the repo (ARO-RP).
@@ -207,6 +204,8 @@ setup_platform_identity() {
     while read -r role; do
         operatorName=$(echo "$role" | jq -r '.operatorName')
         roleDefinitionId=$(echo "$role" | jq -r '.roleDefinitionId' | awk -F'/' '{print $NF}')
+
+        echo "INFO: Setting up platform identity for operator: ${operatorName}, role: ${roleDefinitionId}"
 
         create_platform_identity_and_assign_role "${operatorName}" "${roleDefinitionId}"
 
