@@ -149,17 +149,21 @@ assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
-    
-    result=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null | wc -l)
-    if [[ $result -gt 1 ]]; then
-        echo "INFO: Role already assigned to identity: ${objectId}"
-        echo ""
-        return
+    local roles
+
+    if ! roles=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null); then
+        # If the role assignment list fails, we assume the identity is newly created and we can proceed with the role assignment
+        echo "INFO: Unable to list role assignments for identity: ${objectId}"
     fi
 
-    echo "INFO: Assigning roles to identity: ${objectId}"
-    az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
-    echo ""
+    if [ "$roles" == "" ] || [ "$roles" == "[]" ] ; then
+        echo "INFO: Assigning role to identity: ${objectId}"
+        az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
+        echo ""
+    else
+        echo "INFO: Role already assigned to identity: ${objectId}"
+        echo ""
+    fi
 }
 
 create_platform_identity_and_assign_role() {
