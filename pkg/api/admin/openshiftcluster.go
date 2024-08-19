@@ -5,6 +5,8 @@ package admin
 
 import (
 	"time"
+
+	"github.com/Azure/go-autorest/autorest/date"
 )
 
 // OpenShiftClusterList represents a list of OpenShift clusters.
@@ -498,8 +500,9 @@ const (
 
 // RegistryProfile represents a registry profile
 type RegistryProfile struct {
-	Name     string `json:"name,omitempty"`
-	Username string `json:"username,omitempty"`
+	Name     string     `json:"name,omitempty"`
+	Username string     `json:"username,omitempty"`
+	Expiry   *date.Time `json:"expiry,omitempty"`
 }
 
 // ArchitectureVersion represents an architecture version
