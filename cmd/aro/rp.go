@@ -63,6 +63,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
+			// "OTEL_AUDIT_CONN_TYPE",
 			env.OIDCStorageAccountName,
 		}
 
@@ -171,7 +172,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions)
 
-	otelAudit := auditlog.New("tcp", false)
+	otelAudit := auditlog.New(os.Getenv("OTEL_AUDIT_CONN_TYPE"), false)
 	defer otelAudit.Client.Close(ctx)
 
 	f, err := frontend.NewFrontend(ctx, audit, otelAudit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))

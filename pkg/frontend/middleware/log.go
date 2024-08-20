@@ -209,6 +209,15 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 				auditRec.OperationResultDescription = fmt.Sprintf("Status code: %d", statusCode)
 			}
 
+			log.Printf("Frontend - Error sending audit message: %v", l.OtelAudit)
+			l.OtelAudit.Count += 1
+			if l.OtelAudit.Count < 10 {
+				log.Printf("Frontend - sending audit message count: %d", l.OtelAudit.Count)
+				if err := l.OtelAudit.SendAuditMessage(l.OtelAudit.Client, r.Context(), &auditMsg); err != nil {
+					log.Printf("Frontend - Error sending audit message: %v", err)
+				}
+			}
+
 			if r.URL.Path == "/healthz/ready" {
 				return
 			}

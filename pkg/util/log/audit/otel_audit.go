@@ -16,11 +16,12 @@ import (
 type Audit struct {
 	Client           *otelaudit.Client
 	SendAuditMessage func(a *otelaudit.Client, ctx context.Context, msg *msgs.Msg) error
+	Count            int
 }
 
 // New creates a new audit client based on the connection type (uds or tcp)
 func New(connectionType string, isTest bool) *Audit {
-	audit := &Audit{}
+	audit := &Audit{Count: 0}
 
 	if isTest {
 		audit.newNoOpCon()

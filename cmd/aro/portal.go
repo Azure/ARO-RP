@@ -173,7 +173,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	log.Printf("listening %s", address)
 
-	otelAudit := auditlog.New("tcp", false)
+	otelAudit := auditlog.New(os.Getenv("OTEL_AUDIT_CONN_TYPE"), false)
 	defer otelAudit.Client.Close(ctx)
 
 	p := pkgportal.NewPortal(_env, audit, otelAudit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
