@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
 	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -28,8 +29,13 @@ func (m *manager) disableUpdates(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+			parsedVersion, err := semver.NewVersion(version.Properties.Version)
+			if err != nil {
+				return err
+			}
+			parsedVersion.Metadata = ""
 			cv.Spec.DesiredUpdate = &configv1.Update{
-				Version: version.Properties.Version,
+				Version: parsedVersion.String(),
 				Image:   strings.Replace(version.Properties.OpenShiftPullspec, m.env.ACRDomain(), "quay.io", 1),
 			}
 		}
