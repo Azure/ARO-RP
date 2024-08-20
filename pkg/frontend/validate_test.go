@@ -295,16 +295,14 @@ func TestValidateInstallVersion(t *testing.T) {
 			wantErr:           "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.14.16' is invalid.",
 		},
 		{
-			test:              "Prerelease version returns error",
+			test:              "Prerelease version returns no error",
 			version:           "4.14.0-0.nightly-2024-01-01-000000",
 			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16", "4.14.0-0.nightly-2024-01-01-000000"},
-			wantErr:           "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.14.0-0.nightly-2024-01-01-000000' is invalid.",
 		},
 		{
-			test:              "Version with metadata returns error",
+			test:              "Version with metadata returns no error",
 			version:           "4.14.16+installerref-abcdef",
 			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16", "4.14.16+installerref-abcdef"},
-			wantErr:           "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.14.16+installerref-abcdef' is invalid.",
 		},
 	} {
 		t.Run(tt.test, func(t *testing.T) {

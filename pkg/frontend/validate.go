@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/coreos/go-semver/semver"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -222,7 +223,9 @@ func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShift
 	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
 	f.ocpVersionsMu.RUnlock()
 
-	if !ok || !validate.RxInstallVersion.MatchString(oc.Properties.ClusterProfile.Version) {
+	_, err := semver.NewVersion(oc.Properties.ClusterProfile.Version)
+
+	if !ok || err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version)
 	}
 
