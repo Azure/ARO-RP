@@ -13,17 +13,22 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 const (
-	EtcHostsMachineConfigControllerName = "EtcHostsMachineConfig"
+	EtcHostsControllerName = "EtcHostsMachineConfig"
 )
 
 type MachineConfigReconciler struct {
@@ -39,7 +44,7 @@ func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dyna
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
-			Name:   EtcHostsMachineConfigControllerName,
+			Name:   EtcHostsControllerName,
 		},
 		dh: dh,
 	}
@@ -52,7 +57,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsMachineConfigEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
@@ -90,11 +95,20 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	return reconcile.Result{}, nil
 }
 
-// SetupWithManager setup our mananger
+// SetupWithManager setup our mananger to watch for changes to MCP and ARO Cluster obj
 func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	etcHostsBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&mcv1.MachineConfig{}).
-		Named(EtcHostsMachineConfigControllerName).
+		Watches(&source.Kind{Type: &mcv1.MachineConfigPool{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(&source.Kind{Type: &arov1alpha1.Cluster{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{})))
+
+	return etcHostsBuilder.
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
+		Named(EtcHostsControllerName).
 		Complete(r)
 }
 
