@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/go-autorest/autorest"
 )
 
 type th struct {
@@ -125,4 +126,18 @@ func (t *th) GetClusterUUID() string {
 
 func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 	return t.oc.OpenShiftCluster.Properties
+}
+
+// localFpAuthorizer implements mimo.TaskContext.
+func (t *th) LocalFpAuthorizer() (autorest.Authorizer, error) {
+	localFPAuthorizer, err := t.env.FPAuthorizer(t.env.TenantID(), t.env.Environment().ResourceManagerScope)
+	if err != nil {
+		return nil, err
+	}
+	return localFPAuthorizer, nil
+}
+
+// GetOpenshiftClusterDocument implements mimo.TaskContext.
+func (t *th) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
+	return t.oc
 }
