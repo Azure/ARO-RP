@@ -171,7 +171,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions)
 
-	otelAudit := auditlog.New("uds", false)
+	otelAudit := auditlog.New("tcp", false)
 	defer otelAudit.Client.Close(ctx)
 
 	f, err := frontend.NewFrontend(ctx, audit, otelAudit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
