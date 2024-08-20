@@ -21,7 +21,14 @@ var _ = Describe("Persistent Volume", Label(smoke), func() {
 		manifest := fmt.Sprintf("static_resources/pvc-%s.yaml", pvcName)
 		podName := fmt.Sprintf("bb-%s", pvcName)
 		By(fmt.Sprintf("Creating a pod with %s", pvcName))
-		pod, err := loadResourcesFromYaml(manifest)
+
+		f, err := staticResources.Open(manifest)
+		Expect(err).NotTo(HaveOccurred())
+		defer func() {
+			err = f.Close()
+			Expect(err).NotTo(HaveOccurred())
+		}()
+		pod, err := loadResourcesFromYaml(f)
 		Expect(err).NotTo(HaveOccurred())
 		createResources(ctx, pod...)
 

@@ -231,15 +231,8 @@ func (p Project) VerifyProjectIsDeleted(ctx context.Context) {
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
 
-func loadResourcesFromYaml(file string) (objs []unstructured.Unstructured, err error) {
-	manifest, err := staticResources.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = manifest.Close()
-	}()
-	dec := yaml.NewYAMLOrJSONDecoder(manifest, 4096)
+func loadResourcesFromYaml(r io.Reader) (objs []unstructured.Unstructured, err error) {
+	dec := yaml.NewYAMLOrJSONDecoder(r, 4096)
 	// It can't load multiple objects from a single file, so we need to loop through the file and load them one by one.
 	for {
 		var obj unstructured.Unstructured
