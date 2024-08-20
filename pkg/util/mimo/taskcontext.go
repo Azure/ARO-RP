@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/go-autorest/autorest"
 )
 
 type TaskContext interface {
@@ -21,10 +22,12 @@ type TaskContext interface {
 	Environment() env.Interface
 	ClientHelper() (clienthelper.Interface, error)
 	Log() *logrus.Entry
+	LocalFpAuthorizer() (autorest.Authorizer, error)
 
 	// OpenShiftCluster
 	GetClusterUUID() string
 	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
+	GetOpenshiftClusterDocument() api.OpenShiftClusterDocument
 
 	SetResultMessage(string)
 	GetResultMessage() string
