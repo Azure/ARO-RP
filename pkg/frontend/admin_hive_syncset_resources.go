@@ -50,7 +50,7 @@ func (f *frontend) _getAdminHiveSyncsetResources(ctx context.Context, namespace 
 		return nil, api.NewCloudError(http.StatusNoContent, api.CloudErrorCodeResourceNotFound, "", "cluster is not managed by hive")
 	}
 
-	cd, err := f.syncSetResourceManager.GetSyncSetResources(ctx, namespace)
+	cd, err := f.syncSetResourceManager.GetSyncSetResources(ctx, doc)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster deployment not found")
 	}

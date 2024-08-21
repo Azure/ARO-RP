@@ -57,7 +57,7 @@ type clusterManager struct {
 
 // Define the interface for SyncSetResourceManager
 type SyncSetResourceManager interface {
-	GetSyncSetResources(ctx context.Context, namespace string) (*v1alpha1.ClusterSyncList, error)
+	GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSyncList, error)
 }
 
 // Implement the syncSetResourceManager struct
@@ -67,13 +67,13 @@ type syncSetResourceManager struct {
 	hiveClientset client.Client
 }
 
-// ListClusterSyncs lists ClusterSync resources in the specified namespace
-func (srm *syncSetResourceManager) GetSyncSetResources(ctx context.Context, namespace string) (*v1alpha1.ClusterSyncList, error) {
+// GetSyncSetResources lists ClusterSync resources in the specified namespace
+func (srm *syncSetResourceManager) GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSyncList, error) {
 
 	clusterSyncList := &v1alpha1.ClusterSyncList{}
 
 	listOpts := &client.ListOptions{
-		Namespace: namespace,
+		Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
 	}
 
 	err := srm.hiveClientset.List(ctx, clusterSyncList, listOpts)

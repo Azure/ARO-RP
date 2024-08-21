@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	"github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -544,6 +545,68 @@ func TestGetClusterDeployment(t *testing.T) {
 
 			if result != nil && result.Name != cd.Name && result.Namespace != cd.Namespace {
 				t.Fatal("Unexpected cluster deployment returned", result)
+			}
+		})
+	}
+}
+
+func TestGetSyncSetResources(t *testing.T) {
+	// Setup
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
+	doc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				HiveProfile: api.HiveProfile{
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	}
+
+	clusterSyncTest := &v1alpha1.ClusterSyncList{
+		Items: []v1alpha1.ClusterSync{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sync1",
+					Namespace: fakeNamespace,
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sync2",
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	}
+
+	for _, tt := range []struct {
+		name      string
+		want      *v1alpha1.ClusterSyncList
+		namespace string
+		wantErr   string
+	}{
+		{name: "clustersync exists and are returned"},
+		{name: "clustersync does not exist err returned", namespace: "", wantErr: `no clustersync for namespace given`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClientBuilder := fake.NewClientBuilder()
+			if tt.wantErr == "" {
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(clusterSyncTest)
+			}
+			s := syncSetResourceManager{
+				hiveClientset: fakeClientBuilder.Build(),
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			result, err := s.GetSyncSetResources(context.Background(), doc)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Fatal(err)
+			}
+
+			if result != nil && reflect.DeepEqual(result, clusterSyncTest) {
+				t.Fatal("Unexpected clustersync list returned", result)
 			}
 		})
 	}
