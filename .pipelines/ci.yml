@@ -74,30 +74,30 @@ stages:
         ob_outputDirectory: '$(Build.SourcesDirectory)/out'
         IMAGE_TAG: $(Build.SourceBranchName)
         REPOSITORY: 'my-image-repo'
-        ACR_FQDN: 'arosvcdev.azurecr.io'  # ACR FQDN
+        ACR_FQDN: 'arosvcdev.azurecr.io'  #ACR FQDN
       steps:
         - checkout: self
 
-        # Pull the Docker image using crane
-        - script: |
-            set -eux
-            sudo apt-get update
-            sudo apt-get install -y golang
-            export PATH=$PATH:~/go/bin/
-            go install github.com/google/go-containerregistry/cmd/crane@latest
-            mkdir -p $(ob_outputDirectory)
-            crane pull $(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG) $(ob_outputDirectory)/image.tar
-          displayName: 'Pulling Docker Image using Crane'
-
-        # Push the Docker image to ACR using the Managed Identity Service Connection
+        # Authenticate with Azure using the Managed Identity service connection
         - task: AzureCLI@2
           inputs:
             azureSubscription: 'ado-pipeline-dev-image-push'  #service connection name
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              az acr login --name $(ACR_FQDN) --expose-token --output tsv --query accessToken > token.txt
-              crane auth login "$(ACR_FQDN)" -u "00000000-0000-0000-0000-000000000000" -p "$(cat token.txt)"
+              az acr login --name $(ACR_FQDN)
+              crane auth login "$(ACR_FQDN)" -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name $(ACR_FQDN) --expose-token --output tsv --query accessToken)"
+              mkdir -p $(ob_outputDirectory)
+              crane pull $(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG) $(ob_outputDirectory)/image.tar
+          displayName: 'Pulling Docker Image using Crane'
+
+        # Push the Docker image to ACR
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'ado-pipeline-dev-image-push'  # service connection name
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
               crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG)"
               crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):latest"
           displayName: 'Pushing Docker Image to ACR'
@@ -110,7 +110,7 @@ stages:
         - script: |
             set -eux
             # Create a container from the build cache and copy the coverage file
-            podman create --name coverage-container my-image:latest
+            podman create --name coverage-container $(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG)
             podman cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out
             podman rm coverage-container
           displayName: 'Extract Coverage Report from Container'
