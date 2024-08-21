@@ -18,6 +18,12 @@ AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
 GOTESTSUM = gotest.tools/gotestsum@v1.11.0
 
+# Variables for RP full dev automation 
+AZURE_PREFIX ?= zzz
+RP_FULL_DEV_IMAGE ?= generic-repo/rp-full-dev:v0.0.1
+ARO_RP_BRANCH ?= razo7/ARO-9327-2
+SKIP_DEPLOYMENTS ?= true
+
 # Golang version go mod tidy compatibility
 GOLANG_VERSION ?= 1.21
 
@@ -171,19 +177,17 @@ ci-clean:
 	docker image prune --all --filter="label=aro-*=true"
 
 .PHONY: pre-deploy-no-aks
-pre-deploy-no-aks:
+pre-deploy-no-aks: dev-config.yaml
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro pre-deploy-no-aks dev-config.yaml ${LOCATION}
 
 .PHONY: pre-deploy-full
-pre-deploy-full:
+pre-deploy-full: dev-config.yaml
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro pre-deploy-full dev-config.yaml ${LOCATION}
-# TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
-# override COMMIT.
+
 .PHONY: deploy
 deploy: pre-deploy-full
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
-.PHONY: dev-config.yaml
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
 
@@ -437,18 +441,14 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-AZURE_PREFIX ?= zzz
-RP_FULL_DEV_IMAGE ?= generic-repo/rp-full-dev:v0.0.1
-ARO_RP_BRANCH ?= razo7/ARO-9327
-SKIP_DEPLOYMENTS ?= true
 .PHONY: rp-full-dev
 rp-full-dev: # Build and run a rp-full-dev container for automating rp-full-dev
-	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
+	podman build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
 		--build-arg SKIP_DEPLOYMENTS=$(SKIP_DEPLOYMENTS) \
 		--build-arg ARO_RP_BRANCH=$(ARO_RP_BRANCH) \
 		-f Dockerfile.rp-full-dev \
 		-t $(RP_FULL_DEV_IMAGE) .
-	docker run --rm -it --user=0 --privileged \
+	podman run --rm -it --user=0 --privileged \
 		-v /dev/shm:/dev/shm \
 		-v "${HOME}/.azure:/root/.azure" \
 		--device /dev/net/tun \

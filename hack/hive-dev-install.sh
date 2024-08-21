@@ -54,19 +54,28 @@ if [ -z "$PULL_SECRET" ]; then
 fi
 
 verify_tools
+local skip_deployments
+skip_deployments=${SKIP_DEPLOYMENTS}
 
 if [ $( $KUBECTL get namespace $HIVE_OPERATOR_NS -o yaml 2>/dev/null | wc -l ) -ne 0 ]; then
 	echo "hive is already installed in the namespace"
-	if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
-		echo "'SKIP_DEPLOYMENTS' env var is set to false. ❌⏩ Don't skip Hive installation, and try to reinstall it"
-    elif [[ "${SKIP_DEPLOYMENTS}" == "true" ]]; then
-		echo "'SKIP_DEPLOYMENTS' env var is set to true. ⏩📋 Skip Hive installation"
-		exit
+	if [[ -z $skip_deployments]]; then
+		log "SKIP_DEPLOYMENTS was not set, then use default value of 'true'"
+        skip_deployments=true
+	fi
+	source hack/devtools/rp_dev_helper.sh && is_it_boolean $skip_deployments
+	# Don't skip deployment creation when SKIP_DEPLOYMENTS is set to "false" 
+	if $skip_deployments; then
+		log "'SKIP_DEPLOYMENTS' env var is set to true. ⏩📋 Skip Hive installation"
+		abort
+	else
+		log "'SKIP_DEPLOYMENTS' env var is set to false. ❌⏩ Don't skip Hive installation, and try to reinstall it"
+	fi
 	else
 		echo -n "would you like to reapply the configs? (y/N): "
 		read answer
 		if [[ "$answer" != "y" ]]; then
-			exit
+			abort
 		fi
 	fi
 else

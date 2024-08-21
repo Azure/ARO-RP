@@ -4,11 +4,31 @@ FROM registry.access.redhat.com/ubi8/toolbox:8.10
 USER root 
 
 RUN dnf install https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm -y \
-    && dnf install make golang azure-cli -y \
+    && dnf install make azure-cli -y \
     && dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y \
     && dnf install screen openvpn -y \
-    && dnf install jq docker device-mapper-devel skopeo -y \
+    && dnf install jq podman-docker device-mapper-devel skopeo -y \
     && dnf clean all -y
+
+# Copy the Go Modules manifests for detecting Go version
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+RUN \
+    # get Go version from mod file
+    export GO_VERSION=$(grep -E "go [[:digit:]]\.[[:digit:]][[:digit:]]" go.mod | awk '{print $2}') && \
+    echo ${GO_VERSION} && \
+    # find filename for latest z version from Go download page
+    export GO_FILENAME=$(curl -sL 'https://go.dev/dl/?mode=json&include=all' | jq -r "[.[] | select(.version | startswith(\"go${GO_VERSION}\"))][0].files[] | select(.os == \"linux\" and .arch == \"amd64\") | .filename") && \
+    echo ${GO_FILENAME} && \
+    # download and unpack
+    curl -sL -o go.tar.gz "https://golang.org/dl/${GO_FILENAME}" && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz
+
+# add Go to PATH
+ENV PATH="/usr/local/go/bin:${PATH}"
+RUN go version
 
 ARG ARO_RP_BRANCH
 ENV ARO_RP_DIRECTORY=/home/ARO-RP
