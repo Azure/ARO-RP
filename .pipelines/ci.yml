@@ -43,7 +43,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  
+            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
             export NO_CACHE=true
             make ci-rp
 
@@ -54,7 +54,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  
+            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
             export NO_CACHE=true
             make azext-aro
 
@@ -86,10 +86,11 @@ stages:
             scriptLocation: 'inlineScript'
             inlineScript: |
               az acr login --name ${ACR_FQDN}
-              crane auth login "${ACR_FQDN}" -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
+              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
               mkdir -p ${ob_outputDirectory}
-              crane pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} ${ob_outputDirectory}/image.tar
-          displayName: 'Pulling Docker Image using Crane'
+              docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+              docker save ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -o ${ob_outputDirectory}/image.tar
+          displayName: 'Pulling Docker Image using Docker'
 
         # Push the Docker image to ACR
         - task: AzureCLI@2
@@ -98,8 +99,10 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              crane push ${ob_outputDirectory}/image.tar "${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}"
-              crane push ${ob_outputDirectory}/image.tar "${ACR_FQDN}/${REPOSITORY}:latest"
+              docker load -i ${ob_outputDirectory}/image.tar
+              docker tag ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} ${ACR_FQDN}/${REPOSITORY}:latest
+              docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+              docker push ${ACR_FQDN}/${REPOSITORY}:latest
           displayName: 'Pushing Docker Image to ACR'
       
     - job: Extract_Coverage_Report
@@ -119,23 +122,14 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              # Clear any existing podman auth files
-              podman logout ${ACR_FQDN} || true
-              rm -rf ~/.docker ~/.config/containers/auth.json || true
-
-              # Login to Azure Container Registry
-              az acr login --name ${ACR_FQDN}
-
-              # Fetch the token and login to podman
-              export ACR_TOKEN=$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)
-              podman login ${ACR_FQDN} -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}
+              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
 
         - script: |
             set -eux
             # Create a container from the build cache and copy the coverage file
-            podman create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-            podman cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out
-            podman rm coverage-container
+            docker create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+            docker cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out
+            docker rm coverage-container
           displayName: 'Extract Coverage Report from Container'
 
         # Publish the coverage report to Azure DevOps
