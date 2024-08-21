@@ -92,7 +92,7 @@ stages:
         # Push the Docker image to ACR using the Managed Identity Service Connection
         - task: AzureCLI@2
           inputs:
-            azureSubscription: 'ado-pipline-dev-image-push'  #service connection name
+            azureSubscription: 'ado-pipeline-dev-image-push'  #service connection name
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
