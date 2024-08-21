@@ -385,7 +385,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					}
 
 					dv := &dynamic{
-						appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
+						appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 						azEnv:                      &azureclient.PublicCloud,
 						authorizerType:             authorizerType,
 						log:                        logrus.NewEntry(logrus.StandardLogger()),

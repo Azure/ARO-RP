@@ -849,7 +849,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				azEnv:                      &azureclient.PublicCloud,
-				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
+				appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
 				pdpClient:                  pdpClient,
@@ -1125,7 +1125,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
+				appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				azEnv:                      &azureclient.PublicCloud,
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
@@ -1409,7 +1409,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
+				appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				azEnv:                      &azureclient.PublicCloud,
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
@@ -1717,7 +1717,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				azEnv:                      &azureclient.PublicCloud,
-				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
+				appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				virtualNetworks:            vnetClient,
 				pdpClient:                  pdpClient,

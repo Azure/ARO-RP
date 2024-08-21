@@ -35,16 +35,16 @@ func (m *MockPlatformWorkloadIdentityRolesByVersion) EXPECT() *MockPlatformWorkl
 	return m.recorder
 }
 
-// GetPlatformWorkloadIdentityRoles mocks base method.
-func (m *MockPlatformWorkloadIdentityRolesByVersion) GetPlatformWorkloadIdentityRoles() []api.PlatformWorkloadIdentityRole {
+// GetPlatformWorkloadIdentityRolesByRoleName mocks base method.
+func (m *MockPlatformWorkloadIdentityRolesByVersion) GetPlatformWorkloadIdentityRolesByRoleName() map[string]api.PlatformWorkloadIdentityRole {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPlatformWorkloadIdentityRoles")
-	ret0, _ := ret[0].([]api.PlatformWorkloadIdentityRole)
+	ret := m.ctrl.Call(m, "GetPlatformWorkloadIdentityRolesByRoleName")
+	ret0, _ := ret[0].(map[string]api.PlatformWorkloadIdentityRole)
 	return ret0
 }
 
-// GetPlatformWorkloadIdentityRoles indicates an expected call of GetPlatformWorkloadIdentityRoles.
-func (mr *MockPlatformWorkloadIdentityRolesByVersionMockRecorder) GetPlatformWorkloadIdentityRoles() *gomock.Call {
+// GetPlatformWorkloadIdentityRolesByRoleName indicates an expected call of GetPlatformWorkloadIdentityRolesByRoleName.
+func (mr *MockPlatformWorkloadIdentityRolesByVersionMockRecorder) GetPlatformWorkloadIdentityRolesByRoleName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformWorkloadIdentityRoles", reflect.TypeOf((*MockPlatformWorkloadIdentityRolesByVersion)(nil).GetPlatformWorkloadIdentityRoles))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformWorkloadIdentityRolesByRoleName", reflect.TypeOf((*MockPlatformWorkloadIdentityRolesByVersion)(nil).GetPlatformWorkloadIdentityRolesByRoleName))
 }

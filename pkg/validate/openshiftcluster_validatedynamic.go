@@ -12,8 +12,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/form3tech-oss/jwt-go"
-	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -120,56 +120,64 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		})
 	}
 
-	var pdpClient remotepdp.RemotePDPClient
-	spp := dv.oc.Properties.ServicePrincipalProfile
-
 	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
-	options := dv.env.Environment().ClientSecretCredentialOptions()
-	spClientCred, err := azidentity.NewClientSecretCredential(
-		tenantID, spp.ClientID, string(spp.ClientSecret), options)
-	if err != nil {
-		return err
-	}
 	fpClientCred, err := dv.env.FPNewClientCertificateCredential(tenantID)
 	if err != nil {
 		return err
 	}
 
 	aroEnv := dv.env.Environment()
-	pdpClient = remotepdp.NewRemotePDPClient(
+	pdpClient := remotepdp.NewRemotePDPClient(
 		fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),
 		aroEnv.OAuthScope,
 		fpClientCred,
 	)
 
 	scopes := []string{dv.env.Environment().ResourceManagerScope}
-	err = ensureAccessTokenClaims(ctx, spClientCred, scopes)
-	if err != nil {
-		return err
-	}
-	spAuthorizer := azidext.NewTokenCredentialAdapter(spClientCred, scopes)
-
-	spDynamic := dynamic.NewValidator(
-		dv.log,
-		dv.env,
-		dv.env.Environment(),
-		dv.subscriptionDoc.ID,
-		spAuthorizer,
-		spp.ClientID,
-		dynamic.AuthorizerClusterServicePrincipal,
-		spClientCred,
-		pdpClient,
-	)
-
+	var spDynamic dynamic.Dynamic
 	if dv.oc.Properties.PlatformWorkloadIdentityProfile == nil || dv.oc.Properties.ServicePrincipalProfile != nil {
 		// SP validation
+		spp := dv.oc.Properties.ServicePrincipalProfile
+		options := dv.env.Environment().ClientSecretCredentialOptions()
+		spClientCred, err := azidentity.NewClientSecretCredential(
+			tenantID, spp.ClientID, string(spp.ClientSecret), options)
+		if err != nil {
+			return err
+		}
+		err = ensureAccessTokenClaims(ctx, spClientCred, scopes)
+		if err != nil {
+			return err
+		}
+
+		spDynamic = dynamic.NewValidator(
+			dv.log,
+			dv.env,
+			dv.env.Environment(),
+			dv.subscriptionDoc.ID,
+			dv.fpAuthorizer,
+			&spp.ClientID,
+			dynamic.AuthorizerClusterServicePrincipal,
+			spClientCred,
+			pdpClient,
+		)
 		err = spDynamic.ValidateServicePrincipal(ctx, spClientCred)
 		if err != nil {
 			return err
 		}
 	} else {
 		// PlatformWorkloadIdentity and ClusterMSIIdentity Validation
-		err = spDynamic.ValidatePlatformWorkloadIdentityProfile(ctx, dv.oc, dv.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRoles(), dv.roleDefinitions)
+		spDynamic = dynamic.NewValidator(
+			dv.log,
+			dv.env,
+			dv.env.Environment(),
+			dv.subscriptionDoc.ID,
+			nil,
+			nil,
+			dynamic.AuthorizerClusterServicePrincipal,
+			nil,
+			pdpClient,
+		)
+		err = spDynamic.ValidatePlatformWorkloadIdentityProfile(ctx, dv.oc, dv.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName(), dv.roleDefinitions)
 		if err != nil {
 			return err
 		}
@@ -218,7 +226,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		dv.env.Environment(),
 		dv.subscriptionDoc.ID,
 		dv.fpAuthorizer,
-		dv.env.FPClientID(),
+		to.StringPtr(dv.env.FPClientID()),
 		dynamic.AuthorizerFirstParty,
 		fpClientCred,
 		pdpClient,

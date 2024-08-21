@@ -79,12 +79,12 @@ type Dynamic interface {
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
-	ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRoles []api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error
+	ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error
 }
 
 type dynamic struct {
 	log            *logrus.Entry
-	appID          string // for use when reporting an error
+	appID          *string // for use when reporting an error
 	authorizerType AuthorizerType
 	// This represents the Subject for CheckAccess.  Could be either FP or SP.
 	checkAccessSubjectInfoCred   azcore.TokenCredential
@@ -96,7 +96,6 @@ type dynamic struct {
 	virtualNetworks                       virtualNetworksGetClient
 	diskEncryptionSets                    compute.DiskEncryptionSetsClient
 	resourceSkusClient                    compute.ResourceSkusClient
-	spComputeUsage                        compute.UsageClient
 	spNetworkUsage                        network.UsageClient
 	loadBalancerBackendAddressPoolsClient network.LoadBalancerBackendAddressPoolsClient
 	pdpClient                             remotepdp.RemotePDPClient
@@ -115,7 +114,7 @@ func NewValidator(
 	azEnv *azureclient.AROEnvironment,
 	subscriptionID string,
 	authorizer autorest.Authorizer,
-	appID string,
+	appID *string,
 	authorizerType AuthorizerType,
 	cred azcore.TokenCredential,
 	pdpClient remotepdp.RemotePDPClient,
@@ -128,7 +127,6 @@ func NewValidator(
 		azEnv:                      azEnv,
 		checkAccessSubjectInfoCred: cred,
 
-		spComputeUsage: compute.NewUsageClient(azEnv, subscriptionID, authorizer),
 		spNetworkUsage: network.NewUsageClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks: newVirtualNetworksCache(
 			network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer),
@@ -828,7 +826,7 @@ func (dv *dynamic) noPermissionsErr(errCode string, errMsg string, errMsgSPHasMi
 			target,
 			fmt.Sprintf("%s %s", errMsgSPHasMissingRole, errMsg),
 			dv.authorizerType,
-			dv.appID,
+			*dv.appID,
 			resource,
 		)
 	}

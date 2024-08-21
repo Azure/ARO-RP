@@ -2,6 +2,7 @@ package dynamic
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
@@ -10,33 +11,48 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRoles []api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error {
 	dv.log.Print("ValidatePlatformWorkloadIdentityProfile")
 
-	platformIdentitiesActionsMap := map[string][]string{}
+	dv.platformIdentitiesActionsMap = map[string][]string{}
+	dv.platformIdentities = []api.PlatformWorkloadIdentity{}
 
-	for _, role := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		platformIdentitiesActionsMap[role.OperatorName] = nil
-	}
-
-	roleIsMissing := false
-	requiredOperatorIdentities := []string{}
-	for _, role := range platformWorkloadIdentityRoles {
-		requiredOperatorIdentities = append(requiredOperatorIdentities, role.OperatorName)
-		_, ok := platformIdentitiesActionsMap[role.OperatorName]
-		if !ok {
-			roleIsMissing = true
+	for _, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		_, ok := platformWorkloadIdentityRolesByRoleName[pwi.OperatorName]
+		if ok {
+			dv.platformIdentitiesActionsMap[pwi.OperatorName] = nil
+			dv.platformIdentities = append(dv.platformIdentities, pwi)
 		}
 	}
 
-	if roleIsMissing || len(platformWorkloadIdentityRoles) != len(platformIdentitiesActionsMap) {
+	// Check if any required platform identity is missing
+	if len(dv.platformIdentities) != len(platformWorkloadIdentityRolesByRoleName) {
+		requiredOperatorIdentities := []string{}
+		for _, role := range platformWorkloadIdentityRolesByRoleName {
+			requiredOperatorIdentities = append(requiredOperatorIdentities, role.OperatorName)
+		}
+		v := oc.Properties.ClusterProfile.Version
+		currentOpenShiftVersion, err := version.ParseVersion(oc.Properties.ClusterProfile.Version)
+		if err != nil {
+			return err
+		}
+		if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
+			upgradeableVersion, err := version.ParseVersion(string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo))
+			if err != nil {
+				return err
+			}
+			if !upgradeableVersion.Eq(currentOpenShiftVersion) && !currentOpenShiftVersion.Lt(upgradeableVersion) {
+				v = fmt.Sprintf("%s or %s", v, string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo))
+			}
+		}
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePlatformWorkloadIdentityMismatch,
-			"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '%v'", oc.Properties.ClusterProfile.Version, requiredOperatorIdentities)
+			"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '%v'", v, requiredOperatorIdentities)
 	}
 
 	err := dv.validateClusterMSI(ctx, oc, roleDefinitions)
@@ -44,17 +60,14 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 		return err
 	}
 
-	for _, role := range platformWorkloadIdentityRoles {
+	for _, role := range platformWorkloadIdentityRolesByRoleName {
 		actions, err := getActionsForRoleDefinition(ctx, role.RoleDefinitionID, roleDefinitions)
 		if err != nil {
 			return err
 		}
 
-		platformIdentitiesActionsMap[role.OperatorName] = actions
+		dv.platformIdentitiesActionsMap[role.OperatorName] = actions
 	}
-
-	dv.platformIdentities = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
-	dv.platformIdentitiesActionsMap = platformIdentitiesActionsMap
 
 	return nil
 }
@@ -72,6 +85,7 @@ func (dv *dynamic) validateClusterMSI(ctx context.Context, oc *api.OpenShiftClus
 	return nil
 }
 
+// Validate all Platform Identities such that Cluster MSI can perform actions present in role AzureRedHatOpenShiftFederatedCredentialRole
 func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, oid string, platformIdentities []api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
 	actions, err := getActionsForRoleDefinition(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, roleDefinitions)
 	if err != nil {

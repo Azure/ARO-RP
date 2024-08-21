@@ -9,11 +9,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // PlatformWorkloadIdentityRolesByVersion is the interface that validates and obtains the version from an PlatformWorkloadIdentityRoleSetDocument.
 type PlatformWorkloadIdentityRolesByVersion interface {
-	GetPlatformWorkloadIdentityRoles() []api.PlatformWorkloadIdentityRole
+	GetPlatformWorkloadIdentityRolesByRoleName() map[string]api.PlatformWorkloadIdentityRole
 }
 
 // platformWorkloadIdentityRolesByVersionService is the default implementation of the PlatformWorkloadIdentityRolesByVersion interface.
@@ -22,28 +23,59 @@ type platformWorkloadIdentityRolesByVersionService struct {
 }
 
 func NewPlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets) (PlatformWorkloadIdentityRolesByVersion, error) {
-	if oc.Properties.PlatformWorkloadIdentityProfile == nil || oc.Properties.ServicePrincipalProfile != nil {
+	if !oc.UsesWorkloadIdentity() {
 		return nil, nil
 	}
 
-	requestedInstallVersion := oc.Properties.ClusterProfile.Version
+	currentInstallVersion := oc.Properties.ClusterProfile.Version
+	currentOpenShiftVersion, err := version.ParseVersion(currentInstallVersion)
+	if err != nil {
+		return nil, err
+	}
+	currentMinorVersion := currentOpenShiftVersion.MinorVersion()
+	requiredMinorVersions := map[string]bool{currentMinorVersion: false}
+	platformWorkloadIdentityRoles := []api.PlatformWorkloadIdentityRole{}
 
 	docs, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, doc := range docs.PlatformWorkloadIdentityRoleSetDocuments {
-		if requestedInstallVersion == doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion {
-			return &platformWorkloadIdentityRolesByVersionService{
-				platformWorkloadIdentityRoles: doc.PlatformWorkloadIdentityRoleSet.Properties.PlatformWorkloadIdentityRoles,
-			}, nil
+	if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
+		upgradeableVersion, err := version.ParseVersion(string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo))
+		if err != nil {
+			return nil, err
+		}
+		upgradeableMinorVersion := upgradeableVersion.MinorVersion()
+		if currentMinorVersion != upgradeableMinorVersion && !currentOpenShiftVersion.Lt(upgradeableVersion) {
+			requiredMinorVersions[upgradeableMinorVersion] = false
 		}
 	}
 
-	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "No PlatformWorkloadIdentityRoleSet found for the requested OpenShift version '%s'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket", requestedInstallVersion)
+	for _, doc := range docs.PlatformWorkloadIdentityRoleSetDocuments {
+		for version := range requiredMinorVersions {
+			if version == doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion {
+				platformWorkloadIdentityRoles = append(platformWorkloadIdentityRoles, doc.PlatformWorkloadIdentityRoleSet.Properties.PlatformWorkloadIdentityRoles...)
+				requiredMinorVersions[version] = true
+			}
+		}
+	}
+
+	for version, exists := range requiredMinorVersions {
+		if !exists {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '%s'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket", version)
+		}
+	}
+
+	return &platformWorkloadIdentityRolesByVersionService{
+		platformWorkloadIdentityRoles: platformWorkloadIdentityRoles,
+	}, nil
 }
 
-func (service *platformWorkloadIdentityRolesByVersionService) GetPlatformWorkloadIdentityRoles() []api.PlatformWorkloadIdentityRole {
-	return service.platformWorkloadIdentityRoles
+func (service *platformWorkloadIdentityRolesByVersionService) GetPlatformWorkloadIdentityRolesByRoleName() map[string]api.PlatformWorkloadIdentityRole {
+	platformWorkloadIdentityRolesByRoleName := map[string]api.PlatformWorkloadIdentityRole{}
+	for _, role := range service.platformWorkloadIdentityRoles {
+		platformWorkloadIdentityRolesByRoleName[role.OperatorName] = role
+	}
+	return platformWorkloadIdentityRolesByRoleName
 }

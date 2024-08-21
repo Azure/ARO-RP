@@ -55,7 +55,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
 						Name: "Dummy1",
 						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-							OpenShiftVersion:              "4.14.40",
+							OpenShiftVersion:              "4.14",
 							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{},
 						},
 					},
@@ -72,7 +72,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 				},
 			},
-			wantErr: "400: InvalidParameter: properties.clusterProfile.version: No PlatformWorkloadIdentityRoleSet found for the requested OpenShift version '4.14.40'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket",
+			wantErr: "400: InvalidParameter: : No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '4.14'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			name: "Failed - The role set documents listAll is missing the requested version",
@@ -89,13 +89,13 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
 						Name: "Dummy1",
 						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-							OpenShiftVersion:              "4.14.40",
+							OpenShiftVersion:              "4.15",
 							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{},
 						},
 					},
 				})
 			},
-			wantErr: "400: InvalidParameter: properties.clusterProfile.version: No PlatformWorkloadIdentityRoleSet found for the requested OpenShift version '4.14.26'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket",
+			wantErr: "400: InvalidParameter: : No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '4.14'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket",
 		},
 	} {
 		ctx := context.Background()

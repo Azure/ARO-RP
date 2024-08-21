@@ -143,25 +143,33 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			ResourceID:   platformIdentity1,
 		},
 	}
+	desiredPlatformWorkloadIdentities := []api.PlatformWorkloadIdentity{
+		{
+			OperatorName: "Dummy1",
+			ResourceID:   platformIdentity1,
+		},
+	}
+	desiredPlatformWorkloadIdentitiesMap := map[string]api.PlatformWorkloadIdentityRole{
+		"Dummy1": {
+			OperatorName: "Dummy1",
+		},
+	}
 	clusterMSI := api.UserAssignedIdentities{
 		msiResourceID: api.ClusterUserAssignedIdentity{
 			ClientID:    dummyClientId,
 			PrincipalID: dummyObjectId,
 		},
 	}
-	validRolesForVersion := []api.PlatformWorkloadIdentityRole{
-		{
+	validRolesForVersion := map[string]api.PlatformWorkloadIdentityRole{
+		"Dummy1": {
 			OperatorName: "Dummy1",
-		},
-		{
-			OperatorName: "Dummy2",
 		},
 	}
 	openShiftVersion := "4.13.40"
 
 	for _, tt := range []struct {
 		name                             string
-		platformIdentityRoles            []api.PlatformWorkloadIdentityRole
+		platformIdentityRoles            map[string]api.PlatformWorkloadIdentityRole
 		oc                               *api.OpenShiftCluster
 		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient)
 		wantPlatformIdentities           []api.PlatformWorkloadIdentity
@@ -194,16 +202,15 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Return(&msiAllowedActions, nil).AnyTimes()
 			},
-			wantPlatformIdentities: platformWorkloadIdentities,
+			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
 				"Dummy1": platformIdentityRequiredPermissionsList,
-				"Dummy2": platformIdentityRequiredPermissionsList,
 			},
 		},
 		{
-			name: "Fail - Mismatch between desired and provided platform Identities - count mismatch 1",
-			platformIdentityRoles: []api.PlatformWorkloadIdentityRole{
-				{
+			name: "Success - Mismatch between desired and provided platform Identities - desired are fulfilled",
+			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+				"Dummy2": {
 					OperatorName: "Dummy2",
 				},
 			},
@@ -220,18 +227,35 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '[Dummy2]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, openShiftVersion),
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+				mockTokenCredential(tokenCred)
+				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Return(&msiAllowedActions, nil).AnyTimes()
+			},
+			wantPlatformIdentities: []api.PlatformWorkloadIdentity{
+				{
+					OperatorName: "Dummy2",
+					ResourceID:   platformIdentity1,
+				},
+			},
+			wantPlatformIdentitiesActionsMap: map[string][]string{
+				"Dummy2": platformIdentityRequiredPermissionsList,
+			},
 		},
 		{
 			name: "Fail - Mismatch between desired and provided platform Identities - count mismatch 2",
-			platformIdentityRoles: []api.PlatformWorkloadIdentityRole{
-				{
+			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+				"Dummy2": {
 					OperatorName: "Dummy2",
 				},
-				{
+				"Dummy1": {
 					OperatorName: "Dummy1",
 				},
-				{
+				"Dummy3": {
 					OperatorName: "Dummy3",
 				},
 			},
@@ -251,19 +275,21 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '[Dummy2 Dummy1 Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, openShiftVersion),
 		},
 		{
-			name: "Fail - Mismatch between desired and provided platform Identities - different operators",
-			platformIdentityRoles: []api.PlatformWorkloadIdentityRole{
-				{
-					OperatorName: "Dummy1",
-				},
-				{
-					OperatorName: "Dummy3",
-				},
-			},
+			name:                  "Fail - Mismatch between desired and provided platform Identities - different operators",
+			platformIdentityRoles: desiredPlatformWorkloadIdentitiesMap,
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: platformWorkloadIdentities,
+						PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+							{
+								OperatorName: "Dummy2",
+								ResourceID:   platformIdentity1,
+							},
+							{
+								OperatorName: "Dummy3",
+								ResourceID:   platformIdentity1,
+							},
+						},
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version: openShiftVersion,
@@ -273,7 +299,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '[Dummy1 Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, openShiftVersion),
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, openShiftVersion),
 		},
 		{
 			name:                  "Fail - MSI Resource ID is invalid",
