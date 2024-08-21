@@ -446,6 +446,18 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
 	}
 
+	if current.UsesWorkloadIdentity() {
+		for i := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].OperatorName != oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].OperatorName {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities[%d].operatorName", i), "Operator identity name cannot be changed.")
+			}
+
+			if current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID != oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities[%d].resourceID", i), "Operator identity resource ID cannot be changed.")
+			}
+		}
+	}
+
 	return nil
 }
 
