@@ -6,7 +6,7 @@ E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 
 E2E_LABEL ?= !smoke
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 NO_CACHE ?= true
-PODMAN_REMOTE_ARGS ?=
+PODMAN_REMOTE_ARGS ?= --url=tcp://127.0.0.1:8888 
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -72,9 +72,16 @@ build-all:
 aro: check-release generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
+# Start the Podman service if not already running
+.PHONY: start-podman-service
+start-podman-service:
+	@echo "Starting Podman service..."
+	@sudo podman --log-level=debug system service --time=0 tcp://127.0.0.1:8888 > podmanlog 2>&1 &
+	@sleep 2 # Give the service time to start
+
 # Target to create podman secrets
 .PHONY: podman-secrets
-podman-secrets: aks.kubeconfig
+podman-secrets: aks.kubeconfig start-podman-service
 	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore aks.kubeconfig
 	podman $(PODMAN_REMOTE_ARGS) secret create aks.kubeconfig ./aks.kubeconfig
 
@@ -177,7 +184,7 @@ az: pyenv
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
 
 .PHONY: azext-aro
-azext-aro:
+azext-aro: 
 	podman $(PODMAN_REMOTE_ARGS) \
 		build . \
 		-f Dockerfile.ci-azext-aro \
@@ -197,8 +204,8 @@ client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
 
 .PHONY: ci-rp
-ci-rp: fix-macos-vendor
-	podman $(PODMAN_REMOTE_ARGS) \
+ci-rp: start-podman-service fix-macos-vendor
+	sudo podman $(PODMAN_REMOTE_ARGS) \
 		build . \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
@@ -206,11 +213,11 @@ ci-rp: fix-macos-vendor
 		--build-arg ARO_VERSION=$(VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
-	podman $(PODMAN_REMOTE_ARGS) tag \
-		$(shell podman image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
+	sudo podman $(PODMAN_REMOTE_ARGS) tag \
+		$(shell sudo podman image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
 		$(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)
-	podman $(PODMAN_REMOTE_ARGS) tag \
-		$(shell podman image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
+	sudo podman $(PODMAN_REMOTE_ARGS) tag \
+		$(shell sudo podman image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
 		$(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)
 
 .PHONY: ci-tunnel
