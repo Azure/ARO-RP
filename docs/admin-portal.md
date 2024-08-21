@@ -30,6 +30,13 @@ You will require Node.js and `npm`. These instructions were tested with the vers
 
 ## Running Admin Portal in development
 
+### Running Portal locally as it does in prod
+
+This build uses the `make ci-rp` target to compile the NPM, and serve it via the RP running in a containerized env (the same way we run in prod). It is the recommended method to do final testing (or, if you don't want the hassle of installing `npm` or other tools locally).
+
+1. Run `make runlocal-portal`
+1. Go to `https://localhost:8444` to view the admin portal running
+
 ### Running Portal Served from development RP
 
 1. Complete Steps mentioned above to build and compile portal.
