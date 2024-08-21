@@ -183,4 +183,31 @@ func Validate(r *msgs.Record) {
 			},
 		}
 	}
+
+	for resourceType, resources := range r.TargetResources {
+		if strings.TrimSpace(resourceType) == "" {
+			r.TargetResources["Unknown"] = resources
+			delete(r.TargetResources, resourceType)
+		}
+
+		for _, resource := range resources {
+			if err := resource.Validate(); err != nil {
+				resource.Name = "Unknown"
+			}
+		}
+	}
+}
+
+func GetDummyRecord() *msgs.Record {
+	return &msgs.Record{
+		CallerIpAddress:            msgs.MustParseAddr("192.168.0.1"),
+		CallerIdentities:           map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry{msgs.UPN: {{"user1@domain.com", "Description"}}},
+		OperationCategories:        []msgs.OperationCategory{msgs.UserManagement},
+		TargetResources:            map[string][]msgs.TargetResourceEntry{"ResourceType": {{"Name", "Cluster", "DataCenter", "Region"}}},
+		CallerAccessLevels:         []string{"Level1"},
+		OperationAccessLevel:       "AccessLevel",
+		OperationName:              "Operation",
+		OperationResultDescription: "ResultDescription",
+		CallerAgent:                "Agent",
+	}
 }

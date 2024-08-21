@@ -211,6 +211,12 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 
 			audit.Validate(auditRec)
 			auditMsg.Record = *auditRec
+
+			if err := auditMsg.Record.Validate(); err != nil {
+				log.Printf("Error validating audit record: %v, Sending dummy record", err)
+				auditMsg.Record = *audit.GetDummyRecord()
+			}
+
 			log.Printf("Frontend - sending audit message: %+v", auditMsg.Record)
 			if err := l.OtelAudit.SendAuditMessage(l.OtelAudit.Client, r.Context(), &auditMsg); err != nil {
 				log.Printf("Frontend - Error sending audit message: %v", err)

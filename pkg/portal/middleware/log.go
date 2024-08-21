@@ -167,6 +167,12 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry, otelAudit *audit.Audit) 
 
 				audit.Validate(auditRec)
 				auditMsg.Record = *auditRec
+
+				if err := auditMsg.Record.Validate(); err != nil {
+					log.Printf("Error validating audit record: %v, Sending dummy record", err)
+					auditMsg.Record = *audit.GetDummyRecord()
+				}
+
 				log.Printf("Portal - sending audit message: %+v", auditMsg.Record)
 				if err := otelAudit.SendAuditMessage(otelAudit.Client, r.Context(), &auditMsg); err != nil {
 					log.Printf("Portal - Error sending audit message: %v", err)
