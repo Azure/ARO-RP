@@ -54,7 +54,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
+            export RP_IMAGE_ACR=arosvcdev 
             export NO_CACHE=true
             make azext-aro
 
@@ -74,43 +74,47 @@ stages:
         ob_outputDirectory: '$(Build.SourcesDirectory)/out'
         IMAGE_TAG: $(Build.SourceBranchName)
         REPOSITORY: 'my-image-repo'
-        ACR_FQDN: 'arosvcdev.azurecr.io'  #ACR FQDN
+        ACR_FQDN: 'arosvcdev.azurecr.io'  # ACR FQDN
       steps:
         - checkout: self
 
         # Authenticate with Azure using the Managed Identity service connection
         - task: AzureCLI@2
           inputs:
-            azureSubscription: 'ado-pipeline-dev-image-push'  #service connection name
+            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              az acr login --name $(ACR_FQDN)
-              crane auth login "$(ACR_FQDN)" -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name $(ACR_FQDN) --expose-token --output tsv --query accessToken)"
-              mkdir -p $(ob_outputDirectory)
-              crane pull $(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG) $(ob_outputDirectory)/image.tar
+              az acr login --name ${ACR_FQDN}
+              crane auth login "${ACR_FQDN}" -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
+              mkdir -p ${ob_outputDirectory}
+              crane pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} ${ob_outputDirectory}/image.tar
           displayName: 'Pulling Docker Image using Crane'
 
         # Push the Docker image to ACR
         - task: AzureCLI@2
           inputs:
-            azureSubscription: 'ado-pipeline-dev-image-push'  # service connection name
+            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG)"
-              crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):latest"
+              crane push ${ob_outputDirectory}/image.tar "${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}"
+              crane push ${ob_outputDirectory}/image.tar "${ACR_FQDN}/${REPOSITORY}:latest"
           displayName: 'Pushing Docker Image to ACR'
       
     - job: Extract_Coverage_Report
       pool:
         vmImage: 'ubuntu-latest'
+      variables:
+        ACR_FQDN: 'arosvcdev.azurecr.io'  # ACR FQDN
+        REPOSITORY: 'my-image-repo'
+        IMAGE_TAG: $(Build.SourceBranchName)
       steps:
         - checkout: self
         - script: |
             set -eux
             # Create a container from the build cache and copy the coverage file
-            podman create --name coverage-container $(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG)
+            podman create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
             podman cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out
             podman rm coverage-container
           displayName: 'Extract Coverage Report from Container'
