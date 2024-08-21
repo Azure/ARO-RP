@@ -112,3 +112,75 @@ func GetOperationType(method string) msgs.OperationType {
 		return msgs.UnknownOperationType
 	}
 }
+
+// Validate runs validation rules over the AuditRecord.
+func Validate(r *msgs.Record) {
+
+	if r.OperationName == "" {
+		r.OperationName = "Unknown"
+	}
+
+	if len(r.OperationCategories) == 0 {
+		r.OperationCategories = []msgs.OperationCategory{msgs.ResourceManagement}
+	}
+
+	for _, category := range r.OperationCategories {
+		if category == msgs.OCOther && r.OperationCategoryDescription == "" {
+			r.OperationCategoryDescription = "Other"
+		}
+	}
+
+	if r.OperationResult == msgs.Failure && r.OperationResultDescription == "" {
+		r.OperationResultDescription = "Unknown"
+	}
+
+	if r.OperationAccessLevel == "" {
+		r.OperationAccessLevel = "Unknown"
+	}
+
+	if r.CallerAgent == "" {
+		r.CallerAgent = "Unknown"
+	}
+
+	if len(r.CallerIdentities) == 0 {
+		r.CallerIdentities = map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry{
+			msgs.ApplicationID: {
+				{
+					Identity:    "Unknown",
+					Description: "Unknown",
+				},
+			},
+		}
+	}
+
+	for identityType, identities := range r.CallerIdentities {
+		if len(identities) == 0 {
+			r.CallerIdentities[identityType] = []msgs.CallerIdentityEntry{{Identity: "Unknown", Description: "Unknown"}}
+		}
+	}
+
+	if !r.CallerIpAddress.IsValid() || r.CallerIpAddress.IsUnspecified() || r.CallerIpAddress.IsLoopback() || r.CallerIpAddress.IsMulticast() {
+		r.CallerIpAddress, _ = msgs.ParseAddr("192.168.1.1")
+	}
+
+	if len(r.CallerAccessLevels) == 0 {
+		r.CallerAccessLevels = []string{"Unknown"}
+	}
+
+	for i, k := range r.CallerAccessLevels {
+		if strings.TrimSpace(k) == "" {
+			r.CallerAccessLevels[i] = "Unknown"
+		}
+	}
+
+	if len(r.TargetResources) == 0 {
+		r.TargetResources = map[string][]msgs.TargetResourceEntry{
+			"Unknown": {
+				{
+					Name:   "Unknown",
+					Region: "Unknown",
+				},
+			},
+		}
+	}
+}

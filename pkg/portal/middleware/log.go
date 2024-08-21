@@ -165,8 +165,9 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry, otelAudit *audit.Audit) 
 					},
 				}).Info(audit.DefaultLogMessage)
 
+				audit.Validate(auditRec)
 				auditMsg.Record = *auditRec
-
+				log.Printf("Portal - sending audit message: %+v", auditMsg.Record)
 				if err := otelAudit.SendAuditMessage(otelAudit.Client, r.Context(), &auditMsg); err != nil {
 					log.Printf("Portal - Error sending audit message: %v", err)
 				}

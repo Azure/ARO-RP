@@ -63,7 +63,6 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
-			// "OTEL_AUDIT_CONN_TYPE",
 			env.OIDCStorageAccountName,
 		}
 
