@@ -24,16 +24,6 @@ pr:
     exclude:
       - docs/*
 
-
-resources:
-  containers:
-    - container: golang
-      image: registry.access.redhat.com/ubi8/go-toolset:1.20.12-5
-      options: --user=0
-    - container: python
-      image: registry.access.redhat.com/ubi8/python-39:latest
-      options: --user=0
-
 variables:
   - group: VariableGroupName  # Replace with the name of variable group
 
@@ -53,6 +43,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
+            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
             export NO_CACHE=true
             make ci-rp
 
@@ -63,6 +54,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
+            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
             export NO_CACHE=true
             make azext-aro
 
@@ -82,6 +74,7 @@ stages:
         ob_outputDirectory: '$(Build.SourcesDirectory)/out'
         IMAGE_TAG: $(Build.SourceBranchName)
         REPOSITORY: 'my-image-repo'
+        ACR_FQDN: 'arosvcdev.azurecr.io'  # ACR FQDN
       steps:
         - checkout: self
 
@@ -96,15 +89,17 @@ stages:
             crane pull $(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG) $(ob_outputDirectory)/image.tar
           displayName: 'Pulling Docker Image using Crane'
 
-        # Push the Docker image to ACR
-        - script: |
-            set -eux
-            az login --service-principal -u $(SP_APP_ID) -p $(SP_SECRET) --tenant $(TENANT_ID)
-            ACRName=$(echo "$(ACR_FQDN)" | cut -f1 -d'.')
-            export token=$(az acr login --name ${ACRName} --expose-token --output tsv --query accessToken)
-            crane auth login "$(ACR_FQDN)" -u "00000000-0000-0000-0000-000000000000" -p "${token}"
-            crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG)"
-            crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):latest"
+        # Push the Docker image to ACR using the Managed Identity Service Connection
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'ado-pipline-dev-image-push'  #service connection name
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              az acr login --name $(ACR_FQDN) --expose-token --output tsv --query accessToken > token.txt
+              crane auth login "$(ACR_FQDN)" -u "00000000-0000-0000-0000-000000000000" -p "$(cat token.txt)"
+              crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):$(IMAGE_TAG)"
+              crane push $(ob_outputDirectory)/image.tar "$(ACR_FQDN)/$(REPOSITORY):latest"
           displayName: 'Pushing Docker Image to ACR'
       
     - job: Extract_Coverage_Report
