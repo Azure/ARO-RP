@@ -1182,6 +1182,7 @@ github.com/openshift/hive/apis/hive/v1/none
 github.com/openshift/hive/apis/hive/v1/openstack
 github.com/openshift/hive/apis/hive/v1/ovirt
 github.com/openshift/hive/apis/hive/v1/vsphere
+github.com/openshift/hive/apis/hiveinternal/v1alpha1
 github.com/openshift/hive/apis/scheme
 # github.com/openshift/library-go v0.0.0-20230620084201-504ca4bd5a83 => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
 ## explicit; go 1.17
