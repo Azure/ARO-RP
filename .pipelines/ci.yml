@@ -43,7 +43,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
+            export RP_IMAGE_ACR=arosvcdev  
             export NO_CACHE=true
             make ci-rp
 
@@ -111,6 +111,18 @@ stages:
         IMAGE_TAG: $(Build.SourceBranchName)
       steps:
         - checkout: self
+        
+        # Authenticate with ACR using the Managed Identity service connection
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              az acr login --name ${ACR_FQDN}
+              export ACR_TOKEN=$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)
+              podman login ${ACR_FQDN} -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}
+
         - script: |
             set -eux
             # Create a container from the build cache and copy the coverage file
