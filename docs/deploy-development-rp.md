@@ -60,8 +60,8 @@ It uses hacks scripts around a lot of the setup to make things easier to bootstr
    SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
    ```
 
-1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to
-   mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
+1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to 
+mock a cluster MSI. This script will also create the platform identities, platform identity role assignments, and role assignment on mock cluster MSI to federate the platform identities. Platform identities will be created in resource group `RESOURCEGROUP` and subscription `SUBSCRIPTION`. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`. Additionally, save the value for `Platform workload identity role sets`.
 
 1. Copy, edit (if necessary) and source your environment file. The required
    environment variable configuration is documented immediately below:
@@ -79,6 +79,7 @@ It uses hacks scripts around a lot of the setup to make things easier to bootstr
    - `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
    - `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
    - `MOCK_MSI_TENANT_ID`: Tenant ID for service principal that mocks cluster MSI (see previous step).
+   - `PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS`: The platform workload identity role sets (see previous step or value in `local_dev_env.sh`).
 
 1. Create your own RP database:
 
