@@ -27,7 +27,7 @@ type TaskContext interface {
 	// OpenShiftCluster
 	GetClusterUUID() string
 	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
-	GetOpenshiftClusterDocument() api.OpenShiftClusterDocument
+	GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument
 
 	SetResultMessage(string)
 	GetResultMessage() string
