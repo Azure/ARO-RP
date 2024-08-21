@@ -4,12 +4,14 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -262,6 +264,74 @@ func TestValidateAdminMasterVMSize(t *testing.T) {
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
 			}
+		})
+	}
+}
+
+func TestValidateInstallVersion(t *testing.T) {
+	defaultOcpVersion := "4.12.25"
+
+	for _, tt := range []struct {
+		test              string
+		version           string
+		availableVersions []string
+		wantVersion       string
+		wantErr           string
+	}{
+		{
+			test:              "Valid and available OCP version specified returns no error",
+			version:           "4.12.25",
+			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16"},
+		},
+		{
+			test:              "No version specified, uses default and returns no error",
+			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16"},
+			wantVersion:       "4.12.25",
+		},
+		{
+			test:              "Valid version specified but not available returns error",
+			version:           "4.14.16",
+			availableVersions: []string{"4.12.25", "4.13.40"},
+			wantErr:           "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.14.16' is invalid.",
+		},
+		{
+			test:              "Prerelease version returns no error",
+			version:           "4.14.0-0.nightly-2024-01-01-000000",
+			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16", "4.14.0-0.nightly-2024-01-01-000000"},
+		},
+		{
+			test:              "Version with metadata returns no error",
+			version:           "4.14.16+installerref-abcdef",
+			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16", "4.14.16+installerref-abcdef"},
+		},
+	} {
+		t.Run(tt.test, func(t *testing.T) {
+			ctx := context.Background()
+
+			enabledOcpVersions := map[string]*api.OpenShiftVersion{}
+			for _, av := range tt.availableVersions {
+				enabledOcpVersions[av] = &api.OpenShiftVersion{}
+			}
+
+			f := frontend{
+				enabledOcpVersions: enabledOcpVersions,
+				defaultOcpVersion:  defaultOcpVersion,
+			}
+
+			oc := &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: tt.version,
+					},
+				},
+			}
+
+			err := f.validateInstallVersion(ctx, oc)
+			if tt.wantVersion != "" && oc.Properties.ClusterProfile.Version != tt.wantVersion {
+				t.Errorf("wanted clusterdoc updated with version %s but got %s", tt.wantVersion, oc.Properties.ClusterProfile.Version)
+			}
+
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
