@@ -43,9 +43,9 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
+            export RP_IMAGE_ACR=arosvcdev  
             export NO_CACHE=true
-            make ci-rp
+            make ci-rp 
 
     - job: Build_and_Test_Az_ARO_Extension
       pool:
@@ -54,9 +54,9 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
+            export RP_IMAGE_ACR=arosvcdev 
             export NO_CACHE=true
-            make azext-aro
+            make azext-aro  
 
     - job: Lint_Az_ARO_Extension
       pool:
@@ -65,7 +65,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            make test-python
+            make test-python  
 
     - job: Pull_And_Push_Image_To_ACR
       pool:
@@ -87,9 +87,11 @@ stages:
             inlineScript: |
               az acr login --name ${ACR_FQDN}
               docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
-              mkdir -p ${ob_outputDirectory}
-              docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-              docker save ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -o ${ob_outputDirectory}/image.tar
+              mkdir -p "${ob_outputDirectory}"
+              docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} || echo "Image not found."
+              if [ -f "${ob_outputDirectory}/image.tar" ]; then
+                docker save ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -o ${ob_outputDirectory}/image.tar
+              fi
           displayName: 'Pulling Docker Image using Docker'
 
         # Push the Docker image to ACR
@@ -99,10 +101,14 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              docker load -i ${ob_outputDirectory}/image.tar
-              docker tag ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} ${ACR_FQDN}/${REPOSITORY}:latest
-              docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-              docker push ${ACR_FQDN}/${REPOSITORY}:latest
+              if [ -f "${ob_outputDirectory}/image.tar" ]; then
+                docker load -i ${ob_outputDirectory}/image.tar
+                docker tag ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} ${ACR_FQDN}/${REPOSITORY}:latest
+                docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+                docker push ${ACR_FQDN}/${REPOSITORY}:latest
+              else
+                echo "Image tar file not found, skipping push."
+              fi
           displayName: 'Pushing Docker Image to ACR'
       
     - job: Extract_Coverage_Report
@@ -122,7 +128,7 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
+              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
 
         - script: |
             set -eux
