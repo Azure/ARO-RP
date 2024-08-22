@@ -12,7 +12,7 @@ import (
 
 func ACRTokenChecker(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 	s := []steps.Step{
-		steps.Action(cluster.EnsureACRToken),
+		steps.Action(cluster.EnsureACRTokenIsValid),
 	}
 
 	return run(t, s)
