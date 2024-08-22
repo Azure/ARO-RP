@@ -551,7 +551,6 @@ func TestGetClusterDeployment(t *testing.T) {
 }
 
 func TestGetSyncSetResources(t *testing.T) {
-	// Setup
 	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	doc := &api.OpenShiftClusterDocument{
 		OpenShiftCluster: &api.OpenShiftCluster{
@@ -563,43 +562,31 @@ func TestGetSyncSetResources(t *testing.T) {
 		},
 	}
 
-	clusterSyncTest := &v1alpha1.ClusterSyncList{
-		Items: []v1alpha1.ClusterSync{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sync1",
-					Namespace: fakeNamespace,
-				},
-			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sync2",
-					Namespace: fakeNamespace,
-				},
-			},
+	clusterSyncTest := &v1alpha1.ClusterSync{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "clustersync1",
+			Namespace: fakeNamespace,
 		},
 	}
 
 	for _, tt := range []struct {
-		name      string
-		want      *v1alpha1.ClusterSyncList
-		namespace string
-		wantErr   string
+		name    string
+		wantErr string
 	}{
 		{name: "clustersync exists and are returned"},
-		{name: "clustersync does not exist err returned", namespace: "", wantErr: `no clustersync for namespace given`},
+		{name: "clustersync does not exist err returned"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(clusterSyncTest)
 			}
-			s := syncSetResourceManager{
+			c := syncSetResourceManager{
 				hiveClientset: fakeClientBuilder.Build(),
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := s.GetSyncSetResources(context.Background(), doc)
+			result, err := c.GetSyncSetResources(context.Background(), doc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)

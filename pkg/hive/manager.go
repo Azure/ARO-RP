@@ -57,7 +57,7 @@ type clusterManager struct {
 
 // Define the interface for SyncSetResourceManager
 type SyncSetResourceManager interface {
-	GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSyncList, error)
+	GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) ([]v1alpha1.ClusterSync, error)
 }
 
 // Implement the syncSetResourceManager struct
@@ -68,7 +68,7 @@ type syncSetResourceManager struct {
 }
 
 // GetSyncSetResources lists ClusterSync resources in the specified namespace
-func (srm *syncSetResourceManager) GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSyncList, error) {
+func (srm *syncSetResourceManager) GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) ([]v1alpha1.ClusterSync, error) {
 
 	clusterSyncList := &v1alpha1.ClusterSyncList{}
 
@@ -82,7 +82,7 @@ func (srm *syncSetResourceManager) GetSyncSetResources(ctx context.Context, doc 
 		return nil, err
 	}
 
-	return clusterSyncList, nil
+	return clusterSyncList.Items, nil
 }
 
 func NewClusterSyncFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (SyncSetResourceManager, error) {
