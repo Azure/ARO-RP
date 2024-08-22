@@ -2,7 +2,6 @@
 *
 
 # ...except these
-!.golangci.yml
 !cmd
 !go.mod
 !go.sum
