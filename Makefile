@@ -198,10 +198,37 @@ client: generate
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	echo "Building image $(RP_IMAGE_LOCAL):$(VERSION)"
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE):$(VERSION)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE):$(VERSION)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(RP_IMAGE_LOCAL):$(VERSION)
+	podman $(PODMAN_REMOTE_ARGS) \
+		build . \
+		-f Dockerfile.ci-rp \
+		--ulimit=nofile=4096:4096 \
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
+
+	# Tag the portal build image if it exists
+	@PORTAL_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
+	if [ -n "$$PORTAL_IMAGE_ID" ]; then \
+		echo "Tagging Portal Image $$PORTAL_IMAGE_ID as $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)"; \
+		podman $(PODMAN_REMOTE_ARGS) tag $$PORTAL_IMAGE_ID $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION); \
+	else \
+		echo "No Portal Image found with label stage=portal-build-cache-layer"; \
+	fi
+
+	# Tag the RP build image if it exists
+	@RP_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
+	if [ -n "$$RP_IMAGE_ID" ]; then \
+		echo "Tagging RP Image $$RP_IMAGE_ID as $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)"; \
+		podman $(PODMAN_REMOTE_ARGS) tag $$RP_IMAGE_ID $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
+	else \
+		echo "No RP Image found with label stage=rp-build-cache-layer"; \
+	fi
+	
+.PHONY: ci-tunnel
+ci-tunnel: fix-macos-vendor
+	podman build . -f Dockerfile.ci-tunnel --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE) -t aro-tunnel:$(VERSION)
+
 .PHONY: ci-clean
 ci-clean:
 	podman image prune --all --filter="label=aro-*=true"
@@ -402,7 +429,7 @@ unit-test-go:
 	podman exec test-container go run ${GOTESTSUM} --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 	podman stop test-container
 	podman rm test-container
-
+	
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg:
 	go run ${GOTESTSUM} --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...

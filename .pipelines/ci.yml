@@ -25,40 +25,101 @@ resources:
     - container: golang
       image: registry.access.redhat.com/ubi8/go-toolset:1.21.11-1.1720406008
       options: --user=0
+    - container: python
+      image: registry.access.redhat.com/ubi8/python-39:latest
+      options: --user=0
+    - container: ubi8
+      image: registry.access.redhat.com/ubi8/toolbox:8.8
+      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
+
+variables:
+  - template: vars.yml
 
 stages:
-- stage: NEW_HOTNESS
+- stage: NotContainerized
+  dependsOn: Containerized
   jobs:
-    - job: Build_Lint_Test_RP_And_Portal
+    - job: Python_Unit_Tests
       pool:
         name: 1es-aro-ci-pool
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            export RP_IMAGE_ACR=arosvcdev  
-            export NO_CACHE=true
-            make ci-rp 
+      variables:
+        HOME: $(Agent.BuildDirectory)
 
-    - job: Build_and_Test_Az_ARO_Extension
-      pool:
-        name: 1es-aro-ci-pool
       steps:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev 
-            export NO_CACHE=true
-            make azext-aro  
+            make test-python
+            [[ -z "$(git status -s)" ]]
+          displayName: 🧪Run Python Unit Tests
+          target: python
 
-    - job: Lint_Az_ARO_Extension
+    - job: Golang_Unit_Tests
+      pool:
+        name: 1es-aro-ci-pool
+      variables:
+        GOCACHE: /tmp/gocache
+      steps:
+        - template: ./templates/template-checkout.yml
+
+        - script: |
+            set -xe
+            go version
+            go env
+          displayName: Print Go version & env
+          target: golang
+
+        - script: |
+            set -xe
+            make generate
+            [[ -z "$(git status -s)" ]]
+          displayName: ⚙️ Run Golang code generate
+          target: golang
+
+        - script: |
+            set -xe
+            make build-all
+            [[ -z "$(git status -s)" ]]
+          displayName: 🕵️ Build Golang code
+          target: golang
+
+        - script: |
+            set -xe
+            make unit-test-go
+          displayName: 🧪 Run Golang unit tests
+          target: golang
+
+        - task: PublishTestResults@2
+          displayName: 📊 Publish tests results
+          inputs:
+            testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+          condition: succeededOrFailed()
+
+        - script: |
+            set -xe
+            go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
+          displayName: ⚙️ Process Reports
+          condition: succeededOrFailed()
+          target: golang
+
+        - task: PublishCodeCoverageResults@1
+          displayName: 📈 Publish code coverage
+          inputs:
+            codeCoverageTool: Cobertura
+            summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
+            failIfCoverageEmpty: false
+          condition: succeededOrFailed()
+          target: golang
+
+    - job: Lint_Admin_Portal
       pool:
         name: 1es-aro-ci-pool
       steps:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            make test-python  
+            make lint-admin-portal
+          displayName: 🧹 Lint Admin Portal
 
     - job: Pull_And_Push_Image_To_ACR
       pool:
@@ -71,58 +132,151 @@ stages:
       steps:
         - checkout: self
 
-    # Build the Docker image
-    - script: |
-        set -eux
-        docker build -t ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} .
-      displayName: 'Building Docker Image'
+        # Authenticate with Azure using the Managed Identity service connection
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              az acr login --name ${ACR_FQDN%%.*}
+              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
+              mkdir -p "${ob_outputDirectory}"
+              docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} || echo "Image not found."
+              if [ -f "${ob_outputDirectory}/image.tar" ]; then
+                docker save ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -o ${ob_outputDirectory}/image.tar
+              fi
+          displayName: 'Pulling Docker Image using Docker'
 
-    # Push the Docker image to ACR
-    - script: |
-        set -eux
-        docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
-        docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-      displayName: 'Pushing Docker Image to ACR'
+        # Push the Docker image to ACR
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              if [ -f "${ob_outputDirectory}/image.tar" ]; then
+                docker load -i ${ob_outputDirectory}/image.tar
+                docker tag ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} ${ACR_FQDN}/${REPOSITORY}:latest
+                docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+                docker push ${ACR_FQDN}/${REPOSITORY}:latest
+              else
+                echo "Image tar file not found, skipping push."
+              fi
+          displayName: 'Pushing Docker Image to ACR'
 
-- job: Extract_Coverage_Report
-  pool:
-    vmImage: 'ubuntu-latest'
-  variables:
-    ACR_FQDN: 'arosvcdev.azurecr.io'
-    REPOSITORY: 'my-image-repo'
-    IMAGE_TAG: $(Build.SourceBranchName)
-  steps:
-    - checkout: self
+- stage: Containerized
+  dependsOn: []
+  jobs:
+    - job: Build_Lint_Test_RP_And_Portal
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export NO_CACHE=true
 
-    # Authenticate with ACR using the Managed Identity service connection
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'ado-pipeline-dev-image-push'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          az acr login --name ${ACR_FQDN%%.*}
-          docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
+            # Install podman
+            sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+            sudo dnf install -y podman make
+            which podman
+            podman --version
+            whoami
 
-    # Extract coverage report if the image exists
-    - script: |
-        set -eux
-        if docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}; then
-          docker create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-          docker cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out || {
-            echo "Coverage file not found in container."
-            exit 1
-          }
-          docker rm coverage-container
-        else
-          echo "Image with tag ${IMAGE_TAG} not found in ${ACR_FQDN}/${REPOSITORY}"
-          exit 0  # Gracefully skip the coverage extraction if the image is not found
-        fi
-      displayName: 'Extract Coverage Report from Container'
+            # Start podman service
+            . ./hack/e2e/utils.sh
+            run_podman
+            validate_podman_running
 
-    # Publish the coverage report to Azure DevOps
-    - task: PublishCodeCoverageResults@1
-      inputs:
-        codeCoverageTool: Cobertura
-        summaryFileLocation: $(Build.SourcesDirectory)/cover.out
-      displayName: 'Publish Code Coverage Results'
+            # run build
+            export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
+            make ci-rp
+
+            # Stop podman
+            kill_podman
+          target: ubi8
+
+    - job: Build_and_Test_Az_ARO_Extension
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export NO_CACHE=true
+
+            # Install podman
+            sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+            sudo dnf install -y podman make
+            which podman
+            podman --version
+            whoami
+
+            # Start podman service
+            . ./hack/e2e/utils.sh
+            run_podman
+            validate_podman_running
+
+            # run build
+            export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
+            make azext-aro
+
+            # Stop podman
+            kill_podman
+          target: ubi8
+
+    - job: Lint_Az_ARO_Extension
+      pool:
+        name: 1es-aro-ci-pool
+      variables:
+        HOME: $(Agent.BuildDirectory)
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
+            make test-python
+            [[ -z "$(git status -s)" ]]
+          target: python
+          
+    - job: Extract_Coverage_Report
+      pool:
+        vmImage: 'ubuntu-latest'
+      variables:
+        ACR_FQDN: 'arosvcdev.azurecr.io'  # ACR FQDN
+        REPOSITORY: 'my-image-repo'
+        IMAGE_TAG: $(Build.SourceBranchName)
+      steps:
+        - checkout: self
+
+        # Authenticate with ACR using the Managed Identity service connection
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              az acr login --name ${ACR_FQDN%%.*}
+              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
+
+        - script: |
+            set -eux
+            if docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}; then
+              docker create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+              docker cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out || {
+                echo "Coverage file not found in container."
+                exit 1
+              }
+              docker rm coverage-container
+            else
+              echo "Image with tag ${IMAGE_TAG} not found in ${ACR_FQDN}/${REPOSITORY}"
+              exit 0  # Gracefully skip the coverage extraction if the image is not found
+            fi
+          displayName: 'Extract Coverage Report from Container'
+
+        - task: PublishCodeCoverageResults@1
+          inputs:
+            codeCoverageTool: Cobertura
+            summaryFileLocation: $(Build.SourcesDirectory)/cover.out
+          displayName: 'Publish Code Coverage Results'
