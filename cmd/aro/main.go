@@ -37,6 +37,7 @@ func main() {
 
 	ctx := context.Background()
 	audit := utillog.GetAuditEntry()
+
 	log := utillog.GetLogger()
 
 	go func() {

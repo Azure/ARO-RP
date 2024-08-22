@@ -146,9 +146,10 @@ func TestNew(t *testing.T) {
 			aadAuthenticatedRouter := &mux.Router{}
 
 			_, audit := testlog.NewAudit()
+			otelAudit := testlog.NewOtelAudit("uds")
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			k := New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil)
+			k := New(baseLog, audit, otelAudit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil)
 
 			if tt.r != nil {
 				tt.r(r)

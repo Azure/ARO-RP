@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/util/clientcache"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	auditlog "github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 )
 
@@ -35,6 +36,7 @@ type Kubeconfig struct {
 	Log           *logrus.Entry
 	BaseAccessLog *logrus.Entry
 	Audit         *logrus.Entry
+	OtelAudit     *auditlog.Audit
 
 	servingCert      *x509.Certificate
 	elevatedGroupIDs []string
@@ -51,6 +53,7 @@ type Kubeconfig struct {
 
 func New(baseLog *logrus.Entry,
 	audit *logrus.Entry,
+	otelAduit *auditlog.Audit,
 	env env.Core,
 	baseAccessLog *logrus.Entry,
 	servingCert *x509.Certificate,
@@ -63,6 +66,7 @@ func New(baseLog *logrus.Entry,
 		Log:           baseLog,
 		BaseAccessLog: baseAccessLog,
 		Audit:         audit,
+		OtelAudit:     otelAduit,
 
 		servingCert:      servingCert,
 		elevatedGroupIDs: elevatedGroupIDs,

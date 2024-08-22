@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	auditlog "github.com/Azure/ARO-RP/pkg/util/log/audit"
 	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
@@ -64,6 +65,7 @@ type testInfra struct {
 	cli        *http.Client
 	enricher   *mock_clusterdata.MockBestEffortEnricher
 	audit      *logrus.Entry
+	otelAudit  *auditlog.Audit
 	log        *logrus.Entry
 	fixture    *testdatabase.Fixture
 	checker    *testdatabase.Checker
@@ -118,6 +120,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	enricherMock.EXPECT().Enrich(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	_, auditEntry := testlog.NewAudit()
+	otelAudit := testlog.NewOtelAudit("uds")
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	fixture := testdatabase.NewFixture()
@@ -135,6 +138,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 		fixture:    fixture,
 		checker:    checker,
 		audit:      auditEntry,
+		otelAudit:  otelAudit,
 		log:        log,
 		dbGroup:    dbGroup,
 		cli: &http.Client{

@@ -9,8 +9,10 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/microsoft/go-otel-audit/audit/msgs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -53,7 +55,7 @@ func (rc *logReadCloser) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.Handler {
+func Log(env env.Core, auditLog, baseLog *logrus.Entry, otelAudit *audit.Audit) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t := time.Now()
@@ -103,6 +105,41 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				},
 			})
 
+			auditMsg := msgs.Msg{Type: msgs.ControlPlane}
+			auditRec := audit.GetAuditRecord()
+
+			callerIpAddress, err := msgs.ParseAddr(strings.Split(r.RemoteAddr, ":")[0])
+			if err != nil {
+				log.Printf("Error parsing remote address: %s, error: %v", r.RemoteAddr, err)
+			}
+
+			auditRec.CallerIpAddress = callerIpAddress
+			auditRec.CallerIdentities = map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry{
+				msgs.Username: {
+					{
+						Identity:    username,
+						Description: "Client User name",
+					},
+				},
+			}
+			auditRec.OperationCategories = []msgs.OperationCategory{msgs.ResourceManagement}
+			auditRec.CustomData = audit.GetCustomData()
+			auditRec.TargetResources = map[string][]msgs.TargetResourceEntry{
+				auditTargetResourceType(r): {
+					{
+						Name:   r.URL.Path,
+						Region: env.Location(),
+					},
+				},
+			}
+			auditRec.CallerAccessLevels = []string{"Caller admin AccessLevels"}
+			auditRec.OperationAccessLevel = "Portal Admin Operation AccessLevel"
+			auditRec.OperationName = fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			// OperationResultDescription: fmt.Sprintf("%s %s", r.Method, r.URL.Path),
+			auditRec.CallerAgent = r.UserAgent()
+			auditRec.OperationCategoryDescription = "Client Resource Management via portal"
+			auditRec.OperationType = audit.GetOperationType(r.Method)
+
 			defer func() {
 				statusCode := w.(*logResponseWriter).statusCode
 				log.WithFields(logrus.Fields{
@@ -113,8 +150,12 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				}).Print("sent response")
 
 				resultType := audit.ResultTypeSuccess
+				auditRec.OperationResult = msgs.Success
+
 				if statusCode >= http.StatusBadRequest {
 					resultType = audit.ResultTypeFail
+					auditRec.OperationResult = msgs.Failure
+					auditRec.OperationResultDescription = fmt.Sprintf("Status code: %d", statusCode)
 				}
 
 				auditEntry.WithFields(logrus.Fields{
@@ -123,6 +164,19 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 						ResultDescription: fmt.Sprintf("Status code: %d", statusCode),
 					},
 				}).Info(audit.DefaultLogMessage)
+
+				audit.Validate(auditRec)
+				auditMsg.Record = *auditRec
+
+				if err := auditMsg.Record.Validate(); err != nil {
+					log.Printf("Error validating audit record: %v, Sending dummy record", err)
+					auditMsg.Record = *audit.GetDummyRecord()
+				}
+
+				log.Printf("Portal - sending audit message: %+v", auditMsg.Record)
+				if err := otelAudit.SendAuditMessage(otelAudit.Client, r.Context(), &auditMsg); err != nil {
+					log.Printf("Portal - Error sending audit message: %v", err)
+				}
 			}()
 
 			h.ServeHTTP(w, r)
