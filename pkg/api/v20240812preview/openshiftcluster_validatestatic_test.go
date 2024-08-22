@@ -1437,7 +1437,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].OperatorName = "FAKE-OPERATOR-OTHER"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities[0].operatorName: Operator identity name cannot be changed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity name cannot be changed.",
 		},
 		{
 			name: "invalid change of operator identity resource ID",
@@ -1457,7 +1457,30 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].ResourceID = platformIdentity2.ResourceID
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities[0].resourceID: Operator identity resource ID cannot be changed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity resource ID cannot be changed.",
+		},
+		{
+			name: "change of operator identity order",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+						platformIdentity2,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = []PlatformWorkloadIdentity{
+					platformIdentity2,
+					platformIdentity1,
+				}
+			},
 		},
 	}
 

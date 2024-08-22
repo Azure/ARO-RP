@@ -447,13 +447,15 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 	}
 
 	if current.UsesWorkloadIdentity() {
-		for i := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			if current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].OperatorName != oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].OperatorName {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities[%d].operatorName", i), "Operator identity name cannot be changed.")
-			}
+		for _, currentIdentity := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			for _, updateIdentity := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+				if currentIdentity.ResourceID == updateIdentity.ResourceID && currentIdentity.OperatorName != updateIdentity.OperatorName {
+					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity name cannot be changed.")
+				}
 
-			if current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID != oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities[%d].resourceID", i), "Operator identity resource ID cannot be changed.")
+				if currentIdentity.OperatorName == updateIdentity.OperatorName && currentIdentity.ResourceID != updateIdentity.ResourceID {
+					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity resource ID cannot be changed.")
+				}
 			}
 		}
 	}
