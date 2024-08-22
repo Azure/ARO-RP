@@ -1,168 +1,100 @@
 #!/bin/bash
 
-echo "setting ssh password authentication"
-# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-systemctl reload sshd.service
+set -o errexit \
+    -o pipefail \
+    -o nounset
 
-#Adding retry logic to yum commands in order to avoid stalling out on resource locks
-echo "running RHUI fix"
-for attempt in {1..60}; do
-  yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*' && break
-  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
-done
+main() {
+    # transaction attempt retry time in seconds
+    # shellcheck disable=SC2034
+    local -ri retry_wait_time=30
+    # shellcheck disable=SC2068
+    local -ri pkg_retry_count=60
 
-echo "running yum update"
-for attempt in {1..60}; do
-  yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing && break
-  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
-done
+    create_required_dirs
+    configure_sshd
+    configure_rpm_repos retry_wait_time \
+                    "$pkg_retry_count"
 
-echo "extending partition table"
-# Linux block devices are inconsistently named
-# it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
-physical_disk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
-growpart "$physical_disk" 2
+    # shellcheck disable=SC2034
+    local -ar exclude_pkgs=(
+        "-x WALinuxAgent"
+        "-x WALinuxAgent-udev"
+    )
 
-echo "extending filesystems"
-lvextend -l +20%FREE /dev/rootvg/rootlv
-xfs_growfs /
+    dnf_update_pkgs exclude_pkgs \
+                    retry_wait_time \
+                    "$pkg_retry_count"
 
-lvextend -l +100%FREE /dev/rootvg/varlv
-xfs_growfs /var
+    # shellcheck disable=SC2034
+    local -ra install_pkgs=(
+        clamav
+        azsec-clamav
+        azure-cli
+        azure-mdsd
+        azure-security
+        podman
+        podman-docker
+        openssl-perl
+        # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
+        python3
+        # required for podman networking
+        firewalld
+        # Required to enable fips
+        grubby
+        dracut-fips
+    )
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    dnf_install_pkgs install_pkgs \
+                     retry_wait_time \
+                     "$pkg_retry_count"
+    
+    fips_configure
 
-for attempt in {1..60}; do
-  yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && break
-  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
-done
+    # TODO remove this once MicrosoftCBLMariner:cbl-mariner:cbl-mariner-2-gen2-fips supports automatic updates
+    # Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
+    configure_dnf_cron_job
 
-echo "configuring logrotate"
+    # shellcheck disable=SC2119
+    configure_logrotate
 
-# gateway_logdir is a readonly variable that specifies the host path mount point for the gateway container log file
-# for the purpose of rotating the gateway logs
-declare -r gateway_logdir='/var/log/aro-gateway'
+    # shellcheck disable=SC2034 disable=SC2153
+    local -r mdmimage="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
+    local -r rpimage="$RPIMAGE"
+    # shellcheck disable=SC2034
+    local -r fluentbit_image="$FLUENTBITIMAGE"
+    # values are references to variables, they should not be dereferenced here
+    # shellcheck disable=SC2034
+    local -rA aro_images=(
+        ["mdm"]="mdmimage"
+        ["rp"]="rpimage"
+        ["fluentbit"]="fluentbit_image"
+    )
 
-cat >/etc/logrotate.conf <<EOF
-# see "man logrotate" for details
-# rotate log files weekly
-weekly
+    pull_container_images aro_images
 
-# keep 2 weeks worth of backlogs
-rotate 2
+    local -r aro_network="aro"
+    # shellcheck disable=SC2034
+    local -rA networks=(
+        ["$aro_network"]="192.168.254.0/24"
+    )
+    create_podman_networks networks
 
-# create new (empty) log files after rotating old ones
-create
+    # shellcheck disable=SC2034
+    local -ra enable_ports=(
+        # RP gateway
+        "80/tcp"
+        "8081/tcp"
+        "443/tcp"
+        # JIT ssh
+        "22/tcp"
+    )
 
-# use date as a suffix of the rotated file
-dateext
+    firewalld_configure enable_ports
 
-# uncomment this if you want your log files compressed
-compress
 
-# RPM packages drop log rotation information into this directory
-include /etc/logrotate.d
-
-# no packages own wtmp and btmp -- we'll rotate them here
-/var/log/wtmp {
-    monthly
-    create 0664 root utmp
-        minsize 1M
-    rotate 1
-}
-
-/var/log/btmp {
-    missingok
-    monthly
-    create 0600 root utmp
-    rotate 1
-}
-
-# Maximum log directory size is 100G with this configuration
-# Setting limit to 100G to allow space for other logging services
-# copytruncate is a critical option used to prevent logs from being shipped twice
-${gateway_logdir} {
-    size 20G
-    rotate 5
-    create 0600 root root
-    copytruncate
-    noolddir
-    compress
-}
-EOF
-
-echo "configuring yum repository and running yum update"
-cat >/etc/yum.repos.d/azure.repo <<'EOF'
-[azure-cli]
-name=azure-cli
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=yes
-gpgcheck=yes
-
-[azurecore]
-name=azurecore
-baseurl=https://packages.microsoft.com/yumrepos/azurecore
-enabled=yes
-gpgcheck=no
-EOF
-
-semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
-mkdir -p /var/log/journal
-
-for attempt in {1..60}; do
-  yum -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman-docker openssl-perl python3 && break
-  # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
-  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
-done
-
-echo "applying firewall rules"
-# https://access.redhat.com/security/cve/cve-2020-13401
-cat >/etc/sysctl.d/02-disable-accept-ra.conf <<'EOF'
-net.ipv6.conf.all.accept_ra=0
-EOF
-
-cat >/etc/sysctl.d/01-disable-core.conf <<'EOF'
-kernel.core_pattern = |/bin/true
-EOF
-sysctl --system
-
-firewall-cmd --add-port=80/tcp --permanent
-firewall-cmd --add-port=8081/tcp --permanent
-firewall-cmd --add-port=443/tcp --permanent
-
-echo "logging into prod acr"
-export AZURE_CLOUD_NAME=$AZURECLOUDNAME
-az login -i --allow-no-subscriptions
-
-# The managed identity that the VM runs as only has a single roleassignment.
-# This role assignment is ACRPull which is not necessarily present in the
-# subscription we're deploying into.  If the identity does not have any
-# role assignments scoped on the subscription we're deploying into, it will
-# not show on az login -i, which is why the below line is commented.
-# az account set -s "$SUBSCRIPTIONID"
-
-# Suppress emulation output for podman instead of docker for az acr compatability
-mkdir -p /etc/containers/
-touch /etc/containers/nodocker
-
-mkdir -p /root/.docker
-REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
-
-MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
-docker pull "$MDMIMAGE"
-docker pull "$RPIMAGE"
-docker pull "$FLUENTBITIMAGE"
-
-az logout
-
-echo "configuring fluentbit service"
-mkdir -p /etc/fluentbit/
-mkdir -p /var/lib/fluent
-
-cat >/etc/fluentbit/fluentbit.conf <<'EOF'
-[INPUT]
+    # shellcheck disable=SC2034
+    local -r fluentbit_conf_file="[INPUT]
 	Name systemd
 	Tag journald
 	Systemd_Filter _COMM=aro
@@ -177,324 +109,59 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 [OUTPUT]
 	Name forward
 	Match *
-	Port 29230
-EOF
+	Port 29230"
 
-echo "FLUENTBITIMAGE=$FLUENTBITIMAGE" >/etc/sysconfig/fluentbit
-
-cat >/etc/systemd/system/fluentbit.service <<'EOF'
-[Unit]
-After=network-online.target
-Wants=network-online.target
-StartLimitIntervalSec=0
-
-[Service]
-RestartSec=1s
-EnvironmentFile=/etc/sysconfig/fluentbit
-ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStart=/usr/bin/docker run \
-  --security-opt label=disable \
-  --entrypoint /opt/td-agent-bit/bin/td-agent-bit \
-  --net=host \
-  --hostname %H \
-  --name %N \
-  --rm \
-  --cap-drop net_raw \
-  -v /etc/fluentbit/fluentbit.conf:/etc/fluentbit/fluentbit.conf \
-  -v /var/lib/fluent:/var/lib/fluent:z \
-  -v /var/log/journal:/var/log/journal:ro \
-  -v /etc/machine-id:/etc/machine-id:ro \
-  $FLUENTBITIMAGE \
-  -c /etc/fluentbit/fluentbit.conf
-
-ExecStop=/usr/bin/docker stop %N
-Restart=always
-RestartSec=5
-StartLimitInterval=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-echo "configuring mdm service"
-cat >/etc/sysconfig/mdm <<EOF
-MDMFRONTENDURL='$MDMFRONTENDURL'
-MDMIMAGE='$MDMIMAGE'
-MDMSOURCEENVIRONMENT='$LOCATION'
-MDMSOURCEROLE=gateway
-MDMSOURCEROLEINSTANCE='$(hostname)'
-EOF
-
-mkdir /var/etw
-cat >/etc/systemd/system/mdm.service <<'EOF'
-[Unit]
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-EnvironmentFile=/etc/sysconfig/mdm
-ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStart=/usr/bin/docker run \
-  --entrypoint /usr/sbin/MetricsExtension \
-  --hostname %H \
-  --name %N \
-  --rm \
-  --cap-drop net_raw \
-  -m 2g \
-  -v /etc/mdm.pem:/etc/mdm.pem \
-  -v /var/etw:/var/etw:z \
-  $MDMIMAGE \
-  -CertFile /etc/mdm.pem \
-  -FrontEndUrl $MDMFRONTENDURL \
-  -Logger Console \
-  -LogLevel Warning \
-  -PrivateKeyFile /etc/mdm.pem \
-  -SourceEnvironment $MDMSOURCEENVIRONMENT \
-  -SourceRole $MDMSOURCEROLE \
-  -SourceRoleInstance $MDMSOURCEROLEINSTANCE
-ExecStop=/usr/bin/docker stop %N
-Restart=always
-RestartSec=1
-StartLimitInterval=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-echo "configuring aro-gateway service"
-cat >/etc/sysconfig/aro-gateway <<EOF
-ACR_RESOURCE_ID='$ACRRESOURCEID'
+    # shellcheck disable=SC2034
+    local -r aro_gateway_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
-MDM_ACCOUNT="$RPMDMACCOUNT"
-MDM_NAMESPACE=Gateway
+MDM_ACCOUNT='$RPMDMACCOUNT'
+MDM_NAMESPACE='${role_gateway^}'
 GATEWAY_DOMAINS='$GATEWAYDOMAINS'
 GATEWAY_FEATURES='$GATEWAYFEATURES'
-RPIMAGE='$RPIMAGE'
-EOF
+RPIMAGE='$rpimage'"
 
-cat >/etc/systemd/system/aro-gateway.service <<EOF
-[Unit]
-After=network-online.target
-Wants=network-online.target
+    # shellcheck disable=SC2034
+    local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
 
-[Service]
-EnvironmentFile=/etc/sysconfig/aro-gateway
-ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/mkdir -p ${gateway_logdir}
-ExecStart=/usr/bin/docker run \
-  --hostname %H \
-  --name %N \
-  --rm \
-  --cap-drop net_raw \
-  -e ACR_RESOURCE_ID \
-  -e DATABASE_ACCOUNT_NAME \
-  -e GATEWAY_DOMAINS \
-  -e GATEWAY_FEATURES \
-  -e MDM_ACCOUNT \
-  -e MDM_NAMESPACE \
-  -m 2g \
-  -p 80:8080 \
-  -p 8081:8081 \
-  -p 443:8443 \
-  -v /run/systemd/journal:/run/systemd/journal \
-  -v /var/etw:/var/etw:z \
-  -v ${gateway_logdir}:/ctr.log:z \
-  \$RPIMAGE \
-  gateway
-ExecStop=/usr/bin/docker stop -t 3600 %N
-TimeoutStopSec=3600
-Restart=always
-RestartSec=1
-StartLimitInterval=0
+    # values are references to variables, they should not be dereferenced here
+    # shellcheck disable=SC2034
+    local -rA aro_configs=(
+        ["gateway_config"]="aro_gateway_conf_file"
+        ["fluentbit"]="fluentbit_conf_file"
+        ["mdsd"]="mdsd_config_version"
+        ["network"]="aro_network"
+    )
 
-[Install]
-WantedBy=multi-user.target
-EOF
+    configure_vmss_aro_services role_gateway \
+                                aro_images \
+                                aro_configs
 
-chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
+    # shellcheck disable=SC2034
+    local -ra gateway_services=(
+        "aro-gateway"
+        "azsecd"
+        "mdsd"
+        "mdm"
+        "chronyd"
+        "fluentbit"
+        "download-mdsd-credentials.timer"
+        "download-mdm-credentials.timer"
+        "firewalld"
+    )
 
-mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
+    enable_services gateway_services
 
-echo "configuring mdsd and mdm services"
-for var in "mdsd" "mdm"; do
-cat >/etc/systemd/system/download-$var-credentials.service <<EOF
-[Unit]
-Description=Periodic $var credentials refresh
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/download-credentials.sh $var
-EOF
-
-cat >/etc/systemd/system/download-$var-credentials.timer <<EOF
-[Unit]
-Description=Periodic $var credentials refresh
-After=network-online.target
-Wants=network-online.target
-
-[Timer]
-OnBootSec=0min
-OnCalendar=0/12:00:00
-AccuracySec=5s
-
-[Install]
-WantedBy=timers.target
-EOF
-done
-
-cat >/usr/local/bin/download-credentials.sh <<EOF
-#!/bin/bash
-set -eu
-
-COMPONENT="\$1"
-echo "Download \$COMPONENT credentials"
-
-TEMP_DIR=\$(mktemp -d)
-export AZURE_CONFIG_DIR=\$(mktemp -d)
-
-echo "Logging into Azure..."
-RETRIES=3
-while [ "\$RETRIES" -gt 0 ]; do
-    if az login -i --allow-no-subscriptions
-    then
-        echo "az login successful"
-        break
-    else
-        echo "az login failed. Retrying..."
-        let RETRIES-=1
-        sleep 5
-    fi
-done
-
-trap "cleanup" EXIT
-
-cleanup() {
-  az logout
-  [[ "\$TEMP_DIR" =~ /tmp/.+ ]] && rm -rf \$TEMP_DIR
-  [[ "\$AZURE_CONFIG_DIR" =~ /tmp/.+ ]] && rm -rf \$AZURE_CONFIG_DIR
+    reboot_vm
 }
 
-if [ "\$COMPONENT" = "mdm" ]; then
-  CURRENT_CERT_FILE="/etc/mdm.pem"
-elif [ "\$COMPONENT" = "mdsd" ]; then
-  CURRENT_CERT_FILE="/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem"
-else
-  echo Invalid usage && exit 1
+export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
+
+# util.sh does not exist when deployed to VMSS via VMSS extensions
+# Provides shellcheck definitions
+util="util.sh"
+if [ -f "$util" ]; then
+    # shellcheck source=util.sh
+    source "$util"
 fi
 
-SECRET_NAME="gwy-\${COMPONENT}"
-NEW_CERT_FILE="\$TEMP_DIR/\$COMPONENT.pem"
-for attempt in {1..5}; do
-  az keyvault secret download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-gwy.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME" && break
-  if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
-done
-
-if [ -f \$NEW_CERT_FILE ]; then
-  if [ "\$COMPONENT" = "mdsd" ]; then
-    chown syslog:syslog \$NEW_CERT_FILE
-  else
-    sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
-  fi
-
-  new_cert_sn="\$(openssl x509 -in "\$NEW_CERT_FILE" -noout -serial | awk -F= '{print \$2}')"
-  current_cert_sn="\$(openssl x509 -in "\$CURRENT_CERT_FILE" -noout -serial | awk -F= '{print \$2}')"
-  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != "\$current_cert_sn" ]]; then
-    echo updating certificate for \$COMPONENT
-    chmod 0600 \$NEW_CERT_FILE
-    mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
-  fi
-else
-  echo Failed to refresh certificate for \$COMPONENT && exit 1
-fi
-EOF
-
-chmod u+x /usr/local/bin/download-credentials.sh
-
-systemctl enable download-mdsd-credentials.timer
-systemctl enable download-mdm-credentials.timer
-
-/usr/local/bin/download-credentials.sh mdsd
-/usr/local/bin/download-credentials.sh mdm
-MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
-
-cat >/etc/systemd/system/watch-mdm-credentials.service <<EOF
-[Unit]
-Description=Watch for changes in mdm.pem and restarts the mdm service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/systemctl restart mdm.service
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-cat >/etc/systemd/system/watch-mdm-credentials.path <<EOF
-[Path]
-PathModified=/etc/mdm.pem
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl enable watch-mdm-credentials.path
-systemctl start watch-mdm-credentials.path
-
-mkdir /etc/systemd/system/mdsd.service.d
-cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
-[Unit]
-After=network-online.target
-EOF
-
-cat >/etc/default/mdsd <<EOF
-MDSD_ROLE_PREFIX=/var/run/mdsd/default
-MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
-
-export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
-export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
-export MONITORING_GCS_REGION='$LOCATION'
-export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
-export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
-export MONITORING_GCS_NAMESPACE='$RPMDSDNAMESPACE'
-export MONITORING_CONFIG_VERSION='$GATEWAYMDSDCONFIGVERSION'
-export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
-
-export MONITORING_TENANT='$LOCATION'
-export MONITORING_ROLE=gateway
-export MONITORING_ROLE_INSTANCE='$(hostname)'
-
-export MDSD_MSGPACK_SORT_COLUMNS=1
-EOF
-
-# setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
-# to honour SSL_CERT_FILE any more, heaven only knows why.
-mkdir -p /usr/lib/ssl/certs
-csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 {*} >/dev/null
-c_rehash /usr/lib/ssl/certs
-
-# we leave clientId blank as long as only 1 managed identity assigned to vmss
-# if we have more than 1, we will need to populate with clientId used for off-node scanning
-cat >/etc/default/vsa-nodescan-agent.config <<EOF
-{
-    "Nice": 19,
-    "Timeout": 10800,
-    "ClientId": "",
-    "TenantId": "$AZURESECPACKVSATENANTID",
-    "QualysStoreBaseUrl": "$AZURESECPACKQUALYSURL",
-    "ProcessTimeout": 300,
-    "CommandDelay": 0
-  }
-EOF
-
-echo "enabling aro services"
-for service in aro-gateway auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
-  systemctl enable $service.service
-done
-
-for scan in baseline clamav software; do
-  /usr/local/bin/azsecd config -s $scan -d P1D
-done
-
-echo "rebooting"
-restorecon -RF /var/log/*
-(sleep 30; reboot) &
+main "$@"
