@@ -168,6 +168,12 @@ runlocal-rp: ci-rp podman-secrets
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE) rp
 
+.PHONY: runlocal-rp-the-old-way
+runlocal-rp-the-old-way:
+	@printf "\e[31mIf you're running this instead of runlocal-rp because that's broken, there's probably a problem blocking the whole team. Has a Slack thread been started, and an owner assigned to fix it? Could it be you?\e[0m\n"
+	@sleep 5
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
+
 .PHONY: az
 az: pyenv
 	. pyenv/bin/activate && \
