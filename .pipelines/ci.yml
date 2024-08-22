@@ -43,7 +43,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
+            export RP_IMAGE_ACR=arosvcdev 
             export NO_CACHE=true
             make ci-rp
 
@@ -54,7 +54,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
+            export RP_IMAGE_ACR=arosvcdev  
             export NO_CACHE=true
             make azext-aro
 
@@ -87,8 +87,14 @@ stages:
             inlineScript: |
               az acr login --name ${ACR_FQDN}
               docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
-              mkdir -p ${ob_outputDirectory}
-              docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+              
+              # Ensure directory is created
+              mkdir -p "${ob_outputDirectory}"
+              
+              # Attempt to pull the Docker image from ACR
+              docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} || exit 1
+              
+              # Save the pulled image to a tar file
               docker save ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -o ${ob_outputDirectory}/image.tar
           displayName: 'Pulling Docker Image using Docker'
 
