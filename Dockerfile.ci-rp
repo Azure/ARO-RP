@@ -13,7 +13,7 @@ USER root
 # Copying package files and installing dependencies
 COPY portal/v2/package*.json ./
 RUN npm ci
-RUN npm audit --omit=dev # Run audit without dev dependencies
+RUN npm audit --audit-level high --omit=dev # Run audit without dev dependencies
 
 # Copying the rest of the source and build
 COPY --chown=root:root portal/v2/ ./
