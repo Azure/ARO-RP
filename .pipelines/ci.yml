@@ -43,7 +43,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
+            export RP_IMAGE_ACR=arosvcdev 
             export NO_CACHE=true
             make ci-rp
 
@@ -54,7 +54,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
+            export RP_IMAGE_ACR=arosvcdev 
             export NO_CACHE=true
             make azext-aro
 
@@ -74,7 +74,7 @@ stages:
         IMAGE_TAG: $(Build.SourceBranchName)
         REPOSITORY: 'my-image-repo'
         ACR_FQDN: 'arosvcdev.azurecr.io'  # ACR FQDN
-        IMAGE_EXISTS: $(Build.SourcesDirectory)/image_exists.txt
+        DOCKERFILE_PATH: './path/to/Dockerfile'  # Update this to the correct path
       steps:
         - checkout: self
 
@@ -85,14 +85,14 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              az acr repository show-manifests --name ${ACR_FQDN%%.*} --repository ${REPOSITORY} --query "[?tags[?contains(@, '${IMAGE_TAG}')]].digest" -o tsv > ${IMAGE_EXISTS}
-              if [ -s ${IMAGE_EXISTS} ]; then
-                echo "Image exists."
-              else
-                echo "Image does not exist, building and pushing."
-                docker build -t ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} .
+              az acr repository show-manifests --name ${ACR_FQDN%%.*} --repository ${REPOSITORY} --query "[?tags[?contains(@, '${IMAGE_TAG}')]].digest" -o tsv > /dev/null 2>&1 || echo "Repository not found or image does not exist."
+              if [ $? -ne 0 ]; then
+                echo "Repository not found or image does not exist, building and pushing."
+                docker build -t ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -f ${DOCKERFILE_PATH} .
                 docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
                 docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+              else
+                echo "Image exists."
               fi
           displayName: 'Build, Tag, and Push Docker Image'
 
