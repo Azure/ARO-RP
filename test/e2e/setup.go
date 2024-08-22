@@ -24,6 +24,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
+	routeclient "github.com/openshift/client-go/route/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
@@ -89,6 +90,7 @@ type clientSet struct {
 	Client             client.Client
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
+	Route              routeclient.Interface
 	AROClusters        aroclient.Interface
 	ConfigClient       configclient.Interface
 	SecurityClient     securityclient.Interface
@@ -315,6 +317,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	routecli, err := routeclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
@@ -391,6 +398,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,
+		Route:              routecli,
 		AROClusters:        arocli,
 		Project:            projectcli,
 		ConfigClient:       configcli,
