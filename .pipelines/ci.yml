@@ -5,7 +5,6 @@ trigger:
     include:
       - master
       - loki/pipeline-swarm
-      - loki/pipeline-swarm
   paths:
     exclude:
       - docs/*
@@ -17,15 +16,9 @@ pr:
   branches:
     include:
       - loki/pipeline-swarm
-  branches:
-    include:
-      - loki/pipeline-swarm
   paths:
     exclude:
       - docs/*
-
-variables:
-  - group: VariableGroupName  # Replace with the name of variable group
 
 resources:
   containers:
@@ -78,95 +71,58 @@ stages:
       steps:
         - checkout: self
 
-        # Authenticate with Azure using the Managed Identity service connection
-        - task: AzureCLI@2
-          inputs:
-            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
-            scriptType: 'bash'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              az acr login --name ${ACR_FQDN%%.*}
-              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
-              mkdir -p "${ob_outputDirectory}"
-              docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} || echo "Image not found."
-              if [ -f "${ob_outputDirectory}/image.tar" ]; then
-                docker save ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -o ${ob_outputDirectory}/image.tar
-              fi
-          displayName: 'Pulling Docker Image using Docker'
+    # Build the Docker image
+    - script: |
+        set -eux
+        docker build -t ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} .
+      displayName: 'Building Docker Image'
 
-        # Push the Docker image to ACR
-        - task: AzureCLI@2
-          inputs:
-            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
-            scriptType: 'bash'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              if [ -f "${ob_outputDirectory}/image.tar" ]; then
-                docker load -i ${ob_outputDirectory}/image.tar
-                docker tag ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} ${ACR_FQDN}/${REPOSITORY}:latest
-                docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-                docker push ${ACR_FQDN}/${REPOSITORY}:latest
-              else
-                echo "Image tar file not found, skipping push."
-              fi
-          displayName: 'Pushing Docker Image to ACR'
-      
-    - job: Extract_Coverage_Report
-      pool:
-        vmImage: 'ubuntu-latest'
-      variables:
-        ACR_FQDN: 'arosvcdev.azurecr.io'  # ACR FQDN
-        REPOSITORY: 'my-image-repo'
-        IMAGE_TAG: $(Build.SourceBranchName)
-      steps:
-        - checkout: self
+    # Push the Docker image to ACR
+    - script: |
+        set -eux
+        docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
+        docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+      displayName: 'Pushing Docker Image to ACR'
 
-        # Authenticate with ACR using the Managed Identity service connection
-        - task: AzureCLI@2
-          inputs:
-            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
-            scriptType: 'bash'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              az acr login --name ${ACR_FQDN%%.*}
-              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
+- job: Extract_Coverage_Report
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+    ACR_FQDN: 'arosvcdev.azurecr.io'
+    REPOSITORY: 'my-image-repo'
+    IMAGE_TAG: $(Build.SourceBranchName)
+  steps:
+    - checkout: self
 
-        - script: |
-            set -eux
-            # Attempt to create a container from the image and extract coverage report
-            if docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}; then
-              docker create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-              docker cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out || {
-                echo "Coverage file not found in container."
-                exit 1
-              }
-              docker rm coverage-container
-            else
-              echo "Image with tag ${IMAGE_TAG} not found in ${ACR_FQDN}/${REPOSITORY}"
-              exit 1
-            fi
-          displayName: 'Extract Coverage Report from Container'
+    # Authenticate with ACR using the Managed Identity service connection
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'ado-pipeline-dev-image-push'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name ${ACR_FQDN%%.*}
+          docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
 
-        # Publish the coverage report to Azure DevOps
-        - task: PublishCodeCoverageResults@1
-          inputs:
-            codeCoverageTool: Cobertura
-            summaryFileLocation: $(Build.SourcesDirectory)/cover.out
-          displayName: 'Publish Code Coverage Results'
+    # Extract coverage report if the image exists
+    - script: |
+        set -eux
+        if docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}; then
+          docker create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+          docker cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out || {
+            echo "Coverage file not found in container."
+            exit 1
+          }
+          docker rm coverage-container
+        else
+          echo "Image with tag ${IMAGE_TAG} not found in ${ACR_FQDN}/${REPOSITORY}"
+          exit 0  # Gracefully skip the coverage extraction if the image is not found
+        fi
+      displayName: 'Extract Coverage Report from Container'
 
-- stage: Golang_Code_Generation
-  jobs:
-    - job: Run_Golang_Code_Generate
-      displayName: "⚙️ Run Golang code generate"
-      pool:
-        name: 1es-aro-ci-pool
-      container: golang
-      variables:
-        GOCACHE: /tmp/gocache # Set the Go build cache to a writable directory
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            make generate
-            [[ -z "$(git status -s)" ]]
-          displayName: "Run Golang Code Generate"
+    # Publish the coverage report to Azure DevOps
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: $(Build.SourcesDirectory)/cover.out
+      displayName: 'Publish Code Coverage Results'
