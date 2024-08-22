@@ -43,7 +43,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev 
+            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
             export NO_CACHE=true
             make ci-rp
 
@@ -54,7 +54,7 @@ stages:
         - template: ./templates/template-checkout.yml
         - script: |
             set -xe
-            export RP_IMAGE_ACR=arosvcdev 
+            export RP_IMAGE_ACR=arosvcdev  # Use your new ACR
             export NO_CACHE=true
             make azext-aro
 
@@ -66,35 +66,6 @@ stages:
         - script: |
             set -xe
             make test-python
-
-    - job: Build_Tag_And_Push_Image
-      pool:
-        vmImage: 'ubuntu-latest'
-      variables:
-        IMAGE_TAG: $(Build.SourceBranchName)
-        REPOSITORY: 'my-image-repo'
-        ACR_FQDN: 'arosvcdev.azurecr.io'  # ACR FQDN
-        DOCKERFILE_PATH: './path/to/Dockerfile'  # Update this to the correct path
-      steps:
-        - checkout: self
-
-        # Check if the image already exists in ACR
-        - task: AzureCLI@2
-          inputs:
-            azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
-            scriptType: 'bash'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              az acr repository show-manifests --name ${ACR_FQDN%%.*} --repository ${REPOSITORY} --query "[?tags[?contains(@, '${IMAGE_TAG}')]].digest" -o tsv > /dev/null 2>&1 || echo "Repository not found or image does not exist."
-              if [ $? -ne 0 ]; then
-                echo "Repository not found or image does not exist, building and pushing."
-                docker build -t ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -f ${DOCKERFILE_PATH} .
-                docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
-                docker push ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-              else
-                echo "Image exists."
-              fi
-          displayName: 'Build, Tag, and Push Docker Image'
 
     - job: Pull_And_Push_Image_To_ACR
       pool:
@@ -114,16 +85,10 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              az acr login --name ${ACR_FQDN%%.*}
-              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
-              
-              # Ensure directory is created
-              mkdir -p "${ob_outputDirectory}"
-              
-              # Pull the Docker image from ACR
+              az acr login --name ${ACR_FQDN}
+              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
+              mkdir -p ${ob_outputDirectory}
               docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-              
-              # Save the pulled image to a tar file
               docker save ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} -o ${ob_outputDirectory}/image.tar
           displayName: 'Pulling Docker Image using Docker'
 
@@ -157,7 +122,7 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
+              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
 
         - script: |
             set -eux
