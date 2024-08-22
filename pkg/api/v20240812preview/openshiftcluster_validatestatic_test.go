@@ -1437,7 +1437,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].OperatorName = "FAKE-OPERATOR-OTHER"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity name cannot be changed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity cannot be removed or have its name changed.",
 		},
 		{
 			name: "invalid change of operator identity resource ID",
@@ -1481,6 +1481,50 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 					platformIdentity1,
 				}
 			},
+		},
+		{
+			name: "invalid change of operator identity name and resource ID",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].OperatorName = platformIdentity2.OperatorName
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].ResourceID = platformIdentity2.ResourceID
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity cannot be removed or have its name changed.",
+		},
+		{
+			name: "invalid removal of identity",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+						platformIdentity2,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = []PlatformWorkloadIdentity{
+					platformIdentity1,
+				}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity cannot be removed or have its name changed.",
 		},
 	}
 

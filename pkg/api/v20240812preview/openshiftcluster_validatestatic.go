@@ -447,15 +447,24 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 	}
 
 	if current.UsesWorkloadIdentity() {
-		for _, currentIdentity := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			for _, updateIdentity := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-				if currentIdentity.ResourceID == updateIdentity.ResourceID && currentIdentity.OperatorName != updateIdentity.OperatorName {
-					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity name cannot be changed.")
-				}
+		currentIdentities := map[string]PlatformWorkloadIdentity{}
+		for _, i := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			currentIdentities[i.OperatorName] = i
+		}
 
-				if currentIdentity.OperatorName == updateIdentity.OperatorName && currentIdentity.ResourceID != updateIdentity.ResourceID {
-					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity resource ID cannot be changed.")
-				}
+		updateIdentities := map[string]PlatformWorkloadIdentity{}
+		for _, i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			updateIdentities[i.OperatorName] = i
+		}
+
+		for name, currentIdentity := range currentIdentities {
+			updateIdentity, present := updateIdentities[name]
+			// this also validates that existing identities' names haven't changed
+			if !present {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity cannot be removed or have its name changed.")
+			}
+			if currentIdentity.ResourceID != updateIdentity.ResourceID {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity resource ID cannot be changed.")
 			}
 		}
 	}
