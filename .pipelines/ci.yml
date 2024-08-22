@@ -85,8 +85,8 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
-              az acr login --name ${ACR_FQDN}
-              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN} --expose-token --output tsv --query accessToken)"
+              az acr login --name ${ACR_FQDN%%.*}
+              docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
               mkdir -p "${ob_outputDirectory}"
               docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG} || echo "Image not found."
               if [ -f "${ob_outputDirectory}/image.tar" ]; then
@@ -128,14 +128,23 @@ stages:
             scriptType: 'bash'
             scriptLocation: 'inlineScript'
             inlineScript: |
+              az acr login --name ${ACR_FQDN%%.*}
               docker login ${ACR_FQDN} -u "00000000-0000-0000-0000-000000000000" -p "$(az acr login --name ${ACR_FQDN%%.*} --expose-token --output tsv --query accessToken)"
 
         - script: |
             set -eux
-            # Create a container from the build cache and copy the coverage file
-            docker create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
-            docker cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out
-            docker rm coverage-container
+            # Attempt to create a container from the image and extract coverage report
+            if docker pull ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}; then
+              docker create --name coverage-container ${ACR_FQDN}/${REPOSITORY}:${IMAGE_TAG}
+              docker cp coverage-container:/go/src/ARO-RP/cover.out $(Build.SourcesDirectory)/cover.out || {
+                echo "Coverage file not found in container."
+                exit 1
+              }
+              docker rm coverage-container
+            else
+              echo "Image with tag ${IMAGE_TAG} not found in ${ACR_FQDN}/${REPOSITORY}"
+              exit 1
+            fi
           displayName: 'Extract Coverage Report from Container'
 
         # Publish the coverage report to Azure DevOps
