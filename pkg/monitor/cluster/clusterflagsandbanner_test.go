@@ -8,11 +8,14 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 type fakeMetricsEmitter struct {
@@ -181,12 +184,14 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 				baseCluster.Spec.OperatorFlags = tt.operatorFlags
 			}
 			baseCluster.Spec.Banner = tt.clusterBanner
-			arocli := arofake.NewSimpleClientset(baseCluster)
 			fm := newfakeMetricsEmitter()
 
+			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(baseCluster).Build())
+			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+
 			mon := &Monitor{
-				arocli: arocli,
-				m:      fm,
+				ch: ch,
+				m:  fm,
 			}
 
 			err := mon.emitOperatorFlagsAndSupportBanner(ctx)

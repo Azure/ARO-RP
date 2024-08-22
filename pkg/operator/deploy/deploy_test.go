@@ -11,7 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,8 +19,10 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -229,10 +231,13 @@ func TestCreateDeploymentData(t *testing.T) {
 				},
 			}
 
+			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(cv).Build())
+			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+
 			o := operator{
-				oc:     oc,
-				env:    env,
-				client: ctrlfake.NewClientBuilder().WithObjects(cv).Build(),
+				oc:  oc,
+				env: env,
+				ch:  ch,
 			}
 
 			deploymentData, err := o.createDeploymentData(ctx)
@@ -302,10 +307,13 @@ func TestOperatorVersion(t *testing.T) {
 				},
 			}
 
-			o := &operator{
-				oc:     &api.OpenShiftCluster{Properties: *oc},
-				env:    _env,
-				client: ctrlfake.NewClientBuilder().WithObjects(cv).Build(),
+			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(cv).Build())
+			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+
+			o := operator{
+				oc:  &api.OpenShiftCluster{Properties: *oc},
+				env: _env,
+				ch:  ch,
 			}
 
 			staticResources, err := o.createObjects(ctx)
@@ -564,16 +572,22 @@ func TestTestEnsureUpgradeAnnotation(t *testing.T) {
 				},
 			}
 
+			c := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(cloudcredentialobject).Build())
+			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), c)
+
 			o := operator{
-				oc:          oc,
-				env:         env,
-				operatorcli: operatorfake.NewSimpleClientset(cloudcredentialobject),
+				oc:  oc,
+				env: env,
+				ch:  ch,
 			}
 
 			err := o.EnsureUpgradeAnnotation(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			result, _ := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
-			for _, v := range result.Items {
+
+			updatedCCOs := &operatorv1.CloudCredentialList{}
+			ch.Client().List(ctx, updatedCCOs)
+
+			for _, v := range updatedCCOs.Items {
 				actualAnnotations := v.ObjectMeta.Annotations
 				if !reflect.DeepEqual(actualAnnotations, tt.wantAnnotation) {
 					t.Errorf("actual annotation: %v, wanted %v", tt.annotation, tt.wantAnnotation)

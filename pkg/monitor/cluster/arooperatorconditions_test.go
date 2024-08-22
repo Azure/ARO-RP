@@ -9,11 +9,14 @@ import (
 
 	"github.com/golang/mock/gomock"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 func TestEmitAROOperatorConditions(t *testing.T) {
@@ -82,12 +85,14 @@ func TestEmitAROOperatorConditions(t *testing.T) {
 
 			ctx := context.Background()
 			baseCluster.Status.Conditions = tt.conditions
-			arocli := arofake.NewSimpleClientset(baseCluster)
 			m := mock_metrics.NewMockEmitter(controller)
 
+			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().WithObjects(baseCluster).Build())
+			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+
 			mon := &Monitor{
-				arocli: arocli,
-				m:      m,
+				ch: ch,
+				m:  m,
 			}
 
 			for _, i := range tt.expectMetricsDims {

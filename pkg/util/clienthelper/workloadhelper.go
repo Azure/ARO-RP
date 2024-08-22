@@ -111,3 +111,16 @@ func keyFunc(gk schema.GroupKind, namespace, name string) string {
 
 	return s
 }
+
+func Prepare(resources []kruntime.Object) error {
+	err := hashWorkloadConfigs(resources)
+	if err != nil {
+		return err
+	}
+
+	sort.SliceStable(resources, func(i, j int) bool {
+		return createOrder(resources[i], resources[j])
+	})
+
+	return nil
+}

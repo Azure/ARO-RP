@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	mgmtredhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -35,7 +36,7 @@ var _ = Describe("Update clusters", func() {
 				Name:      "openshift-azure-operator",
 			},
 		}
-		err := clients.Client.Delete(ctx, cr)
+		err := clients.Client.Client().Delete(ctx, cr)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
@@ -44,7 +45,7 @@ var _ = Describe("Update clusters", func() {
 
 		By("checking that the CredentialsRequest has been recreated")
 		cr = &cloudcredentialv1.CredentialsRequest{}
-		err = clients.Client.Get(ctx, crNamespacedName, cr)
+		err = clients.Client.GetOne(ctx, crNamespacedName, cr)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -162,7 +163,8 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 })
 
 func getInfraID(ctx context.Context) (string, error) {
-	co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+	co := &arov1alpha1.Cluster{}
+	err := clients.Client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, co)
 	if err != nil {
 		return "", err
 	}

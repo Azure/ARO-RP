@@ -39,12 +39,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -86,10 +86,9 @@ type clientSet struct {
 	HiveRestConfig     *rest.Config
 	Monitoring         monitoringclient.Interface
 	Kubernetes         kubernetes.Interface
-	Client             client.Client
+	Client             clienthelper.Interface
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
-	AROClusters        aroclient.Interface
 	ConfigClient       configclient.Interface
 	SecurityClient     securityclient.Interface
 	Project            projectclient.Interface
@@ -295,6 +294,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	ch := clienthelper.NewWithClient(log, controllerRuntimeClient)
+
 	monitoring, err := monitoringclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
@@ -311,11 +312,6 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	projectcli, err := projectclient.NewForConfig(restconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -387,11 +383,10 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
 		Dynamic:            dynamiccli,
-		Client:             controllerRuntimeClient,
+		Client:             ch,
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,
-		AROClusters:        arocli,
 		Project:            projectcli,
 		ConfigClient:       configcli,
 		SecurityClient:     securitycli,
