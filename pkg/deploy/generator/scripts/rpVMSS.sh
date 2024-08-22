@@ -347,6 +347,7 @@ ExecStart=/usr/bin/docker run \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
+  -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
   $RPIMAGE \
   rp
 ExecStop=/usr/bin/docker stop -t 3600 %N
@@ -460,6 +461,7 @@ ExecStart=/usr/bin/docker run \
   -p 2222:2222 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
+  -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
   $RPIMAGE \
   portal
 Restart=always
