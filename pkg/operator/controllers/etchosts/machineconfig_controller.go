@@ -28,10 +28,10 @@ import (
 )
 
 const (
-	EtcHostsControllerName = "EtcHostsMachineConfig"
+	ControllerName = "EtcHostsMachineConfig"
 )
 
-type MachineConfigReconciler struct {
+type EtcHostsMachineConfigReconciler struct {
 	base.AROController
 
 	dh dynamichelper.Interface
@@ -39,19 +39,21 @@ type MachineConfigReconciler struct {
 
 var etcHostsRegex = regexp.MustCompile("^99-(.*)-aro-etc-hosts-gateway-domains$")
 
-func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigReconciler {
-	return &MachineConfigReconciler{
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *EtcHostsMachineConfigReconciler {
+	return &EtcHostsMachineConfigReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
-			Name:   EtcHostsControllerName,
+			Name:   ControllerName,
 		},
 		dh: dh,
 	}
 }
 
 // Reconcile watches ARO EtcHosts MachineConfig objects, and if any changes, reconciles it
-func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	r.Log.Debugf("reconcile MachineConfig openshift-machine-api/%s", request.Name)
+
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -63,13 +65,15 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	r.Log.Debug("running")
+	mcp := &mcv1.MachineConfigPool{}
+	// Make sure we are reconciling against etchosts machine config
 	m := etcHostsRegex.FindStringSubmatch(request.Name)
+	r.Log.Debugf("MachineConfig openshift-machine-api/%s", request.Name)
 	if m == nil {
 		return reconcile.Result{}, nil
 	}
 	role := m[1]
 
-	mcp := &mcv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: role}, mcp)
 	if kerrors.IsNotFound(err) {
 		r.ClearDegraded(ctx)
@@ -96,7 +100,9 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 }
 
 // SetupWithManager setup our mananger to watch for changes to MCP and ARO Cluster obj
-func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *EtcHostsMachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Log.Info("starting etchosts-machine-config controller")
+
 	etcHostsBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&mcv1.MachineConfig{}).
 		Watches(&source.Kind{Type: &mcv1.MachineConfigPool{}},
@@ -108,7 +114,7 @@ func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return etcHostsBuilder.
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
-		Named(EtcHostsControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
 
