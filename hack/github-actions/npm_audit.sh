@@ -2,10 +2,11 @@
 
 cd ./portal/v2
 
-if npm audit --omit=dev | grep -q 'found 0 vulnerabilities'; then
-  echo "No vulnerabilities found."
-  exit 0
-else
-  echo "Vulnerabilities found, please run `npm audit --omit=dev` locally and fix or record issues and create an ADO card."
+npm audit --audit-level high --omit=dev
+
+if [ "$?" -gt 0 ]; then
+  echo "Critical/High Vulnerabilities found, please run \"npm audit --omit=dev\" locally and fix, or record issues and create a Jira card."
   exit 1
 fi
+
+echo "No critical/high vulnerabilities found."
