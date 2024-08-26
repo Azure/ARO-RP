@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -43,6 +44,7 @@ type ClusterManager interface {
 	IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
+	GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSync, error)
 }
 
 type clusterManager struct {
@@ -56,35 +58,33 @@ type clusterManager struct {
 }
 
 // Define the interface for SyncSetResourceManager
-type SyncSetResourceManager interface {
-	GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) ([]v1alpha1.ClusterSync, error)
-}
 
 // Implement the syncSetResourceManager struct
-type syncSetResourceManager struct {
+/*type syncSetResourceManager struct {
 	log           *logrus.Entry
 	env           env.Core
 	hiveClientset client.Client
 }
-
+*/
 // GetSyncSetResources lists ClusterSync resources in the specified namespace
-func (srm *syncSetResourceManager) GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) ([]v1alpha1.ClusterSync, error) {
+func (hr *clusterManager) GetSyncSetResources(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSync, error) {
 
-	clusterSyncList := &v1alpha1.ClusterSyncList{}
+	clusterSync := &v1alpha1.ClusterSync{}
 
-	listOpts := &client.ListOptions{
+	key := client.ObjectKey{
+		Name:      ClusterDeploymentName, // "cluster",
 		Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
 	}
 
-	err := srm.hiveClientset.List(ctx, clusterSyncList, listOpts)
+	err := hr.hiveClientset.Get(ctx, key, clusterSync)
 	if err != nil {
-		srm.log.Errorf("Failed to list ClusterSync resources: %v", err)
-		return nil, err
+		log.Fatalf("Error getting ClusterSync resources: %s", err.Error())
 	}
 
-	return clusterSyncList.Items, nil
+	return clusterSync, nil
 }
 
+/*
 func NewClusterSyncFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (SyncSetResourceManager, error) {
 	adoptByHive, err := env.LiveConfig().AdoptByHive(ctx)
 	if err != nil {
@@ -122,7 +122,7 @@ func NewClusterSyncFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest
 		hiveClientset: hiveClientset,
 	}, nil
 }
-
+*/
 // NewFromEnv can return a nil ClusterManager when hive features are disabled. This exists to support regions where we don't have hive,
 // and we do not want to restrict the frontend from starting up successfully.
 // It has the caveat of requiring a nil check on any operations performed with the returned ClusterManager

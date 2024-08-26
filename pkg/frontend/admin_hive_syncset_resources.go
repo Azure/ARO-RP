@@ -32,7 +32,7 @@ func (f *frontend) getAdminHiveSyncsetResources(w http.ResponseWriter, r *http.R
 
 func (f *frontend) _getAdminHiveSyncsetResources(ctx context.Context, namespace string) ([]byte, error) {
 	// we have to check if the frontend has a valid clustermanager since hive is not everywhere.
-	if f.syncSetResourceManager == nil {
+	if f.hiveClusterManager == nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "hive is not enabled")
 	}
 
@@ -50,7 +50,7 @@ func (f *frontend) _getAdminHiveSyncsetResources(ctx context.Context, namespace 
 		return nil, api.NewCloudError(http.StatusNoContent, api.CloudErrorCodeResourceNotFound, "", "cluster is not managed by hive")
 	}
 
-	cd, err := f.syncSetResourceManager.GetSyncSetResources(ctx, doc)
+	cd, err := f.hiveClusterManager.GetSyncSetResources(ctx, doc)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster deployment not found")
 	}

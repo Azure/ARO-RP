@@ -168,7 +168,6 @@ func TestAdminEtcdRecovery(t *testing.T) {
 				&noop.Noop{},
 				nil,
 				nil,
-				nil,
 				kubeActionsFactory,
 				nil,
 				nil,

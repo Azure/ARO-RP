@@ -33,7 +33,7 @@ func TestGetAdminHiveSyncsetResources(t *testing.T) {
 		name           string
 		namespace      string
 		hiveEnabled    bool
-		mocks          func(*test, *mock_hive.MockSyncSetResourceManager)
+		mocks          func(*test, *mock_hive.MockClusterManager)
 		wantStatusCode int
 		wantResponse   []byte
 		wantError      string
@@ -44,7 +44,7 @@ func TestGetAdminHiveSyncsetResources(t *testing.T) {
 			name:           "Cluster SyncSets must be namespaced",
 			namespace:      "",
 			hiveEnabled:    true,
-			mocks:          func(tt *test, s *mock_hive.MockSyncSetResourceManager) {},
+			mocks:          func(tt *test, s *mock_hive.MockClusterManager) {},
 			wantStatusCode: http.StatusNotFound,
 			wantError:      "404: NotFound: : cluster not found",
 		},
@@ -52,7 +52,7 @@ func TestGetAdminHiveSyncsetResources(t *testing.T) {
 			name:      "List ClusterSync resources successfully",
 			namespace: "hive",
 			wantError: "",
-			mocks: func(tt *test, s *mock_hive.MockSyncSetResourceManager) {
+			mocks: func(tt *test, s *mock_hive.MockClusterManager) {
 				s.EXPECT().
 					GetSyncSetResources(gomock.Any(), gomock.Any()).
 					Return(&clusterSyncsetTest, nil).Times(1)
@@ -76,11 +76,11 @@ func TestGetAdminHiveSyncsetResources(t *testing.T) {
 			var f *frontend
 			var err error
 			if tt.hiveEnabled {
-				s := mock_hive.NewMockSyncSetResourceManager(ti.controller)
+				s := mock_hive.NewMockClusterManager(ti.controller) //NewMockSyncSetResourceManager(ti.controller)
 				tt.mocks(tt, s)
-				f, err = NewFrontend(ctx, ti.audit, ti.log, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, s, nil, nil, nil, nil)
+				f, err = NewFrontend(ctx, ti.audit, ti.log, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil)
 			} else {
-				f, err = NewFrontend(ctx, ti.audit, ti.log, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+				f, err = NewFrontend(ctx, ti.audit, ti.log, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil)
 			}
 			if err != nil {
 				t.Fatal(err)

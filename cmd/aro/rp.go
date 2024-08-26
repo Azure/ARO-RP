@@ -159,7 +159,6 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 	hiveClusterManager, err := hive.NewFromEnv(ctx, log, _env)
-	syncSetResourceManager, err := hive.NewClusterSyncFromEnv(ctx, log, _env)
 	if err != nil {
 		return err
 	}
@@ -171,7 +170,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions)
 
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, syncSetResourceManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
+	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}

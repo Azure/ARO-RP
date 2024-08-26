@@ -564,7 +564,7 @@ func TestGetSyncSetResources(t *testing.T) {
 
 	clusterSyncTest := &v1alpha1.ClusterSync{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "clustersync1",
+			Name:      "cluster",
 			Namespace: fakeNamespace,
 		},
 	}
@@ -581,7 +581,7 @@ func TestGetSyncSetResources(t *testing.T) {
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(clusterSyncTest)
 			}
-			c := syncSetResourceManager{
+			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
