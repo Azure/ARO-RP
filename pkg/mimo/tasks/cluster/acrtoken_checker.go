@@ -6,13 +6,13 @@ package cluster
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func EnsureACRTokenIsValid(ctx context.Context) error {
@@ -51,6 +51,6 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 		return mimo.TerminalError(errors.New("ACR token has expired"))
 	}
 
-	th.SetResultMessage(fmt.Sprintf("ACR token is valid"))
+	th.SetResultMessage("ACR token is valid")
 	return nil
 }

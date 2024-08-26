@@ -8,16 +8,18 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/gomega"
+
+	"github.com/Azure/go-autorest/autorest/date"
+	"github.com/golang/mock/gomock"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	"github.com/Azure/go-autorest/autorest/date"
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestEnsureACRToken(t *testing.T) {
