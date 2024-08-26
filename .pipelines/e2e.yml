@@ -30,7 +30,7 @@ jobs:
       - script: |
           set -xe
           sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-          sudo dnf install -y openvpn make podman jq
+          sudo dnf install -y openvpn make podman jq crun
         displayName: Setup (Container)
         target: container
 
