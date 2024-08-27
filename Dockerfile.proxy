@@ -1,7 +1,7 @@
 # Uses a multi-stage container build to build the proxy
 #
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.21.11-1.1720406008 AS builder
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.23-fips-cbl-mariner2.0 AS builder
 USER root
 ENV GOPATH=/root/go
 RUN mkdir -p /app
