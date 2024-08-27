@@ -33,12 +33,12 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 
 	dbAsyncOperations, err := f.dbGroup.AsyncOperations()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	asyncdoc, err := dbAsyncOperations.Get(ctx, operationId)

@@ -30,11 +30,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
-var (
+const (
+	minimumSubnetMaskSize int = 27
+
 	errMsgNSGAttached                       = "The provided subnet '%s' is invalid: must not have a network security group attached."
 	errMsgOriginalNSGNotAttached            = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
 	errMsgNSGNotAttached                    = "The provided subnet '%s' is invalid: must have a network security group attached."
-	errMsgNSGNotProperlyAttached            = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
 	errMsgSPHasNoRequiredPermissionsOnNSG   = "The %s service principal (Application ID: %s) does not have Network Contributor role on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
 	errMsgSubnetNotFound                    = "The provided subnet '%s' could not be found."
 	errMsgSubnetNotInSucceededState         = "The provided subnet '%s' is not in a Succeeded state"
@@ -47,9 +48,8 @@ var (
 	errMsgNatGWNotFound                     = "The nat gateway '%s' could not be found."
 	errMsgCIDROverlaps                      = "The provided CIDRs must not overlap: '%s'."
 	errMsgInvalidVNetLocation               = "The vnet location '%s' must match the cluster location '%s'."
+	errMsgNSGNotProperlyAttached            = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
 )
-
-const minimumSubnetMaskSize int = 27
 
 type Subnet struct {
 	// ID is a resource id of the subnet

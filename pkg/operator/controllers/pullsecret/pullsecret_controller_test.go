@@ -775,7 +775,7 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
 			if !reflect.DeepEqual(s, tt.wantSecret) {
-				t.Fatalf(cmp.Diff(s, tt.wantSecret))
+				t.Fatal(cmp.Diff(s, tt.wantSecret))
 			}
 		})
 	}

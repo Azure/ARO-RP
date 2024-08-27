@@ -86,7 +86,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 			name:                    "fail: parse group kind resource",
 			wantStatusCode:          http.StatusInternalServerError,
 			wantResponseContentType: "application/json",
-			wantError:               "500: InternalServerError: : failed to parse resource",
+			wantError:               "500: InternalServerError: : Error Message: failed to parse resource",
 			doc:                     fakeRecoveryDoc(true, resourceID, resourceName),
 			mocks: func(ctx context.Context, ti *testInfra, k *mock_adminactions.MockKubeActions, log *logrus.Entry, env env.Interface, doc *api.OpenShiftClusterDocument, pods *corev1.PodList, etcdcli operatorv1client.EtcdInterface) {
 				k.EXPECT().ResolveGVR("Etcd", "").Times(1).Return(gvk, errors.New("failed to parse resource"))
@@ -106,7 +106,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 			name:                    "fail: privateEndpointIP cannot be empty",
 			wantStatusCode:          http.StatusInternalServerError,
 			wantResponseContentType: "application/json",
-			wantError:               "500: InternalServerError: : privateEndpointIP is empty",
+			wantError:               "500: InternalServerError: : Error Message: privateEndpointIP is empty",
 			doc:                     fakeRecoveryDoc(false, resourceID, resourceName),
 			mocks: func(ctx context.Context, ti *testInfra, k *mock_adminactions.MockKubeActions, log *logrus.Entry, env env.Interface, doc *api.OpenShiftClusterDocument, pods *corev1.PodList, etcdcli operatorv1client.EtcdInterface) {
 				k.EXPECT().ResolveGVR("Etcd", "").Times(1).Return(gvk, nil)
@@ -116,7 +116,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 			name:                    "fail: kubeActionsFactory error",
 			wantStatusCode:          http.StatusInternalServerError,
 			wantResponseContentType: "application/json",
-			wantError:               "500: InternalServerError: : failed to create kubeactions",
+			wantError:               "500: InternalServerError: : Error Message: failed to create kubeactions",
 			doc:                     fakeRecoveryDoc(true, resourceID, resourceName),
 			kubeActionsFactory: func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
 				return nil, errors.New("failed to create kubeactions")

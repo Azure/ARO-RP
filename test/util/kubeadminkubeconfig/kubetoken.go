@@ -6,6 +6,7 @@ package kubeadminkubeconfig
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,7 +28,7 @@ func parseTokenResponse(location string) (string, error) {
 	}
 
 	if v.Get("error") != "" {
-		return "", fmt.Errorf(v.Get("error_description"))
+		return "", errors.New(v.Get("error_description"))
 	}
 
 	v, err = url.ParseQuery(locURL.Fragment)
@@ -36,7 +37,7 @@ func parseTokenResponse(location string) (string, error) {
 	}
 
 	if v.Get("error") != "" {
-		return "", fmt.Errorf(v.Get("error_description"))
+		return "", errors.New(v.Get("error_description"))
 	}
 
 	return v.Get("access_token"), nil

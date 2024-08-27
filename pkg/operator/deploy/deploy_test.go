@@ -12,6 +12,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +20,8 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -232,7 +235,7 @@ func TestCreateDeploymentData(t *testing.T) {
 			o := operator{
 				oc:     oc,
 				env:    env,
-				client: ctrlfake.NewClientBuilder().WithObjects(cv).Build(),
+				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), ctrlfake.NewClientBuilder().WithObjects(cv).Build()),
 			}
 
 			deploymentData, err := o.createDeploymentData(ctx)
@@ -305,7 +308,7 @@ func TestOperatorVersion(t *testing.T) {
 			o := &operator{
 				oc:     &api.OpenShiftCluster{Properties: *oc},
 				env:    _env,
-				client: ctrlfake.NewClientBuilder().WithObjects(cv).Build(),
+				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), ctrlfake.NewClientBuilder().WithObjects(cv).Build()),
 			}
 
 			staticResources, err := o.createObjects(ctx)
@@ -578,6 +581,69 @@ func TestTestEnsureUpgradeAnnotation(t *testing.T) {
 				if !reflect.DeepEqual(actualAnnotations, tt.wantAnnotation) {
 					t.Errorf("actual annotation: %v, wanted %v", tt.annotation, tt.wantAnnotation)
 				}
+			}
+		})
+	}
+}
+
+func TestGenerateOperatorIdentitySecret(t *testing.T) {
+	tests := []struct {
+		Name           string
+		Operator       *operator
+		ExpectedSecret *corev1.Secret
+		ExpectError    bool
+	}{
+		{
+			Name: "valid cluster operator",
+			Operator: &operator{
+				oc: &api.OpenShiftCluster{
+					Location: "eastus1",
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: pkgoperator.OperatorIdentityName,
+									ClientID:     "11111111-1111-1111-1111-111111111111",
+								},
+							},
+						},
+					},
+				},
+				subscriptiondoc: &api.SubscriptionDocument{
+					ID: "00000000-0000-0000-0000-000000000000",
+					Subscription: &api.Subscription{
+						Properties: &api.SubscriptionProperties{
+							TenantID: "22222222-2222-2222-2222-222222222222",
+						},
+					},
+				},
+			},
+			ExpectedSecret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      pkgoperator.OperatorIdentitySecretName,
+					Namespace: pkgoperator.Namespace,
+				},
+				// StringData is only converted to Data in live kubernetes
+				StringData: map[string]string{
+					"azure_client_id":            "11111111-1111-1111-1111-111111111111",
+					"azure_tenant_id":            "22222222-2222-2222-2222-222222222222",
+					"azure_region":               "eastus1",
+					"azure_subscription_id":      "00000000-0000-0000-0000-000000000000",
+					"azure_federated_token_file": pkgoperator.OperatorTokenFile,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			actualSecret, err := test.Operator.generateOperatorIdentitySecret()
+			if test.ExpectError == (err == nil) {
+				t.Errorf("generateOperatorIdentitySecret() %s: ExpectError: %t, actual error: %s\n", test.Name, test.ExpectError, err)
+			}
+
+			if !reflect.DeepEqual(actualSecret, test.ExpectedSecret) {
+				t.Errorf("generateOperatorIdentitySecret() %s:\nexpected:\n%+v\n\ngot:\n%+v\n", test.Name, test.ExpectedSecret, actualSecret)
 			}
 		})
 	}

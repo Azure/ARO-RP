@@ -29,7 +29,6 @@ import (
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -39,6 +38,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
@@ -63,19 +63,20 @@ type Operator interface {
 }
 
 type operator struct {
-	log *logrus.Entry
-	env env.Interface
-	oc  *api.OpenShiftCluster
+	log             *logrus.Entry
+	env             env.Interface
+	oc              *api.OpenShiftCluster
+	subscriptiondoc *api.SubscriptionDocument
 
 	arocli        aroclient.Interface
-	client        client.Client
+	client        clienthelper.Interface
 	extensionscli extensionsclient.Interface
 	kubernetescli kubernetes.Interface
 	operatorcli   operatorclient.Interface
 	dh            dynamichelper.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client client.Client, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, arocli aroclient.Interface, client clienthelper.Interface, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -90,12 +91,13 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 		env: env,
 		oc:  oc,
 
-		arocli:        arocli,
-		client:        client,
-		extensionscli: extensionscli,
-		kubernetescli: kubernetescli,
-		operatorcli:   operatorcli,
-		dh:            dh,
+		arocli:          arocli,
+		client:          client,
+		extensionscli:   extensionscli,
+		kubernetescli:   kubernetescli,
+		operatorcli:     operatorcli,
+		dh:              dh,
+		subscriptiondoc: subscriptionDoc,
 	}, nil
 }
 
@@ -196,6 +198,15 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 	}
 
 	// then dynamic resources
+	if o.oc.UsesWorkloadIdentity() {
+		operatorIdentitySecret, err := o.generateOperatorIdentitySecret()
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, operatorIdentitySecret)
+	}
+
 	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utilpem.Encode(key)
 	if err != nil {
@@ -227,6 +238,34 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 			},
 		},
 	), nil
+}
+
+func (o *operator) generateOperatorIdentitySecret() (*corev1.Secret, error) {
+	var operatorIdentity *api.PlatformWorkloadIdentity // use a pointer to make it easy to check if we found an identity below
+	for _, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		if i.OperatorName == pkgoperator.OperatorIdentityName {
+			operatorIdentity = &i
+			break
+		}
+	}
+
+	if operatorIdentity == nil {
+		return nil, fmt.Errorf("operator identity %s not found", pkgoperator.OperatorIdentityName)
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: pkgoperator.Namespace,
+			Name:      pkgoperator.OperatorIdentitySecretName,
+		},
+		StringData: map[string]string{
+			"azure_client_id":            operatorIdentity.ClientID,
+			"azure_tenant_id":            o.subscriptiondoc.Subscription.Properties.TenantID,
+			"azure_region":               o.oc.Location,
+			"azure_subscription_id":      o.subscriptiondoc.ID,
+			"azure_federated_token_file": pkgoperator.OperatorTokenFile,
+		},
+	}, nil
 }
 
 func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {

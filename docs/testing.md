@@ -127,3 +127,97 @@ For smoke tests:
 ```bash
 CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> E2E_LABEL=smoke make test-e2e
 ```
+
+### Run tests to private clusters
+
+If you want to run e2e tests to private clusters, you need VPN access to the cluster.
+
+#### hack script
+
+If you are using hack script to create the cluster, you already have the VPN access.
+
+```bash
+sudo openvpn secrets/vpn-eastus.ovpn  # for eastus
+# sudo openvpn secrets/vpn-aks-westeurope.ovpn  # for westeurope
+# sudo openvpn secrets/vpn-aks-australiaeast.ovpn  # for australiaeast
+
+CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
+```
+
+#### az cli
+
+If you are using az cli, and your virtual network doesn't have VPN gateway, you need to create VPN gateway and connect to it.
+This is an example script to create VPN gateway and its client.
+
+```bash
+# Set the variables
+RESOURCE_GROUP=
+VNET=
+
+GATEWAY_SUBNET=10.0.4.0/23
+ADDRESS_PREFIX=192.168.0.0/16
+VPNGW=vpn-gateway
+VPNGW_PUBLIC_IP=vpn-gateway-ip
+VPN_ROOT=/tmp/vpn-root
+VPN_CLIENT=/tmp/vpn-client
+VPN_CLIENT_CONF=/tmp/myvpn.ovpn
+
+# Create VPN gateway
+az network vnet subnet create \
+--vnet-name=$VNET \
+-n GatewaySubnet \
+-g $RESOURCE_GROUP \
+--address-prefix $GATEWAY_SUBNET
+
+az network public-ip create \
+-n $VPNGW_PUBLIC_IP \
+-g $RESOURCE_GROUP
+
+az network vnet-gateway create \
+-n $VPNGW \
+--public-ip-address $VPNGW_PUBLIC_IP \
+-g $RESOURCE_GROUP \
+--vnet $VNET \
+--gateway-type Vpn \
+--sku VpnGw2 \
+--vpn-gateway-generation Generation2 \
+--address-prefixes $ADDRESS_PREFIX \
+--client-protocol OpenVPN
+
+go run ./hack/genkey -ca $VPN_ROOT
+go run ./hack/genkey -client -keyFile $VPN_ROOT.key -certFile $VPN_ROOT.crt $VPN_CLIENT
+
+az network vnet-gateway root-cert create \
+-g $RESOURCE_GROUP \
+-n dev-vpn \
+--gateway-name $VPNGW \
+--public-cert-data $VPN_ROOT.crt
+
+# Generate VPN client configuration
+curl -so vpnclientconfiguration.zip "$(az network vnet-gateway vpn-client generate \
+    -g "$RESOURCE_GROUP" \
+    -n "$VPNGW" \
+    -o tsv)"
+export CLIENTCERTIFICATE="$(openssl x509 -inform der -in $VPN_CLIENT.crt)"
+export PRIVATEKEY="$(openssl pkey -inform der -in $VPN_CLIENT.key)"
+unzip -qc vpnclientconfiguration.zip 'OpenVPN\\vpnconfig.ovpn' \
+    | envsubst \
+    | grep -v '^log ' > "$VPN_CLIENT_CONF"
+rm vpnclientconfiguration.zip
+```
+
+After creating the VPN gateway, you can connect to it using the following command:
+
+```bash
+sudo openvpn --config $VPN_CLIENT.ovpn
+CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
+```
+
+### Run tests to upgraded clusters
+
+To run e2e (smoke) tests to upgraded clusters, run the following command:
+
+```bash
+oc adm upgrade channel <channel>  # e.g., oc adm upgrade channel stable-4.14
+oc adm upgrade --to=<version>  # e.g., oc adm upgrade --to=4.14.16
+``` 

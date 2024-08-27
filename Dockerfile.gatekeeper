@@ -1,5 +1,5 @@
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.21.11-1.1720406008 AS builder
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0 AS builder
 ARG GATEKEEPER_VERSION
 ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
 
@@ -8,7 +8,9 @@ ARG BUILDKIT_SBOM_SCAN_STAGE=true
 ENV GO111MODULE=on \
     GOOS=linux \
     GOPATH=/go/ \
-    GOARCH=amd64
+    GOARCH=amd64 \
+    CGO_ENABLED=1 \
+    GOFLAGS='-tags=requirefips'    
 
 WORKDIR ${GOPATH}/src/github.com/open-policy-agent/gatekeeper
 USER root

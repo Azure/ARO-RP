@@ -1,14 +1,18 @@
 # Uses a multi-stage container build to build the RP.
 #
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.21.11-1.1720406008 AS builder
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0 AS builder
 
 USER root
 ENV GOPATH=/root/go
 RUN mkdir -p /app
 WORKDIR /app
 
+# https://github.com/microsoft/go/tree/microsoft/main/eng/doc/fips#build-option-to-require-fips-mode
+ENV CGO_ENABLED=1 GOFLAGS='-tags=requirefips'
+
 COPY . /app
+
 RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make validate-fips && make e2e.test
 
 FROM ${REGISTRY}/ubi8/ubi-minimal
@@ -17,3 +21,4 @@ COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
 USER 1000
+ENV HOME=/tmp

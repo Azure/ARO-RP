@@ -5,7 +5,7 @@ package subnets
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -142,7 +142,7 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 	}
 
 	if len(combinedErrors) > 0 {
-		return fmt.Errorf(strings.Join(combinedErrors, "\n"))
+		return errors.New(strings.Join(combinedErrors, "\n"))
 	}
 
 	return nil

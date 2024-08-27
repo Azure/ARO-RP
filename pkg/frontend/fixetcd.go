@@ -58,42 +58,42 @@ func (f *frontend) fixEtcd(ctx context.Context, log *logrus.Entry, env env.Inter
 	log.Infof("Listing etcd pods now")
 	rawPods, err := kubeActions.KubeList(ctx, "Pod", namespaceEtcds)
 	if err != nil {
-		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	pods := &corev1.PodList{}
 	err = codec.NewDecoderBytes(rawPods, &codec.JsonHandle{}).Decode(pods)
 	if err != nil {
-		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode pods, %s", err.Error()))
+		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "failed to decode pods, %s", err.Error())
 	}
 
 	de, err := findDegradedEtcd(log, pods)
 	if err != nil {
-		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 	log.Infof("Found degraded endpoint: %v", de)
 
 	backupContainerLogs, err := backupEtcdData(ctx, log, doc.OpenShiftCluster.Name, de.Node, kubeActions)
 	if err != nil {
-		return backupContainerLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return backupContainerLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	fixPeersContainerLogs, err := fixPeers(ctx, log, de, pods, kubeActions, doc.OpenShiftCluster.Name)
 	allLogs, _ := logSeperator(backupContainerLogs, fixPeersContainerLogs)
 	if err != nil {
-		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	rawEtcd, err := kubeActions.KubeGet(ctx, "Etcd", "", "cluster")
 	if err != nil {
-		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	log.Info("Getting etcd operating now")
 	etcd := &operatorv1.Etcd{}
 	err = codec.NewDecoderBytes(rawEtcd, &codec.JsonHandle{}).Decode(etcd)
 	if err != nil {
-		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode etcd operator, %s", err.Error()))
+		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "failed to decode etcd operator, %s", err.Error())
 	}
 
 	existingOverrides := etcd.Spec.UnsupportedConfigOverrides.Raw
@@ -102,24 +102,24 @@ func (f *frontend) fixEtcd(ctx context.Context, log *logrus.Entry, env env.Inter
 	}
 	err = patchEtcd(ctx, log, etcdcli, etcd, patchDisableOverrides)
 	if err != nil {
-		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	err = deleteSecrets(ctx, log, kubeActions, de, doc.OpenShiftCluster.Properties.InfraID)
 	if err != nil {
-		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	etcd.Spec.ForceRedeploymentReason = fmt.Sprintf("single-master-recovery-%s", time.Now())
 	err = patchEtcd(ctx, log, etcdcli, etcd, etcd.Spec.ForceRedeploymentReason)
 	if err != nil {
-		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	etcd.Spec.OperatorSpec.UnsupportedConfigOverrides.Raw = existingOverrides
 	err = patchEtcd(ctx, log, etcdcli, etcd, patchOverides+string(etcd.Spec.OperatorSpec.UnsupportedConfigOverrides.Raw))
 	if err != nil {
-		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	return allLogs, nil

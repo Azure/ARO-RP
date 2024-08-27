@@ -494,7 +494,7 @@ func TestPreDeploy(t *testing.T) {
 				m(mockDeployments, mockResourceGroups, mockMSIs, mockKV, mockVMSS, mockVMSSVM, tt.testParams)
 			}
 
-			err := d.PreDeploy(ctx)
+			err := d.PreDeploy(ctx, 0)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -1074,7 +1074,7 @@ func TestConfigureServiceSecrets(t *testing.T) {
 				m(mockKV, mockVMSS, mockVMSSVM, tt.testParams)
 			}
 
-			err := d.configureServiceSecrets(ctx)
+			err := d.configureServiceSecrets(ctx, 0)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -1470,7 +1470,7 @@ func TestRestartOldScalesets(t *testing.T) {
 				m(mockVMSS, mockVMSSVM, tt.testParams)
 			}
 
-			err := d.restartOldScalesets(ctx)
+			err := d.restartOldScalesets(ctx, 0)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -1564,14 +1564,15 @@ func TestRestartOldScaleset(t *testing.T) {
 				m(mockVMSS, tt.testParams)
 			}
 
-			err := d.restartOldScaleset(ctx, tt.testParams.vmssName)
+			err := d.restartOldScaleset(ctx, tt.testParams.vmssName, 0)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
 
 func TestWaitForReadiness(t *testing.T) {
-	ctxTimeout, cancel := context.WithTimeout(context.Background(), 11*time.Second)
+	ctxRegular, cancelRegular := context.WithTimeout(context.Background(), 11*time.Second)
+	ctxFastTimeout, cancelFastTimeout := context.WithTimeout(context.Background(), 0*time.Second)
 
 	type testParams struct {
 		resourceGroup string
@@ -1599,7 +1600,8 @@ func TestWaitForReadiness(t *testing.T) {
 				resourceGroup: rgName,
 				vmssName:      vmssName,
 				vmInstanceID:  instanceID,
-				ctx:           ctxTimeout,
+				ctx:           ctxFastTimeout,
+				cancel:        cancelFastTimeout,
 			},
 			mocks:   []mock{getInstanceViewMock(unhealthyVMSS)},
 			wantErr: "timed out waiting for the condition",
@@ -1610,8 +1612,8 @@ func TestWaitForReadiness(t *testing.T) {
 				resourceGroup: rgName,
 				vmssName:      vmssName,
 				vmInstanceID:  instanceID,
-				ctx:           ctxTimeout,
-				cancel:        cancel,
+				ctx:           ctxRegular,
+				cancel:        cancelRegular,
 			},
 			mocks: []mock{getInstanceViewMock(healthyVMSS)},
 		},
@@ -1634,7 +1636,7 @@ func TestWaitForReadiness(t *testing.T) {
 				m(mockVMSS, tt.testParams)
 			}
 
-			defer cancel()
+			defer tt.testParams.cancel()
 			err := d.waitForReadiness(tt.testParams.ctx, tt.testParams.vmssName, tt.testParams.vmInstanceID)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})

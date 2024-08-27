@@ -15,7 +15,7 @@ function checksum() {
   local API_VERSION=$1
   local FOLDER=$2
 
-  sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json >> .sha256sum
+  sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json >>.sha256sum
 }
 
 function generate_golang() {
@@ -37,7 +37,7 @@ function generate_golang() {
     --version=~2.0.4421 \
     --license-header=MICROSOFT_APACHE_NO_VERSION \
     --namespace=redhatopenshift \
-    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
+    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
     --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
   docker run \
@@ -51,7 +51,7 @@ function generate_golang() {
     "/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/${API_VERSION}/redhatopenshift/models.go" \
     "/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/${API_VERSION}/redhatopenshift/redhatopenshiftapi/interfaces.go"
 
-  go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/client
+  goimports -w -local=github.com/Azure/ARO-RP pkg/client
 }
 
 function generate_python() {
@@ -73,7 +73,7 @@ function generate_python() {
     --azure-arm \
     --license-header=MICROSOFT_APACHE_NO_VERSION \
     --namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
-    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
+    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
     --output-folder=/python/client
 
   rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
@@ -86,8 +86,7 @@ fi
 
 AUTOREST_IMAGE=$1
 
-for API_VERSION in "${@: 2}"
-do
+for API_VERSION in "${@:2}"; do
   FOLDER=stable
   if [[ "$API_VERSION" =~ .*preview ]]; then
     FOLDER=preview

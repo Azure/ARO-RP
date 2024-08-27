@@ -381,7 +381,7 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 	err := immutable.Validate("", oc, current)
 	if err != nil {
 		err := err.(*immutable.ValidationError)
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, "Error Message: %s", err.Message)
 	}
 
 	return nil

@@ -44,7 +44,7 @@ func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 // new goroutine.  It returns a boolean to the caller indicating whether it
 // succeeded in dequeuing anything - if this is false, the caller should sleep
 // before calling again
-func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
+func (ocb *openShiftClusterBackend) try(ctx context.Context, monitorDeleteWaitTimeSec int) (bool, error) {
 	doc, err := ocb.dbOpenShiftClusters.Dequeue(ctx)
 	if err != nil || doc == nil {
 		return false, err
@@ -78,7 +78,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 			log.WithField("duration", time.Since(t).Seconds()).Print("done")
 		}()
 
-		err := ocb.handle(context.Background(), log, doc)
+		err := ocb.handle(context.Background(), log, doc, monitorDeleteWaitTimeSec)
 		if err != nil {
 			log.Error(err)
 		}
@@ -88,7 +88,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 }
 
 // handle is responsible for handling backend operation and lease
-func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
+func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, monitorDeleteWaitTimeSec int) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -199,7 +199,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		// to capture the deletion (by reading from the changefeed)
 		// and stop monitoring the cluster.
 		// TODO: Provide better communication between RP and Monitor
-		time.Sleep(time.Until(t.Add(time.Second * 20)))
+		time.Sleep(time.Until(t.Add(time.Second * time.Duration(monitorDeleteWaitTimeSec))))
 		return ocb.dbOpenShiftClusters.Delete(ctx, doc)
 	}
 

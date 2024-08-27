@@ -35,7 +35,7 @@ func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context,
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
