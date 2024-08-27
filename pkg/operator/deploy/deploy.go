@@ -534,14 +534,27 @@ func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 }
 
 func (o *operator) IsReady(ctx context.Context) (bool, error) {
-	ok, err := ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
+	deployments := o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace)
+	ok, err := ready.CheckDeploymentIsReady(ctx, deployments, "aro-operator-master")()
 	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-master", ok, err)
 	if !ok || err != nil {
+		d, err := deployments.Get(ctx, "aro-operator-master", metav1.GetOptions{})
+		if err != nil {
+			o.log.Debugf("deployment \"aro-operator-master\" error: %s", err)
+		} else {
+			o.log.Debugf("deployment \"aro-operator-master\" status: %v", &d.Status)
+		}
 		return ok, err
 	}
-	ok, err = ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
+	ok, err = ready.CheckDeploymentIsReady(ctx, deployments, "aro-operator-worker")()
 	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-worker", ok, err)
 	if !ok || err != nil {
+		d, err := deployments.Get(ctx, "aro-operator-worker", metav1.GetOptions{})
+		if err != nil {
+			o.log.Debugf("deployment \"aro-operator-worker\" error: %s", err)
+		} else {
+			o.log.Debugf("deployment \"aro-operator-worker\" status: %v", &d.Status)
+		}
 		return ok, err
 	}
 
