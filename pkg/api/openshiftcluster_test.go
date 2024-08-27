@@ -129,14 +129,14 @@ func TestClusterMsiResourceId(t *testing.T) {
 		{
 			name:    "error - cluster doc has nil Identity",
 			oc:      &OpenShiftCluster{},
-			wantErr: "could not find cluster MSI in cluster doc or unexpectedly found more than one cluster MSI",
+			wantErr: "could not find cluster MSI in cluster doc",
 		},
 		{
 			name: "error - cluster doc has non-nil Identity but nil Identity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
 				Identity: &Identity{},
 			},
-			wantErr: "could not find cluster MSI in cluster doc or unexpectedly found more than one cluster MSI",
+			wantErr: "could not find cluster MSI in cluster doc",
 		},
 		{
 			name: "error - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
@@ -145,7 +145,7 @@ func TestClusterMsiResourceId(t *testing.T) {
 					UserAssignedIdentities: UserAssignedIdentities{},
 				},
 			},
-			wantErr: "could not find cluster MSI in cluster doc or unexpectedly found more than one cluster MSI",
+			wantErr: "could not find cluster MSI in cluster doc",
 		},
 		{
 			name: "error - cluster doc has non-nil Identity but two MSIs in Identity.UserAssignedIdentities",
@@ -157,7 +157,7 @@ func TestClusterMsiResourceId(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "could not find cluster MSI in cluster doc or unexpectedly found more than one cluster MSI",
+			wantErr: "unexpectedly found more than one cluster MSI in cluster doc",
 		},
 		{
 			name: "error - invalid resource ID (theoretically not possible, but still)",
