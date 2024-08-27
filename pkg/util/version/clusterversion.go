@@ -53,5 +53,20 @@ func ClusterVersionIsLessThan4_4(ctx context.Context, configcli configclient.Int
 }
 
 func IsClusterUpgrading(cv *configv1.ClusterVersion) bool {
-	return cv.Spec.DesiredUpdate != nil
+	var isUpgrading bool
+	if c := findClusterOperatorStatusCondition(cv.Status.Conditions, configv1.OperatorProgressing); c != nil && c.Status == configv1.ConditionTrue {
+		isUpgrading = true
+	} else {
+		isUpgrading = false
+	}
+	return isUpgrading
+}
+
+func findClusterOperatorStatusCondition(conditions []configv1.ClusterOperatorStatusCondition, name configv1.ClusterStatusConditionType) *configv1.ClusterOperatorStatusCondition {
+	for i := range conditions {
+		if conditions[i].Type == name {
+			return &conditions[i]
+		}
+	}
+	return nil
 }
