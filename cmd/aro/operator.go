@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/cpms"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/etchosts"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
@@ -232,6 +233,16 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", cloudproviderconfig.ControllerName),
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", cloudproviderconfig.ControllerName, err)
+		}
+		if err = (etchosts.NewReconciler(
+			log.WithField("controller", etchosts.ControllerName),
+			client, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", etchosts.ControllerName, err)
+		}
+		if err = (etchosts.NewClusterReconciler(
+			log.WithField("controller", etchosts.ClusterControllerName),
+			client, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", etchosts.ClusterControllerName, err)
 		}
 
 		// only register CPMS controller on clusters that support the CRD
