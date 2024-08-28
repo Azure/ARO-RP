@@ -113,7 +113,7 @@ jobs:
           export CI=true
           . ./hack/e2e/run-rp-and-e2e.sh
 
-          delete_e2e_cluster
+          echo Skipping delete_e2e_cluster
           kill_rp
           kill_selenium
           kill_podman

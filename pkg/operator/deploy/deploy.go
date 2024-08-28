@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -534,31 +535,73 @@ func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 }
 
 func (o *operator) IsReady(ctx context.Context) (bool, error) {
-	deployments := o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace)
-	ok, err := ready.CheckDeploymentIsReady(ctx, deployments, "aro-operator-master")()
-	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-master", ok, err)
-	if !ok || err != nil {
-		d, err := deployments.Get(ctx, "aro-operator-master", metav1.GetOptions{})
-		if err != nil {
-			o.log.Debugf("deployment \"aro-operator-master\" error: %s", err)
-		} else {
-			o.log.Debugf("deployment \"aro-operator-master\" status: %v", &d.Status)
-		}
-		return ok, err
-	}
-	ok, err = ready.CheckDeploymentIsReady(ctx, deployments, "aro-operator-worker")()
-	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-worker", ok, err)
-	if !ok || err != nil {
-		d, err := deployments.Get(ctx, "aro-operator-worker", metav1.GetOptions{})
-		if err != nil {
-			o.log.Debugf("deployment \"aro-operator-worker\" error: %s", err)
-		} else {
-			o.log.Debugf("deployment \"aro-operator-worker\" status: %v", &d.Status)
-		}
-		return ok, err
-	}
+	var deploymentOk bool = false
+	var deploymentErr error
 
-	return true, nil
+	deployments := o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace)
+	replicasets := o.kubernetescli.AppsV1().ReplicaSets(pkgoperator.Namespace)
+	pods := o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace)
+
+	for _, deployment := range []string{"aro-operator-master", "aro-operator-worker"} {
+		ok, err := ready.CheckDeploymentIsReady(ctx, deployments, deployment)()
+		o.log.Infof("deployment %q ok status is: %v, err is: %v", deployment, ok, err)
+		deploymentOk = deploymentOk || ok
+		if deploymentErr == nil && err != nil {
+			deploymentErr = err
+		}
+		if !ok {
+			d, err := deployments.Get(ctx, deployment, metav1.GetOptions{})
+			if err != nil {
+				o.log.Errorf("failed to get deployment %q: %s", deployment, err)
+				continue
+			}
+			j, err := json.Marshal(d.Status)
+			if err != nil {
+				o.log.Errorf("failed to serialize deployment %q: %s", deployment, err)
+				continue
+			}
+			o.log.Infof("deployment %q status: %s", deployment, string(j))
+
+			rs, err := replicasets.List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("app=%s", deployment)})
+			if err != nil {
+				o.log.Errorf("failed to list replicasets: %s", err)
+				continue
+			}
+			for _, replicaset := range rs.Items {
+				r, err := replicasets.Get(ctx, replicaset.Name, metav1.GetOptions{})
+				if err != nil {
+					o.log.Errorf("failed to get replicaset %s: %s", replicaset.Name, err)
+					continue
+				}
+				j, err := json.Marshal(r.Status)
+				if err != nil {
+					o.log.Errorf("failed to serialize replicaset status %q: %s", replicaset.Name, err)
+					continue
+				}
+				o.log.Infof("replicaset %q status: %s", replicaset.Name, string(j))
+			}
+
+			ps, err := pods.List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("app=%s", deployment)})
+			if err != nil {
+				o.log.Errorf("failed to list pods: %s", err)
+				continue
+			}
+			for _, pod := range ps.Items {
+				p, err := pods.Get(ctx, pod.Name, metav1.GetOptions{})
+				if err != nil {
+					o.log.Errorf("failed to get pod %s: %s", pod.Name, err)
+					continue
+				}
+				j, err := json.Marshal(p.Status)
+				if err != nil {
+					o.log.Errorf("failed to serialize pod status %q: %s", pod.Name, err)
+					continue
+				}
+				o.log.Infof("pod %q status: %s", pod.Name, string(j))
+			}
+		}
+	}
+	return deploymentOk, deploymentErr
 }
 
 func (o *operator) Restart(ctx context.Context, deploymentNames []string) error {

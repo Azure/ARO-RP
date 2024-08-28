@@ -4,12 +4,15 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Azure/ARO-RP/pkg/cluster/failurediagnostics"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -19,14 +22,15 @@ type diagnosticStep struct {
 }
 
 func (m *manager) gatherFailureLogs(ctx context.Context) {
-	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines)
+	// d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines)
 
 	for _, f := range []diagnosticStep{
 		{f: m.logClusterVersion, isJSON: true},
 		{f: m.logNodes, isJSON: true},
 		{f: m.logClusterOperators, isJSON: true},
 		{f: m.logIngressControllers, isJSON: true},
-		{f: d.LogVMSerialConsole, isJSON: false},
+		{f: m.logPodLogs, isJSON: false},
+		// {f: d.LogVMSerialConsole, isJSON: false},
 	} {
 		o, err := f.f(ctx)
 		if err != nil {
@@ -120,4 +124,47 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 	}
 
 	return ics.Items, nil
+}
+
+func (m *manager) logPodLogs(ctx context.Context) (interface{}, error) {
+	if m.operatorcli == nil {
+		return nil, nil
+	}
+
+	tailLines := int64(20)
+	podLogOptions := corev1.PodLogOptions{
+		TailLines: &tailLines,
+	}
+	items := make([]interface{}, 0)
+
+	pods, err := m.kubernetescli.CoreV1().Pods("openshift-azure-operator").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, i := range pods.Items {
+		items = append(items, fmt.Sprintf("pod status %s: %v", i.Name, i.Status))
+
+		req := m.kubernetescli.CoreV1().Pods("openshift-azure-operator").GetLogs(i.Name, &podLogOptions)
+		logForPod := m.log.WithField("pod", i.Name)
+		logStream, err := req.Stream(ctx)
+		if err != nil {
+			items = append(items, fmt.Sprintf("pod logs retrieval error for %s: %s", i.Name, err))
+			continue
+		}
+		defer logStream.Close()
+
+		reader := bufio.NewReader(logStream)
+		for {
+			line, err := reader.ReadString('\n')
+			logForPod.Info(line)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				m.log.Errorf("pod logs reading error for %s: %s", i.Name, err)
+				break
+			}
+		}
+	}
+	return items, nil
 }
