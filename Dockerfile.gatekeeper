@@ -1,5 +1,5 @@
 ARG REGISTRY
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.23-fips-cbl-mariner2.0 AS builder
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.23-cbl-mariner2.0 AS builder
 ARG GATEKEEPER_VERSION
 ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
 

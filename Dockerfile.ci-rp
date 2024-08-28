@@ -23,7 +23,7 @@ LABEL stage="portal-build-cache-layer"
 ###############################################################################
 # Stage 2: Compile the Golang RP code
 ###############################################################################
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.23-fips-cbl-mariner2.0 AS builder
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.23-cbl-mariner2.0 AS builder
 ARG ARO_VERSION
 LABEL aro-builder=true
 USER root

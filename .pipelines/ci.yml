@@ -23,7 +23,7 @@ pr:
 resources:
   containers:
     - container: golang
-      image: mcr.microsoft.com/oss/go/microsoft/golang:1.23-fips-cbl-mariner2.0
+      image: mcr.microsoft.com/oss/go/microsoft/golang:1.23-cbl-mariner2.0
       options: --user=0
     - container: python
       image: registry.access.redhat.com/ubi8/python-39:latest

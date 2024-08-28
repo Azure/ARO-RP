@@ -9,7 +9,7 @@ parameters:
 resources:
   containers:
     - container: golang
-      image: mcr.microsoft.com/oss/go/microsoft/golang:1.23-fips-cbl-mariner2.0
+      image: mcr.microsoft.com/oss/go/microsoft/golang:1.23-cbl-mariner2.0
       options: --user=0
 
 variables:

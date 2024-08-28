@@ -104,7 +104,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 
 		// https://mcr.microsoft.com/en-us/product/oss/go/microsoft/golang/about
-		"mcr.microsoft.com/oss/go/microsoft/golang:1.23-fips-cbl-mariner2.0",
+		"mcr.microsoft.com/oss/go/microsoft/golang:1.23-cbl-mariner2.0",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
