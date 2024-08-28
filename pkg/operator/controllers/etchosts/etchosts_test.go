@@ -30,7 +30,6 @@ func TestGenerateEtcHostsAROConf(t *testing.T) {
 				tc.input.GatewayDomains, tc.input.GatewayPrivateEndpointIP)
 			assert.Equal(t, tc.expected, string(actual))
 		})
-
 	}
 }
 
@@ -51,7 +50,6 @@ func TestGenerateEtcHostsAROScript(t *testing.T) {
 			actual, _ := GenerateEtcHostsAROScript()
 			assert.Equal(t, tc.expected, string(actual))
 		})
-
 	}
 }
 
@@ -72,6 +70,5 @@ func TestGenerateEtcHostsAROUnit(t *testing.T) {
 			actual, _ := GenerateEtcHostsAROUnit()
 			assert.Equal(t, tc.expected, actual)
 		})
-
 	}
 }

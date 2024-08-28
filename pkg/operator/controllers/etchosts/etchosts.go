@@ -242,5 +242,4 @@ func EtcHostsMachineConfig(clusterDomain string, apiIntIP string, gatewayDomains
 			Config: rawExt,
 		},
 	}, nil
-
 }
