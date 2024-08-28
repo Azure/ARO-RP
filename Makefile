@@ -20,7 +20,7 @@ GATEKEEPER_VERSION = v3.15.1
 GOTESTSUM = gotest.tools/gotestsum@v1.12.0
 
 # Golang version go mod tidy compatibility
-GOLANG_VERSION ?= 1.23
+GOLANG_VERSION ?= 1.22
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
