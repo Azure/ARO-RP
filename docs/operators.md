@@ -101,13 +101,13 @@ go run ./cmd/aro operator master
 
    * Pre-requisite:
      ```
-     ACR created in Azure Portal with Name ${USER}aro
+     ACR created in Azure Portal with Name ${AZURE_PREFIX}aro
      2GB+ of Free RAM
      ```
 
     * Setup environment variables
       ```bash
-      export DST_ACR_NAME=${USER}aro
+      export DST_ACR_NAME=${AZURE_PREFIX}aro
       export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken) | base64 -w0)
       ```
 

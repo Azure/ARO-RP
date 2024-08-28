@@ -137,19 +137,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 	}
 
-	if isCreate {
-		// Persist identity URL and tenant ID only for managed/workload identity cluster create
-		// We don't support updating cluster managed identity after cluster creation
-		if doc.OpenShiftCluster.UsesWorkloadIdentity() {
-			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
-				return nil, err
-			}
-			if err := validateIdentityTenantID(doc.OpenShiftCluster, putOrPatchClusterParameters.identityTenantID); err != nil {
-				return nil, err
-			}
-		}
-	}
-
 	doc.CorrelationData = putOrPatchClusterParameters.correlationData
 
 	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
@@ -259,6 +246,17 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
+
+		// Persist identity URL and tenant ID only for managed/workload identity cluster create
+		// We don't support updating cluster managed identity after cluster creation
+		if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
+				return nil, err
+			}
+			if err := validateIdentityTenantID(doc.OpenShiftCluster, putOrPatchClusterParameters.identityTenantID); err != nil {
+				return nil, err
+			}
+		}
 
 		doc.Bucket, err = f.bucketAllocator.Allocate()
 		if err != nil {

@@ -10,11 +10,13 @@ MDMFRONTENDURL=https://global.ppe.microsoftmetrics.com/
 MDMSOURCEENVIRONMENT=$LOCATION
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE=$HOSTNAME
+# use unique prefix for Azure resources when it is set, otherwise use your user's name
+export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
 
 echo "Using:"
 
 echo "Resourcegroup = $RESOURCEGROUP"
-echo "User          = $USER"
+echo "AzurePrefix   = $AZURE_PREFIX"
 echo "HOSTNAME      = $HOSTNAME"
 echo "Containername = $NAME"
 echo "Location      = $LOCATION"
@@ -22,10 +24,10 @@ echo "MDM image     = $MDMIMAGE"
 echo "  (version hardcoded. Check against pkg/util/version/const.go if things don't work)"
 echo "Geneva API URL= $MDMFRONTENDURL"
 echo "MDMSOURCEENV  = $MDMSOURCEENVIRONMENT"
-echo "MDMSOURCEROLE  = $MDMSOURCEROLE"
+echo "MDMSOURCEROLE = $MDMSOURCEROLE"
 echo "MDMSOURCEROLEINSTANCE  = $MDMSOURCEROLEINSTANCE"
 
-VMName="$USER-mdm-link"
+VMName="$AZURE_PREFIX-mdm-link"
 
 CLOUDUSER="cloud-user"
 

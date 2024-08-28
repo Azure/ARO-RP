@@ -23,7 +23,6 @@ import {
   mergeStyleSets,
   registerIcons,
 } from "@fluentui/react"
-import { AxiosResponse } from "axios"
 import { useBoolean } from "@fluentui/react-hooks"
 import { SSHModal } from "./SSHModal"
 import { ClusterDetailPanel } from "./ClusterDetail"
@@ -178,7 +177,7 @@ export interface IClusterDetail {
 function App() {
   const [data, updateData] = useState({ location: "", csrf: "", elevated: false, username: "" })
   const [regions, setRegions] = useState<any>([])
-  const [error, setError] = useState<AxiosResponse | null>(null)
+  const [error, setError] = useState<Response | null>(null)
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false)
   const [fetching, setFetching] = useState("")
 
@@ -192,19 +191,20 @@ function App() {
   }
 
   useEffect(() => {
-    const onData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateData(result.data)
-        csrfRef.current = result.data.csrf
+    const onData = async (result: Response) => {
+      if (result.status === 200) {
+        const data = await result.json()
+        updateData(data)
+        csrfRef.current = data.csrf
       } else {
         setError(result)
       }
       setFetching("DONE")
     }
 
-    const onRegions = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        setRegions(result.data)
+    const onRegions = async (result: Response) => {
+      if (result.status === 200) {
+        setRegions(await result.json())
       } else {
         setError(result)
       }
