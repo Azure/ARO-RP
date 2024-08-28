@@ -26,6 +26,10 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 			RoleDefinitionName: r.RoleDefinitionName,
 			RoleDefinitionID:   r.RoleDefinitionID,
 			ServiceAccounts:    make([]string, 0, len(r.ServiceAccounts)),
+			SecretLocation: SecretLocation{
+				Namespace: r.SecretLocation.Namespace,
+				Name:      r.SecretLocation.Name,
+			},
 		}
 
 		role.ServiceAccounts = append(role.ServiceAccounts, r.ServiceAccounts...)
