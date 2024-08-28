@@ -495,6 +495,12 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 						},
 					},
 					Status: configv1.ClusterVersionStatus{
+						Conditions: []configv1.ClusterOperatorStatusCondition{
+							{
+								Type:   configv1.OperatorProgressing,
+								Status: configv1.ConditionTrue,
+							},
+						},
 						History: []configv1.UpdateHistory{
 							{
 								State:   configv1.CompletedUpdate,
