@@ -142,7 +142,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 			wantPlatformIdentities: []string{"Dummy1", "Dummy2"},
 		},
 		{
-			name: "Success - The role set document found for the cluster and upgradeable version(with lesser than current version)",
+			name: "Success - Role set document found for cluster version; UpgradeableTo version ignored because it is less than cluster version",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{
@@ -164,19 +164,34 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 							},
 						},
 					},
+				})
+			},
+			wantPlatformIdentities: []string{"Dummy1"},
+		},
+		{
+			name: "Success - Role set document found for cluster version; UpgradeableTo version ignored because upgradeable minor version is equal to cluster minor version",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.40",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo("4.14.60")),
+					},
 				},
-					&api.PlatformWorkloadIdentityRoleSetDocument{
-						PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
-							Name: "Dummy2",
-							Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-								OpenShiftVersion: "4.15",
-								PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-									{OperatorName: "Dummy2"},
-								},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Name: "Dummy1",
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{OperatorName: "Dummy1"},
 							},
 						},
 					},
-				)
+				})
 			},
 			wantPlatformIdentities: []string{"Dummy1"},
 		},

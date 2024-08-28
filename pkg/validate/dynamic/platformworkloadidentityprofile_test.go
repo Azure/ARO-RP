@@ -167,7 +167,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			OperatorName: "Dummy1",
 		},
 	}
-	openShiftVersion := "4.13.40"
+	openShiftVersion := "4.14.40"
 
 	for _, tt := range []struct {
 		name                             string
@@ -301,7 +301,53 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s or %s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, openShiftVersion, "4.15.40"),
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s or %s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14", "4.15"),
+		},
+		{
+			name: "Fail - UpgradeableTo is provided(ignored because minor version is equal to cluster minor version), but desired identities are not fulfilled",
+			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+				"Dummy3": {
+					OperatorName: "Dummy3",
+				},
+			},
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: platformWorkloadIdentities,
+						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.14.60")),
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version: openShiftVersion,
+					},
+				},
+				Identity: &api.Identity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
+		},
+		{
+			name: "Fail - UpgradeableTo is provided(ignored because upgradeable version is smaller than cluster version), but desired identities are not fulfilled",
+			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+				"Dummy3": {
+					OperatorName: "Dummy3",
+				},
+			},
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: platformWorkloadIdentities,
+						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.13.60")),
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version: openShiftVersion,
+					},
+				},
+				Identity: &api.Identity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
 			name:                  "Fail - Mismatch between desired and provided platform Identities - count mismatch 2",
@@ -319,7 +365,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, openShiftVersion),
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
 			name:                  "Fail - Mismatch between desired and provided platform Identities - different operators",
@@ -346,7 +392,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, openShiftVersion),
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
 			name:                  "Fail - MSI Resource ID is invalid",
