@@ -5,7 +5,6 @@ package dnsmasq
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -382,11 +381,8 @@ func TestClusterReconciler(t *testing.T) {
 				}
 			}
 
-			fmt.Println("tt.name: ", tt.name)
 			e, err = testclienthelper.CompareTally(tt.wantUpdated, updateTally)
 			if err != nil {
-				fmt.Println("tt.wantUpdated: ", tt.wantUpdated)
-				fmt.Println("updateTally: ", updateTally)
 				t.Errorf("update comparison: %v", err)
 				for _, i := range e {
 					t.Error(i)
