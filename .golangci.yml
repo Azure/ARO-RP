@@ -23,6 +23,15 @@ issues:
       text: "SA1019: codec.BasicHandle is deprecated"
     # This is set to false to disregard the default EXC0011 exclusion
     # which shadows all the ST* checks. Refer https://github.com/golangci/golangci-lint/issues/2281
+    - linters:
+        - govet
+      text: "printf: non-constant format string"
+    - linters:
+        - staticcheck
+      text: "SA1006: printf-style function with dynamic format"
+    - linters:
+        - gosimple
+      text: "S1009: should omit nil check"
     - path: "pkg/client/(.+)\\.go"
       linters:
         - importas
