@@ -1364,7 +1364,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Properties.ServicePrincipalProfile = nil
 				oc.Identity = &Identity{}
 			},
-			wantErr: "400: InvalidParameter: identity: The provided set of user assigned identities is invalid; there should be exactly one.",
+			wantErr: "400: InvalidParameter: identity: The provided cluster identity is invalid; there should be exactly one.",
 		},
 		{
 			name: "operator name missing",

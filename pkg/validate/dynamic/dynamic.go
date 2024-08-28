@@ -106,6 +106,7 @@ type AuthorizerType string
 const (
 	AuthorizerFirstParty              AuthorizerType = "resource provider"
 	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
+	AuthorizerWorkloadIdentity        AuthorizerType = "workload identity"
 )
 
 func NewValidator(

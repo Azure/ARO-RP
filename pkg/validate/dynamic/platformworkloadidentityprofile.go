@@ -47,7 +47,7 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 			if err != nil {
 				return err
 			}
-			if !upgradeableVersion.Eq(currentOpenShiftVersion) && !currentOpenShiftVersion.Lt(upgradeableVersion) {
+			if !upgradeableVersion.Eq(currentOpenShiftVersion) && currentOpenShiftVersion.Lt(upgradeableVersion) {
 				v = fmt.Sprintf("%s or %s", v, string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo))
 			}
 		}
@@ -85,7 +85,7 @@ func (dv *dynamic) validateClusterMSI(ctx context.Context, oc *api.OpenShiftClus
 	return nil
 }
 
-// Validate all Platform Identities such that Cluster MSI can perform actions present in role AzureRedHatOpenShiftFederatedCredentialRole
+// Validate that the cluster MSI has all permissions specified in AzureRedHatOpenShiftFederatedCredentialRole over each platform managed identity
 func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, oid string, platformIdentities []api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
 	actions, err := getActionsForRoleDefinition(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, roleDefinitions)
 	if err != nil {

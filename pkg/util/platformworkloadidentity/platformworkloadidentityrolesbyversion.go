@@ -22,13 +22,13 @@ type platformWorkloadIdentityRolesByVersionService struct {
 	platformWorkloadIdentityRoles []api.PlatformWorkloadIdentityRole
 }
 
+// NewPlatformWorkloadIdentityRolesByVersion aims to populate platformWorkloadIdentityRoles for current OpenShift minor version and also for UpgradeableTo minor version if provided and is greater than the current version
 func NewPlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets) (PlatformWorkloadIdentityRolesByVersion, error) {
 	if !oc.UsesWorkloadIdentity() {
 		return nil, nil
 	}
 
-	currentInstallVersion := oc.Properties.ClusterProfile.Version
-	currentOpenShiftVersion, err := version.ParseVersion(currentInstallVersion)
+	currentOpenShiftVersion, err := version.ParseVersion(oc.Properties.ClusterProfile.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func NewPlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.Open
 			return nil, err
 		}
 		upgradeableMinorVersion := upgradeableVersion.MinorVersion()
-		if currentMinorVersion != upgradeableMinorVersion && !currentOpenShiftVersion.Lt(upgradeableVersion) {
+		if currentMinorVersion != upgradeableMinorVersion && currentOpenShiftVersion.Lt(upgradeableVersion) {
 			requiredMinorVersions[upgradeableMinorVersion] = false
 		}
 	}

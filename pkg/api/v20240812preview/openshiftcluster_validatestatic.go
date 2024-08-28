@@ -501,7 +501,7 @@ func (sv openShiftClusterStaticValidator) validatePlatformIdentities(oc *OpenShi
 	}
 
 	if operatorRolePresent && len(oc.Identity.UserAssignedIdentities) != 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "identity", "The provided set of user assigned identities is invalid; there should be exactly one.")
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "identity", "The provided cluster identity is invalid; there should be exactly one.")
 	}
 
 	return nil

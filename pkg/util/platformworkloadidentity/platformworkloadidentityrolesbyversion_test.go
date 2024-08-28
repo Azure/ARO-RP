@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -14,22 +16,21 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-const fakeClusterSPObjectId = "00000000-0000-0000-0000-000000000000"
-
 func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		oc      *api.OpenShiftCluster
-		fixture func(f *testdatabase.Fixture)
-		mocks   func(dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets)
-		wantErr string
+		name                   string
+		oc                     *api.OpenShiftCluster
+		fixture                func(f *testdatabase.Fixture)
+		mocks                  func(dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets)
+		wantErr                string
+		wantPlatformIdentities []string
 	}{
 		{
 			name: "Success - Exit the func for non MIWI clusters that has ServicePrincipalProfile",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ServicePrincipalProfile: &api.ServicePrincipalProfile{
-						SPObjectID: fakeClusterSPObjectId,
+						SPObjectID: "00000000-0000-0000-0000-000000000000",
 					},
 				},
 			},
@@ -61,6 +62,123 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 					},
 				})
 			},
+		},
+		{
+			name: "Success - The role set document found for the cluster and upgradeable version",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.40",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+					},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Name: "Dummy1",
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{OperatorName: "Dummy1"},
+							},
+						},
+					},
+				},
+					&api.PlatformWorkloadIdentityRoleSetDocument{
+						PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+							Name: "Dummy2",
+							Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+								OpenShiftVersion: "4.15",
+								PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+									{OperatorName: "Dummy1"},
+								},
+							},
+						},
+					},
+				)
+			},
+			wantPlatformIdentities: []string{"Dummy1"},
+		},
+		{
+			name: "Success - The role set document found for the cluster and upgradeable version(with new identity)",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.40",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+					},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Name: "Dummy1",
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{OperatorName: "Dummy1"},
+							},
+						},
+					},
+				},
+					&api.PlatformWorkloadIdentityRoleSetDocument{
+						PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+							Name: "Dummy2",
+							Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+								OpenShiftVersion: "4.15",
+								PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+									{OperatorName: "Dummy2"},
+								},
+							},
+						},
+					},
+				)
+			},
+			wantPlatformIdentities: []string{"Dummy1", "Dummy2"},
+		},
+		{
+			name: "Success - The role set document found for the cluster and upgradeable version(with lesser than current version)",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.40",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo("4.13.40")),
+					},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Name: "Dummy1",
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{OperatorName: "Dummy1"},
+							},
+						},
+					},
+				},
+					&api.PlatformWorkloadIdentityRoleSetDocument{
+						PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+							Name: "Dummy2",
+							Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+								OpenShiftVersion: "4.15",
+								PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+									{OperatorName: "Dummy2"},
+								},
+							},
+						},
+					},
+				)
+			},
+			wantPlatformIdentities: []string{"Dummy1"},
 		},
 		{
 			name: "Failed - The role set documents listAll returns empty",
@@ -97,6 +215,31 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: : No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '4.14'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket",
 		},
+		{
+			name: "Failed - The role set documents listAll is missing the requested upgradeable version",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.26",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+					},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Name: "Dummy1",
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion:              "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{},
+						},
+					},
+				})
+			},
+			wantErr: "400: InvalidParameter: : No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '4.15'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket",
+		},
 	} {
 		ctx := context.Background()
 
@@ -115,8 +258,18 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewPlatformWorkloadIdentityRolesByVersion(ctx, tt.oc, dbPlatformWorkloadIdentityRoleSets)
+			pir, err := NewPlatformWorkloadIdentityRolesByVersion(ctx, tt.oc, dbPlatformWorkloadIdentityRoleSets)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			if tt.wantPlatformIdentities != nil {
+				platformWorkloadIdentityRolesByRoleName := pir.GetPlatformWorkloadIdentityRolesByRoleName()
+				for _, operatorName := range tt.wantPlatformIdentities {
+					_, ok := platformWorkloadIdentityRolesByRoleName[operatorName]
+					if !ok {
+						t.Fatalf("Incorrect platformWorkloadIdentityRolesByRoleName created, %s does not exist. %s", operatorName, platformWorkloadIdentityRolesByRoleName)
+					}
+				}
+			}
 		})
 	}
 }

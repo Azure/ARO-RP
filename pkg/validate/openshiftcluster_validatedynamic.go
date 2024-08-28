@@ -135,7 +135,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	scopes := []string{dv.env.Environment().ResourceManagerScope}
 	var spDynamic dynamic.Dynamic
-	if dv.oc.Properties.PlatformWorkloadIdentityProfile == nil || dv.oc.Properties.ServicePrincipalProfile != nil {
+	if !dv.oc.UsesWorkloadIdentity() {
 		// SP validation
 		spp := dv.oc.Properties.ServicePrincipalProfile
 		options := dv.env.Environment().ClientSecretCredentialOptions()
@@ -171,9 +171,9 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			dv.env,
 			dv.env.Environment(),
 			dv.subscriptionDoc.ID,
+			dv.fpAuthorizer,
 			nil,
-			nil,
-			dynamic.AuthorizerClusterServicePrincipal,
+			dynamic.AuthorizerWorkloadIdentity,
 			nil,
 			pdpClient,
 		)
