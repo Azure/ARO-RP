@@ -66,7 +66,7 @@ endif
 
 .PHONY: build-all
 build-all:
-	go build ./...
+	go build -buildvcs=false ./...
 
 .PHONY: aro
 aro: check-release generate

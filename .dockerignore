@@ -15,4 +15,3 @@ gomock_reflect_*
 cmd/aro/__debug_bin
 python/az/aro/build
 python/az/aro/dist
-.git
