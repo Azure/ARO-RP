@@ -44,10 +44,6 @@ func (m *manager) generateWorkloadIdentityResources() ([]kruntime.Object, error)
 }
 
 func (m *manager) generatePlatformWorkloadIdentitySecrets() ([]*corev1.Secret, error) {
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		return nil, fmt.Errorf("generatePlatformWorkloadIdentitySecrets called for a CSP cluster")
-	}
-
 	subscriptionId := m.subscriptionDoc.ID
 	tenantId := m.subscriptionDoc.Subscription.Properties.TenantID
 	region := m.doc.OpenShiftCluster.Location
