@@ -33,26 +33,26 @@ import (
 )
 
 var (
-	errMsgSPHasMissingReaderRole               = "The %s service principal (Application ID: %s) does not have Reader permission"
-	errMsgSPHasMissingNetworkContributorRole   = "The %s service principal (Application ID: %s) does not have Network Contributor role"
-	errMsgPlatformIdentityHasMissingPermission = "The %s platform managed identity does not have required permissions"
-	errMsgNSGAttached                          = "The provided subnet '%s' is invalid: must not have a network security group attached."
-	errMsgOriginalNSGNotAttached               = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
-	errMsgNSGNotAttached                       = "The provided subnet '%s' is invalid: must have a network security group attached."
-	errMsgNSGNotProperlyAttached               = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
-	errMsgMissingPermissionsOnNSG              = "on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
-	errMsgSubnetNotFound                       = "The provided subnet '%s' could not be found."
-	errMsgSubnetNotInSucceededState            = "The provided subnet '%s' is not in a Succeeded state"
-	errMsgSubnetInvalidSize                    = "The provided subnet '%s' is invalid: must be /27 or larger."
-	errMsgMissingPermissionsOnVNet             = "on vnet '%s'."
-	errMsgMissingPermissionsOnDES              = "on disk encryption set '%s'."
-	errMsgVnetNotFound                         = "The vnet '%s' could not be found."
-	errMsgMissingPermissionsOnRT               = "on route table '%s'."
-	errMsgRTNotFound                           = "The route table '%s' could not be found."
-	errMsgMissingPermissionsOnNatGW            = "on nat gateway '%s'."
-	errMsgNatGWNotFound                        = "The nat gateway '%s' could not be found."
-	errMsgCIDROverlaps                         = "The provided CIDRs must not overlap: '%s'."
-	errMsgInvalidVNetLocation                  = "The vnet location '%s' must match the cluster location '%s'."
+	errMsgNSGAttached                       = "The provided subnet '%s' is invalid: must not have a network security group attached."
+	errMsgOriginalNSGNotAttached            = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
+	errMsgNSGNotAttached                    = "The provided subnet '%s' is invalid: must have a network security group attached."
+	errMsgNSGNotProperlyAttached            = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
+	errMsgSPHasNoRequiredPermissionsOnNSG   = "The %s service principal (Application ID: %s) does not have Network Contributor role on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
+	errMsgWIHasNoRequiredPermissionsOnNSG   = "The %s platform managed identity does not have required permissions on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
+	errMsgSubnetNotFound                    = "The provided subnet '%s' could not be found."
+	errMsgSubnetNotInSucceededState         = "The provided subnet '%s' is not in a Succeeded state"
+	errMsgSubnetInvalidSize                 = "The provided subnet '%s' is invalid: must be /27 or larger."
+	errMsgSPHasNoRequiredPermissionsOnVNet  = "The %s service principal (Application ID: %s) does not have Network Contributor role on vnet '%s'."
+	errMsgWIHasNoRequiredPermissionsOnVNet  = "The %s platform managed identity does not have required permissions on vnet '%s'."
+	errMsgVnetNotFound                      = "The vnet '%s' could not be found."
+	errMsgSPHasNoRequiredPermissionsOnRT    = "The %s service principal does not have Network Contributor role on route table '%s'."
+	errMsgWIHasNoRequiredPermissionsOnRT    = "The %s platform managed identity does not have required permissions on route table '%s'."
+	errMsgRTNotFound                        = "The route table '%s' could not be found."
+	errMsgSPHasNoRequiredPermissionsOnNatGW = "The %s service principal does not have Network Contributor role on nat gateway '%s'."
+	errMsgWIHasNoRequiredPermissionsOnNatGW = "The %s platform managed identity does not have required permissions on nat gateway '%s'."
+	errMsgNatGWNotFound                     = "The nat gateway '%s' could not be found."
+	errMsgCIDROverlaps                      = "The provided CIDRs must not overlap: '%s'."
+	errMsgInvalidVNetLocation               = "The vnet location '%s' must match the cluster location '%s'."
 )
 
 const minimumSubnetMaskSize int = 27
@@ -229,7 +229,30 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		"Microsoft.Network/virtualNetworks/subnets/write",
 	})
 
-	noPermissionsErr := dv.noPermissionsErr(errCode, errMsgMissingPermissionsOnVNet, errMsgSPHasMissingNetworkContributorRole, "", operatorName, vnet.String())
+	var noPermissionsErr *api.CloudError
+	if err != nil {
+		if dv.authorizerType == AuthorizerWorkloadIdentity {
+			noPermissionsErr = api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				"",
+				errMsgWIHasNoRequiredPermissionsOnVNet,
+				*operatorName,
+				vnet.String(),
+			)
+		} else {
+			noPermissionsErr = api.NewCloudError(
+				http.StatusBadRequest,
+				errCode,
+				"",
+				errMsgSPHasNoRequiredPermissionsOnVNet,
+				dv.authorizerType,
+				*dv.appID,
+				vnet.String(),
+			)
+		}
+	}
+
 	if err == wait.ErrWaitTimeout {
 		return noPermissionsErr
 	}
@@ -297,7 +320,24 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		"Microsoft.Network/routeTables/write",
 	})
 	if err == wait.ErrWaitTimeout {
-		return dv.noPermissionsErr(errCode, errMsgMissingPermissionsOnRT, errMsgSPHasMissingNetworkContributorRole, "", operatorName, rtID)
+		if dv.authorizerType == AuthorizerWorkloadIdentity {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				"",
+				errMsgWIHasNoRequiredPermissionsOnRT,
+				*operatorName,
+				rtID,
+			)
+		}
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			errCode,
+			"",
+			errMsgSPHasNoRequiredPermissionsOnRT,
+			dv.authorizerType,
+			rtID,
+		)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
@@ -356,7 +396,24 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 		"Microsoft.Network/natGateways/write",
 	})
 	if err == wait.ErrWaitTimeout {
-		return dv.noPermissionsErr(errCode, errMsgMissingPermissionsOnNatGW, errMsgSPHasMissingNetworkContributorRole, "", operatorName, ngID)
+		if dv.authorizerType == AuthorizerWorkloadIdentity {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				"",
+				errMsgWIHasNoRequiredPermissionsOnNatGW,
+				*operatorName,
+				ngID,
+			)
+		}
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			errCode,
+			"",
+			errMsgSPHasNoRequiredPermissionsOnNatGW,
+			dv.authorizerType,
+			ngID,
+		)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
@@ -802,36 +859,28 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
 		if dv.authorizerType == AuthorizerClusterServicePrincipal {
 			errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
+		} else if dv.authorizerType == AuthorizerWorkloadIdentity {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				"",
+				errMsgWIHasNoRequiredPermissionsOnNSG,
+				*operatorName,
+				nsgID,
+			)
 		}
-		return dv.noPermissionsErr(errCode, errMsgMissingPermissionsOnNSG, errMsgSPHasMissingNetworkContributorRole, "", operatorName, nsgID)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			errCode,
+			"",
+			errMsgSPHasNoRequiredPermissionsOnNSG,
+			dv.authorizerType,
+			*dv.appID,
+			nsgID,
+		)
 	}
 
 	return err
-}
-
-func (dv *dynamic) noPermissionsErr(errCode string, errMsg string, errMsgSPHasMissingRole string, target string, operatorName *string, resource string) *api.CloudError {
-	var noPermissionsErr *api.CloudError
-	if operatorName != nil {
-		noPermissionsErr = api.NewCloudError(
-			http.StatusBadRequest,
-			errCode,
-			target,
-			fmt.Sprintf("%s %s", errMsgPlatformIdentityHasMissingPermission, errMsg),
-			*operatorName,
-			resource,
-		)
-	} else {
-		noPermissionsErr = api.NewCloudError(
-			http.StatusBadRequest,
-			errCode,
-			target,
-			fmt.Sprintf("%s %s", errMsgSPHasMissingRole, errMsg),
-			dv.authorizerType,
-			*dv.appID,
-			resource,
-		)
-	}
-	return noPermissionsErr
 }
 
 func isTheSameNSG(found, inDB string) bool {

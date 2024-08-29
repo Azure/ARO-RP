@@ -53,6 +53,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 				platformIdentityMap map[string][]string
 				mocks               func(*mock_compute.MockDiskEncryptionSetsClient, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc)
 				wantErr             string
+				wantFPSPErr         string
 			}{
 				{
 					name: "no disk encryption set provided",
@@ -281,7 +282,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 								cancel()
 							})
 					},
-					wantErr: fmt.Sprintf("400: %s: properties.masterProfile.diskEncryptionSetId: The %s service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Reader permission on disk encryption set '%s'.", wantErrCode, authorizerType, fakeDesID1),
+					wantErr: fmt.Sprintf("400: %s: properties.masterProfile.diskEncryptionSetId: The %s service principal does not have Reader permission on disk encryption set '%s'.", wantErrCode, authorizerType, fakeDesID1),
 				},
 				{
 					name: "Fail - MIWI Cluster - permissions don't exist on diskEncryptionSet",
@@ -308,7 +309,8 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					platformIdentityMap: map[string][]string{
 						"Dummy": platformIdentity1SubnetActions,
 					},
-					wantErr: fmt.Sprintf("400: %s: properties.masterProfile.diskEncryptionSetId: The Dummy platform managed identity does not have required permissions on disk encryption set '%s'.", wantErrCode, fakeDesID1),
+					wantErr:     fmt.Sprintf("400: %s: properties.masterProfile.diskEncryptionSetId: The Dummy platform managed identity does not have required permissions on disk encryption set '%s'.", api.CloudErrorCodeInvalidWorkloadIdentityPermissions, fakeDesID1),
+					wantFPSPErr: fmt.Sprintf("400: %s: properties.masterProfile.diskEncryptionSetId: The %s service principal does not have Reader permission on disk encryption set '%s'.", wantErrCode, authorizerType, fakeDesID1),
 				},
 				{
 					name: "one of the disk encryption set permissions not found",
@@ -397,6 +399,11 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					if tt.platformIdentities != nil {
 						dv.platformIdentities = tt.platformIdentities
 						dv.platformIdentitiesActionsMap = tt.platformIdentityMap
+						if authorizerType == AuthorizerClusterServicePrincipal {
+							dv.authorizerType = AuthorizerWorkloadIdentity
+						} else {
+							tt.wantErr = tt.wantFPSPErr
+						}
 					}
 
 					err := dv.ValidateDiskEncryptionSets(ctx, tt.oc)

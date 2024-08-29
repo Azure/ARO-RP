@@ -79,7 +79,10 @@ func (dv *dynamic) validateDiskEncryptionSetPermissions(ctx context.Context, des
 	})
 
 	if err == wait.ErrWaitTimeout {
-		return dv.noPermissionsErr(errCode, errMsgMissingPermissionsOnDES, errMsgSPHasMissingReaderRole, path, operatorName, desr.String())
+		if dv.authorizerType == AuthorizerWorkloadIdentity {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidWorkloadIdentityPermissions, path, "The %s platform managed identity does not have required permissions on disk encryption set '%s'.", *operatorName, desr.String())
+		}
+		return api.NewCloudError(http.StatusBadRequest, errCode, path, "The %s service principal does not have Reader permission on disk encryption set '%s'.", dv.authorizerType, desr.String())
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {

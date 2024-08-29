@@ -785,7 +785,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The Dummy platform managed identity does not have required permissions on vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet'.",
+			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet'.",
 		},
 		{
 			name: "fail: CheckAccess Return less entries than requested",
@@ -859,6 +859,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			if tt.platformIdentities != nil {
 				dv.platformIdentities = tt.platformIdentities
 				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
+				dv.authorizerType = AuthorizerWorkloadIdentity
 			}
 
 			vnetr, err := azure.ParseResourceID(vnetID)
@@ -992,7 +993,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
 		},
 		{
 			name:               "Fail - MIWI Cluster - permissions don't exist",
@@ -1015,7 +1016,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The Dummy platform managed identity does not have required permissions on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "fail: CheckAccessV2 doesn't return all the entries",
@@ -1034,7 +1035,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidRouteTablesAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "pass",
@@ -1145,6 +1146,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			if tt.platformIdentities != nil {
 				dv.platformIdentities = tt.platformIdentities
 				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
+				dv.authorizerType = AuthorizerWorkloadIdentity
 			}
 
 			err := dv.validateRouteTablePermissions(ctx, tt.subnet)
@@ -1263,7 +1265,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidNatGWAuthorizationDecisionsReadNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:               "Fail - MIWI Cluster - permissions don't exist",
@@ -1287,7 +1289,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidNatGWAuthorizationDecisionsReadNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The Dummy platform managed identity does not have required permissions on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "fail: CheckAccessV2 doesn't return all permissions",
@@ -1307,7 +1309,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidNatGWAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "pass",
@@ -1429,6 +1431,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			if tt.platformIdentities != nil {
 				dv.platformIdentities = tt.platformIdentities
 				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
+				dv.authorizerType = AuthorizerWorkloadIdentity
 			}
 
 			err := dv.validateNatGatewayPermissions(ctx, tt.subnet)
@@ -1582,7 +1585,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The Dummy platform managed identity does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
 		},
 		{
 			name: "pass: sp has the required permission on the NSG",
@@ -1737,6 +1740,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			if tt.platformIdentities != nil {
 				dv.platformIdentities = tt.platformIdentities
 				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
+				dv.authorizerType = AuthorizerWorkloadIdentity
 			}
 
 			err := dv.ValidatePreConfiguredNSGs(ctx, oc, subnets)
