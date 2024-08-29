@@ -8,7 +8,7 @@ import (
 )
 
 func (mon *Monitor) emitSyncSetStatus(ctx context.Context) error {
-	cs, error := mon.hiveClusterManager.GetClusterSyncforClusterDeployment(ctx, mon.doc)
+	cs, error := mon.hiveClusterManager.GetSyncSetResources(ctx, mon.doc)
 	if error != nil {
 		return nil
 	}

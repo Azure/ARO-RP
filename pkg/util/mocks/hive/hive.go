@@ -97,19 +97,19 @@ func (mr *MockClusterManagerMockRecorder) GetClusterDeployment(arg0, arg1 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterDeployment", reflect.TypeOf((*MockClusterManager)(nil).GetClusterDeployment), arg0, arg1)
 }
 
-// GetClusterSyncforClusterDeployment mocks base method.
-func (m *MockClusterManager) GetClusterSyncforClusterDeployment(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSync, error) {
+// GetSyncSetResources mocks base method.
+func (m *MockClusterManager) GetSyncSetResources(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSync, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterSyncforClusterDeployment", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetSyncSetResources", arg0, arg1)
 	ret0, _ := ret[0].(*v1alpha1.ClusterSync)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetClusterSyncforClusterDeployment indicates an expected call of GetClusterSyncforClusterDeployment.
-func (mr *MockClusterManagerMockRecorder) GetClusterSyncforClusterDeployment(arg0, arg1 interface{}) *gomock.Call {
+// GetSyncSetResources indicates an expected call of GetSyncSetResources.
+func (mr *MockClusterManagerMockRecorder) GetSyncSetResources(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSyncforClusterDeployment", reflect.TypeOf((*MockClusterManager)(nil).GetClusterSyncforClusterDeployment), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncSetResources", reflect.TypeOf((*MockClusterManager)(nil).GetSyncSetResources), arg0, arg1)
 }
 
 // Install mocks base method.

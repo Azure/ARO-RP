@@ -586,7 +586,7 @@ func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := c.GetClusterSyncforClusterDeployment(context.Background(), doc)
+			result, err := c.GetSyncSetResources(context.Background(), doc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
