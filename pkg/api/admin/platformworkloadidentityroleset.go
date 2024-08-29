@@ -45,11 +45,11 @@ type PlatformWorkloadIdentityRole struct {
 	ServiceAccounts []string `json:"serviceAccounts,omitempty" mutable:"true" validate:"required"`
 
 	// SecretLocation represents the location of the in-cluster secret containing credentials for the platform workload identity.
-	SecretLocation SecretLocation `json:"secretLocation,omitempty"`
+	SecretLocation SecretLocation `json:"secretLocation,omitempty" mutable:"true" validate:"required"`
 }
 
 // SecretLocation represents the location of the in-cluster secret containing credentials for the platform workload identity.
 type SecretLocation struct {
-	Namespace string `json:"namespace,omitempty"`
-	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty" mutable:"true" validate:"required"`
+	Name      string `json:"name,omitempty" mutable:"true" validate:"required"`
 }
