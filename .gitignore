@@ -42,3 +42,4 @@ megalinter-reports/
 /jq
 /portalauth
 .kiota.log
+podmanlog
