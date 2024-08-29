@@ -27,7 +27,7 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-const TEST_PULLSPEC = "mcr.microsoft.com/oss/go/microsoft/golang:1.22-fips-cbl-mariner2.0@sha256:8850221fcd43650f27ff1613c2348b8a82e87403b8cc1e57bc86647a7632f80f"
+const TEST_PULLSPEC = "mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0"
 
 var _ = Describe("Podman", Ordered, func() {
 	var err error

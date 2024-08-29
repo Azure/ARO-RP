@@ -15,7 +15,7 @@ jobs:
   ci-from-docker:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/oss/go/microsoft/golang:1.22-fips-cbl-mariner2.0@sha256:8850221fcd43650f27ff1613c2348b8a82e87403b8cc1e57bc86647a7632f80f
+      image: mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
   vendor-check:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/oss/go/microsoft/golang:1.22-fips-cbl-mariner2.0@sha256:8850221fcd43650f27ff1613c2348b8a82e87403b8cc1e57bc86647a7632f80f
+      image: mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
   generate-check:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/oss/go/microsoft/golang:1.22-fips-cbl-mariner2.0@sha256:8850221fcd43650f27ff1613c2348b8a82e87403b8cc1e57bc86647a7632f80f
+      image: mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
