@@ -166,7 +166,7 @@ runlocal-rp: ci-rp podman-secrets
 		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION): rp
+		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
 
 .PHONY: az
 az: pyenv
