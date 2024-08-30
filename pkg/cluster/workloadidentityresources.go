@@ -12,7 +12,13 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
 
-const azureFederatedTokenFileLocation = "/var/run/secrets/openshift/serviceaccount/token"
+const (
+	azureFederatedTokenFileLocation = "/var/run/secrets/openshift/serviceaccount/token"
+
+	ccoSecretNamespace       = "openshift-cloud-credential-operator"
+	ccoSecretName            = "azure-credentials"
+	authenticationConfigName = "cluster"
+)
 
 func (m *manager) generateWorkloadIdentityResources() ([]kruntime.Object, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
@@ -78,8 +84,8 @@ func (m *manager) generateCloudCredentialOperatorSecret() (*corev1.Secret, error
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "openshift-cloud-credential-operator",
-			Name:      "azure-cloud-credentials",
+			Namespace: ccoSecretNamespace,
+			Name:      ccoSecretName,
 		},
 		Type: corev1.SecretTypeOpaque,
 		StringData: map[string]string{
@@ -96,7 +102,7 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 
 	return &configv1.Authentication{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cluster",
+			Name: authenticationConfigName,
 		},
 		Spec: configv1.AuthenticationSpec{
 			ServiceAccountIssuer: (string)(*oidcIssuer),

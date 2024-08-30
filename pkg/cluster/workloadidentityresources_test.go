@@ -77,7 +77,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 						"azure_subscription_id":      subscriptionId,
 						"azure_tenant_id":            tenantId,
 						"azure_region":               location,
-						"azure_federated_token_file": "/var/run/secrets/openshift/serviceaccount/token",
+						"azure_federated_token_file": azureFederatedTokenFileLocation,
 					},
 				},
 				&corev1.Secret{
@@ -91,13 +91,13 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 						"azure_subscription_id":      subscriptionId,
 						"azure_tenant_id":            tenantId,
 						"azure_region":               location,
-						"azure_federated_token_file": "/var/run/secrets/openshift/serviceaccount/token",
+						"azure_federated_token_file": azureFederatedTokenFileLocation,
 					},
 				},
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "openshift-cloud-credential-operator",
-						Name:      "azure-cloud-credentials",
+						Namespace: ccoSecretNamespace,
+						Name:      ccoSecretName,
 					},
 					Type: corev1.SecretTypeOpaque,
 					StringData: map[string]string{
@@ -106,7 +106,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 				},
 				&configv1.Authentication{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster",
+						Name: authenticationConfigName,
 					},
 					Spec: configv1.AuthenticationSpec{
 						ServiceAccountIssuer: oidcIssuer,
@@ -221,7 +221,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 						"azure_subscription_id":      subscriptionId,
 						"azure_tenant_id":            tenantId,
 						"azure_region":               location,
-						"azure_federated_token_file": "/var/run/secrets/openshift/serviceaccount/token",
+						"azure_federated_token_file": azureFederatedTokenFileLocation,
 					},
 				},
 				{
@@ -235,7 +235,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 						"azure_subscription_id":      subscriptionId,
 						"azure_tenant_id":            tenantId,
 						"azure_region":               location,
-						"azure_federated_token_file": "/var/run/secrets/openshift/serviceaccount/token",
+						"azure_federated_token_file": azureFederatedTokenFileLocation,
 					},
 				},
 			},
@@ -311,8 +311,8 @@ func TestGenerateCloudCredentialOperatorSecret(t *testing.T) {
 			usesWorkloadIdentity: true,
 			want: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "openshift-cloud-credential-operator",
-					Name:      "azure-cloud-credentials",
+					Namespace: ccoSecretNamespace,
+					Name:      ccoSecretName,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -373,7 +373,7 @@ func TestGenerateAuthenticationConfig(t *testing.T) {
 			oidcIssuer:           (*api.OIDCIssuer)(&oidcIssuer),
 			want: &configv1.Authentication{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster",
+					Name: authenticationConfigName,
 				},
 				Spec: configv1.AuthenticationSpec{
 					ServiceAccountIssuer: oidcIssuer,
