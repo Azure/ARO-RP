@@ -40,7 +40,7 @@ const (
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
-func (d *deployer) PreDeploy(ctx context.Context) error {
+func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
 	// deploy global rbac
 	err := d.deployRPGlobalSubscription(ctx)
 	if err != nil {
@@ -154,7 +154,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	return d.configureServiceSecrets(ctx)
+	return d.configureServiceSecrets(ctx, lbHealthcheckWaitTimeSec)
 }
 
 func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID string) error {
@@ -359,7 +359,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 	})
 }
 
-func (d *deployer) configureServiceSecrets(ctx context.Context) error {
+func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
 	isRotated := false
 	for _, s := range []struct {
 		kv         keyvault.Manager
@@ -400,7 +400,7 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	}
 
 	if isRotated {
-		err = d.restartOldScalesets(ctx)
+		err = d.restartOldScalesets(ctx, lbHealthcheckWaitTimeSec)
 		if err != nil {
 			return err
 		}
@@ -485,14 +485,14 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv keyvault.Manager, sec
 	})
 }
 
-func (d *deployer) restartOldScalesets(ctx context.Context) error {
+func (d *deployer) restartOldScalesets(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
 	scalesets, err := d.vmss.List(ctx, d.config.RPResourceGroupName)
 	if err != nil {
 		return err
 	}
 
 	for _, vmss := range scalesets {
-		err = d.restartOldScaleset(ctx, *vmss.Name)
+		err = d.restartOldScaleset(ctx, *vmss.Name, lbHealthcheckWaitTimeSec)
 		if err != nil {
 			return err
 		}
@@ -501,7 +501,7 @@ func (d *deployer) restartOldScalesets(ctx context.Context) error {
 	return nil
 }
 
-func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string) error {
+func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHealthcheckWaitTimeSec int) error {
 	if !strings.HasPrefix(vmssName, rpVMSSPrefix) {
 		return &api.CloudError{
 			StatusCode: http.StatusBadRequest,
@@ -531,7 +531,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string) erro
 		}
 
 		// wait for load balancer probe to change the vm health status
-		time.Sleep(30 * time.Second)
+		time.Sleep(time.Duration(lbHealthcheckWaitTimeSec) * time.Second)
 		timeoutCtx, cancel := context.WithTimeout(ctx, time.Hour)
 		defer cancel()
 		err = d.waitForReadiness(timeoutCtx, vmssName, *vm.InstanceID)
