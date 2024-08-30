@@ -17,3 +17,4 @@ COPY --from=builder /app/aro /app/e2e.test /app/db /app/cluster /app/portalauth 
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
 USER 1000
+ENV HOME=/tmp
