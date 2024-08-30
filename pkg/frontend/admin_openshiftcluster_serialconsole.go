@@ -49,7 +49,7 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)

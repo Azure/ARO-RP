@@ -32,7 +32,7 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, 
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, r.URL.Path)

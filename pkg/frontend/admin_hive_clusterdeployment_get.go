@@ -38,7 +38,7 @@ func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, resourceI
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)

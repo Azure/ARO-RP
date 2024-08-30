@@ -167,7 +167,7 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdCertificateRenew(ctx context.Co
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
@@ -211,7 +211,7 @@ func (e *etcdrenew) validateClusterVersion(ctx context.Context) error {
 	cv := &configv1.ClusterVersion{}
 	err = codec.NewDecoderBytes(rawCV, &codec.JsonHandle{}).Decode(cv)
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode clusterversion, %s", err.Error()))
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode clusterversion, %s", err.Error())) //nolint:govet
 	}
 	clusterVersion, err := version.GetClusterVersion(cv)
 	if err != nil {
@@ -230,12 +230,12 @@ func (e *etcdrenew) validateEtcdOperatorControllersState(ctx context.Context) er
 	e.log.Infoln("validating etcdOperator Controllers state now")
 	rawEtcd, err := e.k.KubeGet(ctx, "etcd.operator.openshift.io", "", "cluster")
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 	etcd := &operatorv1.Etcd{}
 	err = codec.NewDecoderBytes(rawEtcd, &codec.JsonHandle{}).Decode(etcd)
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode etcd object, %s", err.Error()))
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode etcd object, %s", err.Error())) //nolint:govet
 	}
 	for _, c := range etcd.Status.Conditions {
 		if _, ok := etcdOperatorControllerConditionsExpected[c.Type]; !ok {
@@ -254,12 +254,12 @@ func (e *etcdrenew) validateEtcdOperatorState(ctx context.Context) error {
 	e.log.Infoln("validating Etcd Operator state")
 	rawEtcdOperator, err := e.k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "etcd")
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 	etcdOperator := &configv1.ClusterOperator{}
 	err = codec.NewDecoderBytes(rawEtcdOperator, &codec.JsonHandle{}).Decode(etcdOperator)
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode etcd operator, %s", err.Error()))
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode etcd operator, %s", err.Error())) //nolint:govet
 	}
 	for _, c := range etcdOperator.Status.Conditions {
 		if _, ok := etcdOperatorConditionsExpected[c.Type]; !ok {
@@ -357,12 +357,12 @@ func (e *etcdrenew) fetchEtcdCurrentRevision(ctx context.Context) error {
 	e.log.Infoln("fetching etcd Current Revision now")
 	rawEtcd, err := e.k.KubeGet(ctx, "etcd.operator.openshift.io", "", "cluster")
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 	etcd := &operatorv1.Etcd{}
 	err = codec.NewDecoderBytes(rawEtcd, &codec.JsonHandle{}).Decode(etcd)
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode etcd object, %s", err.Error()))
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode etcd object, %s", err.Error())) //nolint:govet
 	}
 
 	e.lastRevision = etcd.Status.LatestAvailableRevision
@@ -389,7 +389,7 @@ func (e *etcdrenew) backupEtcdSecrets(ctx context.Context) error {
 			secret := &corev1.Secret{}
 			err = codec.NewDecoderBytes(data, &codec.JsonHandle{}).Decode(secret)
 			if err != nil {
-				return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode secret, %s", err.Error()))
+				return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode secret, %s", err.Error())) //nolint:govet
 			}
 			secret.CreationTimestamp = metav1.Time{
 				Time: time.Now(),
@@ -400,7 +400,7 @@ func (e *etcdrenew) backupEtcdSecrets(ctx context.Context) error {
 			var cert []byte
 			err = codec.NewEncoderBytes(&cert, &codec.JsonHandle{}).Encode(secret)
 			if err != nil {
-				return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to encode secret, %s", err.Error()))
+				return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to encode secret, %s", err.Error())) //nolint:govet
 			}
 			e.backupSecrets[secretname] = cert
 			return nil
@@ -446,13 +446,13 @@ func (e *etcdrenew) isEtcdRevised(ctx context.Context) (bool, error) {
 	isAtRevision := true
 	rawEtcd, err := e.k.KubeGet(ctx, "etcd.operator.openshift.io", "", "cluster")
 	if err != nil {
-		e.log.Warnf(err.Error())
+		e.log.Warnf("%s", err.Error())
 		return false, nil
 	}
 	etcd := &operatorv1.Etcd{}
 	err = codec.NewDecoderBytes(rawEtcd, &codec.JsonHandle{}).Decode(etcd)
 	if err != nil {
-		e.log.Warnf(err.Error())
+		e.log.Warnf("%s", err.Error())
 		return false, nil
 	}
 

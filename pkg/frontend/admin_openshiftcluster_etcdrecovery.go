@@ -40,7 +40,7 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdRecovery(ctx context.Context, r
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
@@ -52,12 +52,12 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdRecovery(ctx context.Context, r
 	}
 	kubeActions, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
-		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	gvr, err := kubeActions.ResolveGVR("Etcd", "")
 	if err != nil {
-		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	err = validateAdminKubernetesObjects(r.Method, gvr, namespaceEtcds, "cluster")
@@ -67,12 +67,12 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdRecovery(ctx context.Context, r
 
 	restConfig, err := restconfig.RestConfig(f.env, doc.OpenShiftCluster)
 	if err != nil {
-		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	operatorcli, err := operatorclient.NewForConfig(restConfig)
 	if err != nil {
-		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 	}
 
 	return f.fixEtcd(ctx, log, f.env, doc, kubeActions, operatorcli.OperatorV1().Etcds())

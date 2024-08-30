@@ -73,12 +73,12 @@ func TestAdminDeleteManagedResource(t *testing.T) {
 			managedResourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.Network/privateLinkServices/infraID", mockSubID),
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceDeleteAndWait(gomock.Any(), tt.managedResourceID).Return(api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
-					fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)),
+					fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)), //nolint:govet
 				)
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
-				fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)).Error(),
+				fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)).Error(), //nolint:govet
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

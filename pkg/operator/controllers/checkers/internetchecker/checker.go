@@ -66,7 +66,7 @@ func (r *checker) Check(URLs []string) error {
 	}
 	if len(errsAll) != 0 {
 		// TODO: Consider replacing with multi error wrapping with Go 1.20: https://github.com/golang/go/issues/53435#issuecomment-1320343377
-		return fmt.Errorf(strings.Join(errsAll, "\n"))
+		return fmt.Errorf("%s", strings.Join(errsAll, "\n"))
 	}
 
 	return nil

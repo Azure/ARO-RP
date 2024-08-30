@@ -142,7 +142,7 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 	}
 
 	if len(combinedErrors) > 0 {
-		return fmt.Errorf(strings.Join(combinedErrors, "\n"))
+		return fmt.Errorf("%s", strings.Join(combinedErrors, "\n"))
 	}
 
 	return nil

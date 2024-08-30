@@ -247,19 +247,19 @@ func deleteByIdCloudError(err error) error {
 	switch {
 	case strings.Contains(detailedError.Original.Error(), "CannotDeleteLoadBalancerWithPrivateLinkService"):
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeCannotDeleteLoadBalancerByID,
-			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error()) //nolint:govet
 
 	case strings.Contains(detailedError.Original.Error(), "AuthorizationFailed"):
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden,
-			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error()) //nolint:govet
 
 	case strings.Contains(detailedError.Original.Error(), "InUseSubnetCannotBeDeleted"):
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInUseSubnetCannotBeDeleted,
-			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error()) //nolint:govet
 
 	case strings.Contains(detailedError.Original.Error(), "ScopeLocked"):
 		return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeScopeLocked,
-			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error()) //nolint:govet
 	}
 
 	return err

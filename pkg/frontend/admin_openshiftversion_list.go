@@ -26,7 +26,7 @@ func (f *frontend) getAdminOpenShiftVersions(w http.ResponseWriter, r *http.Requ
 
 	dbOpenShiftVersions, err := f.dbGroup.OpenShiftVersions()
 	if err != nil {
-		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
 		return
 	}
 
