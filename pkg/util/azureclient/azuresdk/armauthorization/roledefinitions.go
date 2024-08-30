@@ -15,12 +15,15 @@ type RoleDefinitionsClient interface {
 	GetByID(ctx context.Context, roleID string, options *armauthorization.RoleDefinitionsClientGetByIDOptions) (armauthorization.RoleDefinitionsClientGetByIDResponse, error)
 }
 
-type roleDefinitionsClient struct {
-	armauthorization.RoleDefinitionsClient
+type ArmRoleDefinitionsClient struct {
+	*armauthorization.RoleDefinitionsClient
 }
 
-var _ RoleDefinitionsClient = &roleDefinitionsClient{}
+var _ RoleDefinitionsClient = &ArmRoleDefinitionsClient{}
 
-func NewRoleDefinitionsClient(credential azcore.TokenCredential, options *arm.ClientOptions) (RoleDefinitionsClient, error) {
-	return armauthorization.NewRoleDefinitionsClient(credential, options)
+func NewArmRoleDefinitionsClient(credential azcore.TokenCredential, options *arm.ClientOptions) (*ArmRoleDefinitionsClient, error) {
+	client, err := armauthorization.NewRoleDefinitionsClient(credential, options)
+	return &ArmRoleDefinitionsClient{
+		RoleDefinitionsClient: client,
+	}, err
 }

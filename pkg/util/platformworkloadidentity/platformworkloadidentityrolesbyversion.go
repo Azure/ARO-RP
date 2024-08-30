@@ -5,6 +5,7 @@ package platformworkloadidentity
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -15,36 +16,43 @@ import (
 // PlatformWorkloadIdentityRolesByVersion is the interface that validates and obtains the version from an PlatformWorkloadIdentityRoleSetDocument.
 type PlatformWorkloadIdentityRolesByVersion interface {
 	GetPlatformWorkloadIdentityRolesByRoleName() map[string]api.PlatformWorkloadIdentityRole
+	PopulatePlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets) error
 }
 
 // platformWorkloadIdentityRolesByVersionService is the default implementation of the PlatformWorkloadIdentityRolesByVersion interface.
-type platformWorkloadIdentityRolesByVersionService struct {
+type PlatformWorkloadIdentityRolesByVersionService struct {
 	platformWorkloadIdentityRoles []api.PlatformWorkloadIdentityRole
 }
 
-// NewPlatformWorkloadIdentityRolesByVersion aims to populate platformWorkloadIdentityRoles for current OpenShift minor version and also for UpgradeableTo minor version if provided and is greater than the current version
-func NewPlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets) (PlatformWorkloadIdentityRolesByVersion, error) {
-	if !oc.UsesWorkloadIdentity() {
-		return nil, nil
-	}
+var _ PlatformWorkloadIdentityRolesByVersion = &PlatformWorkloadIdentityRolesByVersionService{}
 
+func NewPlatformWorkloadIdentityRolesByVersionService() *PlatformWorkloadIdentityRolesByVersionService {
+	return &PlatformWorkloadIdentityRolesByVersionService{
+		platformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{},
+	}
+}
+
+// PopulatePlatformWorkloadIdentityRolesByVersion aims to populate platformWorkloadIdentityRoles for current OpenShift minor version and also for UpgradeableTo minor version if provided and is greater than the current version
+func (service *PlatformWorkloadIdentityRolesByVersionService) PopulatePlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets) error {
+	if !oc.UsesWorkloadIdentity() {
+		return fmt.Errorf("PopulatePlatformWorkloadIdentityRolesByVersion called for a CSP cluster")
+	}
 	currentOpenShiftVersion, err := version.ParseVersion(oc.Properties.ClusterProfile.Version)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	currentMinorVersion := currentOpenShiftVersion.MinorVersion()
 	requiredMinorVersions := map[string]bool{currentMinorVersion: false}
-	platformWorkloadIdentityRoles := []api.PlatformWorkloadIdentityRole{}
 
 	docs, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
 		upgradeableVersion, err := version.ParseVersion(string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo))
 		if err != nil {
-			return nil, err
+			return err
 		}
 		upgradeableMinorVersion := upgradeableVersion.MinorVersion()
 		if currentMinorVersion != upgradeableMinorVersion && currentOpenShiftVersion.Lt(upgradeableVersion) {
@@ -55,7 +63,7 @@ func NewPlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.Open
 	for _, doc := range docs.PlatformWorkloadIdentityRoleSetDocuments {
 		for version := range requiredMinorVersions {
 			if version == doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion {
-				platformWorkloadIdentityRoles = append(platformWorkloadIdentityRoles, doc.PlatformWorkloadIdentityRoleSet.Properties.PlatformWorkloadIdentityRoles...)
+				service.platformWorkloadIdentityRoles = append(service.platformWorkloadIdentityRoles, doc.PlatformWorkloadIdentityRoleSet.Properties.PlatformWorkloadIdentityRoles...)
 				requiredMinorVersions[version] = true
 			}
 		}
@@ -63,16 +71,14 @@ func NewPlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.Open
 
 	for version, exists := range requiredMinorVersions {
 		if !exists {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '%s'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket", version)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '%s'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket", version)
 		}
 	}
 
-	return &platformWorkloadIdentityRolesByVersionService{
-		platformWorkloadIdentityRoles: platformWorkloadIdentityRoles,
-	}, nil
+	return nil
 }
 
-func (service *platformWorkloadIdentityRolesByVersionService) GetPlatformWorkloadIdentityRolesByRoleName() map[string]api.PlatformWorkloadIdentityRole {
+func (service *PlatformWorkloadIdentityRolesByVersionService) GetPlatformWorkloadIdentityRolesByRoleName() map[string]api.PlatformWorkloadIdentityRole {
 	platformWorkloadIdentityRolesByRoleName := map[string]api.PlatformWorkloadIdentityRole{}
 	for _, role := range service.platformWorkloadIdentityRoles {
 		platformWorkloadIdentityRolesByRoleName[role.OperatorName] = role

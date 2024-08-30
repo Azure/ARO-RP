@@ -26,7 +26,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 		wantPlatformIdentities []string
 	}{
 		{
-			name: "Success - Exit the func for non MIWI clusters that has ServicePrincipalProfile",
+			name: "Fail - Exit the func for non MIWI clusters that has ServicePrincipalProfile",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ServicePrincipalProfile: &api.ServicePrincipalProfile{
@@ -34,12 +34,14 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 					},
 				},
 			},
+			wantErr: "PopulatePlatformWorkloadIdentityRolesByVersion called for a CSP cluster",
 		},
 		{
-			name: "Success - Exit the func for non MIWI clusters that has no PlatformWorkloadIdentityProfile or ServicePrincipalProfile",
+			name: "Fail - Exit the func for non MIWI clusters that has no PlatformWorkloadIdentityProfile or ServicePrincipalProfile",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{},
 			},
+			wantErr: "PopulatePlatformWorkloadIdentityRolesByVersion called for a CSP cluster",
 		},
 		{
 			name: "Success - The role set document found for the cluster version",
@@ -273,7 +275,8 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			pir, err := NewPlatformWorkloadIdentityRolesByVersion(ctx, tt.oc, dbPlatformWorkloadIdentityRoleSets)
+			pir := NewPlatformWorkloadIdentityRolesByVersionService()
+			err := pir.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, tt.oc, dbPlatformWorkloadIdentityRoleSets)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantPlatformIdentities != nil {

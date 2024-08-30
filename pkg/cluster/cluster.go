@@ -238,14 +238,17 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	armRoleDefinitionsClient, err := armauthorization.NewRoleDefinitionsClient(fpCredClusterTenant, &clientOptions)
+	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, &clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	platformWorkloadIdentityRolesByVersion, err := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
-	if err != nil {
-		return nil, err
+	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		err = platformWorkloadIdentityRolesByVersion.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &manager{

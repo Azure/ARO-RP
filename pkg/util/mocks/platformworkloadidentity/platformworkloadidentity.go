@@ -5,11 +5,13 @@
 package mock_platformworkloadidentity
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
+	database "github.com/Azure/ARO-RP/pkg/database"
 )
 
 // MockPlatformWorkloadIdentityRolesByVersion is a mock of PlatformWorkloadIdentityRolesByVersion interface.
@@ -47,4 +49,18 @@ func (m *MockPlatformWorkloadIdentityRolesByVersion) GetPlatformWorkloadIdentity
 func (mr *MockPlatformWorkloadIdentityRolesByVersionMockRecorder) GetPlatformWorkloadIdentityRolesByRoleName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformWorkloadIdentityRolesByRoleName", reflect.TypeOf((*MockPlatformWorkloadIdentityRolesByVersion)(nil).GetPlatformWorkloadIdentityRolesByRoleName))
+}
+
+// PopulatePlatformWorkloadIdentityRolesByVersion mocks base method.
+func (m *MockPlatformWorkloadIdentityRolesByVersion) PopulatePlatformWorkloadIdentityRolesByVersion(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 database.PlatformWorkloadIdentityRoleSets) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PopulatePlatformWorkloadIdentityRolesByVersion", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PopulatePlatformWorkloadIdentityRolesByVersion indicates an expected call of PopulatePlatformWorkloadIdentityRolesByVersion.
+func (mr *MockPlatformWorkloadIdentityRolesByVersionMockRecorder) PopulatePlatformWorkloadIdentityRolesByVersion(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopulatePlatformWorkloadIdentityRolesByVersion", reflect.TypeOf((*MockPlatformWorkloadIdentityRolesByVersion)(nil).PopulatePlatformWorkloadIdentityRolesByVersion), arg0, arg1, arg2)
 }
