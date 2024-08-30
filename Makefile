@@ -232,6 +232,7 @@ ci-tunnel: fix-macos-vendor
 
 .PHONY: ci-clean
 ci-clean:
+	$(shell podman ps --external --format "{{.Command}} {{.ID}}" | grep buildah | cut -d " " -f 2 | xargs podman rm -f > /dev/null)
 	podman image prune --all --filter="label=aro-*=true"
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
