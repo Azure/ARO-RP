@@ -39,7 +39,7 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validate(new *PlatformW
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.openShiftVersion", "Must be provided")
 	}
 
-	if len(new.Properties.PlatformWorkloadIdentityRoles) == 0 || new.Properties.PlatformWorkloadIdentityRoles == nil {
+	if len(new.Properties.PlatformWorkloadIdentityRoles) == 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.platformWorkloadIdentityRoles", "Must be provided and must be non-empty")
 	}
 
@@ -58,7 +58,7 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validate(new *PlatformW
 			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i))
 		}
 
-		if len(r.ServiceAccounts) == 0 || r.ServiceAccounts == nil {
+		if len(r.ServiceAccounts) == 0 {
 			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i))
 		}
 	}
