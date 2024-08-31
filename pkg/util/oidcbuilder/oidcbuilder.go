@@ -28,7 +28,7 @@ type OIDCBuilder struct {
 }
 
 func NewOIDCBuilder(env env.Interface, oidcEndpoint string, directoryName string) (*OIDCBuilder, error) {
-	privateKey, publicKey, err := CreateKeyPair()
+	privateKey, publicKey, err := CreateKeyPair(env)
 	if err != nil {
 		return nil, err
 	}
