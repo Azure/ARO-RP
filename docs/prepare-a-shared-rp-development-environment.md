@@ -12,11 +12,13 @@ locations.
    applications.
 
 1. Set the az account
+
    ```bash
    az account set -n "<your-azure-subscription>"
    ```
 
 1. You will need a resource group for global infrastructure
+
    ```bash
    GLOBAL_RESOURCEGROUP=global-infra
    az group create -n $GLOBAL_RESOURCEGROUP --location eastus
@@ -96,10 +98,12 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 ## AAD applications
 
 1. Set a prefix variable used for naming apps/sp
-```bash
-# for PR E2E Environment
-PREFIX=aro-v4-e2e
-```
+
+   ```bash
+   # for PR E2E Environment
+   PREFIX=aro-v4-e2e
+   ```
+
 1. Create an AAD application which will fake up the ARM layer:
 
    This application requires client certificate authentication to be enabled. A
@@ -342,47 +346,47 @@ This section documents the steps taken to rotate certificates in dev and INT sub
 
 1. Generate new certificates like we did in [AAD application](#aad-applications) and [certificate](#certificates) sections above
 
-2. Import newly generated certificates to keyvault. Note that this does not include firstparty certificates
+1. Import newly generated certificates to keyvault. Note that this does not include firstparty certificates
 
-```bash
-source hack/devtools/deploy-shared-env.sh
-import_certs_secrets
-```
+   ```bash
+   source hack/devtools/deploy-shared-env.sh
+   import_certs_secrets
+   ```
 
-3. Update the Azure VPN Gateway configuration. To do this, go to `Virtual Network Gateways` > `Point-to-site configuration` and the public cert data from `vpn-ca.pem`. Delete the old expired root certificate
+1. Update the Azure VPN Gateway configuration. To do this, go to `Virtual Network Gateways` > `Point-to-site configuration` and the public cert data from `vpn-ca.pem`. Delete the old expired root certificate
 
-4. The OpenVPN configuration file needs to be manually updated. To achieve this, edit the `vpn-<region>.ovpn` file and add the `vpn-client` certificate and private key
+1. The OpenVPN configuration file needs to be manually updated. To achieve this, edit the `vpn-<region>.ovpn` file and add the `vpn-client` certificate and private key
 
-5. Next, we need to update certificates owned by FP Service Principal. Current configuration in DEV and INT is listed below. You can get the `AAD APP ID` from the `secrets/env` file
+1. Next, we need to update certificates owned by FP Service Principal. Current configuration in DEV and INT is listed below. You can get the `AAD APP ID` from the `secrets/env` file
 
-| Variable               | Certificate Client | Subscription Type | AAD App Name             | Key Vault Name     |
-| ---------------------- | ------------------ | ----------------- | ------------------------ | ------------------ |
-| AZURE_FP_CLIENT_ID     | firstparty         | DEV               | aro-v4-fp-shared-dev     | v4-eastus-dev-svc  |
-| AZURE_ARM_CLIENT_ID    | arm                | DEV               | aro-v4-arm-shared-dev    | v4-eastus-dev-svc  |
-| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV               | aro-v4-portal-shared-dev | v4-eastus-dev-svc  |
-| AZURE_FP_CLIENT_ID     | firstparty         | INT               | aro-int-sp               | aro-int-eastus-svc |
+   | Variable               | Certificate Client | Subscription Type | AAD App Name             | Key Vault Name     |
+   | ---------------------- | ------------------ | ----------------- | ------------------------ | ------------------ |
+   | AZURE_FP_CLIENT_ID     | firstparty         | DEV               | aro-v4-fp-shared-dev     | v4-eastus-dev-svc  |
+   | AZURE_ARM_CLIENT_ID    | arm                | DEV               | aro-v4-arm-shared-dev    | v4-eastus-dev-svc  |
+   | AZURE_PORTAL_CLIENT_ID | portal-client      | DEV               | aro-v4-portal-shared-dev | v4-eastus-dev-svc  |
+   | AZURE_FP_CLIENT_ID     | firstparty         | INT               | aro-int-sp               | aro-int-eastus-svc |
 
-```bash
-# Import firstparty.pem to keyvault v4-eastus-svc
-az keyvault certificate import --vault-name <kv_name>  --name rp-firstparty --file firstparty.pem
+   ```bash
+   # Import firstparty.pem to keyvault v4-eastus-svc
+   az keyvault certificate import --vault-name <kv_name>  --name rp-firstparty --file firstparty.pem
 
-# Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable)
-az ad app credential reset \
-   --id "$AZURE_ARM_CLIENT_ID" \
-   --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
+   # Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable)
+   az ad app credential reset \
+      --id "$AZURE_ARM_CLIENT_ID" \
+      --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
 
-az ad app credential reset \
-   --id "$AZURE_FP_CLIENT_ID" \
-   --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
+   az ad app credential reset \
+      --id "$AZURE_FP_CLIENT_ID" \
+      --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
 
-az ad app credential reset \
-   --id "$AZURE_PORTAL_CLIENT_ID" \
-   --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
-```
+   az ad app credential reset \
+      --id "$AZURE_PORTAL_CLIENT_ID" \
+      --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
+   ```
 
-5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
+1. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
 
-6. Run `[rharosecretsdev|e2earosecrets|e2earoclassicsecrets] make secrets-update` to upload it to your
+1. Run `[rharosecretsdev|e2earosecrets|e2earoclassicsecrets] make secrets-update` to upload it to your
    storage account so other people on your team can access it via `make secrets`
 
 # Environment file
@@ -461,9 +465,11 @@ each of the bash functions below.
      `eastus`).
 1. Create AzSecPack managed Identity https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/234249/AzSecPack-AutoConfig-UserAssigned-Managed-Identity (required for `deploy_env_dev`)
 1. Enable EncryptionAtHost for subscription.
+
    ```bash
    az feature register --namespace Microsoft.Compute --name EncryptionAtHost 
    ```
+
 1. Create the resource group and deploy the RP resources:
 
    ```bash
@@ -554,16 +560,18 @@ each of the bash functions below.
 1. In pre-production (int, e2e) certain certificates are provisioned via keyvault
    integration. These should be rotated and generated in the keyvault itself:
 
-```
-Vault Name: "$KEYVAULT_PREFIX-svc"
-Certificate: rp-firstparty
-Development value: secrets/firstparty.pem
+   ``` bash
+   Vault Name: "$KEYVAULT_PREFIX-svc"
+   Certificate: rp-firstparty
+   Development value: secrets/firstparty.pem
 
-Vault Name: "$KEYVAULT_PREFIX-svc"
-Certificate: cluster-mdsd
-Development value: secrets/cluster-logging-int.pem
-```
+   Vault Name: "$KEYVAULT_PREFIX-svc"
+   Certificate: cluster-mdsd
+   Development value: secrets/cluster-logging-int.pem
+   ```
+
    > __NOTE:__: in the new tenant OneCert is not available, therefore firstparty and cluster-mdsd are self signed.
+
    ```bash
       az keyvault certificate import \
          --vault-name "$KEYVAULT_PREFIX-svc" \
@@ -591,36 +599,46 @@ Development value: secrets/cluster-logging-int.pem
 ## PR E2E Only - Create the global keyvault, ADO Library Variable Group
 
 1. Create E2E global keyvault
+
    ```bash
    AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
    ARO_E2E_GLOBAL_VAULT_NAME=<your-global-keyvault>
 
    deploy_aro_e2e_global_keyvault
-   ``` 
+   ```
+
 1. Upload Keyvault Secrets and Certificates
 1. Give List/Get permissions to Azure DevOps Connection SPN
 1. Set up Library Variable group in ADO and connect it to keyvault
 
 ## PR E2E Only - Setup ACR Credentials
+
 Due to cross tenant ACR access, token credentials must be generated for arointsvc
+
 1. Login to MSIT tenant and navigate to arointsvc
+
 1. Under "Repository permissions -> Tokens" add a new token and generate a password
+
 1. Add username and password to json file formatted like below and convert it to base64
-```
-{
-    "username": "<username>",
-    "password": "<Password>"
-}
-```
+
+   ```bash
+   {
+      "username": "<username>",
+      "password": "<Password>"
+   }
+   ```
+
 1. convert to base 64, copy the output and add it to aro-e2e-global keyvault
-```
-cat <my-acr-cred-file>.json | base64 -w0
-```
+
+   ```bash
+   cat <my-acr-cred-file>.json | base64 -w0
+   ```
+
 1. Add the secret to the Libary variable group that is connected to the global keyvault
 
 ## PR E2E Only - Add keyvault permissions to aro-v4-e2e-devops-spn
-- assign 'Keyvault Secrets User' to aro-v4-e2e-devops-spn
 
+- assign 'Keyvault Secrets User' to aro-v4-e2e-devops-spn
 
 ## Append Resource Group to Subscription Cleaner DenyList
 
