@@ -407,6 +407,7 @@ az ad app credential reset \
    # use a unique prefix for Azure resources when it is set, otherwise use your user's name
    cat >secrets/env <<EOF
    export AZURE_PREFIX='${AZURE_PREFIX:-$USER}'
+   export ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
    export AZURE_TENANT_ID='$AZURE_TENANT_ID'
    export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
@@ -431,7 +432,6 @@ az ad app credential reset \
    export SECRET_SA_ACCOUNT_NAME='$SECRET_SA_ACCOUNT_NAME'
    export DATABASE_ACCOUNT_NAME='\$RESOURCEGROUP'
    export KEYVAULT_PREFIX='\$RESOURCEGROUP'
-   export ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
    export PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
    export PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
    export DOMAIN_NAME='\$LOCATION.\$PARENT_DOMAIN_NAME'
