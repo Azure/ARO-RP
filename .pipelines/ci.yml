@@ -175,7 +175,7 @@ stages:
 
             # run build
             export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
-            make azext-aro
+            make ci-azext-aro
 
             # Stop podman
             kill_podman
