@@ -166,7 +166,7 @@ runlocal-rp: ci-rp podman-secrets
 		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION): rp
+		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
 
 .PHONY: runlocal-rp-the-old-way
 runlocal-rp-the-old-way:
@@ -238,6 +238,7 @@ ci-tunnel: fix-macos-vendor
 
 .PHONY: ci-clean
 ci-clean:
+	$(shell podman ps --external --format "{{.Command}} {{.ID}}" | grep buildah | cut -d " " -f 2 | xargs podman rm -f > /dev/null)
 	podman image prune --all --filter="label=aro-*=true"
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
