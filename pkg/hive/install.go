@@ -63,6 +63,10 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	}
 
 	cd := c.clusterDeploymentForInstall(doc, version, c.env.IsLocalDevelopmentMode())
+	manifests, err := manifestsSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace)
+	if err != nil {
+		return err
+	}
 
 	// Enrich the cluster deployment with the correlation data so that logs are
 	// properly annotated
@@ -80,6 +84,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 		envSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, c.env.IsLocalDevelopmentMode()),
 		psSecret,
 		installConfigCM(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, doc.OpenShiftCluster.Location),
+		manifests,
 		cd,
 	}
 
@@ -225,6 +230,9 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				ReleaseImage:           version.Properties.OpenShiftPullspec,
 				InstallConfigSecretRef: &corev1.LocalObjectReference{
 					Name: installConfigName,
+				},
+				ManifestsSecretRef: &corev1.LocalObjectReference{
+					Name: "install-manifests",
 				},
 				InstallerEnv: envVars,
 			},

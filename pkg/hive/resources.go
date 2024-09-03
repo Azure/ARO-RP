@@ -10,8 +10,10 @@ import (
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -201,4 +203,71 @@ func installConfigCM(namespace string, location string) *corev1.Secret {
 			"install-config.yaml": fmt.Sprintf(installConfigTemplate, location),
 		},
 	}
+}
+
+func manifestsSecret(namespace string) (*corev1.Secret, error) {
+	manifests := []kruntime.Object{
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "azure-cloud-credentials",
+			},
+			Type: corev1.SecretTypeOpaque,
+			StringData: map[string]string{
+				"azure_client_id":            "00f00f00-0f00-0f00-0f00-f00f00f00f00",
+				"azure_subscription_id":      "subscriptionId",
+				"azure_tenant_id":            "tenantId",
+				"azure_region":               "location",
+				"azure_federated_token_file": "azureFederatedTokenFileLocation",
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "azure-cloud-credentials-2",
+			},
+			Type: corev1.SecretTypeOpaque,
+			StringData: map[string]string{
+				"azure_client_id":            "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
+				"azure_subscription_id":      "subscriptionId",
+				"azure_tenant_id":            "tenantId",
+				"azure_region":               "location",
+				"azure_federated_token_file": "azureFederatedTokenFileLocation",
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "openshift-cloud-credential-operator",
+				Name:      "azure-credentials",
+			},
+			Type: corev1.SecretTypeOpaque,
+			StringData: map[string]string{
+				"azure_tenant_id": "tenantId",
+			},
+		},
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "install-manifests",
+		},
+		StringData: map[string]string{},
+	}
+
+	for _, manifest := range manifests {
+		a := meta.NewAccessor()
+
+		namespace, _ := a.Namespace(manifest)
+		name, _ := a.Name(manifest)
+		key := fmt.Sprintf("%s_%s", namespace, name)
+
+		b, err := yaml.Marshal(manifest)
+		if err != nil {
+			return nil, err
+		}
+		secret.StringData[key] = string(b)
+	}
+
+	return secret, nil
 }
