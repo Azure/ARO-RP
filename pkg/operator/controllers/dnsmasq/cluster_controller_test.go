@@ -273,22 +273,12 @@ func TestClusterReconciler(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",
 					},
-					Spec: configv1.ClusterVersionSpec{
-						DesiredUpdate: &configv1.Update{
-							Version: "4.10.12",
-						},
-					},
+					Spec: configv1.ClusterVersionSpec{},
 					Status: configv1.ClusterVersionStatus{
 						Conditions: []configv1.ClusterOperatorStatusCondition{
 							{
 								Type:   configv1.OperatorProgressing,
 								Status: configv1.ConditionTrue,
-							},
-						},
-						History: []configv1.UpdateHistory{
-							{
-								State:   configv1.CompletedUpdate,
-								Version: "4.10.11",
 							},
 						},
 					},
@@ -325,16 +315,12 @@ func TestClusterReconciler(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",
 					},
-					Spec: configv1.ClusterVersionSpec{
-						DesiredUpdate: &configv1.Update{
-							Version: "4.10.12",
-						},
-					},
+					Spec: configv1.ClusterVersionSpec{},
 					Status: configv1.ClusterVersionStatus{
-						History: []configv1.UpdateHistory{
+						Conditions: []configv1.ClusterOperatorStatusCondition{
 							{
-								State:   configv1.CompletedUpdate,
-								Version: "4.10.11",
+								Type:   configv1.OperatorProgressing,
+								Status: configv1.ConditionTrue,
 							},
 						},
 					},
