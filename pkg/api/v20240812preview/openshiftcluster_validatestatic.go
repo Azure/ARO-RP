@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	azcorearm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
@@ -478,6 +479,9 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 		return nil
 	}
 
+	// collect operator names to check for duplicates
+	operatorNames := []string{}
+
 	// Validate the PlatformWorkloadIdentities
 	for n, p := range pwip.PlatformWorkloadIdentities {
 		resource, err := azcorearm.ParseResourceID(p.ResourceID)
@@ -488,6 +492,11 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 		if p.OperatorName == "" {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Operator name is empty.")
 		}
+
+		if slices.Contains(operatorNames, p.OperatorName) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.platformWorkloadIdentities", path), "Operator identities cannot have duplicate names.")
+		}
+		operatorNames = append(operatorNames, p.OperatorName)
 
 		if resource.ResourceType.Type != "userAssignedIdentities" {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Resource must be a user assigned identity.")
