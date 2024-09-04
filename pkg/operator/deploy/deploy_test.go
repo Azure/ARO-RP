@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"context"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -219,7 +220,7 @@ func TestCreateDeploymentData(t *testing.T) {
 				Image:                operatorImageWithTag,
 				Version:              operatorImageTag,
 				UsesWorkloadIdentity: true,
-				TokenVolumeMountPath: pkgoperator.OperatorTokenFile,
+				TokenVolumeMountPath: filepath.Dir(pkgoperator.OperatorTokenFile),
 			},
 		},
 		{

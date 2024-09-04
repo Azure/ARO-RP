@@ -9,6 +9,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -171,7 +172,7 @@ func (o *operator) createDeploymentData(ctx context.Context) (deploymentData, er
 
 	if o.oc.UsesWorkloadIdentity() {
 		data.UsesWorkloadIdentity = o.oc.UsesWorkloadIdentity()
-		data.TokenVolumeMountPath = pkgoperator.OperatorTokenFile
+		data.TokenVolumeMountPath = filepath.Dir(pkgoperator.OperatorTokenFile)
 	}
 
 	return data, nil
