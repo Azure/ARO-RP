@@ -30,7 +30,8 @@ WORKDIR /app
 
 # golang config and build steps
 ENV GOPATH=/root/go
-ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
+ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper,requirefips"
+ENV CGO_ENABLED=1
 
 # Copy dependencies and source files
 COPY go.mod go.sum ./

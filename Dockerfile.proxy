@@ -3,7 +3,7 @@
 ARG REGISTRY
 FROM mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0 AS builder
 USER root
-ENV GOPATH=/root/go
+ENV GOPATH=/root/go CGO_ENABLED=1 GOFLAGS='-tags=requirefips'
 RUN mkdir -p /app
 WORKDIR /app
 

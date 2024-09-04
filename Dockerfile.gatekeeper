@@ -8,7 +8,9 @@ ARG BUILDKIT_SBOM_SCAN_STAGE=true
 ENV GO111MODULE=on \
     GOOS=linux \
     GOPATH=/go/ \
-    GOARCH=amd64
+    GOARCH=amd64 \
+    CGO_ENABLED=1 \
+    GOFLAGS='-tags=requirefips'    
 
 WORKDIR ${GOPATH}/src/github.com/open-policy-agent/gatekeeper
 USER root

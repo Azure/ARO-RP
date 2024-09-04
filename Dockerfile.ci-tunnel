@@ -6,8 +6,11 @@ ARG ARO_VERSION
 USER root
 WORKDIR /app
 
+# https://github.com/microsoft/go/tree/microsoft/main/eng/doc/fips#build-option-to-require-fips-mode
+ENV CGO_ENABLED=1 GOFLAGS='-tags=requirefips'
+
 # golang config and build steps
-ENV GOPATH=/root/go
+ENV GOPATH=/root/go 
 
 # Copy dependencies and source files
 COPY go.mod go.sum ./
