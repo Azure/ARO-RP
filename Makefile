@@ -5,8 +5,6 @@ ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 E2E_LABEL ?= !smoke
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
-NO_CACHE ?= true
-PODMAN_REMOTE_ARGS ?=
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -43,12 +41,6 @@ else
 	REGISTRY = $(RP_IMAGE_ACR)
 endif
 
-# local images
-LOCAL_ARO_RP_IMAGE ?= aro
-LOCAL_ARO_PORTAL_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-portal-build
-LOCAL_ARO_RP_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-build
-LOCAL_AZ_EXT_ARO_IMAGE ?= azext-aro
-
 # prod images
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
@@ -72,106 +64,8 @@ build-all:
 aro: check-release generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
-# Target to create podman secrets
-.PHONY: podman-secrets
-podman-secrets: aks.kubeconfig
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore aks.kubeconfig
-	podman $(PODMAN_REMOTE_ARGS) secret create aks.kubeconfig ./aks.kubeconfig
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.key
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.key ./secrets/proxy-client.key
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.crt
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.crt ./secrets/proxy-client.crt
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy.crt
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy.crt ./secrets/proxy.crt
-
-.PHONY: runlocal-portal
-runlocal-portal: ci-rp podman-secrets
-	podman $(PODMAN_REMOTE_ARGS) \
-		run \
-		--name aro-portal \
-		--rm \
-		-p 127.0.0.1:8444:8444 \
-		-p 127.0.0.1:2222:2222 \
-		--cap-drop net_raw \
-		-e RP_MODE \
-		-e AZURE_SUBSCRIPTION_ID \
-		-e AZURE_TENANT_ID \
-		-e LOCATION \
-		-e RESOURCEGROUP \
-		-e AZURE_PORTAL_CLIENT_ID \
-		-e AZURE_PORTAL_ELEVATED_GROUP_IDS \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
-		-e AZURE_RP_CLIENT_SECRET \
-		-e AZURE_RP_CLIENT_ID \
-		-e KEYVAULT_PREFIX \
-		-e DATABASE_ACCOUNT_NAME \
-		-e DATABASE_NAME \
-		-e NO_NPM=1 \
-		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
-		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
-		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION) portal
-
-# Target to run the local RP
 .PHONY: runlocal-rp
-runlocal-rp: ci-rp podman-secrets
-	podman $(PODMAN_REMOTE_ARGS) \
-		run \
-		--name aro-rp \
-		--rm \
-		-p 127.0.0.1:8443:8443 \
-		-w /app \
-		-e ARO_IMAGE \
-		-e RP_MODE="development" \
-		-e PROXY_HOSTNAME \
-		-e DOMAIN_NAME \
-		-e AZURE_RP_CLIENT_ID \
-		-e AZURE_FP_CLIENT_ID \
-		-e AZURE_SUBSCRIPTION_ID \
-		-e AZURE_TENANT_ID \
-		-e AZURE_RP_CLIENT_SECRET \
-		-e LOCATION \
-		-e RESOURCEGROUP \
-		-e AZURE_ARM_CLIENT_ID \
-		-e AZURE_FP_SERVICE_PRINCIPAL_ID \
-		-e AZURE_DBTOKEN_CLIENT_ID \
-		-e AZURE_PORTAL_CLIENT_ID \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
-		-e AZURE_CLIENT_ID \
-		-e AZURE_SERVICE_PRINCIPAL_ID \
-		-e AZURE_CLIENT_SECRET \
-		-e AZURE_GATEWAY_CLIENT_ID \
-		-e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
-		-e AZURE_GATEWAY_CLIENT_SECRET \
-		-e DATABASE_NAME \
-		-e PULL_SECRET \
-		-e SECRET_SA_ACCOUNT_NAME \
-		-e DATABASE_ACCOUNT_NAME \
-		-e KEYVAULT_PREFIX \
-		-e ADMIN_OBJECT_ID \
-		-e PARENT_DOMAIN_NAME \
-		-e PARENT_DOMAIN_RESOURCEGROUP \
-		-e AZURE_ENVIRONMENT \
-		-e STORAGE_ACCOUNT_DOMAIN \
-		-e OIDC_STORAGE_ACCOUNT_NAME \
-		-e KUBECONFIG="/app/secrets/aks.kubeconfig" \
-		-e HIVE_KUBE_CONFIG_PATH="/app/secrets/aks.kubeconfig" \
-		-e ARO_CHECKOUT_PATH="/app" \
-		-e ARO_INSTALL_VIA_HIVE="true" \
-		-e ARO_ADOPT_BY_HIVE="true" \
-		--secret aks.kubeconfig,target=/app/secrets/aks.kubeconfig \
-		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
-		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
-		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
-
-.PHONY: runlocal-rp-the-old-way
-runlocal-rp-the-old-way:
-	@printf "\e[31mIf you're running this instead of runlocal-rp because that's broken, there's probably a problem blocking the whole team. Has a Slack thread been started, and an owner assigned to fix it? Could it be you?\e[0m\n"
-	@sleep 5
+runlocal-rp:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
 
 .PHONY: az
@@ -181,15 +75,6 @@ az: pyenv
 	python3 ./setup.py bdist_egg && \
 	python3 ./setup.py bdist_wheel || true && \
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
-
-.PHONY: azext-aro
-azext-aro:
-	podman $(PODMAN_REMOTE_ARGS) \
-		build . \
-		-f Dockerfile.ci-azext-aro \
-		--platform=linux/amd64 \
-		--no-cache=$(NO_CACHE) \
-		-t $(LOCAL_AZ_EXT_ARO_IMAGE):$(VERSION)
 
 .PHONY: clean
 clean:
@@ -201,45 +86,6 @@ clean:
 .PHONY: client
 client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
-
-.PHONY: ci-rp
-ci-rp: fix-macos-vendor
-	podman $(PODMAN_REMOTE_ARGS) \
-		build . \
-		-f Dockerfile.ci-rp \
-		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=$(REGISTRY) \
-		--build-arg ARO_VERSION=$(VERSION) \
-		--no-cache=$(NO_CACHE) \
-		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
-
-	# Tag the portal build image if it exists
-	@PORTAL_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
-	if [ -n "$$PORTAL_IMAGE_ID" ]; then \
-		echo "Tagging Portal Image $$PORTAL_IMAGE_ID as $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)"; \
-		podman $(PODMAN_REMOTE_ARGS) tag $$PORTAL_IMAGE_ID $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION); \
-	else \
-		echo "No Portal Image found with label stage=portal-build-cache-layer"; \
-	fi
-
-	# Tag the RP build image if it exists
-	@RP_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
-	if [ -n "$$RP_IMAGE_ID" ]; then \
-		echo "Tagging RP Image $$RP_IMAGE_ID as $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)"; \
-		podman $(PODMAN_REMOTE_ARGS) tag $$RP_IMAGE_ID $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
-	else \
-		echo "No RP Image found with label stage=rp-build-cache-layer"; \
-	fi
-
-
-.PHONY: ci-tunnel
-ci-tunnel: fix-macos-vendor
-	podman build . -f Dockerfile.ci-tunnel --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE) -t aro-tunnel:$(VERSION)
-
-.PHONY: ci-clean
-ci-clean:
-	$(shell podman ps --external --format "{{.Command}} {{.ID}}" | grep buildah | cut -d " " -f 2 | xargs podman rm -f > /dev/null)
-	podman image prune --all --filter="label=aro-*=true"
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -256,12 +102,6 @@ discoverycache:
 	$(MAKE) admin.kubeconfig
 	KUBECONFIG=admin.kubeconfig go run ./hack/gendiscoverycache
 	$(MAKE) generate
-
-.PHONY: fix-macos-vendor
-fix-macos-vendor:
-ifeq ($(shell uname -s),Darwin)
-	mv ./vendor/github.com/Microsoft ./vendor/github.com/temp-microsoft && mv ./vendor/github.com/temp-microsoft ./vendor/github.com/microsoft || true
-endif
 
 .PHONY: generate
 generate:
@@ -353,8 +193,8 @@ extract-aro-docker:
 proxy:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
-.PHONY: run-portal
-run-portal:
+.PHONY: runlocal-portal
+runlocal-portal:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 .PHONY: build-portal
@@ -500,3 +340,196 @@ vendor:
 .PHONY: install-go-tools
 install-go-tools:
 	go install ${GOTESTSUM}
+
+###############################################################################
+# Containerized CI/CD RP
+###############################################################################
+
+###############################################################################
+# Config
+###############################################################################
+
+# REGISTRY is used from above, and defines what base images are used in the
+# build process
+
+# VERSION is used from above, and is used during binary compile time and for
+# all image tags.
+
+# Configures use of podman build cache. Likely you want `false` locally. Always
+# `true` in CI.
+NO_CACHE ?= true
+
+# Useful for CI pipelines where we need to run podman as a service, and specify
+# that service as a URL (see .pipelines/ci.yml). This should be invoked on all
+# use of `podman` in the Makefile.
+PODMAN_REMOTE_ARGS ?=
+
+# Image names that will be found in the local podman image registry after build
+# (tags are always VERSION).
+LOCAL_ARO_RP_IMAGE ?= aro
+LOCAL_ARO_PORTAL_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-portal-build
+LOCAL_ARO_RP_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-build
+LOCAL_AZ_EXT_ARO_IMAGE ?= azext-aro
+LOCAL_TUNNEL_IMAGE ?= aro-tunnel
+
+###############################################################################
+# Targets
+###############################################################################
+.PHONY: ci-azext-aro
+ci-azext-aro:
+	podman $(PODMAN_REMOTE_ARGS) \
+		build . \
+		-f Dockerfile.ci-azext-aro \
+		--platform=linux/amd64 \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_AZ_EXT_ARO_IMAGE):$(VERSION)
+
+.PHONY: ci-clean
+ci-clean:
+	$(shell podman $(PODMAN_REMOTE_ARGS) ps --external --format "{{.Command}} {{.ID}}" | grep buildah | cut -d " " -f 2 | xargs podman $(PODMAN_REMOTE_ARGS) rm -f > /dev/null)
+	podman $(PODMAN_REMOTE_ARGS) \
+	    image prune --all --filter="label=aro-*=true"
+
+.PHONY: ci-rp
+ci-rp: fix-macos-vendor
+	podman $(PODMAN_REMOTE_ARGS) \
+		build . \
+		-f Dockerfile.ci-rp \
+		--ulimit=nofile=4096:4096 \
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
+
+	# Tag the portal build image if it exists
+	@PORTAL_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
+	if [ -n "$$PORTAL_IMAGE_ID" ]; then \
+		echo "Tagging Portal Image $$PORTAL_IMAGE_ID as $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)"; \
+		podman $(PODMAN_REMOTE_ARGS) tag $$PORTAL_IMAGE_ID $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION); \
+	else \
+		echo "No Portal Image found with label stage=portal-build-cache-layer"; \
+	fi
+
+	# Tag the RP build image if it exists
+	@RP_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
+	if [ -n "$$RP_IMAGE_ID" ]; then \
+		echo "Tagging RP Image $$RP_IMAGE_ID as $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)"; \
+		podman $(PODMAN_REMOTE_ARGS) tag $$RP_IMAGE_ID $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
+	else \
+		echo "No RP Image found with label stage=rp-build-cache-layer"; \
+	fi
+
+.PHONY: ci-tunnel
+ci-tunnel: fix-macos-vendor
+	podman $(PODMAN_REMOTE_ARGS) \
+	    build . \
+		-f Dockerfile.ci-tunnel \
+		--ulimit=nofile=4096:4096 \
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_TUNNEL_IMAGE):$(VERSION)
+
+# MacOS is a case insensitive filesystem. Linux is case sensitive. This target
+# makes podman builds possible on MacOS.
+.PHONY: fix-macos-vendor
+fix-macos-vendor:
+ifeq ($(shell uname -s),Darwin)
+	mv ./vendor/github.com/Microsoft ./vendor/github.com/temp-microsoft && mv ./vendor/github.com/temp-microsoft ./vendor/github.com/microsoft || true
+endif
+
+.PHONY: podman-secrets
+podman-secrets: aks.kubeconfig
+	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore aks.kubeconfig
+	podman $(PODMAN_REMOTE_ARGS) secret create aks.kubeconfig ./aks.kubeconfig
+
+	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.key
+	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.key ./secrets/proxy-client.key
+
+	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.crt
+	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.crt ./secrets/proxy-client.crt
+
+	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy.crt
+	podman $(PODMAN_REMOTE_ARGS) secret create proxy.crt ./secrets/proxy.crt
+
+.PHONY: run-portal
+run-portal: ci-rp podman-secrets
+	podman $(PODMAN_REMOTE_ARGS) \
+		run \
+		--name aro-portal \
+		--rm \
+		-p 127.0.0.1:8444:8444 \
+		-p 127.0.0.1:2222:2222 \
+		--cap-drop net_raw \
+		-e RP_MODE \
+		-e AZURE_SUBSCRIPTION_ID \
+		-e AZURE_TENANT_ID \
+		-e LOCATION \
+		-e RESOURCEGROUP \
+		-e AZURE_PORTAL_CLIENT_ID \
+		-e AZURE_PORTAL_ELEVATED_GROUP_IDS \
+		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
+		-e AZURE_RP_CLIENT_SECRET \
+		-e AZURE_RP_CLIENT_ID \
+		-e KEYVAULT_PREFIX \
+		-e DATABASE_ACCOUNT_NAME \
+		-e DATABASE_NAME \
+		-e NO_NPM=1 \
+		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
+		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
+		--secret proxy.crt,target=/app/secrets/proxy.crt \
+		$(LOCAL_ARO_RP_IMAGE):$(VERSION) portal
+
+# run-rp executes the RP locally as similarly as possible to production. That
+# includes the use of Hive, meaning you need a VPN connection.
+.PHONY: run-rp
+run-rp: ci-rp podman-secrets
+	podman $(PODMAN_REMOTE_ARGS) \
+		run \
+		--name aro-rp \
+		--rm \
+		-p 127.0.0.1:8443:8443 \
+		-w /app \
+		-e ARO_IMAGE \
+		-e RP_MODE="development" \
+		-e PROXY_HOSTNAME \
+		-e DOMAIN_NAME \
+		-e AZURE_RP_CLIENT_ID \
+		-e AZURE_FP_CLIENT_ID \
+		-e AZURE_SUBSCRIPTION_ID \
+		-e AZURE_TENANT_ID \
+		-e AZURE_RP_CLIENT_SECRET \
+		-e LOCATION \
+		-e RESOURCEGROUP \
+		-e AZURE_ARM_CLIENT_ID \
+		-e AZURE_FP_SERVICE_PRINCIPAL_ID \
+		-e AZURE_DBTOKEN_CLIENT_ID \
+		-e AZURE_PORTAL_CLIENT_ID \
+		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
+		-e AZURE_CLIENT_ID \
+		-e AZURE_SERVICE_PRINCIPAL_ID \
+		-e AZURE_CLIENT_SECRET \
+		-e AZURE_GATEWAY_CLIENT_ID \
+		-e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
+		-e AZURE_GATEWAY_CLIENT_SECRET \
+		-e DATABASE_NAME \
+		-e PULL_SECRET \
+		-e SECRET_SA_ACCOUNT_NAME \
+		-e DATABASE_ACCOUNT_NAME \
+		-e KEYVAULT_PREFIX \
+		-e ADMIN_OBJECT_ID \
+		-e PARENT_DOMAIN_NAME \
+		-e PARENT_DOMAIN_RESOURCEGROUP \
+		-e AZURE_ENVIRONMENT \
+		-e STORAGE_ACCOUNT_DOMAIN \
+		-e OIDC_STORAGE_ACCOUNT_NAME \
+		-e KUBECONFIG="/app/secrets/aks.kubeconfig" \
+		-e HIVE_KUBE_CONFIG_PATH="/app/secrets/aks.kubeconfig" \
+		-e ARO_CHECKOUT_PATH="/app" \
+		-e ARO_INSTALL_VIA_HIVE="true" \
+		-e ARO_ADOPT_BY_HIVE="true" \
+		--secret aks.kubeconfig,target=/app/secrets/aks.kubeconfig \
+		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
+		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
+		--secret proxy.crt,target=/app/secrets/proxy.crt \
+		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
