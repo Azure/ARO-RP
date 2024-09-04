@@ -624,7 +624,6 @@ func TestGenerateOperatorIdentitySecret(t *testing.T) {
 		Name           string
 		Operator       *operator
 		ExpectedSecret *corev1.Secret
-		ExpectError    bool
 	}{
 		{
 			Name: "valid cluster operator",
@@ -671,8 +670,8 @@ func TestGenerateOperatorIdentitySecret(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			actualSecret, err := test.Operator.generateOperatorIdentitySecret()
-			if test.ExpectError == (err == nil) {
-				t.Errorf("generateOperatorIdentitySecret() %s: ExpectError: %t, actual error: %s\n", test.Name, test.ExpectError, err)
+			if err != nil {
+				t.Errorf("generateOperatorIdentitySecret() %s: unexpected error: %s\n", test.Name, err)
 			}
 
 			if !reflect.DeepEqual(actualSecret, test.ExpectedSecret) {
@@ -686,7 +685,6 @@ func TestTemplateManifests(t *testing.T) {
 	tests := []struct {
 		Name           string
 		DeploymentData deploymentData
-		ExpectError    bool
 	}{
 		{
 			Name: "service principal data",
@@ -713,16 +711,16 @@ func TestTemplateManifests(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			actualBytes, err := templateManifests(test.DeploymentData)
-			if test.ExpectError == (err == nil) {
-				t.Errorf("templateManifests() %s: ExpectError: %t, actual error: %s\n", test.Name, test.ExpectError, err)
+			if err != nil {
+				t.Errorf("templateManifests() %s: unexpected error: %s\n", test.Name, err)
 			}
 
 			for _, fileBytes := range actualBytes {
 				var resource *kruntime.Object
 				err := yaml.Unmarshal(fileBytes, resource)
 
-				if test.ExpectError == (err == nil) {
-					t.Errorf("templateManifests() %s: ExpectError: %t, actual error: %s\n", test.Name, test.ExpectError, err)
+				if err != nil {
+					t.Errorf("templateManifests() %s: unexpected error: %s\n", test.Name, err)
 				}
 			}
 		})
