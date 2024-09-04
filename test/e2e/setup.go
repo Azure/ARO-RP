@@ -41,6 +41,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -81,6 +82,7 @@ type clientSet struct {
 	Interfaces            network.InterfacesClient
 	Storage               storage.AccountsClient
 	LoadBalancers         network.LoadBalancersClient
+	RoleDefinitions       authorization.RoleDefinitionsClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
@@ -389,6 +391,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		LoadBalancers:         network.NewLoadBalancersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		RoleDefinitions:       authorization.NewRoleDefinitionsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,

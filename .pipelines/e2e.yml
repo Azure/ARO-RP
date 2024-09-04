@@ -75,6 +75,9 @@ jobs:
           validate_rp_running
 
           register_sub
+          
+          wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+          tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
 
           make test-e2e -o e2e.test
         displayName: Execute Tests
