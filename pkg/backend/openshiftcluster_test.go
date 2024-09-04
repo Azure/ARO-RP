@@ -452,7 +452,7 @@ func TestBackendTry(t *testing.T) {
 				newManager: createManager,
 			}
 
-			worked, err := b.ocb.try(ctx)
+			worked, err := b.ocb.try(ctx, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
