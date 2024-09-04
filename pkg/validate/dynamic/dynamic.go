@@ -489,10 +489,9 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 		_, ok := actionsToFind[result.ActionId]
 		if ok {
 			delete(actionsToFind, result.ActionId)
-			if result.AccessDecision == remotepdp.Allowed {
-				continue
+			if result.AccessDecision != remotepdp.Allowed {
+				return false, nil
 			}
-			return false, nil
 		}
 	}
 	if len(actionsToFind) > 0 {
