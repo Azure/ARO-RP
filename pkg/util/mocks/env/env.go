@@ -537,6 +537,20 @@ func (mr *MockInterfaceMockRecorder) OIDCEndpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OIDCEndpoint", reflect.TypeOf((*MockInterface)(nil).OIDCEndpoint))
 }
 
+// OIDCKeyBitSize mocks base method.
+func (m *MockInterface) OIDCKeyBitSize() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OIDCKeyBitSize")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// OIDCKeyBitSize indicates an expected call of OIDCKeyBitSize.
+func (mr *MockInterfaceMockRecorder) OIDCKeyBitSize() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OIDCKeyBitSize", reflect.TypeOf((*MockInterface)(nil).OIDCKeyBitSize))
+}
+
 // OIDCStorageAccountName mocks base method.
 func (m *MockInterface) OIDCStorageAccountName() string {
 	m.ctrl.T.Helper()

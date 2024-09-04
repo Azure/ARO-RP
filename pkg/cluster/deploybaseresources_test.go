@@ -1421,6 +1421,7 @@ func TestCreateOIDC(t *testing.T) {
 			},
 		},
 	}
+	testOIDCKeyBitSize := 256
 
 	for _, tt := range []struct {
 		name                              string
@@ -1481,6 +1482,7 @@ func TestCreateOIDC(t *testing.T) {
 			},
 			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(false)
+				menv.EXPECT().OIDCKeyBitSize().Return(testOIDCKeyBitSize)
 				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
@@ -1508,6 +1510,7 @@ func TestCreateOIDC(t *testing.T) {
 			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(true)
 				menv.EXPECT().ResourceGroup().Return(resourceGroupName)
+				menv.EXPECT().OIDCKeyBitSize().Return(testOIDCKeyBitSize)
 				menv.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
 				blob.EXPECT().GetContainerProperties(gomock.Any(), resourceGroupName, oidcStorageAccountName, oidcbuilder.WebContainer).Return(containerProperties, nil)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
@@ -1557,6 +1560,7 @@ func TestCreateOIDC(t *testing.T) {
 			},
 			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(false)
+				menv.EXPECT().OIDCKeyBitSize().Return(testOIDCKeyBitSize)
 				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
@@ -1581,6 +1585,7 @@ func TestCreateOIDC(t *testing.T) {
 			},
 			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(false)
+				menv.EXPECT().OIDCKeyBitSize().Return(testOIDCKeyBitSize)
 				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)

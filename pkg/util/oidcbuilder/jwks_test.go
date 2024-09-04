@@ -15,7 +15,7 @@ import (
 // Licensed under the Apache License 2.0.
 
 func TestKeyIDFromPublicKey(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 256)
 	if err != nil {
 		t.Fatal(err)
 	}
