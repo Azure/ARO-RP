@@ -242,7 +242,7 @@ e2etools:
 
 .PHONY: test-e2e
 test-e2e: e2e.test
-	./e2e.test $(E2E_FLAGS) --ginkgo.label-filter="$(E2E_LABEL)"
+	./e2e.test $(E2E_FLAGS) --ginkgo.label-filter="$(E2E_LABEL)" --ginkgo.focus="MIWI"
 
 .PHONY: test-go
 test-go: generate build-all validate-go lint-go unit-test-go

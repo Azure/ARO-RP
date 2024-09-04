@@ -14,6 +14,7 @@ import (
 
 // RoleDefinitionsClient is a minimal interface for azure RoleDefinitionsClient
 type RoleDefinitionsClient interface {
+	Get(ctx context.Context, scope string, roleDefinitionID string) (result mgmtauthorization.RoleDefinition, err error)
 	Delete(ctx context.Context, scope string, roleDefinitionID string) (result mgmtauthorization.RoleDefinition, err error)
 	RoleDefinitionsClientAddons
 }
