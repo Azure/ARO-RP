@@ -165,6 +165,12 @@ runlocal-rp: ci-rp podman-secrets
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
 
+.PHONY: runlocal-rp-the-old-way
+runlocal-rp-the-old-way:
+	@printf "\e[31mIf you're running this instead of runlocal-rp because that's broken, there's probably a problem blocking the whole team. Has a Slack thread been started, and an owner assigned to fix it? Could it be you?\e[0m\n"
+	@sleep 5
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
+
 .PHONY: az
 az: pyenv
 	. pyenv/bin/activate && \
@@ -203,12 +209,25 @@ ci-rp: fix-macos-vendor
 		--build-arg ARO_VERSION=$(VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
-	podman $(PODMAN_REMOTE_ARGS) tag \
-		$(shell podman image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
-		$(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)
-	podman $(PODMAN_REMOTE_ARGS) tag \
-		$(shell podman image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1) \
-		$(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)
+
+	# Tag the portal build image if it exists
+	@PORTAL_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
+	if [ -n "$$PORTAL_IMAGE_ID" ]; then \
+		echo "Tagging Portal Image $$PORTAL_IMAGE_ID as $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)"; \
+		podman $(PODMAN_REMOTE_ARGS) tag $$PORTAL_IMAGE_ID $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION); \
+	else \
+		echo "No Portal Image found with label stage=portal-build-cache-layer"; \
+	fi
+
+	# Tag the RP build image if it exists
+	@RP_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
+	if [ -n "$$RP_IMAGE_ID" ]; then \
+		echo "Tagging RP Image $$RP_IMAGE_ID as $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)"; \
+		podman $(PODMAN_REMOTE_ARGS) tag $$RP_IMAGE_ID $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
+	else \
+		echo "No RP Image found with label stage=rp-build-cache-layer"; \
+	fi
+
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
@@ -216,6 +235,7 @@ ci-tunnel: fix-macos-vendor
 
 .PHONY: ci-clean
 ci-clean:
+	$(shell podman ps --external --format "{{.Command}} {{.ID}}" | grep buildah | cut -d " " -f 2 | xargs podman rm -f > /dev/null)
 	podman image prune --all --filter="label=aro-*=true"
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to

@@ -23,94 +23,176 @@ pr:
 resources:
   containers:
     - container: golang
-      image: mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0
+      image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
       options: --user=0
     - container: python
       image: registry.access.redhat.com/ubi8/python-39:latest
       options: --user=0
+    - container: ubi8
+      image: registry.access.redhat.com/ubi8/toolbox:8.8
+      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
 
 variables:
   - template: vars.yml
 
-jobs:
-  - job: Python_Unit_Tests
-    pool:
-      name: 1es-aro-ci-pool
-    variables:
-      HOME: $(Agent.BuildDirectory)
+stages:
+- stage: NotContainerized
+  dependsOn: Containerized
+  jobs:
+    - job: Python_Unit_Tests
+      pool:
+        name: 1es-aro-ci-pool
+      variables:
+        HOME: $(Agent.BuildDirectory)
 
-    steps:
-      - template: ./templates/template-checkout.yml
-      - script: |
-          set -xe
-          make test-python
-          [[ -z "$(git status -s)" ]]
-        displayName: 🧪Run Python Unit Tests
-        target: python
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            make test-python
+            [[ -z "$(git status -s)" ]]
+          displayName: 🧪Run Python Unit Tests
+          target: python
 
-  - job: Golang_Unit_Tests
-    pool:
-      name: 1es-aro-ci-pool
-    variables:
-      GOCACHE: /tmp/gocache
-    steps:
-      - template: ./templates/template-checkout.yml
+    - job: Golang_Unit_Tests
+      pool:
+        name: 1es-aro-ci-pool
+      variables:
+        GOCACHE: /tmp/gocache
+      steps:
+        - template: ./templates/template-checkout.yml
 
-      - script: |
-          set -xe
-          go version
-          go env
-        displayName: Print Go version & env
-        target: golang
+        - script: |
+            set -xe
+            go version
+            go env
+          displayName: Print Go version & env
+          target: golang
 
-      - script: |
-          set -xe
-          make generate
-          [[ -z "$(git status -s)" ]]
-        displayName: ⚙️ Run Golang code generate
-        target: golang
+        - script: |
+            set -xe
+            # Required for podman 5
+            sudo tdnf install -y gpgme-devel lvm2-devel btrfs-progs-devel golang-1.21.11-1.cm2
+            make generate
+            [[ -z "$(git status -s)" ]]
+          displayName: ⚙️ Run Golang code generate
+          target: golang
 
-      - script: |
-          set -xe
-          make build-all
-          [[ -z "$(git status -s)" ]]
-        displayName: 🕵️ Build Golang code
-        target: golang
+        - script: |
+            set -xe
+            make build-all
+            [[ -z "$(git status -s)" ]]
+          displayName: 🕵️ Build Golang code
+          target: golang
 
-      - script: |
-          set -xe
-          make unit-test-go
-        displayName: 🧪 Run Golang unit tests
-        target: golang
+        - script: |
+            set -xe
+            make unit-test-go
+          displayName: 🧪 Run Golang unit tests
+          target: golang
 
-      - task: PublishTestResults@2
-        displayName: 📊 Publish tests results
-        inputs:
-          testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-        condition: succeededOrFailed()
+        - task: PublishTestResults@2
+          displayName: 📊 Publish tests results
+          inputs:
+            testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+          condition: succeededOrFailed()
 
-      - script: |
-          set -xe
-          go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
-        displayName: ⚙️ Process Reports
-        condition: succeededOrFailed()
-        target: golang
+        - script: |
+            set -xe
+            go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
+          displayName: ⚙️ Process Reports
+          condition: succeededOrFailed()
+          target: golang
 
-      - task: PublishCodeCoverageResults@1
-        displayName: 📈 Publish code coverage
-        inputs:
-          codeCoverageTool: Cobertura
-          summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
-          failIfCoverageEmpty: false
-        condition: succeededOrFailed()
-        target: golang
+        - task: PublishCodeCoverageResults@1
+          displayName: 📈 Publish code coverage
+          inputs:
+            codeCoverageTool: Cobertura
+            summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
+            failIfCoverageEmpty: false
+          condition: succeededOrFailed()
+          target: golang
 
-  - job: Lint_Admin_Portal
-    pool:
-      name: 1es-aro-ci-pool
-    steps:
-      - template: ./templates/template-checkout.yml
-      - script: |
-          set -xe
-          make lint-admin-portal
-        displayName: 🧹 Lint Admin Portal
+    - job: Lint_Admin_Portal
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            make lint-admin-portal
+          displayName: 🧹 Lint Admin Portal
+- stage: Containerized
+  dependsOn: []
+  jobs:
+    - job: Build_Lint_Test_RP_And_Portal
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export NO_CACHE=true
+
+            # Install podman
+            sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+            sudo dnf install -y podman make
+            which podman
+            podman --version
+            whoami
+
+            # Start podman service
+            . ./hack/e2e/utils.sh
+            run_podman
+            validate_podman_running
+
+            # run build
+            export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
+            make ci-rp
+
+            # Stop podman
+            kill_podman
+          target: ubi8
+
+    - job: Build_and_Test_Az_ARO_Extension
+      pool:
+        name: 1es-aro-ci-pool
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export NO_CACHE=true
+
+            # Install podman
+            sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+            sudo dnf install -y podman make
+            which podman
+            podman --version
+            whoami
+
+            # Start podman service
+            . ./hack/e2e/utils.sh
+            run_podman
+            validate_podman_running
+
+            # run build
+            export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
+            make azext-aro
+
+            # Stop podman
+            kill_podman
+          target: ubi8
+
+    - job: Lint_Az_ARO_Extension
+      pool:
+        name: 1es-aro-ci-pool
+      variables:
+        HOME: $(Agent.BuildDirectory)
+      steps:
+        - template: ./templates/template-checkout.yml
+        - script: |
+            set -xe
+            export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
+            make test-python
+            [[ -z "$(git status -s)" ]]
+          target: python
