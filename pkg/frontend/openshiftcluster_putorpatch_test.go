@@ -630,7 +630,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			wantEnriched:           []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantAsync:              false,
 			wantStatusCode:         http.StatusBadRequest,
-			wantError:              `400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.`,
+			wantError:              `400: PropertyChangeNotAllowed: properties.registryProfiles: Error Message: Changing property 'properties.registryProfiles' is not allowed.`,
 		},
 		{
 			name: "patch an empty maintenance state cluster with maintenance pending request",

@@ -60,7 +60,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				return &OpenShiftCluster{Location: "eastus"}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Location = strings.ToUpper(oc.Location) },
-			wantErr: "400: PropertyChangeNotAllowed: location: Changing property 'location' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: location: Error Message: Changing property 'location' is not allowed.",
 		},
 		{
 			name: "tags change is not allowed",
@@ -72,7 +72,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Tags = map[string]string{"new": "value"} },
-			wantErr: "400: PropertyChangeNotAllowed: tags: Changing property 'tags' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: tags: Error Message: Changing property 'tags' is not allowed.",
 		},
 		{
 			name: "provisioningState change is not allowed",
@@ -84,7 +84,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ArchitectureVersion = 2 },
-			wantErr: "400: PropertyChangeNotAllowed: properties.architectureVersion: Changing property 'properties.architectureVersion' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.architectureVersion: Error Message: Changing property 'properties.architectureVersion' is not allowed.",
 		},
 		{
 			name: "provisioningState change is not allowed",
@@ -96,7 +96,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ProvisioningState = ProvisioningStateFailed },
-			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Error Message: Changing property 'properties.provisioningState' is not allowed.",
 		},
 		{
 			name: "lastProvisioningState change is not allowed",
@@ -104,7 +104,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				return &OpenShiftCluster{}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.LastProvisioningState = ProvisioningStateSucceeded },
-			wantErr: "400: PropertyChangeNotAllowed: properties.lastProvisioningState: Changing property 'properties.lastProvisioningState' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.lastProvisioningState: Error Message: Changing property 'properties.lastProvisioningState' is not allowed.",
 		},
 		{
 			name: "failedProvisioningState change is not allowed",
@@ -117,7 +117,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.FailedProvisioningState = ProvisioningStateUpdating },
-			wantErr: "400: PropertyChangeNotAllowed: properties.failedProvisioningState: Changing property 'properties.failedProvisioningState' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.failedProvisioningState: Error Message: Changing property 'properties.failedProvisioningState' is not allowed.",
 		},
 		{
 			name: "lastAdminUpdateError change is not allowed",
@@ -125,7 +125,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				return &OpenShiftCluster{}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.LastAdminUpdateError = "error" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.lastAdminUpdateError: Changing property 'properties.lastAdminUpdateError' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.lastAdminUpdateError: Error Message: Changing property 'properties.lastAdminUpdateError' is not allowed.",
 		},
 		{
 			name: "disable gatewayEnabled on enabled clusters is allowed",
@@ -169,7 +169,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleProfile.URL = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.consoleProfile.url: Changing property 'properties.consoleProfile.url' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.consoleProfile.url: Error Message: Changing property 'properties.consoleProfile.url' is not allowed.",
 		},
 		{
 			name: "domain change is not allowed",
@@ -183,7 +183,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Domain = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Error Message: Changing property 'properties.clusterProfile.domain' is not allowed.",
 		},
 		{
 			name: "version change is not allowed",
@@ -197,7 +197,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Version = "" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.version: Changing property 'properties.clusterProfile.version' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.version: Error Message: Changing property 'properties.clusterProfile.version' is not allowed.",
 		},
 		{
 			name: "resource group change is not allowed",
@@ -213,7 +213,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID[:strings.LastIndexByte(oc.Properties.ClusterProfile.ResourceGroupID, '/')] + "/changed"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.resourceGroupId: Changing property 'properties.clusterProfile.resourceGroupId' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.resourceGroupId: Error Message: Changing property 'properties.clusterProfile.resourceGroupId' is not allowed.",
 		},
 		{
 			name: "apiServer private change is not allowed",
@@ -229,7 +229,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.APIServerProfile.Visibility = VisibilityPrivate
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.visibility: Changing property 'properties.apiserverProfile.visibility' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.visibility: Error Message: Changing property 'properties.apiserverProfile.visibility' is not allowed.",
 		},
 		{
 			name: "apiServer url change is not allowed",
@@ -243,7 +243,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.URL = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.url: Changing property 'properties.apiserverProfile.url' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.url: Error Message: Changing property 'properties.apiserverProfile.url' is not allowed.",
 		},
 		{
 			name: "apiServer ip change is not allowed",
@@ -257,7 +257,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.IP = "2.3.4.5" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.ip: Changing property 'properties.apiserverProfile.ip' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.ip: Error Message: Changing property 'properties.apiserverProfile.ip' is not allowed.",
 		},
 		{
 			name: "apiServer intIp change is not allowed",
@@ -271,7 +271,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.IntIP = "2.3.4.5" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.intIp: Changing property 'properties.apiserverProfile.intIp' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.intIp: Error Message: Changing property 'properties.apiserverProfile.intIp' is not allowed.",
 		},
 		{
 			name: "ingress private change is not allowed",
@@ -290,7 +290,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].Visibility = VisibilityPrivate
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].visibility: Changing property 'properties.ingressProfiles['default'].visibility' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].visibility: Error Message: Changing property 'properties.ingressProfiles['default'].visibility' is not allowed.",
 		},
 		{
 			name: "ingress ip change is not allowed",
@@ -307,7 +307,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].IP = "2.3.4.5" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].ip: Changing property 'properties.ingressProfiles['default'].ip' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].ip: Error Message: Changing property 'properties.ingressProfiles['default'].ip' is not allowed.",
 		},
 		{
 			name: "clientId change is not allowed",
@@ -323,7 +323,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ServicePrincipalProfile.ClientID = uuid.DefaultGenerator.Generate()
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Error Message: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
 		},
 		{
 			name: "spObjectId change is not allowed",
@@ -339,7 +339,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ServicePrincipalProfile.SPObjectID = uuid.DefaultGenerator.Generate()
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.spObjectId: Changing property 'properties.servicePrincipalProfile.spObjectId' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.spObjectId: Error Message: Changing property 'properties.servicePrincipalProfile.spObjectId' is not allowed.",
 		},
 		{
 			name: "softwareDefinedNetwork change is not allowed",
@@ -353,7 +353,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.SoftwareDefinedNetwork = "anything" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.softwareDefinedNetwork: Changing property 'properties.networkProfile.softwareDefinedNetwork' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.softwareDefinedNetwork: Error Message: Changing property 'properties.networkProfile.softwareDefinedNetwork' is not allowed.",
 		},
 		{
 			name: "podCidr change is not allowed",
@@ -367,7 +367,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.PodCIDR = "0.0.0.0/0" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.podCidr: Changing property 'properties.networkProfile.podCidr' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.podCidr: Error Message: Changing property 'properties.networkProfile.podCidr' is not allowed.",
 		},
 		{
 			name: "serviceCidr change is not allowed",
@@ -381,7 +381,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.ServiceCIDR = "0.0.0.0/0" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.serviceCidr: Changing property 'properties.networkProfile.serviceCidr' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.serviceCidr: Error Message: Changing property 'properties.networkProfile.serviceCidr' is not allowed.",
 		},
 		{
 			name: "privateEndpointIp change is not allowed",
@@ -395,7 +395,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.APIServerPrivateEndpointIP = "4.3.2.1" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.privateEndpointIp: Changing property 'properties.networkProfile.privateEndpointIp' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.privateEndpointIp: Error Message: Changing property 'properties.networkProfile.privateEndpointIp' is not allowed.",
 		},
 		{
 			name: "gatewayPrivateEndpointIp change is not allowed",
@@ -409,7 +409,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.GatewayPrivateEndpointIP = "4.3.2.1" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.gatewayPrivateEndpointIp: Changing property 'properties.networkProfile.gatewayPrivateEndpointIp' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.gatewayPrivateEndpointIp: Error Message: Changing property 'properties.networkProfile.gatewayPrivateEndpointIp' is not allowed.",
 		},
 		{
 			name: "gatewayPrivateLinkId change is not allowed",
@@ -423,7 +423,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.GatewayPrivateLinkID = "2" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.gatewayPrivateLinkId: Changing property 'properties.networkProfile.gatewayPrivateLinkId' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.gatewayPrivateLinkId: Error Message: Changing property 'properties.networkProfile.gatewayPrivateLinkId' is not allowed.",
 		},
 		{
 			name: "master subnetId change is not allowed",
@@ -439,7 +439,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID[:strings.LastIndexByte(oc.Properties.MasterProfile.SubnetID, '/')] + "/changed"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Changing property 'properties.masterProfile.subnetId' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Error Message: Changing property 'properties.masterProfile.subnetId' is not allowed.",
 		},
 		{
 			name: "master vmSize change is not allowed",
@@ -455,7 +455,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.MasterProfile.VMSize = VMSizeStandardD4sV3
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.vmSize: Changing property 'properties.masterProfile.vmSize' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.vmSize: Error Message: Changing property 'properties.masterProfile.vmSize' is not allowed.",
 		},
 		{
 			name: "worker vmSize change is not allowed",
@@ -472,7 +472,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = VMSizeStandardD4sV3 },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Error Message: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
 		},
 		{
 			name: "worker diskSizeGB change is not allowed",
@@ -489,7 +489,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].DiskSizeGB++ },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].diskSizeGB: Changing property 'properties.workerProfiles['worker'].diskSizeGB' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].diskSizeGB: Error Message: Changing property 'properties.workerProfiles['worker'].diskSizeGB' is not allowed.",
 		},
 		{
 			name: "worker subnetId change is not allowed",
@@ -508,7 +508,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = oc.Properties.WorkerProfiles[0].SubnetID[:strings.LastIndexByte(oc.Properties.WorkerProfiles[0].SubnetID, '/')] + "/changed"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].subnetId: Changing property 'properties.workerProfiles['worker'].subnetId' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].subnetId: Error Message: Changing property 'properties.workerProfiles['worker'].subnetId' is not allowed.",
 		},
 		{
 			name: "workerProfiles count change is not allowed",
@@ -525,7 +525,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count++ },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].count: Changing property 'properties.workerProfiles['worker'].count' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].count: Error Message: Changing property 'properties.workerProfiles['worker'].count' is not allowed.",
 		},
 		{
 			name: "install phase change is not allowed",
@@ -539,7 +539,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.Install.Phase = InstallPhaseRemoveBootstrap },
-			wantErr: "400: PropertyChangeNotAllowed: properties.install.phase: Changing property 'properties.install.phase' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.install.phase: Error Message: Changing property 'properties.install.phase' is not allowed.",
 		},
 		{
 			name: "install now change is not allowed",
@@ -555,7 +555,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.Install.Now = time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.install.now.ext: Changing property 'properties.install.now.ext' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.install.now.ext: Error Message: Changing property 'properties.install.now.ext' is not allowed.",
 		},
 		{
 			name: "storageSuffix change is not allowed",
@@ -567,7 +567,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.StorageSuffix = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.storageSuffix: Changing property 'properties.storageSuffix' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.storageSuffix: Error Message: Changing property 'properties.storageSuffix' is not allowed.",
 		},
 		{
 			name: "imageRegistryStorageAccountName change is not allowed",
@@ -579,7 +579,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ImageRegistryStorageAccountName = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.imageRegistryStorageAccountName: Changing property 'properties.imageRegistryStorageAccountName' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.imageRegistryStorageAccountName: Error Message: Changing property 'properties.imageRegistryStorageAccountName' is not allowed.",
 		},
 		{
 			name: "createdAt change is not allowed",
@@ -593,7 +593,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.CreatedAt = time.Date(1970, 1, 1, 0, 0, 0, 1, time.UTC)
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.createdAt.wall: Changing property 'properties.createdAt.wall' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.createdAt.wall: Error Message: Changing property 'properties.createdAt.wall' is not allowed.",
 		},
 		{
 			name: "createdBy change is not allowed",
@@ -607,7 +607,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.CreatedBy = "someothersha"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.createdBy: Changing property 'properties.createdBy' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.createdBy: Error Message: Changing property 'properties.createdBy' is not allowed.",
 		},
 		{
 			name: "provisionedBy change is not allowed",
@@ -621,7 +621,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ProvisionedBy = "someothersha"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.provisionedBy: Changing property 'properties.provisionedBy' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.provisionedBy: Error Message: Changing property 'properties.provisionedBy' is not allowed.",
 		},
 		{
 			name: "registryProfiles change is not allowed",
@@ -635,7 +635,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.RegistryProfiles[0].Username = "someothertestuser"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Error Message: Changing property 'properties.registryProfiles' is not allowed.",
 		},
 		{
 			name: "maintenanceTask change to Everything is allowed",
