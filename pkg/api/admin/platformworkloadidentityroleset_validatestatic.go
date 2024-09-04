@@ -74,7 +74,7 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validateDelta(new, curr
 	err := immutable.Validate("", new, current)
 	if err != nil {
 		err := err.(*immutable.ValidationError)
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message) //nolint:govet
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, "Error Message: %s", err.Message)
 	}
 	return nil
 }

@@ -122,6 +122,6 @@ func (s *authorizationRefreshingActionStep) servicePrincipalCloudError(message s
 	return api.NewCloudError(
 		http.StatusBadRequest,
 		api.CloudErrorCodeInvalidServicePrincipalCredentials,
-		"properties.servicePrincipalProfile",
-		message) //nolint:govet
+		"properties.servicePrincipalProfile", "Message: %s",
+		message)
 }

@@ -30,7 +30,7 @@ func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, spTokenCredenti
 	c := &azureclaim.AzureClaim{}
 	_, _, err = p.ParseUnverified(token.Token, c)
 	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", err.Error()) //nolint:govet
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "Error Message: %s", err.Error())
 	}
 
 	for _, role := range c.Roles {

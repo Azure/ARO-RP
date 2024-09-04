@@ -53,57 +53,57 @@ func TestEnrichConditionTimeoutError(t *testing.T) {
 		{
 			desc:     "test conditionfail for func - attachNSGs",
 			function: s.attachNSGs,
-			wantErr:  "500: DeploymentFailed: : Failed to attach the ARO NSG to the cluster subnets. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Failed to attach the ARO NSG to the cluster subnets. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - apiServersReady",
 			function: s.apiServersReady,
-			wantErr:  "500: DeploymentFailed: : Kube API has not initialised successfully and is unavailable. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Kube API has not initialised successfully and is unavailable. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - minimumWorkerNodesReady",
 			function: s.minimumWorkerNodesReady,
-			wantErr:  "500: DeploymentFailed: : Minimum number of worker nodes have not been successfully created. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Minimum number of worker nodes have not been successfully created. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - operatorConsoleExists",
 			function: s.operatorConsoleExists,
-			wantErr:  "500: DeploymentFailed: : Console Cluster Operator has failed to initialize successfully. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Console Cluster Operator has failed to initialize successfully. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - operatorConsoleReady",
 			function: s.operatorConsoleReady,
-			wantErr:  "500: DeploymentFailed: : Console Cluster Operator has not started successfully. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Console Cluster Operator has not started successfully. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - clusterVersionReady",
 			function: s.clusterVersionReady,
-			wantErr:  "500: DeploymentFailed: : Cluster Version is not reporting status as ready. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Cluster Version is not reporting status as ready. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - clusterVersionReady",
 			function: s.ingressControllerReady,
-			wantErr:  "500: DeploymentFailed: : Ingress Cluster Operator has not started successfully. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Ingress Cluster Operator has not started successfully. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - aroDeploymentReady",
 			function: s.aroDeploymentReady,
-			wantErr:  "500: DeploymentFailed: : ARO Cluster Operator has failed to initialize successfully. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: ARO Cluster Operator has failed to initialize successfully. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - ensureAROOperatorRunningDesiredVersion",
 			function: s.ensureAROOperatorRunningDesiredVersion,
-			wantErr:  "500: DeploymentFailed: : ARO Cluster Operator is not running desired version. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: ARO Cluster Operator is not running desired version. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - hiveClusterDeploymentReady",
 			function: s.hiveClusterDeploymentReady,
-			wantErr:  "500: DeploymentFailed: : Timed out waiting for the condition to be ready. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Timed out waiting for the condition to be ready. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - hiveClusterInstallationComplete",
 			function: s.hiveClusterInstallationComplete,
-			wantErr:  "500: DeploymentFailed: : Timed out waiting for the condition to complete. Please retry, and if the issue persists, raise an Azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Message: Timed out waiting for the condition to complete. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {

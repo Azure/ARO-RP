@@ -63,8 +63,8 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 				azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.IsInvalidSecretError(err) {
 				err = api.NewCloudError(http.StatusBadRequest, step.String(),
-					"encountered error",
-					err.Error()) //nolint:govet
+					"encountered error", "Error Message: %s",
+					err.Error())
 				log.Error(err)
 			} else {
 				log.Errorf("step %s encountered error: %s", step, err.Error())

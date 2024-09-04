@@ -32,13 +32,13 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 	var ext *admin.OpenShiftVersion
 	err := json.Unmarshal(body, &ext)
 	if err != nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: "+err.Error()) //nolint:govet
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: %s", err.Error())
 		return
 	}
 
 	dbOpenShiftVersions, err := f.dbGroup.OpenShiftVersions()
 	if err != nil {
-		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error()) //nolint:govet
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 		return
 	}
 
