@@ -866,3 +866,48 @@ var _ = Describe("ARO Operator - Control Plane MachineSets", func() {
 		}
 	})
 })
+
+var _ = Describe("ARO Operator - etchosts", func() {
+	const (
+		etchostsEnabled = operator.EtcHostsEnabled
+		etchostsManaged = operator.EtcHostsManaged
+	)
+
+	It("must have etchosts machineconfigs", func(ctx context.Context) {
+		By("checking whether EtcHosts reconciliation is enabled in ARO operator config")
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(etchostsEnabled) {
+			Skip("EtcHosts Controller is not enabled, skipping test")
+		}
+
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(etchostsManaged) {
+			By("waiting for the etchosts machineconfigs to exist")
+			Eventually(func(g Gomega, ctx context.Context) {
+				getFunc := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get
+				_ = GetK8sObjectWithRetry(ctx, getFunc, "99-master-aro-etc-hosts-gateway-domains", metav1.GetOptions{})
+				_ = GetK8sObjectWithRetry(ctx, getFunc, "99-worker-aro-etc-hosts-gateway-domains", metav1.GetOptions{})
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+		}
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(etchostsManaged) {
+			getMachineConfigNames := func(g Gomega, ctx context.Context) []string {
+				machineConfigs, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				names := []string{}
+				for _, mc := range machineConfigs.Items {
+					names = append(names, mc.Name)
+				}
+				return names
+			}
+			By("waiting for the etchosts machineconfigs to not exist")
+			Eventually(func(g Gomega, _ctx context.Context) {
+				machineConfigs := getMachineConfigNames(g, _ctx)
+				g.Expect(machineConfigs).NotTo(ContainElement("99-master-aro-etc-hosts-gateway-domains"))
+				g.Expect(machineConfigs).NotTo(ContainElement("99-worker-aro-etc-hosts-gateway-domains"))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithPolling(PollingInterval).Should(Succeed())
+		}
+	})
+
+})
