@@ -72,7 +72,7 @@ stages:
         - script: |
             set -xe
             # Required for podman 5
-            sudo tdnf install -y gpgme-devel lvm2-devel btrfs-progs-devel golang-1.21.11-1.cm2
+            sudo tdnf install -y gpgme-devel lvm2-devel btrfs-progs-devel golang-1.22.5-1.cm2
             make generate
             [[ -z "$(git status -s)" ]]
           displayName: ⚙️ Run Golang code generate
