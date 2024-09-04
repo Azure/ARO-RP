@@ -96,6 +96,7 @@ type Interface interface {
 	ACRDomain() string
 	OIDCStorageAccountName() string
 	OIDCEndpoint() string
+	OIDCKeyBitSize() int
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 

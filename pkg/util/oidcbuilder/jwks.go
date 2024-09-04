@@ -15,13 +15,13 @@ import (
 
 	"github.com/pkg/errors"
 	"gopkg.in/go-jose/go-jose.v2"
+
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-func CreateKeyPair() (encPrivateKey []byte, encPublicKey []byte, err error) {
-	bitSize := 4096
-
+func CreateKeyPair(env env.Interface) (encPrivateKey []byte, encPublicKey []byte, err error) {
 	// Generate RSA keypair
-	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	privateKey, err := rsa.GenerateKey(rand.Reader, env.OIDCKeyBitSize())
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate private key")
 	}

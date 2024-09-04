@@ -271,6 +271,10 @@ func (p *prod) OIDCEndpoint() string {
 	return fmt.Sprintf("https://%s/", os.Getenv("OIDC_AFD_ENDPOINT"))
 }
 
+func (p *prod) OIDCKeyBitSize() int {
+	return 4096
+}
+
 func (p *prod) AROOperatorImage() string {
 	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
 }

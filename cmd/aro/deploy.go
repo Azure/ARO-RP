@@ -87,7 +87,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	err = deployer.PreDeploy(ctx)
+	err = deployer.PreDeploy(ctx, 30)
 	if err != nil {
 		return err
 	}

@@ -613,11 +613,13 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 		mocks                 func(*test, *mock_adminactions.MockKubeActions)
 		wantStatusCode        int
 		wantError             string
+		timeout               int
 	}
 
 	for _, tt := range []*test{
 		{
-			name:       "etcd secrets recovery",
+			name:       "etcd secrets recovery fails on timeout",
+			timeout:    0,
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			version: &configv1.ClusterVersion{
 				Status: configv1.ClusterVersionStatus{
@@ -793,7 +795,7 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 
-			err = f._postAdminOpenShiftClusterEtcdCertificateRenew(ctx, strings.ToLower(tt.resourceID), log, 10*time.Second)
+			err = f._postAdminOpenShiftClusterEtcdCertificateRenew(ctx, strings.ToLower(tt.resourceID), log, time.Duration(tt.timeout)*time.Second)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 		})
 	}

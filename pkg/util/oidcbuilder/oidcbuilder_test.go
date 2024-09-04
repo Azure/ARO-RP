@@ -36,20 +36,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 	blobContainerURL := "fakeBlobContainerURL"
 	endpointURL := "fakeEndPointURL"
 
-	priKey, pubKey, err := CreateKeyPair()
-	if err != nil {
-		t.Fatal(err)
-	}
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pubKeyBytes := x509.MarshalPKCS1PublicKey(&privateKey.PublicKey)
-	incorrectlyEncodedPublicKey := pem.EncodeToMemory(&pem.Block{
-		Type:    "PUBLIC KEY",
-		Headers: nil,
-		Bytes:   pubKeyBytes,
-	})
+	priKey, pubKey, incorrectlyEncodedPublicKey := getTestKeyData(t)
 
 	nonRSAPrivateKey, _ := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	nonRSAPubKeyBytes, err := x509.MarshalPKIXPublicKey(&nonRSAPrivateKey.PublicKey)
@@ -180,6 +167,33 @@ func TestEnsureOIDCDocs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func getTestKeyData(t *testing.T) ([]byte, []byte, []byte) {
+	t.Helper()
+
+	testKeyBitSize := 256
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	env := mock_env.NewMockInterface(controller)
+	env.EXPECT().OIDCKeyBitSize().Return(testKeyBitSize)
+	priKey, pubKey, err := CreateKeyPair(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateKey, err := rsa.GenerateKey(rand.Reader, testKeyBitSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKeyBytes := x509.MarshalPKCS1PublicKey(&privateKey.PublicKey)
+	incorrectlyEncodedPublicKey := pem.EncodeToMemory(&pem.Block{
+		Type:    "PUBLIC KEY",
+		Headers: nil,
+		Bytes:   pubKeyBytes,
+	})
+	return priKey, pubKey, incorrectlyEncodedPublicKey
 }
 
 type fakeReadCloser struct {

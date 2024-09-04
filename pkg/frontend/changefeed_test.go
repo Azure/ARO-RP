@@ -175,7 +175,7 @@ func TestUpdateFromIteratorOcpVersions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ticker := time.NewTicker(1)
+			ticker := time.NewTicker(20 * time.Millisecond)
 			ctx, cancel := context.WithCancel(context.TODO())
 
 			frontend := frontend{
@@ -185,7 +185,7 @@ func TestUpdateFromIteratorOcpVersions(t *testing.T) {
 			fakeIterator := cosmosdb.NewFakeOpenShiftVersionDocumentIterator(tt.docsInIterator, 0)
 
 			go frontend.updateFromIteratorOcpVersions(ctx, ticker, fakeIterator)
-			time.Sleep(time.Second)
+			time.Sleep(10 * time.Millisecond)
 			cancel()
 
 			if !reflect.DeepEqual(frontend.enabledOcpVersions, tt.wantVersions) {
@@ -517,7 +517,7 @@ func TestUpdateFromIteratorRoleSets(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ticker := time.NewTicker(1)
+			ticker := time.NewTicker(20 * time.Millisecond)
 			ctx, cancel := context.WithCancel(context.TODO())
 
 			frontend := frontend{
@@ -527,7 +527,7 @@ func TestUpdateFromIteratorRoleSets(t *testing.T) {
 			fakeIterator := cosmosdb.NewFakePlatformWorkloadIdentityRoleSetDocumentIterator(tt.docsInIterator, 0)
 
 			go frontend.updateFromIteratorRoleSets(ctx, ticker, fakeIterator)
-			time.Sleep(time.Second)
+			time.Sleep(10 * time.Millisecond)
 			cancel()
 
 			if !reflect.DeepEqual(frontend.availablePlatformWorkloadIdentityRoleSets, tt.wantRoleSets) {
