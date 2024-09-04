@@ -8,6 +8,9 @@ ENV GOPATH=/root/go
 RUN mkdir -p /app
 WORKDIR /app
 
+# https://github.com/microsoft/go/tree/microsoft/main/eng/doc/fips#build-option-to-require-fips-mode
+ENV CGO_ENABLED=1 GOFLAGS='-tags=requirefips'
+
 COPY . /app
 RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make validate-fips && make e2e.test e2etools
 
