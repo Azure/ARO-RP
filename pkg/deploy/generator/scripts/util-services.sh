@@ -39,7 +39,7 @@ configure_service_aro_gateway() {
 ROLE=${role,,}"
 
     write_file aro_gateway_conf_filename conf_file true
-    write_file aro_gateway_conf_filename add_network false
+    write_file aro_gateway_conf_filename add_conf_file false
 
     # shellcheck disable=SC2034
     local -r aro_gateway_service_filename='/etc/systemd/system/aro-gateway.service'
