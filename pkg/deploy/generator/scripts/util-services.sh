@@ -35,8 +35,8 @@ configure_service_aro_gateway() {
     log "Configuring aro-gateway service"
 
     local -r aro_gateway_conf_filename='/etc/sysconfig/aro-gateway'
-    local -r add_conf_file="PODMAN_NETWORK=$network
-ROLE=${role,,}"
+    local -r add_conf_file="PODMAN_NETWORK='$network'
+ROLE='${role,,}'"
 
     write_file aro_gateway_conf_filename conf_file true
     write_file aro_gateway_conf_filename add_conf_file false
@@ -64,7 +64,7 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -m 2g \
-  --network=$PODMAN_NETWORK \
+  --network=${PODMAN_NETWORK} \
   -p 80:8080 \
   -p 8081:8081 \
   -p 443:8443 \
@@ -100,8 +100,8 @@ configure_service_aro_rp() {
     log "Configuring aro-rp service"
 
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
-    local -r add_conf_file="PODMAN_NETWORK=$network
-ROLE=${role,,}"
+    local -r add_conf_file="PODMAN_NETWORK='$network'
+ROLE='${role,,}'"
 
     write_file aro_rp_conf_filename conf_file true
     write_file aro_rp_conf_filename add_conf_file true
@@ -146,7 +146,7 @@ ExecStart=/usr/bin/podman run \
   -e OIDC_AFD_ENDPOINT \
   -e OIDC_STORAGE_ACCOUNT_NAME \
   -m 2g \
-  --network=$PODMAN_NETWORK \
+  --network=${PODMAN_NETWORK} \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
@@ -195,7 +195,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
 RPIMAGE='$image'
-PODMAN_NETWORK=$network"
+PODMAN_NETWORK='$network'"
 
     write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
 
@@ -214,7 +214,7 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$PODMAN_NETWORK \
+  --network=${PODMAN_NETWORK} \
   -e AZURE_FP_CLIENT_ID \
   -e DOMAIN_NAME \
   -e CLUSTER_MDSD_ACCOUNT \
@@ -266,7 +266,7 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
 RPIMAGE='$image'
-PODMAN_NETWORK=$network"
+PODMAN_NETWORK='$network'"
 
     write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 
@@ -286,7 +286,7 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$PODMAN_NETWORK \
+  --network=${PODMAN_NETWORK} \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \
@@ -321,7 +321,7 @@ configure_service_aro_mise() {
     log "starting"
     log "Configuring aro-mise service"
 
-    local -n LOGININSTANCE="https://login.microsoftonline.com"
+    LOGININSTANCE="https://login.microsoftonline.com"
     if [[ $AZURECLOUDNAME == "AzureUSGovernment" ]]; then
         LOGININSTANCE="https://login.microsoftonline.us"
     fi
@@ -334,7 +334,7 @@ MISEIMAGE='$image'
 MISEVALIDAUDIENCES='$MISEVALIDAUDIENCES'
 MISEVALIDAPPIDS='$MISEVALIDAPPIDS'
 LOGININSTANCE='$LOGININSTANCE'
-PODMAN_NETWORK=$network"
+PODMAN_NETWORK='$network'"
 
     write_file aro_mise_service_conf_filename aro_mise_service_conf_file true
 
@@ -357,18 +357,14 @@ PODMAN_NETWORK=$network"
                 "AuthenticationSchemes": [
                     "PoP"
                 ],
-                "ValidAudiences": [
-                        "$MISEVALIDAUDIENCES"
-                ],
+                "ValidAudiences": "$MISEVALIDAUDIENCES",
                 "SignedHttpRequestValidationPolicy": {
                     "ValidateTs": true,
                     "ValidateM": true,
                     "ValidateU": true,
                     "ValidateP": true
                 },
-                "ValidApplicationIds": [
-                        "$MISEVALIDAPPIDS"
-                ]
+                "ValidApplicationIds": "$MISEVALIDAPPIDS"
             }
         ],
         "Logging": {
@@ -415,7 +411,7 @@ ExecStart=/usr/bin/docker run \
   -v /app/mise/appsettings.json:/app/appsettings.json:z \
   --hostname %H \
   --name %N \
-  --network=$PODMAN_NETWORK \
+  --network=${PODMAN_NETWORK} \
   --rm \
   $MISEIMAGE
 ExecStop=/usr/bin/docker stop %N
@@ -442,7 +438,7 @@ configure_service_aro_otel_collector() {
     # shellcheck disable=SC2034
     local -r aro_otel_collector_service_conf_file="GOMEMLIMIT=1000MiB
 OTELIMAGE='$image'
-PODMAN_NETWORK=$network"
+PODMAN_NETWORK='$network'"
 
     write_file aro_otel_collector_service_conf_filename aro_otel_collector_service_conf_file true
 
@@ -490,14 +486,14 @@ Wants=network-online.target
 StartLimitIntervalSec=0
 [Service]
 RestartSec=1s
-EnvironmentFile=/etc/sysconfig/aro-mise
+EnvironmentFile=/etc/sysconfig/aro-otel-collector
 ExecStartPre=-/usr/bin/docker rm -f %N
 ExecStart=/usr/bin/docker run \
   -p 5000:5000 \
   -v /app/mise/appsettings.json:/app/appsettings.json:z \
   --hostname %H \
   --name %N \
-  --network=$PODMAN_NETWORK \
+  --network=${PODMAN_NETWORK} \
   --rm \
   $OTELIMAGE
 ExecStop=/usr/bin/docker stop %N
@@ -582,7 +578,7 @@ configure_service_fluentbit() {
     local -r sysconfig_filename='/etc/sysconfig/fluentbit'
     # shellcheck disable=SC2034
     local -r sysconfig_file="FLUENTBITIMAGE=$image
-PODMAN_NETWORK=$network"
+PODMAN_NETWORK='$network'"
 
     write_file sysconfig_filename sysconfig_file true
 
@@ -601,7 +597,7 @@ ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --security-opt label=disable \
   --entrypoint /opt/td-agent-bit/bin/td-agent-bit \
-  --network=$PODMAN_NETWORK \
+  --network=${PODMAN_NETWORK} \
   --hostname %H \
   --name %N \
   --rm \
@@ -805,7 +801,7 @@ MDMSOURCEROLEINSTANCE=\"$(hostname)\"
 MDM_INPUT=statsd_local,otlp_grpc
 MDM_NAMESPACE="OTEL"
 MDM_ACCOUNT="AzureRedHatOpenShiftRP"
-PODMAN_NETWORK=$network"
+PODMAN_NETWORK='$network'"
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
 
@@ -826,7 +822,7 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$PODMAN_NETWORK \
+  --network=${PODMAN_NETWORK} \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
@@ -873,8 +869,8 @@ configure_vmss_aro_services() {
         configure_service_aro_rp "${images["rp"]}" "$1" "${configs["rp_config"]}" "${configs["network"]}"
         configure_service_aro_monitor "${images["rp"]}" "${configs["network"]}"
         configure_service_aro_portal "${images["rp"]}" "${configs["network"]}"
-        configure_service_aro_mise "${images["rp"]}" "${configs["network"]}"
-        configure_service_aro_otel_collector "${images["rp"]}" "${configs["network"]}"
+        configure_service_aro_mise "${images["mise"]}" "${configs["network"]}"
+        configure_service_aro_otel_collector "${images["otel"]}" "${configs["network"]}"
         configure_certs_rp
     fi
 
