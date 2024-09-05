@@ -2,6 +2,27 @@ ARG REGISTRY
 ARG ARO_VERSION
 
 ###############################################################################
+# Stage 0: Dev Container Base Image
+###############################################################################
+FROM ${REGISTRY}/ubi8/go-toolset:1.21.11-1.1720406008 AS rp-dev
+USER root
+RUN rpm --import https://packages.microsoft.com/keys/microsoft.asc \
+    && dnf install -y https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm \
+    && dnf install -y \
+        azure-cli \
+        gpgme-devel \
+        libassuan-devel \
+        llvm-devel \
+        openssl \
+        make \
+        podman \
+    && dnf upgrade -y
+
+WORKDIR /app
+
+ENV GOPATH=/root/go
+
+###############################################################################
 # Stage 1: Build the SRE Portal Assets
 ###############################################################################
 FROM ${REGISTRY}/ubi8/nodejs-16  as portal-build
@@ -22,14 +43,10 @@ LABEL stage="portal-build-cache-layer"
 ###############################################################################
 # Stage 2: Compile the Golang RP code
 ###############################################################################
-FROM ${REGISTRY}/ubi8/go-toolset:1.21.11-1.1720406008 AS builder
+FROM rp-dev AS builder
 ARG ARO_VERSION
 LABEL aro-builder=true
-USER root
-WORKDIR /app
 
-# golang config and build steps
-ENV GOPATH=/root/go
 ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
 
 COPY .bingo .bingo
