@@ -29,11 +29,11 @@ $(CLIENT_GEN): $(BINGO_DIR)/client-gen.mod
 	@echo "(re)installing $(GOBIN)/client-gen-v0.25.16"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=client-gen.mod -o=$(GOBIN)/client-gen-v0.25.16 "k8s.io/code-generator/cmd/client-gen"
 
-CONTROLLER_GEN := $(GOBIN)/controller-gen-v0.9.0
+CONTROLLER_GEN := $(GOBIN)/controller-gen-v0.16.2
 $(CONTROLLER_GEN): $(BINGO_DIR)/controller-gen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/controller-gen-v0.9.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=controller-gen.mod -o=$(GOBIN)/controller-gen-v0.9.0 "sigs.k8s.io/controller-tools/cmd/controller-gen"
+	@echo "(re)installing $(GOBIN)/controller-gen-v0.16.2"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=controller-gen.mod -o=$(GOBIN)/controller-gen-v0.16.2 "sigs.k8s.io/controller-tools/cmd/controller-gen"
 
 ENUMER := $(GOBIN)/enumer-v1.1.2
 $(ENUMER): $(BINGO_DIR)/enumer.mod
@@ -71,17 +71,17 @@ $(GOIMPORTS): $(BINGO_DIR)/goimports.mod
 	@echo "(re)installing $(GOBIN)/goimports-v0.23.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=goimports.mod -o=$(GOBIN)/goimports-v0.23.0 "golang.org/x/tools/cmd/goimports"
 
-GOLANGCI_LINT := $(GOBIN)/golangci-lint-v1.59.1
+GOLANGCI_LINT := $(GOBIN)/golangci-lint-v1.60.3
 $(GOLANGCI_LINT): $(BINGO_DIR)/golangci-lint.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/golangci-lint-v1.59.1"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v1.59.1 "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	@echo "(re)installing $(GOBIN)/golangci-lint-v1.60.3"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v1.60.3 "github.com/golangci/golangci-lint/cmd/golangci-lint"
 
-GOTESTSUM := $(GOBIN)/gotestsum-v1.11.0
+GOTESTSUM := $(GOBIN)/gotestsum-v1.12.0
 $(GOTESTSUM): $(BINGO_DIR)/gotestsum.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/gotestsum-v1.11.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gotestsum.mod -o=$(GOBIN)/gotestsum-v1.11.0 "gotest.tools/gotestsum"
+	@echo "(re)installing $(GOBIN)/gotestsum-v1.12.0"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gotestsum.mod -o=$(GOBIN)/gotestsum-v1.12.0 "gotest.tools/gotestsum"
 
 MOCKGEN := $(GOBIN)/mockgen-v1.6.0
 $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
