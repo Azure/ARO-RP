@@ -23,7 +23,6 @@ import (
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
@@ -43,6 +42,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
@@ -105,7 +105,7 @@ type manager struct {
 	graph   graph.Manager
 	rpBlob  azblob.Manager
 
-	client           client.Client
+	ch               clienthelper.Interface
 	kubernetescli    kubernetes.Interface
 	dynamiccli       dynamic.Interface
 	extensionscli    extensionsclient.Interface

@@ -19,7 +19,6 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.3.1
 	github.com/Azure/go-autorest/tracing v0.6.0
 	github.com/Azure/msi-dataplane v0.0.3
-	github.com/alvaroloes/enumer v1.1.2
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
 	github.com/containers/image/v5 v5.30.1
@@ -30,7 +29,6 @@ require (
 	github.com/coreos/ignition/v2 v2.14.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
-	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-logr/logr v1.4.2
 	github.com/go-test/deep v1.1.0
@@ -46,7 +44,6 @@ require (
 	github.com/gorilla/sessions v1.2.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/itchyny/gojq v0.12.13
-	github.com/jewzaam/go-cosmosdb v0.0.0-20240723075448-058185e3c66d
 	github.com/jongio/azidext/go/azidext v0.5.0
 	github.com/microsoft/kiota-abstractions-go v1.2.0
 	github.com/microsoft/kiota-http-go v1.0.0
@@ -89,12 +86,10 @@ require (
 	k8s.io/apimachinery v0.30.3
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.26.2
-	k8s.io/code-generator v0.25.16
 	k8s.io/kubectl v0.24.17
 	k8s.io/kubernetes v1.28.4
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/controller-runtime v0.13.1
-	sigs.k8s.io/controller-tools v0.9.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -146,7 +141,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
-	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
@@ -169,7 +163,6 @@ require (
 	github.com/go-playground/validator/v10 v10.22.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
-	github.com/gobuffalo/flect v0.2.5 // indirect
 	github.com/godbus/dbus/v5 v5.1.1-0.20230522191255-76236955d466 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
@@ -202,7 +195,6 @@ require (
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
@@ -231,7 +223,6 @@ require (
 	github.com/opencontainers/selinux v1.11.0 // indirect
 	github.com/openshift/custom-resource-status v1.1.3-0.20220503160415-f2fdb4999d87 // indirect
 	github.com/ostreedev/ostree-go v0.0.0-20210805093236-719684c64e4f // indirect
-	github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/sftp v1.13.6 // indirect
@@ -286,7 +277,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiserver v0.26.2 // indirect
 	k8s.io/component-base v0.26.2 // indirect
-	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-aggregator v0.24.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
@@ -1593,7 +1583,6 @@ replace (
 	k8s.io/kubectl => k8s.io/kubectl v0.25.16
 	k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
-	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.9.0
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06

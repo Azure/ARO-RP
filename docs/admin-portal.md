@@ -34,7 +34,7 @@ You will require Node.js and `npm`. These instructions were tested with the vers
 
 This build uses the `make ci-rp` target to compile the NPM, and serve it via the RP running in a containerized env (the same way we run in prod). It is the recommended method to do final testing (or, if you don't want the hassle of installing `npm` or other tools locally).
 
-1. Run `make runlocal-portal`
+1. Run `make run-portal`
 1. Go to `https://localhost:8444` to view the admin portal running
 
 ### Running Portal Served from development RP
@@ -43,7 +43,7 @@ This build uses the `make ci-rp` target to compile the NPM, and serve it via the
 
 1. Make sure development environment variables are set and also set `export NO_NPM=1`. Setting this environment variable will make sure in development mode that the admin portal does not redirect to the front end development server at localhost:3000 and instead will route to localhost:8444 where the front end code is being served by the RP
 
-1. Run `make run-portal`
+1. Run `make runlocal-portal`
 
 1. Go to localhost:8444 to view admin portal running
 
@@ -53,7 +53,7 @@ This build uses the `make ci-rp` target to compile the NPM, and serve it via the
 
 1. Make sure development environment variables are set
 
-1. Run `make run-portal`
+1. Run `make runlocal-portal`
 
 1. In a seperate tab change directory to `portal/v2/` and run `npm run start` to run front end development server
 

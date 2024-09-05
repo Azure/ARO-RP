@@ -19,9 +19,9 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    - name: Install Go runtime deps
+    - name: Add GOBIN to PATH
       run: |
-        make install-go-tools
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - name: Build all
       run: |
         make build-all
@@ -36,6 +36,9 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+    - name: Add GOBIN to PATH
+      run: |
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - run: |
         make go-verify
         hack/ci-utils/isClean.sh
@@ -47,6 +50,9 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+    - name: Add GOBIN to PATH
+      run: |
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - name: Run make generate
       run: |
         make generate

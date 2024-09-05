@@ -12,6 +12,7 @@ WORKDIR /app
 ENV CGO_ENABLED=1 GOFLAGS='-tags=requirefips'
 
 COPY . /app
+
 RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make validate-fips && make e2e.test
 
 FROM ${REGISTRY}/ubi8/ubi-minimal

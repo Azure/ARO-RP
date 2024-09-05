@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -34,35 +33,34 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-type Interface interface {
-	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
+type Writer interface {
+	client.Writer
+	// Ensure applies self-contained objects to a Kubernetes API, merging
+	// client-side if required.
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
+	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
+}
+
+type Reader interface {
+	client.Reader
 	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
 }
 
-type clientHelper struct {
-	log *logrus.Entry
-
-	client client.Client
+type Interface interface {
+	Reader
+	Writer
 }
 
-func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
-	mapper, err := apiutil.NewDynamicRESTMapper(restconfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
+type clientHelper struct {
+	client.Client
 
-	client, err := client.New(restconfig, client.Options{Mapper: mapper})
-	if err != nil {
-		return nil, err
-	}
-	return NewWithClient(log, client), nil
+	log *logrus.Entry
 }
 
 func NewWithClient(log *logrus.Entry, client client.Client) Interface {
 	return &clientHelper{
 		log:    log,
-		client: client,
+		Client: client,
 	}
 }
 
@@ -74,7 +72,7 @@ func (ch *clientHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersi
 	a.SetGroupVersionKind(gvk)
 
 	ch.log.Infof("Delete kind %s ns %s name %s", gvk.Kind, key.Namespace, key.Name)
-	err := ch.client.Delete(ctx, a)
+	err := ch.Delete(ctx, a)
 	if kerrors.IsNotFound(err) {
 		return nil
 	}
@@ -87,7 +85,7 @@ func (ch *clientHelper) GetOne(ctx context.Context, key types.NamespacedName, ob
 		return errors.New("can't convert object")
 	}
 
-	return ch.client.Get(ctx, key, newObj)
+	return ch.Get(ctx, key, newObj)
 }
 
 // Ensure that one or more objects match their desired state.  Only update
@@ -125,10 +123,10 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 			return fmt.Errorf("object of kind %s can't be made a client.Object", gvk.String())
 		}
 
-		err = ch.client.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, oldObj)
+		err = ch.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, oldObj)
 		if kerrors.IsNotFound(err) {
 			ch.log.Infof("Create %s", keyFunc(gvk.GroupKind(), newObj.GetNamespace(), newObj.GetName()))
-			return ch.client.Create(ctx, newObj)
+			return ch.Create(ctx, newObj)
 		}
 		if err != nil {
 			return err
@@ -138,7 +136,7 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 			return err
 		}
 		ch.log.Infof("Update %s: %s", keyFunc(gvk.GroupKind(), candidate.GetNamespace(), candidate.GetName()), diff)
-		return ch.client.Update(ctx, candidate)
+		return ch.Update(ctx, candidate)
 	})
 }
 

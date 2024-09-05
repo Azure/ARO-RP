@@ -33,6 +33,14 @@ ENV GOPATH=/root/go
 ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper,requirefips"
 ENV CGO_ENABLED=1
 
+COPY .bingo .bingo
+RUN source .bingo/variables.env \
+    # install bingo itself
+    && make -f .bingo/Variables.mk ${BINGO} \
+    # and all the tools it manages
+    && ${BINGO} get -l
+ENV PATH=$PATH:${GOPATH}/bin/
+
 # Copy dependencies and source files
 COPY go.mod go.sum ./
 COPY vendor vendor
