@@ -342,8 +342,8 @@ vendor:
 xmlcov: $(GOCOV) $(GOCOV_XML)
 	$(GOCOV) convert cover.out | $(GOCOV_XML) > coverage.xml
 
-.PHONY: install-go-tools
-install-go-tools: $(BINGO)
+.PHONY: install-tools
+install-tools: $(BINGO)
 	$(BINGO) get -l
 
 ###############################################################################
