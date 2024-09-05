@@ -29,7 +29,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 		usesWorkloadIdentity bool
 		identities           []api.PlatformWorkloadIdentity
 		roles                []api.PlatformWorkloadIdentityRole
-		want                 []kruntime.Object
+		want                 map[string]kruntime.Object
 		wantErr              string
 	}{
 		{
@@ -65,8 +65,8 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 			},
-			want: []kruntime.Object{
-				&corev1.Secret{
+			want: map[string]kruntime.Object{
+				"openshift-foo-azure-cloud-credentials-credentials.yaml": &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-foo",
 						Name:      "azure-cloud-credentials",
@@ -80,7 +80,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 						"azure_federated_token_file": azureFederatedTokenFileLocation,
 					},
 				},
-				&corev1.Secret{
+				"openshift-bar-azure-cloud-credentials-credentials.yaml": &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-bar",
 						Name:      "azure-cloud-credentials",
@@ -94,7 +94,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 						"azure_federated_token_file": azureFederatedTokenFileLocation,
 					},
 				},
-				&corev1.Secret{
+				ccoSecretFilename: &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ccoSecretNamespace,
 						Name:      ccoSecretName,
@@ -104,7 +104,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 						"azure_tenant_id": tenantId,
 					},
 				},
-				&configv1.Authentication{
+				authenticationConfigFilename: &configv1.Authentication{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: authenticationConfigName,
 					},
@@ -159,7 +159,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 
 			got, err := m.generateWorkloadIdentityResources()
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			assert.ElementsMatch(t, tt.want, got)
+			assert.EqualValues(t, tt.want, got)
 		})
 	}
 }

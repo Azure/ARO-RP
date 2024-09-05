@@ -15,35 +15,38 @@ import (
 const (
 	azureFederatedTokenFileLocation = "/var/run/secrets/openshift/serviceaccount/token"
 
-	ccoSecretNamespace       = "openshift-cloud-credential-operator"
-	ccoSecretName            = "azure-credentials"
-	authenticationConfigName = "cluster"
+	ccoSecretNamespace           = "openshift-cloud-credential-operator"
+	ccoSecretName                = "azure-credentials"
+	ccoSecretFilename            = "azure-ad-pod-identity-webhook-config.yaml"
+	authenticationConfigName     = "cluster"
+	authenticationConfigFilename = "cluster-authentication-02-config.yaml"
 )
 
-func (m *manager) generateWorkloadIdentityResources() ([]kruntime.Object, error) {
+func (m *manager) generateWorkloadIdentityResources() (map[string]kruntime.Object, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return nil, fmt.Errorf("generateWorkloadIdentityResources called for a CSP cluster")
 	}
 
-	resources := []kruntime.Object{}
+	resources := map[string]kruntime.Object{}
 	if platformWorkloadIdentitySecrets, err := m.generatePlatformWorkloadIdentitySecrets(); err != nil {
 		return nil, err
 	} else {
 		for _, secret := range platformWorkloadIdentitySecrets {
-			resources = append(resources, secret)
+			key := fmt.Sprintf("%s-%s-credentials.yaml", secret.ObjectMeta.Namespace, secret.ObjectMeta.Name)
+			resources[key] = secret
 		}
 	}
 
 	if cloudCredentialOperatorSecret, err := m.generateCloudCredentialOperatorSecret(); err != nil {
 		return nil, err
 	} else {
-		resources = append(resources, cloudCredentialOperatorSecret)
+		resources[ccoSecretFilename] = cloudCredentialOperatorSecret
 	}
 
 	if authenticationConfig, err := m.generateAuthenticationConfig(); err != nil {
 		return nil, err
 	} else {
-		resources = append(resources, authenticationConfig)
+		resources[authenticationConfigFilename] = authenticationConfig
 	}
 
 	return resources, nil
