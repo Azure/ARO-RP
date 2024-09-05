@@ -321,6 +321,10 @@ configure_service_aro_mise() {
     log "starting"
     log "Configuring aro-mise service"
 
+    local -n LOGININSTANCE="https://login.microsoftonline.com"
+    if [[ $AZURECLOUDNAME == "AzureUSGovernment" ]]; then
+        LOGININSTANCE="https://login.microsoftonline.us"
+    fi
     # shellcheck disable=SC2034
     local -r aro_mise_service_conf_filename='/etc/sysconfig/aro-mise'
     # shellcheck disable=SC2034
