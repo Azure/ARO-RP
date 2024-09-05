@@ -4,6 +4,7 @@ package hive
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -13,7 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/yaml"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -255,18 +258,37 @@ func manifestsSecret(namespace string) (*corev1.Secret, error) {
 		StringData: map[string]string{},
 	}
 
+	ser := kjson.NewSerializerWithOptions(
+		kjson.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
+		kjson.SerializerOptions{Yaml: true, Pretty: true, Strict: true},
+	)
+	cf := serializer.NewCodecFactory(scheme.Scheme).WithoutConversion()
 	for _, manifest := range manifests {
 		a := meta.NewAccessor()
 
 		namespace, _ := a.Namespace(manifest)
 		name, _ := a.Name(manifest)
-		key := fmt.Sprintf("%s_%s", namespace, name)
+		key := fmt.Sprintf("%s-%s-credentials.yaml", namespace, name)
 
-		b, err := yaml.Marshal(manifest)
+		gvks, unversioned, err := scheme.Scheme.ObjectKinds(manifest)
+		if unversioned {
+			return nil, fmt.Errorf("unversioned resource %v", manifest)
+		}
 		if err != nil {
 			return nil, err
 		}
-		secret.StringData[key] = string(b)
+		if len(gvks) < 1 {
+			return nil, fmt.Errorf("no gvk registered for resource %v", manifest)
+		}
+
+		gvk := gvks[0]
+		encoder := cf.EncoderForVersion(ser, kruntime.NewMultiGroupVersioner(gvk.GroupVersion(), gvk.GroupKind()))
+
+		b := new(bytes.Buffer)
+		if err := encoder.Encode(manifest, b); err != nil {
+			return nil, err
+		}
+		secret.StringData[key] = b.String()
 	}
 
 	return secret, nil

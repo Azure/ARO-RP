@@ -4,6 +4,7 @@ package hive
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -17,4 +18,11 @@ func TestInstallConfigMap(t *testing.T) {
 	for _, err := range deep.Equal(r.StringData, expected) {
 		t.Error(err)
 	}
+}
+
+func TestDeleteMe(t *testing.T) {
+	secret, err := manifestsSecret("asdf")
+
+	fmt.Println(secret)
+	t.Error(err)
 }
