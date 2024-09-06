@@ -15,7 +15,9 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
-GOTESTSUM = gotest.tools/gotestsum@v1.12.0
+
+# Golang version go mod tidy compatibility
+GOLANG_VERSION ?= 1.22
 
 include .bingo/Variables.mk
 
@@ -57,7 +59,7 @@ endif
 
 .PHONY: build-all
 build-all:
-	go build -buildvcs=false ./...
+	go build ./...
 
 .PHONY: aro
 aro: check-release generate
@@ -190,7 +192,7 @@ extract-aro-docker:
 
 .PHONY: proxy
 proxy:
-	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
+	CGO_ENABLED=1 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 .PHONY: runlocal-portal
 runlocal-portal:
@@ -320,7 +322,7 @@ aks.kubeconfig:
 
 .PHONY: go-tidy
 go-tidy: # Run go mod tidy - add missing and remove unused modules.
-	go mod tidy
+	go mod tidy -compat=${GOLANG_VERSION}
 
 .PHONY: go-vendor
 go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies).
