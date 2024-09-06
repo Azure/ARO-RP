@@ -5,6 +5,7 @@ steps:
       targetType: inline
       script: |
         export GOPATH=$(Agent.TempDirectory)
+        export PATH=${PATH}:$(Agent.TempDirectory)/bin
         export TAG=$(git describe --exact-match 2>/dev/null)
         export COMMIT=$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
         if [ -z "$TAG" ];
@@ -24,6 +25,7 @@ steps:
         mkdir -p $(Agent.TempDirectory)/src/github.com/Azure/
         cp -rd $(Build.SourcesDirectory) $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
         cd $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
+        make install-tools
         make aro
         mkdir -p $(ob_outputDirectory)
         cp aro $(ob_outputDirectory)/aro
