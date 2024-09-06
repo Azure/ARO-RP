@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 version=4.15.30
+
+#oc adm release extract --credentials-requests --to "/tmp/credreqs/$version" "quay.io/openshift-release-dev/ocp-release:$version-x86_64"
 
 declare -A test_cases=(
   ["0000_50_cluster-storage-operator_03_credentials_request_azure.yaml"]="5b7237c5-45e1-49d6-bc18-a1f62f400748"
@@ -14,7 +16,11 @@ declare -A test_cases=(
 
 for role in "${!test_cases[@]}"; do
   echo "Testing $role"
-  comm -23 \
-    <(yq ".spec.providerSpec.permissions[]" "/tmp/credreqs/$version/${test_cases[$role]}" | sort) \
-    <(az role definition list -n $role | jq -r ".[].permissions[].actions[]"| sort)
+  echo ""
+  yq ".spec.providerSpec.permissions[]" "/tmp/credreqs/$version/$role" | sort
+  echo ""
+  cat "/tmp/credreqs/$version/$role"
+#  comm -23 \
+#    <(yq ".spec.providerSpec.permissions[]" "/tmp/credreqs/$version/$role" | sort) \
+#    <(az role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].actions[]"| sort)
 done
