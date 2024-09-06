@@ -37,5 +37,6 @@ steps:
       targetType: inline
       script: |
         export GOPATH=$(Agent.TempDirectory)
+        export PATH=${PATH}:$(Agent.TempDirectory)/bin
         make validate-fips
       workingDirectory: $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
