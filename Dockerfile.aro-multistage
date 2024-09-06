@@ -5,6 +5,7 @@ FROM ${REGISTRY}/ubi8/go-toolset:1.21.11-1.1720406008 AS builder
 
 USER root
 ENV GOPATH=/root/go
+ENV PATH=$PATH:${GOPATH}/bin/
 RUN mkdir -p /app
 WORKDIR /app
 
