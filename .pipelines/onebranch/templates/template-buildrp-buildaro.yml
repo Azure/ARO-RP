@@ -40,3 +40,4 @@ steps:
         export PATH=${PATH}:$(Agent.TempDirectory)/bin
         make validate-fips
       workingDirectory: $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
+      
