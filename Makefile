@@ -16,9 +16,6 @@ AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
 
-# Golang version go mod tidy compatibility
-GOLANG_VERSION ?= 1.22
-
 include .bingo/Variables.mk
 
 ifneq ($(shell uname -s),Darwin)
@@ -59,7 +56,7 @@ endif
 
 .PHONY: build-all
 build-all:
-	go build ./...
+	go build -buildvcs=false ./...
 
 .PHONY: aro
 aro: check-release generate
@@ -322,7 +319,7 @@ aks.kubeconfig:
 
 .PHONY: go-tidy
 go-tidy: # Run go mod tidy - add missing and remove unused modules.
-	go mod tidy -compat=${GOLANG_VERSION}
+	go mod tidy
 
 .PHONY: go-vendor
 go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies).
