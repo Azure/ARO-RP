@@ -1,4 +1,5 @@
 SHELL = /bin/bash
+GO ?= $(shell command -v go)
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
