@@ -1,11 +1,18 @@
 steps:
   - task: Bash@3
+    displayName: Add GOBIN to PATH
+    inputs:
+      targetType: inline
+      script: |
+        export GOPATH=$(Agent.TempDirectory)
+        echo "##vso[task.prependpath]$(go env GOPATH)/bin"
+      workingDirectory: $(Build.SourcesDirectory)
+  - task: Bash@3
     displayName: ⚙️ Make ARO
     inputs:
       targetType: inline
       script: |
         export GOPATH=$(Agent.TempDirectory)
-        echo "##vso[task.prependpath]$(Agent.TempDirectory)/bin"
         export TAG=$(git describe --exact-match 2>/dev/null)
         export COMMIT=$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
         if [ -z "$TAG" ];
