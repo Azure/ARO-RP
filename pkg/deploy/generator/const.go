@@ -27,6 +27,7 @@ const (
 	fileRPDevelopment          = "rp-development.json"
 
 	fileMiwiDevelopment = "rp-development-miwi.json"
+	fileCIDevelopment   = "ci-development.json"
 
 	// Tag constants
 	tagKeyExemptPublicBlob   = "Az.Sec.AnonymousBlobAccessEnforcement::Skip"
