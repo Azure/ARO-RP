@@ -105,8 +105,8 @@
     1. Now that your machine is able access the AKS cluster, you can deploy Hive:
         ```bash
         make aks.kubeconfig
-        ./hack/hive-generate-config.sh
-        KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive-dev-install.sh
+        ./hack/hive/hive-generate-config.sh
+        KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive/hive-dev-install.sh
         ```
 
 1. Mirror the OpenShift images to your new Azure Container Registry (ACR)

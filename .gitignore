@@ -33,8 +33,8 @@ gomock_reflect_*
 /portal/v2/node_modules/
 portal/v2/.vscode/
 .idea*
-/hack/hive-config/crds
-/hack/hive-config/hive-deployment.yaml
+/hack/hive/hive-config/crds
+/hack/hive/hive-config/hive-deployment.yaml
 cmd/aro/__debug_bin
 megalinter-reports/
 /db
