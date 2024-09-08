@@ -19,6 +19,11 @@ GATEKEEPER_VERSION = v3.15.1
 # Golang version go mod tidy compatibility
 GOLANG_VERSION ?= 1.21
 
+# Variables for RP full dev automation 
+AZURE_PREFIX ?= zzz
+RP_LOCATION ?= eastus
+FULL_RP_DEV_IMAGE ?= generic-repo/full-rp-dev:v0.0.1
+
 include .bingo/Variables.mk
 
 ifneq ($(shell uname -s),Darwin)
@@ -540,3 +545,15 @@ run-rp: ci-rp podman-secrets
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+
+.PHONY: full-rp-dev
+full-rp-dev: # Build and run a full-rp-dev container for automating full-rp-dev
+	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
+		--build-arg LOCATION=$(RP_LOCATION) \
+		-f Dockerfile.full-rp-dev \
+		-t $(FULL_RP_DEV_IMAGE) .
+	docker run --rm -it --user=0 --privileged \
+		-v /dev/shm:/dev/shm \
+		-v "${HOME}/.azure:/root/.azure" \
+		--device /dev/net/tun \
+		--name full-rp-dev-container $(FULL_RP_DEV_IMAGE)
