@@ -93,15 +93,23 @@ clean:
 client: generate $(GOIMPORTS)
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
 
+dev-config.yaml:
+	go run ./hack/gendevconfig >dev-config.yaml
+
+.PHONY: pre-deploy-no-aks
+pre-deploy-no-aks: dev-config.yaml
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro pre-deploy-no-aks dev-config.yaml ${LOCATION}
+
+.PHONY: pre-deploy-full
+pre-deploy-full: dev-config.yaml
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro pre-deploy-full dev-config.yaml ${LOCATION}
+
+
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
-deploy:
+deploy: pre-deploy-full
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
-
-.PHONY: dev-config.yaml
-dev-config.yaml:
-	go run ./hack/gendevconfig >dev-config.yaml
 
 .PHONY: discoverycache
 discoverycache:
