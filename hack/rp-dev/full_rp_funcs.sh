@@ -6,7 +6,7 @@ source hack/devtools/rp_dev_helper.sh
 setup_rp_config() {
   # Check if exactly non-empty two arguments are provided
   if [[ $# -ne 2 ]]; then
-    echo "Error: $0 <AZURE_PREFIX>. Please try again"
+    echo "Error: $0 <AZURE_PREFIX> <SKIP_DEPLOYMENTS>. Please try again"
     exit 1
   fi
 
@@ -23,7 +23,7 @@ setup_rp_config() {
   source secrets/env
   echo -e "Success step 1 ✅ - Directory '$expected_dir' has been created with files - ${secret_files[@]}\n"
 
-  export AZURE_PREFIX=$1 NO_CACHE=true ARO_INSTALL_VIA_HIVE=true ARO_ADOPT_BY_HIVE=true DATABASE_NAME=ARO
+  export AZURE_PREFIX=$1 SKIP_DEPLOYMENTS=$2 NO_CACHE=true ARO_INSTALL_VIA_HIVE=true ARO_ADOPT_BY_HIVE=true DATABASE_NAME=ARO
 
   azure_resource_name=${AZURE_PREFIX}-aro-$LOCATION
   # TODO truncate to 20 characters
@@ -42,6 +42,13 @@ setup_rp_config() {
 
 # Function to predeploy 6 deployments in case they are needed
 pre_deploy_resources() {
+    # Don't skip deployment creation when SKIP_DEPLOYMENTS is set to "false" 
+    if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
+        echo "'SKIP_DEPLOYMENTS' env var is set to false. Don't skip predeployment."
+        make pre-deploy-no-aks
+        return 0
+    fi
+
     num_deployment=0
     check_azure_deployment ${AZURE_PREFIX}-global rp-global-${LOCATION} && num_deployment=$(( num_deployment + 1))
     check_azure_deployment ${AZURE_PREFIX}-subscription rp-production-subscription-${LOCATION} && num_deployment=$(( num_deployment + 1))
@@ -148,6 +155,13 @@ prepare_RP_deployment() {
 
 # Function to fully deploy 12 deployments in case they are needed
 fully_deploy_resources() {
+    # Don't skip deployment creation when SKIP_DEPLOYMENTS is set to "false" 
+    if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
+        echo "'SKIP_DEPLOYMENTS' env var is set to false. Don't skip full deployments of RP and GYW."
+        make go-verify deploy
+        return 0
+    fi
+
     num_deployment=0
     check_azure_deployment ${AZURE_PREFIX}-global rp-global-${LOCATION} && num_deployment=$(( num_deployment + 1))
     check_azure_deployment ${AZURE_PREFIX}-subscription rp-production-subscription-${LOCATION} && num_deployment=$(( num_deployment + 1))
@@ -171,7 +185,7 @@ fully_deploy_resources() {
 }
 
 # Example usage
-# setup_rp_config <AZURE_PREFIX>
+# setup_rp_config <AZURE_PREFIX> <SKIP_DEPLOYMENTS>
 # pre_deploy_resources
 # add_hive
 # mirror_images

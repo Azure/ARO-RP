@@ -40,16 +40,23 @@ main() {
 	fi
 	verify_tools
 
-	if [ "$( $KUBECTL get namespace $HIVE_OPERATOR_NS -o yaml 2>/dev/null | wc -l )" -ne 0 ]; then
-		log "hive is already installed in namespace $HIVE_OPERATOR_NS"
-			log -n "would you like to reapply the configs? (y/N): "
-			read answer
-			if [[ "$answer" != "y" ]]; then
-				exit
-		    fi
-	else
-		$KUBECTL create namespace $HIVE_OPERATOR_NS
-	fi
+    if [ $( $KUBECTL get namespace $HIVE_OPERATOR_NS -o yaml 2>/dev/null | wc -l ) -ne 0 ]; then
+        echo "hive is already installed in the namespace"
+        if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
+            echo "'SKIP_DEPLOYMENTS' env var is set to false. ❌⏩ Don't skip Hive installation, and try to reinstall it"
+        elif [[ "${SKIP_DEPLOYMENTS}" == "true" ]]; then
+            echo "'SKIP_DEPLOYMENTS' env var is set to true. ⏩📋 Skip Hive installation"
+            exit
+        else
+            echo -n "would you like to reapply the configs? (y/N): "
+            read answer
+            if [[ "$answer" != "y" ]]; then
+                exit
+            fi
+        fi
+    else
+        $KUBECTL create namespace $HIVE_OPERATOR_NS
+    fi
 
 	log "Hive is ready to be installed"
 	$KUBECTL apply -f ./hack/hive/hive-config/crds

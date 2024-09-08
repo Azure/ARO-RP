@@ -22,6 +22,7 @@ GOLANG_VERSION ?= 1.21
 # Variables for RP full dev automation 
 AZURE_PREFIX ?= zzz
 RP_LOCATION ?= eastus
+SKIP_DEPLOYMENTS ?= true
 FULL_RP_DEV_IMAGE ?= generic-repo/full-rp-dev:v0.0.1
 
 include .bingo/Variables.mk
@@ -558,6 +559,7 @@ run-rp: ci-rp podman-secrets
 full-rp-dev: # Build and run a full-rp-dev container for automating full-rp-dev
 	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
 		--build-arg LOCATION=$(RP_LOCATION) \
+		--build-arg SKIP_DEPLOYMENTS=$(SKIP_DEPLOYMENTS) \
 		-f Dockerfile.full-rp-dev \
 		-t $(FULL_RP_DEV_IMAGE) .
 	docker run --rm -it --user=0 --privileged \
