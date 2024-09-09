@@ -111,22 +111,18 @@ jobs:
           echo "Captured UNIQUE_TAG: $UNIQUE_TAG"
 
           # Retag the image with the ACR repository and unique tag
-          echo "Tagging the image with ACR repository..."
           podman --remote --url=tcp://localhost:8888 tag localhost/${IMAGE_REPO_NAME}:${IMAGE_TAG} ${ACR_FQDN}/${REPOSITORY}:${UNIQUE_TAG}
 
           # Push the image to ACR
-          echo "Pushing image to ACR..."
           podman --remote --url=tcp://localhost:8888 push ${ACR_FQDN}/${REPOSITORY}:${UNIQUE_TAG}
 
           # Optionally tag and push the image as 'latest'
           if [ ${{ parameters.pushLatest }} == true ]; then
-            echo "Tagging and pushing latest image..."
             podman --remote --url=tcp://localhost:8888 tag ${ACR_FQDN}/${REPOSITORY}:${UNIQUE_TAG} ${ACR_FQDN}/${REPOSITORY}:latest
             podman --remote --url=tcp://localhost:8888 push ${ACR_FQDN}/${REPOSITORY}:latest
           fi
 
           # Check for images with label 'stage=rp-build-cache-layer' to extract cover.out
-          echo "Checking for images with label 'stage=rp-build-cache-layer'..."
           RP_IMAGE_ID=$(podman image ls --filter label=stage=rp-build-cache-layer --noheading --format '{{.Id}}' | tail -n 1)
 
           if [ -n "$RP_IMAGE_ID" ]; then
@@ -143,23 +139,6 @@ jobs:
               else
                   echo "cover.out file found in $(Build.SourcesDirectory)"
               fi
-
-              # Validate and display cover.out contents
-              echo "Contents of cover.out:"
-              cat $(Build.SourcesDirectory)/cover.out
-
-              # Check if the file is not empty
-              if [ -s $(Build.SourcesDirectory)/cover.out ]; then
-                echo "cover.out contains data:"
-                head -n 10 $(Build.SourcesDirectory)/cover.out
-              else
-                echo "cover.out is empty or does not exist."
-                exit 1
-              fi
-
-              # Convert cover.out to human-readable format (for Go coverage)
-              echo "Converting cover.out to human-readable format..."
-              go tool cover -func $(Build.SourcesDirectory)/cover.out
           else
               # If no image is found, skip the cover.out extraction
               echo "No RP Image found with label 'stage=rp-build-cache-layer'. Skipping cover.out extraction."
@@ -168,7 +147,13 @@ jobs:
           # Stop podman
           echo "Stopping Podman service..."
           kill_podman
+        target: ubi8
 
-          # Clear Azure session AFTER all ACR operations are complete
-          az account clear
+      # Now, after the script step, we add the task to publish code coverage results
+      - task: PublishCodeCoverageResults@1
+        inputs:
+          codeCoverageTool: 'Cobertura'  # Adjust if you're using a different tool like JaCoCo
+          summaryFileLocation: '$(Build.SourcesDirectory)/cover.out'
+          reportDirectory: '$(Build.SourcesDirectory)/reports'
+          failIfCoverageEmpty: false
         target: ubi8
