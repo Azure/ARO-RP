@@ -16,11 +16,17 @@ declare -A test_cases=(
 
 for role in "${!test_cases[@]}"; do
   echo "Testing $role"
-  echo ""
-  yq ".spec.providerSpec.permissions[]" "/tmp/credreqs/$version/$role" | sort
-  echo ""
-  cat "/tmp/credreqs/$version/$role"
-#  comm -23 \
-#    <(yq ".spec.providerSpec.permissions[]" "/tmp/credreqs/$version/$role" | sort) \
-#    <(az role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].actions[]"| sort)
+  missing=$(comm -23 \
+    <(yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' "/tmp/credreqs/$version/$role" | sort) \
+    <(az role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].actions[]"| sort))
+
+  if [[ -n $missing ]]; then
+    echo "Missing permissions for $role:"
+    for permission in $missing; do
+      echo "  $permission"
+    done
+    exit 1
+  fi
 done
+
+
