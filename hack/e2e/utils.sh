@@ -39,26 +39,16 @@ kill_podman() {
     echo "########## Kill the podman running in background ##########"
     
     if [ -n "$PODMAN_PID" ]; then
-        echo "Killing Podman process with PID: $PODMAN_PID"
         kill $PODMAN_PID 2>/dev/null
-        if [ $? -ne 0 ]; then
-            echo "Error: Failed to kill Podman process with PID $PODMAN_PID."
-            exit 1
-        fi
         wait $PODMAN_PID 2>/dev/null || echo "Podman process $PODMAN_PID was not a child of this shell."
     else
         echo "No PODMAN_PID found. Attempting to kill by port."
         rppid=$(lsof -t -i :8888)
         if [ -n "$rppid" ]; then
-            echo "Killing Podman running on port 8888 with PID $rppid."
             kill $rppid
-            if [ $? -ne 0 ]; then
-                echo "Error: Failed to kill Podman running on port 8888."
-                exit 1
-            fi
+            echo "Killed podman running on port 8888 with PID $rppid."
         else
             echo "No process found running on port 8888."
         fi
     fi
 }
-

@@ -51,7 +51,7 @@ stages:
               set -xe
               make test-python
               [[ -z "$(git status -s)" ]]
-            displayName: 🧪Run Python Unit Tests
+            displayName: 🧪 Run Python Unit Tests
             target: python
 
       - job: Golang_Unit_Tests
@@ -96,24 +96,9 @@ stages:
             displayName: 🧪 Run Golang unit tests
             target: golang
 
-          - task: PublishTestResults@2
-            displayName: 📊 Publish tests results
-            inputs:
-              testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-            condition: succeededOrFailed()
-
           - script: |
               make xmlcov
             displayName: ⚙️ Process Reports
-            condition: succeededOrFailed()
-            target: golang
-
-          - task: PublishCodeCoverageResults@2
-            displayName: 📈 Publish code coverage
-            inputs:
-              codeCoverageTool: Cobertura
-              summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
-              failIfCoverageEmpty: false
             condition: succeededOrFailed()
             target: golang
 
@@ -130,31 +115,78 @@ stages:
   - stage: Containerized
     dependsOn: []
     jobs:
-      - template: templates/template-podman.yml
-        parameters:
-          jobName: 'Build_Test_And_Push_Az_ARO_Extension'
-          makeCommand: 'make ci-azext-aro'
-          repository: 'my-image-repo'
-          acrFQDN: 'arosvcdev.azurecr.io'
-          imageRepoName: 'azext-aro'
-          pushLatest: true
+      - job: Build_Test_And_Push_Az_ARO_Extension
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - template: ./templates/template-checkout.yml
 
-      # Lint Az ARO Extension
-      - template: templates/template-podman.yml
-        parameters:
-          jobName: 'Lint_Az_ARO_Extension'
-          makeCommand: 'make test-python'
-          repository: 'my-image-repo'
-          acrFQDN: 'arosvcdev.azurecr.io'
-          imageRepoName: 'azext-aro'
-          pushLatest: true
+          # Build and test the Az ARO Extension
+          - script: |
+              set -xe
+              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(Build.BuildId)
+            displayName: 🛠 Build & Test Az ARO Extension
 
-      # Build, Lint, and Test RP and Portal (with coverage publishing inside this template)
-      - template: templates/template-podman.yml
-        parameters:
-          jobName: 'Build_Lint_Test_RP_And_Portal'
-          makeCommand: 'make ci-rp'
-          repository: 'my-image-repo'
-          acrFQDN: 'arosvcdev.azurecr.io'
-          imageRepoName: 'aro'
-          pushLatest: true
+          # Push the image to ACR
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              jobName: 'Build_Test_And_Push_Az_ARO_Extension'
+              acrFQDN: 'arosvcdev.azurecr.io'
+              repository: 'azext-aro'
+              imageRepoName: 'azext-aro'
+              imageTag: '$(Build.BuildId),latest'
+              dockerFilePath: 'Dockerfile.ci-azext-aro'
+              pushLatest: true
+
+      - job: Build_Lint_Test_RP_And_Portal
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - template: ./templates/template-checkout.yml
+
+          # Build and test RP and Portal
+          - script: |
+              set -xe
+              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(Build.BuildId)
+            displayName: 🛠 Build & Test RP and Portal
+
+          # Publish test results
+          - task: PublishTestResults@2
+            displayName: 📊 Publish tests results
+            inputs:
+              testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
+            condition: succeededOrFailed()
+
+          # Publish code coverage results
+          - task: PublishCodeCoverageResults@2
+            displayName: 📈 Publish code coverage
+            inputs:
+              codeCoverageTool: Cobertura
+              summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
+              failIfCoverageEmpty: false
+            condition: succeededOrFailed()
+
+          # Push the image to ACR
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              jobName: 'Build_Lint_Test_RP_And_Portal'
+              acrFQDN: 'arosvcdev.azurecr.io'
+              repository: 'aro'
+              imageRepoName: 'aro'
+              imageTag: '$(Build.BuildId),latest'
+              dockerFilePath: 'Dockerfile.ci-rp'
+              pushLatest: true
+
+      - job: Lint_Az_ARO_Extension
+        pool:
+          name: 1es-aro-ci-pool
+        variables:
+          HOME: $(Agent.BuildDirectory)
+        steps:
+          - template: ./templates/template-checkout.yml
+          - script: |
+              set -xe
+              export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
+              make test-python
+              [[ -z "$(git status -s)" ]]
+            target: python
