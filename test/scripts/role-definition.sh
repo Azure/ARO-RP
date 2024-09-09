@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 
-version=4.15.30
+confirmed_version=4.14.35
+version=$(curl -s "https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.16" | jq -r ".nodes[].version" | sort -V --rev | head -n1)
 
-#oc adm release extract --credentials-requests --to "/tmp/credreqs/$version" "quay.io/openshift-release-dev/ocp-release:$version-x86_64"
+oc adm release extract --credentials-requests --to "/tmp/credreqs/$confirmed_version" "quay.io/openshift-release-dev/ocp-release:$confirmed_version-x86_64"
+echo "Extracted $confirmed_version"
+oc adm release extract --credentials-requests --to "/tmp/credreqs/$version" "quay.io/openshift-release-dev/ocp-release:$version-x86_64"
+echo "Extracted $version"
 
 declare -A test_cases=(
   ["0000_50_cluster-storage-operator_03_credentials_request_azure.yaml"]="5b7237c5-45e1-49d6-bc18-a1f62f400748"
@@ -16,6 +20,14 @@ declare -A test_cases=(
 
 for role in "${!test_cases[@]}"; do
   echo "Testing $role"
+  diff=$(comm -3 \
+    <(yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' "/tmp/credreqs/$confirmed_version/$role" | sort) \
+    <(yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' "/tmp/credreqs/$version/$role" | sort))
+  if [[ -z $diff ]]; then
+    echo "No changes in permissions for $role"
+    continue
+  fi
+
   missing=$(comm -23 \
     <(yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' "/tmp/credreqs/$version/$role" | sort) \
     <(az role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].actions[]"| sort))
