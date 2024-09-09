@@ -6,6 +6,14 @@ OC=$1
 confirmed_version=4.14.35
 version=$(curl -s "https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.16" | jq -r ".nodes[].version" | sort -V --rev | head -n1)
 
+parse_permissions() {
+  podman run -i --rm mikefarah/yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' < "$1" | sort
+}
+
+parse_data_permissions() {
+  podman run -i --rm mikefarah/yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' < "$1" | sort
+}
+
 "$OC" adm release extract --credentials-requests --to "/tmp/credreqs/$confirmed_version" "quay.io/openshift-release-dev/ocp-release:$confirmed_version-x86_64"
 echo "Extracted $confirmed_version"
 "$OC" adm release extract --credentials-requests --to "/tmp/credreqs/$version" "quay.io/openshift-release-dev/ocp-release:$version-x86_64"
@@ -24,15 +32,15 @@ declare -A test_cases=(
 for role in "${!test_cases[@]}"; do
   echo "Testing $role"
   diff=$(comm -3 \
-    <(yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' "/tmp/credreqs/$confirmed_version/$role" | sort) \
-    <(yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' "/tmp/credreqs/$version/$role" | sort))
+    <(parse_permissions "/tmp/credreqs/$confirmed_version/$role") \
+    <(parse_permissions "/tmp/credreqs/$version/$role"))
   if [[ -z $diff ]]; then
     echo "No changes in permissions for $role"
     continue
   fi
 
   missing=$(comm -23 \
-    <(yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.permissions[]' "/tmp/credreqs/$version/$role" | sort) \
+    <(parse_permissions "/tmp/credreqs/$version/$role") \
     <(az role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].actions[]"| sort))
 
   if [[ -n $missing ]]; then
@@ -44,7 +52,7 @@ for role in "${!test_cases[@]}"; do
   fi
 
   missing=$(comm -23 \
-    <(yq '.[] | select(.providerSpec.kind == "AzureProviderSpec") | .providerSpec.dataPermissions[]' "/tmp/credreqs/$version/$role" | sort) \
+    <(parse_data_permissions "/tmp/credreqs/$version/$role") \
     <(az role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].dataActions[]"| sort))
 
   if [[ -n $missing ]]; then
