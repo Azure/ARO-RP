@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 
+set -e
+
+OC=$1
 confirmed_version=4.14.35
 version=$(curl -s "https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.16" | jq -r ".nodes[].version" | sort -V --rev | head -n1)
 
-oc adm release extract --credentials-requests --to "/tmp/credreqs/$confirmed_version" "quay.io/openshift-release-dev/ocp-release:$confirmed_version-x86_64"
+"$OC" adm release extract --credentials-requests --to "/tmp/credreqs/$confirmed_version" "quay.io/openshift-release-dev/ocp-release:$confirmed_version-x86_64"
 echo "Extracted $confirmed_version"
-oc adm release extract --credentials-requests --to "/tmp/credreqs/$version" "quay.io/openshift-release-dev/ocp-release:$version-x86_64"
+"$OC" adm release extract --credentials-requests --to "/tmp/credreqs/$version" "quay.io/openshift-release-dev/ocp-release:$version-x86_64"
 echo "Extracted $version"
 
 declare -A test_cases=(

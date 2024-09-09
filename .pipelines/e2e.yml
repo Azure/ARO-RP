@@ -48,6 +48,6 @@ jobs:
           ./oc adm must-gather --image quay.io/cmarches/aro-must-gather:20231030.00
           alias oc=./oc
           
-          ./test/scripts/role-definition.sh
+          ./test/scripts/role-definition.sh ./oc
         displayName: Execute Tests
         target: container
