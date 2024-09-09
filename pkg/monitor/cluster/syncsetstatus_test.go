@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	//	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
@@ -12,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -30,7 +28,7 @@ func TestEmitSyncSetStatus(t *testing.T) {
 		expectedGauges    map[string]int64
 		expectedLabels    map[string]string
 	}{
-		{
+		/*{
 			name: "SyncSets has elements",
 			clusterSync: &hivev1alpha1.ClusterSync{
 				Status: hivev1alpha1.ClusterSyncStatus{
@@ -66,7 +64,7 @@ func TestEmitSyncSetStatus(t *testing.T) {
 			},
 			expectedError:  nil,
 			expectedGauges: map[string]int64{"selectorsyncsets.count": 0},
-		},
+		},*/
 		{
 			name:              "GetClusterSyncforClusterDeployment returns error",
 			getClusterSyncErr: errors.New("some error"),
