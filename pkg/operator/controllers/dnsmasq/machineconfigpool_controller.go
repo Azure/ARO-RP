@@ -16,7 +16,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
 
 const (
@@ -26,17 +26,17 @@ const (
 type MachineConfigPoolReconciler struct {
 	base.AROController
 
-	dh dynamichelper.Interface
+	ch clienthelper.Interface
 }
 
-func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
+func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *MachineConfigPoolReconciler {
 	return &MachineConfigPoolReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   MachineConfigPoolControllerName,
 		},
-		dh: dh,
+		ch: ch,
 	}
 }
 
@@ -58,6 +58,13 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		r.Log.Debug("restart dnsmasq machineconfig enabled")
 	}
 
+	allowReconcile, err := r.AllowRebootCausingReconciliation(ctx, instance)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
+	}
+
 	r.Log.Debug("running")
 	mcp := &mcv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, mcp)
@@ -70,8 +77,11 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
+	if mcp.GetDeletionTimestamp() != nil {
+		return reconcile.Result{}, nil
+	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, restartDnsmasq, *mcp)
+	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, restartDnsmasq, *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)

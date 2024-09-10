@@ -5,6 +5,7 @@ FROM mcr.microsoft.com/oss/go/microsoft/golang:1.22.6-fips-cbl-mariner2.0 AS bui
 
 USER root
 ENV GOPATH=/root/go
+ENV PATH=$PATH:${GOPATH}/bin/
 RUN mkdir -p /app
 WORKDIR /app
 
