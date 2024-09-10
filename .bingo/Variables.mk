@@ -39,7 +39,7 @@ ENUMER := $(GOBIN)/enumer-v1.1.2
 $(ENUMER): $(BINGO_DIR)/enumer.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
 	@echo "(re)installing $(GOBIN)/enumer-v1.1.2"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=enumer.mod -o=$(GOBIN)/enumer-v1.1.2 "github.com/alvaroloes/enumer"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=enumer.mod -o=$(GOBIN)/enumer-v1.1.2 "github.com/dmarkham/enumer"
 
 FIPS_DETECT := $(GOBIN)/fips-detect-v0.0.0-20230309083406-7157dae5bafd
 $(FIPS_DETECT): $(BINGO_DIR)/fips-detect.mod
