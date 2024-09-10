@@ -3,6 +3,7 @@
 set -e
 
 OC=$1
+AZ=$2
 confirmed_version=4.14.35
 version=$(curl -s "https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.16" | jq -r ".nodes[].version" | sort -V --rev | head -n1)
 

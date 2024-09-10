@@ -45,7 +45,6 @@ jobs:
       - script: |
           wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
           tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-          az 
-          ./test/scripts/role-definition.sh ./oc
+          ./test/scripts/role-definition.sh ./oc $(which az)
         displayName: Execute Tests
         target: container
