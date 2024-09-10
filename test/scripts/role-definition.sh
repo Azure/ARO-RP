@@ -42,7 +42,7 @@ for role in "${!test_cases[@]}"; do
 
   missing=$(comm -23 \
     <(parse_permissions "/tmp/credreqs/$version/$role") \
-    <(az role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].actions[]"| sort))
+    <("$AZ" role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].actions[]"| sort))
 
   if [[ -n $missing ]]; then
     echo "Missing permissions for $role:"
@@ -54,7 +54,7 @@ for role in "${!test_cases[@]}"; do
 
   missing=$(comm -23 \
     <(parse_data_permissions "/tmp/credreqs/$version/$role") \
-    <(az role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].dataActions[]"| sort))
+    <("$AZ" role definition list -n "${test_cases[$role]}" | jq -r ".[].permissions[].dataActions[]"| sort))
 
   if [[ -n $missing ]]; then
     echo "Missing data permissions for $role:"
