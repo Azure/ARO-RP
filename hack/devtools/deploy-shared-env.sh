@@ -252,12 +252,16 @@ clean_env() {
       done
 }
 
-deploy_e2e_secret_storage() {
+deploy_global_secret_storage() {
+    if [ -z "${SECRET_STORAGE_RESOURCEGROUP}" ]; then
+        echo "SECRET_STORAGE_RESOURCEGROUP is unset"
+        return
+    fi
     az deployment group create \
-        --name e2esecretstorage \
-        --resource-group global-infra \
-        --parameters storageAccounts_e2earosecrets_name=$SECRET_SA_ACCOUNT_NAME \
-        --template-file pkg/deploy/assets/e2e-secret-storage.json 
+        --name secretstorage \
+        --resource-group $SECRET_STORAGE_RESOURCEGROUP \
+        --parameters storageAccounts_arosecrets_name=$SECRET_SA_ACCOUNT_NAME \
+        --template-file pkg/deploy/assets/shared-rp-secret-storage.json 
 }
 
 deploy_aro_spn_keyvault() {
@@ -302,6 +306,8 @@ echo
 echo "KEYVAULT_PREFIX=$KEYVAULT_PREFIX"
 echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
+echo
+echo "SECRET_SA_ACCOUNT_NAME=$SECRET_SA_ACCOUNT_NAME"
 echo "######################################"
 
 [ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
@@ -315,3 +321,4 @@ echo "######################################"
 [ "$AZURE_RP_CLIENT_ID" ] || ( echo ">> AZURE_RP_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
 [ "$PULL_SECRET" ] || ( echo ">> PULL_SECRET is not set please validate your ./secrets/env"; exit 128 )
 [ "$PARENT_DOMAIN_RESOURCEGROUP" ] || ( echo ">> PARENT_DOMAIN_RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
+[ "$SECRET_SA_ACCOUNT_NAME" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set please validate your ./secrets/env"; exit 128 )
