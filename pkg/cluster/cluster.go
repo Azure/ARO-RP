@@ -5,9 +5,7 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -226,7 +224,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, &clientOptions)
+	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -287,19 +285,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 			return nil, err
 		}
 
-		cloud := ""
-		switch strings.ToUpper(_env.Environment().Name) {
-		case dataplane.AzurePublicCloud:
-			cloud = dataplane.AzurePublicCloud
-		case dataplane.AzureUSGovCloud:
-			cloud = dataplane.AzureUSGovCloud
-		}
-
-		if cloud == "" {
-			return nil, errors.New("could not determine which Azure Cloud to use to instantiate MSI dataplane client")
-		}
-
-		msiDataplaneClientOptions := clientOptions.ClientOptions
 		msiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
 		if err != nil {
 			return nil, err
