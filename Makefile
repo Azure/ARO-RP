@@ -238,7 +238,7 @@ e2etools:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/cluster
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/db
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/portalauth
-	CGO_ENABLED=0 go build ./hack/jq
+	$(BINGO) get -l gojq
 
 .PHONY: test-e2e
 test-e2e: e2e.test
@@ -267,7 +267,9 @@ validate-go-action:
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 .PHONY: validate-fips
-validate-fips:
+validate-fips: $(BINGO)
+	$(BINGO) get -l fips-detect
+	$(BINGO) get -l gojq
 	hack/fips/validate-fips.sh ./aro
 
 .PHONY: unit-test-go

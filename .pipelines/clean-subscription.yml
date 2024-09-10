@@ -22,6 +22,11 @@ jobs:
 
     steps:
       - template: ./templates/template-checkout.yml
+      - script: |
+          set -xe
+          sudo dnf install -y jq
+        displayName: Setup (Container)
+        target: golang
       - template: ./templates/template-clean-subscription.yml
         parameters:
           dryRun: ${{ parameters.dryRun }}
