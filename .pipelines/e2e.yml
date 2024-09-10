@@ -48,4 +48,3 @@ jobs:
           which az
           ./test/scripts/role-definition.sh ./oc `which az`
         displayName: Execute Tests
-        target: container
