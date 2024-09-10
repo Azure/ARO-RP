@@ -1,5 +1,3 @@
-github.com/dmarkham/enumer v1.1.2 h1:5khqHB33TZy1GWCO/lZwcroBFh7u+0j40T83VUbfAMY=
-github.com/dmarkham/enumer v1.1.2/go.mod h1:FxrjvuXoDAx9isTJrv4c+T410zFi0DtXIT0m65DJ+Wo=
 github.com/dmarkham/enumer v1.5.10 h1:ygL0L6quiTiH1jpp68DyvsWaea6MaZLZrTTkIS++R0M=
 github.com/dmarkham/enumer v1.5.10/go.mod h1:e4VILe2b1nYK3JKJpRmNdl5xbDQvELc6tQ8b+GsGk6E=
 github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1 h1:/I3lTljEEDNYLho3/FUB7iD/oc2cEFgVmbHzV+O0PtU=
