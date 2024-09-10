@@ -96,6 +96,49 @@
         }
       }
     },
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityroleset": {
+      "get": {
+        "tags": [
+          "PlatformWorkloadIdentityRoleSet"
+        ],
+        "summary": "Lists a mapping of OpenShift versions to identity requirements, which include operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
+        "description": "This operation returns PlatformWorkloadIdentityRoleSet as a string",
+        "operationId": "PlatformWorkloadIdentityRoleSet_List",
+        "parameters": [
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/LocationParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PlatformWorkloadIdentityRoleSetList"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Lists a mapping of OpenShift versions to identity requirements, which include operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.": {
+            "$ref": "./examples/PlatformWorkloadIdentityRoleSet_List.json"
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
+        }
+      }
+    },
     "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/openShiftClusters": {
       "get": {
         "tags": [
@@ -2383,6 +2426,97 @@
             "$ref": "#/definitions/PlatformWorkloadIdentity"
           },
           "x-ms-identifiers": []
+        }
+      }
+    },
+    "PlatformWorkloadIdentityRole": {
+      "description": "PlatformWorkloadIdentityRole represents a mapping from a particular OCP operator to the built-in role that should be assigned to that operator's corresponding managed identity.",
+      "type": "object",
+      "properties": {
+        "operatorName": {
+          "description": "OperatorName represents the name of the operator that this role is for.",
+          "type": "string"
+        },
+        "roleDefinitionName": {
+          "description": "RoleDefinitionName represents the name of the role.",
+          "type": "string"
+        },
+        "roleDefinitionId": {
+          "description": "RoleDefinitionID represents the resource ID of the role definition.",
+          "type": "string"
+        }
+      }
+    },
+    "PlatformWorkloadIdentityRoleSet": {
+      "description": "PlatformWorkloadIdentityRoleSet represents a mapping from the names of OCP operators to the built-in roles that should be assigned to those operator's corresponding managed identities for a particular OCP version.",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource"
+        }
+      ],
+      "properties": {
+        "properties": {
+          "$ref": "#/definitions/PlatformWorkloadIdentityRoleSetProperties",
+          "description": "The properties for the PlatformWorkloadIdentityRoleSet resource.",
+          "x-ms-client-flatten": true
+        },
+        "systemData": {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
+          "description": "The system meta data relating to this resource.",
+          "readOnly": true
+        }
+      }
+    },
+    "PlatformWorkloadIdentityRoleSetList": {
+      "description": "PlatformWorkloadIdentityRoleSetList represents a List of role sets.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "The list of role sets.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlatformWorkloadIdentityRoleSet"
+          },
+          "x-ms-identifiers": []
+        },
+        "nextLink": {
+          "description": "Next Link to next operation.",
+          "type": "string"
+        }
+      }
+    },
+    "PlatformWorkloadIdentityRoleSetProperties": {
+      "description": "PlatformWorkloadIdentityRoleSetProperties represents the properties of a PlatformWorkloadIdentityRoleSet resource.",
+      "type": "object",
+      "properties": {
+        "openShiftVersion": {
+          "description": "OpenShiftVersion represents the version associated with this set of roles.",
+          "type": "string"
+        },
+        "platformWorkloadIdentityRoles": {
+          "description": "PlatformWorkloadIdentityRoles represents the set of roles associated with this version.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlatformWorkloadIdentityRole"
+          },
+          "x-ms-identifiers": []
+        }
+      }
+    },
+    "PlatformWorkloadIdentityRoleSetUpdate": {
+      "description": "PlatformWorkloadIdentityRoleSet represents a mapping from the names of OCP operators to the built-in roles that should be assigned to those operator's corresponding managed identities for a particular OCP version.",
+      "type": "object",
+      "properties": {
+        "properties": {
+          "$ref": "#/definitions/PlatformWorkloadIdentityRoleSetProperties",
+          "description": "The properties for the PlatformWorkloadIdentityRoleSet resource.",
+          "x-ms-client-flatten": true
+        },
+        "systemData": {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
+          "description": "The system meta data relating to this resource.",
+          "readOnly": true
         }
       }
     },
