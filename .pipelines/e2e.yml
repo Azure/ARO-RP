@@ -36,9 +36,14 @@ jobs:
         displayName: Setup (Container)
         target: container
 
-      - template: ./templates/template-az-cli-login.yml
-        parameters:
-          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - script: |
+          set -e
+    
+          trap 'rm -f devops-spn.json' EXIT
+          base64 -d >devops-spn.json <<<$(aro-v4-e2e-devops-spn)
+    
+          az login --service-principal -u "$(jq -r .clientId <devops-spn.json)" -p "$(jq -r .clientSecret <devops-spn.json)" -t "$(jq -r .tenantId <devops-spn.json)" --allow-no-subscriptions >/dev/null
+        displayName: 🗝 AZ Login
         target: container
 
       - script: |
