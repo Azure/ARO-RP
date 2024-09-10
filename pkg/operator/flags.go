@@ -35,6 +35,7 @@ const (
 	GuardrailsDeployManaged            = "aro.guardrails.deploy.managed"
 	CloudProviderConfigEnabled         = "aro.cloudproviderconfig.enabled"
 	EtcHostsEnabled                    = "aro.etchosts.enabled"
+	ForceReconciliation                = "aro.forcereconciliation"
 	FlagTrue                           = "true"
 	FlagFalse                          = "false"
 )
@@ -74,5 +75,6 @@ func DefaultOperatorFlags() map[string]string {
 		GuardrailsDeployManaged:            FlagFalse,
 		CloudProviderConfigEnabled:         FlagTrue,
 		EtcHostsEnabled:                    FlagFalse,
+		ForceReconciliation:                FlagFalse,
 	}
 }
