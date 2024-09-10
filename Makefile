@@ -236,7 +236,6 @@ e2etools:
 	CGO_ENABLED=1 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/cluster
 	CGO_ENABLED=1 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/db
 	CGO_ENABLED=1 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/portalauth
-	CGO_ENABLED=1 go build ./hack/jq
 	$(BINGO) get -l gojq
 
 .PHONY: test-e2e
