@@ -30,7 +30,9 @@ jobs:
       - script: |
           set -xe
           sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-          sudo dnf install -y openvpn make podman jq conmon containers-common crun iptables netavark nftables slirp4netns
+          sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+          sudo dnf install -y https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm
+          sudo dnf install -y openvpn make podman jq conmon containers-common crun iptables netavark nftables slirp4netns azure-cli
         displayName: Setup (Container)
         target: container
 
@@ -45,6 +47,6 @@ jobs:
       - script: |
           wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
           tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-          which az
           ./test/scripts/role-definition.sh ./oc `which az`
         displayName: Execute Tests
+        target: container
