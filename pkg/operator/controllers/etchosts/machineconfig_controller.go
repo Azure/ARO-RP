@@ -64,16 +64,39 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 		return reconcile.Result{}, nil
 	}
 
+	// EtchostsManaged = false, remove machine configs
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) {
+		r.Log.Debug("etchosts managed is false, removing machine configs")
+		err = r.removeMachineConfig(ctx, etchostsMasterMCMetadata)
+		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+			return reconcile.Result{}, err
+		}
+
+		err = r.removeMachineConfig(ctx, etchostsWorkerMCMetadata)
+		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+			return reconcile.Result{}, err
+		}
+
+		r.ClearConditions(ctx)
+		r.Log.Debug("etchosts managed is false, machine configs removed")
+		return reconcile.Result{}, nil
+	}
+
+	// EtchostsManaged = true, reconcile machine configs
 	r.Log.Debug("running")
 	mcp := &mcv1.MachineConfigPool{}
 	// Make sure we are reconciling against etchosts machine config
 	m := etcHostsRegex.FindStringSubmatch(request.Name)
-	r.Log.Debugf("MachineConfig openshift-machine-api/%s", request.Name)
 	if m == nil {
 		return reconcile.Result{}, nil
 	}
 	role := m[1]
 
+	r.Log.Debugf("reconcile object openshift-machine-api/%s", request.Name)
 	err = r.Client.Get(ctx, types.NamespacedName{Name: role}, mcp)
 	if kerrors.IsNotFound(err) {
 		r.ClearDegraded(ctx)
@@ -140,4 +163,10 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 	}
 
 	return dh.Ensure(ctx, resources...)
+}
+
+func (r *EtcHostsMachineConfigReconciler) removeMachineConfig(ctx context.Context, mc *mcv1.MachineConfig) error {
+	r.Log.Debugf("removing machine config %s", mc.Name)
+	err := r.Client.Delete(ctx, mc)
+	return err
 }
