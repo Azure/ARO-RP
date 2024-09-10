@@ -34,6 +34,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -46,6 +47,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -93,6 +95,7 @@ type manager struct {
 	virtualNetworkLinks      privatedns.VirtualNetworkLinksClient
 	roleAssignments          authorization.RoleAssignmentsClient
 	roleDefinitions          authorization.RoleDefinitionsClient
+	armRoleDefinitions       armauthorization.RoleDefinitionsClient
 	denyAssignments          authorization.DenyAssignmentClient
 	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead.
 	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
@@ -127,10 +130,12 @@ type manager struct {
 	now func() time.Time
 
 	openShiftClusterDocumentVersioner openShiftClusterDocumentVersioner
+
+	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion
 }
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, dbOpenShiftVersions database.OpenShiftVersions, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, aead encryption.AEAD,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveClusterManager hive.ClusterManager, metricsEmitter metrics.Emitter,
 ) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
@@ -233,6 +238,19 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, &clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		err = platformWorkloadIdentityRolesByVersion.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &manager{
 		log:                      log,
 		env:                      _env,
@@ -264,6 +282,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		virtualNetworkLinks:      privatedns.NewVirtualNetworkLinksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		roleAssignments:          authorization.NewRoleAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		roleDefinitions:          authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armRoleDefinitions:       armRoleDefinitionsClient,
 		denyAssignments:          authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		fpPrivateEndpoints:       network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
@@ -276,10 +295,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		graph:   graph.NewManager(_env, log, aead, storage),
 		rpBlob:  rpBlob,
 
-		installViaHive:                    installViaHive,
-		adoptViaHive:                      adoptByHive,
-		hiveClusterManager:                hiveClusterManager,
-		now:                               func() time.Time { return time.Now() },
-		openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
+		installViaHive:                         installViaHive,
+		adoptViaHive:                           adoptByHive,
+		hiveClusterManager:                     hiveClusterManager,
+		now:                                    func() time.Time { return time.Now() },
+		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),
+		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 	}, nil
 }

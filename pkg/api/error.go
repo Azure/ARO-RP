@@ -91,6 +91,7 @@ const (
 	CloudErrorCodeInvalidServicePrincipalClaims      = "InvalidServicePrincipalClaims"
 	CloudErrorCodeInvalidResourceProviderPermissions = "InvalidResourceProviderPermissions"
 	CloudErrorCodeInvalidServicePrincipalPermissions = "InvalidServicePrincipalPermissions"
+	CloudErrorCodeInvalidWorkloadIdentityPermissions = "InvalidWorkloadIdentityPermissions"
 	CloudErrorCodeInvalidLocation                    = "InvalidLocation"
 	CloudErrorCodeInvalidOperationID                 = "InvalidOperationID"
 	CloudErrorCodeDuplicateClientID                  = "DuplicateClientID"
@@ -105,6 +106,8 @@ const (
 	CloudErrorCodeInvalidNetworkAddress              = "InvalidNetworkAddress"
 	CloudErrorCodeThrottlingLimitExceeded            = "ThrottlingLimitExceeded"
 	CloudErrorCodeInvalidCIDRRange                   = "InvalidCIDRRange"
+	CloudErrorCodePlatformWorkloadIdentityMismatch   = "CloudErrorCodePlatformWorkloadIdentityMismatch"
+	CloudErrorCodeInvalidClusterMSICount             = "CloudErrorCodeInvalidClusterMSICount"
 )
 
 // NewCloudError returns a new CloudError
