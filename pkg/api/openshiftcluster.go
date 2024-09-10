@@ -24,7 +24,7 @@ type OpenShiftCluster struct {
 	SystemData SystemData                 `json:"systemData,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-	Identity   *Identity                  `json:"identity,omitempty"`
+	Identity   *ManagedServiceIdentity    `json:"managedServiceIdentity,omitempty"`
 
 	//this property is used in the enrichers. Should not be marshalled
 	Lock sync.Mutex `json:"-"`
@@ -832,8 +832,8 @@ type HiveProfile struct {
 type PlatformWorkloadIdentityProfile struct {
 	MissingFields
 
-	UpgradeableTo              *UpgradeableTo             `json:"upgradeableTo,omitempty"`
-	PlatformWorkloadIdentities []PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
+	UpgradeableTo              *UpgradeableTo                      `json:"upgradeableTo,omitempty"`
+	PlatformWorkloadIdentities map[string]PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }
 
 // UpgradeableTo stores a single OpenShift version a workload identity cluster can be upgraded to
@@ -842,9 +842,6 @@ type UpgradeableTo string
 // PlatformWorkloadIdentity stores information representing a single workload identity.
 type PlatformWorkloadIdentity struct {
 	MissingFields
-
-	// The name of the operator the PlatformWorkloadIdentity is to be used for
-	OperatorName string `json:"operatorName,omitempty"`
 
 	// The resource ID of the PlatformWorkloadIdentity resource
 	ResourceID string `json:"resourceId,omitempty"`
@@ -856,38 +853,40 @@ type PlatformWorkloadIdentity struct {
 	ObjectID string `json:"objectId,omitempty" swagger:"readOnly"`
 }
 
-// ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
-type ClusterUserAssignedIdentity struct {
+// UserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
+type UserAssignedIdentity struct {
 	MissingFields
 
-	// The ClientID of the ClusterUserAssignedIdentity resource
-	ClientID string `json:"clientId,omitempty"`
+	// The ClientID of the UserAssignedIdentity resource
+	ClientID string `json:"clientId,omitempty" swagger:"readOnly"`
 
-	// The PrincipalID of the ClusterUserAssignedIdentity resource
-	PrincipalID string `json:"principalId,omitempty"`
+	// The PrincipalID of the UserAssignedIdentity resource
+	PrincipalID string `json:"principalId,omitempty" swagger:"readOnly"`
 }
 
-// The identity type.
-type ResourceIdentityType string
+// The ManagedServiceIdentity type.
+type ManagedServiceIdentityType string
 
-// IdentityType constants
+// ManagedServiceIdentityType constants
 const (
-	IdentityTypeSystemAssigned ResourceIdentityType = "SystemAssigned"
-	IdentityTypeUserAssigned   ResourceIdentityType = "UserAssigned"
+	ManagedServiceIdentityNone                       ManagedServiceIdentityType = "None"
+	ManagedServiceIdentitySystemAssigned             ManagedServiceIdentityType = "SystemAssigned"
+	ManagedServiceIdentityUserAssigned               ManagedServiceIdentityType = "UserAssigned"
+	ManagedServiceIdentitySystemAssignedUserAssigned ManagedServiceIdentityType = "SystemAssigned,UserAssigned"
 )
 
-// Identity stores information about the cluster MSI(s) in a workload identity cluster.
-type Identity struct {
+// ManagedServiceIdentity stores information about the cluster MSI(s) in a workload identity cluster.
+type ManagedServiceIdentity struct {
 	MissingFields
 
-	// The type of the Identity resource.
-	Type ResourceIdentityType `json:"type,omitempty"`
+	// The type of the ManagedServiceIdentity resource.
+	Type ManagedServiceIdentityType `json:"type,omitempty"`
 
 	// The PrincipalID of the Identity resource.
 	PrincipalID string `json:"principalId,omitempty" swagger:"readOnly"`
 
-	// A map of ClusterUserAssigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.
-	UserAssignedIdentities map[string]ClusterUserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
+	// A map of user assigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.
+	UserAssignedIdentities map[string]UserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
 
 	// The IdentityURL provided by the MSI RP
 	IdentityURL string `json:"identityURL,omitempty" mutable:"true"`

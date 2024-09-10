@@ -85,9 +85,9 @@ Response contained no body
 			name: "error - invalid resource ID (theoretically not possible, but still)",
 			doc: &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							"Hi hello I'm not a valid resource ID": api.ClusterUserAssignedIdentity{},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							"Hi hello I'm not a valid resource ID": {},
 						},
 					},
 				},
@@ -99,11 +99,11 @@ Response contained no body
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -121,11 +121,11 @@ Response contained no body
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -150,11 +150,11 @@ Response contained no body
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -182,11 +182,11 @@ Response contained no body
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -263,9 +263,9 @@ func TestClusterMsiSecretName(t *testing.T) {
 			name: "error - invalid resource ID (theoretically not possible, but still)",
 			doc: &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							"Hi hello I'm not a valid resource ID": api.ClusterUserAssignedIdentity{},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							"Hi hello I'm not a valid resource ID": {},
 						},
 					},
 				},
@@ -277,9 +277,9 @@ func TestClusterMsiSecretName(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
 						},
 					},
 				},
@@ -392,9 +392,9 @@ Response contained no body
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							"Hi hello I'm not a valid resource ID": api.ClusterUserAssignedIdentity{},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							"Hi hello I'm not a valid resource ID": {},
 						},
 					},
 				},
@@ -410,11 +410,11 @@ Response contained no body
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
 						},
 					},
 				},
@@ -437,11 +437,11 @@ Response contained no body
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: api.UserAssignedIdentity{},
 						},
 					},
 				},
@@ -454,11 +454,11 @@ Response contained no body
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: api.UserAssignedIdentity{
 								ClientID:    miClientId,
 								PrincipalID: miObjectId,
 							},
@@ -476,11 +476,11 @@ Response contained no body
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceIdIncorrectCasing: api.ClusterUserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceIdIncorrectCasing: {},
 						},
 					},
 				},
@@ -493,11 +493,11 @@ Response contained no body
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
-					Identity: &api.Identity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceIdIncorrectCasing: api.ClusterUserAssignedIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceIdIncorrectCasing: api.UserAssignedIdentity{
 								ClientID:    miClientId,
 								PrincipalID: miObjectId,
 							},

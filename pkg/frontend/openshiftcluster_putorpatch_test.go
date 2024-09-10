@@ -2087,45 +2087,37 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name: "create a new workload identity cluster",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Version = defaultVersion
-				oc.Identity = &v20240812preview.Identity{
+				oc.Identity = &v20240812preview.ManagedServiceIdentity{
 					Type: "UserAssigned",
-					UserAssignedIdentities: map[string]v20240812preview.ClusterUserAssignedIdentity{
+					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
 						mockMiResourceId: {},
 					},
 				}
 				oc.Properties.PlatformWorkloadIdentityProfile = &v20240812preview.PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: []v20240812preview.PlatformWorkloadIdentity{
-						{
-							OperatorName: "AzureFilesStorageOperator",
-							ResourceID:   mockMiResourceId,
+					PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+						"AzureFilesStorageOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "CloudControllerManager",
-							ResourceID:   mockMiResourceId,
+						"CloudControllerManager": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "ClusterIngressOperator",
-							ResourceID:   mockMiResourceId,
+						"ClusterIngressOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "ImageRegistryOperator",
-							ResourceID:   mockMiResourceId,
+						"ImageRegistryOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "MachineApiOperator",
-							ResourceID:   mockMiResourceId,
+						"MachineApiOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "NetworkOperator",
-							ResourceID:   mockMiResourceId,
+						"NetworkOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "ServiceOperator",
-							ResourceID:   mockMiResourceId,
+						"ServiceOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "StorageOperator",
-							ResourceID:   mockMiResourceId,
+						"StorageOperator": {
+							ResourceID: mockMiResourceId,
 						},
 					},
 				}
@@ -2158,9 +2150,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ID:   testdatabase.GetResourcePath(mockGuid, "resourceName"),
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Identity: &api.Identity{
+						Identity: &api.ManagedServiceIdentity{
 							Type: "UserAssigned",
-							UserAssignedIdentities: map[string]api.ClusterUserAssignedIdentity{
+							UserAssignedIdentities: map[string]api.UserAssignedIdentity{
 								mockMiResourceId: {},
 							},
 							IdentityURL: middleware.MockIdentityURL,
@@ -2193,38 +2185,30 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							OperatorFlags: operator.DefaultOperatorFlags(),
 							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-								PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-									{
-										OperatorName: "AzureFilesStorageOperator",
-										ResourceID:   mockMiResourceId,
+								PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+									"AzureFilesStorageOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "CloudControllerManager",
-										ResourceID:   mockMiResourceId,
+									"CloudControllerManager": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "ClusterIngressOperator",
-										ResourceID:   mockMiResourceId,
+									"ClusterIngressOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "ImageRegistryOperator",
-										ResourceID:   mockMiResourceId,
+									"ImageRegistryOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "MachineApiOperator",
-										ResourceID:   mockMiResourceId,
+									"MachineApiOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "NetworkOperator",
-										ResourceID:   mockMiResourceId,
+									"NetworkOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "ServiceOperator",
-										ResourceID:   mockMiResourceId,
+									"ServiceOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "StorageOperator",
-										ResourceID:   mockMiResourceId,
+									"StorageOperator": {
+										ResourceID: mockMiResourceId,
 									},
 								},
 							},
@@ -2240,9 +2224,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				Name:       "resourceName",
 				Type:       "Microsoft.RedHatOpenShift/openShiftClusters",
 				SystemData: &v20240812preview.SystemData{},
-				Identity: &v20240812preview.Identity{
+				Identity: &v20240812preview.ManagedServiceIdentity{
 					Type: "UserAssigned",
-					UserAssignedIdentities: map[string]v20240812preview.ClusterUserAssignedIdentity{
+					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
 						mockMiResourceId: {},
 					},
 				},
@@ -2265,38 +2249,30 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 					PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: []v20240812preview.PlatformWorkloadIdentity{
-							{
-								OperatorName: "AzureFilesStorageOperator",
-								ResourceID:   mockMiResourceId,
+						PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+							"AzureFilesStorageOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "CloudControllerManager",
-								ResourceID:   mockMiResourceId,
+							"CloudControllerManager": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "ClusterIngressOperator",
-								ResourceID:   mockMiResourceId,
+							"ClusterIngressOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "ImageRegistryOperator",
-								ResourceID:   mockMiResourceId,
+							"ImageRegistryOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "MachineApiOperator",
-								ResourceID:   mockMiResourceId,
+							"MachineApiOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "NetworkOperator",
-								ResourceID:   mockMiResourceId,
+							"NetworkOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "ServiceOperator",
-								ResourceID:   mockMiResourceId,
+							"ServiceOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "StorageOperator",
-								ResourceID:   mockMiResourceId,
+							"StorageOperator": {
+								ResourceID: mockMiResourceId,
 							},
 						},
 					},
@@ -3789,11 +3765,11 @@ func TestValidateIdentityUrl(t *testing.T) {
 		{
 			name: "pass - identity URL passed",
 			cluster: &api.OpenShiftCluster{
-				Identity: &api.Identity{},
+				Identity: &api.ManagedServiceIdentity{},
 			},
 			identityURL: "http://foo.bar",
 			expected: &api.OpenShiftCluster{
-				Identity: &api.Identity{
+				Identity: &api.ManagedServiceIdentity{
 					IdentityURL: "http://foo.bar",
 				},
 			},
@@ -3830,11 +3806,11 @@ func TestValidateIdentityTenantID(t *testing.T) {
 		{
 			name: "pass - tenantID passed",
 			cluster: &api.OpenShiftCluster{
-				Identity: &api.Identity{},
+				Identity: &api.ManagedServiceIdentity{},
 			},
 			tenantID: "bogus",
 			expected: &api.OpenShiftCluster{
-				Identity: &api.Identity{
+				Identity: &api.ManagedServiceIdentity{
 					TenantID: "bogus",
 				},
 			},

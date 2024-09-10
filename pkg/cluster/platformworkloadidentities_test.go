@@ -43,14 +43,12 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 		OpenShiftCluster: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
 				PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-						{
-							OperatorName: identityFooName,
-							ResourceID:   identityFooResourceId,
+					PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+						identityFooName: {
+							ResourceID: identityFooResourceId,
 						},
-						{
-							OperatorName: identityBarName,
-							ResourceID:   identityBarResourceId,
+						identityBarName: {
+							ResourceID: identityBarResourceId,
 						},
 					},
 				},
@@ -64,7 +62,7 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 		doc                               *api.OpenShiftClusterDocument
 		userAssignedIdentitiesClientMocks func(*mock_armmsi.MockUserAssignedIdentitiesClient)
 		wantErr                           string
-		wantIdentities                    *[]api.PlatformWorkloadIdentity
+		wantIdentities                    *map[string]api.PlatformWorkloadIdentity
 	}{
 		{
 			name: "error - CSP cluster",
@@ -90,11 +88,9 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-
-									OperatorName: "invalid",
-									ResourceID:   "I am not a resource ID.",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"invalid": {
+									ResourceID: "I am not a resource ID.",
 								},
 							},
 						},
@@ -111,10 +107,9 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: identityFooName,
-									ResourceID:   identityFooResourceId,
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {
+									ResourceID: identityFooResourceId,
 								},
 							},
 						},
@@ -151,18 +146,16 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantIdentities: &[]api.PlatformWorkloadIdentity{
-				{
-					OperatorName: identityFooName,
-					ResourceID:   identityFooResourceId,
-					ClientID:     identityFooClientId,
-					ObjectID:     identityFooObjectId,
+			wantIdentities: &map[string]api.PlatformWorkloadIdentity{
+				identityFooName: {
+					ResourceID: identityFooResourceId,
+					ClientID:   identityFooClientId,
+					ObjectID:   identityFooObjectId,
 				},
-				{
-					OperatorName: identityBarName,
-					ResourceID:   identityBarResourceId,
-					ClientID:     identityBarClientId,
-					ObjectID:     identityBarObjectId,
+				identityBarName: {
+					ResourceID: identityBarResourceId,
+					ClientID:   identityBarClientId,
+					ObjectID:   identityBarObjectId,
 				},
 			},
 		},
@@ -194,7 +187,7 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantIdentities != nil {
-				assert.ElementsMatch(t, *tt.wantIdentities, m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities)
+				assert.Equal(t, *tt.wantIdentities, m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities)
 			}
 		})
 	}

@@ -615,12 +615,11 @@ var (
 	platformIdentity1SubnetActionsNoIntersect = []string{
 		"Microsoft.Network/virtualNetworks/nointersect/nointersect",
 	}
-	platformIdentities = []api.PlatformWorkloadIdentity{
-		{
-			OperatorName: "Dummy",
-			ResourceID:   platformIdentity1,
-			ClientID:     dummyClientId,
-			ObjectID:     dummyObjectId,
+	platformIdentities = map[string]api.PlatformWorkloadIdentity{
+		"Dummy": {
+			ResourceID: platformIdentity1,
+			ClientID:   dummyClientId,
+			ObjectID:   dummyObjectId,
 		},
 	}
 	validSubnetsAuthorizationDecisions = remotepdp.AuthorizationDecisionResponse{
@@ -720,7 +719,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                string
-		platformIdentities  []api.PlatformWorkloadIdentity
+		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
 		mocks               func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
 		wantErr             string
@@ -927,7 +926,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		subnet              Subnet
-		platformIdentities  []api.PlatformWorkloadIdentity
+		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
 		pdpClientMocks      func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
 		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
@@ -1209,7 +1208,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		subnet              Subnet
-		platformIdentities  []api.PlatformWorkloadIdentity
+		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
 		pdpClientMocks      func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
 		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
@@ -1515,7 +1514,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		modifyOC            func(*api.OpenShiftCluster)
-		platformIdentities  []api.PlatformWorkloadIdentity
+		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
 		checkAccessMocks    func(context.CancelFunc, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
 		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)

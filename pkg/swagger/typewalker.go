@@ -170,7 +170,7 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 			if field.Name() == "proxyResource" {
 				s.AllOf = []Schema{
 					{
-						Ref: "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource",
+						Ref: "../../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource",
 					},
 				}
 			}
@@ -197,8 +197,9 @@ func (tw *typeWalker) _define(definitions Definitions, t *types.Named) {
 		name := c[(len(c) - 1)]
 		for _, xname := range tw.xmsEnumList {
 			if xname == name {
-				s.XMSEnum = &XMSEnum{ModelAsString: isModelAsString(xname),
-					Name: xname,
+				s.XMSEnum = &XMSEnum{
+					ModelAsString: true,
+					Name:          xname,
 				}
 			}
 		}
@@ -261,9 +262,4 @@ func getNodeField(nodes []ast.Node) (*ast.Field, bool) {
 	}
 
 	return nil, false
-}
-
-func isModelAsString(name string) bool {
-	// ARM mandates that modelAsString is false for the identity type.
-	return name != "ResourceIdentityType"
 }
