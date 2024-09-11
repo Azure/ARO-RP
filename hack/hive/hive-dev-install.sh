@@ -28,8 +28,7 @@ main() {
 
 	if [ ! -f "./hack/hive/hive-config/hive-deployment.yaml" ] || [ ! -d "./hack/hive/hive-config/crds" ] ; then
 		log "hive config is missing, generating config, please rerun this script afterwards"
-		./hack/hive/hive-generate-config.sh
-		if [ $? -ne 0 ]; then
+		if ./hack/hive/hive-generate-config.sh; then
 			abort "error generating the hive configs"
 		fi
 	fi
@@ -40,12 +39,12 @@ main() {
 	fi
 	verify_tools
 
-    if [ $( $KUBECTL get namespace $HIVE_OPERATOR_NS -o yaml 2>/dev/null | wc -l ) -ne 0 ]; then
+    if [ "$( $KUBECTL get namespace $HIVE_OPERATOR_NS -o yaml 2>/dev/null | wc -l )" -ne 0 ]; then
         echo "hive is already installed in the namespace"
-        if [[ "${SKIP_DEPLOYMENTS}" == "false" ]]; then
-            echo "'SKIP_DEPLOYMENTS' env var is set to false. ❌⏩ Don't skip Hive installation, and try to reinstall it"
-        elif [[ "${SKIP_DEPLOYMENTS}" == "true" ]]; then
-            echo "'SKIP_DEPLOYMENTS' env var is set to true. ⏩📋 Skip Hive installation"
+        if [ "${skip_deployments}" = false ]; then
+            echo "'skip_deployments' is set to 'false'. ❌⏩ Don't skip Hive installation, and try to reinstall it"
+        elif [ "${skip_deployments}" = true ]; then
+            echo "'skip_deployments' is set to `true`. ⏩📋 Skip Hive installation"
             exit
         else
             echo -n "would you like to reapply the configs? (y/N): "

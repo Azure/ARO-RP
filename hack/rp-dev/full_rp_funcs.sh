@@ -5,14 +5,14 @@ source hack/devtools/rp_dev_helper.sh
 
 setup_rp_config() {
   err_str="Usage $0 <AZURE_PREFIX> <GIT_COMMIT> <LOCATION>. Please try again"
-  local azure_prefix=${1?$err_str}
-  local git_commit=${2?$err_str}
-  local location=${3?$err_str}
+  local azure_prefix="${1?$err_str}"
+  local git_commit="${2?$err_str}"
+  local location="${3?$err_str}"
 
   # TODO - check if needed
   export USER=dummy
   # Export the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
-  readonly subscription_id="fe16a035-e540-4ab7-80d9-373fa9a3d6ae"
+  local -r subscription_id="fe16a035-e540-4ab7-80d9-373fa9a3d6ae"
   az account set -s $subscription_id
   log "Using Azure subscription $subscription_id"
   SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
@@ -25,7 +25,7 @@ setup_rp_config() {
   log "Success step 1 ✅ - Directory '$secrets_dir' has been created."
 
   export AZURE_PREFIX="$azure_prefix" NO_CACHE="true" ARO_INSTALL_VIA_HIVE="true" ARO_ADOPT_BY_HIVE="true" DATABASE_NAME="ARO"
-  azure_resource_name=${azure_prefix}-aro-$location
+  azure_resource_name="${azure_prefix}-aro-$location"
   azure_resource_name="${azure_resource_name:0:20}"
   export RESOURCEGROUP="$azure_resource_name" DATABASE_ACCOUNT_NAME="$azure_resource_name" KEYVAULT_PREFIX="$azure_resource_name"
   # TODO chekc if it is needed here
@@ -44,13 +44,13 @@ setup_rp_config() {
 
 is_full_rp_succeeded() {
   err_str="Usage $0 <AZURE_PREFIX> <RP_RESOURCE_GROUP> <GWY_RESOURCE_GROUP> <GIT_COMMIT>. Please try again"
-  local azure_prefix=${1?$err_str}
-  local rp_resource_group=${2?$err_str}
-  local gwy_resource_group=${3?$err_str}
-  local git_commit=${4?$err_str}
+  local azure_prefix="${1?$err_str}"
+  local rp_resource_group="${2?$err_str}"
+  local gwy_resource_group="${3?$err_str}"
+  local git_commit="${4?$err_str}"
 
-  local rp_resource_group_info=$(az group show --resource-group "${rp_resource_group}" 2>/dev/null)
-  local gwy_resource_group_info=$(az group show --resource-group "${gwy_resource_group}" 2>/dev/null)
+  local rp_resource_group_info="$(az group show --resource-group "${rp_resource_group}" 2>/dev/null)"
+  local gwy_resource_group_info="$(az group show --resource-group "${gwy_resource_group}" 2>/dev/null)"
 
   if [ -z "${rp_resource_group_info}" ] || [ -z "${gwy_resource_group_info}" ] ; then
     log "🔴❌📦 At least one resourceGroup ('${rp_resource_group}' or '${gwy_resource_group}') does not exist. AZURE_PREFIX='$azure_prefix' was not used."
@@ -59,8 +59,8 @@ is_full_rp_succeeded() {
   fi
   log "AZURE_PREFIX='$azure_prefix' has already been used. There could be interference with another developer"
    
-  if ! check_vmss ${rp_resource_group} "rp-vmss-${git_commit}" || ! check_vmss ${gwy_resource_group} "gateway-vmss-${git_commit}" \
-      || ! check_deployment  ${rp_resource_group} rp-production-${git_commit}  ! check_deployment ${gwy_resource_group} gateway-production-${git_commit} ; then
+  if ! check_vmss "${rp_resource_group}" "rp-vmss-${git_commit}" || ! check_vmss "${gwy_resource_group}" "gateway-vmss-${git_commit}" \
+      || ! check_deployment  "${rp_resource_group}" "rp-production-${git_commit}"  ! check_deployment "${gwy_resource_group}" "gateway-production-${git_commit}" ; then
     log "🔴❌📦 At least one VMSS ('rp-vmss-${git_commit}' or 'gateway-vmss-${git_commit}') does not exist/succeeded or its deployment failed."
     log "🟢 No full RP resources interference, you may proceed running the automation"
     return
@@ -70,13 +70,13 @@ is_full_rp_succeeded() {
 
 pre_deploy_resources() {
     err_str="Usage $0 <AZURE_PREFIX> <LOCATION> <RESOURCE_GROUP> [SKIP_DEPLOYMENTS]. Please try again"
-    local azure_prefix=${1?$err_str}
-    local location=${2?$err_str}
-    local rp_resource_group=${3?$err_str}
-    local skip_deployments=${4:-"true"}
+    local azure_prefix="${1?$err_str}"
+    local location="${2?$err_str}"
+    local rp_resource_group="${3?$err_str}"
+    local skip_deployments="${4:-"true"}"
 
     # Don't skip deployment creation when SKIP_DEPLOYMENTS was set to "false" 
-    if is_it_boolean $skip_deployments && ! $skip_deployments; then
+    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
       log "'SKIP_DEPLOYMENTS' env var was set to false. Don't skip predeployment."
       make pre-deploy-no-aks
     fi
@@ -85,7 +85,7 @@ pre_deploy_resources() {
     resource_groups=("${azure_prefix}-global" "${azure_prefix}-subscription" "${azure_prefix}-gwy-${location}" "${azure_prefix}-gwy-${location}" "$rp_resource_group" "$rp_resource_group")
     deployments=("rp-global-${location}" "rp-production-subscription-${location}" "gateway-production-predeploy" "gateway-production-managed-identity" "rp-production-managed-identity" "rp-production-predeploy-no-aks")
     for i in "${!deployments[@]}"; do
-      check_deployment ${resource_groups[i]} ${deployments[i]} && num_deployment=$((num_deployment + 1))
+      check_deployment "${resource_groups[i]}" "${deployments[i]}" && num_deployment="$((num_deployment + 1))"
     done
     if [[ ${num_deployment} -lt 6 ]]; then
       log "Deploy predeployment resources prior to AKS. ${num_deployment}/6 deployments have been deployed." 
@@ -98,21 +98,21 @@ pre_deploy_resources() {
 
 add_hive(){
   err_str="Usage $0 <LOCATION> <RESOURCE_GROUP> [SKIP_DEPLOYMENTS]. Please try again"
-  local location=${1?$err_str}
-  local resource_group=${2?$err_str}
-  local skip_deployments=${3:-"true"}
+  local location="${1?$err_str}"
+  local resource_group="${2?$err_str}"
+  local skip_deployments="${3:-"true"}"
 
-  is_it_boolean $skip_deployments
+  is_boolean "$skip_deployments"
 
   source hack/devtools/deploy-shared-env.sh
-  if $skip_deployments && check_deployment ${resource_group} dev-vpn; then
+  if $skip_deployments && check_deployment "${resource_group}" dev-vpn; then
     log "⏩📋 VPN deployment was skipped"
   else
     deploy_vpn_for_dedicated_rp 
     log "Success step 4a 🚀 - VPN has been deployed"
   fi
 
-  if $skip_deployments && check_deployment ${resource_group} aks-development; then
+  if $skip_deployments && check_deployment "${resource_group}" aks-development; then
     log "⏩📋 AKS deployment was skipped"
   else
     deploy_aks_dev 
@@ -124,28 +124,28 @@ add_hive(){
   vpn_configuration
   screen -dmS connect_dev_vpn bash -c "sudo openvpn secrets/vpn-${location}.ovpn; sleep 10; exec bash" # open new socket to run concurrently
   make aks.kubeconfig
-  HOME=/usr KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive/hive-dev-install.sh $skip_deployments
+  HOME=/usr KUBECONFIG="$(pwd)/aks.kubeconfig" ./hack/hive/hive-dev-install.sh "$skip_deployments"
   log "Success step 5 ✅ - Hive has been installed"
 }
 
 mirror_images() {
   err_str="Usage $0 <AZURE_PREFIX> <USER_PULL_SECRET> <PULL_SECRET> <GIT_COMMIT> [SKIP_DEPLOYMENTS]. Please try again"
-  local azure_prefix=${1?$err_str}
-  local user_pull_secret=${2?$err_str}
-  local pull_secret=${3?$err_str}
-  local git_commit=${4?$err_str}
-  local skip_deployments=${5:-"true"}
+  local azure_prefix="${1?$err_str}"
+  local user_pull_secret="${2?$err_str}"
+  local pull_secret="${3?$err_str}"
+  local git_commit="${4?$err_str}"
+  local skip_deployments="${5:-"true"}"
 
-  export DST_ACR_NAME=${azure_prefix}aro
-  export SRC_AUTH_QUAY=$(jq -r '.auths."quay.io".auth' <<< ${user_pull_secret})
-  export SRC_AUTH_REDHAT=$(jq -r '.auths."registry.redhat.io".auth' <<< ${user_pull_secret})
-  export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken) | base64 -w0)
-  docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "${DST_ACR_NAME}.azurecr.io"
+  export DST_ACR_NAME="${azure_prefix}aro"
+  export SRC_AUTH_QUAY="$(jq -r '.auths."quay.io".auth' <<< "${user_pull_secret}")"
+  export SRC_AUTH_REDHAT="$(jq -r '.auths."registry.redhat.io".auth' <<< "${user_pull_secret}")"
+  export DST_AUTH="$(echo -n '00000000-0000-0000-0000-000000000000:'"$(az acr login -n "${DST_ACR_NAME}" --expose-token | jq -r .accessToken)" | base64 -w0)"
+  docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo "$DST_AUTH" | base64 -d | cut -d':' -f2)" "${DST_ACR_NAME}.azurecr.io"
   local acr_string="ACR '${DST_ACR_NAME}'"
   log "Success step 6a ✈️ 🏷️ - Login to ${acr_string}"
 
   local resource_group_global="${azure_prefix}-global"
-  if ( is_it_boolean $skip_deployments && ! $skip_deployments) || ! check_acr_repos $resource_group_global $git_commit $skip_deployments; then
+  if ( is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]) || ! check_acr_repos "$resource_group_global" "$git_commit" "$skip_deployments"; then
     make go-verify # add Vendor directory
     go run -tags containers_image_openpgp,exclude_graphdriver_btrfs ./cmd/aro mirror latest
     log "Success step 6b ✈️ 📦 - Mirror OCP images"
@@ -153,14 +153,14 @@ mirror_images() {
     geneva_prefix="distroless/geneva"
     geneva_names=("MdmImage" "MdsdImage")
     for name in "${geneva_names[@]}"; do
-      tag=$(get_repo_tag ${name})
-      repo=${name/Image/}
+      tag="$(get_repo_tag "${name}")"
+      repo="${name/Image/}"
       repo="$geneva_prefix${repo,,}"
-      import_geneva_image $repo $tag ${DST_ACR_NAME}
+      import_geneva_image "$repo" "$tag" "${DST_ACR_NAME}"
     done
     log "Success step 6d ✈️ 📦 - Import MDM and MDSD to ${acr_string}"
 
-    if ! check_acr_repo ${DST_ACR_NAME} "aro" ${skip_deployments} ${git_commit}; then
+    if ! check_acr_repo "${DST_ACR_NAME}" "aro" "${skip_deployments}" "${git_commit}"; then
       make publish-image-aro-multistage
       log "Imported 'aro' to ${acr_string} with tag ${git_commit}"
     else
@@ -168,9 +168,9 @@ mirror_images() {
     fi
     log "Success step 6d ✈️ 📦 - Build and push ARO image to ${acr_string}"
 
-    fluentbit_tag=$(get_repo_tag "FluentbitImage")
-    if ! check_acr_repo ${DST_ACR_NAME} "fluentbit" ${skip_deployments} ${fluentbit_tag}; then
-      copy_digest_tag ${pull_secret} "arointsvc" ${DST_ACR_NAME} "fluentbit" ${fluentbit_tag}
+    fluentbit_tag="$(get_repo_tag "FluentbitImage")"
+    if ! check_acr_repo "${DST_ACR_NAME}" "fluentbit" "${skip_deployments}" "${fluentbit_tag}"; then
+      copy_digest_tag "${pull_secret}" "arointsvc" "${DST_ACR_NAME}" "fluentbit" "${fluentbit_tag}"
       log "Imported 'fluentbit' to ${acr_string}"
     else
       log "⏭️📦 Skip importing 'fluentbit' to '${acr_string}', since it already exist with tag '${fluentbit_tag}'."
@@ -185,17 +185,17 @@ mirror_images() {
 
 prepare_RP_deployment() {
   err_str="Usage $0 <AZURE_PREFIX> <GIT_COMMIT> <LOCATION> [SKIP_DEPLOYMENTS]. Please try again"
-  local azure_prefix=${1?$err_str}
-  local git_commit=${2?$err_str}
-  local location=${3?$err_str}
-  local skip_deployments=${4:-"true"}
+  local azure_prefix="${1?$err_str}"
+  local git_commit="${2?$err_str}"
+  local location="${3?$err_str}"
+  local skip_deployments="${4:-"true"}"
   
   # TODO maybe it should be exported
   parent_domain_name="osadev.cloud"
   global_resourcegroup="${azure_prefix}-global"
 
   for DOMAIN_NAME in ${azure_prefix}-clusters.$parent_domain_name ${azure_prefix}-rp.$parent_domain_name; do
-    child_domain_prefix="$(cut -d. -f1 <<<$DOMAIN_NAME)"
+    child_domain_prefix="$(cut -d. -f1 <<<"$DOMAIN_NAME")"
     log "########## Creating NS record to DNS Zone $child_domain_prefix ##########"
     az network dns record-set ns create \
       --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
@@ -214,7 +214,7 @@ prepare_RP_deployment() {
   done
   log "Success step 7a ✅ - Update DNS Child Domains"
   
-  if is_it_boolean $skip_deployments && check_and_import_certificates $KEYVAULT_PREFIX $skip_deployments; then
+  if is_boolean "$skip_deployments" && check_and_import_certificates "$KEYVAULT_PREFIX" "$skip_deployments"; then
     log "Success step 7b ✅ - Update certificates in keyvault"
   fi
 
@@ -227,27 +227,27 @@ prepare_RP_deployment() {
 
 fully_deploy_resources() {
     err_str="Usage $0 <AZURE_PREFIX> <GIT_COMMIT> <LOCATION> <RESOURCE_GROUP> [SKIP_DEPLOYMENTS]. Please try again"
-    local azure_prefix=${1?$err_str}
-    local git_commit=${2?$err_str}
-    local location=${3?$err_str}
-    local rp_resource_group=${4?$err_str}
-    local skip_deployments=${5:-"true"}
+    local azure_prefix="${1?$err_str}"
+    local git_commit="${2?$err_str}"
+    local location="${3?$err_str}"
+    local rp_resource_group="${4?$err_str}"
+    local skip_deployments="${5:-"true"}"
 
     # Don't skip deployment creation when SKIP_DEPLOYMENTS was set to "false" 
-    if is_it_boolean $skip_deployments && ! $skip_deployments; then
+    if is_boolean $skip_deployments && ! [ "${skip_deployments}" = false ]; then
       log "'SKIP_DEPLOYMENTS' env var was set to false. Don't skip full deployments of RP and GYW."
       make go-verify deploy
     fi
 
     local num_deployment=0
-    check_deployment ${azure_prefix}-global rp-global-${location} && num_deployment=$((num_deployment + 1))
-    check_deployment ${azure_prefix}-subscription rp-production-subscription-${location} && num_deployment=$((num_deployment + 1))
+    check_deployment "${azure_prefix}-global" "rp-global-${location}" && num_deployment="$((num_deployment + 1))"
+    check_deployment "${azure_prefix}-subscription" "rp-production-subscription-${location}" && num_deployment="$((num_deployment + 1))"
     local gwy_resource_group="${azure_prefix}-gwy-${location}"
     for deployment in "gateway-production-predeploy" "gateway-production-managed-identity" "gateway-production-${git_commit}"; do
-      check_deployment ${gwy_resource_group} $deployment && num_deployment=$((num_deployment + 1))
+      check_deployment "${gwy_resource_group}" "$deployment" && num_deployment="$((num_deployment + 1))"
     done
     for deployment in "rp-production-managed-identity" "rp-production-predeploy" "rpServiceKeyvaultDynamic" "dev-vpn" "aks-development" "rp-production-${git_commit}"; do
-      check_deployment ${resource_group} $deployment && num_deployment=$((num_deployment + 1))
+      check_deployment "${resource_group}" "$deployment" && num_deployment="$((num_deployment + 1))"
     done
 
     if [[ ${num_deployment} -lt 11 ]]; then
@@ -258,8 +258,8 @@ fully_deploy_resources() {
     fi
 
     # Verify VMSS have been provisioned successfully
-    check_vmss ${rp_resource_group} "rp-vmss-${git_commit}"
-    check_vmss ${gwy_resource_group} "gateway-vmss-${git_commit}"
+    check_vmss "${rp_resource_group}" "rp-vmss-${git_commit}"
+    check_vmss "${gwy_resource_group}" "gateway-vmss-${git_commit}"
     log "Success step 8 ✅ - fully deploy all the resources for ARO RP and GWY VMSSs"
 }
 
@@ -290,7 +290,7 @@ To get detailed usage for a specific function, run:
   $0 usage_full_rp_funcs <function_name>
 EOF
 
-    local fun_name=${1-"missing-fun_name"}
+    local fun_name="${1-"missing-fun_name"}"
     # Specific function usage
     case "${fun_name}" in
         setup_rp_config)

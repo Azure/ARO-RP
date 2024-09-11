@@ -4,6 +4,7 @@ set -o errexit \
     -o nounset
 
 main() {
+    abort_directory
     local -r tmpdir="$(mktemp -d)"
     # shellcheck disable=SC2064
     trap "cleanup $tmpdir" EXIT
@@ -124,11 +125,6 @@ generate_hive_config() {
     cp -R "$tmpd/config/crds" ./hack/hive/hive-config/
 }
 
-if [ ! -f go.mod ] || [ ! -d ".git" ]; then
-    echo "this script must by run from the repo's root directory"
-    exit 1
-fi
-
 declare -r util_script="hack/util.sh"
 if [ -f $util_script ]; then
     # shellcheck source=util.sh
@@ -136,7 +132,7 @@ if [ -f $util_script ]; then
 fi
 
 cleanup() {
-    local tmpd="$1"
+    local tmpd="${1}"
     [ -d "$tmpd" ] && rm -fr "$tmpd"
 }
 

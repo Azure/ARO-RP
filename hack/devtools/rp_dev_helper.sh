@@ -5,35 +5,26 @@ set -o errexit \
        -o monitor
 
 declare -r utils="hack/util.sh"
+declare -r provisioning_state_succeeded="Succeeded"
 if [ -f "$utils" ]; then
+    # shellcheck source=../util.sh  
     source "$utils"
 fi
-
+log "Keep in mind that some of the functions here use 'jq' to parse data from Azure API, and may fail on missing jq."
 ######## Helper file to run full RP dev either locally or using Azure DevOps Pipelines ########
 # Run usage_rp_dev to get functions' usage help
+
 secrets_dir="secrets"
 secrets_files=("dev-ca.crt" "dev-client.crt" "portal-client.pem" "firstparty.pem" "localhost.pem" "arm.pem"
         "cluster-mdsd-self-signed.pem" "gwy-mdm-self-signed.pem" "gwy-mdsd-self-signed.pem" "rp-mdm-self-signed.pem"
         "rp-mdsd-self-signed.pem" "full_rp_id_rsa" "full_rp_id_rsa.pub" "env" )
-
-    # # Define the expected directory and file names
-    # all_secret_files=("firstparty.key" "vpn-client.key" "vpn-eastus.ovpn" "localhost.crt" "proxy.crt"
-    #     "dev-ca.crt" "proxy-client.pem" "vpn-aks-eastus.ovpn" "portal-client.key" "portal-client.pem"
-    #     "proxy-client.key" "vpn-ca-cert.pem" "rp-metrics-int.pem" "dev-client.crt" "rp-logging-int.pem"
-    #     "vpn-ca.crt" "shared-cluster.kubeconfig" "vpn-client.pem" "firstparty.pem" "portal-client.crt"
-    #     "dev-ca.key" "vpn-aks-australiaeast.ovpn" "vpn-client-cert.pem" "vpn-client-key.pem" "dev-client.pem"
-    #     "proxy.key" "firstparty.crt" "vpn-client.crt" "vpn-aks-westeurope.ovpn" "localhost.key" "vpn-ca.pem"
-    #     "vpn-australiaeast.ovpn" "cluster-logging-int.pem" "vpn-ca.key" "localhost.pem" "proxy.pem" "dev-client.key"
-    #     "proxy_id_rsa.pub" "proxy_id_rsa" "vpn-ca-key.pem" "proxy-client.crt" "vpn-westeurope.ovpn" "dev-ca.pem"
-    #     "arm.crt" "arm.key" "arm.pem" "cluster-mdsd.crt" "cluster-mdsd.key" "cluster-mdsd.pem" "cluster-mdsd-self-signed.pem"
-    #     "gwy-mdm-self-signed.pem" "gwy-mdsd-self-signed.pem" "rp-mdm-self-signed.pem" "rp-mdsd-self-signed.pem"
-    #     "full_rp_id_rsa" "full_rp_id_rsa.pub" "env")
 
 verify_downloading_secrets() {
     if [ ! -d "$secrets_dir" ]; then
         abort "Directory '$secrets_dir' has not been created."
     fi
     #  TODO check if only the below files are required
+    # shellcheck disable=SC2068
     for file in ${secrets_files[@]}; do
         if [ ! -f "$secrets_dir/$file" ]; then
             abort "File '$file' does not exist inside the directory '$secrets_dir'."
@@ -41,41 +32,29 @@ verify_downloading_secrets() {
     done
 }
 
-check_jq_installed() {
-  if ! command -v jq &> /dev/null; then
-    abort "Error: jq is not installed.
-                Please install jq to proceed. You can install it using the following command:
-                For Debian/Ubuntu-based systems: sudo apt-get install jq
-                For Red Hat/CentOS-based systems: sudo yum install jq
-                For macOS: brew install jq"
-  fi
-}
-
-is_it_boolean(){
-    if [[ $1 != "false" && $1 != "true" ]]; then
+is_boolean(){
+    if [[ $1 != false && $1 != true ]]; then
         abort "var $1 isn't a boolean"
     fi
 }
 
 check_vmss() {
     err_str="Usage $0 <RESOURCE_GROUP> <VMSS_NAME> <DELETE_VMSS>. Please try again"
-    local resource_group=${1?$err_str}
-    local vmss_name=${2?$err_str}
-    local delete_vmss=${3:-"false"}
+    local resource_group="${1?$err_str}"
+    local vmss_name="${2?$err_str}"
+    local delete_vmss="${3:-"false"}"
     # Check if the VMSS exists
-    vmss_info="$(az vmss show --resource-group ${resource_group} --name ${vmss_name} 2>/dev/null)"
+    vmss_info="$(az vmss show --resource-group "${resource_group}" --name "${vmss_name}" 2>/dev/null)"
     if [ -z "${vmss_info}" ]; then
         log "🔴❌🖥️ VMSS '${vmss_name}' in Resource group '$resource_group' does not exist."
         return 1
     fi
 
-    # check_jq_installed - Might not needed
-
     provisioning_state="$( jq -r '.provisioningState' <<< "${vmss_info}")"
-    if [[ "${provisioning_state}" == "Succeeded" ]]; then
+    if [[ "${provisioning_state}" == "${provisioning_state_succeeded}" ]]; then
         log "🟢🖥️ VMSS '${vmss_name}' in Resource group '$resource_group' has been provisioned successfully. DELETE_VMSS:${delete_vmss}"
-        if ! is_it_boolean ${delete_vmss} &&  ${delete_vmss}; then
-           az vmss delete --resource-group ${resource_group} --name  ${vmss_name} --force-deletion
+        if ! is_boolean "${delete_vmss}" &&  [ "${delete_vmss}" = true ]; then
+           az vmss delete --resource-group "${resource_group}" --name  "${vmss_name}" --force-deletion
            log "🗑️🖥️ VMSS '${vmss_name}' in Resource group '$resource_group' has been deleted."
         fi
     else
@@ -86,26 +65,25 @@ check_vmss() {
 
 check_deployment() {
     err_str="Usage $0 <RESOURCE_GROUP> <DEPLOYMENT_NAME>. Please try again"
-    local resource_group=${1?$err_str}
-    local deployment_name=${2?$err_str}
+    local resource_group="${1?$err_str}"
+    local deployment_name="${2?$err_str}"
 
     # Check if the ResourceGroup exists
-    resource_group_info=$(az group show --resource-group "${resource_group}" 2>/dev/null)
+    resource_group_info="$(az group show --resource-group "${resource_group}" 2>/dev/null)"
     if [ -z "${resource_group_info}" ]; then
         log "🔴❌📦 Resource group '${resource_group}' does not exist."
         return 1
     fi
 
     # Check if the deployment exists
-    deployment_info=$(az deployment group show --resource-group "${resource_group}" --name "${deployment_name}" 2>/dev/null)
+    deployment_info="$(az deployment group show --resource-group "${resource_group}" --name "${deployment_name}" 2>/dev/null)"
     if [ -z "${deployment_info}" ]; then
         log "🔴❌📦 Deployment '${deployment_name}' does not exist in resource group '${resource_group}'."
         return 1
     fi
-    # Check if the provisioning state is 'Succeeded'
-    # check_jq_installed - Might not needed
-    provisioning_state=$(jq -r '.properties.provisioningState' <<< "${deployment_info}")
-    if [[ "${provisioning_state}" == "Succeeded" ]]; then
+    # Check if the provisioning state mathc provisioning_state_succeeded
+    provisioning_state="$(jq -r '.properties.provisioningState' <<< "${deployment_info}")"
+    if [[ "${provisioning_state}" == "${provisioning_state_succeeded}" ]]; then
         log "🟢📦 Deployment '${deployment_name}' in resource group '${resource_group}' has been provisioned successfully."
     else
         log "🔴📦 Deployment '${deployment_name}' in resource group '${resource_group}' has not been provisioned successfully. Current state: ${provisioning_state}"
@@ -115,34 +93,34 @@ check_deployment() {
 
 extract_image_tag() {
     err_str="Usage $0 <IMAGE_NAME> <FILE>. Please try again"
-    local image_name=${1?$err_str}
-    local file=${2?$err_str}
+    local image_name="${1?$err_str}"
+    local file="${2?$err_str}"
 
     local return_line
-    return_line=$(awk "/func $image_name/ {flag=1; next} /return/ && flag {print; exit}" "$file")
+    return_line="$(awk "/func $image_name/ {flag=1; next} /return/ && flag {print; exit}" "$file")"
     return_line="${return_line#*:}"
     echo "${return_line%@*}"
 }
 
-VERSION_CONST_FILE="pkg/util/version/const.go"
 get_repo_tag() {
+    declare -r version_const_file="pkg/util/version/const.go"
     err_str="Usage $0 <IMAGE_NAME>. Please try again"
-    local image_name=${1?$err_str}
-    echo $(extract_image_tag "$image_name" "$VERSION_CONST_FILE")
+    local image_name="${1?$err_str}"
+    extract_image_tag "${image_name}" "${version_const_file}"
 }
 
 copy_digest_tag() {
     err_str="Usage $0 <PULL_SECRET> <SRC_ACR_NAME> <DST_ACR_NAME> <REPOSITORY> <TAG>. Please try again"
-    local pull_secret=${1?$err_str}
-    local src_acr_name=${2?$err_str}
-    local dst_acr_name=${3?$err_str}
-    local repository=${4?$err_str}
-    local tag=${5?$err_str}
+    local pull_secret="${1?$err_str}"
+    local src_acr_name="${2?$err_str}"
+    local dst_acr_name="${3?$err_str}"
+    local repository="${4?$err_str}"
+    local tag="${5?$err_str}"
     
     log "INFO: Copy image from one ACR to another ..."
    
-    src_auth="$(jq -r '.auths["'$src_acr_name'.azurecr.io"].auth' <<< $pull_secret | base64 -d)"
-    dst_token="$(az acr login -n ${dst_acr_name} --expose-token | jq -r .accessToken)"
+    src_auth="$(jq -r '.auths["'"$src_acr_name"'.azurecr.io"].auth' <<< $pull_secret | base64 -d)"
+    dst_token="$(az acr login -n "${dst_acr_name}" --expose-token | jq -r .accessToken)"
     
     skopeo copy \
         --src-creds "$src_auth" \
@@ -153,19 +131,19 @@ copy_digest_tag() {
 
 check_acr_repo() {
     err_str="Usage: $0 <ACR_NAME> <REPOSITORY> [SKIP_DEPLOYMENTS] [TAG]. Please try again"
-    local acr_name=${1?$err_str}
-    local repository=${2?$err_str}
-    local skip_deployments=${3:-"true"}
-    local tag=${4:-"no-tag"}
+    local acr_name="${1?$err_str}"
+    local repository="${2?$err_str}"
+    local skip_deployments="${3:-"true"}"
+    local tag="${4:-"no-tag"}"
 
    # Don't skip deployment creation when skip_deployments was set to 'false'
-    if is_it_boolean $skip_deployments && ! $skip_deployments; then
+    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
         log "'skip_deployments' was set to 'false'. ❌⏩ Don't skip ACR '$acr_name' repo mirroring for repository '${repository}'."
         return 1
     fi
 
     # Check if the repository tag is not empty and if it matches an optional tag
-    repo_tag=$(az acr repository show-tags --name "$acr_name" --repository "${repository}" -o tsv | tr '' ' ')
+    repo_tag="$(az acr repository show-tags --name "$acr_name" --repository "${repository}" -o tsv | tr '' ' ')"
     if [[ -n "$repo_tag" ]]; then
         # TODO: Loop all the repo tags and print all the tags in one line
         if [[ "${tag}" != "no-tag" && "${tag}" != "${repo_tag}" ]] ; then
@@ -186,17 +164,16 @@ acr_repos=("azure-cli" "rhel8/support-tools" "rhel9/support-tools" "openshift4/o
 
 check_acr_repos() {
     err_str="Usage: $0 <RESOURCE_GROUP> [GIT_COMMIT] [SKIP_DEPLOYMENTS]. Please try again"
-    local resource_group=${1?$err_str}
-    local git_commit=${2:-"no-commit"}
-    local skip_deployments=${3:-"true"}
+    local resource_group="${1?$err_str}"
+    local git_commit="${2:-"no-commit"}"
+    local skip_deployments="${3:-"true"}"
 
     # Don't skip deployment creation when skip_deployments was set to 'false'
-    if is_it_boolean $skip_deployments && ! $skip_deployments; then
+    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
         log "'skip_deployments' was set to 'false'. ❌⏩ Don't skip acr repo mirroring in ResourceGroup $resource_group"
         return 1
     fi
    
-    # check_jq_installed - Might not needed
     # Get the first Azure Container Registry (ACR) name under ResourceGroup
     acr_name="$(az acr list --resource-group $resource_group | jq -r '.[0].name')"
     if [[ -z "$acr_name" ]]; then
@@ -205,13 +182,14 @@ check_acr_repos() {
     
     # Do all the needed repos already imported
     local -a missing_repos_names=()
+    # shellcheck disable=SC2068
     for repo in ${acr_repos[@]}; do
         if [[ ${repo} == "aro" && $git_commit != "no-commit" ]]; then
-            if ! check_acr_repo $acr_name $repo $skip_deployments $git_commit; then
+            if ! check_acr_repo "$acr_name" "$repo" "$skip_deployments" "$git_commit"; then
                 missing_repos_names+=("$repo")
             fi
         else
-            if ! check_acr_repo $acr_name $repo $skip_deployments; then
+            if ! check_acr_repo "$acr_name" "$repo" "$skip_deployments"; then
                 missing_repos_names+=("$repo")
             fi
         fi
@@ -220,17 +198,17 @@ check_acr_repos() {
         log "🟢✈️ All repositories exist in ACR '$acr_name'."
         return 0
     fi
-    echo -e "🔴✈️ Some repositories are missing and need to be imported.\nRepositories: ${missing_repos_names[@]}\n"
+    echo -e "🔴✈️ Some repositories are missing and need to be imported.\nRepositories: ${missing_repos_names[*]}\n"
     return 1
 }
 
 import_geneva_image() {
     err_str="Usage: $0 <REPOSITORY> <Tag> <DST_ACR_NAME>. Please try again"
-    local repository=${1?$err_str}
-    local tag=${2?$err_str}
-    local dst_acr_name=${3?$err_str}
-    if ! check_acr_repo ${dst_acr_name} ${repository} "true" ${tag} ;then
-        az acr import --name ${dst_acr_name}.azurecr.io/${repository}:${tag} --source linuxgeneva-microsoft.azurecr.io/${repository}:${tag}
+    local repository="${1?$err_str}"
+    local tag="${2?$err_str}"
+    local dst_acr_name="${3?$err_str}"
+    if ! check_acr_repo "${dst_acr_name}" "${repository}" "true" "${tag}" ;then
+        az acr import --name "${dst_acr_name}.azurecr.io/${repository}:${tag}" --source "linuxgeneva-microsoft.azurecr.io/${repository}:${tag}"
         log "🟢✈️ Imported repository '${repository}' to ACR '${dst_acr_name}'"
     else
         log "⏭️📦 Skip importing repository '${repository}' to ACR '${dst_acr_name}', since it already exist with tag ${tag}. Import can not run twice"
@@ -239,12 +217,12 @@ import_geneva_image() {
 
 check_keyvault_certificate() {
     err_str="Usage $0 <KEYVAULT> <CERTIFICATE> [SKIP_DEPLOYMENTS]. Please try again"
-    local key_vault=${1?$err_str}
-    local certificate=${2?$err_str}
-    local skip_deployments=${3:-"true"}
+    local key_vault="${1?$err_str}"
+    local certificate="${2?$err_str}"
+    local skip_deployments="${3:-"true"}"
 
     # Don't skip deployment creation when skip_deployments was set to 'false'
-    if is_it_boolean $skip_deployments && ! $skip_deployments; then
+    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
         abort "'skip_deployments' was set to 'false'. ❌⏩ Don't skip keyvault's certificate $certificate import"
     fi
     
@@ -259,10 +237,8 @@ check_keyvault_certificate() {
         return 1
     fi
 
-    # check_jq_installed - Might not needed
-
-    local -r attributes_enabled="$( jq -r '.attributes.enabled' <<< $certificate_info)"
-    local -r attributes_expires="$( jq -r '.attributes.expires' <<< $certificate_info)"
+    local -r attributes_enabled="$( jq -r '.attributes.enabled' <<< "$certificate_info")"
+    local -r attributes_expires="$( jq -r '.attributes.expires' <<< "$certificate_info")"
     # we don't validate the thumbprint for exact match
     if $attributes_enabled; then 
         log "🟢💼 Certificate '$certificate' in Key Vault '$key_vault' exists and is enabled with expiration date '$attributes_expires'."
@@ -273,25 +249,26 @@ check_keyvault_certificate() {
 
 skip_and_import_certificates(){
     err_str="Usage $0 <KEYVAULT>  <CERTIFICATEs...> <SECRET_FILES...> [SKIP_DEPLOYMENTS]. Please try again"
-    local keyVault=${1?$err_str}
+    local keyVault="${1?$err_str}"
 
     # Extract the certificates and secret_files arraies based on half the remaining arguments
-    local num_certs=$((($# -1) / 2))
+    local num_certs="$((($# -1) / 2))"
     local -a certificates=("${@:2:$num_certs}")
     local -a secret_files=("${@:$((num_certs + 2)):$num_certs}")
     # Optional flag (last argument)
-    local skip_deployments="${@: -1}"
+    local skip_deployments="${*: -1}"
 
     # Don't skip deployment creation when skip_deployments was set to "false" 
-    if is_it_boolean $skip_deployments && ! $skip_deployments; then
+    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
         abort "'skip_deployments' was set to 'false'. ❌⏩ Don't skip certs import to keyVault $keyVault"
     fi
 
-    for i in "${!certificates[@]}"; do
-         if check_keyvault_certificate "${keyVault}" "${certificates[i]}" $skip_deployments; then
+    # shellcheck disable=SC2068
+    for i in ${!certificates[*]}; do
+         if check_keyvault_certificate "${keyVault}" "${certificates[i]}" "$skip_deployments"; then
             log "⏭️🔑💼 Skip import for certificate ${certificates[i]}"
         else
-            log "🔐📥 Import certificate ${certificates[i]}"
+            log "🔐📥 Importing certificate ${certificates[i]}"
             az keyvault certificate import \
                 --vault-name "${keyVault}" \
                 --name "${certificates[i]}" \
@@ -302,11 +279,11 @@ skip_and_import_certificates(){
 
 check_and_import_certificates (){
     err_str="Usage $0 <KEYVAULT_PREFIX> [SKIP_DEPLOYMENTS]. Please try again"
-    local keyvault_prefix=${1?$err_str}
-    local skip_deployments=${2:-"true"}
+    local keyvault_prefix="${1?$err_str}"
+    local skip_deployments="${2:-"true"}"
 
     # Don't skip deployment creation when skip_deployments was set to "false" 
-    if is_it_boolean $skip_deployments && ! $skip_deployments; then
+    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
         abort "'skip_deployments' was set to 'false'. ❌⏩ Don't skip certs import"
     fi
 
@@ -317,24 +294,24 @@ check_and_import_certificates (){
     log "Check import certificates for the service keyVault ${key_vault}"
     certs=("rp-mdm" "rp-mdsd" "cluster-mdsd" "dev-arm" "rp-firstparty" "rp-server")
     files=("secrets/rp-mdm-self-signed.pem" "secrets/rp-mdsd-self-signed.pem" "secrets/cluster-mdsd-self-signed.pem" "secrets/arm.pem" "secrets/firstparty.pem" "secrets/localhost.pem")
-    skip_and_import_certificates ${key_vault} ${certs[@]} ${files[@]} $skip_deployments
+    skip_and_import_certificates "${key_vault}" "${certs[@]}" "${files[@]}" "$skip_deployments"
     
     key_vault="${keyvault_prefix}-gwy"
     log "Check import certificates for the gateway keyVault ${key_vault}"
     certs=("gwy-mdm" "gwy-mdsd")
     files=("secrets/gwy-mdm-self-signed.pem" "secrets/gwy-mdsd-self-signed.pem")
-    skip_and_import_certificates ${key_vault} ${certs[@]} ${files[@]} $skip_deployments
+    skip_and_import_certificates "${key_vault}" "${certs[@]}" "${files[@]}" "$skip_deployments"
 
     key_vault="${keyvault_prefix}-por"
     log "Check import certificates for the portal keyVault ${key_vault}"
     certs=("portal-server" "portal-client")
     files=("secrets/localhost.pem" "secrets/portal-client.pem")
-    skip_and_import_certificates ${key_vault} ${certs[@]} ${files[@]} $skip_deployments
+    skip_and_import_certificates "${key_vault}" "${certs[@]}" "${files[@]}" "$skip_deployments"
 }
 
 clean_rp_dev_env() {
     err_str="Usage $0 <LOCATION> [LIST_RESOURCE_GROUPS] [LIST_KEYVAULTS]. Please try again"
-    local location=${1?$err_str}
+    local location="${1?$err_str}"
     local -a list_resource_groups=("${2:-}")
     local -a list_keyvaults=("${3:-}")
     log "########## Deleting Dev Env in $location ##########"
@@ -353,12 +330,14 @@ clean_rp_dev_env() {
 
    if [[ ${#rgs[@]} -eq 0 ]]; then
         rg_suffixes=("global" "subscription" "gwy-$location" "aro-$location")
+         # shellcheck disable=2068
         for suffix in ${rg_suffixes[@]}; do
             rgs+=("${AZURE_PREFIX}-$suffix")
         done
         log "No resource groups were provided. Use default values for list: ${rgs[*]}"
     fi
 
+     # shellcheck disable=SC2068
      for rg in ${rgs[@]}; do
         log "########## Delete Resource Group $rg in $location ##########"
         az group delete --resource-group "$rg" -y
@@ -366,12 +345,14 @@ clean_rp_dev_env() {
 
     if [[ ${#kvs[@]} -eq 0 ]]; then
         kv_suffixes=("gwy" "por" "svc" "cls")
+        # shellcheck disable=2068
         for suffix in ${kv_suffixes[@]}; do
             kvs+=("${AZURE_PREFIX}-aro-$location-$suffix")
         done
         log "No KeyVaults were provided. Use default values for list: ${kvs[*]}"
     fi
 
+    # shellcheck disable=SC2068
     for kv in ${kvs[@]}; do
         log "########## Delete KeyVault $kv in $location ##########"
         az keyvault purge --name "$kv" # add --no-wait to stop waiting
@@ -385,7 +366,7 @@ Usage: $0 <function_name> [arguments]
 
 Available functions:
   verify_downloading_secrets    - Download the secrets storage account and validates that the secrets directory and required files exist
-  is_it_boolean                 - Check if the input value is true or false
+  is_boolean                 - Check if the input value is true or false
   check_deployment              - Check deployment DEPLOYMENT_NAME existance in resource group RESOURCE_GROUP and provisioning state
   check_vmss                    - Check VMSS existance and its provisioning state
   extract_image_tag             - Extract the image tag
@@ -401,7 +382,7 @@ Available functions:
 
 Examples:
   $0 verify_downloading_secrets
-  $0 is_it_boolean
+  $0 is_boolean
   $0 check_deployment xxx-aro-eastus aks-development
   $0 check_vmss xxx-aro-eastus rp-vmss-bfc8993 true
   $0 extract_image_tag pkg/util/version/const.go
@@ -418,14 +399,14 @@ Examples:
 To get detailed usage for a specific function, run:
   $0 usage_rp_dev <function_name>
 EOF
-    local fun_name=${1-"missing-fun_name"}
+    local fun_name="${1-"missing-fun_name"}"
     # Specific function usage
     case "${fun_name}" in
         verify_downloading_secrets)
             echo "Usage: $0 verify_downloading_secrets"
             ;;
-        is_it_boolean)
-            echo "Usage: $0 is_it_boolean"
+        is_boolean)
+            echo "Usage: $0 is_boolean"
             ;;
         check_deployment)
             echo "Usage: $0 check_deployment <RESOURCE_GROUP> <DEPLOYMENT_NAME>"
