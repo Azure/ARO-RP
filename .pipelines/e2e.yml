@@ -51,6 +51,8 @@ jobs:
           . secrets/env
 
           export CI=true
+          export DATABASE_NAME=sp
+          export DATABASE_ACCOUNT_NAME=$DATABASE_NAME
           . ./hack/e2e/run-rp-and-e2e.sh
           deploy_e2e_db
         displayName: Setup (Azure)
@@ -184,6 +186,8 @@ jobs:
           . secrets/env
 
           export CI=true
+          export DATABASE_NAME=miwi
+          export DATABASE_ACCOUNT_NAME=$DATABASE_NAME
           . ./hack/e2e/run-rp-and-e2e.sh
           deploy_e2e_db
         displayName: Setup (Azure)
