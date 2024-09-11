@@ -22,6 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/hive"
+	hivev1 "github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
@@ -60,10 +62,11 @@ type Monitor struct {
 		arodl *appsv1.DeploymentList
 	}
 
-	wg *sync.WaitGroup
+	wg                 *sync.WaitGroup
+	hiveclustermanager hivev1.ClusterManager
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup, hiveclustermanager hive.ClusterManager) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -126,16 +129,17 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		oc:   oc,
 		dims: dims,
 
-		restconfig:    restConfig,
-		cli:           cli,
-		configcli:     configcli,
-		maocli:        maocli,
-		mcocli:        mcocli,
-		arocli:        arocli,
-		m:             m,
-		ocpclientset:  ocpclientset,
-		hiveclientset: hiveclientset,
-		wg:            wg,
+		restconfig:         restConfig,
+		cli:                cli,
+		configcli:          configcli,
+		maocli:             maocli,
+		mcocli:             mcocli,
+		arocli:             arocli,
+		m:                  m,
+		ocpclientset:       ocpclientset,
+		hiveclientset:      hiveclientset,
+		wg:                 wg,
+		hiveclustermanager: hiveclustermanager,
 	}, nil
 }
 
@@ -212,6 +216,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitMaintenanceState,
 		mon.emitCertificateExpirationStatuses,
 		mon.emitEtcdCertificateExpiry,
+		mon.emitClusterSyncStatus,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)

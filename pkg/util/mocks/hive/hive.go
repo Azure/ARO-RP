@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/hive/apis/hive/v1"
+	v1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	v10 "k8s.io/api/core/v1"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
@@ -94,6 +95,21 @@ func (m *MockClusterManager) GetClusterDeployment(arg0 context.Context, arg1 *ap
 func (mr *MockClusterManagerMockRecorder) GetClusterDeployment(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterDeployment", reflect.TypeOf((*MockClusterManager)(nil).GetClusterDeployment), arg0, arg1)
+}
+
+// GetClusterSync mocks base method.
+func (m *MockClusterManager) GetClusterSync(arg0 context.Context, arg1 *api.OpenShiftCluster) (*v1alpha1.ClusterSync, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClusterSync", arg0, arg1)
+	ret0, _ := ret[0].(*v1alpha1.ClusterSync)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClusterSync indicates an expected call of GetClusterSync.
+func (mr *MockClusterManagerMockRecorder) GetClusterSync(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSync", reflect.TypeOf((*MockClusterManager)(nil).GetClusterSync), arg0, arg1)
 }
 
 // Install mocks base method.
