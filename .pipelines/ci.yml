@@ -142,7 +142,7 @@ stages:
             sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
             sudo dnf install -y podman make
             which podman
-            podman --version
+            podman --versionf
             whoami
 
             # Start podman service
