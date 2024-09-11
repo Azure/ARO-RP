@@ -116,12 +116,12 @@ generate_hive_config() {
 
     # return to the repo directory to copy the generated config from $TMPDIR
     popd 1> /dev/null
-    mv "$tmpd/hive-deployment.yaml" ./hack/hive-config/
+    mv "$tmpd/hive-deployment.yaml" ./hack/hive/hive-config/
 
-    if [ -d ./hack/hive-config/crds ]; then
-        rm -rf ./hack/hive-config/crds
+    if [ -d ./hack/hive/hive-config/crds ]; then
+        rm -rf ./hack/hive/hive-config/crds
     fi
-    cp -R "$tmpd/config/crds" ./hack/hive-config/
+    cp -R "$tmpd/config/crds" ./hack/hive/hive-config/
 }
 
 if [ ! -f go.mod ] || [ ! -d ".git" ]; then
