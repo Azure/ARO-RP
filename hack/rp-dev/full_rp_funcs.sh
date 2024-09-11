@@ -1,6 +1,6 @@
 #!/bin/bash -e
 ######## Helper file with the functions to fully deploy RP dev either locally or using Azure DevOps Pipelines ########
-# Run usage_rp_funcs to get functions' usage help
+# Run usage_full_rp_funcs to get functions' usage help
 source hack/devtools/rp_dev_helper.sh
 
 setup_rp_config() {
@@ -124,7 +124,7 @@ add_hive(){
   vpn_configuration
   screen -dmS connect_dev_vpn bash -c "sudo openvpn secrets/vpn-${location}.ovpn; sleep 10; exec bash" # open new socket to run concurrently
   make aks.kubeconfig
-  HOME=/usr KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive/hive-dev-install.sh
+  HOME=/usr KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive/hive-dev-install.sh $skip_deployments
   log "Success step 5 ✅ - Hive has been installed"
 }
 
@@ -263,7 +263,7 @@ fully_deploy_resources() {
     log "Success step 8 ✅ - fully deploy all the resources for ARO RP and GWY VMSSs"
 }
 
-usage_rp_funcs() {
+usage_full_rp_funcs() {
     cat <<EOF
 ######## Helper functions for Full RP dev automation ########
 Usage: $0 <function_name> [arguments]
@@ -287,7 +287,7 @@ Examples:
   $0 fully_deploy_resources zzz bfc8993 eastus zzz-aro-eastus true
 
 To get detailed usage for a specific function, run:
-  $0 usage <function_name>
+  $0 usage_full_rp_funcs <function_name>
 EOF
 
     local fun_name=${1-"missing-fun_name"}

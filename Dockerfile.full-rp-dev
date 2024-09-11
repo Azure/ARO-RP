@@ -1,8 +1,5 @@
 FROM registry.access.redhat.com/ubi8/toolbox:8.10
 
-# Needed for installing packages
-USER root 
-
 RUN dnf install https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm -y \
     && dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y \
     && dnf install make azure-cli screen openvpn jq docker device-mapper-devel skopeo -y \

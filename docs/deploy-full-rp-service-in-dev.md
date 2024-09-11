@@ -20,6 +20,36 @@
       to the tag expected by aro deployer
     - with a dirty tag, it's not clear what's actually in the image
 
+## Containerize and Automate the int-like Development RP
+
+The [manual int-like Development RP deployment](#deploying-an-int-like-development-rp) is automated using scripts and functions that ease the process, and reduce the setup toll.
+Run the below command to automate the full RP int-like dev env using a container:
+
+   ```bash
+    AZURE_PREFIX=zzz RP_LOCATION=eastus SKIP_DEPLOYMENTS=true make full-rp-dev
+   ```
+
+- Prior to running the automation a user must be logged in to Azure locally (with Azure CLI), since the local Azure credentials (from `${HOME}/.azure`) are copied to the container.
+- Running the automation will be skipped in case the RP and GWY VMSSs succeed and their final deployment succeeds as well.
+- **AZURE_PREFIX** must be unique to avoid Azure resources collision between other deveolopers.
+ This value is also used for truncating the keyVault prefix up to 20 characters.
+- (optional) Set **RP_LOCATION** var to your preferred the Azure location (by default it is 'eastus').
+- (optional) Set **SKIP_DEPLOYMENTS** var as false (by default 'true') when you prefer to deploy Azure resources regardless of their existence.
+- (optional) You may run the target with *RP_FULL_DEV_IMAGE* var (e.g., `RP_FULL_DEV_IMAGE=YOUR_REPO_AND_TAG`) in case you want to push the container to your registry.
+- For running locally the RP helper functions please use *usage_full_rp_funcs* and *usage_rp_dev* to get functions' usage help for [*full_rp_funcs.sh*](https://github.com/Azure/ARO-RP/blob/master/hack/rp-dev/full_rp_funcs.sh) and [*rp_dev_helper.sh*](https://github.com/Azure/ARO-RP/blob/master/hack/devtools/rp_dev_helper.sh) respectively
+
+- Clean Azure resources (4 ResourceGroups and 4 KeyVaults) by running one of the following (based on the above full RP creation):
+
+   ```bash
+   AZURE_PREFIX=zzz clean_rp_dev_env eastus
+   ```
+
+   Or
+
+   ```bash
+   AZURE_PREFIX=zzz RP_LOCATION=eastus make full-rp-dev-clenup
+   ```
+
 ## Deploying an int-like Development RP
 
 1. Fetch the most up-to-date secrets specifying `SECRET_SA_ACCOUNT_NAME` to the
@@ -55,11 +85,11 @@
 
     What to change in `env-int` file:
 
-    * if using a public key separate from `~/.ssh/id_rsa.pub` (for ssh access to RP and Gateway vmss instances), source it with `export SSH_PUBLIC_KEY=~/.ssh/id_separate.pub`
+    - if using a public key separate from `~/.ssh/id_rsa.pub` (for ssh access to RP and Gateway vmss instances), source it with `export SSH_PUBLIC_KEY=~/.ssh/id_separate.pub`
     - Modify `AZURE_PREFIX` environment variable for a different prefix of the created Azure resources.
-    * set tag of `FLUENTBIT_IMAGE` value to match the default from `pkg/util/version/const.go`,
+    - set tag of `FLUENTBIT_IMAGE` value to match the default from `pkg/util/version/const.go`,
       eg. `FLUENTBIT_IMAGE=${AZURE_PREFIX}aro.azurecr.io/fluentbit:1.9.10-cm20230426`
-    * if you actually care about fluentbit image version, you need to change the default both in the env-int file and for ARO Deployer, which is out of scope of this guide
+    - if you actually care about fluentbit image version, you need to change the default both in the env-int file and for ARO Deployer, which is out of scope of this guide
 
 1. And finally source the env:
 
@@ -68,6 +98,7 @@
     ```
 
 1. Generate the development RP configuration
+
     ```bash
     make dev-config.yaml
     ```
@@ -79,30 +110,36 @@
 
 1. Deploy a VPN Gateway
     This is required in order to be able to connect to AKS from your local machine:
+
     ```bash
     source ./hack/devtools/deploy-shared-env.sh
     deploy_vpn_for_dedicated_rp
     ```
 
 1. Deploy AKS by running these commands from the ARO-RP root directory:
+
     ```bash
     source ./hack/devtools/deploy-shared-env.sh
     deploy_aks_dev
     ```
+
     > __NOTE:__ If the AKS deployment fails with missing RP VNETs, delete the "gateway-production-predeploy" deployment in the gateway resource group, and re-run `make deploy` and then re-run `deploy_aks_dev`.
 
 1. Install Hive into AKS
-    1. Download the VPN config. Please note that this action will _**OVER WRITE**_ the `secrets/vpn-$LOCATION.ovpn` on your local machine. **DO NOT** run `make secrets-update` after doing this, as you will overwrite existing config, until such time as you have run `make secrets` to get the config restored.
+    1. Download the VPN config. Please note that this action will _**OVER WRITE**_ the `secrets/vpn-$LOCATION.ovpn` on your local machine. __DO NOT__ run `make secrets-update` after doing this, as you will overwrite existing config, until such time as you have run `make secrets` to get the config restored.
+
         ```bash
         vpn_configuration
         ```
 
     1. Connect to the Dev VPN in a new terminal:
+
         ```bash
         sudo openvpn secrets/vpn-$LOCATION.ovpn
         ```
 
     1. Now that your machine is able access the AKS cluster, you can deploy Hive:
+
         ```bash
         make aks.kubeconfig
         ./hack/hive/hive-generate-config.sh
@@ -116,6 +153,7 @@
     > __NOTE:__ `DST_AUTH` token or the login to the registry expires after some time
 
     1. Setup mirroring environment variables
+
         ```bash
         export DST_ACR_NAME=${AZURE_PREFIX}aro
         export SRC_AUTH_QUAY=$(echo $USER_PULL_SECRET | jq -r '.auths."quay.io".auth')
@@ -124,11 +162,12 @@
         ```
 
     1. Login to the Azure Container Registry
+
         ```bash
         docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "${DST_ACR_NAME}.azurecr.io"
         ```
 
-   1. Run the mirroring
+    1. Run the mirroring
 
       > The `latest` argument will take the DefaultInstallStream from `pkg/util/version/const.go` and mirror that version
 
@@ -149,19 +188,20 @@
         go run ./cmd/aro mirror 4.11.21
         ```
 
-   1. Mirror upstream distroless Geneva MDM/MDSD images to your ACR
+    1. Mirror upstream distroless Geneva MDM/MDSD images to your ACR
 
         Run the following commands to mirror two Microsoft Geneva images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1).
 
         ```bash
+            geneva_prefix="distroless/geneva"
             source hack/devtools/rp_dev_helper.sh
-            mdm_image_tag=$(get_digest_tag "MdmImage")
-            az acr import --name $DST_ACR_NAME.azurecr.io$mdm_image_tag --source linuxgeneva-microsoft.azurecr.io$mdm_image_tag
-            mdsd_image_tag=$(get_digest_tag "MdsdImage")
-            az acr import --name $DST_ACR_NAME.azurecr.io$mdsd_image_tag --source linuxgeneva-microsoft.azurecr.io$mdsd_image_tag
+            mdm_tag=$(get_repo_tag "MdmImage")
+            az acr import --name $DST_ACR_NAME.azurecr.io/${geneva_prefix}mdm:${mdm_tag} --source linuxgeneva-microsoft.azurecr.io/${geneva_prefix}mdm:${mdm_tag}
+            mdsd_tag=$(get_repo_tag "MdsdImage")
+            az acr import --name $DST_ACR_NAME.azurecr.io/${geneva_prefix}mdsd:${mdsd_tag} --source linuxgeneva-microsoft.azurecr.io/${geneva_prefix}mdsd:${mdsd_tag}
         ```
 
-   1. Push the ARO image to your ACR
+    1. Push the ARO image to your ACR
 
         > If running this step from a VM separate from your workstation, ensure the commit tag used to build the image matches the commit tag where `make deploy` is run.
 
@@ -188,11 +228,12 @@
 
         ```bash
         source hack/devtools/rp_dev_helper.sh
-        fluentbit_image_tag=$(get_digest_tag "FluentbitImage")
-        copy_digest_tag $PULL_SECRET "arointsvc" $DST_ACR_NAME $fluentbit_image_tag
+        fluentbit_tag=$(get_repo_tag "FluentbitImage")
+        copy_digest_tag $PULL_SECRET "arointsvc" $DST_ACR_NAME "fluentbit" ${fluentbit_tag}
         ```
 
 1. Update the DNS Child Domains
+
     ```bash
     export PARENT_DOMAIN_NAME=osadev.cloud
     export PARENT_DOMAIN_RESOURCEGROUP=dns
@@ -228,23 +269,23 @@
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdm \
-        --file secrets/rp-metrics-int.pem >/dev/null
+        --file secrets/rp-mdm-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-gwy" \
         --name gwy-mdm \
-        --file secrets/rp-metrics-int.pem >/dev/null
+        --file secrets/gwy-mdm-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdsd \
-        --file secrets/rp-logging-int.pem >/dev/null
+        --file secrets/rp-mdsd-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-gwy" \
         --name gwy-mdsd \
-        --file secrets/rp-logging-int.pem >/dev/null
+        --file secrets/gwy-mdsd-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name cluster-mdsd \
-        --file secrets/cluster-logging-int.pem >/dev/null
+        --file secrets/cluster-mdsd-self-signed.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name dev-arm \
@@ -279,6 +320,7 @@
    Gateway.
 
 1. Create additional infrastructure required for workload identity clusters
+
     ```
     source ./hack/devtools/deploy-shared-env.sh
     deploy_miwi_infra_for_dedicated_rp
@@ -289,6 +331,7 @@
 ## SSH to RP VMSS Instance
 
 1. Update the RP NSG to allow SSH
+
     ```bash
     az network nsg rule create \
         --name ssh-to-rp \
@@ -302,16 +345,17 @@
     ```
 
 1. SSH into the VM
+
     ```bash
     VMSS_PIP=$(az vmss list-instance-public-ips -g $RESOURCEGROUP --name rp-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty) | jq -r '.[0].ipAddress')
 
     ssh cloud-user@${VMSS_PIP}
     ```
 
-
 ## SSH to Gateway VMSS Instance
 
 1. Update the Gateway NSG to allow SSH
+
     ```bash
     az network nsg rule create \
         --name ssh-to-gwy \
@@ -324,14 +368,13 @@
         --destination-port-ranges 22
     ```
 
-
 1. SSH into the VM
+
     ```bash
     VMSS_PIP=$(az vmss list-instance-public-ips -g $AZURE_PREFIX-gwy-$LOCATION --name gateway-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty) | jq -r '.[0].ipAddress')
 
     ssh cloud-user@${VMSS_PIP}
     ```
-
 
 ## Deploy a Cluster
 
@@ -349,8 +392,8 @@
         --destination-port-ranges 443
     ```
 
-
 1. Run the tunnel program to tunnel to the RP
+
     ```bash
     make tunnel
     ```
@@ -358,21 +401,25 @@
     > __NOTE:__ `make tunnel` will print the public IP of your new RP VM NIC. Ensure that it's correct.
 
 1. Update the versions present available to install (run this as many times as you need for versions)
+
     ```bash
     curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.x.y", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:<sha256>", "installerPullspec": "<name>.azurecr.io/installer:release-4.x" }}'
     ```
 
 1. Update environment variable to deploy in a different resource group
+
     ```bash
     export RESOURCEGROUP=myResourceGroup
     ```
 
 1. Create the resource group if it doesn't exist
+
     ```bash
     az group create --resource-group $RESOURCEGROUP --location $LOCATION
     ```
 
 1. Create VNets / Subnets
+
     ```bash
     az network vnet create \
         --resource-group $RESOURCEGROUP \
@@ -399,6 +446,7 @@
     ```
 
 1. Register your subscription with the resource provider (post directly to subscription cosmosdb container)
+
     ```bash
     curl -k -X PUT   -H 'Content-Type: application/json'   -d '{
         "state": "Registered",
@@ -415,6 +463,7 @@
     ```
 
 1. Create the cluster
+
     ```bash
     export CLUSTER=$USER
 
@@ -430,7 +479,7 @@
 
 ## Recover VPN access
 
-Since setting up your own VPN in an earlier step will overwrite your local secrets, you will lose access to the vpn / vnet gateway that you provisioned in an earlier step if you run `make secrets`. If you don't have a secrets/* backup, you can recover your access using the following steps. Please note that this action will _**OVER WRITE**_ the `secrets/vpn-$LOCATION.ovpn` on your local machine. **DO NOT** run `make secrets-update` after doing this, as you will overwrite the shared secrets for all users.
+Since setting up your own VPN in an earlier step will overwrite your local secrets, you will lose access to the vpn / vnet gateway that you provisioned in an earlier step if you run `make secrets`. If you don't have a secrets/* backup, you can recover your access using the following steps. Please note that this action will _**OVER WRITE**_ the `secrets/vpn-$LOCATION.ovpn` on your local machine. __DO NOT__ run `make secrets-update` after doing this, as you will overwrite the shared secrets for all users.
 
 1. Source all environment variables from earlier, and run the VPN configuration step again:
 
@@ -459,6 +508,7 @@ Since setting up your own VPN in an earlier step will overwrite your local secre
     - Add the new `secrets/vpn-ca.pem` data created above to this configuration.
 
 1. Connect to the VPN:
+
     ```bash
     sudo openvpn secrets/vpn-$LOCATION.ovpn
     ```

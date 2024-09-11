@@ -5,7 +5,7 @@ main() {
     echo "##### Make sure to be logged in to Azure prior to running this script ####"
     echo "##### In case of failure when creating Azure reseource, consider running the clean_rp_dev_env function ####"
     echo "#### E.g., AZURE_PREFIX=$AZURE_PREFIX clean_rp_dev_env $LOCATION ####"
-    source hack/rp-dev/rp_funcs.sh
+    source hack/rp-dev/full_rp_funcs.sh
     local git_commit="$(git rev-parse --short=7 HEAD)"
     is_full_rp_succeeded $AZURE_PREFIX "${AZURE_PREFIX}-aro-$LOCATION" "${AZURE_PREFIX}-gwy-$LOCATION" $git_commit
 
