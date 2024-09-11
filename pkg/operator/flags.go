@@ -76,7 +76,7 @@ func DefaultOperatorFlags() map[string]string {
 		GuardrailsDeployManaged:            FlagFalse,
 		CloudProviderConfigEnabled:         FlagTrue,
 		ForceReconciliation:                FlagFalse,
-		EtcHostsEnabled:                    FlagFalse,
+		EtcHostsEnabled:                    FlagTrue,
 		EtcHostsManaged:                    FlagTrue,
 	}
 }

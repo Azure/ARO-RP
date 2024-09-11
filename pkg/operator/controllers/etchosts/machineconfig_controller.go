@@ -64,10 +64,21 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 		return reconcile.Result{}, nil
 	}
 
+	allowReconcile, err := r.AllowRebootCausingReconciliation(ctx, instance)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
+	}
+
 	// EtchostsManaged = false, remove machine configs
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) && allowReconcile {
 		r.Log.Debug("etchosts managed is false, removing machine configs")
 		err = r.removeMachineConfig(ctx, etchostsMasterMCMetadata)
+		if kerrors.IsNotFound(err) {
+			r.ClearDegraded(ctx)
+			return reconcile.Result{}, nil
+		}
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -75,6 +86,10 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 		}
 
 		err = r.removeMachineConfig(ctx, etchostsWorkerMCMetadata)
+		if kerrors.IsNotFound(err) {
+			r.ClearDegraded(ctx)
+			return reconcile.Result{}, nil
+		}
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -111,7 +126,7 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 		return reconcile.Result{}, nil
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, role, r.dh, *mcp)
+	err = reconcileMachineConfigs(ctx, instance, role, r.dh, allowReconcile, *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
@@ -141,7 +156,7 @@ func (r *EtcHostsMachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, role string, dh dynamichelper.Interface, mcps ...mcv1.MachineConfigPool) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, role string, dh dynamichelper.Interface, allowReconcile bool, mcps ...mcv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
 		resource, err := EtcHostsMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, role)
@@ -162,7 +177,14 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 		return err
 	}
 
-	return dh.Ensure(ctx, resources...)
+	// If we are allowed to reconcile the resources, then we run Ensure to
+	// create or update. If we are not allowed to reconcile, we do not want to
+	// perform any updates.
+	if allowReconcile {
+		return dh.Ensure(ctx, resources...)
+	}
+
+	return nil
 }
 
 func (r *EtcHostsMachineConfigReconciler) removeMachineConfig(ctx context.Context, mc *mcv1.MachineConfig) error {
