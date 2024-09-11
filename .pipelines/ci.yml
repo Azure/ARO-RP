@@ -22,181 +22,144 @@ pr:
 
 resources:
   containers:
-    - container: golang
-      image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
-      options: --user=0
-    - container: python
-      image: registry.access.redhat.com/ubi8/python-39:latest
-      options: --user=0
-    - container: ubi8
+    - container: container
       image: registry.access.redhat.com/ubi8/toolbox:8.8
       options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
 
+# Azure DevOps Pipeline running e2e tests
 variables:
   - template: vars.yml
 
-stages:
-- stage: NotContainerized
-  dependsOn: Containerized
-  jobs:
-    - job: Python_Unit_Tests
-      pool:
-        name: 1es-aro-ci-pool
-      variables:
-        HOME: $(Agent.BuildDirectory)
+# Run the test suite and collect must-gather
+jobs:
+  - job: E2E
+    timeoutInMinutes: 180
+    variables:
+      ARO_PODMAN_SOCKET: "tcp://localhost:8888"
+      ARO_SELENIUM_HOSTNAME: "localhost"
+    pool:
+      name: 1es-aro-ci-pool
+    steps:
+      - template: ./templates/template-checkout.yml
 
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            make test-python
-            [[ -z "$(git status -s)" ]]
-          displayName: 🧪Run Python Unit Tests
-          target: python
+      - script: |
+          set -xe
+          sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+          sudo dnf install -y openvpn make podman jq conmon containers-common crun iptables netavark nftables slirp4netns
+        displayName: Setup (Container)
+        target: container
 
-    - job: Golang_Unit_Tests
-      pool:
-        name: 1es-aro-ci-pool
-      variables:
-        GOCACHE: /tmp/gocache
-      steps:
-        - template: ./templates/template-checkout.yml
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - template: ./templates/template-push-images-to-acr.yml
+        parameters:
+          rpImageACR: $(RP_IMAGE_ACR)
+          acrCredentialsJSON: $(acr-credentials)
+      - script: |
+          make extract-aro-docker
+        displayName: Extract ARO binaries from build
 
-        - script: |
-            set -xe
-            go version
-            go env
-          displayName: Print Go version & env
-          target: golang
+      - script: |
+          az account set -s $AZURE_SUBSCRIPTION_ID
+          SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+          . secrets/env
 
-        - script: |
-            echo "##vso[task.prependpath]$(go env GOPATH)/bin"
-          displayName: Add GOBIN to path
-          target: golang
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
+          deploy_e2e_db
+        displayName: Setup (Azure)
 
-        - script: |
-            set -xe
-            # Required for podman 5
-            sudo tdnf install -y gpgme-devel lvm2-devel btrfs-progs-devel golang-1.21.11-1.cm2
-            make generate
-            [[ -z "$(git status -s)" ]]
-          displayName: ⚙️ Run Golang code generate
-          target: golang
+      - script: |
+          export CI=true
+          . secrets/env
+          . ./hack/e2e/run-rp-and-e2e.sh
 
-        - script: |
-            set -xe
-            make build-all
-            [[ -z "$(git status -s)" ]]
-          displayName: 🕵️ Build Golang code
-          target: golang
+          run_vpn
 
-        - script: |
-            set -xe
-            make unit-test-go
-          displayName: 🧪 Run Golang unit tests
-          target: golang
+          run_podman
+          validate_podman_running
 
-        - task: PublishTestResults@2
-          displayName: 📊 Publish tests results
-          inputs:
-            testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-          condition: succeededOrFailed()
+          run_portal
+          validate_portal_running
 
-        - script: |
-            make xmlcov
-          displayName: ⚙️ Process Reports
-          condition: succeededOrFailed()
-          target: golang
+          run_selenium
+          validate_selenium_running
 
-        - task: PublishCodeCoverageResults@1
-          displayName: 📈 Publish code coverage
-          inputs:
-            codeCoverageTool: Cobertura
-            summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
-            failIfCoverageEmpty: false
-          condition: succeededOrFailed()
-          target: golang
+          run_rp
+          validate_rp_running
 
-    - job: Lint_Admin_Portal
-      pool:
-        name: 1es-aro-ci-pool
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            make lint-admin-portal
-          displayName: 🧹 Lint Admin Portal
-- stage: Containerized
-  dependsOn: []
-  jobs:
-    - job: Build_Lint_Test_RP_And_Portal
-      pool:
-        name: 1es-aro-ci-pool
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            export NO_CACHE=true
+          register_sub
 
-            # Install podman
-            sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-            sudo dnf install -y podman make
-            which podman
-            podman --version
-            whoami
+          make test-e2e -o e2e.test
+        displayName: Execute Tests
+        target: container
 
-            # Start podman service
-            . ./hack/e2e/utils.sh
-            run_podman
-            validate_podman_running
+      - script: |
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
+          set -x
 
-            # run build
-            export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
-            make ci-rp
+          # retrieve the kubeconfig
+          hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
+        displayName: Get admin kubeconfig for must-gather
+        condition: failed()
+      # must-gather collection must be run inside the container so it can access the VPN
+      - script: |
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
 
-            # Stop podman
-            kill_podman
-          target: ubi8
+          export KUBECONFIG=admin.kubeconfig
 
-    - job: Build_and_Test_Az_ARO_Extension
-      pool:
-        name: 1es-aro-ci-pool
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            export NO_CACHE=true
+          # retrieve the oc cli
+          wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+          tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+          ./oc adm must-gather --image quay.io/cmarches/aro-must-gather:20231030.00
+          tar cf must-gather.tar.gz must-gather.local.*
+        displayName: Collect must-gather
+        target: container
+        condition: failed()
+      - publish: must-gather.tar.gz
+        artifact: must-gather
+        displayName: Append must-gather to Pipeline
+        condition: failed()
 
-            # Install podman
-            sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-            sudo dnf install -y podman make
-            which podman
-            podman --version
-            whoami
+      - script: |
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
 
-            # Start podman service
-            . ./hack/e2e/utils.sh
-            run_podman
-            validate_podman_running
+          delete_e2e_cluster
+          kill_rp
+          kill_selenium
+          kill_podman
+          kill_vpn
+        displayName: Cleanup
+        condition: always()
+        target: container
+      - script: |
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
+          clean_e2e_db
+        displayName: Cleanup (Azure)
+        condition: always()
+      - template: ./templates/template-az-cli-logout.yml
 
-            # run build
-            export PODMAN_REMOTE_ARGS="-r --url=tcp://localhost:8888"
-            make ci-azext-aro
+      - task: PublishTestResults@2
+        displayName: 📊 Publish tests results
+        inputs:
+          testResultsFiles: $(System.DefaultWorkingDirectory)/**/e2e-report.xml
+        condition: succeededOrFailed()
 
-            # Stop podman
-            kill_podman
-          target: ubi8
+      - task: CopyFiles@2
+        condition: succeededOrFailed()
+        inputs:
+          contents: |
+            $(Build.SourcesDirectory)/*.png
+            $(Build.SourcesDirectory)/*.html
+          targetFolder: $(Build.ArtifactStagingDirectory)
 
-    - job: Lint_Az_ARO_Extension
-      pool:
-        name: 1es-aro-ci-pool
-      variables:
-        HOME: $(Agent.BuildDirectory)
-      steps:
-        - template: ./templates/template-checkout.yml
-        - script: |
-            set -xe
-            export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
-            make test-python
-            [[ -z "$(git status -s)" ]]
-          target: python
+      - task: PublishBuildArtifacts@1
+        condition: succeededOrFailed()
+        inputs:
+          pathToPublish: $(Build.ArtifactStagingDirectory)
+          artifactName: Screenshots
