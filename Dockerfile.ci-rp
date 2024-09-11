@@ -31,7 +31,7 @@ WORKDIR /app
 # golang config and build steps
 ENV GOPATH=/root/go
 ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper,requirefips"
-ENV CGO_ENABLED=1
+ENV CGO_ENABLED=0
 
 COPY .bingo .bingo
 RUN source .bingo/variables.env \
