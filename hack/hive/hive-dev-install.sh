@@ -47,7 +47,9 @@ main() {
 	$KUBECTL apply -f ./hack/hive/hive-config/hive-additional-install-log-regexes.yaml
 	$KUBECTL apply -f ./hack/hive/hive-config/hive-deployment.yaml
 	$KUBECTL wait --timeout=5m --for=condition=Available --namespace $HIVE_OPERATOR_NS deployment/hive-operator
-	log "\nHive is installed."
+	log "Hive is installed but to check Hive readiness use one of the following options to monitor the deployment rollout:
+        'kubectl wait --timeout=5m --for=condition=Available --namespace "$HIVE_OPERATOR_NS" deployment/hive-controllers' 
+        or 'kubectl wait --timeout=5m  --for=condition=Ready --namespace "$HIVE_OPERATOR_NS" pod --selector control-plane=clustersync'"
 }
 
 function download_tmp_kubectl {
