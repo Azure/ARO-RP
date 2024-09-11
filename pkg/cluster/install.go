@@ -308,8 +308,7 @@ func (m *manager) bootstrap() []steps.Step {
 	}
 
 	s = append(s,
-		// TODO: Uncomment this when Rajdeep's dynamic validation merges
-		//steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.ensurePreconfiguredNSG),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
