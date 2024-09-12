@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/golang/mock/gomock"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -18,11 +17,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-
-	// mock_acrtoken "github.com/Azure/ARO-RP/pkg/util/mocks/acrtoken"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -48,7 +46,7 @@ func TestEnsureACRToken(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{},
 				}
 			},
-			wantErr: "TerminalError: No registry profile detected.",
+			wantErr: "TerminalError: no registry profile detected",
 		},
 		{
 			name:     "No expiry date",
@@ -66,7 +64,7 @@ func TestEnsureACRToken(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "TerminalError: No expiry date detected.",
+			wantErr: "TerminalError: no expiry date detected",
 		},
 		{
 			name:     "expired",
@@ -89,7 +87,7 @@ func TestEnsureACRToken(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "TerminalError: ACR token has expired",
+			wantErr: "TerminalError: azure container registry (acr) token has expired",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
