@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	tokenName          = "token-12345"
-	registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
+	registryName       = "arointsvc"
+	registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/" + registryName
 	clusterUUID        = "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
 )
 
@@ -49,6 +49,24 @@ func TestEnsureACRToken(t *testing.T) {
 				}
 			},
 			wantErr: "TerminalError: No registry profile detected.",
+		},
+		{
+			name:     "No expiry date",
+			azureEnv: azureclient.PublicCloud,
+			oc: func() *api.OpenShiftCluster {
+				return &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						RegistryProfiles: []*api.RegistryProfile{
+							{
+								Name:     registryName + ".azurecr.io",
+								Username: "testuser",
+								Expiry:   nil,
+							},
+						},
+					},
+				}
+			},
+			wantErr: "TerminalError: No expiry date detected.",
 		},
 		{
 			name:     "expired",
