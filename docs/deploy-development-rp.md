@@ -375,8 +375,10 @@ export RESOURCEGROUP=<resource-group-name>
 
 - Admin - Put a new OpenShift installation version
 
+This command adds the image to your cosmoDB. Where **openShiftPullspec** comes from [quay.io/repository/openshift-release-dev](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags) ; and **installerPullspec** modifies as per example below, replace `X.Y` accordingly.
+
   ```bash
-  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.10.0", "enabled": true, "openShiftPullspec": "test.com/a:b", "installerPullspec": "test.com/a:b" }}'
+  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.14.16", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:XXXX", "installerPullspec": "arosvc.azurecr.io/aro-installer:release-X.Y"'
   ```
 
 - List the enabled OpenShift installation versions within a region
@@ -540,3 +542,14 @@ shpaitha-aro-cluster-4sp5c-worker-westeurope3-56tk7   Ready    worker           
 ```
 - Check if`~/.azure/config` there is a block `extensions.dev_sources`. If yes, comment it.
 - Check if env var `AZURE_EXTENSION_DEV_SOURCES` is set. If yes, unset it.
+
+- Installation fails with authorization errors:
+```bash 
+Message="authorization.RoleAssignmentsClient#Create: Failure responding to request: StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code=\"AuthorizationFailed\" Message=\"The client '$SP_ID' with object id '$SP_ID' does not have authorization to perform action 'Microsoft.Authorization/roleAssignments/write' over scope '/subscriptions/$SRE_SUBSCRIPTION/resourceGroups/$myresourcegroup/providers/Microsoft.Authorization/roleAssignments/b5a083aa-f555-466e-a268-4352b3b8394d' or the scope is invalid. If access was recently granted, please refresh your credentials.\"" Target="encountered error"
+exit status 1
+```
+
+To resolve, check if has the `User Access Administrator` role assigned.
+```
+az role assignment list --assignee $SP_ID --output json --query '[].{principalId:principalId, roleDefinitionName:roleDefinitionName, scope:scope}'
+```
