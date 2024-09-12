@@ -35,15 +35,19 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	rp := manager.GetRegistryProfileFromSlice(registryProfiles)
 	if rp != nil {
 		var now = time.Now().UTC()
-		expiry := registryProfiles[0].Expiry.Time
+		expiry := registryProfiles[0].Expiry
 
-		if expiry.Before(now) {
+		switch {
+		case expiry == nil:
+			return mimo.TerminalError(errors.New("No expiry date detected."))
+		case expiry.Time.Before(now):
 			return mimo.TerminalError(errors.New("ACR token has expired"))
+		default:
+			th.SetResultMessage("ACR token is valid")
 		}
 	} else {
 		return mimo.TerminalError(errors.New("No registry profile detected."))
 	}
 
-	th.SetResultMessage("ACR token is valid")
 	return nil
 }
