@@ -39,14 +39,14 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 
 		switch {
 		case expiry == nil:
-			return mimo.TerminalError(errors.New("No expiry date detected."))
+			return mimo.TerminalError(errors.New("no expiry date detected"))
 		case expiry.Time.Before(now):
-			return mimo.TerminalError(errors.New("ACR token has expired"))
+			return mimo.TerminalError(errors.New("azure container registry (acr) token has expired"))
 		default:
-			th.SetResultMessage("ACR token is valid")
+			th.SetResultMessage("azure container registry (acr) token is valid")
 		}
 	} else {
-		return mimo.TerminalError(errors.New("No registry profile detected."))
+		return mimo.TerminalError(errors.New("no registry profile detected"))
 	}
 
 	return nil
