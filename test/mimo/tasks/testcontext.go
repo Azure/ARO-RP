@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/go-autorest/autorest"
 )
 
 type fakeTestContext struct {
