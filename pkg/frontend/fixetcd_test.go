@@ -60,7 +60,7 @@ func TestFixEtcd(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name:    "fail: list pods",
-			wantErr: "500: InternalServerError: : oh no, can't list pods",
+			wantErr: "500: InternalServerError: : Error Message: oh no, can't list pods",
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(nil, errors.New("oh no, can't list pods"))
 			},
@@ -211,7 +211,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: Multiple degraded etcd instances scenario",
-			wantErr: "500: InternalServerError: : only a single degraded etcd pod can can be recovered from, more than one NotReady etcd pods were found: [etcd-cluster-zfsbk-master-0 etcd-cluster-zfsbk-master-1 etcd-cluster-zfsbk-master-2]",
+			wantErr: "500: InternalServerError: : Error Message: only a single degraded etcd pod can can be recovered from, more than one NotReady etcd pods were found: [etcd-cluster-zfsbk-master-0 etcd-cluster-zfsbk-master-1 etcd-cluster-zfsbk-master-2]",
 			pods:    newEtcdPods(t, doc, false, true, true),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -224,7 +224,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: empty/correct pod env and no bad container statuses",
-			wantErr: "500: InternalServerError: : no etcd pod's were found in a CrashLoopBackOff state, unable to remediate etcd deployment",
+			wantErr: "500: InternalServerError: : Error Message: no etcd pod's were found in a CrashLoopBackOff state, unable to remediate etcd deployment",
 			pods:    newEtcdPods(t, doc, true, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -237,7 +237,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create job data backup",
-			wantErr: "500: InternalServerError: : oh no, can't create job data backup",
+			wantErr: "500: InternalServerError: : Error Message: oh no, can't create job data backup",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -254,7 +254,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create job fix peers",
-			wantErr: "500: InternalServerError: : oh no, can't create job fix peers",
+			wantErr: "500: InternalServerError: : Error Message: oh no, can't create job fix peers",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -306,7 +306,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create service account",
-			wantErr: "500: InternalServerError: : oh no, can't create service account %!!(MISSING)s(<nil>)",
+			wantErr: "500: InternalServerError: : Error Message: oh no, can't create service account %!s(<nil>)",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -339,7 +339,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create cluster role",
-			wantErr: "500: InternalServerError: : oh no, can't create job fix peers %!!(MISSING)s(<nil>)",
+			wantErr: "500: InternalServerError: : Error Message: oh no, can't create job fix peers %!s(<nil>)",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -373,7 +373,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create cluster role binding",
-			wantErr: "500: InternalServerError: : oh no, can't create cluster role binding %!!(MISSING)s(<nil>)",
+			wantErr: "500: InternalServerError: : Error Message: oh no, can't create cluster role binding %!s(<nil>)",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -410,7 +410,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create security context constraint",
-			wantErr: "500: InternalServerError: : oh no, can't create security context constraint %!!(MISSING)s(<nil>)",
+			wantErr: "500: InternalServerError: : Error Message: oh no, can't create security context constraint %!s(<nil>)",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -450,7 +450,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: Backup job Pod failed",
-			wantErr: "500: InternalServerError: : pod etcd-recovery-data-backup event Failed received with message Pod Failed for reasons XYZ...",
+			wantErr: "500: InternalServerError: : Error Message: pod etcd-recovery-data-backup event Failed received with message Pod Failed for reasons XYZ...",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -471,7 +471,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:      "fail: Context cancelled",
-			wantErr:   "500: InternalServerError: : context was cancelled while waiting for etcd-recovery-data-backup because context canceled",
+			wantErr:   "500: InternalServerError: : Error Message: context was cancelled while waiting for etcd-recovery-data-backup because context canceled",
 			pods:      newEtcdPods(t, doc, false, false, false),
 			cancel:    true,
 			ctxCancel: ctxCancel,

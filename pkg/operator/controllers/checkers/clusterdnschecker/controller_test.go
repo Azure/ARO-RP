@@ -136,11 +136,11 @@ func TestReconcile(t *testing.T) {
 			}
 
 			if condition.Status != tt.wantConditionStatus {
-				t.Errorf(string(condition.Status))
+				t.Errorf("%s", string(condition.Status))
 			}
 
 			if condition.Message != tt.wantConditionMessage {
-				t.Errorf(condition.Message)
+				t.Errorf("%s", condition.Message)
 			}
 		})
 	}

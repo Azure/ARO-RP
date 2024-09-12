@@ -69,7 +69,7 @@ func TestValidateServicePrincipal(t *testing.T) {
 				claims:        jwt.MapClaims{"roles": []string{"Application.ReadWrite.OwnedBy"}},
 				signingMethod: signingMethodFake{},
 			},
-			wantErr: "400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: signing method (alg) is unavailable.",
+			wantErr: "400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: Error Message: signing method (alg) is unavailable.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -4,11 +4,14 @@ package admin
 
 import (
 	"fmt"
+	"strings"
 )
 
 const _InstallPhaseName = "InstallPhaseBootstrapInstallPhaseRemoveBootstrap"
 
 var _InstallPhaseIndex = [...]uint8{0, 21, 48}
+
+const _InstallPhaseLowerName = "installphasebootstrapinstallphaseremovebootstrap"
 
 func (i InstallPhase) String() string {
 	if i < 0 || i >= InstallPhase(len(_InstallPhaseIndex)-1) {
@@ -17,11 +20,26 @@ func (i InstallPhase) String() string {
 	return _InstallPhaseName[_InstallPhaseIndex[i]:_InstallPhaseIndex[i+1]]
 }
 
-var _InstallPhaseValues = []InstallPhase{0, 1}
+// An "invalid array index" compiler error signifies that the constant values have changed.
+// Re-run the stringer command to generate them again.
+func _InstallPhaseNoOp() {
+	var x [1]struct{}
+	_ = x[InstallPhaseBootstrap-(0)]
+	_ = x[InstallPhaseRemoveBootstrap-(1)]
+}
+
+var _InstallPhaseValues = []InstallPhase{InstallPhaseBootstrap, InstallPhaseRemoveBootstrap}
 
 var _InstallPhaseNameToValueMap = map[string]InstallPhase{
-	_InstallPhaseName[0:21]:  0,
-	_InstallPhaseName[21:48]: 1,
+	_InstallPhaseName[0:21]:       InstallPhaseBootstrap,
+	_InstallPhaseLowerName[0:21]:  InstallPhaseBootstrap,
+	_InstallPhaseName[21:48]:      InstallPhaseRemoveBootstrap,
+	_InstallPhaseLowerName[21:48]: InstallPhaseRemoveBootstrap,
+}
+
+var _InstallPhaseNames = []string{
+	_InstallPhaseName[0:21],
+	_InstallPhaseName[21:48],
 }
 
 // InstallPhaseString retrieves an enum value from the enum constants string name.
@@ -30,12 +48,23 @@ func InstallPhaseString(s string) (InstallPhase, error) {
 	if val, ok := _InstallPhaseNameToValueMap[s]; ok {
 		return val, nil
 	}
+
+	if val, ok := _InstallPhaseNameToValueMap[strings.ToLower(s)]; ok {
+		return val, nil
+	}
 	return 0, fmt.Errorf("%s does not belong to InstallPhase values", s)
 }
 
 // InstallPhaseValues returns all values of the enum
 func InstallPhaseValues() []InstallPhase {
 	return _InstallPhaseValues
+}
+
+// InstallPhaseStrings returns a slice of all String values of the enum
+func InstallPhaseStrings() []string {
+	strs := make([]string, len(_InstallPhaseNames))
+	copy(strs, _InstallPhaseNames)
+	return strs
 }
 
 // IsAInstallPhase returns "true" if the value is listed in the enum definition. "false" otherwise

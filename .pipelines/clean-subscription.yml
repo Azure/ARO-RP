@@ -9,7 +9,7 @@ parameters:
 resources:
   containers:
     - container: golang
-      image: registry.access.redhat.com/ubi8/go-toolset:1.21.11-1.1720406008
+      image: mcr.microsoft.com/oss/go/microsoft/golang:1.23-fips-cbl-mariner2.0
       options: --user=0
 
 variables:

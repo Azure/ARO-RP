@@ -39,7 +39,7 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validate(new *PlatformW
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.openShiftVersion", "Must be provided")
 	}
 
-	if new.Properties.PlatformWorkloadIdentityRoles == nil || len(new.Properties.PlatformWorkloadIdentityRoles) == 0 {
+	if len(new.Properties.PlatformWorkloadIdentityRoles) == 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.platformWorkloadIdentityRoles", "Must be provided and must be non-empty")
 	}
 
@@ -58,7 +58,7 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validate(new *PlatformW
 			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i))
 		}
 
-		if r.ServiceAccounts == nil || len(r.ServiceAccounts) == 0 {
+		if len(r.ServiceAccounts) == 0 {
 			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i))
 		}
 	}
@@ -74,7 +74,7 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validateDelta(new, curr
 	err := immutable.Validate("", new, current)
 	if err != nil {
 		err := err.(*immutable.ValidationError)
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, "Error Message: %s", err.Message)
 	}
 	return nil
 }

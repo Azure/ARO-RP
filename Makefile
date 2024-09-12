@@ -1,4 +1,5 @@
 SHELL = /bin/bash
+GO ?= $(shell command -v go)
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
@@ -15,9 +16,6 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
-
-# Golang version go mod tidy compatibility
-GOLANG_VERSION ?= 1.21
 
 include .bingo/Variables.mk
 
@@ -59,7 +57,7 @@ endif
 
 .PHONY: build-all
 build-all:
-	go build ./...
+	go build -buildvcs=false ./...
 
 .PHONY: aro
 aro: check-release generate
@@ -192,7 +190,7 @@ extract-aro-docker:
 
 .PHONY: proxy
 proxy:
-	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
+	CGO_ENABLED=1 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 .PHONY: runlocal-portal
 runlocal-portal:
@@ -235,9 +233,9 @@ e2e.test:
 
 .PHONY: e2etools
 e2etools:
-	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/cluster
-	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/db
-	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/portalauth
+	CGO_ENABLED=1 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/cluster
+	CGO_ENABLED=1 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/db
+	CGO_ENABLED=1 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/portalauth
 	$(BINGO) get -l gojq
 
 .PHONY: test-e2e
@@ -324,7 +322,7 @@ aks.kubeconfig:
 
 .PHONY: go-tidy
 go-tidy: # Run go mod tidy - add missing and remove unused modules.
-	go mod tidy -compat=${GOLANG_VERSION}
+	go mod tidy
 
 .PHONY: go-vendor
 go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies).

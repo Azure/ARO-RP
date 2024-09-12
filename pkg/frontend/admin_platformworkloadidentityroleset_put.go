@@ -32,13 +32,13 @@ func (f *frontend) putAdminPlatformWorkloadIdentityRoleSet(w http.ResponseWriter
 	var ext *admin.PlatformWorkloadIdentityRoleSet
 	err := json.Unmarshal(body, &ext)
 	if err != nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: "+err.Error())
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: %s", err.Error())
 		return
 	}
 
 	dbPlatformWorkloadIdentityRoleSets, err := f.dbGroup.PlatformWorkloadIdentityRoleSets()
 	if err != nil {
-		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Error Message: %s", err.Error())
 		return
 	}
 

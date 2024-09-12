@@ -382,7 +382,7 @@ func TestPreflightValidation(t *testing.T) {
 			wantResponse: &api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.CloudErrorBody{
-					Message: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed.",
+					Message: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Error Message: Changing property 'properties.clusterProfile.domain' is not allowed.",
 				},
 			},
 		},
