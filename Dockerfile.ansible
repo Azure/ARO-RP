@@ -39,7 +39,7 @@ RUN ${APP_ROOT}/bin/pip install "pipx==${PIPX_VERSION}" && \
 FROM ansible AS linter
 ARG ANSIBLE_LINT_VERSION=24.7.0
 RUN ${APP_ROOT}/bin/pipx inject --include-apps ansible "ansible-lint==${ANSIBLE_LINT_VERSION}" && \
-    ${HOME}/.local/bin/ansible-lint -v -c /ansible/.ansible_lint.yaml --project-dir /ansible --format sarif | tee /opt/app-root/src/sarif.txt
+    ${HOME}/.local/bin/ansible-lint --offline -c /ansible/.ansible_lint.yaml --project-dir /ansible --format sarif | tee /opt/app-root/src/sarif.txt
 
 ###############################################################################
 # Final image is the base image plus ansible-lint's output

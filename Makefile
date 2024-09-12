@@ -346,7 +346,7 @@ install-go-tools:
 
 .PHONY: ansible-image
 ansible-image:
-	docker image exists aro-ansible:$(VERSION) || docker build . -f Dockerfile.ansible --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE) --tag aro-ansible:$(VERSION)
+	podman $(PODMAN_REMOTE_ARGS) image exists aro-ansible:$(VERSION) || podman $(PODMAN_REMOTE_ARGS) build . -f Dockerfile.ansible --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE) --tag aro-ansible:$(VERSION)
 
 LOCATION := eastus
 CLUSTERPREFIX := $(USER)
@@ -366,12 +366,12 @@ cluster: ansible-image cluster-deploy cluster-cleanup
 	@true
 .PHONY: cluster-deploy
 cluster-deploy:
-	docker run --rm -it -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) -v ./ansible:/ansible$(PODMAN_VOLUME_OVERLAY) -v $(SSH_CONFIG_DIR):/root/.ssh$(PODMAN_VOLUME_OVERLAY) aro-ansible:$(VERSION) -i hosts.yaml $(CLUSTERFILTER) -e location=$(LOCATION) -e CLUSTERPREFIX=$(CLUSTERPREFIX) -e CLEANUP=$(CLEANUP) -e SSH_KEY_BASENAME=$(SSH_KEY_BASENAME) $(SKIP_VERBOSE) deploy.playbook.yaml
+	podman $(PODMAN_REMOTE_ARGS) run --rm -it -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) -v ./ansible:/ansible$(PODMAN_VOLUME_OVERLAY) -v $(SSH_CONFIG_DIR):/root/.ssh$(PODMAN_VOLUME_OVERLAY) aro-ansible:$(VERSION) -i hosts.yaml $(CLUSTERFILTER) -e location=$(LOCATION) -e CLUSTERPREFIX=$(CLUSTERPREFIX) -e CLEANUP=$(CLEANUP) -e SSH_KEY_BASENAME=$(SSH_KEY_BASENAME) $(SKIP_VERBOSE) deploy.playbook.yaml
 .PHONY: cluster-cleanup
 cluster-cleanup:
 	@if [ "${CLEANUP}" == "True" ]; \
 	then \
-		docker run --rm -it -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) -v ./ansible:/ansible$(PODMAN_VOLUME_OVERLAY) -v $(SSH_CONFIG_DIR):/root/.ssh$(PODMAN_VOLUME_OVERLAY) aro-ansible:$(VERSION) -i hosts.yaml $(CLUSTERFILTER) -e location=$(LOCATION) -e CLUSTERPREFIX=$(CLUSTERPREFIX) -e CLEANUP=$(CLEANUP) -e SSH_KEY_BASENAME=$(SSH_KEY_BASENAME) $(SKIP_VERBOSE) cleanup.playbook.yaml; \
+		podman $(PODMAN_REMOTE_ARGS) run --rm -it -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) -v ./ansible:/ansible$(PODMAN_VOLUME_OVERLAY) -v $(SSH_CONFIG_DIR):/root/.ssh$(PODMAN_VOLUME_OVERLAY) aro-ansible:$(VERSION) -i hosts.yaml $(CLUSTERFILTER) -e location=$(LOCATION) -e CLUSTERPREFIX=$(CLUSTERPREFIX) -e CLEANUP=$(CLEANUP) -e SSH_KEY_BASENAME=$(SSH_KEY_BASENAME) $(SKIP_VERBOSE) cleanup.playbook.yaml; \
 	fi
 
 .PHONY: lint-ansible
