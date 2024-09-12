@@ -63,6 +63,10 @@ func (m *manager) generatePlatformWorkloadIdentitySecrets() ([]*corev1.Secret, e
 	for _, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 		if role, ok := roles[identity.OperatorName]; ok {
 			secrets = append(secrets, &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.Identifier(),
+					Kind:       "Secret",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: role.SecretLocation.Namespace,
 					Name:      role.SecretLocation.Name,
@@ -86,6 +90,10 @@ func (m *manager) generateCloudCredentialOperatorSecret() (*corev1.Secret, error
 	tenantId := m.subscriptionDoc.Subscription.Properties.TenantID
 
 	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.Identifier(),
+			Kind:       "Secret",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ccoSecretNamespace,
 			Name:      ccoSecretName,
@@ -104,6 +112,10 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 	}
 
 	return &configv1.Authentication{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: configv1.SchemeGroupVersion.Identifier(),
+			Kind:       "Authentication",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: authenticationConfigName,
 		},
