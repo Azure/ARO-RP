@@ -23,7 +23,7 @@ from azure.mgmt.core import ARMPipelineClient
 
 from . import models
 from ._configuration import AzureRedHatOpenShiftClientConfiguration
-from .operations import MachinePoolsOperations, OpenShiftClustersOperations, OpenShiftVersionsOperations, Operations, SecretsOperations, SyncIdentityProvidersOperations, SyncSetsOperations
+from .operations import MachinePoolsOperations, OpenShiftClustersOperations, OpenShiftVersionsOperations, Operations, PlatformWorkloadIdentityRoleSetOperations, SecretsOperations, SyncIdentityProvidersOperations, SyncSetsOperations
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
@@ -40,6 +40,9 @@ class AzureRedHatOpenShiftClient(object):    # pylint: disable=too-many-instance
     :ivar open_shift_versions: OpenShiftVersionsOperations operations
     :vartype open_shift_versions:
      azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.OpenShiftVersionsOperations
+    :ivar platform_workload_identity_role_set: PlatformWorkloadIdentityRoleSetOperations operations
+    :vartype platform_workload_identity_role_set:
+     azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.PlatformWorkloadIdentityRoleSetOperations
     :ivar open_shift_clusters: OpenShiftClustersOperations operations
     :vartype open_shift_clusters:
      azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.OpenShiftClustersOperations
@@ -84,6 +87,7 @@ class AzureRedHatOpenShiftClient(object):    # pylint: disable=too-many-instance
         self._serialize.client_side_validation = False
         self.operations = Operations(self._client, self._config, self._serialize, self._deserialize)
         self.open_shift_versions = OpenShiftVersionsOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.platform_workload_identity_role_set = PlatformWorkloadIdentityRoleSetOperations(self._client, self._config, self._serialize, self._deserialize)
         self.open_shift_clusters = OpenShiftClustersOperations(self._client, self._config, self._serialize, self._deserialize)
         self.machine_pools = MachinePoolsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.secrets = SecretsOperations(self._client, self._config, self._serialize, self._deserialize)
