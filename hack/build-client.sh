@@ -15,7 +15,7 @@ function checksum() {
   local API_VERSION=$1
   local FOLDER=$2
 
-  sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json >>.sha256sum
+  sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/"$FOLDER"/"$API_VERSION"/redhatopenshift.json >>.sha256sum
 }
 
 function generate_golang() {
