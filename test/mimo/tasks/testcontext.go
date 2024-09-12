@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/go-autorest/autorest"
 )
 
 type fakeTestContext struct {
@@ -63,6 +64,15 @@ func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entr
 		i(ftc)
 	}
 	return ftc
+}
+
+func (t *fakeTestContext) LocalFpAuthorizer() (autorest.Authorizer, error) {
+	myAuthorizer := autorest.NullAuthorizer{}
+	return myAuthorizer, nil
+}
+func (t *fakeTestContext) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
+	myCD := &api.OpenShiftClusterDocument{}
+	return myCD
 }
 
 // handle
