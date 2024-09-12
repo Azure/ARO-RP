@@ -42,6 +42,10 @@ try:
     from ._models_py3 import OperationList
     from ._models_py3 import PlatformWorkloadIdentity
     from ._models_py3 import PlatformWorkloadIdentityProfile
+    from ._models_py3 import PlatformWorkloadIdentityRole
+    from ._models_py3 import PlatformWorkloadIdentityRoleSet
+    from ._models_py3 import PlatformWorkloadIdentityRoleSetList
+    from ._models_py3 import PlatformWorkloadIdentityRoleSetUpdate
     from ._models_py3 import ProxyResource
     from ._models_py3 import Resource
     from ._models_py3 import Secret
@@ -85,6 +89,10 @@ except (SyntaxError, ImportError):
     from ._models import OperationList  # type: ignore
     from ._models import PlatformWorkloadIdentity  # type: ignore
     from ._models import PlatformWorkloadIdentityProfile  # type: ignore
+    from ._models import PlatformWorkloadIdentityRole  # type: ignore
+    from ._models import PlatformWorkloadIdentityRoleSet  # type: ignore
+    from ._models import PlatformWorkloadIdentityRoleSetList  # type: ignore
+    from ._models import PlatformWorkloadIdentityRoleSetUpdate  # type: ignore
     from ._models import ProxyResource  # type: ignore
     from ._models import Resource  # type: ignore
     from ._models import Secret  # type: ignore
@@ -140,6 +148,10 @@ __all__ = [
     'OperationList',
     'PlatformWorkloadIdentity',
     'PlatformWorkloadIdentityProfile',
+    'PlatformWorkloadIdentityRole',
+    'PlatformWorkloadIdentityRoleSet',
+    'PlatformWorkloadIdentityRoleSetList',
+    'PlatformWorkloadIdentityRoleSetUpdate',
     'ProxyResource',
     'Resource',
     'Secret',

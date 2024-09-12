@@ -1474,6 +1474,190 @@ class PlatformWorkloadIdentityProfile(msrest.serialization.Model):
         self.platform_workload_identities = platform_workload_identities
 
 
+class PlatformWorkloadIdentityRole(msrest.serialization.Model):
+    """PlatformWorkloadIdentityRole represents a mapping from a particular OCP operator to the built-in role that should be assigned to that operator's corresponding managed identity.
+
+    :ivar operator_name: OperatorName represents the name of the operator that this role is for.
+    :vartype operator_name: str
+    :ivar role_definition_name: RoleDefinitionName represents the name of the role.
+    :vartype role_definition_name: str
+    :ivar role_definition_id: RoleDefinitionID represents the resource ID of the role definition.
+    :vartype role_definition_id: str
+    """
+
+    _attribute_map = {
+        'operator_name': {'key': 'operatorName', 'type': 'str'},
+        'role_definition_name': {'key': 'roleDefinitionName', 'type': 'str'},
+        'role_definition_id': {'key': 'roleDefinitionId', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        *,
+        operator_name: Optional[str] = None,
+        role_definition_name: Optional[str] = None,
+        role_definition_id: Optional[str] = None,
+        **kwargs
+    ):
+        """
+        :keyword operator_name: OperatorName represents the name of the operator that this role is for.
+        :paramtype operator_name: str
+        :keyword role_definition_name: RoleDefinitionName represents the name of the role.
+        :paramtype role_definition_name: str
+        :keyword role_definition_id: RoleDefinitionID represents the resource ID of the role
+         definition.
+        :paramtype role_definition_id: str
+        """
+        super(PlatformWorkloadIdentityRole, self).__init__(**kwargs)
+        self.operator_name = operator_name
+        self.role_definition_name = role_definition_name
+        self.role_definition_id = role_definition_id
+
+
+class PlatformWorkloadIdentityRoleSet(ProxyResource):
+    """PlatformWorkloadIdentityRoleSet represents a mapping from the names of OCP operators to the built-in roles that should be assigned to those operator's corresponding managed identities for a particular OCP version.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar id: Fully qualified resource ID for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :vartype id: str
+    :ivar name: The name of the resource.
+    :vartype name: str
+    :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
+     "Microsoft.Storage/storageAccounts".
+    :vartype type: str
+    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+     information.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
+    :ivar open_shift_version: OpenShiftVersion represents the version associated with this set of
+     roles.
+    :vartype open_shift_version: str
+    :ivar platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
+     roles associated with this version.
+    :vartype platform_workload_identity_roles:
+     list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRole]
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'open_shift_version': {'key': 'properties.openShiftVersion', 'type': 'str'},
+        'platform_workload_identity_roles': {'key': 'properties.platformWorkloadIdentityRoles', 'type': '[PlatformWorkloadIdentityRole]'},
+    }
+
+    def __init__(
+        self,
+        *,
+        open_shift_version: Optional[str] = None,
+        platform_workload_identity_roles: Optional[List["PlatformWorkloadIdentityRole"]] = None,
+        **kwargs
+    ):
+        """
+        :keyword open_shift_version: OpenShiftVersion represents the version associated with this set
+         of roles.
+        :paramtype open_shift_version: str
+        :keyword platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
+         roles associated with this version.
+        :paramtype platform_workload_identity_roles:
+         list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRole]
+        """
+        super(PlatformWorkloadIdentityRoleSet, self).__init__(**kwargs)
+        self.open_shift_version = open_shift_version
+        self.platform_workload_identity_roles = platform_workload_identity_roles
+
+
+class PlatformWorkloadIdentityRoleSetList(msrest.serialization.Model):
+    """PlatformWorkloadIdentityRoleSetList represents a List of role sets.
+
+    :ivar value: The list of role sets.
+    :vartype value:
+     list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRoleSet]
+    :ivar next_link: Next Link to next operation.
+    :vartype next_link: str
+    """
+
+    _attribute_map = {
+        'value': {'key': 'value', 'type': '[PlatformWorkloadIdentityRoleSet]'},
+        'next_link': {'key': 'nextLink', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        *,
+        value: Optional[List["PlatformWorkloadIdentityRoleSet"]] = None,
+        next_link: Optional[str] = None,
+        **kwargs
+    ):
+        """
+        :keyword value: The list of role sets.
+        :paramtype value:
+         list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRoleSet]
+        :keyword next_link: Next Link to next operation.
+        :paramtype next_link: str
+        """
+        super(PlatformWorkloadIdentityRoleSetList, self).__init__(**kwargs)
+        self.value = value
+        self.next_link = next_link
+
+
+class PlatformWorkloadIdentityRoleSetUpdate(msrest.serialization.Model):
+    """PlatformWorkloadIdentityRoleSet represents a mapping from the names of OCP operators to the built-in roles that should be assigned to those operator's corresponding managed identities for a particular OCP version.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar system_data: The system meta data relating to this resource.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
+    :ivar open_shift_version: OpenShiftVersion represents the version associated with this set of
+     roles.
+    :vartype open_shift_version: str
+    :ivar platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
+     roles associated with this version.
+    :vartype platform_workload_identity_roles:
+     list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRole]
+    """
+
+    _validation = {
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'open_shift_version': {'key': 'properties.openShiftVersion', 'type': 'str'},
+        'platform_workload_identity_roles': {'key': 'properties.platformWorkloadIdentityRoles', 'type': '[PlatformWorkloadIdentityRole]'},
+    }
+
+    def __init__(
+        self,
+        *,
+        open_shift_version: Optional[str] = None,
+        platform_workload_identity_roles: Optional[List["PlatformWorkloadIdentityRole"]] = None,
+        **kwargs
+    ):
+        """
+        :keyword open_shift_version: OpenShiftVersion represents the version associated with this set
+         of roles.
+        :paramtype open_shift_version: str
+        :keyword platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
+         roles associated with this version.
+        :paramtype platform_workload_identity_roles:
+         list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRole]
+        """
+        super(PlatformWorkloadIdentityRoleSetUpdate, self).__init__(**kwargs)
+        self.system_data = None
+        self.open_shift_version = open_shift_version
+        self.platform_workload_identity_roles = platform_workload_identity_roles
+
+
 class Secret(ProxyResource):
     """Secret represents a secret.
 

@@ -1553,6 +1553,323 @@ type PlatformWorkloadIdentityProfile struct {
 	PlatformWorkloadIdentities *[]PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }
 
+// PlatformWorkloadIdentityRole platformWorkloadIdentityRole represents a mapping from a particular OCP
+// operator to the built-in role that should be assigned to that operator's corresponding managed identity.
+type PlatformWorkloadIdentityRole struct {
+	// OperatorName - OperatorName represents the name of the operator that this role is for.
+	OperatorName *string `json:"operatorName,omitempty"`
+	// RoleDefinitionName - RoleDefinitionName represents the name of the role.
+	RoleDefinitionName *string `json:"roleDefinitionName,omitempty"`
+	// RoleDefinitionID - RoleDefinitionID represents the resource ID of the role definition.
+	RoleDefinitionID *string `json:"roleDefinitionId,omitempty"`
+}
+
+// PlatformWorkloadIdentityRoleSet platformWorkloadIdentityRoleSet represents a mapping from the names of
+// OCP operators to the built-in roles that should be assigned to those operator's corresponding managed
+// identities for a particular OCP version.
+type PlatformWorkloadIdentityRoleSet struct {
+	// PlatformWorkloadIdentityRoleSetProperties - The properties for the PlatformWorkloadIdentityRoleSet resource.
+	*PlatformWorkloadIdentityRoleSetProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PlatformWorkloadIdentityRoleSet.
+func (pwirs PlatformWorkloadIdentityRoleSet) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pwirs.PlatformWorkloadIdentityRoleSetProperties != nil {
+		objectMap["properties"] = pwirs.PlatformWorkloadIdentityRoleSetProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PlatformWorkloadIdentityRoleSet struct.
+func (pwirs *PlatformWorkloadIdentityRoleSet) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var platformWorkloadIdentityRoleSetProperties PlatformWorkloadIdentityRoleSetProperties
+				err = json.Unmarshal(*v, &platformWorkloadIdentityRoleSetProperties)
+				if err != nil {
+					return err
+				}
+				pwirs.PlatformWorkloadIdentityRoleSetProperties = &platformWorkloadIdentityRoleSetProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				pwirs.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				pwirs.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				pwirs.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				pwirs.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
+// PlatformWorkloadIdentityRoleSetList platformWorkloadIdentityRoleSetList represents a List of role sets.
+type PlatformWorkloadIdentityRoleSetList struct {
+	autorest.Response `json:"-"`
+	// Value - The list of role sets.
+	Value *[]PlatformWorkloadIdentityRoleSet `json:"value,omitempty"`
+	// NextLink - Next Link to next operation.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// PlatformWorkloadIdentityRoleSetListIterator provides access to a complete listing of
+// PlatformWorkloadIdentityRoleSet values.
+type PlatformWorkloadIdentityRoleSetListIterator struct {
+	i    int
+	page PlatformWorkloadIdentityRoleSetListPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *PlatformWorkloadIdentityRoleSetListIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PlatformWorkloadIdentityRoleSetListIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *PlatformWorkloadIdentityRoleSetListIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter PlatformWorkloadIdentityRoleSetListIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter PlatformWorkloadIdentityRoleSetListIterator) Response() PlatformWorkloadIdentityRoleSetList {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter PlatformWorkloadIdentityRoleSetListIterator) Value() PlatformWorkloadIdentityRoleSet {
+	if !iter.page.NotDone() {
+		return PlatformWorkloadIdentityRoleSet{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the PlatformWorkloadIdentityRoleSetListIterator type.
+func NewPlatformWorkloadIdentityRoleSetListIterator(page PlatformWorkloadIdentityRoleSetListPage) PlatformWorkloadIdentityRoleSetListIterator {
+	return PlatformWorkloadIdentityRoleSetListIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (pwirsl PlatformWorkloadIdentityRoleSetList) IsEmpty() bool {
+	return pwirsl.Value == nil || len(*pwirsl.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (pwirsl PlatformWorkloadIdentityRoleSetList) hasNextLink() bool {
+	return pwirsl.NextLink != nil && len(*pwirsl.NextLink) != 0
+}
+
+// platformWorkloadIdentityRoleSetListPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (pwirsl PlatformWorkloadIdentityRoleSetList) platformWorkloadIdentityRoleSetListPreparer(ctx context.Context) (*http.Request, error) {
+	if !pwirsl.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(pwirsl.NextLink)))
+}
+
+// PlatformWorkloadIdentityRoleSetListPage contains a page of PlatformWorkloadIdentityRoleSet values.
+type PlatformWorkloadIdentityRoleSetListPage struct {
+	fn     func(context.Context, PlatformWorkloadIdentityRoleSetList) (PlatformWorkloadIdentityRoleSetList, error)
+	pwirsl PlatformWorkloadIdentityRoleSetList
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *PlatformWorkloadIdentityRoleSetListPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PlatformWorkloadIdentityRoleSetListPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.pwirsl)
+		if err != nil {
+			return err
+		}
+		page.pwirsl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *PlatformWorkloadIdentityRoleSetListPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page PlatformWorkloadIdentityRoleSetListPage) NotDone() bool {
+	return !page.pwirsl.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page PlatformWorkloadIdentityRoleSetListPage) Response() PlatformWorkloadIdentityRoleSetList {
+	return page.pwirsl
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page PlatformWorkloadIdentityRoleSetListPage) Values() []PlatformWorkloadIdentityRoleSet {
+	if page.pwirsl.IsEmpty() {
+		return nil
+	}
+	return *page.pwirsl.Value
+}
+
+// Creates a new instance of the PlatformWorkloadIdentityRoleSetListPage type.
+func NewPlatformWorkloadIdentityRoleSetListPage(cur PlatformWorkloadIdentityRoleSetList, getNextPage func(context.Context, PlatformWorkloadIdentityRoleSetList) (PlatformWorkloadIdentityRoleSetList, error)) PlatformWorkloadIdentityRoleSetListPage {
+	return PlatformWorkloadIdentityRoleSetListPage{
+		fn:     getNextPage,
+		pwirsl: cur,
+	}
+}
+
+// PlatformWorkloadIdentityRoleSetProperties platformWorkloadIdentityRoleSetProperties represents the
+// properties of a PlatformWorkloadIdentityRoleSet resource.
+type PlatformWorkloadIdentityRoleSetProperties struct {
+	// OpenShiftVersion - OpenShiftVersion represents the version associated with this set of roles.
+	OpenShiftVersion *string `json:"openShiftVersion,omitempty"`
+	// PlatformWorkloadIdentityRoles - PlatformWorkloadIdentityRoles represents the set of roles associated with this version.
+	PlatformWorkloadIdentityRoles *[]PlatformWorkloadIdentityRole `json:"platformWorkloadIdentityRoles,omitempty"`
+}
+
+// PlatformWorkloadIdentityRoleSetUpdate platformWorkloadIdentityRoleSet represents a mapping from the
+// names of OCP operators to the built-in roles that should be assigned to those operator's corresponding
+// managed identities for a particular OCP version.
+type PlatformWorkloadIdentityRoleSetUpdate struct {
+	// PlatformWorkloadIdentityRoleSetProperties - The properties for the PlatformWorkloadIdentityRoleSet resource.
+	*PlatformWorkloadIdentityRoleSetProperties `json:"properties,omitempty"`
+	// SystemData - READ-ONLY; The system meta data relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PlatformWorkloadIdentityRoleSetUpdate.
+func (pwirsu PlatformWorkloadIdentityRoleSetUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pwirsu.PlatformWorkloadIdentityRoleSetProperties != nil {
+		objectMap["properties"] = pwirsu.PlatformWorkloadIdentityRoleSetProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PlatformWorkloadIdentityRoleSetUpdate struct.
+func (pwirsu *PlatformWorkloadIdentityRoleSetUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var platformWorkloadIdentityRoleSetProperties PlatformWorkloadIdentityRoleSetProperties
+				err = json.Unmarshal(*v, &platformWorkloadIdentityRoleSetProperties)
+				if err != nil {
+					return err
+				}
+				pwirsu.PlatformWorkloadIdentityRoleSetProperties = &platformWorkloadIdentityRoleSetProperties
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				pwirsu.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
 // ProxyResource the resource model definition for a Azure Resource Manager proxy resource. It will not
 // have tags and a location
 type ProxyResource struct {
