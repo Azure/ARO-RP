@@ -23,6 +23,7 @@ import (
 
 type Manager interface {
 	GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
+	GetRegistryProfileFromSlice(oc []*api.RegistryProfile) *api.RegistryProfile
 	NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
 	PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryProfile)
 	EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error)
@@ -64,6 +65,16 @@ func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProf
 	for i, rp := range oc.Properties.RegistryProfiles {
 		if rp.Name == fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix) {
 			return oc.Properties.RegistryProfiles[i]
+		}
+	}
+
+	return nil
+}
+
+func (m *manager) GetRegistryProfileFromSlice(registryProfiles []*api.RegistryProfile) *api.RegistryProfile {
+	for _, rp := range registryProfiles {
+		if rp.Name == fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix) {
+			return rp
 		}
 	}
 
