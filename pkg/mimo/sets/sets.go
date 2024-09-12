@@ -16,10 +16,9 @@ const DEFAULT_POLL_TIME = time.Second * 10
 const DEFAULT_TIMEOUT_DURATION = time.Minute * 20
 
 var DEFAULT_MAINTENANCE_SETS = map[string]MaintenanceSet{
-	mimo.TLS_CERT_ROTATION_ID: TLSCertRotation,
-	//TODO Add string
-	"xxxx-xxx-xxx-xxxx-xxxxxxxxxx": ACRTokenChecker,
-	mimo.OPERATOR_FLAGS_UPDATE_ID:  UpdateOperatorFlags,
+	mimo.TLS_CERT_ROTATION_ID:              TLSCertRotation,
+	"082978ce-3700-4972-835f-53d48658d291": ACRTokenChecker,
+	mimo.OPERATOR_FLAGS_UPDATE_ID:          UpdateOperatorFlags,
 }
 
 func run(t utilmimo.TaskContext, s []steps.Step) (api.MaintenanceManifestState, string) {

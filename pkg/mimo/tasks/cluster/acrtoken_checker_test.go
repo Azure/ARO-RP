@@ -10,56 +10,76 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/golang/mock/gomock"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+
+	// mock_acrtoken "github.com/Azure/ARO-RP/pkg/util/mocks/acrtoken"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
+const (
+	tokenName          = "token-12345"
+	registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
+	clusterUUID        = "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
+)
+
 func TestEnsureACRToken(t *testing.T) {
 	ctx := context.Background()
-	clusterUUID := "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
-
 	for _, tt := range []struct {
-		name    string
-		oc      func() *api.OpenShiftCluster
-		wantErr string
+		name     string
+		azureEnv azureclient.AROEnvironment
+		oc       func() *api.OpenShiftCluster
+		wantErr  string
 	}{
 		{
-			name: "not found",
+			name:     "not found",
+			azureEnv: azureclient.PublicCloud,
 			oc: func() *api.OpenShiftCluster {
-				return &api.OpenShiftCluster{}
+				return &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{},
+				}
 			},
-			wantErr: `No object found`,
+			wantErr: "TerminalError: No registry profile detected.",
 		},
 		{
-			name: "expired",
+			name:     "expired",
+			azureEnv: azureclient.PublicCloud,
 			oc: func() *api.OpenShiftCluster {
 				return &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						RegistryProfiles: []*api.RegistryProfile{
 							{
-								Name:     "test",
+								Name:     "arosvc.azurecr.io",
 								Username: "testuser",
 								Expiry:   &date.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+							},
+							{
+								Name:     "arointsvc.azurecr.io",
+								Username: "testuser",
+								Expiry:   &date.Time{Time: time.Date(2024, 1, 9, 0, 0, 0, 0, time.UTC)},
 							},
 						},
 					},
 				}
 			},
-			wantErr: `TerminalError: ACR token has expired`,
+			wantErr: "TerminalError: ACR token has expired",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			controller := gomock.NewController(t)
 			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().ACRResourceID().AnyTimes().Return(registryResourceID)
+			_env.EXPECT().Environment().AnyTimes().Return(&tt.azureEnv)
 			_, log := testlog.New()
 
 			builder := fake.NewClientBuilder()
@@ -72,7 +92,7 @@ func TestEnsureACRToken(t *testing.T) {
 
 			err := EnsureACRTokenIsValid(tc)
 			if tt.wantErr != "" && err != nil {
-				g.Expect(err).To(MatchError(tt.wantErr))
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			} else if tt.wantErr != "" && err == nil {
 				t.Errorf("wanted error %s", tt.wantErr)
 			} else if tt.wantErr == "" {
