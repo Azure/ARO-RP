@@ -375,7 +375,7 @@ export RESOURCEGROUP=<resource-group-name>
 
 - Admin - Put a new OpenShift installation version
 
-This command adds the image to your cosmoDB. Where **openShiftPullspec** comes from [quay.io/repository/openshift-release-dev](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags) ; and **installerPullspec** modifies as per example below, replace `X.Y` accordingly.
+This command adds the image to your cosmosDB. **openShiftPullspec** comes from [quay.io/repository/openshift-release-dev](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags) ; and **installerPullspec** modifies as per example below, replace `X.Y` accordingly.
 
   ```bash
   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.14.16", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:XXXX", "installerPullspec": "arosvc.azurecr.io/aro-installer:release-X.Y"'
