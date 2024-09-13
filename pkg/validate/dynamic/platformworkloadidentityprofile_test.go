@@ -156,8 +156,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			OperatorName: "Dummy1",
 		},
 	}
-	clusterMSI := api.UserAssignedIdentities{
-		msiResourceID: api.ClusterUserAssignedIdentity{
+	clusterMSI := map[string]api.ClusterUserAssignedIdentity{
+		msiResourceID: {
 			ClientID:    dummyClientId,
 			PrincipalID: dummyObjectId,
 		},
@@ -407,7 +407,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					},
 				},
 				Identity: &api.Identity{
-					UserAssignedIdentities: api.UserAssignedIdentities{
+					UserAssignedIdentities: map[string]api.ClusterUserAssignedIdentity{
 						"invalidUUID": {},
 					},
 				},
