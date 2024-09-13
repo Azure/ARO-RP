@@ -142,12 +142,6 @@ pull_container_images() {
 
     # shellcheck disable=SC2034
     local -ri retry_time=30
-    # The managed identity that the VM runs as only has a single roleassignment.
-    # This role assignment is ACRPull which is not necessarily present in the
-    # subscription we're deploying into.  If the identity does not have any
-    # role assignments scoped on the subscription we're deploying into, it will
-    # not show on az login -i, which is why the below line is commented.
-    # az account set -s "$SUBSCRIPTIONID"
     cmd=(
         az
         login
@@ -248,7 +242,7 @@ configure_certs_gateway() {
 configure_certs_devproxy() {
     log "starting"
 
-    verify_role role_devproxy true
+    verify_role role_devproxy
     
     local -r proxy_certs_basedir="/etc/proxy"
     mkdir -p "$proxy_certs_basedir"

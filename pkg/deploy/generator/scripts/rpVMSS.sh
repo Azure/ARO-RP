@@ -188,6 +188,9 @@ OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
     reboot_vm
 }
 
+# This variable is used by az-cli
+# It's assumed that if this variable hasn't been carried over, that others are also not present, so we fail early by returning an error
+# This was mostly helpful when testing on a development VM, but is still applicable
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 
 # util.sh does not exist when deployed to VMSS via VMSS extensions
