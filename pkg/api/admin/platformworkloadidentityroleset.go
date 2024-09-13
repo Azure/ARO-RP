@@ -43,4 +43,13 @@ type PlatformWorkloadIdentityRole struct {
 
 	// ServiceAccounts represents the set of service accounts associated with the given operator, since each service account needs its own federated credential.
 	ServiceAccounts []string `json:"serviceAccounts,omitempty" mutable:"true" validate:"required"`
+
+	// SecretLocation represents the location of the in-cluster secret containing credentials for the platform workload identity.
+	SecretLocation SecretLocation `json:"secretLocation,omitempty" mutable:"true" validate:"required"`
+}
+
+// SecretLocation represents the location of the in-cluster secret containing credentials for the platform workload identity.
+type SecretLocation struct {
+	Namespace string `json:"namespace,omitempty" mutable:"true" validate:"required"`
+	Name      string `json:"name,omitempty" mutable:"true" validate:"required"`
 }

@@ -23,8 +23,15 @@ type PlatformWorkloadIdentityRoleSetProperties struct {
 
 // PlatformWorkloadIdentityRole represents a mapping from a particular OCP operator to the built-in role that should be assigned to that operator's corresponding managed identity.
 type PlatformWorkloadIdentityRole struct {
-	OperatorName       string   `json:"operatorName,omitempty"`
-	RoleDefinitionName string   `json:"roleDefinitionName,omitempty"`
-	RoleDefinitionID   string   `json:"roleDefinitionId,omitempty"`
-	ServiceAccounts    []string `json:"serviceAccounts,omitempty"`
+	OperatorName       string         `json:"operatorName,omitempty"`
+	RoleDefinitionName string         `json:"roleDefinitionName,omitempty"`
+	RoleDefinitionID   string         `json:"roleDefinitionId,omitempty"`
+	ServiceAccounts    []string       `json:"serviceAccounts,omitempty"`
+	SecretLocation     SecretLocation `json:"secretLocation,omitempty"`
+}
+
+// SecretLocation represents the location of the in-cluster secret containing credentials for the platform workload identity.
+type SecretLocation struct {
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name,omitempty"`
 }
