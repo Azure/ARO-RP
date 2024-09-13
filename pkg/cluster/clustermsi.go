@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -35,7 +36,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	_, err = m.clusterMsiKeyVaultStore.GetCredentialsObject(ctx, secretName)
 	if err == nil {
 		return nil
-	} else if azcoreErr, ok := err.(*azcore.ResponseError); !ok || azcoreErr.StatusCode != 404 {
+	} else if azcoreErr, ok := err.(*azcore.ResponseError); !ok || azcoreErr.StatusCode != http.StatusNotFound {
 		return err
 	}
 
