@@ -549,7 +549,7 @@ Message="authorization.RoleAssignmentsClient#Create: Failure responding to reque
 exit status 1
 ```
 
-To resolve, check if has the `User Access Administrator` role assigned.
+To resolve, check if it has the `User Access Administrator` role assigned.
 ```
 az role assignment list --assignee $SP_ID --output json --query '[].{principalId:principalId, roleDefinitionName:roleDefinitionName, scope:scope}'
 ```
