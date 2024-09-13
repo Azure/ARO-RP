@@ -37,12 +37,17 @@ locations.
    shared development environment secrets. The storage account must contain a
    private container named `secrets`. All team members must have `Storage Blob
 Data Reader` or `Storage Blob Data Contributor` role on the storage account.
-   Set SECRET_SA_ACCOUNT_NAME to the name of the storage account:
+   Set SECRET_SA_ACCOUNT_NAME to the name of the storage account.
+   Set SECRET_STORAGE_RESOURCEGROUP to the name of the resourcegroup to deploy the storage into.
 
    ```bash
    export SECRET_SA_ACCOUNT_NAME=<your-storage-account-name>
-   ./hack/devtools/deploy-shared-env-storage.sh
-   
+   export SECRET_STORAGE_RESOURCEGROUP=<resource-group-for-secret-storage>
+   # When sourcing deploy-shared-env.sh environment variables may not be set,
+   # that is okay for the purpose of just deploying storage.
+   . ./hack/devtools/deploy-shared-env.sh 
+
+   deploy_global_secret_storage
    ```
 
 1. You will need an AAD object (this could be your AAD user, or an AAD group of
