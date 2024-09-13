@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/hive/apis/hive/v1"
 	v10 "k8s.io/api/core/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
 )
@@ -97,17 +98,17 @@ func (mr *MockClusterManagerMockRecorder) GetClusterDeployment(arg0, arg1 interf
 }
 
 // Install mocks base method.
-func (m *MockClusterManager) Install(arg0 context.Context, arg1 *api.SubscriptionDocument, arg2 *api.OpenShiftClusterDocument, arg3 *api.OpenShiftVersion) error {
+func (m *MockClusterManager) Install(arg0 context.Context, arg1 *api.SubscriptionDocument, arg2 *api.OpenShiftClusterDocument, arg3 *api.OpenShiftVersion, arg4 map[string]runtime.Object) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Install", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Install", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Install indicates an expected call of Install.
-func (mr *MockClusterManagerMockRecorder) Install(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) Install(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockClusterManager)(nil).Install), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockClusterManager)(nil).Install), arg0, arg1, arg2, arg3, arg4)
 }
 
 // IsClusterDeploymentReady mocks base method.

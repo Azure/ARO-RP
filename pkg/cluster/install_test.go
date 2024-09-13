@@ -351,7 +351,7 @@ func TestRunHiveInstallerSetsCreatedByHiveFieldToTrueInClusterDoc(t *testing.T) 
 	defer controller.Finish()
 
 	hiveClusterManagerMock := mock_hive.NewMockClusterManager(controller)
-	hiveClusterManagerMock.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+	hiveClusterManagerMock.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 
 	m := &manager{
 		doc: dequeuedDoc,

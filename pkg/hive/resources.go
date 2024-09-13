@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -24,6 +25,7 @@ const (
 	ClusterDeploymentName             = "cluster"
 	aroServiceKubeconfigSecretName    = "aro-service-kubeconfig-secret"
 	clusterServicePrincipalSecretName = "cluster-service-principal-secret"
+	clusterManifestsSecretName        = "cluster-manifests-secret"
 )
 
 var (
@@ -56,10 +58,6 @@ var (
 
 func (hr *clusterManager) resources(sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) ([]kruntime.Object, error) {
 	namespace := doc.OpenShiftCluster.Properties.HiveProfile.Namespace
-	clusterSP, err := clusterSPToBytes(sub, doc.OpenShiftCluster)
-	if err != nil {
-		return nil, err
-	}
 
 	cd := adoptedClusterDeployment(
 		namespace,
@@ -69,7 +67,7 @@ func (hr *clusterManager) resources(sub *api.SubscriptionDocument, doc *api.Open
 		doc.OpenShiftCluster.Location,
 		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 	)
-	err = utillog.EnrichHiveWithCorrelationData(cd, doc.CorrelationData)
+	err := utillog.EnrichHiveWithCorrelationData(cd, doc.CorrelationData)
 	if err != nil {
 		return nil, err
 	}
@@ -78,9 +76,14 @@ func (hr *clusterManager) resources(sub *api.SubscriptionDocument, doc *api.Open
 		return nil, err
 	}
 
+	azureCredentialSecret, err := clusterAzureSecret(namespace, doc.OpenShiftCluster, sub)
+	if err != nil {
+		return nil, err
+	}
+
 	return []kruntime.Object{
 		aroServiceKubeconfigSecret(namespace, doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
-		clusterServicePrincipalSecret(namespace, clusterSP),
+		azureCredentialSecret,
 		cd,
 	}, nil
 }
@@ -98,17 +101,47 @@ func aroServiceKubeconfigSecret(namespace string, kubeConfig []byte) *corev1.Sec
 	}
 }
 
-func clusterServicePrincipalSecret(namespace string, secret []byte) *corev1.Secret {
-	return &corev1.Secret{
+func clusterAzureSecret(namespace string, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) (*corev1.Secret, error) {
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clusterServicePrincipalSecretName,
 			Namespace: namespace,
 		},
-		Data: map[string][]byte{
-			"osServicePrincipal.json": secret,
-		},
+		Data: map[string][]byte{},
 		Type: corev1.SecretTypeOpaque,
 	}
+
+	// Add osServicePrincipal.json only when cluster is not managed identity
+	if !oc.UsesWorkloadIdentity() {
+		clusterSPBytes, err := clusterSPToBytes(sub, oc)
+		if err != nil {
+			return nil, err
+		}
+		secret.Data["osServicePrincipal.json"] = clusterSPBytes
+	}
+
+	return secret, nil
+}
+
+func clusterManifestsSecret(namespace string, customManifests map[string]kruntime.Object) (*corev1.Secret, error) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      clusterManifestsSecretName,
+			Namespace: namespace,
+		},
+		StringData: map[string]string{},
+		Type:       corev1.SecretTypeOpaque,
+	}
+
+	for key, manifest := range customManifests {
+		b, err := yaml.Marshal(manifest)
+		if err != nil {
+			return nil, err
+		}
+
+		secret.StringData[key] = string(b)
+	}
+	return secret, nil
 }
 
 func envSecret(namespace string, isDevelopment bool) *corev1.Secret {
