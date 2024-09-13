@@ -50,10 +50,6 @@ main() {
 
     fips_configure
 
-    # TODO remove this once MicrosoftCBLMariner:cbl-mariner:cbl-mariner-2-gen2-fips supports automatic updates
-    # Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
-    configure_dnf_cron_job
-
     # shellcheck disable=SC2119
     configure_logrotate
 

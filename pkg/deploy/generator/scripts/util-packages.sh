@@ -86,18 +86,6 @@ dnf_update_pkgs() {
     retry cmd "$2" "${3:-}"
 }
 
-# configure_dnf_cron_job
-# create cron job to auto update rpm packages
-configure_dnf_cron_job() {
-    log "starting"
-    local -r cron_weekly_dnf_update_filename='/etc/cron.weekly/dnfupdate'
-    local -r cron_weekly_dnf_update_file="#!/bin/bash
-dnf update -y"
-
-    write_file cron_weekly_dnf_update_filename cron_weekly_dnf_update_file true
-    chmod u+x "$cron_weekly_dnf_update_filename"
-}
-
 # rpm_import_keys
 # args:
 # 1) keys - nameref, string array; rpm keys to be imported
