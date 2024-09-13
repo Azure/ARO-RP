@@ -161,6 +161,7 @@ stages:
               pathToPublish: $(Build.ArtifactStagingDirectory)
               artifactName: Screenshots
   - stage: E2E2
+    dependsOn: []
     jobs:
       - job: E2E2
         dependsOn: []
