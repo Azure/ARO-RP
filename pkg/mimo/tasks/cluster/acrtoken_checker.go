@@ -35,7 +35,7 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	rp := manager.GetRegistryProfileFromSlice(registryProfiles)
 	if rp != nil {
 		var now = time.Now().UTC()
-		expiry := registryProfiles[0].Expiry
+		expiry := registryProfiles[0].IssueDate
 
 		switch {
 		case expiry == nil:
