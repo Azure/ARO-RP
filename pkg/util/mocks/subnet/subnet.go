@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	network "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	network "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	gomock "github.com/golang/mock/gomock"
 
 	subnet "github.com/Azure/ARO-RP/pkg/util/subnet"

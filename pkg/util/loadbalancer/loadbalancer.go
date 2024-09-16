@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 )
 
 func RemoveFrontendIPConfiguration(lb *mgmtnetwork.LoadBalancer, resourceID string) error {

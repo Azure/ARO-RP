@@ -4,7 +4,7 @@ package containerregistry
 // Licensed under the Apache License 2.0.
 
 import (
-	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2021-08-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"

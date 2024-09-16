@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"

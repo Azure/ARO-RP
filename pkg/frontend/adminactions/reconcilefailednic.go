@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -20,7 +20,7 @@ func (a *azureActions) NICReconcileFailedState(ctx context.Context, nicName stri
 	}
 
 	// Ensure we only update NIC if in failed provisioning state
-	if nic.ProvisioningState != mgmtnetwork.Failed {
+	if nic.ProvisioningState != mgmtnetwork.ProvisioningStateFailed {
 		return fmt.Errorf("skipping nic '%s' because it is not in a failed provisioning state", nicName)
 	}
 

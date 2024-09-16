@@ -6,16 +6,16 @@ package network
 import (
 	"context"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 )
 
 type VirtualNetworkPeeringsAddons interface {
-	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters mgmtnetwork.VirtualNetworkPeering) (err error)
+	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters mgmtnetwork.VirtualNetworkPeering, virtualNetworkSyncRemoteAddressSpace mgmtnetwork.SyncRemoteAddressSpace) (err error)
 	DeleteAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string) (err error)
 }
 
-func (c *virtualNetworkPeeringsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters mgmtnetwork.VirtualNetworkPeering) (err error) {
-	future, err := c.CreateOrUpdate(ctx, resourceGroupName, virtualNetworkName, virtualNetworkPeeringName, virtualNetworkPeeringParameters)
+func (c *virtualNetworkPeeringsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters mgmtnetwork.VirtualNetworkPeering, virtualNetworkSyncRemoteAddressSpace mgmtnetwork.SyncRemoteAddressSpace) (err error) {
+	future, err := c.CreateOrUpdate(ctx, resourceGroupName, virtualNetworkName, virtualNetworkPeeringName, virtualNetworkPeeringParameters, virtualNetworkSyncRemoteAddressSpace)
 	if err != nil {
 		return err
 	}

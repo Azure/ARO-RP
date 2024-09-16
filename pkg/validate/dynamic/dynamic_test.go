@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
@@ -405,7 +405,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "pass: subnet provisioning state is succeeded",
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.Succeeded
+				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.ProvisioningStateSucceeded
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
@@ -414,7 +414,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: subnet provisioning state is not succeeded",
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.Failed
+				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.ProvisioningStateFailed
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
@@ -570,7 +570,7 @@ func TestValidateSubnets(t *testing.T) {
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 						},
 					},
@@ -1684,7 +1684,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 						},
 						{
@@ -1694,7 +1694,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 									ID: &workerNSGv1,
 								},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 						},
 					},

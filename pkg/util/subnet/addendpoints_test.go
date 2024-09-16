@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 )
 
@@ -52,12 +52,12 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 							{
 								Service:           to.StringPtr("Microsoft.ContainerRegistry"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 							{
 								Service:           to.StringPtr("Microsoft.Storage"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 						},
 					},
@@ -69,12 +69,12 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 							{
 								Service:           to.StringPtr("Microsoft.ContainerRegistry"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 							{
 								Service:           to.StringPtr("Microsoft.Storage"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 						},
 					},
@@ -149,12 +149,12 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 							{
 								Service:           to.StringPtr("Microsoft.ContainerRegistry"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Failed,
+								ProvisioningState: mgmtnetwork.ProvisioningStateFailed,
 							},
 							{
 								Service:           to.StringPtr("Microsoft.Storage"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Failed,
+								ProvisioningState: mgmtnetwork.ProvisioningStateFailed,
 							},
 						},
 					},
@@ -169,12 +169,12 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 							{
 								Service:           to.StringPtr("Microsoft.ContainerRegistry"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Failed,
+								ProvisioningState: mgmtnetwork.ProvisioningStateFailed,
 							},
 							{
 								Service:           to.StringPtr("Microsoft.Storage"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Failed,
+								ProvisioningState: mgmtnetwork.ProvisioningStateFailed,
 							},
 							{
 								Service:   to.StringPtr("Microsoft.ContainerRegistry"),
@@ -199,7 +199,7 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 							{
 								Service:           to.StringPtr("Microsoft.ContainerRegistry"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 						},
 					},
@@ -214,7 +214,7 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 							{
 								Service:           to.StringPtr("Microsoft.ContainerRegistry"),
 								Locations:         &[]string{"*"},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 							},
 							{
 								Service:   to.StringPtr("Microsoft.Storage"),

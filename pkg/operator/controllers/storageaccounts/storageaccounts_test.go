@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -94,7 +94,7 @@ func getValidSubnet(resourceId string) *mgmtnetwork.Subnet {
 		*s.SubnetPropertiesFormat.ServiceEndpoints = append(*s.SubnetPropertiesFormat.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
 			Service:           to.StringPtr(endpoint),
 			Locations:         &[]string{location},
-			ProvisioningState: mgmtnetwork.Succeeded,
+			ProvisioningState: mgmtnetwork.ProvisioningStateSucceeded,
 		})
 	}
 	return s

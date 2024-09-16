@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -48,7 +48,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic is in succeeded provisioning state",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
+				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.ProvisioningStateSucceeded
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
 				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
 			},
@@ -56,7 +56,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic is in failed provisioning state",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
+				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.ProvisioningStateFailed
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
 				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(nil)
 				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
@@ -65,7 +65,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "provisioning state is failed and CreateOrUpdateAndWait returns error",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
+				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.ProvisioningStateFailed
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
 				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(fmt.Errorf("Failed to update"))
 			},
@@ -83,7 +83,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "DeleteAndWait returns error",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
+				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.ProvisioningStateSucceeded
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
 				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(fmt.Errorf("Failed to delete"))
 			},

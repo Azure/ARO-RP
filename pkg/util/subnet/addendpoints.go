@@ -5,7 +5,7 @@ package subnet
 import (
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 )
 
@@ -30,7 +30,7 @@ func addEndpointsToSubnet(endpoints []string, subnet *mgmtnetwork.Subnet) (subne
 	for _, endpoint := range endpoints {
 		endpointFound, serviceEndpointPtr := subnetContainsEndpoint(subnet, endpoint)
 
-		if !endpointFound || serviceEndpointPtr.ProvisioningState != mgmtnetwork.Succeeded {
+		if !endpointFound || serviceEndpointPtr.ProvisioningState != mgmtnetwork.ProvisioningStateSucceeded {
 			addEndpointToSubnet(endpoint, subnet)
 			subnetChanged = true
 		}

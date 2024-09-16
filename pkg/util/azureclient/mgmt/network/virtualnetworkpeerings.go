@@ -6,14 +6,14 @@ package network
 import (
 	"context"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 type VirtualNetworkPeeringsClient interface {
-	CreateOrUpdate(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters mgmtnetwork.VirtualNetworkPeering) (result mgmtnetwork.VirtualNetworkPeeringsCreateOrUpdateFuture, err error)
+	CreateOrUpdate(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters mgmtnetwork.VirtualNetworkPeering, virtualNetworkSyncRemoteAddressSpace mgmtnetwork.SyncRemoteAddressSpace) (result mgmtnetwork.VirtualNetworkPeeringsCreateOrUpdateFuture, err error)
 	Delete(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string) (result mgmtnetwork.VirtualNetworkPeeringsDeleteFuture, err error)
 	VirtualNetworkPeeringsAddons
 }

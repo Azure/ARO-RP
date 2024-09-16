@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -46,7 +46,7 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 			var found bool
 			for _, se := range *subnetObject.SubnetPropertiesFormat.ServiceEndpoints {
 				if strings.EqualFold(*se.Service, endpoint) &&
-					se.ProvisioningState == mgmtnetwork.Succeeded {
+					se.ProvisioningState == mgmtnetwork.ProvisioningStateSucceeded {
 					found = true
 				}
 			}

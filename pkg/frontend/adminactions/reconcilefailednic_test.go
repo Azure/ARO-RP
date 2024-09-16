@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-01-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
@@ -25,7 +25,7 @@ func getNic(subscription, resourceGroup, location, nicName string) mgmtnetwork.I
 		Location: to.StringPtr(location),
 		ID:       to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkInterfaces/%s", subscription, resourceGroup, nicName)),
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-			ProvisioningState: mgmtnetwork.Failed,
+			ProvisioningState: mgmtnetwork.ProvisioningStateFailed,
 		},
 	}
 }
@@ -54,7 +54,7 @@ func TestReconcileFailedNic(t *testing.T) {
 			name: "nic not in failed provisioning state",
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
 				nic := getNic(subscription, clusterRG, location, nicName)
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
+				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.ProvisioningStateSucceeded
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
 			},
 			wantErr: fmt.Sprintf("skipping nic '%s' because it is not in a failed provisioning state", nicName),
