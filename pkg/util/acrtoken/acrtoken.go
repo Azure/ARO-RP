@@ -87,7 +87,7 @@ func (m *manager) NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProf
 	return &api.RegistryProfile{
 		Name:     fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix),
 		Username: "token-" + uuid.DefaultGenerator.Generate(),
-		Expiry:   &date.Time{Time: tokenExpiration},
+		IssueDate: &date.Time{Time: tokenExpiration},
 	}
 }
 
@@ -169,7 +169,6 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtco
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
 		Name:    passwordName,
-		Expiry:  rp.Expiry,
 	})
 	if err != nil {
 		return "", err
