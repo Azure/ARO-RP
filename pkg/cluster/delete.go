@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -377,6 +378,77 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 	return err
 }
 
+func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+		return nil
+	}
+
+	if m.clusterMsiFederatedIdentityCredentials == nil {
+		m.log.Warning("cluster MSI federated identity credentials client is nil, trying to initialize")
+		err := m.initializeClusterMsiClients(ctx)
+		if err != nil {
+			m.log.Errorf("cluster MSI federated identity credentials client initialization failed with error: %v", err)
+			return nil
+		}
+	}
+
+	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
+	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+
+	for _, identity := range platformWorkloadIdentities {
+		_, exists := platformWIRolesByRoleName[identity.OperatorName]
+		if !exists {
+			continue
+		}
+
+		identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
+		if err != nil {
+			return err
+		}
+
+		platformWIRole, exists := platformWIRolesByRoleName[identity.OperatorName]
+		if !exists {
+			continue
+		}
+
+		for _, sa := range platformWIRole.ServiceAccounts {
+			federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
+			if err != nil {
+				m.log.Errorf("failed to get federated identity credential name for %s: %v", identity.ResourceID, err)
+				continue
+			}
+
+			_, err = m.clusterMsiFederatedIdentityCredentials.Get(
+				ctx,
+				identityResourceId.ResourceGroup,
+				identityResourceId.ResourceName,
+				federatedIdentityCredentialResourceName,
+				&armmsi.FederatedIdentityCredentialsClientGetOptions{},
+			)
+
+			// If the federated identity credentials do not exist, we can skip the deletion
+			if err != nil {
+				continue
+			}
+
+			_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
+				ctx,
+				identityResourceId.ResourceGroup,
+				identityResourceId.ResourceName,
+				federatedIdentityCredentialResourceName,
+				&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
+			)
+
+			// As long as the customer can clean up resources on their own, we don't block deletion on failure to clean up federated credentials
+			if err != nil {
+				m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
@@ -485,6 +557,12 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		m.log.Printf("deleting platform managed identities' federated credentials")
+		err = m.deleteFederatedCredentials(ctx)
+		if err != nil {
+			return err
+		}
+
 		m.log.Printf("deleting cluster MSI certificate")
 		err = m.deleteClusterMsiCertificate(ctx)
 		if err != nil {
