@@ -21,17 +21,17 @@ type FederatedIdentityCredentialsClient interface {
 	NewListPager(resourceGroupName string, resourceName string, options *armmsi.FederatedIdentityCredentialsClientListOptions) *runtime.Pager[armmsi.FederatedIdentityCredentialsClientListResponse]
 }
 
-type federatedIdentityCredentialsClient struct {
+type ArmFederatedIdentityCredentialsClient struct {
 	*armmsi.FederatedIdentityCredentialsClient
 }
 
-var _ FederatedIdentityCredentialsClient = &federatedIdentityCredentialsClient{}
+var _ FederatedIdentityCredentialsClient = &ArmFederatedIdentityCredentialsClient{}
 
 // NewFederatedIdentityCredentialsClient creates a new FederatedIdentityCredentialsClient
-func NewFederatedIdentityCredentialsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (FederatedIdentityCredentialsClient, error) {
+func NewFederatedIdentityCredentialsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (*ArmFederatedIdentityCredentialsClient, error) {
 	clientFactory, err := armmsi.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {
 		return nil, err
 	}
-	return &federatedIdentityCredentialsClient{FederatedIdentityCredentialsClient: clientFactory.NewFederatedIdentityCredentialsClient()}, nil
+	return &ArmFederatedIdentityCredentialsClient{FederatedIdentityCredentialsClient: clientFactory.NewFederatedIdentityCredentialsClient()}, nil
 }

@@ -22,18 +22,18 @@ type Client interface {
 	SetSecret(ctx context.Context, name string, parameters azsecrets.SetSecretParameters, options *azsecrets.SetSecretOptions) (azsecrets.SetSecretResponse, error)
 }
 
-type client struct {
+type ArmClient struct {
 	*azsecrets.Client
 }
 
-var _ Client = &client{}
+var _ Client = &ArmClient{}
 
-func NewClient(vaultURL string, credential azcore.TokenCredential, options *arm.ClientOptions) (Client, error) {
+func NewClient(vaultURL string, credential azcore.TokenCredential, options *arm.ClientOptions) (ArmClient, error) {
 	azSecretsOptions := azsecrets.ClientOptions{
 		ClientOptions: (*options).ClientOptions,
 	}
 	_client, err := azsecrets.NewClient(vaultURL, credential, &azSecretsOptions)
-	return client{
+	return ArmClient{
 		Client: _client,
 	}, err
 }

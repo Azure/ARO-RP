@@ -479,17 +479,17 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
+	err = m.deleteResourcesAndResourceGroup(ctx)
+	if err != nil {
+		return err
+	}
+
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		m.log.Printf("deleting cluster MSI certificate")
 		err = m.deleteClusterMsiCertificate(ctx)
 		if err != nil {
 			return err
 		}
-	}
-
-	err = m.deleteResourcesAndResourceGroup(ctx)
-	if err != nil {
-		return err
 	}
 
 	if !m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
