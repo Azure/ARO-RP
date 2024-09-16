@@ -193,10 +193,8 @@ create_platform_identity_and_assign_role() {
     echo "Name: $name"
     echo ""
 
-    # The following operators require a role assignment since they need access to customer BYO virtual network
-    # RP will be responsible for other role assignments
-    if [[ "${operatorName}" == "MachineApiOperator" || "${operatorName}" == "NetworkOperator" \
-        || "${operatorName}" == "AzureFilesStorageOperator" || "${operatorName}" == "ServiceOperator" ]]; then
+    # Storage Operator don't require access to customer BYO virtual network
+    if [[ "${operatorName}" != "StorageOperator" ]]; then
 
         assign_role_to_identity "${principalId}" "${roleDefinitionId}"
     fi

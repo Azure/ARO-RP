@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -203,6 +204,14 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		resources = append(resources,
 			m.clusterServicePrincipalRBAC(),
 		)
+	}
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		r, err := m.ensureWorkloadIdentityRBAC()
+		if err != nil {
+			return err
+		}
+
+		resources = append(resources, r...)
 	}
 
 	// Create a public load balancer routing if needed
@@ -447,6 +456,60 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 		}
 	}
 	return err
+}
+
+func (m *manager) federateIdentityCredentials(ctx context.Context) error {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil
+	}
+
+	if m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil {
+		return fmt.Errorf("OIDCIssuer is nil for the cluster with ID: %s", m.doc.OpenShiftCluster.ID)
+	}
+
+	issuer := to.StringPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
+
+	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
+	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+
+	for _, identity := range platformWorkloadIdentities {
+		identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
+		if err != nil {
+			return err
+		}
+
+		platformWIRole, exists := platformWIRolesByRoleName[identity.OperatorName]
+		if !exists {
+			continue
+		}
+
+		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFedertedCredName(identity)
+		if err != nil {
+			return err
+		}
+
+		for _, sa := range platformWIRole.ServiceAccounts {
+			_, err := m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
+				ctx,
+				identityResourceId.ResourceGroup,
+				identityResourceId.ResourceName,
+				federatedIdentityCredentialResourceName,
+				armmsi.FederatedIdentityCredential{
+					Properties: &armmsi.FederatedIdentityCredentialProperties{
+						Audiences: []*string{to.StringPtr("openshift")},
+						Issuer:    issuer,
+						Subject:   to.StringPtr(sa),
+					},
+				},
+				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
+			)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // generateInfraID take base and returns a ID that
