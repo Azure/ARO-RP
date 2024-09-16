@@ -56,9 +56,9 @@ func TestEnsureACRToken(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{
 						RegistryProfiles: []*api.RegistryProfile{
 							{
-								Name:     registryName + ".azurecr.io",
-								Username: "testuser",
-								Expiry:   nil,
+								Name:      registryName + ".azurecr.io",
+								Username:  "testuser",
+								IssueDate: nil,
 							},
 						},
 					},
@@ -74,14 +74,14 @@ func TestEnsureACRToken(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{
 						RegistryProfiles: []*api.RegistryProfile{
 							{
-								Name:     "arosvc.azurecr.io",
-								Username: "testuser",
-								Expiry:   &date.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+								Name:      "arosvc.azurecr.io",
+								Username:  "testuser",
+								IssueDate: &date.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
 							},
 							{
-								Name:     "arointsvc.azurecr.io",
-								Username: "testuser",
-								Expiry:   &date.Time{Time: time.Date(2024, 1, 9, 0, 0, 0, 0, time.UTC)},
+								Name:      "arointsvc.azurecr.io",
+								Username:  "testuser",
+								IssueDate: &date.Time{Time: time.Date(2024, 1, 9, 0, 0, 0, 0, time.UTC)},
 							},
 						},
 					},

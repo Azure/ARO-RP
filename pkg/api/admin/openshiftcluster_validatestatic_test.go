@@ -630,7 +630,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", Expiry: toDate(time.Now())}},
+						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", IssueDate: toDate(time.Now())}},
 					},
 				}
 			},
@@ -644,12 +644,12 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", Expiry: toDate(time.Now())}},
+						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", IssueDate: toDate(time.Now())}},
 					},
 				}
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.RegistryProfiles[0].Expiry = toDate(time.Now().UTC().Add(time.Hour * 24 * 30))
+				oc.Properties.RegistryProfiles[0].IssueDate = toDate(time.Now().UTC().Add(time.Hour * 24 * 30))
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
 		},
