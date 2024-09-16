@@ -76,31 +76,32 @@ pre_deploy_resources() {
     local skip_deployments="${4:-"true"}"
 
     # Don't skip deployment creation when SKIP_DEPLOYMENTS was set to "false" 
-    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
-      log "'SKIP_DEPLOYMENTS' env var was set to false. Don't skip predeployment."
-      make pre-deploy-no-aks
-    fi
-  
-    local num_deployment=0
-    resource_groups=("${azure_prefix}-global" "${azure_prefix}-subscription" "${azure_prefix}-gwy-${location}" "${azure_prefix}-gwy-${location}" "$rp_resource_group" "$rp_resource_group")
-    deployments=("rp-global-${location}" "rp-production-subscription-${location}" "gateway-production-predeploy" "gateway-production-managed-identity" "rp-production-managed-identity" "rp-production-predeploy-no-aks")
-    for i in "${!deployments[@]}"; do
-      check_deployment "${resource_groups[i]}" "${deployments[i]}" && num_deployment="$((num_deployment + 1))"
-    done
-    if [[ ${num_deployment} -lt 6 ]]; then
-      log "Deploy predeployment resources prior to AKS. ${num_deployment}/6 deployments have been deployed." 
+    if is_boolean "${skip_deployments}" && [ "${skip_deployments}" = false ]; then
+      log "'SKIP_DEPLOYMENTS' env var was set to 'false'.❌⏩ Don't skip predeployment."
       make pre-deploy-no-aks
     else
-      log "All the 6 deployments exists. ⏩📋 Predeployment was skipped"
+      local num_deployment=0
+      resource_groups=("${azure_prefix}-global" "${azure_prefix}-subscription" "${azure_prefix}-gwy-${location}" "${azure_prefix}-gwy-${location}" "$rp_resource_group" "$rp_resource_group")
+      deployments=("rp-global-${location}" "rp-production-subscription-${location}" "gateway-production-predeploy" "gateway-production-managed-identity" "rp-production-managed-identity" "rp-production-predeploy-no-aks")
+      for i in "${!deployments[@]}"; do
+        check_deployment "${resource_groups[i]}" "${deployments[i]}" && num_deployment="$((num_deployment + 1))"
+      done
+      if [[ ${num_deployment} -lt 6 ]]; then
+        log "Deploy predeployment resources prior to AKS. ${num_deployment}/6 deployments have been deployed." 
+        make pre-deploy-no-aks
+      else
+        log "All the 6 deployments exists. ⏩📋 Predeployment was skipped"
+      fi
     fi
     log "Success step 3 ✅ - deploy pre-deployment resources prior to AKS"
 }
 
 add_hive(){
-  err_str="Usage $0 <LOCATION> <RESOURCE_GROUP> [SKIP_DEPLOYMENTS]. Please try again"
+  err_str="Usage $0 <LOCATION> <RESOURCE_GROUP> <PULL_SECRET> [SKIP_DEPLOYMENTS]. Please try again"
   local location="${1?$err_str}"
   local resource_group="${2?$err_str}"
-  local skip_deployments="${3:-"true"}"
+  local pull_secret="${3?$err_str}"
+  local skip_deployments="${4:-"true"}"
 
   is_boolean "$skip_deployments"
 
@@ -124,7 +125,7 @@ add_hive(){
   vpn_configuration
   screen -dmS connect_dev_vpn bash -c "sudo openvpn secrets/vpn-${location}.ovpn; sleep 10; exec bash" # open new socket to run concurrently
   make aks.kubeconfig
-  HOME=/usr KUBECONFIG="$(pwd)/aks.kubeconfig" ./hack/hive/hive-dev-install.sh "$skip_deployments"
+  HOME=/usr KUBECONFIG="$(pwd)/aks.kubeconfig" ./hack/hive/hive-dev-install.sh "${pull_secret}" "${skip_deployments}"
   log "Success step 5 ✅ - Hive has been installed"
 }
 
@@ -145,7 +146,7 @@ mirror_images() {
   log "Success step 6a ✈️ 🏷️ - Login to ${acr_string}"
 
   local resource_group_global="${azure_prefix}-global"
-  if ( is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]) || ! check_acr_repos "$resource_group_global" "$git_commit" "$skip_deployments"; then
+  if ( is_boolean "${skip_deployments}" && [ "${skip_deployments}" = false ]) || ! check_acr_repos "$resource_group_global" "$git_commit" "$skip_deployments"; then
     make go-verify # add Vendor directory
     go run -tags containers_image_openpgp,exclude_graphdriver_btrfs ./cmd/aro mirror latest
     log "Success step 6b ✈️ 📦 - Mirror OCP images"
@@ -158,7 +159,7 @@ mirror_images() {
       repo="$geneva_prefix${repo,,}"
       import_geneva_image "$repo" "$tag" "${DST_ACR_NAME}"
     done
-    log "Success step 6d ✈️ 📦 - Import MDM and MDSD to ${acr_string}"
+    log "Success step 6c ✈️ 📦 - Import MDM and MDSD to ${acr_string}"
 
     if ! check_acr_repo "${DST_ACR_NAME}" "aro" "${skip_deployments}" "${git_commit}"; then
       make publish-image-aro-multistage
@@ -234,27 +235,27 @@ fully_deploy_resources() {
     local skip_deployments="${5:-"true"}"
 
     # Don't skip deployment creation when SKIP_DEPLOYMENTS was set to "false" 
-    if is_boolean $skip_deployments && ! [ "${skip_deployments}" = false ]; then
-      log "'SKIP_DEPLOYMENTS' env var was set to false. Don't skip full deployments of RP and GYW."
-      make go-verify deploy
-    fi
-
-    local num_deployment=0
-    check_deployment "${azure_prefix}-global" "rp-global-${location}" && num_deployment="$((num_deployment + 1))"
-    check_deployment "${azure_prefix}-subscription" "rp-production-subscription-${location}" && num_deployment="$((num_deployment + 1))"
-    local gwy_resource_group="${azure_prefix}-gwy-${location}"
-    for deployment in "gateway-production-predeploy" "gateway-production-managed-identity" "gateway-production-${git_commit}"; do
-      check_deployment "${gwy_resource_group}" "$deployment" && num_deployment="$((num_deployment + 1))"
-    done
-    for deployment in "rp-production-managed-identity" "rp-production-predeploy" "rpServiceKeyvaultDynamic" "dev-vpn" "aks-development" "rp-production-${git_commit}"; do
-      check_deployment "${resource_group}" "$deployment" && num_deployment="$((num_deployment + 1))"
-    done
-
-    if [[ ${num_deployment} -lt 11 ]]; then
-      log "Fully deploy RP and GYW deployments. $((11 - num_deployment))/11 deployments have been deployed."
+    if is_boolean "${skip_deployments}" && [ "${skip_deployments}" = false ]; then
+      log "'SKIP_DEPLOYMENTS' env var was set to 'false'.❌⏩ Don't skip full deployments of RP and GYW."
       make go-verify deploy
     else
-      log "All the 11 deployments exists. ⏩📋 Full deployments of RP and GYW was skipped."
+      local num_deployment=0
+      check_deployment "${azure_prefix}-global" "rp-global-${location}" && num_deployment="$((num_deployment + 1))"
+      check_deployment "${azure_prefix}-subscription" "rp-production-subscription-${location}" && num_deployment="$((num_deployment + 1))"
+      local gwy_resource_group="${azure_prefix}-gwy-${location}"
+      for deployment in "gateway-production-predeploy" "gateway-production-managed-identity" "gateway-production-${git_commit}"; do
+        check_deployment "${gwy_resource_group}" "$deployment" && num_deployment="$((num_deployment + 1))"
+      done
+      for deployment in "rp-production-managed-identity" "rp-production-predeploy" "rpServiceKeyvaultDynamic" "dev-vpn" "aks-development" "rp-production-${git_commit}"; do
+        check_deployment "${rp_resource_group}" "$deployment" && num_deployment="$((num_deployment + 1))"
+      done
+
+      if [[ ${num_deployment} -lt 11 ]]; then
+        log "Fully deploy RP and GYW deployments. ${num_deployment}/11 deployments have been deployed."
+        make go-verify deploy
+      else
+        log "All the 11 deployments exists. ⏩📋 Full deployments of RP and GYW was skipped."
+      fi
     fi
 
     # Verify VMSS have been provisioned successfully
@@ -272,7 +273,7 @@ Available functions:
   setup_rp_config         - Setup dev-config.yaml file for deploying the RP and GWY VMSSs
   is_full_rp_succeeded    - Get fast feedback whether the automation is needed. Both of the resource groups and VMSSs exist and succeeded (respectively), then skip automation.
   pre_deploy_resources    - Deploy 6 deployments in case they are needed
-  add_hive                - Add VPN configuratiom, install AKS and then install Hive
+  add_hive                - Add VPN configuration, install AKS and then install Hive
   mirror_images           - Login and copy many repos (e.g., mdm, mdsd, fluentbit and aro) to your ACR 
   prepare_RP_deployment   - Create DNS records, add certs and remove old VMSSs
   fully_deploy_resources  - Fully deploy 12 deployments in case they are needed
@@ -281,7 +282,7 @@ Examples:
   $0 setup_rp_config zzz bfc8993 eastus
   $0 is_full_rp_succeeded zzz zzz-aro-eastus zzz-gwy-eastus bfc8993
   $0 pre_deploy_resources zzz eastus zzz-aro-eastus true
-  $0 add_hive eastus zzz-aro-eastus true
+  $0 add_hive eastus zzz-aro-eastus "'{"auths":{"...":{"auth":"..."}}'}" true
   $0 mirror_images zzz "'{"auths":{"...":{"auth":"..."}}'}" true
   $0 prepare_RP_deployment zzz bfc8993 eastus true
   $0 fully_deploy_resources zzz bfc8993 eastus zzz-aro-eastus true
@@ -303,7 +304,7 @@ EOF
             echo "Usage: $0 pre_deploy_resources <AZURE_PREFIX> <LOCATION> <RESOURCE_GROUP> [SKIP_DEPLOYMENTS]"
             ;;
         add_hive)
-            echo "Usage: $0 add_hive <LOCATION> <RESOURCE_GROUP> [SKIP_DEPLOYMENTS]"
+            echo "Usage: $0 add_hive <LOCATION> <RESOURCE_GROUP> <PULL_SECRET> [SKIP_DEPLOYMENTS]"
             ;;
         mirror_images)
             echo "Usage: $0 mirror_images <AZURE_PREFIX> <USER_PULL_SECRET> [SKIP_DEPLOYMENTS]"

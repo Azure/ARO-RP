@@ -1,7 +1,8 @@
 #!/bin/bash
 
 set -o errexit \
-    -o nounset
+    -o nounset \
+    -o monitor
 
 main() {
     abort_directory

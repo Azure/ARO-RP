@@ -53,7 +53,7 @@ check_vmss() {
     provisioning_state="$( jq -r '.provisioningState' <<< "${vmss_info}")"
     if [[ "${provisioning_state}" == "${provisioning_state_succeeded}" ]]; then
         log "🟢🖥️ VMSS '${vmss_name}' in Resource group '$resource_group' has been provisioned successfully. DELETE_VMSS:${delete_vmss}"
-        if ! is_boolean "${delete_vmss}" &&  [ "${delete_vmss}" = true ]; then
+        if is_boolean "${delete_vmss}" &&  [ "${delete_vmss}" = true ]; then
            az vmss delete --resource-group "${resource_group}" --name  "${vmss_name}" --force-deletion
            log "🗑️🖥️ VMSS '${vmss_name}' in Resource group '$resource_group' has been deleted."
         fi
@@ -71,7 +71,7 @@ check_deployment() {
     # Check if the ResourceGroup exists
     resource_group_info="$(az group show --resource-group "${resource_group}" 2>/dev/null)"
     if [ -z "${resource_group_info}" ]; then
-        log "🔴❌📦 Resource group '${resource_group}' does not exist."
+        log "🔴❌📦 Resource group '${resource_group}' of deployment '${deployment_name}' does not exist."
         return 1
     fi
 
@@ -143,11 +143,10 @@ check_acr_repo() {
     fi
 
     # Check if the repository tag is not empty and if it matches an optional tag
-    repo_tag="$(az acr repository show-tags --name "$acr_name" --repository "${repository}" -o tsv | tr '' ' ')"
+    repo_tag="$(az acr repository show-tags --name "$acr_name" --repository "${repository}" -o tsv | awk '{printf "%s%s", sep, $0; sep=","} END {print ""}')"
     if [[ -n "$repo_tag" ]]; then
-        # TODO: Loop all the repo tags and print all the tags in one line
         if [[ "${tag}" != "no-tag" && "${tag}" != "${repo_tag}" ]] ; then
-            log "🔴✈️ Repository '${repository}' in ACR '$acr_name' exists, but with a wrong tag '${repo_tag}'. Expected tag: '${tag}'."
+            log "🔴✈️ Repository '${repository}' in ACR '$acr_name' exists with different tag/s '${repo_tag}'. Expected tag: '${tag}'."
             return 1
         fi
         log "🟢✈️ Repository '${repository}' in ACR '$acr_name' exists with tag '${repo_tag}'."
@@ -198,7 +197,7 @@ check_acr_repos() {
         log "🟢✈️ All repositories exist in ACR '$acr_name'."
         return 0
     fi
-    echo -e "🔴✈️ Some repositories are missing and need to be imported.\nRepositories: ${missing_repos_names[*]}\n"
+    log "🔴✈️ Some repositories are missing and need to be imported: ${missing_repos_names[*]}."
     return 1
 }
 
@@ -340,7 +339,7 @@ clean_rp_dev_env() {
      # shellcheck disable=SC2068
      for rg in ${rgs[@]}; do
         log "########## Delete Resource Group $rg in $location ##########"
-        az group delete --resource-group "$rg" -y
+        az group delete --resource-group "$rg" -y || true
     done
 
     if [[ ${#kvs[@]} -eq 0 ]]; then
@@ -355,7 +354,7 @@ clean_rp_dev_env() {
     # shellcheck disable=SC2068
     for kv in ${kvs[@]}; do
         log "########## Delete KeyVault $kv in $location ##########"
-        az keyvault purge --name "$kv" # add --no-wait to stop waiting
+        az keyvault purge --name "$kv" || true  # add --no-wait to stop waiting
     done
 }
 
@@ -378,7 +377,7 @@ Available functions:
   check_keyvault_certificate    - Check certificate CERTIFICATE existance in keyVault KEYVAULT, enablement and expiration date
   skip_and_import_certificates  - Import array of certificates <CERTIFICATE...> using array of secret files <SECRET_FILE...> to keyVault KEYVAULT
   check_and_import_certificates - Import the certificates if possible based on prefix KEYVAULT_PREFIX
-  clean_rp_dev_env              - Cleanup all the created resources from the full RP dev (4 resourceGroups and 4 KeyVaults)
+  clean_rp_dev_env              - Cleanup all the created resources from the full RP dev (4 resourceGroups and 4 KeyVaults) based on input or defualt values.
 
 Examples:
   $0 verify_downloading_secrets
@@ -394,7 +393,7 @@ Examples:
   $0 check_keyvault_certificate xxx-aro-eastus-svc rp-mdm true
   $0 skip_and_import_certificates xxx-aro-eastus-svc rp-mdm rp-mdsd secrets/rp-mdm-self-signed.pem secrets/rp-mdsd-self-signed.pem true
   $0 check_and_import_certificates xxx-aro-eastus-svc true
-  $0 clean_rp_dev_env eastus
+  $0 clean_rp_dev_env eastus "xxx-global xxx-subscription" "xxx-aro-eastus-gwy xxx-aro-eastus-por"
 
 To get detailed usage for a specific function, run:
   $0 usage_rp_dev <function_name>

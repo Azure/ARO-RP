@@ -7,7 +7,7 @@ The commit sha is used to specify the image tag and also used during config gene
 1. You can either
    1. Provide the hive image commit has as an argument to `hack/hive/hive-generate-config.sh`. This is useful for testing new hive images before hive releases.
       1. Example: `./hack/hive/hive-generate-config.sh d7ead609f4`
-   2. Accept the default version by providing no arguments, which should be the latest.
+   1. Accept the default version by providing no arguments, which should be the latest.
       1. Example: `./hack/hive/hive-generate-config.sh`
 
 ## Generating config
@@ -27,20 +27,24 @@ This will download the latest source, reset to the hash specified in HIVE_IMAGE_
 
 1. Connect to the appropriate aks vpn
    1. vpn-aks-westeurope.ovpn
-   2. vpn-aks-eastus.ovpn
-   3. vpn-aks-australiaeast.ovpn
-2. Ensure you have the latest AKS kubeconfig  
+   1. vpn-aks-eastus.ovpn
+   1. vpn-aks-australiaeast.ovpn
+1. Ensure you have the latest AKS kubeconfig  
+
     ```bash
     # get the AKS kubeconfig
     . ./env
     make aks.kubeconfig
     ```
-3. Set KUBECONFIG to the aks.kubeconfig file, for example:
+
+1. Set KUBECONFIG to the aks.kubeconfig file, for example:
+
     ```bash
     export KUBECONFIG="$PWD/aks.kubeconfig"
     ```
-4. Installing then simply requires the running of the install script.
+
+1. Run Hive installation script with PULL_SECRET
+
     ```bash
-    ./hack/hive/hive-dev-install.sh
+    ./hack/hive/hive-dev-install.sh $PULL_SECRET
     ```
-   > __NOTE:__  When Hive is already installed and SKIP_DEPLOYMENTS is set to "true" then Hive installation can be skipped without user's approval.
