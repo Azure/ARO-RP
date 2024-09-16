@@ -57,7 +57,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 		return err
 	}
 
-	clusterManifestsSecret, err := clusterManifestsSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, customManifests)
+	manifestsSecret, err := clusterManifestsSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, customManifests)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 
 	resources := []kruntime.Object{
 		azureCredentialSecret,
-		clusterManifestsSecret,
+		manifestsSecret,
 		envSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, c.env.IsLocalDevelopmentMode()),
 		psSecret,
 		installConfigCM(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, doc.OpenShiftCluster.Location),
