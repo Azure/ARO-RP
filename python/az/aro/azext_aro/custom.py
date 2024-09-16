@@ -481,6 +481,9 @@ def aro_update(cmd,
                 oc_update.service_principal_profile.client_id = client_id
 
     if oc.platform_workload_identity_profile is not None:
+        if platform_workload_identities is not None or upgradeable_to is not None:
+            oc_update.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile()
+
         if platform_workload_identities is not None:
             pwis = {}
             for i in oc.platform_workload_identity_profile.platform_workload_identities:
@@ -492,10 +495,9 @@ def aro_update(cmd,
             for i in platform_workload_identities:
                 pwis[i.operator_name] = i
 
-            oc_update.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile(
-                platform_workload_identities=list(pwis.values())
-            )
-        oc.platform_workload_identity_profile.upgradeable_to = upgradeable_to 
+            oc_update.platform_workload_identity_profile.platform_workload_identities=list(pwis.values())
+        
+        oc_update.platform_workload_identity_profile.upgradeable_to = upgradeable_to 
 
     if load_balancer_managed_outbound_ip_count is not None:
         oc_update.network_profile = openshiftcluster.NetworkProfile()
