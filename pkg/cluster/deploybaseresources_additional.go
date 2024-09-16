@@ -92,6 +92,65 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
+func (m *manager) ensureWorkloadIdentityRBAC() ([]*arm.Resource, error) {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil, nil
+	}
+
+	clusterMSIResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	if err != nil {
+		return nil, err
+	}
+	clusterMSI := m.doc.OpenShiftCluster.Identity.UserAssignedIdentities[clusterMSIResourceId.String()]
+
+	resources := []*arm.Resource{}
+	managedRG := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	resources = append(resources, m.workloadIdentityResourceGroupRBAC(rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, clusterMSI.PrincipalID, managedRG))
+
+	r, err := m.platoformWorkloadIdentityRBAC(managedRG)
+	if err != nil {
+		return nil, err
+	}
+
+	resources = append(resources, r...)
+	return resources, nil
+}
+
+func (m *manager) platoformWorkloadIdentityRBAC(managedRG string) ([]*arm.Resource, error) {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil, nil
+	}
+
+	resources := []*arm.Resource{}
+	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
+	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+
+	for _, identity := range platformWorkloadIdentities {
+		role, exists := platformWIRolesByRoleName[identity.OperatorName]
+		if !exists {
+			continue
+		}
+
+		roleID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
+		resources = append(resources, m.workloadIdentityResourceGroupRBAC(roleID, identity.ObjectID, managedRG))
+	}
+	return resources, nil
+}
+
+func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID, resourceGroup string) *arm.Resource {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil
+	}
+
+	return rbac.ResourceRoleAssignment(
+		roleID,
+		objID,
+		"Microsoft.Resources/resourceGroups",
+		resourceGroup,
+	)
+}
+
 // storageAccount will return storage account resource.
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.

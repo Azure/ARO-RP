@@ -5,6 +5,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -54,10 +55,17 @@ func (oc *OpenShiftCluster) ClusterMsiResourceId() (*arm.ResourceID, error) {
 	return arm.ParseResourceID(msiResourceId)
 }
 
-// HasUserAssignedIdentities returns true if and only if the cluster doc's
-// Identity.UserAssignedIdentities is non-nil and non-empty.
-func (oc *OpenShiftCluster) HasUserAssignedIdentities() bool {
-	return oc.Identity != nil && oc.Identity.UserAssignedIdentities != nil && len(oc.Identity.UserAssignedIdentities) > 0
+func (oc *OpenShiftCluster) ClusterMsiUserAssignedIdentity() (ClusterUserAssignedIdentity, error) {
+	msiResourceId, err := oc.ClusterMsiResourceId()
+	if err != nil {
+		return ClusterUserAssignedIdentity{}, err
+	}
+
+	if clusterUAI, ok := oc.Identity.UserAssignedIdentities[msiResourceId.String()]; ok {
+		return clusterUAI, nil
+	}
+
+	return ClusterUserAssignedIdentity{}, fmt.Errorf("could not find any cluster MSI associated with resource ID: %s", msiResourceId.String())
 }
 
 // CreatedByType by defines user type, which executed the request
