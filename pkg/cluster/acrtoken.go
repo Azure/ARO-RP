@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/date"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,6 +58,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		}
 
 		rp.Password = api.SecureString(password)
+		rp.IssueDate = &date.Time{Time: time.Now().UTC()}
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			token.PutRegistryProfile(doc.OpenShiftCluster, rp)

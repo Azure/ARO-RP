@@ -746,7 +746,7 @@ type RegistryProfile struct {
 	Name     string       `json:"name,omitempty"`
 	Username string       `json:"username,omitempty"`
 	Password SecureString `json:"password,omitempty"`
-	Expiry   *date.Time   `json:"expiry,omitempty"`
+	IssueDate *date.Time   `json:"issueDate,omitempty"`
 }
 
 // Install represents an install process
