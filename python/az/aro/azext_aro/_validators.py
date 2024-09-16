@@ -287,6 +287,13 @@ def validate_version_format(namespace):
     if namespace.version is not None and not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
         raise InvalidArgumentValueError('--version is invalid')
 
+def validate_upgradeable_to_format(namespace):
+    if not namespace.upgradeable_to:
+        return
+    if not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.upgradeable_to):
+        raise InvalidArgumentValueError('--upgradeable-to is invalid')
+    if namespace.client_secret is not None or namespace.client_id is not None:
+        raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
 
 def validate_load_balancer_managed_outbound_ip_count(namespace):
     if namespace.load_balancer_managed_outbound_ip_count is None:
