@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -377,6 +378,58 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 	return err
 }
 
+func (m *manager) deleteIdentityFederations(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+		return nil
+	}
+	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
+	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+
+	for _, identity := range platformWorkloadIdentities {
+		_, exists := platformWIRolesByRoleName[identity.OperatorName]
+		if !exists {
+			continue
+		}
+
+		identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
+		if err != nil {
+			return err
+		}
+
+		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFedertedCredName(identity)
+		if err != nil {
+			return err
+		}
+
+		_, err = m.clusterMsiFederatedIdentityCredentials.Get(
+			ctx,
+			identityResourceId.ResourceGroup,
+			identityResourceId.ResourceName,
+			federatedIdentityCredentialResourceName,
+			&armmsi.FederatedIdentityCredentialsClientGetOptions{},
+		)
+
+		// If the federated identity credentials do not exist, we can skip the deletion
+		if err != nil {
+			continue
+		}
+
+		_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
+			ctx,
+			identityResourceId.ResourceGroup,
+			identityResourceId.ResourceName,
+			federatedIdentityCredentialResourceName,
+			&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
+		)
+
+		if err != nil {
+			return fmt.Errorf("failed to delete federated identity credentials for %s: %w", identity.ResourceID, err)
+		}
+	}
+
+	return nil
+}
+
 func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
@@ -487,6 +540,11 @@ func (m *manager) Delete(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		m.log.Printf("deleting cluster MSI certificate")
 		err = m.deleteClusterMsiCertificate(ctx)
+		if err != nil {
+			return err
+		}
+
+		err = m.deleteIdentityFederations(ctx)
 		if err != nil {
 			return err
 		}

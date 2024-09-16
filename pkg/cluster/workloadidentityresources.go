@@ -6,10 +6,13 @@ package cluster
 import (
 	"fmt"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 const (
@@ -123,4 +126,16 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 			ServiceAccountIssuer: (string)(*oidcIssuer),
 		},
 	}, nil
+}
+
+func (m *manager) getPlatformWorkloadIdentityFedertedCredName(identity api.PlatformWorkloadIdentity) (string, error) {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return "", fmt.Errorf("getPlatformWorkloadIdentityFedertedCredName called for a CSP cluster")
+	}
+
+	identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s-%s", m.doc.ID, identityResourceId.ResourceName), nil
 }
