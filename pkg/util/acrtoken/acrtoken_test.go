@@ -68,7 +68,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 		tokens:     tokens,
 	}
 
-	password, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: tokenName, Expiry: &date.Time{Time: tokenExpiration}})
+	password, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: tokenName, IssueDate: &date.Time{Time: tokenExpiration}})
 	if err != nil {
 		t.Fatal(err)
 	}
