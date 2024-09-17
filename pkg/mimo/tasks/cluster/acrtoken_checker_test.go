@@ -49,7 +49,7 @@ func TestEnsureACRToken(t *testing.T) {
 			wantErr: "TerminalError: no registry profile detected",
 		},
 		{
-			name:     "No expiry date",
+			name:     "No issue date",
 			azureEnv: azureclient.PublicCloud,
 			oc: func() *api.OpenShiftCluster {
 				return &api.OpenShiftCluster{
@@ -67,7 +67,7 @@ func TestEnsureACRToken(t *testing.T) {
 			wantErr: "TerminalError: no expiry date detected",
 		},
 		{
-			name:     "expired",
+			name:     "Expired",
 			azureEnv: azureclient.PublicCloud,
 			oc: func() *api.OpenShiftCluster {
 				return &api.OpenShiftCluster{
@@ -87,7 +87,30 @@ func TestEnsureACRToken(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "TerminalError: azure container registry (acr) token has expired",
+			wantErr: "TerminalError: azure container registry (acr) token has expired, 252 days have passed",
+		},
+		{
+			name:     "Should rotate token",
+			azureEnv: azureclient.PublicCloud,
+			oc: func() *api.OpenShiftCluster {
+				return &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						RegistryProfiles: []*api.RegistryProfile{
+							{
+								Name:      "arosvc.azurecr.io",
+								Username:  "testuser",
+								IssueDate: &date.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+							},
+							{
+								Name:      "arointsvc.azurecr.io",
+								Username:  "testuser",
+								IssueDate: &date.Time{Time: time.Now().AddDate(0, 0, -50)},
+							},
+						},
+					},
+				}
+			},
+			wantErr: "TerminalError: 50 days have passed since azure container registry (acr) token was issued, please rotate the token now",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
