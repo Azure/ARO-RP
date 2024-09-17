@@ -349,41 +349,48 @@ Generate new key/certificate files using an helper utility, and when these files
    PROXY_DOMAIN_NAME_LABEL=<your-proxy-domain-name-label>
    ```
 
+1. Export resourceGroup
+
+   ```bash
+   export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
+   ```
+
 1. Create the secrets/env file:
 
    ```bash
    # use a unique prefix for Azure resources when it is set, otherwise use your user's name
    cat >secrets/env <<EOF
-   export AZURE_PREFIX='${AZURE_PREFIX:-$USER}'
-   export ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
-   export AZURE_TENANT_ID='$AZURE_TENANT_ID'
-   export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
-   export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
-   export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
-   export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
-   export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
-   export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
-   export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
-   export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
-   export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'
-   export AZURE_RP_CLIENT_SECRET='$AZURE_RP_CLIENT_SECRET'
-   export AZURE_GATEWAY_CLIENT_ID='$AZURE_GATEWAY_CLIENT_ID'
-   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_GATEWAY_CLIENT_SECRET='$AZURE_GATEWAY_CLIENT_SECRET'
-   export RESOURCEGROUP='$RESOURCEGROUP_PREFIX-\$LOCATION'
-   export PROXY_HOSTNAME='vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com'
-   export DATABASE_NAME='\$AZURE_PREFIX'
-   export RP_MODE='development'
-   export PULL_SECRET='$PULL_SECRET'
-   export SECRET_SA_ACCOUNT_NAME='$SECRET_SA_ACCOUNT_NAME'
-   export DATABASE_ACCOUNT_NAME='\$RESOURCEGROUP'
-   export KEYVAULT_PREFIX='\$RESOURCEGROUP'
-   export PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
-   export PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
-   export DOMAIN_NAME='\$LOCATION.\$PARENT_DOMAIN_NAME'
-   export AZURE_ENVIRONMENT='AzurePublicCloud'
+   ######## Prior to sourcing the file the following env vars must be set:    ########
+   ######## AZURE_PREFIX, LOCATION, ADMIN_OBJECT_ID, RESOURCEGROUP, and PARENT_DOMAIN_NAME   ########
+   export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
+   export ADMIN_OBJECT_ID="$ADMIN_OBJECT_ID"
+   export AZURE_TENANT_ID="$AZURE_TENANT_ID"
+   export AZURE_SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID"
+   export AZURE_ARM_CLIENT_ID="$AZURE_ARM_CLIENT_ID"
+   export AZURE_FP_CLIENT_ID="$AZURE_FP_CLIENT_ID"
+   export AZURE_FP_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_PORTAL_CLIENT_ID="$AZURE_PORTAL_CLIENT_ID"
+   export AZURE_PORTAL_ACCESS_GROUP_IDS="$ADMIN_OBJECT_ID"
+   export AZURE_PORTAL_ELEVATED_GROUP_IDS="$ADMIN_OBJECT_ID"
+   export AZURE_CLIENT_ID="$AZURE_CLIENT_ID"
+   export AZURE_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_CLIENT_SECRET="$AZURE_CLIENT_SECRET"
+   export AZURE_RP_CLIENT_ID="$AZURE_RP_CLIENT_ID"
+   export AZURE_RP_CLIENT_SECRET="$AZURE_RP_CLIENT_SECRET"
+   export AZURE_GATEWAY_CLIENT_ID="$AZURE_GATEWAY_CLIENT_ID"
+   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_GATEWAY_CLIENT_SECRET="$AZURE_GATEWAY_CLIENT_SECRET"
+   export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
+   export DATABASE_NAME="\$AZURE_PREFIX"
+   export RP_MODE="development"
+   export PULL_SECRET="$PULL_SECRET"
+   export SECRET_SA_ACCOUNT_NAME="$SECRET_SA_ACCOUNT_NAME"
+   export DATABASE_ACCOUNT_NAME="\$RESOURCEGROUP"
+   export KEYVAULT_PREFIX="\$RESOURCEGROUP"
+   export PARENT_DOMAIN_NAME="$PARENT_DOMAIN_NAME"
+   export PARENT_DOMAIN_RESOURCEGROUP="$PARENT_DOMAIN_RESOURCEGROUP"
+   export DOMAIN_NAME="\$LOCATION.\$PARENT_DOMAIN_NAME"
+   export AZURE_ENVIRONMENT="AzurePublicCloud"
    export OIDC_STORAGE_ACCOUNT_NAME="\${RESOURCEGROUP//-}oic"
    EOF
    ```
