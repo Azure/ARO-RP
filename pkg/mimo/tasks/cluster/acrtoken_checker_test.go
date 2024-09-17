@@ -25,13 +25,16 @@ import (
 )
 
 const (
-	registryName       = "arointsvc"
-	registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/" + registryName
+	registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
 	clusterUUID        = "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
+	publicACR          = "arosvc.azurecr.io"
+	intACR             = "arointsvc.azurecr.io"
+	user               = "testuser"
 )
 
 func TestEnsureACRToken(t *testing.T) {
 	ctx := context.Background()
+
 	for _, tt := range []struct {
 		name     string
 		azureEnv azureclient.AROEnvironment
@@ -56,8 +59,8 @@ func TestEnsureACRToken(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{
 						RegistryProfiles: []*api.RegistryProfile{
 							{
-								Name:      registryName + ".azurecr.io",
-								Username:  "testuser",
+								Name:      intACR,
+								Username:  user,
 								IssueDate: nil,
 							},
 						},
@@ -74,13 +77,13 @@ func TestEnsureACRToken(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{
 						RegistryProfiles: []*api.RegistryProfile{
 							{
-								Name:      "arosvc.azurecr.io",
-								Username:  "testuser",
+								Name:      publicACR,
+								Username:  user,
 								IssueDate: &date.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
 							},
 							{
-								Name:      "arointsvc.azurecr.io",
-								Username:  "testuser",
+								Name:      intACR,
+								Username:  user,
 								IssueDate: &date.Time{Time: time.Date(2024, 1, 9, 0, 0, 0, 0, time.UTC)},
 							},
 						},
@@ -97,13 +100,13 @@ func TestEnsureACRToken(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{
 						RegistryProfiles: []*api.RegistryProfile{
 							{
-								Name:      "arosvc.azurecr.io",
-								Username:  "testuser",
+								Name:      publicACR,
+								Username:  user,
 								IssueDate: &date.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
 							},
 							{
-								Name:      "arointsvc.azurecr.io",
-								Username:  "testuser",
+								Name:      intACR,
+								Username:  user,
 								IssueDate: &date.Time{Time: time.Now().AddDate(0, 0, -50)},
 							},
 						},
