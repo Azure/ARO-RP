@@ -1,0 +1,10 @@
+# ignore everything
+*
+
+# ...except these
+!Makefile
+!go.mod
+!go.sum
+!hack
+!vendor
+!.git

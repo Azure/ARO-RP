@@ -16,6 +16,13 @@ AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
 
+# Variables for shared RP automation
+AZURE_PREFIX ?= zzz
+SHARED_RP_PREFIX ?= zzz
+SA_ACCOUNT_NAME ?= razo${SHARED_RP_PREFIX} # probably rharosecretsdev
+SHARED_RP_LOCATION ?= westcentralus
+SHARED_RP_IMAGE ?= generic-repo/shared-rp:v0.0.1
+
 # Golang version go mod tidy compatibility
 GOLANG_VERSION ?= 1.21
 
@@ -540,3 +547,19 @@ run-rp: ci-rp podman-secrets
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+
+.PHONY: shared-rp
+shared-rp: # Build and run a shared-rp container for automating shared-rp dev env
+	# pass PULL_SECRET to the container
+	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
+		--build-arg SHARED_RP_PREFIX=$(SHARED_RP_PREFIX) \
+		--build-arg LOCATION=$(SHARED_RP_LOCATION) \
+		--build-arg SECRET_SA_ACCOUNT_NAME=$(SA_ACCOUNT_NAME) \
+		--no-cache=$(NO_CACHE) \
+		-f Dockerfile.shared-rp \
+		-t $(SHARED_RP_IMAGE) .
+	docker run --rm -it --user=0 --privileged \
+		-v "${HOME}/.azure:/root/.azure" \
+		--name shared-rp-container $(SHARED_RP_IMAGE)
+	SECRET_SA_ACCOUNT_NAME=${SA_ACCOUNT_NAME} make secrets
+	ls secrets/*
