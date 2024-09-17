@@ -6,10 +6,16 @@ package cluster
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
+)
+
+const (
+	daysValid        = 90
+	daysShouldRotate = 45
 )
 
 // EnsureACRTokenIsValid checks the expiry date of the Azure Container Registry (ACR) Token from the RegistryProfile.
@@ -35,13 +41,19 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	rp := manager.GetRegistryProfileFromSlice(registryProfiles)
 	if rp != nil {
 		var now = time.Now().UTC()
-		expiry := registryProfiles[0].IssueDate
+		issueDate := rp.IssueDate
+
+		if issueDate == nil {
+			return mimo.TerminalError(errors.New("no expiry date detected"))
+		}
+
+		daysInterval := int32(now.Sub(issueDate.Time).Hours() / 24)
 
 		switch {
-		case expiry == nil:
-			return mimo.TerminalError(errors.New("no expiry date detected"))
-		case expiry.Time.Before(now):
-			return mimo.TerminalError(errors.New("azure container registry (acr) token has expired"))
+		case daysInterval > daysValid:
+			return mimo.TerminalError(fmt.Errorf("azure container registry (acr) token has expired, %d days have passed", daysInterval))
+		case daysInterval >= daysShouldRotate:
+			return mimo.TerminalError(fmt.Errorf("%d days have passed since azure container registry (acr) token was issued, please rotate the token now", daysInterval))
 		default:
 			th.SetResultMessage("azure container registry (acr) token is valid")
 		}
