@@ -17,6 +17,7 @@ import (
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -275,10 +276,18 @@ func (m *manager) runHiveInstaller(ctx context.Context) error {
 		return err
 	}
 
+	var customManifests map[string]kruntime.Object
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		customManifests, err = m.generateWorkloadIdentityResources()
+		if err != nil {
+			return err
+		}
+	}
+
 	// Run installer. For M5/M6 we will persist the graph inside the installer
 	// code since it's easier, but in the future, this data should be collected
 	// from Hive's outputs where needed.
-	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, version)
+	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, version, customManifests)
 }
 
 func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocumentMutator {

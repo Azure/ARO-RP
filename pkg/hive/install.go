@@ -51,8 +51,13 @@ func makeEnvSecret(name string) corev1.EnvVar {
 	}
 }
 
-func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
-	sppSecret, err := servicePrincipalSecretForInstall(doc.OpenShiftCluster, sub, c.env.IsLocalDevelopmentMode())
+func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]kruntime.Object) error {
+	azureCredentialSecret, err := azureCredentialSecretForInstall(doc.OpenShiftCluster, sub, c.env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+
+	manifestsSecret, err := clusterManifestsSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, customManifests)
 	if err != nil {
 		return err
 	}
@@ -76,7 +81,8 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	}
 
 	resources := []kruntime.Object{
-		sppSecret,
+		azureCredentialSecret,
+		manifestsSecret,
 		envSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, c.env.IsLocalDevelopmentMode()),
 		psSecret,
 		installConfigCM(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, doc.OpenShiftCluster.Location),
@@ -96,12 +102,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	return nil
 }
 
-func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.SubscriptionDocument, isDevelopment bool) (*corev1.Secret, error) {
-	clusterSPBytes, err := clusterSPToBytes(sub, oc)
-	if err != nil {
-		return nil, err
-	}
-
+func azureCredentialSecretForInstall(oc *api.OpenShiftCluster, sub *api.SubscriptionDocument, isDevelopment bool) (*corev1.Secret, error) {
 	enc, err := json.Marshal(oc)
 	if err != nil {
 		return nil, err
@@ -112,9 +113,13 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 		return nil, err
 	}
 
-	sppSecret := clusterServicePrincipalSecret(oc.Properties.HiveProfile.Namespace, clusterSPBytes)
-	sppSecret.Data["99_aro.json"] = enc
-	sppSecret.Data["99_sub.json"] = encSub
+	azureCredentialSecret, err := clusterAzureSecret(oc.Properties.HiveProfile.Namespace, oc, sub)
+	if err != nil {
+		return nil, err
+	}
+
+	azureCredentialSecret.Data["99_aro.json"] = enc
+	azureCredentialSecret.Data["99_sub.json"] = encSub
 
 	if isDevelopment {
 		// In development mode, load in the proxy certificates so that clusters
@@ -146,12 +151,12 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 			return nil, err
 		}
 
-		sppSecret.Data["proxy.crt"] = proxyCert
-		sppSecret.Data["proxy-client.crt"] = proxyClientCert
-		sppSecret.Data["proxy-client.key"] = proxyClientKey
+		azureCredentialSecret.Data["proxy.crt"] = proxyCert
+		azureCredentialSecret.Data["proxy-client.crt"] = proxyClientCert
+		azureCredentialSecret.Data["proxy-client.key"] = proxyClientKey
 	}
 
-	return sppSecret, nil
+	return azureCredentialSecret, nil
 }
 
 func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, isDevelopment bool) *hivev1.ClusterDeployment {
@@ -227,6 +232,9 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 					Name: installConfigName,
 				},
 				InstallerEnv: envVars,
+				ManifestsSecretRef: &corev1.LocalObjectReference{
+					Name: clusterManifestsSecretName,
+				},
 			},
 			PreserveOnDelete: true,
 			ManageDNS:        false,
