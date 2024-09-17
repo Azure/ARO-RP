@@ -869,8 +869,9 @@ var _ = Describe("ARO Operator - Control Plane MachineSets", func() {
 
 var _ = Describe("ARO Operator - etchosts", func() {
 	const (
-		etchostsEnabled = operator.EtcHostsEnabled
-		etchostsManaged = operator.EtcHostsManaged
+		etchostsEnabled     = operator.EtcHostsEnabled
+		etchostsManaged     = operator.EtcHostsManaged
+		forceReconciliation = operator.ForceReconciliation
 	)
 
 	It("must have etchosts machineconfigs", func(ctx context.Context) {
@@ -882,7 +883,7 @@ var _ = Describe("ARO Operator - etchosts", func() {
 			Skip("EtcHosts Controller is not enabled, skipping test")
 		}
 
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(etchostsManaged) {
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(etchostsManaged) && instance.Spec.OperatorFlags.GetSimpleBoolean(forceReconciliation) {
 			By("waiting for the etchosts machineconfigs to exist")
 			Eventually(func(g Gomega, ctx context.Context) {
 				getFunc := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get
@@ -891,7 +892,7 @@ var _ = Describe("ARO Operator - etchosts", func() {
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		}
 
-		if !instance.Spec.OperatorFlags.GetSimpleBoolean(etchostsManaged) {
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(etchostsManaged) && instance.Spec.OperatorFlags.GetSimpleBoolean(forceReconciliation) {
 			getMachineConfigNames := func(g Gomega, ctx context.Context) []string {
 				machineConfigs, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
 				g.Expect(err).NotTo(HaveOccurred())

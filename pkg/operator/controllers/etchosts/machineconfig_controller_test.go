@@ -80,6 +80,78 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 			wantRequeue: false,
 			requestName: "99-master-aro-etc-hosts-gateway-domains",
 		},
+		{
+			name: "etchosts controller enabled, managed false, cluster not updating, no action",
+			objects: []client.Object{
+				clusterEtcHostsControllerEnabledManagedFalseReconcileFalse, clusterVersionNotUpdating, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+			},
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			},
+			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
+			wantRequeue: false,
+			requestName: "cluster",
+		},
+		{
+			name: "etchosts controller enabled, managed false, cluster updating, no action",
+			objects: []client.Object{
+				clusterEtcHostsControllerEnabledManagedFalseReconcileFalse, clusterVersionUpdating, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+			},
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			},
+			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "etchosts managed is false, machine configs removed"},
+			wantRequeue: false,
+			requestName: "cluster",
+		},
+		{
+			name: "etchosts controller enabled, managed true, cluster not updating, regex not match, no action",
+			objects: []client.Object{
+				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+			},
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			},
+			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
+			wantRequeue: false,
+			requestName: "cluster",
+		},
+		{
+			name: "etchosts controller enabled, managed true, cluster updating, regex not match, no action",
+			objects: []client.Object{
+				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+			},
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			},
+			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
+			wantRequeue: false,
+			requestName: "cluster",
+		},
+		{
+			name: "etchosts controller enabled, managed true, cluster not updating, regex match, reconcile - no action",
+			objects: []client.Object{
+				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+			},
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			},
+			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"},
+			wantRequeue: false,
+			requestName: "99-master-aro-etc-hosts-gateway-domains",
+		},
+		{
+			name: "etchosts controller enabled, managed true, cluster updating, regex match, reconcile - ensure machine config",
+			objects: []client.Object{
+				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+			},
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"},
+			wantRequeue: false,
+			requestName: "99-master-aro-etc-hosts-gateway-domains",
+		},
 	} {
 		controller := gomock.NewController(t)
 		defer controller.Finish()

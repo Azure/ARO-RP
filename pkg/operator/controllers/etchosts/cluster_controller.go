@@ -68,7 +68,6 @@ func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichel
 // Reconcile watches ARO EtcHosts MachineConfig objects, and if any changes, reconciles it
 func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.Log.Debugf("reconcile MachineConfig openshift-machine-api/%s", request.Name)
-
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -78,10 +77,22 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
+
+	allowReconcile, err := r.AllowRebootCausingReconciliation(ctx, instance)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
+	}
+
 	// EtchostsManaged = false, remove machine configs
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) && allowReconcile {
 		r.Log.Debug("etchosts managed is false, removing machine configs")
 		err = r.removeMachineConfig(ctx, etchostsMasterMCMetadata)
+		if kerrors.IsNotFound(err) {
+			r.ClearDegraded(ctx)
+			return reconcile.Result{}, nil
+		}
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -89,6 +100,10 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 		}
 
 		err = r.removeMachineConfig(ctx, etchostsWorkerMCMetadata)
+		if kerrors.IsNotFound(err) {
+			r.ClearDegraded(ctx)
+			return reconcile.Result{}, nil
+		}
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -124,7 +139,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	err = r.Client.Get(ctx, types.NamespacedName{Name: "99-master-aro-etc-hosts-gateway-domains"}, mc)
 	if kerrors.IsNotFound(err) {
 		r.Log.Debug("99-master-aro-etc-hosts-gateway-domains not found, creating it")
-		err = reconcileMachineConfigs(ctx, instance, "master", r.dh, *mcp)
+		err = reconcileMachineConfigs(ctx, instance, "master", r.dh, allowReconcile, *mcp)
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -158,7 +173,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	if kerrors.IsNotFound(err) {
 		r.Log.Debug("99-worker-aro-etc-hosts-gateway-domains not found, creating it")
 		r.ClearDegraded(ctx)
-		err = reconcileMachineConfigs(ctx, instance, "worker", r.dh, *mcp)
+		err = reconcileMachineConfigs(ctx, instance, "worker", r.dh, allowReconcile, *mcp)
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
