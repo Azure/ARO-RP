@@ -311,6 +311,7 @@ env_file(){
     echo -e "#### (2) Create the secrets/env file ####\n"
     # use a unique prefix for Azure resources when it is set, otherwise use your user's name
     cat >secrets/env <<EOF
+    export AZURE_PREFIX='${AZURE_PREFIX:-$USER}'
     export ADMIN_OBJECT_ID='$admin_object_id'
     export AZURE_TENANT_ID='$azure_tenant_id'
     export AZURE_SUBSCRIPTION_ID='$azure_subscription_id'
@@ -354,17 +355,12 @@ EOF
 deploy_shared_rp(){
     # Deploy Shared RP Development Environment
     echo -e "#### Deploy Shared RP Development Environment ####\n"
-    err_str="Usage $0 <SECRET_SA_ACCOUNT_NAME> <PARENT_DOMAIN_RESOURCEGROUP> <RESOURCEGROUP_PREFIX> <PROXY_DOMAIN_NAME_LABEL>. Please try again"
-    local secret_sa_account_name=${1?$err_str}
-    local parent_domain_resourcegroup=${2?$err_str}
-    local resourcegroup_prefix=${3?$err_str}
-    local proxy_domain_name_label=${4?$err_str}
     echo -e "#### (1) Source environment files - Not sure it is needed ####\n"
     source env.example
 
     echo -e "#### (2) Create AzSecPack managed Identity - Manuel? ####\n"
     # This step is required for 'deploy_env_dev' -  https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/234249/AzSecPack-AutoConfig-UserAssigned-Managed-Identity
-    curl /subscriptions/fe16a035-e540-4ab7-80d9-373fa9a3d6ae/resourceGroups/AzSecPackAutoConfigRG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/AzSecPackAutoConfigUA-westcentralus
+    # curl /subscriptions/fe16a035-e540-4ab7-80d9-373fa9a3d6ae/resourceGroups/AzSecPackAutoConfigRG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/AzSecPackAutoConfigUA-westcentralus
 
     echo -e "#### (3) Enable EncryptionAtHost for subscription ####\n"
     az feature register --namespace Microsoft.Compute --name EncryptionAtHost 

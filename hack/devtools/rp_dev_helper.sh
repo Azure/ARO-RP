@@ -1,4 +1,14 @@
-#!/bin/bash -e
+#!/bin/bash  
+
+set -o errexit \
+       -o nounset \
+       -o monitor
+
+declare -r utils="hack/util.sh"
+if [ -f "$utils" ]; then
+    source "$utils"
+fi
+
 ######## Helper file to run full RP dev either locally or using Azure DevOps Pipelines ########
 
 # Function to extract the image tag - (FUNCTION_NAME)
