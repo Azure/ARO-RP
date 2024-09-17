@@ -50,10 +50,6 @@ main() {
 
     fips_configure
 
-    # TODO remove this once MicrosoftCBLMariner:cbl-mariner:cbl-mariner-2-gen2-fips supports automatic updates
-    # Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
-    configure_dnf_cron_job
-
     # shellcheck disable=SC2119
     configure_logrotate
 
@@ -192,6 +188,9 @@ OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
     reboot_vm
 }
 
+# This variable is used by az-cli
+# It's assumed that if this variable hasn't been carried over, that others are also not present, so we fail early by returning an error
+# This was mostly helpful when testing on a development VM, but is still applicable
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 
 # util.sh does not exist when deployed to VMSS via VMSS extensions

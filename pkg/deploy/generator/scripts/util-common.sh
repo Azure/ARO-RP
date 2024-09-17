@@ -81,17 +81,10 @@ retry() {
 # verify_role
 # args:
 # 1) test_role - nameref; role being verified
-# 2) certs - boolean, optional; defaults to false. Set to true to add devproxy to allowed roles
 verify_role() {
     local -n test_role="$1"
-    local -r certs="${2:-false}"
 
-    allowed_roles_glob="($role_rp|$role_gateway)"
-    if $certs; then
-        # remove trailing ")" and append additional role
-        allowed_roles_glob="${allowed_roles_glob%\)*}|$role_devproxy)"
-    fi
-
+    allowed_roles_glob="($role_rp|$role_gateway|$role_devproxy)"
     if [[ "$test_role" =~ $allowed_roles_glob ]]; then
         log "Verified role \"$test_role\""
     else
