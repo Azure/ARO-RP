@@ -4,21 +4,12 @@ trigger:
   branches:
     include:
       - master
-      - loki/pipeline-swarm
   paths:
     exclude:
       - docs/*
   tags:
     include:
       - v2*
-
-pr:
-  branches:
-    include:
-      - loki/pipeline-swarm
-  paths:
-    exclude:
-      - docs/*
 
 resources:
   containers:
