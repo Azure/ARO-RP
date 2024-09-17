@@ -161,8 +161,15 @@ PREFIX=aro-v4-e2e
 1. Create an AAD application which will fake up the RP identity.
 
    ```bash
-   AZURE_RP_CLIENT_SECRET="$(uuidgen)"
-   AZURE_RP_CLIENT_ID="$(az ad app create --display-name ${PREFIX}-rp-shared --end-date '2299-12-31T11:59:59+00:00' --key-type Password --key-value "$AZURE_RP_CLIENT_SECRET" --query appId -o tsv)"
+   AZURE_RP_CLIENT_SECRET="$(openssl rand -base64 32)"
+   AZURE_RP_CLIENT_ID="$(az ad app create \
+      --display-name ${PREFIX}-rp-shared \
+      --end-date '2299-12-31T11:59:59+00:00' \
+      --key-type Symmetric \
+      --key-usage Sign \
+      --key-value "$AZURE_RP_CLIENT_SECRET" \
+      --query appId \
+      -o tsv)"
    az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
    ```
 
@@ -175,12 +182,13 @@ PREFIX=aro-v4-e2e
 1. Create an AAD application which will fake up the gateway identity.
 
    ```bash
-   AZURE_GATEWAY_CLIENT_SECRET="$(uuidgen)"
+   AZURE_GATEWAY_CLIENT_SECRET="$(openssl rand -base64 32)"
    AZURE_GATEWAY_CLIENT_ID="$(az ad app create \
      --display-name ${PREFIX}-gateway-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
-     --key-type password \
-     --password "$AZURE_GATEWAY_CLIENT_SECRET" \
+     --key-type Symmetric \
+     --key-usage Sign \
+     --key-value "$AZURE_GATEWAY_CLIENT_SECRET" \
      --query appId \
      -o tsv)"
    az ad sp create --id "$AZURE_GATEWAY_CLIENT_ID" >/dev/null
@@ -189,12 +197,13 @@ PREFIX=aro-v4-e2e
 1. Create an AAD application which will be used by E2E and tooling.
 
    ```bash
-   AZURE_CLIENT_SECRET="$(uuidgen)"
+   AZURE_CLIENT_SECRET="$(openssl rand -base64 32)"
    AZURE_CLIENT_ID="$(az ad app create \
      --display-name ${PREFIX}-tooling-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
-     --key-type password \
-     --password "$AZURE_CLIENT_SECRET" \
+     --key-type Symmetric \
+     --key-usage Sign \
+     --key-value "$AZURE_CLIENT_SECRET" \
      --query appId \
      -o tsv)"
    az ad sp create --id "$AZURE_CLIENT_ID" >/dev/null
@@ -205,18 +214,39 @@ PREFIX=aro-v4-e2e
    - `Contributor` on your subscription.
    - `User Access Administrator` on your subscription.
 
-   You must also manually grant this application the `Microsoft.Graph/Application.ReadWrite.OwnedBy` permission, which requires admin access, in order for AAD applications to be created/deleted on a per-cluster basis.
+1. Add and grant `Microsoft.Graph/Application.ReadWrite.OwnedBy` permission.
+   It requires admin access in order for AAD applications to be created/deleted on a per-cluster basis.
 
-   - Go into the Azure Portal
-   - Go to Azure Active Directory
-   - Navigate to the `aro-v4-tooling-shared` app registration page
-   - Click 'API permissions' in the left side pane
-   - Click 'Add a permission'.
-   - Click 'Microsoft Graph'
-   - Select 'Application permissions'
-   - Search for 'Application' and select `Application.ReadWrite.OwnedBy`
-   - Click 'Add permissions'
-   - This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
+   ```bash
+   local ms_graph_sp_api_id="00000003-0000-0000-c000-000000000000"
+   local permission_id="$(az ad sp show \
+      --id $ms_graph_sp_api_id \
+      --query "appRoles" \
+      -o jsonc | jq -r '.[] | select(.value=="Application.ReadWrite.OwnedBy") | .id')"
+   local app_premission_info="$(az ad app permission list --id fb194a8e-da8a-4b15-8c1e-ef49b98987dc 2>/dev/null)" 
+   az ad app permission add \
+      --id $AZURE_CLIENT_ID \
+      --api $ms_graph_sp_api_id \
+      --api-permissions $permission_id=Role
+   az ad app permission grant \
+      --id $AZURE_CLIENT_ID \
+      --api $ms_graph_sp_api_id
+   # Only an admin can consent the new premission
+   az ad app permission admin-consent \
+      --id $AZURE_CLIENT_ID
+   ```
+
+   Or manuel way
+      - Go into the Azure Portal
+      - Go to Azure Active Directory
+      - Navigate to the `aro-v4-tooling-shared` app registration page
+      - Click 'API permissions' in the left side pane
+      - Click 'Add a permission'.
+      - Click 'Microsoft Graph'
+      - Select 'Application permissions'
+      - Search for 'Application' and select `Application.ReadWrite.OwnedBy`
+      - Click 'Add permissions'
+      - This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
 
 1. Set up the RP role definitions and subscription role assignments in your Azure subscription. The usage of "uuidgen" for fpRoleDefinitionId is simply there to keep from interfering with any linked resources and to create the role net new. This mimics the RBAC that ARM sets up. With at least `User Access Administrator` permissions on your subscription, do:
 

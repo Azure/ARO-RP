@@ -35,10 +35,16 @@ prerequisites() {
     fi
 
     # export ADMIN_OBJECT_ID="$(az ad group show -g aro-engineering --query id -o tsv)"
-    # export PULL_SECRET='dummy'
+    # export PULL_SECRET="dummy"
     # export AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
     # export AZURE_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-    mkdir -p secrets
+
+    # Generate new dev-config.yaml
+    local secrets_dir="secrets"
+    if [ -d "$secrets_dir" ]; then
+        rm -R $secrets_dir
+    fi
+    mkdir -p $secrets_dir
 }
 
 aad_applications() {
@@ -46,17 +52,17 @@ aad_applications() {
     err_str="Usage $0 <PREFIX> <LOCATION>. Please try again"
     local prefix=${1?$err_str}
     local location=${2?$err_str}
+    local endless_date="2299-12-31T11:59:59+00:00"
 
     echo -e "#### AAD applications ####\n"
-    aad_prefix=aro-v4-${prefix}
     echo -e "#### (1) Fake up the ARM layer ####"
     go run ./hack/genkey -client arm
     mv arm.* secrets
-    arm_client_info=$(az ad app list --display-name ${aad_prefix}-arm-shared 2>/dev/null)
+    local arm_client_info="$(az ad app list --display-name ${AAD_PREFIX}-arm-shared 2>/dev/null)"
     if [ "${arm_client_info}"  == "[]" ]; then
         echo -e "\n#### (1) Create the fake up ARM layer ####"
         export AZURE_ARM_CLIENT_ID="$(az ad app create \
-            --display-name ${aad_prefix}-arm-shared \
+            --display-name ${AAD_PREFIX}-arm-shared \
             --query appId \
             -o tsv)"
         az ad app credential reset \
@@ -65,125 +71,164 @@ aad_applications() {
         az ad sp create --id "$AZURE_ARM_CLIENT_ID" >/dev/null
         
     else
-        echo -e "\n#### (1) Skip the fake up ARM layer ####"
+        export AZURE_ARM_CLIENT_ID="$(az ad app list \
+             --filter "displayname eq '${AAD_PREFIX}-arm-shared'" \
+             --query '[].appId' \
+             -o tsv)"
+        echo -e "\n#### (1) Skip the fake up ARM layer with application id $AZURE_ARM_CLIENT_ID ####"
     fi
 
     echo -e "\n#### (2) Fake up the first party application ####"
     go run ./hack/genkey -client firstparty
     mv firstparty.* secrets
-    fp_client_info=$(az ad app list --display-name ${aad_prefix}-fp-shared 2>/dev/null)
+    local fp_client_info="$(az ad app list --display-name ${AAD_PREFIX}-fp-shared 2>/dev/null)"
     if [ "${fp_client_info}"  == "[]" ]; then
         echo -e "\n#### (2) Create the fake up first party application ####"
-        export AZURE_FP_CLIENT_ID='$(az ad app create \
-            --display-name "'${aad_prefix}'-fp-shared" \
+        export AZURE_FP_CLIENT_ID="$(az ad app create \
+            --display-name ${AAD_PREFIX}-fp-shared \
             --query appId \
-            -o tsv)'
+            -o tsv)"
         az ad app credential reset \
             --id "$AZURE_FP_CLIENT_ID" \
             --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
         az ad sp create --id "$AZURE_FP_CLIENT_ID" >/dev/null
-        export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list \
-            --filter "appId eq '$AZURE_FP_CLIENT_ID'" \
-            --query '[].id' \
-             -o tsv)'
     else
-        echo -e "\n#### (2) Skip the fake up first party application ####"
+        export AZURE_FP_CLIENT_ID="$(az ad app list \
+             --filter "displayname eq '${AAD_PREFIX}-fp-shared'" \
+             --query '[].appId' \
+             -o tsv)"
+        echo -e "\n#### (2) Skip the fake up first party application with application id $AZURE_FP_CLIENT_ID ####"
     fi
 
-    export AZURE_RP_CLIENT_SECRET="$(uuidgen)"
+    export AZURE_RP_CLIENT_SECRET="$(openssl rand -base64 32)"
     echo -e "\n#### (3) Fake up the RP identity with secret $AZURE_RP_CLIENT_SECRET ####"
-    rp_identity_info=$(az ad app list --display-name ${prefix}-rp-shared 2>/dev/null)
+    local rp_identity_info="$(az ad app list --display-name ${AAD_PREFIX}-rp-shared 2>/dev/null)"
     if [ "${rp_identity_info}" == "[]" ]; then
         echo -e "\n#### (3) Create the fake RP identity ####"
-        az ad app create \
-            --display-name ${prefix}-rp-shared \
-            --end-date '2299-12-31T11:59:59+00:00' \
-            --key-type Password \
+        export AZURE_RP_CLIENT_ID="$(az ad app create \
+            --display-name ${AAD_PREFIX}-rp-shared \
+            --start-date "$(date -Iseconds)" \
+            --end-date $endless_date \
+            --key-type Symmetric \
+            --key-usage Sign \
             --key-value "$AZURE_RP_CLIENT_SECRET" \
-            --debug \
-            -o tsv
-        # export AZURE_RP_CLIENT_ID="$(az ad app create \
-        #     --display-name ${prefix}-rp-shared \
-        #     --end-date '2299-12-31T11:59:59+00:00' \
-        #     --key-type Password \
-        #     --key-value "$AZURE_RP_CLIENT_SECRET" \
-        #     --query appId \
-        #     --debug \
-        #     -o tsv)"
-        # az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
+            --query appId \
+            -o tsv)"
+        az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
     else
-        echo -e "\n#### (3) Skip the fake RP identity ####"
+        export AZURE_RP_CLIENT_ID="$(az ad app list \
+             --filter "displayname eq '${AAD_PREFIX}-rp-shared'" \
+             --query '[].appId' \
+             -o tsv)"
+        echo -e "\n#### (3) Skip the fake RP identity with application id $AZURE_RP_CLIENT_ID ####"
     fi
 
-    export AZURE_GATEWAY_CLIENT_SECRET="$(uuidgen)"
+    export AZURE_GATEWAY_CLIENT_SECRET="$(openssl rand -base64 32)"
     echo -e "\n#### (4) Fake up the GWY identity with secret $AZURE_GATEWAY_CLIENT_SECRET ####"
-    gwy_identity_info=$(az ad app list --display-name ${prefix}-gateway-shared 2>/dev/null)
+    local gwy_identity_info="$(az ad app list --display-name ${AAD_PREFIX}-gateway-shared 2>/dev/null)"
     if [ "${gwy_identity_info}" == "[]" ]; then
         echo -e "\n#### (4) Create the fake GWY identity ####"
-        export AZURE_GATEWAY_CLIENT_ID='$(az ad app create \
-            --display-name ${prefix}-gateway-shared \
-            --end-date '2299-12-31T11:59:59+00:00' \
-            --key-type password \
-            --password "$AZURE_GATEWAY_CLIENT_SECRET" \
+        export AZURE_GATEWAY_CLIENT_ID="$(az ad app create \
+            --display-name ${AAD_PREFIX}-gateway-shared \
+            --start-date "$(date -Iseconds)" \
+            --end-date $endless_date \
+            --key-type Symmetric \
+            --key-usage Sign \
+            --key-value "$AZURE_GATEWAY_CLIENT_SECRET" \
             --query appId \
-            -o tsv)'
+            -o tsv)"   
         az ad sp create --id "$AZURE_GATEWAY_CLIENT_ID" >/dev/null
-        export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list \
-            --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" \
-            --query '[].id' \
-            -o tsv)'
     else
-        echo -e "\n#### (4) Skip the fake GWY identity ####"
+        export AZURE_GATEWAY_CLIENT_ID="$(az ad app list \
+             --filter "displayname eq '${AAD_PREFIX}-gateway-shared'" \
+             --query '[].appId' \
+             -o tsv)"
+        echo -e "\n#### (4) Skip the fake GWY identity with application id $AZURE_GATEWAY_CLIENT_ID ####"
     fi
 
-    export AZURE_CLIENT_SECRET="$(uuidgen)"
+    export AZURE_CLIENT_SECRET="$(openssl rand -base64 32)"
     echo -e "\n#### (5) E2E and tooling client with secret $AZURE_CLIENT_SECRET ####"
-    client_identity_info=$(az ad app list --display-name ${prefix}-tooling-shared 2>/dev/null)
+    local client_identity_info="$(az ad app list --display-name ${AAD_PREFIX}-tooling-shared 2>/dev/null)"
     if [ "${client_identity_info}" == "[]" ]; then
         echo -e "\n#### (5) Create the E2E and tooling client ####"
-        export AZURE_CLIENT_ID='$(az ad app create \
-            --display-name ${prefix}-tooling-shared \
-            --end-date '2299-12-31T11:59:59+00:00' \
-            --key-type password \
-            --password "$AZURE_CLIENT_SECRET" \
+        export AZURE_CLIENT_ID="$(az ad app create \
+            --display-name ${AAD_PREFIX}-tooling-shared \
+            --start-date "$(date -Iseconds)" \
+            --end-date $endless_date \
+            --key-type Symmetric \
+            --key-usage Sign \
+            --key-value "$AZURE_CLIENT_SECRET" \
             --query appId \
-            -o tsv)'
+            -o tsv)"
         az ad sp create --id "$AZURE_CLIENT_ID" >/dev/null
-        export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list \
-            --filter "appId eq '$AZURE_CLIENT_ID'" \
-            --query '[].id' \
-            -o tsv)'        
     else
-        echo -e "\n#### (5) Skip the E2E and tooling client ####"
+        export AZURE_CLIENT_ID="$(az ad app list \
+             --filter "displayname eq '${AAD_PREFIX}-tooling-shared'" \
+             --query '[].appId' \
+             -o tsv)"
+        echo -e "\n#### (5) Skip the E2E and tooling client with application id $AZURE_CLIENT_ID ####"
     fi
 
-    echo -e "\n#### (5-b) Set up for E2E and tooling client with Microsoft.Graph/Application.ReadWrite.OwnedBy permission  (Manuel) ####"
+    echo -e "\n#### (6) Add Microsoft.Graph/Application.ReadWrite.OwnedBy permission to E2E and tooling client $AZURE_CLIENT_ID####"
+    local ms_graph_sp_api_id="00000003-0000-0000-c000-000000000000"
+    local permission_id="$(az ad sp show \
+         --id $ms_graph_sp_api_id \
+         --query "appRoles" \
+         -o jsonc | jq -r '.[] | select(.value=="Application.ReadWrite.OwnedBy") | .id')"
+    echo -e "\n#### (6) Add premission $permission_id ####"
+    local app_premission_info="$(az ad app permission list --id fb194a8e-da8a-4b15-8c1e-ef49b98987dc 2>/dev/null)" 
+    if [ "${client_identity_info}" == "[]" ]; then
+        az ad app permission add \
+            --id $AZURE_CLIENT_ID \
+            --api $ms_graph_sp_api_id \
+            --api-permissions $permission_id=Role
+        echo -e "\n#### Grant premission $permission_id ####"
+        az ad app permission grant \
+            --id $AZURE_CLIENT_ID \
+            --api $ms_graph_sp_api_id
+        # TODO: I can't grant without Admin premission
+        echo -e "\n#### Admin-consent premission $permission_id ####"
+        az ad app permission admin-consent \
+            --id $AZURE_CLIENT_ID
+    else
+         echo -e "\n#### (6) Skip adding Microsoft.Graph/Application.ReadWrite.OwnedBy permission ####"
+    fi
 
-    echo -e "\n#### (6) Set up the RP role definitions and subscription role assignments at ${location} ####"
-    echo -e "\n#### (6) No verification ####"
-    az deployment sub create \
-        -l ${location} \
-        --template-file pkg/deploy/assets/rbac-development.json \
-        --parameters \
-            "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].id' -o tsv)" \
-            "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)" \
-            "fpRoleDefinitionId"="$(uuidgen)" \
-            "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)" \
-         >/dev/null
-    
-    echo -e "\n#### (7) Fake up the portal client ${prefix}-portal-shared ####"
-    portal_client_info=$(az ad app list --display-name  ${prefix}-portal-shared 2>/dev/null)
+    echo -e "\n#### (7) Set up the RP role definitions and subscription role assignments at ${location} ####"
+    # Check if the subscription deployment exists
+    local rbac_dev_deployment="$AAD_PREFIX-rbac-development"
+    deployment_info="$(az deployment sub show --name $rbac_dev_deployment 2>/dev/null)"
+    provisioning_state="$(jq -r '.properties.provisioningState' <<< "${deployment_info}")"
+    if [ ! -z "${deployment_info}" ] && [[ "${provisioning_state}" == "Succeeded" ]]; then
+        echo "🟢📦 Deployment '$rbac_dev_deployment' in the subscription has been provisioned successfully."
+        echo -e "\n#### (7) Skip subscription deployment creatin ####"
+    else
+        echo "Create deployment '$rbac_dev_deployment' in the subscription."
+        az deployment sub create \
+            --location ${location} \
+            --name "$rbac_dev_deployment" \
+            --template-file pkg/deploy/assets/rbac-development.json \
+            --parameters \
+                "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].id' -o tsv)" \
+                "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)" \
+                "fpRoleDefinitionId"="$(uuidgen)" \
+                "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)" \
+            >/dev/null
+    fi  
+
+    echo -e "\n#### (8) Fake up the portal client ${AAD_PREFIX}-portal-shared ####"
+    local portal_client_info="$(az ad app list --display-name  ${AAD_PREFIX}-portal-shared 2>/dev/null)"
     if [ "${portal_client_info}" == "[]" ]; then
-        echo -e "\n#### (7) Fake up the portal client ####"
+        echo -e "\n#### (8) Fake up the portal client ####"
         export AZURE_PORTAL_CLIENT_ID="$(az ad app create \
-            --display-name ${prefix}-portal-shared \
+            --display-name ${AAD_PREFIX}-portal-shared \
             --query appId \
             -o tsv)"
 
-        OBJ_ID="$(az ad app show --id $AZURE_PORTAL_CLIENT_ID --query id -o tsv)"
+        obj_id="$(az ad app show --id $AZURE_PORTAL_CLIENT_ID --query id -o tsv)"
 
         az rest --method PATCH \
-            --uri "https://graph.microsoft.com/v1.0/applications/$OBJ_ID" \
+            --uri "https://graph.microsoft.com/v1.0/applications/$obj_id" \
             --headers 'Content-Type=application/json' \
             --body '{"web":{"redirectUris":["https://locahlost:8444/callback"]}}'
 
@@ -191,7 +236,11 @@ aad_applications() {
             --id "$AZURE_PORTAL_CLIENT_ID" \
             --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
     else
-        echo -e "\n#### (7) Skip the portal client ####"
+        export AZURE_PORTAL_CLIENT_ID="$(az ad app list \
+             --filter "displayname eq '${AAD_PREFIX}-portal-shared'" \
+             --query '[].appId' \
+             -o tsv)"
+        echo -e "\n#### (8) Skip the portal client with application id $AZURE_PORTAL_CLIENT_ID ####"
     fi
     echo "Finish aad_applications"
 }
@@ -254,46 +303,31 @@ env_file(){
     local azure_tenant_id=$(az account show --query tenantId -o tsv)
     local azure_subscription_id=$(az account show --query id -o tsv)
 
-    # local azure_tenant_id="abcd1"
-    # local azure_subscription_id="abcd2"
-    local azure_arm_client_id="abcd3"
-    local azure_fp_client_id="abcd4"
-    local azure_fp_service_principal_id="abcd5"
-    local azure_portal_client_id="abcd14"
-    # local admin_object_id="abcd6"
-    local azure_client_id="abcd7"
-    local azure_service_principal_id="abcd8"
-    local azure_client_secret="abcd9"
-    local azure_rp_client_id="abcd15"
-    local azure_rp_client_secret="abcd10"
-    local azure_gateway_client_id="abcd11"
-    local azure_gateway_service_principal_id="abcd12"
-    local azure_gateway_client_secret="abcd13"
-    # TODO: How to get the USER_PULL_SECRET 
+    # TODO: How to get the PULL_SECRET - We can pass it to the container...
+    # TODO: How to get the USER_PULL_SECRET
 
     echo -e "#### (1) Generate SSH key for VMSS access ####\n"
     ssh-keygen -t rsa -N "" -f secrets/full_rp_id_rsa
     echo -e "#### (2) Create the secrets/env file ####\n"
     # use a unique prefix for Azure resources when it is set, otherwise use your user's name
     cat >secrets/env <<EOF
-    export AZURE_PREFIX='${AZURE_PREFIX:-$USER}'
     export ADMIN_OBJECT_ID='$admin_object_id'
     export AZURE_TENANT_ID='$azure_tenant_id'
     export AZURE_SUBSCRIPTION_ID='$azure_subscription_id'
-    export AZURE_ARM_CLIENT_ID='$azure_arm_client_id'
-    export AZURE_FP_CLIENT_ID='$azure_fp_client_id'
-    export AZURE_FP_SERVICE_PRINCIPAL_ID='$azure_fp_service_principal_id'
-    export AZURE_PORTAL_CLIENT_ID='$azure_portal_client_id'
+    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
+    export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
+    export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)'
+    export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
     export AZURE_PORTAL_ACCESS_GROUP_IDS='$admin_object_id'
     export AZURE_PORTAL_ELEVATED_GROUP_IDS='$admin_object_id'
-    export AZURE_CLIENT_ID='$azure_client_id'
-    export AZURE_SERVICE_PRINCIPAL_ID='$azure_service_principal_id'
-    export AZURE_CLIENT_SECRET='$azure_client_secret'
-    export AZURE_RP_CLIENT_ID='$azure_rp_client_id'
-    export AZURE_RP_CLIENT_SECRET='$azure_rp_client_secret'
-    export AZURE_GATEWAY_CLIENT_ID='$azure_gateway_client_id'
-    export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$azure_gateway_service_principal_id'
-    export AZURE_GATEWAY_CLIENT_SECRET='$azure_gateway_client_secret'
+    export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
+    export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)'
+    export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
+    export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'
+    export AZURE_RP_CLIENT_SECRET='$AZURE_RP_CLIENT_SECRET'
+    export AZURE_GATEWAY_CLIENT_ID='$AZURE_GATEWAY_CLIENT_ID'
+    export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)'
+    export AZURE_GATEWAY_CLIENT_SECRET='$AZURE_GATEWAY_CLIENT_SECRET'
     export RESOURCEGROUP='$resourcegroup_prefix-\$LOCATION'
     export PROXY_HOSTNAME='vm0.$proxy_domain_name_label.\$LOCATION.cloudapp.azure.com'
     export DATABASE_NAME='\$AZURE_PREFIX'
@@ -312,7 +346,7 @@ env_file(){
     export SSH_PUBLIC_KEY='secrets/full_rp_id_rsa.pub'
 EOF
     # export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$AZURE_GATEWAY_SERVICE_PRINCIPAL_ID'
-    echo -e "#### (4) Upload the secrets/env file to the storage account ####\n"
+    echo -e "#### (3) Upload the secrets/env file to the storage account ####\n"
     make secrets-update
     echo "Finish env_file"
 }
@@ -325,10 +359,8 @@ deploy_shared_rp(){
     local parent_domain_resourcegroup=${2?$err_str}
     local resourcegroup_prefix=${3?$err_str}
     local proxy_domain_name_label=${4?$err_str}
-    echo -e "#### (1) Tweak and source your environment file - Not sure it is needed ####\n"
-    # cp env.example env
-    # vi env
-    # . ./env
+    echo -e "#### (1) Source environment files - Not sure it is needed ####\n"
+    source env.example
 
     echo -e "#### (2) Create AzSecPack managed Identity - Manuel? ####\n"
     # This step is required for 'deploy_env_dev' -  https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/234249/AzSecPack-AutoConfig-UserAssigned-Managed-Identity
@@ -374,6 +406,30 @@ deploy_shared_rp(){
     echo "Finish deploy_shared_rp"
 
 }
+
+clean_aad_applications() {
+    # Clean 6 AAD applications and 5 SPs
+    echo "Clean AAD applications"
+    app_names=("arm" "fp" "rp" "gateway" "tooling" "portal")
+    for app_name in ${app_names[@]}; do
+        full_app_name="$AAD_PREFIX-$app_name-shared"
+        app_info="$(az ad app list --display-name $full_app_name 2>/dev/null)"
+        if [ "${app_info}"  != "[]" ]; then
+            # app_id="$(az ad app list --display-name $full_app_name --query '[].id' -o tsv)"
+            app_id="$(az ad app list --display-name $full_app_name --query '[].appId' -o tsv)"
+            echo "❌📦 delete AAD application with name '$full_app_name' and application ID `$app_id`"
+            az ad app delete --id $app_id
+            sp_info="$(az ad sp list --filter "appId eq $app_id" 2>/dev/null)"
+            if [[ $app_name != "portal" && "${sp_info}"  != "[]" ]]; then
+                sp_id="$(az ad sp list --filter "appId eq $app_id" --query '[].id' -o tsv)"
+                echo "❌📦 delete AAD SP id with object ID `$sp_id`"
+                az ad sp delete --id $sp_id
+            fi
+        fi
+    done
+    echo "Finish clean_aad_applications"
+}
+
 
 certificate_rotation(){
     # Certificate Rotation

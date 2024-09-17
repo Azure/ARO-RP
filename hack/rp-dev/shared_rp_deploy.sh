@@ -12,6 +12,8 @@ main () {
     local parent_domain_resourcegroup="global-infra-${prefix}" # usually dns
     source hack/devtools/rp_dev_helper.sh
     echo -e "#### Running Shared RP Automation in Container ####\n"
+    export AAD_PREFIX="aro-v4-${prefix}"
+    # clean_aad_applications
     prerequisites ${secret_sa_account_name} ${prefix} ${location} ${parent_domain_resourcegroup}
 
     # Should we use e2esecretstorage or  rharosecretsdev?
@@ -24,10 +26,7 @@ main () {
     # proxy hostname will be of the form vm0.$PROXY_DOMAIN_NAME_LABEL.$LOCATION.cloudapp.azure.com.
     env_file ${secret_sa_account_name} ${parent_domain_resourcegroup} ${resourcegroup_prefix} ${proxy_domain_name_label}
     ls secrets/*
-    # ls secrets/vpn-*.ovpn
 }
 
 main "$@"
 # cleanup
-# az ad sp delete --id 12d31286-4cf3-40f7-851a-e562c6043f82 && az ad sp delete --id 8df991ab-b3b9-4a5d-a940-0b34e50a8310
-# az ad app delete --id 18f90d02-dea2-4495-9db8-3832898ebb11 && az ad app delete --id ef71dbb7-7f74-4723-a6b7-c4d945992d69

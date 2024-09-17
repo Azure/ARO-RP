@@ -4,7 +4,7 @@ FROM registry.access.redhat.com/ubi8/toolbox:8.10
 USER root 
 
 RUN dnf install https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm -y \
-    && dnf install jq azure-cli make -y \
+    && dnf install jq azure-cli make openssl -y \
     && dnf clean all -y
 
 # Copy the Go Modules manifests for detecting Go version
