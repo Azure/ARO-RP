@@ -192,3 +192,61 @@ func TestClusterMsiResourceId(t *testing.T) {
 		})
 	}
 }
+
+func TestHasUserAssignedIdentities(t *testing.T) {
+	mockGuid := "00000000-0000-0000-0000-000000000000"
+	clusterRGName := "aro-cluster"
+	miName := "aro-cluster-msi"
+	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+
+	tests := []struct {
+		name       string
+		oc         *OpenShiftCluster
+		wantResult bool
+	}{
+		{
+			name:       "false - cluster doc has nil Identity",
+			oc:         &OpenShiftCluster{},
+			wantResult: false,
+		},
+		{
+			name: "false - cluster doc has non-nil Identity but nil Identity.UserAssignedIdentities",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{},
+			},
+			wantResult: false,
+		},
+		{
+			name: "false - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{},
+				},
+			},
+			wantResult: false,
+		},
+		{
+			name: "true",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						miResourceId: ClusterUserAssignedIdentity{},
+					},
+				},
+			},
+			wantResult: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			got := tt.oc.HasUserAssignedIdentities()
+			if got != tt.wantResult {
+				t.Error(fmt.Errorf("got != want: %v != %v", got, tt.wantResult))
+			}
+		})
+	}
+}

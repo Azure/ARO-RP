@@ -359,7 +359,7 @@ func (m *manager) deleteGateway(ctx context.Context) error {
 func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 	// The cluster MSI may have been deleted prior to cluster deletion. If that's the case
 	// we will have already deleted the certificate.
-	if m.doc.OpenShiftCluster.Identity == nil || m.doc.OpenShiftCluster.Identity.UserAssignedIdentities == nil || len(m.doc.OpenShiftCluster.Identity.UserAssignedIdentities) == 0 {
+	if !m.doc.OpenShiftCluster.HasUserAssignedIdentities() {
 		m.log.Warning("skipping cluster MSI certificate deletion because cluster MSI has already been deleted")
 		return nil
 	}
