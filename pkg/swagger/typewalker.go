@@ -170,7 +170,7 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 			if field.Name() == "proxyResource" {
 				s.AllOf = []Schema{
 					{
-						Ref: "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource",
+						Ref: "../../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource",
 					},
 				}
 			}
