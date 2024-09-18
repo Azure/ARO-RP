@@ -19,7 +19,7 @@ RUN curl -Lq $DOWNLOAD_URL | tar -xz --strip-components=1
 RUN go build -mod vendor -a -ldflags "-X github.com/open-policy-agent/gatekeeper/pkg/version.Version=$GATEKEEPER_VERSION" -o manager
 
 #### Runtime container
-FROM ${REGISTRY}/ubi8/ubi-minimal:latest
+FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0-nonroot@sha256:92275882d3b3f18da5ed51ab0b3bf0c5e5255390fe86f00414fca5007c377a11
 
 ENV USER_UID=1001 \
     USER_NAME=guardrails-operator

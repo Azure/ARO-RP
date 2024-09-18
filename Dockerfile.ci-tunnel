@@ -21,7 +21,7 @@ COPY pkg pkg
 # build
 RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./hack/tunnel
 
-FROM ${REGISTRY}/ubi8/ubi-minimal AS final
+FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0-nonroot@sha256:92275882d3b3f18da5ed51ab0b3bf0c5e5255390fe86f00414fca5007c377a11 AS final
 RUN microdnf update && microdnf clean all
 COPY --from=builder /app/tunnel /usr/local/bin/
 ENTRYPOINT ["tunnel"]

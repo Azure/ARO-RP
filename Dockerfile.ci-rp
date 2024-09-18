@@ -67,7 +67,7 @@ LABEL stage="rp-build-cache-layer"
 ###############################################################################
 # Stage 3: final is our slim image with minimal layers and tools
 ###############################################################################
-FROM ${REGISTRY}/ubi8/ubi-minimal AS final
+FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0-nonroot@sha256:92275882d3b3f18da5ed51ab0b3bf0c5e5255390fe86f00414fca5007c377a11 AS final
 LABEL aro-final=true
 RUN microdnf update && microdnf clean all
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
