@@ -155,3 +155,10 @@ Make sure that `PKG_CONFIG_PATH` contains the pkgconfig files of the above packa
     git config --global github.user <<user_name>>
     ```
 
+# Troubleshooting
+
+- Error`./env:.:11: no such file or directory: secrets/env`.
+To resolve, run `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets`.
+
+- `az -v` does not return `aro` as dependency.
+To resolve, make sure it is being used the `env` file parameters as per the `env.example`
