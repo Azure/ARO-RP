@@ -368,6 +368,46 @@
                 }
             },
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/MaintenanceManifests')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "MaintenanceManifests",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'MaintenanceManifests')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/MaintenanceManifests/renewLease')]",
+            "properties": {
+                "resource": {
+                    "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "id": "renewLease",
+                    "triggerOperation": "All",
+                    "triggerType": "Pre"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
         }
     ]
 }
