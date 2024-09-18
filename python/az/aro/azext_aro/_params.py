@@ -162,8 +162,8 @@ def load_arguments(self, _):
                    validator=validate_platform_workload_identities(isCreate=False),
                    action=AROPlatformWorkloadIdentityAddAction, nargs='+')
         c.argument('upgradeable_to', arg_group='Identity', options_list=['--upgradeable-to'],
-        help='OpenShift version to upgrade/update to.', is_preview=True,
-        validator=validate_upgradeable_to_format)
+                   help='OpenShift version to upgrade to.', is_preview=True,
+                   validator=validate_upgradeable_to_format)
 
     with self.argument_context('aro get-admin-kubeconfig') as c:
         c.argument('file',

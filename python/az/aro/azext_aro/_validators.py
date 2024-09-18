@@ -41,6 +41,7 @@ def validate_cidr(key):
 def validate_client_id(namespace):
     if namespace.client_id is None:
         return
+    raise RequiredArgumentMissingError('--client-id must be not set with --upgradeable-to.') # pylint: disable=line-too-long
     if namespace.enable_managed_identity is True:
         raise MutuallyExclusiveArgumentError('Must not specify --client-id when --enable-managed-identity is True')  # pylint: disable=line-too-long
     if namespace.platform_workload_identities is not None:
@@ -59,6 +60,7 @@ def validate_client_secret(isCreate):
     def _validate_client_secret(namespace):
         if namespace.client_secret is None:
             return
+        raise RequiredArgumentMissingError('--client-secret must be not set with --upgradeable-to.') # pylint: disable=line-too-long
         if namespace.enable_managed_identity is True:
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --enable-managed-identity is True')  # pylint: disable=line-too-long
         if namespace.platform_workload_identities is not None:
@@ -292,8 +294,6 @@ def validate_upgradeable_to_format(namespace):
         return
     if not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.upgradeable_to):
         raise InvalidArgumentValueError('--upgradeable-to is invalid')
-    if namespace.client_secret is not None or namespace.client_id is not None:
-        raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
 
 def validate_load_balancer_managed_outbound_ip_count(namespace):
     if namespace.load_balancer_managed_outbound_ip_count is None:
