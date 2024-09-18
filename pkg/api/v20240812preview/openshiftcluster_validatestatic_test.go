@@ -43,7 +43,19 @@ const (
 )
 
 var (
-	subscriptionID = "00000000-0000-0000-0000-000000000000"
+	subscriptionID    = "00000000-0000-0000-0000-000000000000"
+	platformIdentity1 = PlatformWorkloadIdentity{
+		OperatorName: "FAKE-OPERATOR",
+		ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+	}
+	platformIdentity2 = PlatformWorkloadIdentity{
+		OperatorName: "ANOTHER-FAKE-OPERATOR",
+		ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name-two",
+	}
+	clusterIdentity1 = ClusterUserAssignedIdentity{
+		ClientID:    "11111111-1111-1111-1111-111111111111",
+		PrincipalID: "SOMETHING",
+	}
 )
 
 func getResourceID(clusterName string) string {
@@ -1234,10 +1246,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
-						{
-							OperatorName: "FAKE-OPERATOR",
-							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
-						},
+						platformIdentity1,
 					},
 				}
 				oc.Identity = &Identity{
@@ -1288,10 +1297,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Properties.ServicePrincipalProfile = nil
 				oc.Identity = &Identity{
 					UserAssignedIdentities: UserAssignedIdentities{
-						"first": {
-							ClientID:    "11111111-1111-1111-1111-111111111111",
-							PrincipalID: "SOMETHING",
-						},
+						"first": clusterIdentity1,
 					},
 				}
 			},
@@ -1302,18 +1308,12 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
-						{
-							OperatorName: "FAKE-OPERATOR",
-							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
-						},
+						platformIdentity1,
 					},
 				}
 				oc.Identity = &Identity{
 					UserAssignedIdentities: UserAssignedIdentities{
-						"first": {
-							ClientID:    "11111111-1111-1111-1111-111111111111",
-							PrincipalID: "SOMETHING",
-						},
+						"first": clusterIdentity1,
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{
@@ -1328,10 +1328,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Identity = &Identity{
 					UserAssignedIdentities: UserAssignedIdentities{
-						"first": {
-							ClientID:    "11111111-1111-1111-1111-111111111111",
-							PrincipalID: "SOMETHING",
-						},
+						"first": clusterIdentity1,
 					},
 				}
 			},
@@ -1371,10 +1368,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Identity = &Identity{
 					UserAssignedIdentities: UserAssignedIdentities{
-						"first": {
-							ClientID:    "11111111-1111-1111-1111-111111111111",
-							PrincipalID: "SOMETHING",
-						},
+						"first": clusterIdentity1,
 					},
 				}
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
@@ -1426,7 +1420,182 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			},
 			wantErr: `400: InvalidParameter: properties.platformWorkloadIdentityProfile.UpgradeableTo[16.107.invalid]: UpgradeableTo must be a valid OpenShift version in the format 'x.y.z'.`,
 		},
+		{
+			name: "invalid duplicate identity",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+						{
+							OperatorName: platformIdentity1.OperatorName,
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name-three",
+						},
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identities cannot have duplicate names.",
+		},
+	}
+
+	updateTests := []*validateTest{
+		{
+			name: "addition of operator identity",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = append(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities, platformIdentity2)
+			},
+		},
+		{
+			name: "invalid change of operator identity name",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].OperatorName = "FAKE-OPERATOR-OTHER"
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity cannot be removed or have its name changed.",
+		},
+		{
+			name: "invalid change of operator identity resource ID",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].ResourceID = platformIdentity2.ResourceID
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity resource ID cannot be changed.",
+		},
+		{
+			name: "change of operator identity order",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+						platformIdentity2,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = []PlatformWorkloadIdentity{
+					platformIdentity2,
+					platformIdentity1,
+				}
+			},
+		},
+		{
+			name: "invalid change of operator identity name and resource ID",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].OperatorName = platformIdentity2.OperatorName
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].ResourceID = platformIdentity2.ResourceID
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity cannot be removed or have its name changed.",
+		},
+		{
+			name: "invalid removal of identity",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+						platformIdentity2,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = []PlatformWorkloadIdentity{
+					platformIdentity1,
+				}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity cannot be removed or have its name changed.",
+		},
+		{
+			name: "invalid duplicate identity",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						platformIdentity1,
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = append(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities,
+					PlatformWorkloadIdentity{
+						OperatorName: platformIdentity1.OperatorName,
+						ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name-three",
+					})
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identities cannot have duplicate names.",
+		},
 	}
 
 	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeUpdate, updateTests)
 }

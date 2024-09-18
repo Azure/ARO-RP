@@ -41,6 +41,11 @@ type OpenShiftCluster struct {
 	Identity *Identity `json:"identity,omitempty"`
 }
 
+// UsesWorkloadIdentity checks whether a cluster is a Workload Identity cluster or a Service Principal cluster
+func (oc *OpenShiftCluster) UsesWorkloadIdentity() bool {
+	return oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.ServicePrincipalProfile == nil
+}
+
 // Tags represents an OpenShift cluster's tags.
 type Tags map[string]string
 
