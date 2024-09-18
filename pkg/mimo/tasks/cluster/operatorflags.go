@@ -6,11 +6,12 @@ package cluster
 import (
 	"context"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
 // UpdateClusterOperatorFlags updates the OperatorFlags object in the ARO
