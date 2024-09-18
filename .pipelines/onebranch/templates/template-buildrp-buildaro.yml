@@ -1,5 +1,13 @@
 steps:
   - task: Bash@3
+    displayName: Add GOBIN to PATH
+    inputs:
+      targetType: inline
+      script: |
+        export GOPATH=$(Agent.TempDirectory)
+        echo "##vso[task.prependpath]$(go env GOPATH)/bin"
+      workingDirectory: $(Build.SourcesDirectory)
+  - task: Bash@3
     displayName: ⚙️ Make ARO
     inputs:
       targetType: inline
