@@ -397,6 +397,18 @@ ci-clean:
 	podman $(PODMAN_REMOTE_ARGS) \
 	    image prune --all --filter="label=aro-*=true"
 
+.PHONY: quick-rp
+quick-rp: fix-macos-vendor
+	podman $(PODMAN_REMOTE_ARGS) \
+		build . \
+		-f Dockerfile.ci-rp \
+		--ulimit=nofile=4096:4096 \
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=false \
+		--target=quick-build \
+		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
+
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
 	podman $(PODMAN_REMOTE_ARGS) \
@@ -460,7 +472,7 @@ podman-secrets: aks.kubeconfig
 	podman $(PODMAN_REMOTE_ARGS) secret create proxy.crt ./secrets/proxy.crt
 
 .PHONY: run-portal
-run-portal: ci-rp podman-secrets
+run-portal: podman-secrets
 	podman $(PODMAN_REMOTE_ARGS) \
 		run \
 		--name aro-portal \
@@ -490,7 +502,7 @@ run-portal: ci-rp podman-secrets
 # run-rp executes the RP locally as similarly as possible to production. That
 # includes the use of Hive, meaning you need a VPN connection.
 .PHONY: run-rp
-run-rp: ci-rp podman-secrets
+run-rp: podman-secrets
 	podman $(PODMAN_REMOTE_ARGS) \
 		run \
 		--name aro-rp \
