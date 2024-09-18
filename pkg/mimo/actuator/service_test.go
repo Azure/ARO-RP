@@ -100,7 +100,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 
 		svc = NewService(_env, log, nil, dbg, m)
 		svc.now = now
-
+		svc.serveHealthz = false
 	})
 
 	JustBeforeEach(func() {
@@ -249,5 +249,4 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
 		})
 	})
-
 })

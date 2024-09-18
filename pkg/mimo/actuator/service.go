@@ -5,6 +5,10 @@ package actuator
 
 import (
 	"context"
+	"errors"
+	"log"
+	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -12,6 +16,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -51,6 +56,8 @@ type service struct {
 	now      func() time.Time
 
 	sets map[string]sets.MaintenanceSet
+
+	serveHealthz bool
 }
 
 type actuatorDBs interface {
@@ -73,6 +80,8 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		startTime: time.Now(),
 		now:       time.Now,
 		pollTime:  time.Minute,
+
+		serveHealthz: true,
 	}
 
 	s.b = buckets.NewBucketWorker(log, s.worker, &s.mu)
@@ -86,6 +95,43 @@ func (s *service) SetMaintenanceSets(sets map[string]sets.MaintenanceSet) {
 
 func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+
+	// Only enable the healthz endpoint if configured (disabled in unit tests)
+	if s.serveHealthz {
+		c := &healthz.Handler{
+			Checks: map[string]healthz.Checker{
+				"ready": func(h *http.Request) error {
+					if !s.checkReady() {
+						return errors.New("not ready")
+					}
+					return nil
+				},
+			},
+		}
+
+		m := http.NewServeMux()
+		m.Handle("/healthz", http.StripPrefix("/healthz", c))
+		// Handle healthz subpaths
+		m.Handle("/healthz/", http.StripPrefix("/healthz", c))
+
+		h := &http.Server{
+			Handler:     m,
+			ErrorLog:    log.New(s.baseLog.Writer(), "", 0),
+			BaseContext: func(net.Listener) context.Context { return ctx },
+		}
+
+		listener, err := s.env.Listen()
+		if err != nil {
+			return err
+		}
+
+		go func() {
+			err := h.Serve(listener)
+			if err != http.ErrServerClosed {
+				s.baseLog.Error(err)
+			}
+		}()
+	}
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
@@ -196,8 +242,13 @@ func (s *service) checkReady() bool {
 	if !ok {
 		return false
 	}
-	return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
-		(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
+
+	if s.env.IsLocalDevelopmentMode() {
+		return (time.Since(lastChangefeedTime) < time.Minute) // did we update our list of clusters recently?
+	} else {
+		return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
+			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
+	}
 }
 
 func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
