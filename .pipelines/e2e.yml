@@ -70,6 +70,8 @@ jobs:
 
       - script: |
           export CI=true
+          # Tell the E2E binary to run the MIMO tests
+          export CI_E2E_MIMO=true
           . secrets/env
           . ./hack/e2e/run-rp-and-e2e.sh
 
@@ -83,6 +85,9 @@ jobs:
 
           run_selenium
           validate_selenium_running
+
+          run_mimo_actuator
+          validate_mimo_actuator_running
 
           run_rp
           validate_rp_running
@@ -128,6 +133,7 @@ jobs:
 
           delete_e2e_cluster
           kill_rp
+          kill_mimo_actuator
           kill_selenium
           kill_podman
           kill_vpn
