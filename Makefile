@@ -199,6 +199,10 @@ proxy:
 runlocal-portal:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
+.PHONY: runlocal-actuator
+runlocal-actuator:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro mimo-actuator
+
 .PHONY: build-portal
 build-portal:
 	cd portal/v2 && npm install && npm run build
