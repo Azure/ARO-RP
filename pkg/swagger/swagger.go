@@ -232,7 +232,7 @@ func Run(api, outputDir string) error {
 		if !slices.Contains(proxyResources, azureResource) {
 			s.Definitions[azureResource].AllOf = []Schema{
 				{
-					Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
+					Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
 				},
 			}
 		} else {
@@ -309,7 +309,7 @@ func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
 				Schema: &Schema{
 					ReadOnly:    true,
 					Description: "The system meta data relating to this resource.",
-					Ref:         "../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
+					Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
 				},
 			})
 	}
