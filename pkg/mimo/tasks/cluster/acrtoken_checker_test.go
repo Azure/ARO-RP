@@ -84,13 +84,13 @@ func TestEnsureACRToken(t *testing.T) {
 							{
 								Name:      intACR,
 								Username:  user,
-								IssueDate: &date.Time{Time: time.Date(2024, 1, 9, 0, 0, 0, 0, time.UTC)},
+								IssueDate: &date.Time{Time: time.Now().AddDate(0, 0, -100)},
 							},
 						},
 					},
 				}
 			},
-			wantErr: "TerminalError: azure container registry (acr) token has expired, 252 days have passed",
+			wantErr: "TerminalError: azure container registry (acr) token has expired, 100 days have passed",
 		},
 		{
 			name:     "Should rotate token",
