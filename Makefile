@@ -407,12 +407,12 @@ ci-rp: fix-macos-vendor
 		--no-cache=$(NO_CACHE) \
 		--target=builder \
 		-t $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)
+
 	docker build . $(DOCKER_BUILD_CI_ARGS) \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
-		--cache-from=$(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION) \
 		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
 
 	# Extract test coverage files from build to local filesystem
@@ -420,6 +420,7 @@ ci-rp: fix-macos-vendor
 	docker cp extract_cover_out:/app/report.xml ./report.xml; \
 	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
 	docker rm extract_cover_out;
+
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
