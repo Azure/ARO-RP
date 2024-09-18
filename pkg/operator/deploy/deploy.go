@@ -9,6 +9,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -107,6 +108,8 @@ type deploymentData struct {
 	Version                      string
 	IsLocalDevelopment           bool
 	SupportsPodSecurityAdmission bool
+	UsesWorkloadIdentity         bool
+	TokenVolumeMountPath         string
 }
 
 func (o *operator) SetForceReconcile(ctx context.Context, enable bool) error {
@@ -177,12 +180,19 @@ func (o *operator) createDeploymentData(ctx context.Context) (deploymentData, er
 		return deploymentData{}, err
 	}
 
-	return deploymentData{
+	data := deploymentData{
 		IsLocalDevelopment:           o.env.IsLocalDevelopmentMode(),
 		Image:                        image,
 		SupportsPodSecurityAdmission: usePodSecurityAdmission,
 		Version:                      version,
-	}, nil
+	}
+
+	if o.oc.UsesWorkloadIdentity() {
+		data.UsesWorkloadIdentity = o.oc.UsesWorkloadIdentity()
+		data.TokenVolumeMountPath = filepath.Dir(pkgoperator.OperatorTokenFile)
+	}
+
+	return data, nil
 }
 
 func (o *operator) createObjects(ctx context.Context) ([]kruntime.Object, error) {
