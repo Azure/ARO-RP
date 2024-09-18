@@ -3,7 +3,7 @@
 set -xe
 
 # check if we can build and have built a valid FIPS-compatible binary
-res=$(fips-detect ${1} -j)
+res=$($FIPS_DETECT ${1} -j)
 
 binary=$(echo $res | gojq -r '.goBinaryFips.value')
 lib=$(echo $res | gojq -r '.cryptoLibFips.value')
