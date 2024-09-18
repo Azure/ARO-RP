@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	. "github.com/onsi/gomega"
 
+	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,7 +45,7 @@ func TestOperatorFlags(t *testing.T) {
 			name: "not ready",
 			objects: []runtime.Object{
 				&arov1alpha1.Cluster{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:            arov1alpha1.SingletonClusterName,
 						ResourceVersion: "1000",
 					},
@@ -58,11 +58,11 @@ func TestOperatorFlags(t *testing.T) {
 			},
 			wantObjects: []runtime.Object{
 				&arov1alpha1.Cluster{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:            arov1alpha1.SingletonClusterName,
 						ResourceVersion: "1001",
 					},
-					TypeMeta: v1.TypeMeta{
+					TypeMeta: metav1.TypeMeta{
 						Kind:       "Cluster",
 						APIVersion: arov1alpha1.SchemeGroupVersion.String(),
 					},
@@ -119,7 +119,7 @@ func TestOperatorFlags(t *testing.T) {
 					g.Expect(err).ToNot(HaveOccurred())
 
 					r := deep.Equal(i, o)
-					g.Expect(r).To(HaveLen(0))
+					g.Expect(r).To(BeEmpty())
 				}
 			}
 		})
