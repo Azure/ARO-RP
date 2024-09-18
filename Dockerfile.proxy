@@ -11,7 +11,7 @@ COPY . /app
 RUN make proxy
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0-nonroot@sha256:92275882d3b3f18da5ed51ab0b3bf0c5e5255390fe86f00414fca5007c377a11
-RUN microdnf update && microdnf clean all
+# RUN microdnf update && microdnf clean all
 COPY --from=builder /app/proxy /usr/local/bin/
 ENTRYPOINT ["proxy"]
 EXPOSE 8443/tcp
