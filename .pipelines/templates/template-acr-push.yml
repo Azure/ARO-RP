@@ -2,18 +2,10 @@
 # We cannot use the simpler Docker@2 push command because MSI does not support cross-tenant authentication.
 
 parameters:
-  - name: jobName
-    type: string
   - name: acrFQDN
     type: string
-  - name: repository  # This is the repository in the ACR
-    type: string
-  - name: imageRepoName
-    type: string  # The local image repository name
-  - name: imageTag
-    type: string
-  - name: dockerFilePath
-    type: string
+  - name: repository  # This is both the ACR and local repository name
+    type: string  # The local and ACR image repository name
   - name: pushLatest
     type: boolean
     default: false
@@ -40,14 +32,14 @@ steps:
         docker images
 
         # Ensure the image is available locally before tagging the build ID
-        IMAGE_NAME="${{ parameters.imageRepoName }}:$(Build.BuildId)"
+        IMAGE_NAME="${{ parameters.repository }}:$(Build.BuildId)"
         if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
           echo "Error: Image $IMAGE_NAME not found. Exiting."
           exit 1
         fi
 
         # Ensure the image is available locally before tagging 'latest'
-        IMAGE_LATEST="${{ parameters.imageRepoName }}:latest"
+        IMAGE_LATEST="${{ parameters.repository }}:latest"
         if [[ "$(docker images -q $IMAGE_LATEST 2> /dev/null)" == "" ]]; then
           echo "Warning: Image $IMAGE_LATEST not found. Skipping latest tag."
           SKIP_LATEST=true

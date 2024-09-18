@@ -130,12 +130,8 @@ stages:
           # Push the image to ACR
           - template: ./templates/template-acr-push.yml
             parameters:
-              jobName: 'Build_Test_And_Push_Az_ARO_Extension'
               acrFQDN: 'arosvcdev.azurecr.io'
               repository: 'azext-aro'
-              imageRepoName: 'azext-aro'
-              imageTag: '$(Build.BuildId),latest'
-              dockerFilePath: 'Dockerfile.ci-azext-aro'
               pushLatest: true
 
       - job: Build_Lint_Test_RP_And_Portal
@@ -169,12 +165,8 @@ stages:
           # Push the image to ACR
           - template: ./templates/template-acr-push.yml
             parameters:
-              jobName: 'Build_Lint_Test_RP_And_Portal'
               acrFQDN: 'arosvcdev.azurecr.io'
               repository: 'aro'
-              imageRepoName: 'aro'
-              imageTag: '$(Build.BuildId),latest'
-              dockerFilePath: 'Dockerfile.ci-rp'
               pushLatest: true
 
       - job: Lint_Az_ARO_Extension
