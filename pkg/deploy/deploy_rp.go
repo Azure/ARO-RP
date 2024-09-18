@@ -29,6 +29,11 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
+	globalDevopsMSI, err := d.userassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+	if err != nil {
+		return err
+	}
+
 	deploymentName := "rp-production-" + d.version
 
 	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProduction)
@@ -76,6 +81,9 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	}
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
+	}
+	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
+		Value: globalDevopsMSI.PrincipalID.String(),
 	}
 	if d.config.Configuration.CosmosDB != nil {
 		parameters.Parameters["cosmosDB"] = &arm.ParametersParameter{

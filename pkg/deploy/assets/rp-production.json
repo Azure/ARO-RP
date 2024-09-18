@@ -106,6 +106,9 @@
         "gatewayServicePrincipalId": {
             "type": "string"
         },
+        "globalDevopsServicePrincipalId": {
+            "type": "string"
+        },
         "ipRules": {
             "type": "array"
         },
@@ -1144,6 +1147,20 @@
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts/dbs', parameters('databaseAccountName'), 'ARO')]",
                 "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '00000000-0000-0000-0000-000000000002')]",
                 "principalId": "[parameters('gatewayServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('globalDevopsServicePrincipalId'), 'DocumentDB Data Contributor'))]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts/dbs', parameters('databaseAccountName'), 'ARO')]",
+                "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '00000000-0000-0000-0000-000000000002')]",
+                "principalId": "[parameters('globalDevopsServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2023-04-15",
