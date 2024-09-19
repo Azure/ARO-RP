@@ -71,7 +71,7 @@ jobs:
       - script: |
           export CI=true
           # Tell the E2E binary to run the MIMO tests
-          export CI_E2E_MIMO=true
+          export ARO_E2E_MIMO=true
           . secrets/env
           . ./hack/e2e/run-rp-and-e2e.sh
 
