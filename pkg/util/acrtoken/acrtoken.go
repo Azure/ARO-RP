@@ -82,12 +82,11 @@ func (m *manager) GetRegistryProfileFromSlice(registryProfiles []*api.RegistryPr
 }
 
 func (m *manager) NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
-	var tokenExpiration = time.Now().UTC().Add(time.Hour * HoursInADay * ACRTokenLifeInDays)
 
 	return &api.RegistryProfile{
 		Name:     fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix),
 		Username: "token-" + uuid.DefaultGenerator.Generate(),
-		IssueDate: &date.Time{Time: tokenExpiration},
+		IssueDate: &date.Time{Time: time.Now().UTC()},
 	}
 }
 

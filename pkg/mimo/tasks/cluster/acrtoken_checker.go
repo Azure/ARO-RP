@@ -44,14 +44,14 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 		issueDate := rp.IssueDate
 
 		if issueDate == nil {
-			return mimo.TerminalError(errors.New("no expiry date detected"))
+			return mimo.TerminalError(errors.New("no issue date detected"))
 		}
 
 		daysInterval := int32(now.Sub(issueDate.Time).Hours() / 24)
 
 		switch {
 		case daysInterval > daysValid:
-			return mimo.TerminalError(fmt.Errorf("azure container registry (acr) token has expired, %d days have passed", daysInterval))
+			return mimo.TerminalError(fmt.Errorf("azure container registry (acr) token is not valid, %d days have passed", daysInterval))
 		case daysInterval >= daysShouldRotate:
 			return mimo.TerminalError(fmt.Errorf("%d days have passed since azure container registry (acr) token was issued, please rotate the token now", daysInterval))
 		default:

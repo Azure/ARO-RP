@@ -26,7 +26,6 @@ const (
 
 func TestEnsureTokenAndPassword(t *testing.T) {
 	ctx := context.Background()
-	var tokenExpiration = time.Now().UTC().Add(time.Hour * 24 * 90)
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -68,7 +67,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 		tokens:     tokens,
 	}
 
-	password, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: tokenName, IssueDate: &date.Time{Time: tokenExpiration}})
+	password, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: tokenName, IssueDate: &date.Time{Time: time.Now().AddDate(0, 0, -50)}})
 	if err != nil {
 		t.Fatal(err)
 	}
