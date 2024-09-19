@@ -67,7 +67,7 @@ func TestEnsureACRToken(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "TerminalError: no expiry date detected",
+			wantErr: "TerminalError: no issue date detected",
 		},
 		{
 			name:     "Expired",
@@ -90,7 +90,7 @@ func TestEnsureACRToken(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "TerminalError: azure container registry (acr) token has expired, 100 days have passed",
+			wantErr: "TerminalError: azure container registry (acr) token is not valid, 100 days have passed",
 		},
 		{
 			name:     "Should rotate token",
