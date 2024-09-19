@@ -41,12 +41,10 @@ def validate_cidr(key):
 def validate_client_id(namespace):
     if namespace.client_id is None:
         return
-    raise RequiredArgumentMissingError('--client-id must be not set with --upgradeable-to.') # pylint: disable=line-too-long
     if namespace.enable_managed_identity is True:
         raise MutuallyExclusiveArgumentError('Must not specify --client-id when --enable-managed-identity is True')  # pylint: disable=line-too-long
     if namespace.platform_workload_identities is not None:
         raise MutuallyExclusiveArgumentError('Must not specify --client-id when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
-
     try:
         uuid.UUID(namespace.client_id)
     except ValueError as e:
@@ -54,19 +52,20 @@ def validate_client_id(namespace):
 
     if namespace.client_secret is None or not str(namespace.client_secret):
         raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')  # pylint: disable=line-too-long
+    raise RequiredArgumentMissingError('--client-id must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
 
 
 def validate_client_secret(isCreate):
     def _validate_client_secret(namespace):
         if namespace.client_secret is None:
             return
-        raise RequiredArgumentMissingError('--client-secret must be not set with --upgradeable-to.') # pylint: disable=line-too-long
         if namespace.enable_managed_identity is True:
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --enable-managed-identity is True')  # pylint: disable=line-too-long
         if namespace.platform_workload_identities is not None:
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
         if isCreate and (namespace.client_id is None or not str(namespace.client_id)):
             raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
+        raise RequiredArgumentMissingError('--client-secret must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
 
     return _validate_client_secret
 
@@ -289,11 +288,13 @@ def validate_version_format(namespace):
     if namespace.version is not None and not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
         raise InvalidArgumentValueError('--version is invalid')
 
+
 def validate_upgradeable_to_format(namespace):
     if not namespace.upgradeable_to:
         return
     if not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.upgradeable_to):
-        raise InvalidArgumentValueError('--upgradeable-to is invalid')
+        raise InvalidArgumentValueError('--upgradeable-to format is invalid')
+
 
 def validate_load_balancer_managed_outbound_ip_count(namespace):
     if namespace.load_balancer_managed_outbound_ip_count is None:

@@ -21,7 +21,8 @@ from azext_aro._validators import (
     validate_load_balancer_managed_outbound_ip_count,
     validate_enable_managed_identity,
     validate_platform_workload_identities,
-    validate_cluster_identity
+    validate_cluster_identity,
+    validate_upgradeable_to_format
 )
 from azure.cli.core.azclierror import (
     InvalidArgumentValueError, RequiredArgumentMissingError,
@@ -1276,3 +1277,51 @@ def test_validate_cluster_identity(test_description, namespace, expected_excepti
 
     if expected_identity is not None:
         assert (expected_identity == namespace.mi_user_assigned)
+
+
+test_validate_upgradeable_to_data = [
+    (
+        "should not raise any Exception because namespace.upgradeable_to is empty",
+        Mock(upgradeable_to="", client_id=None, client_secret=None),
+        None, None
+    ),
+
+    (
+        "should raise RequiredArgumentMissingError Exception because namespace.client_id is present",
+        Mock(upgradeable_to="4.14.5", client_id="client_id_456", client_secret=None),
+        RequiredArgumentMissingError, '--client-id must be not set with --upgradeable-to.'
+    ),
+
+    (
+        "should raise RequiredArgumentMissingError Exception because namespace.client_secret is present",
+        Mock(upgradeable_to="4.14.5", client_id=None, client_secret="secret_123"),
+        RequiredArgumentMissingError, '--client-secret must be not set with --upgradeable-to.'
+    ),
+
+    (
+        "should raise InvalidArgumentValueError Exception because upgradeable_to format is invalid",
+        Mock(upgradeable_to="a", client_id=None, client_secret=None),
+        InvalidArgumentValueError, "--upgradeable-to is invalid"
+    ),
+
+    (
+        "Should raise InvalidArgumentValueError when --upgradeable-to < 4.14.0",
+        Mock(upgradeable_to="4.0.4",
+             client_id=None, client_secret=None),
+        InvalidArgumentValueError, 'Enabling managed identity requires --upgradeable-to >= 4.14.z'
+    ),
+
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception, expected_exception_message",
+    test_validate_upgradeable_to_data,
+    ids=[i[0] for i in test_validate_upgradeable_to_data]
+)
+def test_validate_upgradeable_to_data(test_description, namespace, expected_exception, expected_exception_message):
+    if expected_exception is None:
+        validate_upgradeable_to_format(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_upgradeable_to_format(namespace)
