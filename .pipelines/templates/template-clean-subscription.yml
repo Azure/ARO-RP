@@ -8,8 +8,15 @@ parameters:
 
 steps:
   - script: |
+      echo "##vso[task.prependpath]$(go env GOPATH)/bin"
+    displayName: Add GOBIN to path
+    target: golang
+  - script: |
       set -e
       export GOCACHE=/tmp
+
+      # build gojq via bingo
+      source .bingo/variables.env && make -f .bingo/Variables.mk ${GOJQ}
 
       go build ./hack/clean
     displayName: Build tools
@@ -17,11 +24,13 @@ steps:
   - script: |
       set -e
 
+      source .bingo/variables.env
+
       trap 'rm -f spn.json' EXIT
       base64 -d >spn.json <<<${{ parameters.subscriptionCredentialsJSON }}
-      export AZURE_CLIENT_ID=$(jq -r .clientId <spn.json)
-      export AZURE_CLIENT_SECRET=$(jq -r .clientSecret <spn.json)
-      export AZURE_TENANT_ID=$(jq -r .tenantId <spn.json)
+      export AZURE_CLIENT_ID=$(${GOJQ} -r .clientId <spn.json)
+      export AZURE_CLIENT_SECRET=$(${GOJQ} -r .clientSecret <spn.json)
+      export AZURE_TENANT_ID=$(${GOJQ} -r .tenantId <spn.json)
 
       export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
 
