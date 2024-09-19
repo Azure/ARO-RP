@@ -129,14 +129,14 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	}
 
 	if oc.Identity != nil {
-		out.Identity = &Identity{}
-		out.Identity.Type = ResourceIdentityType(oc.Identity.Type)
-		out.Identity.UserAssignedIdentities = make(map[string]ClusterUserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
+		out.ManagedServiceIdentity = &ManagedServiceIdentity{}
+		out.ManagedServiceIdentity.Type = ManagedServiceIdentityType(oc.Identity.Type)
+		out.ManagedServiceIdentity.UserAssignedIdentities = make(map[string]UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
 		for k := range oc.Identity.UserAssignedIdentities {
-			var temp ClusterUserAssignedIdentity
+			var temp UserAssignedIdentity
 			temp.ClientID = oc.Identity.UserAssignedIdentities[k].ClientID
 			temp.PrincipalID = oc.Identity.UserAssignedIdentities[k].PrincipalID
-			out.Identity.UserAssignedIdentities[k] = temp
+			out.ManagedServiceIdentity.UserAssignedIdentities[k] = temp
 		}
 	}
 
@@ -208,14 +208,14 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 	}
 
-	if oc.Identity != nil {
-		out.Identity = &api.Identity{}
-		out.Identity.Type = api.ResourceIdentityType(oc.Identity.Type)
-		out.Identity.UserAssignedIdentities = make(map[string]api.ClusterUserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
-		for k := range oc.Identity.UserAssignedIdentities {
-			var temp api.ClusterUserAssignedIdentity
-			temp.ClientID = oc.Identity.UserAssignedIdentities[k].ClientID
-			temp.PrincipalID = oc.Identity.UserAssignedIdentities[k].PrincipalID
+	if oc.ManagedServiceIdentity != nil {
+		out.Identity = &api.ManagedServiceIdentity{}
+		out.Identity.Type = api.ManagedServiceIdentityType(oc.ManagedServiceIdentity.Type)
+		out.Identity.UserAssignedIdentities = make(map[string]api.UserAssignedIdentity, len(oc.ManagedServiceIdentity.UserAssignedIdentities))
+		for k := range oc.ManagedServiceIdentity.UserAssignedIdentities {
+			var temp api.UserAssignedIdentity
+			temp.ClientID = oc.ManagedServiceIdentity.UserAssignedIdentities[k].ClientID
+			temp.PrincipalID = oc.ManagedServiceIdentity.UserAssignedIdentities[k].PrincipalID
 			out.Identity.UserAssignedIdentities[k] = temp
 		}
 	}

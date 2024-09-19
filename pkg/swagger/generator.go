@@ -319,7 +319,7 @@ var apis = map[string]*generator{
 		examplePlatformWorkloadIdentityRoleSetListResponse: v20240812preview.ExamplePlatformWorkloadIdentityRoleSetListResponse,
 		exampleOperationListResponse:                       api.ExampleOperationListResponse,
 
-		xmsEnum:              []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType", "ResourceIdentityType"},
+		xmsEnum:              []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType", "ManagedServiceIdentityType"},
 		xmsSecretList:        []string{"kubeconfig", "kubeadminPassword", "secretResources"},
 		xmsIdentifiers:       []string{},
 		commonTypesVersion:   "v6",
