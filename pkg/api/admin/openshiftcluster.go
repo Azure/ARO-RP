@@ -24,7 +24,7 @@ type OpenShiftCluster struct {
 	Location   string                     `json:"location,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-	Identity   *Identity                  `json:"identity,omitempty"`
+	Identity   *ManagedServiceIdentity    `json:"identity,omitempty"`
 }
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
@@ -441,8 +441,8 @@ type PlatformWorkloadIdentity struct {
 	ObjectID string `json:"objectId,omitempty" swagger:"readOnly"`
 }
 
-// ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
-type ClusterUserAssignedIdentity struct {
+// UserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
+type UserAssignedIdentity struct {
 	// The ClientID of the ClusterUserAssignedIdentity resource
 	ClientID string `json:"clientId,omitempty"`
 
@@ -450,19 +450,21 @@ type ClusterUserAssignedIdentity struct {
 	PrincipalID string `json:"principalId,omitempty"`
 }
 
-// The identity type.
-type ResourceIdentityType string
+// The ManagedServiceIdentity type.
+type ManagedServiceIdentityType string
 
-// IdentityType constants
+// ManagedServiceIdentityType constants
 const (
-	IdentitySystemAssigned ResourceIdentityType = "SystemAssigned"
-	IdentityUserAssigned   ResourceIdentityType = "UserAssigned"
+	ManagedServiceIdentityNone                       ManagedServiceIdentityType = "None"
+	ManagedServiceIdentitySystemAssigned             ManagedServiceIdentityType = "SystemAssigned"
+	ManagedServiceIdentityUserAssigned               ManagedServiceIdentityType = "UserAssigned"
+	ManagedServiceIdentitySystemAssignedUserAssigned ManagedServiceIdentityType = "SystemAssigned,UserAssigned"
 )
 
-// Identity stores information about the cluster MSI(s) in a workload identity cluster.
-type Identity struct {
-	// The type of the Identity resource.
-	Type ResourceIdentityType `json:"type,omitempty"`
+// ManagedServiceIdentity stores information about the cluster MSI(s) in a workload identity cluster.
+type ManagedServiceIdentity struct {
+	// The type of the ManagedServiceIdentity resource.
+	Type ManagedServiceIdentityType `json:"type,omitempty"`
 
 	// The PrincipalID of the Identity resource.
 	PrincipalID string `json:"principalId,omitempty" swagger:"readOnly"`
@@ -470,8 +472,8 @@ type Identity struct {
 	// The TenantID provided by the MSI RP
 	TenantID string `json:"tenantId,omitempty" swagger:"readOnly"`
 
-	// A map of ClusterUserAssigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.
-	UserAssignedIdentities map[string]ClusterUserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
+	// A map of user assigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.
+	UserAssignedIdentities map[string]UserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
 }
 
 // Install represents an install process.

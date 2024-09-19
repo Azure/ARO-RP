@@ -52,7 +52,7 @@ var (
 		OperatorName: "ANOTHER-FAKE-OPERATOR",
 		ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name-two",
 	}
-	clusterIdentity1 = ClusterUserAssignedIdentity{
+	clusterIdentity1 = UserAssignedIdentity{
 		ClientID:    "11111111-1111-1111-1111-111111111111",
 		PrincipalID: "SOMETHING",
 	}
@@ -1249,8 +1249,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity1,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": {
 							ClientID:    "11111111-1111-1111-1111-111111111111",
 							PrincipalID: "SOMETHING",
@@ -1263,8 +1263,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "invalid resourceID",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": {
 							ClientID:    "11111111-1111-1111-1111-111111111111",
 							PrincipalID: "SOMETHING",
@@ -1295,8 +1295,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1311,8 +1311,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity1,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1326,8 +1326,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "cluster identity missing platform workload identity",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1359,15 +1359,15 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
-				oc.Identity = &Identity{}
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{}
 			},
 			wantErr: "400: InvalidParameter: identity: The provided cluster identity is invalid; there should be exactly one.",
 		},
 		{
 			name: "operator name missing",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1394,8 +1394,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "valid UpgradeableTo value",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"Dummy": {},
 					},
 				}
@@ -1408,8 +1408,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "invalid UpgradeableTo value",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"Dummy": {},
 					},
 				}
@@ -1432,8 +1432,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						},
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1452,8 +1452,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity1,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1471,8 +1471,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity1,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1491,8 +1491,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity1,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1512,8 +1512,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity2,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1534,8 +1534,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity1,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1556,8 +1556,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity2,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1578,8 +1578,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						platformIdentity1,
 					},
 				}
-				oc.Identity = &Identity{
-					UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{
+				oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
