@@ -49,27 +49,44 @@ COPY cmd cmd
 COPY pkg pkg
 COPY test test
 
-# Ensure JS assets are available before generating Go code
+# Copy Portal assets
 COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build
 
-# Build RP and E2E test suite bins
+# Build the RP
 RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./cmd/aro
-RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
 
-# Additional tests
+###############################################################################
+# Stage 3: Additional validations that our code is production grade
+###############################################################################
+FROM builder AS validation
+# unit tests
 RUN gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+
+# compile e2e tests
+RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
 
 # Validate FIPS
 RUN hack/fips/validate-fips.sh ./aro
 LABEL stage="rp-build-cache-layer"
 
 ###############################################################################
-# Stage 3: final is our slim image with minimal layers and tools
+# Stage -1: Target to skip validation checks run in CI. For use in local dev
+# environments only for faster feedback loops on strictly compilation.
+###############################################################################
+FROM ${REGISTRY}/ubi8/ubi-minimal AS quick-build
+COPY --from=builder /app/aro /usr/local/bin/
+ENTRYPOINT ["aro"]
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
+USER 1000
+ENV HOME=/tmp
+
+###############################################################################
+# Stage 4: final is our slim image with minimal layers and tools
 ###############################################################################
 FROM ${REGISTRY}/ubi8/ubi-minimal AS final
 LABEL aro-final=true
 RUN microdnf update && microdnf clean all
-COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+COPY --from=validation /app/aro /app/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
 USER 1000
