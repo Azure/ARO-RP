@@ -370,6 +370,7 @@ NO_CACHE ?= true
 # that service as a URL (see .pipelines/ci.yml). This should be invoked on all
 # use of `podman` in the Makefile.
 PODMAN_REMOTE_ARGS ?=
+DOCKER_BUILD_CI_ARGS ?=
 
 # Image names that will be found in the local podman image registry after build
 # (tags are always VERSION).
@@ -384,8 +385,7 @@ LOCAL_TUNNEL_IMAGE ?= aro-tunnel
 ###############################################################################
 .PHONY: ci-azext-aro
 ci-azext-aro:
-	podman $(PODMAN_REMOTE_ARGS) \
-		build . \
+	docker build . $(DOCKER_BUILD_CI_ARGS) \
 		-f Dockerfile.ci-azext-aro \
 		--platform=linux/amd64 \
 		--no-cache=$(NO_CACHE) \
@@ -399,32 +399,28 @@ ci-clean:
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	podman $(PODMAN_REMOTE_ARGS) \
-		build . \
+	docker build . $(DOCKER_BUILD_CI_ARGS) \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
 		--no-cache=$(NO_CACHE) \
+		--target=builder \
+		-t $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)
+
+	docker build . $(DOCKER_BUILD_CI_ARGS) \
+		-f Dockerfile.ci-rp \
+		--ulimit=nofile=4096:4096 \
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
 		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
 
-	# Tag the portal build image if it exists
-	@PORTAL_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=portal-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
-	if [ -n "$$PORTAL_IMAGE_ID" ]; then \
-		echo "Tagging Portal Image $$PORTAL_IMAGE_ID as $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION)"; \
-		podman $(PODMAN_REMOTE_ARGS) tag $$PORTAL_IMAGE_ID $(LOCAL_ARO_PORTAL_BUILD_IMAGE):$(VERSION); \
-	else \
-		echo "No Portal Image found with label stage=portal-build-cache-layer"; \
-	fi
+	# Extract test coverage files from build to local filesystem
+	docker create --name extract_cover_out $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
+	docker cp extract_cover_out:/app/report.xml ./report.xml; \
+	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
+	docker rm extract_cover_out;
 
-	# Tag the RP build image if it exists
-	@RP_IMAGE_ID=$(shell podman $(PODMAN_REMOTE_ARGS) image ls --filter label=stage=rp-build-cache-layer --noheading --format "{{.Id}}" | tail -n 1); \
-	if [ -n "$$RP_IMAGE_ID" ]; then \
-		echo "Tagging RP Image $$RP_IMAGE_ID as $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)"; \
-		podman $(PODMAN_REMOTE_ARGS) tag $$RP_IMAGE_ID $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
-	else \
-		echo "No RP Image found with label stage=rp-build-cache-layer"; \
-	fi
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
