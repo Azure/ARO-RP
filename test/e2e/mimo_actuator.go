@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -73,8 +72,6 @@ var _ = Describe("MIMO Actuator E2E Testing", func() {
 			http.MethodPut, "/admin"+clusterResourceID+"/maintenancemanifests",
 			url.Values{}, true, &admin.MaintenanceManifest{
 				MaintenanceSetID: mimo.OPERATOR_FLAGS_UPDATE_ID,
-				RunAfter:         1,
-				RunBefore:        int(time.Now().Add(time.Hour).Unix()),
 			}, &out)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusCreated))
