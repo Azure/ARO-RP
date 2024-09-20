@@ -5,11 +5,8 @@ package cluster
 
 import (
 	"context"
-	"net/http"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -33,10 +30,8 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azblob"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -178,48 +173,39 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
-	clientOptions := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: _env.Environment().Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
-		},
-	}
+	clientOptions := _env.Environment().ClientOptions()
 
-	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredRPTenant, &clientOptions)
+	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredRPTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armSecurityGroupsClient, err := armnetwork.NewSecurityGroupsClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armSecurityGroupsClient, err := armnetwork.NewSecurityGroupsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, msiCredential, &clientOptions)
+	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, msiCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +215,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, &clientOptions)
+	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
