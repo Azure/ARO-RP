@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -38,10 +37,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -96,16 +93,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
-	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
-	clientOptions := armsdk.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Environment().Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
-		},
-	}
+	clientOptions := environment.Environment().ClientOptions()
 
 	armOption := armsdk.ClientOptions{
 		ClientOptions: policy.ClientOptions{
@@ -118,7 +106,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
-	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(environment.SubscriptionID(), spTokenCredential, &clientOptions)
+	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}

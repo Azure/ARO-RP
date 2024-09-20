@@ -5,13 +5,16 @@ package azureclient
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 )
 
@@ -139,6 +142,19 @@ func (e *AROEnvironment) ManagedIdentityCredentialOptions() *azidentity.ManagedI
 	return &azidentity.ManagedIdentityCredentialOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: e.Cloud,
+		},
+	}
+}
+
+func (e *AROEnvironment) ClientOptions() *arm.ClientOptions {
+	roundTripper := NewCustomRoundTripper(http.DefaultTransport)
+	return &arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+			Retry: common.RetryOptions,
+			Transport: &http.Client{
+				Transport: roundTripper,
+			},
 		},
 	}
 }
