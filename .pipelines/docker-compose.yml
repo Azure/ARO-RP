@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  selenium:
+    image: selenium/standalone-chrome
+    container_name: selenium-container
+    ports:
+      - "4444:4444"
+
+  rp:
+    image: ${RP_IMAGE_ACR}/aro:${VERSION}
+    container_name: rp-container
+    depends_on:
+      - selenium
+    ports:
+      - "8443:8443"
+
+  e2e:
+    image: ${RP_IMAGE_ACR}/aro:${VERSION}
+    container_name: e2e-container
+    depends_on:
+      - rp
+    environment:
+      - CI=true
+    command: make test-e2e

@@ -1,4 +1,4 @@
-# Azure DevOps Pipeline running CI
+# Azure DevOps Pipeline running CI and E2E with Docker Compose
 
 trigger:
   branches:
@@ -122,3 +122,57 @@ stages:
               acrFQDN: 'arosvcdev.azurecr.io'
               repository: 'aro'
               pushLatest: true
+
+  # New E2E Stage with Docker Compose
+  - stage: E2E
+    dependsOn: Containerized
+    jobs:
+      - job: Run_E2E_Tests
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          # Checkout the code
+          - template: ./templates/template-checkout.yml
+
+          # Use the E2E pipeline template for Docker Compose installation
+          - template: ./templates/e2e-pipeline-template.yml
+            parameters:
+              rpImageACR: $(RP_IMAGE_ACR)
+              acrCredentialsJSON: $(acr-credentials)
+
+          # Set the RP Image ACR and Version
+          - script: |
+              export RP_IMAGE_ACR=arosvcdev.azurecr.io
+              export VERSION=$(Build.BuildId)
+            displayName: Set RP_IMAGE_ACR and VERSION
+
+          # Run Docker Compose to bring up services
+          - script: |
+              docker-compose -f docker-compose.yml up -d
+            displayName: Run Docker Compose for E2E Services
+
+          # Run E2E Tests using Docker Compose
+          - script: |
+              docker-compose exec e2e make run-e2e
+            displayName: Execute E2E Tests in Docker Compose
+
+          # Clean up Docker Compose
+          - script: |
+              docker-compose down
+            displayName: Cleanup Docker Compose
+            condition: always()
+
+          # Publish test results
+          - task: PublishTestResults@2
+            displayName: 📊 Publish E2E Test Results
+            inputs:
+              testResultsFiles: $(System.DefaultWorkingDirectory)/e2e-report.xml
+            condition: succeededOrFailed()
+
+          # Publish any additional test artifacts
+          - task: PublishBuildArtifacts@1
+            displayName: Publish E2E Test Artifacts
+            inputs:
+              pathToPublish: $(Build.ArtifactStagingDirectory)
+              artifactName: e2e-artifacts
+            condition: succeededOrFailed()

@@ -536,3 +536,26 @@ run-rp: ci-rp podman-secrets
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+
+# Run selenium using Docker
+.PHONY: run-selenium
+run-selenium:
+	docker run -d --name selenium-container selenium/standalone-chrome
+	
+# Run RP using Docker
+.PHONY: run-rp
+run-rp: run-selenium
+	docker run -d --name rp-container $(ARO_IMAGE_BASE):$(VERSION)
+
+# Run the E2E tests
+.PHONY: run-e2e
+run-e2e: run-rp
+	docker run --name e2e-container $(ARO_IMAGE_BASE):$(VERSION) make test-e2e
+
+# Clean up containers after E2E tests
+.PHONY: e2e-cluster-clean
+e2e-cluster-clean:
+	docker stop selenium-container rp-container e2e-container || true
+	docker rm selenium-container rp-container e2e-container || true	
+
+		

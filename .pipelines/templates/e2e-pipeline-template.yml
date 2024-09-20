@@ -1,0 +1,25 @@
+# e2e-pipeline-template.yml
+parameters:
+  - name: rpImageACR
+    type: string
+  - name: acrCredentialsJSON
+    type: string
+
+steps:
+  # Install Docker Compose
+  - script: |
+      sudo apt-get update
+      sudo apt-get install -y docker-compose
+    displayName: Install Docker Compose
+
+  # Pull the RP Docker image
+  - script: |
+      export RP_IMAGE_ACR=$(rpImageACR)
+      export VERSION=$(Build.BuildId)
+      docker pull $(RP_IMAGE_ACR)/aro:$(VERSION)
+    displayName: Pull RP Docker Image
+
+  # Run RP Docker container
+  - script: |
+      docker run -d --name rp-container $(RP_IMAGE_ACR)/aro:$(VERSION)
+    displayName: Run RP Docker Image
