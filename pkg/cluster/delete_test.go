@@ -344,7 +344,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := deprecratedgomock.NewController(t)
+			controller := deprecatedgomock.NewController(t)
 			defer controller.Finish()
 
 			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
