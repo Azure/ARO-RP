@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -17,11 +18,15 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -271,6 +276,89 @@ func TestDeleteResourceGroup(t *testing.T) {
 
 			err := m.deleteResourceGroup(ctx, managedRGName)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestDisconnectSecurityGroup(t *testing.T) {
+	subscription := "00000000-0000-0000-0000-000000000000"
+	resourceGroup := "test-rg"
+	nsgId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkSecurityGroups/test-nsg", subscription, resourceGroup)
+
+	tests := []struct {
+		name    string
+		mocks   func(*mock_armnetwork.MockSecurityGroupsClient, *mock_subnet.MockManager)
+		wantErr string
+	}{
+		{
+			name: "empty security group",
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_subnet.MockManager) {
+				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
+					SecurityGroup: armnetwork.SecurityGroup{
+						ID: ptr.To(nsgId),
+						Properties: &armnetwork.SecurityGroupPropertiesFormat{
+							Subnets: []*armnetwork.Subnet{},
+						},
+					},
+				}
+				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
+				subnets.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name: "disconnects subnets",
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_subnet.MockManager) {
+				subnetId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
+				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
+					SecurityGroup: armnetwork.SecurityGroup{
+						ID: ptr.To(nsgId),
+						Properties: &armnetwork.SecurityGroupPropertiesFormat{
+							Subnets: []*armnetwork.Subnet{
+								{
+									ID: ptr.To(subnetId),
+								},
+							},
+						},
+					},
+				}
+				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
+				subnets.EXPECT().Get(gomock.Any(), subnetId).Times(1).Return(&mgmtnetwork.Subnet{
+					ID: ptr.To(subnetId),
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							ID: ptr.To(nsgId),
+						},
+					},
+				}, nil)
+				subnets.EXPECT().CreateOrUpdate(gomock.Any(), subnetId, &mgmtnetwork.Subnet{
+					ID:                     ptr.To(subnetId),
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{},
+				}).Times(1).Return(nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
+			subnets := mock_subnet.NewMockManager(controller)
+
+			tt.mocks(securityGroups, subnets)
+
+			m := manager{
+				log:               logrus.NewEntry(logrus.StandardLogger()),
+				armSecurityGroups: securityGroups,
+				subnet:            subnets,
+			}
+
+			ctx := context.Background()
+			err := m.disconnectSecurityGroup(ctx, nsgId)
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+			}
 		})
 	}
 }

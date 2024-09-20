@@ -70,17 +70,17 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		return err
 	}
 
-	nsg, err := m.securityGroups.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+	resp, err := m.armSecurityGroups.Get(ctx, r.ResourceGroup, r.ResourceName, nil)
 	if err != nil {
 		return err
 	}
+	nsg := resp.SecurityGroup
 
-	if nsg.SecurityGroupPropertiesFormat == nil ||
-		nsg.SecurityGroupPropertiesFormat.Subnets == nil {
+	if nsg.Properties == nil || nsg.Properties.Subnets == nil {
 		return nil
 	}
 
-	for _, subnet := range *nsg.SecurityGroupPropertiesFormat.Subnets {
+	for _, subnet := range nsg.Properties.Subnets {
 		// Note: subnet only has value in the ID field,
 		// so we have to make another API request to get full subnet struct
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
@@ -102,8 +102,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 			}
 		}
 
-		if s.SubnetPropertiesFormat == nil ||
-			s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
+		if s.SubnetPropertiesFormat == nil || s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
 			!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, *nsg.ID) {
 			continue
 		}
