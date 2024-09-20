@@ -17,10 +17,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -36,7 +38,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -58,7 +63,7 @@ type Cluster struct {
 	deployments          features.DeploymentsClient
 	groups               features.ResourceGroupsClient
 	openshiftclusters    InternalClient
-	securitygroups       network.SecurityGroupsClient
+	securitygroups       armnetwork.SecurityGroupsClient
 	subnets              network.SubnetsClient
 	routetables          network.RouteTablesClient
 	roleassignments      authorization.RoleAssignmentsClient
@@ -91,6 +96,17 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
+	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
+	clientOptions := armsdk.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: environment.Environment().Cloud,
+			Retry: common.RetryOptions,
+			Transport: &http.Client{
+				Transport: customRoundTripper,
+			},
+		},
+	}
+
 	armOption := armsdk.ClientOptions{
 		ClientOptions: policy.ClientOptions{
 			Cloud: options.Cloud,
@@ -98,10 +114,15 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	}
 
 	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
-
 	if err != nil {
 		return nil, err
 	}
+
+	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(environment.SubscriptionID(), spTokenCredential, &clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Cluster{
 		log: log,
 		env: environment,
@@ -111,7 +132,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		groups:            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclusters: NewInternalClient(log, environment, authorizer),
-		securitygroups:    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		securitygroups:    securityGroupsClient,
 		subnets:           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		routetables:       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		roleassignments:   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -724,10 +745,10 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 
 	// very occasionally c.securitygroups.List returns an empty list in
 	// production.  No idea why.  Let's try retrying it...
-	var nsgs []mgmtnetwork.SecurityGroup
+	var nsgs []*sdknetwork.SecurityGroup
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		var err error
-		nsgs, err = c.securitygroups.List(ctx, "aro-"+clusterName)
+		nsgs, err = c.securitygroups.List(ctx, "aro-"+clusterName, nil)
 		return len(nsgs) > 0, err
 	}, timeoutCtx.Done())
 	if err != nil {
