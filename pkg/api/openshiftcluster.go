@@ -785,9 +785,9 @@ type IngressProfile struct {
 type RegistryProfile struct {
 	MissingFields
 
-	Name     string       `json:"name,omitempty"`
-	Username string       `json:"username,omitempty"`
-	Password SecureString `json:"password,omitempty"`
+	Name      string       `json:"name,omitempty"`
+	Username  string       `json:"username,omitempty"`
+	Password  SecureString `json:"password,omitempty"`
 	IssueDate *date.Time   `json:"issueDate,omitempty"`
 }
 
