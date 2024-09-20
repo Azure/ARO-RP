@@ -379,6 +379,7 @@ LOCAL_ARO_PORTAL_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-portal-build
 LOCAL_ARO_RP_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-build
 LOCAL_AZ_EXT_ARO_IMAGE ?= azext-aro
 LOCAL_TUNNEL_IMAGE ?= aro-tunnel
+LOCAL_VPN_IMAGE ?= vpn_image
 
 ###############################################################################
 # Targets
@@ -539,3 +540,47 @@ run-rp: ci-rp podman-secrets
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+
+# Run selenium using Docker
+.PHONY: run-selenium
+run-selenium:
+	docker run -d --name selenium-container selenium/standalone-chrome
+
+# Run RP using Docker
+.PHONY: run-rp-docker
+run-rp: run-selenium
+	docker run -d --name rp-container $(ARO_IMAGE_BASE):$(VERSION)
+
+# Run E2E Tests using Docker
+.PHONY: run-e2e
+run-e2e: e2e.test
+	docker-compose run --rm e2e /usr/local/bin/e2e.test $(E2E_FLAGS) --ginkgo.label-filter=$(E2E_LABEL)
+
+# Clean up containers after E2E tests
+.PHONY: e2e-cluster-clean
+e2e-cluster-clean:
+	docker stop selenium-container rp-container e2e-container || true
+	docker rm selenium-container rp-container e2e-container || true
+
+# Build the VPN Docker image
+.PHONY: build-vpn
+build-vpn:
+	@echo "Building VPN image with VERSION: $(VERSION)"
+	docker build . $(DOCKER_BUILD_CI_ARGS) \
+		-f Dockerfile.vpn \
+		-t $(LOCAL_VPN_IMAGE):$(VERSION)
+
+# Push the VPN image to ACR
+.PHONY: push-vpn
+push-vpn: build-vpn
+	@echo "Pushing VPN image to ACR: $(RP_IMAGE_ACR)"
+	@echo "VERSION is: $(VERSION)"
+	if [ -z "$(RP_IMAGE_ACR)" ]; then \
+	    echo "Error: RP_IMAGE_ACR is not set"; \
+	    exit 1; \
+	fi
+	# Tag the VPN image with the ACR registry and version
+	docker tag $(LOCAL_VPN_IMAGE):$(VERSION) $(RP_IMAGE_ACR)/vpn_image:$(VERSION)
+	# Push the VPN image to ACR
+	docker push $(RP_IMAGE_ACR)/vpn_image:$(VERSION)
+

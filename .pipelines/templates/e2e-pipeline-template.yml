@@ -1,0 +1,44 @@
+# ./templates/e2e-pipeline-template.yml
+parameters:
+  - name: rpImageACR
+    type: string
+  - name: acrCredentialsJSON
+    type: string
+
+steps:
+  # Authenticate to ACR and Install Docker Compose
+  - task: AzureCLI@2
+    displayName: 'Authenticate to ACR and Install Docker Compose'
+    inputs:
+      azureSubscription: 'ado-pipeline-dev-image-push'  # Replace with your service connection
+      scriptType: bash
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        set -xe
+        # Ensure RP_IMAGE_ACR is correctly passed as a parameter
+        if [ -z "${{ parameters.rpImageACR }}" ]; then
+          echo "Error: RP_IMAGE_ACR is not set"
+          exit 1
+        fi
+
+        ACR_FQDN="${{ parameters.rpImageACR }}"
+        REGISTRY_NAME=$(echo $ACR_FQDN | cut -d'.' -f1)
+
+        # Install Docker Compose
+        sudo apt-get update
+        sudo apt-get install -y docker-compose
+
+        # Login to ACR
+        az acr login --name $REGISTRY_NAME
+
+  # Pull the RP Docker image
+  - script: |
+      if [ -z "${{ parameters.rpImageACR }}" ]; then
+          echo "Error: RP_IMAGE_ACR is not set"
+          exit 1
+      fi
+
+      export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
+      export VERSION=$(Build.BuildId)
+      docker pull ${RP_IMAGE_ACR}/aro:${VERSION}
+    displayName: Pull RP Docker Image

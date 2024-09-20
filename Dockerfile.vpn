@@ -1,0 +1,11 @@
+# Use a Microsoft-approved image
+FROM mcr.microsoft.com/azure-cli:2.61.0 AS base
+
+# Install OpenVPN
+RUN apk add --no-cache openvpn || tdnf install -y openvpn || dnf install -y openvpn
+
+# Create the config directory and generate a basic vpn.conf file
+RUN mkdir -p /etc/openvpn && echo "client\nremote vpn-server-address 1194\nproto udp\ndev tun\nresolv-retry infinite\nnobind\npersist-key\npersist-tun\nca ca.crt\ncert client.crt\nkey client.key\ncomp-lzo\nverb 3" > /etc/openvpn/vpn.conf
+
+# Run OpenVPN when the container starts
+CMD ["openvpn", "--config", "/etc/openvpn/vpn.conf"]
