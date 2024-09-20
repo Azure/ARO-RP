@@ -10,9 +10,11 @@ services:
     volumes:
       - ${PWD}/secrets:/secrets:z
     devices:
-      - /dev/net/tun  # required to modify VPN on host
+      - /dev/net/tun
     entrypoint: "openvpn"
     command: ["/secrets/vpn-eastus.ovpn"]
+    ports:
+      - "443:443"
     healthcheck:
       test: ["CMD", "pidof", "openvpn"]
       start_period: 20s
@@ -24,14 +26,16 @@ services:
     image: selenium/standalone-edge:4.10.0-20230607
     container_name: selenium-container
     network_mode: host
+    ports:
+      - "4444:4444"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4444"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-sS", "-f", "http://localhost:4444"]
+      interval: 60s
+      timeout: 20s
       retries: 3
 
   rp:
-    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}  # Using localhost/aro for local image
     build:
       context: .
       dockerfile: Dockerfile.ci-rp
@@ -43,6 +47,7 @@ services:
           soft: 4096
           hard: 4096
     container_name: aro-rp
+    network_mode: host
     depends_on:
       vpn:
         condition: service_healthy
@@ -57,7 +62,6 @@ services:
       - source: hive-kubeconfig
         target: /app/secrets/aks.kubeconfig
     environment:
-      # inherit from host
       - ADMIN_OBJECT_ID
       - ARO_IMAGE
       - AZURE_ARM_CLIENT_ID
@@ -85,6 +89,7 @@ services:
       - MOCK_MSI_CLIENT_ID
       - MOCK_MSI_OBJECT_ID
       - MOCK_MSI_TENANT_ID
+      - MOCK_MSI_OBJECT_ID
       - OIDC_STORAGE_ACCOUNT_NAME
       - PARENT_DOMAIN_NAME
       - PARENT_DOMAIN_RESOURCEGROUP
@@ -93,31 +98,28 @@ services:
       - RESOURCEGROUP
       - SECRET_SA_ACCOUNT_NAME
       - STORAGE_ACCOUNT_DOMAIN
-
-      # override
       - ARO_ADOPT_BY_HIVE=true
       - ARO_CHECKOUT_PATH=/app
       - ARO_INSTALL_VIA_HIVE=true
       - HIVE_KUBE_CONFIG_PATH=/app/secrets/aks.kubeconfig
       - KUBECONFIG=/app/secrets/aks.kubeconfig
       - RP_MODE=development
-    expose:
-      - "8443"
     ports:
-      - "127.0.0.1:8443:8443"
+      - "8443:8443"
     healthcheck:
-      test: ["CMD", "curl", "-k", "http://localhost:8443/healthz"]
-      interval: 30s
+      test: ["CMD", "curl", "-k", "-sS", "https://localhost:8443/healthz/ready"]
+      interval: 90s
       timeout: 30s
-      retries: 3
+      retries: 5
     restart: on-failure:3
 
   portal:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
     container_name: aro-portal
+    network_mode: host
     depends_on:
       rp:
-        condition: service_healthy
+        condition: service_started
     environment:
       - RP_MODE
       - AZURE_SUBSCRIPTION_ID
@@ -130,12 +132,13 @@ services:
       - AZURE_RP_CLIENT_SECRET
       - AZURE_RP_CLIENT_ID
       - KEYVAULT_PREFIX
+      - AZURE_ENVIRONMENT=AzurePublicCloud
       - DATABASE_ACCOUNT_NAME
       - DATABASE_NAME
       - NO_NPM=1
     ports:
-      - "127.0.0.1:8444:8444"
-      - "127.0.0.1:2222:2222"
+      - "8444:8444"
+      - "2222:2222"
     secrets:
       - source: proxy-client-key
         target: /app/secrets/proxy-client.key
@@ -148,10 +151,63 @@ services:
     command: ["portal"]
     restart: on-failure:3
     healthcheck:
-      test: ["CMD", "curl", "-k", "http://localhost:8444/healthz"]
+      test: ["CMD", "curl", "-k", "-sS", "https://localhost:8444/healthz/ready"]
       interval: 30s
-      timeout: 10s
+      timeout: 20s
       retries: 3
+
+  e2e:
+    image: ${LOCAL_E2E_IMAGE}:${VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile.aro-e2e
+      args:
+        - REGISTRY=${REGISTRY}
+      ulimits:
+        nofile:
+          soft: 4096
+          hard: 4096
+    container_name: run-e2e
+    network_mode: host
+    depends_on:
+      vpn:
+        condition: service_healthy
+      rp:
+        condition: service_healthy
+      portal:
+        condition: service_healthy
+      selenium:
+        condition: service_healthy
+    environment:
+      - ARO_SELENIUM_HOSTNAME
+      - AZURE_CLIENT_ID
+      - AZURE_CLIENT_SECRET
+      - AZURE_FP_CLIENT_ID
+      - AZURE_FP_SERVICE_PRINCIPAL_ID
+      - AZURE_PORTAL_ELEVATED_GROUP_IDS
+      - AZURE_RP_CLIENT_ID
+      - AZURE_RP_CLIENT_SECRET
+      - AZURE_SERVICE_PRINCIPAL_ID
+      - AZURE_SUBSCRIPTION_ID
+      - AZURE_TENANT_ID
+      - CI
+      - CLUSTER
+      - DATABASE_ACCOUNT_NAME
+      - DATABASE_NAME
+      - E2E_DELETE_CLUSTER
+      - E2E_LABEL
+      - KEYVAULT_PREFIX
+      - LOCATION
+      - OS_CLUSTER_VERSION
+      - PROXY_HOSTNAME
+      - PULL_SECRET
+      - RESOURCEGROUP
+      - RP_BASE_URL=https://localhost:8443
+      - PORTAL_HOSTNAME=https://localhost:8444
+      - RP_MODE
+      - USER_PULL_SECRET
+    entrypoint: "/usr/local/bin/e2e.test"
+    command: ["-test.v", "--ginkgo.v", "--ginkgo.timeout=180m", "--ginkgo.flake-attempts=2", "--ginkgo.junit-report=/tmp/e2e-report.xml", "--ginkgo.label-filter=${E2E_LABEL}"]
 
 secrets:
   proxy-client-key:
@@ -161,4 +217,4 @@ secrets:
   proxy-crt:
     file: ./secrets/proxy.crt
   hive-kubeconfig:
-    file: ./aks.kubeconfig
+    file: ./secrets/aks.kubeconfig

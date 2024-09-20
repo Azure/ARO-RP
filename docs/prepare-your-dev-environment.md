@@ -179,3 +179,24 @@ To resolve, run `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets`.
 
 - `az -v` does not return `aro` as dependency.
 To resolve, make sure it is being used the `env` file parameters as per the `env.example`
+
+## Getting Started with Docker Compose
+
+1. Install [Docker Compose](https://docs.docker.com/compose/install/linux/#install-using-the-repository)
+
+2. Check the `env.example` file and copy it by creating your own:
+
+        ```bash
+        cp env.example env
+        ```
+
+3. Source the `env` file
+
+        ```bash
+        . ./env
+        ```
+4. Run VPN, RP, and Portal services using Docker Compose
+
+        ```bash
+        docker compose up
+        ```
