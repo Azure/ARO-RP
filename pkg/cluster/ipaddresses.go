@@ -10,9 +10,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -212,12 +214,12 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	pe, err := m.privateEndpoints.Get(ctx, resourceGroup, infraID+"-pe", "networkInterfaces")
+	pe, err := m.armPrivateEndpoints.Get(ctx, resourceGroup, infraID+"-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: ptr.To("networkInterfaces")})
 	if err != nil {
 		return err
 	}
 
-	pls, err := m.rpPrivateLinkServices.Get(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", "")
+	pls, err := m.armRPPrivateLinkServices.Get(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", nil)
 	if err != nil {
 		return err
 	}
@@ -227,18 +229,18 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 	// call to the resource graph service, but it's not worth the effort to do
 	// that here.
 	var linkIdentifier string
-	for _, conn := range *pls.PrivateEndpointConnections {
-		if !strings.EqualFold(*conn.PrivateEndpoint.ID, *pe.ID) {
+	for _, conn := range pls.Properties.PrivateEndpointConnections {
+		if !strings.EqualFold(*conn.Properties.PrivateEndpoint.ID, *pe.ID) {
 			continue
 		}
 
-		linkIdentifier = *conn.LinkIdentifier
+		linkIdentifier = *conn.Properties.LinkIdentifier
 
-		if !strings.EqualFold(*conn.PrivateLinkServiceConnectionState.Status, "Approved") {
-			conn.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
-			conn.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
+		if !strings.EqualFold(*conn.Properties.PrivateLinkServiceConnectionState.Status, "Approved") {
+			conn.Properties.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
+			conn.Properties.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
 
-			_, err = m.rpPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, conn)
+			_, err = m.armRPPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, *conn, nil)
 			if err != nil {
 				return err
 			}
@@ -280,7 +282,7 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP = *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress
+		doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP = *pe.Properties.NetworkInterfaces[0].Properties.IPConfigurations[0].Properties.PrivateIPAddress
 		doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID = linkIdentifier
 		return nil
 	})
