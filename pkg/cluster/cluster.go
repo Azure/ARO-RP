@@ -307,7 +307,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		}
 
 		clusterMsiKeyVaultName := _env.ClusterMsiKeyVaultName()
-		clusterMsiKeyVaultURL := fmt.Sprintf("https://%s.vault.azure.net", clusterMsiKeyVaultName)
+		clusterMsiKeyVaultURL := fmt.Sprintf("https://%s.%s", clusterMsiKeyVaultName, _env.Environment().KeyVaultDNSSuffix)
 		clusterMsiSecretsClient, err := azsecrets.NewClient(clusterMsiKeyVaultURL, msiCredential, clientOptions)
 		if err != nil {
 			return nil, err
