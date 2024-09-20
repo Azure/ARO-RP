@@ -85,7 +85,6 @@ type manager struct {
 	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead.
 	armLoadBalancers         armnetwork.LoadBalancersClient
 	armPrivateEndpoints      armnetwork.PrivateEndpointsClient
-	securityGroups           network.SecurityGroupsClient // TODO: use armSecurityGroups instead.
 	armSecurityGroups        armnetwork.SecurityGroupsClient
 	deployments              features.DeploymentsClient
 	resourceGroups           features.ResourceGroupsClient
@@ -264,7 +263,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		loadBalancers:            network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armLoadBalancers:         armLoadBalancersClient,
 		armPrivateEndpoints:      armPrivateEndpoints,
-		securityGroups:           network.NewSecurityGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armSecurityGroups:        armSecurityGroupsClient,
 		deployments:              features.NewDeploymentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		resourceGroups:           features.NewResourceGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
