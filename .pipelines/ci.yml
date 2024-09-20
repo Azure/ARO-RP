@@ -1,4 +1,4 @@
-# Azure DevOps Pipeline running CI
+# Azure DevOps Pipeline running CI and E2E
 
 trigger:
   branches:
@@ -74,9 +74,99 @@ jobs:
           failIfCoverageEmpty: false
         condition: succeededOrFailed()
 
-      # Push the image to ACR
-      - template: ./templates/template-acr-push.yml
-        parameters:
-          acrFQDN: 'arosvcdev.azurecr.io'
-          repository: 'aro'
-          pushLatest: true
+          # Push the image to ACR
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              acrFQDN: 'arosvcdev.azurecr.io'
+              repository: 'aro'
+              pushLatest: true
+
+      - job: Lint_Az_ARO_Extension
+        pool:
+          name: 1es-aro-ci-pool
+        variables:
+          HOME: $(Agent.BuildDirectory)
+        steps:
+          - template: ./templates/template-checkout.yml
+          - script: |
+              set -xe
+              export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
+              make test-python
+              [[ -z "$(git status -s)" ]]
+            target: python
+
+  # New E2E Stage with Docker Compose
+  - stage: E2E
+    dependsOn: Containerized
+    jobs:
+      - job: Run_E2E_Tests
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          # Checkout the code
+          - template: ./templates/template-checkout.yml
+
+          # Install Docker Compose and pull the RP image
+          - template: ./templates/e2e-pipeline-template.yml
+            parameters:
+              rpImageACR: 'arosvcdev.azurecr.io'
+              acrCredentialsJSON: $(acr-credentials)
+
+          # Install OpenVPN (the command will depend on the agent OS)
+          - script: |
+                set -xe
+                sudo apt-get update && sudo apt-get install -y openvpn || \
+                sudo tdnf install -y openvpn || \
+                sudo yum install -y openvpn
+            displayName: Install OpenVPN
+
+          # AZ CLI Login using the existing secret as in the old pipeline
+          - template: ./templates/template-az-cli-login.yml
+            parameters:
+              azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+
+          - script: |
+              set -xe
+              az account set -s $AZURE_SUBSCRIPTION_ID
+
+              # Download secrets tarball containing the VPN certificates and config
+              az storage blob download --account-name $(SECRET_SA_ACCOUNT_NAME) --container-name secrets --name vpn-secrets.tar.gz --file vpn-secrets.tar.gz
+
+              # Extract the secrets tarball
+              sudo mkdir -p /etc/openvpn
+              sudo tar -xzf vpn-secrets.tar.gz -C /etc/openvpn
+
+              # Ensure the extracted files contain the required certificates
+              ls /etc/openvpn
+            displayName: Download and Extract VPN Secrets
+
+          # Setup Azure and source secrets/env
+          - script: |
+              set -xe
+              export RP_IMAGE_ACR=arosvcdev.azurecr.io
+              export VERSION=${BUILD_BUILDID}
+              export E2E_FLAGS="--flag1 --flag2"
+              export E2E_LABEL="test-label"
+              export E2E_DELETE_CLUSTER="false"
+              echo "RP_IMAGE_ACR=$RP_IMAGE_ACR" > .env
+              echo "VERSION=$VERSION" >> .env
+              echo "E2E_FLAGS=$E2E_FLAGS" >> .env
+              echo "E2E_LABEL=$E2E_LABEL" >> .env
+
+              cat .env
+              sudo openvpn --config /etc/openvpn/vpn.conf &
+              docker-compose --env-file .env -f docker-compose.yml up -d
+            displayName: Start OpenVPN and Run Docker Compose for E2E Services
+
+          # Log the output from the e2e container in case of failure
+          - script: |
+              set -xe
+              docker-compose logs e2e
+            displayName: Log E2E Test Output
+            condition: failed()
+
+          # Clean up Docker Compose
+          - script: |
+              docker-compose down
+            displayName: Cleanup Docker Compose
+            condition: always()

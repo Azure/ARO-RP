@@ -383,6 +383,7 @@ LOCAL_ARO_PORTAL_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-portal-build
 LOCAL_ARO_RP_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-build
 LOCAL_AZ_EXT_ARO_IMAGE ?= azext-aro
 LOCAL_TUNNEL_IMAGE ?= aro-tunnel
+LOCAL_VPN_IMAGE ?= vpn_image
 
 ###############################################################################
 # Targets
