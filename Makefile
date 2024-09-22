@@ -229,7 +229,7 @@ secrets:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	rm -rf secrets
 	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	tar -xzf secrets.tar.gz
+	tar -xzf secrets.tar.gz --no-same-owner
 	rm secrets.tar.gz
 
 .PHONY: secrets-update
@@ -557,12 +557,13 @@ run-rp: ci-rp podman-secrets
 
 .PHONY: full-rp-dev
 full-rp-dev: # Build and run a full-rp-dev container for automating full-rp-dev
-	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
+	podman build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
 		--build-arg LOCATION=$(RP_LOCATION) \
 		--build-arg SKIP_DEPLOYMENTS=$(SKIP_DEPLOYMENTS) \
+		--no-cache=$(NO_CACHE) \
 		-f Dockerfile.full-rp-dev \
 		-t $(FULL_RP_DEV_IMAGE) .
-	docker run --rm -it --user=0 --privileged \
+	podman run --rm -it --user=0 --privileged \
 		-v /dev/shm:/dev/shm \
 		-v "${HOME}/.azure:/root/.azure" \
 		--device /dev/net/tun \

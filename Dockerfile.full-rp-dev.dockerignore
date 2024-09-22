@@ -8,5 +8,8 @@
 !go.sum
 !hack
 !pkg
+!test
 !vendor
+!Dockerfile.aro-multistage
 !.git
+!.bingo

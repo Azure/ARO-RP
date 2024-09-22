@@ -32,13 +32,7 @@ setup_rp_config() {
   export ARO_IMAGE="${azure_prefix}aro.azurecr.io/aro:${git_commit}"
 
   # Generate new dev-config.yaml
-  if [ -f "dev-config.yaml" ]; then
-    rm dev-config.yaml
-  fi
   make dev-config.yaml
-  if [ ! -f "dev-config.yaml" ]; then
-    abort "File dev-config.yaml does not exist."
-  fi
   log "Success step 2 ✅ - Config file dev-config.yaml has been created"
 }
 
@@ -140,7 +134,7 @@ mirror_images() {
   export DST_ACR_NAME="${azure_prefix}aro"
   export SRC_AUTH_QUAY="$(jq -r '.auths."quay.io".auth' <<< "${user_pull_secret}")"
   export SRC_AUTH_REDHAT="$(jq -r '.auths."registry.redhat.io".auth' <<< "${user_pull_secret}")"
-  export DST_AUTH="$(echo -n '00000000-0000-0000-0000-000000000000:'"$(az acr login -n "${DST_ACR_NAME}" --expose-token | jq -r .accessToken)" | base64 -w0)"
+  export DST_AUTH="$(echo -n '00000000-0000-0000-0000-000000000000:'"$(az acr login -n "${DST_ACR_NAME}" -ojson --expose-token | jq -r .accessToken)" | base64 -w0)"
   docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo "$DST_AUTH" | base64 -d | cut -d':' -f2)" "${DST_ACR_NAME}.azurecr.io"
   local acr_string="ACR '${DST_ACR_NAME}'"
   log "Success step 6a ✈️ 🏷️ - Login to ${acr_string}"

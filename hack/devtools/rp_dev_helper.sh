@@ -119,7 +119,7 @@ copy_digest_tag() {
     
     log "INFO: Copy image from one ACR to another ..."
    
-    src_auth="$(jq -r '.auths["'"$src_acr_name"'.azurecr.io"].auth' <<< $pull_secret | base64 -d)"
+    src_auth="$(jq -r '.auths["'"$src_acr_name"'.azurecr.io"].auth' <<< "$pull_secret" | base64 -d)"
     dst_token="$(az acr login -n "${dst_acr_name}" --expose-token | jq -r .accessToken)"
     
     skopeo copy \
@@ -138,21 +138,28 @@ check_acr_repo() {
 
    # Don't skip deployment creation when skip_deployments was set to 'false'
     if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
-        log "'skip_deployments' was set to 'false'. ❌⏩ Don't skip ACR '$acr_name' repo mirroring for repository '${repository}'."
+        log "'skip_deployments' was set to 'false'. ❌⏩ Don't skip ACR '${acr_name}' repo mirroring for repository '${repository}'."
         return 1
     fi
 
     # Check if the repository tag is not empty and if it matches an optional tag
-    repo_tag="$(az acr repository show-tags --name "$acr_name" --repository "${repository}" -o tsv | awk '{printf "%s%s", sep, $0; sep=","} END {print ""}')"
-    if [[ -n "$repo_tag" ]]; then
-        if [[ "${tag}" != "no-tag" && "${tag}" != "${repo_tag}" ]] ; then
-            log "🔴✈️ Repository '${repository}' in ACR '$acr_name' exists with different tag/s '${repo_tag}'. Expected tag: '${tag}'."
+    repo_tags="$(az acr repository show-tags --name "${acr_name}" --repository "${repository}" -o tsv | awk '{printf "%s%s", sep, $0; sep=","} END {print ""}')"
+    if [[ -n "${repo_tags}" ]]; then
+        if [[ "${tag}" != "no-tag" ]]; then
+            IFS=',' read -r -a repo_tags_array <<< "${repo_tags}"
+            for repo_tag in "${repo_tags_array[@]}"; do
+                if [[ "${repo_tag}" == "${tag}" ]]; then
+                    log "🟢✈️ Repository '${repository}' in ACR '${acr_name}' exists with tag '${repo_tag}' out of the following tag/s '${repo_tags}'."
+                    return 0
+                fi
+            done
+            log "🔴✈️ Repository '${repository}' in ACR '${acr_name}' exists with different tag/s '${repo_tags}'. Expected tag: '${tag}'."
             return 1
         fi
-        log "🟢✈️ Repository '${repository}' in ACR '$acr_name' exists with tag '${repo_tag}'."
+        log "🟢✈️ Repository '${repository}' in ACR '${acr_name}' exists with tag '${repo_tags}'."
         return 0
     fi
-    log "🔴❌✈️ Repository '${repository}' doesn't exist in ACR '$acr_name'."
+    log "🔴❌✈️ Repository '${repository}' doesn't exist in ACR '${acr_name}'."
     return 1
 }
 
