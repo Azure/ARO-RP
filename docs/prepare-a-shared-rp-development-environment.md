@@ -356,7 +356,7 @@ Generate new key/certificate files using an helper utility, and when these files
    ```bash
    # use a unique prefix for Azure resources when it is set, otherwise use your user's name
    cat >secrets/env <<EOF
-   ######## Prior of sourcing the file the following env vars must be set:    ########
+   ########Prior to sourcing the file the following env vars must be set:    ########
    ######## AZURE_PREFIX, LOCATION, ADMIN_OBJECT_ID, RESOURCEGROUP, and PARENT_DOMAIN_NAME   ########
    export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
    export ADMIN_OBJECT_ID="$ADMIN_OBJECT_ID"
