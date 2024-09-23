@@ -15,11 +15,40 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-func adminRequest(ctx context.Context, method, path string, params url.Values, strict bool, in, out interface{}) (*http.Response, error) {
+type adminReqOpts struct {
+	Option string
+	Value  interface{}
+}
+
+func logOnError(log *logrus.Entry) []adminReqOpts {
+	return []adminReqOpts{
+		{
+			Option: "log",
+			Value:  log,
+		},
+		{
+			Option: "logOnError",
+			Value:  true,
+		},
+	}
+}
+
+func _getAdminReqOpt(key string, opts []adminReqOpts) (interface{}, bool) {
+	for _, i := range opts {
+		if i.Option == key {
+			return i.Value, true
+		}
+	}
+	return nil, false
+}
+
+func adminRequest(ctx context.Context, method, path string, params url.Values, strict bool, in, out interface{}, opts ...adminReqOpts) (*http.Response, error) {
 	if !env.IsLocalDevelopmentMode() {
 		return nil, errors.New("only development RP mode is supported")
 	}
@@ -69,7 +98,24 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, s
 	}()
 
 	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
-		decoder := json.NewDecoder(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return resp, err
+		}
+
+		if resp.StatusCode == http.StatusInternalServerError {
+			_, ok := _getAdminReqOpt("logOnError", opts)
+			if ok {
+				log, ok := _getAdminReqOpt("log", opts)
+				if ok {
+					logger := log.(*logrus.Entry)
+
+					logger.Errorf("Failed request, content: %s", string(body))
+				}
+			}
+		}
+
+		decoder := json.NewDecoder(bytes.NewBuffer(body))
 		// If strict is set, enable DisallowUnknownFields. This is used to
 		// verify that the response doesn't contain any fields that are not
 		// defined, namely systemData.
