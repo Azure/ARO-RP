@@ -14,12 +14,17 @@ import (
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/Azure/msi-dataplane/pkg/store"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 )
 
 const (
 	mockMsiCertValidityDays = 90
+)
+
+var (
+	errClusterMsiNotPresentInResponse = errors.New("cluster msi not present in msi credentials response")
 )
 
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
@@ -136,4 +141,45 @@ func (m *manager) clusterMsiSecretName() (string, error) {
 	}
 
 	return fmt.Sprintf("%s-%s", m.doc.ID, clusterMsi.Name), nil
+}
+
+func (m *manager) clusterIdentityIDs(ctx context.Context) error {
+	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	if err != nil {
+		return err
+	}
+
+	uaMsiRequest := dataplane.UserAssignedMSIRequest{
+		IdentityURL: m.doc.OpenShiftCluster.Identity.IdentityURL,
+		ResourceIDs: []string{clusterMsiResourceId.String()},
+		TenantID:    m.doc.OpenShiftCluster.Identity.TenantID,
+	}
+
+	msiCredObj, err := m.msiDataplane.GetUserAssignedIdentities(ctx, uaMsiRequest)
+	if err != nil {
+		return err
+	}
+
+	if msiCredObj.CredentialsObject.ExplicitIdentities == nil ||
+		len(msiCredObj.CredentialsObject.ExplicitIdentities) == 0 ||
+		msiCredObj.CredentialsObject.ExplicitIdentities[0] == nil ||
+		msiCredObj.CredentialsObject.ExplicitIdentities[0].ClientID == nil ||
+		msiCredObj.CredentialsObject.ExplicitIdentities[0].ObjectID == nil {
+		return errClusterMsiNotPresentInResponse
+	}
+
+	clientId := *msiCredObj.CredentialsObject.ExplicitIdentities[0].ClientID
+	principalId := *msiCredObj.CredentialsObject.ExplicitIdentities[0].ObjectID
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		identity := doc.OpenShiftCluster.Identity.UserAssignedIdentities[clusterMsiResourceId.String()]
+		identity.ClientID = clientId
+		identity.PrincipalID = principalId
+
+		doc.OpenShiftCluster.Identity.UserAssignedIdentities[clusterMsiResourceId.String()] = identity
+
+		return nil
+	})
+
+	return err
 }
