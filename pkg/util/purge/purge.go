@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -27,7 +28,7 @@ type ResourceCleaner struct {
 	resourcegroupscli      features.ResourceGroupsClient
 	vnetscli               network.VirtualNetworksClient
 	privatelinkservicescli network.PrivateLinkServicesClient
-	securitygroupscli      network.SecurityGroupsClient
+	securitygroupscli      armnetwork.SecurityGroupsClient
 
 	subnet subnet.Manager
 
@@ -45,6 +46,13 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 	scopes := []string{env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
+	clientOptions := env.Environment().ClientOptions()
+
+	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(env.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ResourceCleaner{
 		log:    log,
 		dryRun: dryRun,
@@ -52,7 +60,7 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		resourcegroupscli:      features.NewResourceGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
 		vnetscli:               network.NewVirtualNetworksClient(env.Environment(), env.SubscriptionID(), authorizer),
 		privatelinkservicescli: network.NewPrivateLinkServicesClient(env.Environment(), env.SubscriptionID(), authorizer),
-		securitygroupscli:      network.NewSecurityGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		securitygroupscli:      securityGroupsClient,
 
 		subnet: subnet.NewManager(env.Environment(), env.SubscriptionID(), authorizer),
 
