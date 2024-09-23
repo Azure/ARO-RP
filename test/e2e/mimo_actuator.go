@@ -34,7 +34,7 @@ var _ = Describe("MIMO Actuator E2E Testing", func() {
 		By("set a bogus flag on the cluster")
 		resp, err := adminRequest(ctx,
 			http.MethodPatch, clusterResourceID, nil, true,
-			json.RawMessage("{\"properties\": {\"operatorFlags\": {\""+testflag+"\": \"true\"}}}"), oc)
+			json.RawMessage("{\"properties\": {\"maintenanceTask\": \"SyncClusterObject\", \"operatorFlags\": {\""+testflag+"\": \"true\"}}}"), oc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -72,7 +72,7 @@ var _ = Describe("MIMO Actuator E2E Testing", func() {
 			http.MethodPut, "/admin"+clusterResourceID+"/maintenancemanifests",
 			url.Values{}, true, &admin.MaintenanceManifest{
 				MaintenanceSetID: mimo.OPERATOR_FLAGS_UPDATE_ID,
-			}, &out)
+			}, &out, logOnError(log)...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 
