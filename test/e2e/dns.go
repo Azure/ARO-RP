@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -77,15 +77,15 @@ var _ = Describe("ARO cluster DNS", func() {
 
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 		for wn := range workerNodes {
-			nic, err := clients.Interfaces.Get(ctx, clusterResourceGroup, nicName(wn), "")
+			resp, err := clients.Interfaces.Get(ctx, clusterResourceGroup, nicName(wn), nil)
 			Expect(err).NotTo(HaveOccurred())
+			nic := resp.Interface
 
-			Expect(nic.InterfacePropertiesFormat).NotTo(BeNil())
-			Expect(nic.IPConfigurations).NotTo(BeNil())
-			Expect(*nic.IPConfigurations).To(HaveLen(1))
-			Expect((*nic.IPConfigurations)[0].InterfaceIPConfigurationPropertiesFormat).NotTo(BeNil())
-			Expect((*nic.IPConfigurations)[0].PrivateIPAddress).NotTo(BeNil())
-			workerNodes[wn] = *(*nic.IPConfigurations)[0].PrivateIPAddress
+			Expect(nic.Properties).NotTo(BeNil())
+			Expect(nic.Properties.IPConfigurations).To(HaveLen(1))
+			Expect(nic.Properties.IPConfigurations[0].Properties).NotTo(BeNil())
+			Expect(nic.Properties.IPConfigurations[0].Properties.PrivateIPAddress).NotTo(BeNil())
+			workerNodes[wn] = *nic.Properties.IPConfigurations[0].Properties.PrivateIPAddress
 		}
 
 		By("preparing to read resolv.conf from each of the worker nodes by allowing the test namespace's ServiceAccount to use the hostmount-anyuid SecurityContextConstraint")
@@ -380,14 +380,18 @@ func verifyResolvConf(
 	return nil
 }
 
-func toggleAcceleratedNetworking(ctx context.Context, interfaces network.InterfacesClient, clusterResourceGroup string, nodeName string, enabled bool) error {
-	nic, err := interfaces.Get(ctx, clusterResourceGroup, nicName(nodeName), "")
+func toggleAcceleratedNetworking(ctx context.Context, interfaces armnetwork.InterfacesClient, clusterResourceGroup string, nodeName string, enabled bool) error {
+	resp, err := interfaces.Get(ctx, clusterResourceGroup, nicName(nodeName), nil)
 	if err != nil {
 		return err
 	}
+	nic := resp.Interface
 
-	nic.EnableAcceleratedNetworking = to.BoolPtr(enabled)
-	err = clients.Interfaces.CreateOrUpdateAndWait(ctx, clusterResourceGroup, nicName(nodeName), nic)
+	if nic.Properties == nil {
+		return fmt.Errorf("NIC properties are nil")
+	}
+	nic.Properties.EnableAcceleratedNetworking = to.BoolPtr(enabled)
+	err = clients.Interfaces.CreateOrUpdateAndWait(ctx, clusterResourceGroup, nicName(nodeName), nic, nil)
 	return err
 }
 

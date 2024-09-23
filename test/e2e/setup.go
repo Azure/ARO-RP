@@ -79,14 +79,14 @@ type clientSet struct {
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient
-	VirtualNetworks       network.VirtualNetworksClient
 	DiskEncryptionSets    compute.DiskEncryptionSetsClient
 	Disks                 compute.DisksClient
+	Interfaces            armnetwork.InterfacesClient
+	LoadBalancers         network.LoadBalancersClient
 	NetworkSecurityGroups armnetwork.SecurityGroupsClient
 	Subnet                network.SubnetsClient
-	Interfaces            network.InterfacesClient
+	VirtualNetworks       network.VirtualNetworksClient
 	Storage               storage.AccountsClient
-	LoadBalancers         network.LoadBalancersClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
@@ -392,6 +392,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		},
 	}
 
+	interfacesClient, err := armnetwork.NewInterfacesClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
@@ -403,14 +408,14 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		VirtualNetworks:       network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Disks:                 compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Interfaces:            network.NewInterfacesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		NetworkSecurityGroups: securityGroupsClient,
-		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Interfaces:            interfacesClient,
 		LoadBalancers:         network.NewLoadBalancersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		NetworkSecurityGroups: securityGroupsClient,
+		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		VirtualNetworks:       network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
