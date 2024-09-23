@@ -100,22 +100,23 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 
 // cleanPrivateLink lists and unassigns all private links. If they are assigned the deletoin will fail
 func (rc *ResourceCleaner) cleanPrivateLink(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
-	plss, err := rc.privatelinkservicescli.List(ctx, *resourceGroup.Name)
+	plss, err := rc.privatelinkservicescli.List(ctx, *resourceGroup.Name, nil)
 	if err != nil {
 		return err
 	}
 	for _, pls := range plss {
-		if pls.PrivateEndpointConnections == nil {
+		if pls.Properties == nil || pls.Properties.PrivateEndpointConnections == nil {
 			continue
 		}
 
-		for _, peconn := range *pls.PrivateEndpointConnections {
+		for _, peconn := range pls.Properties.PrivateEndpointConnections {
 			rc.log.Debugf("Deleting private endpoint connection %s/%s/%s", *resourceGroup.Name, *pls.Name, *peconn.Name)
-			if !rc.dryRun {
-				_, err := rc.privatelinkservicescli.DeletePrivateEndpointConnection(ctx, *resourceGroup.Name, *pls.Name, *peconn.Name)
-				if err != nil {
-					return err
-				}
+			if rc.dryRun {
+				continue
+			}
+			err := rc.privatelinkservicescli.DeletePrivateEndpointConnectionAndWait(ctx, *resourceGroup.Name, *pls.Name, *peconn.Name, nil)
+			if err != nil {
+				return err
 			}
 		}
 	}
