@@ -49,7 +49,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
@@ -84,7 +83,7 @@ type clientSet struct {
 	Interfaces            armnetwork.InterfacesClient
 	LoadBalancers         armnetwork.LoadBalancersClient
 	NetworkSecurityGroups armnetwork.SecurityGroupsClient
-	Subnet                network.SubnetsClient
+	Subnet                armnetwork.SubnetsClient
 	VirtualNetworks       armnetwork.VirtualNetworksClient
 	Storage               storage.AccountsClient
 
@@ -407,6 +406,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	subnetsClient, err := armnetwork.NewSubnetsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	virtualNetworksClient, err := armnetwork.NewVirtualNetworksClient(_env.SubscriptionID(), tokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
@@ -423,7 +427,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Interfaces:            interfacesClient,
 		LoadBalancers:         loadBalancersClient,
 		NetworkSecurityGroups: securityGroupsClient,
-		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Subnet:                subnetsClient,
 		VirtualNetworks:       virtualNetworksClient,
 		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
