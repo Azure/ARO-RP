@@ -72,14 +72,16 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		lbName, err := getInfraID(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
-		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
+		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		for _, fipConfig := range *lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations {
-			if !strings.Contains(*fipConfig.PublicIPAddress.ID, "default-v4") && !strings.Contains(*fipConfig.PublicIPAddress.ID, "pip-v4") {
-				lbRuleID = *(*fipConfig.LoadBalancingRules)[0].ID
+		for _, fipConfig := range lb.Properties.FrontendIPConfigurations {
+			Expect(fipConfig.Properties.PublicIPAddress).NotTo(BeNil())
+			if !strings.Contains(*fipConfig.Properties.PublicIPAddress.ID, "default-v4") && !strings.Contains(*fipConfig.Properties.PublicIPAddress.ID, "pip-v4") {
+				Expect(fipConfig.Properties.LoadBalancingRules).To(HaveLen(1))
+				lbRuleID = *fipConfig.Properties.LoadBalancingRules[0].ID
 				fipConfigID = *fipConfig.ID
-				pipAddressID = *fipConfig.PublicIPAddress.ID
+				pipAddressID = *fipConfig.Properties.PublicIPAddress.ID
 			}
 		}
 
