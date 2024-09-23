@@ -62,17 +62,17 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 
 // cleanNetworking lists subnets in vnets and unnassign security groups
 func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
-	secGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name)
+	secGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
 	if err != nil {
 		return err
 	}
 
 	for _, secGroup := range secGroups {
-		if secGroup.SecurityGroupPropertiesFormat == nil || secGroup.SecurityGroupPropertiesFormat.Subnets == nil {
+		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
 			continue
 		}
 
-		for _, secGroupSubnet := range *secGroup.SecurityGroupPropertiesFormat.Subnets {
+		for _, secGroupSubnet := range secGroup.Properties.Subnets {
 			subnet, err := rc.subnet.Get(ctx, *secGroupSubnet.ID)
 			if err != nil {
 				return err
