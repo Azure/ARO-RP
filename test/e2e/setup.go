@@ -8,6 +8,7 @@ import (
 	"embed"
 	"fmt"
 	"math"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -18,6 +19,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jongio/azidext/go/azidext"
@@ -41,6 +44,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -76,7 +82,7 @@ type clientSet struct {
 	VirtualNetworks       network.VirtualNetworksClient
 	DiskEncryptionSets    compute.DiskEncryptionSetsClient
 	Disks                 compute.DisksClient
-	NetworkSecurityGroups network.SecurityGroupsClient
+	NetworkSecurityGroups armnetwork.SecurityGroupsClient
 	Subnet                network.SubnetsClient
 	Interfaces            network.InterfacesClient
 	Storage               storage.AccountsClient
@@ -375,6 +381,22 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		}
 	}
 
+	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
+	clientOptions := &arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: _env.Environment().Cloud,
+			Retry: common.RetryOptions,
+			Transport: &http.Client{
+				Transport: customRoundTripper,
+			},
+		},
+	}
+
+	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return &clientSet{
 		Operations:        redhatopenshift20231122.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		OpenshiftClusters: redhatopenshift20231122.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -386,7 +408,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Interfaces:            network.NewInterfacesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		NetworkSecurityGroups: securityGroupsClient,
 		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		LoadBalancers:         network.NewLoadBalancersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
