@@ -85,7 +85,7 @@ type clientSet struct {
 	LoadBalancers         armnetwork.LoadBalancersClient
 	NetworkSecurityGroups armnetwork.SecurityGroupsClient
 	Subnet                network.SubnetsClient
-	VirtualNetworks       network.VirtualNetworksClient
+	VirtualNetworks       armnetwork.VirtualNetworksClient
 	Storage               storage.AccountsClient
 
 	Dynamic            dynamic.Client
@@ -407,6 +407,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	virtualNetworksClient, err := armnetwork.NewVirtualNetworksClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return &clientSet{
 		Operations:        redhatopenshift20231122.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		OpenshiftClusters: redhatopenshift20231122.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -419,7 +424,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		LoadBalancers:         loadBalancersClient,
 		NetworkSecurityGroups: securityGroupsClient,
 		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		VirtualNetworks:       network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		VirtualNetworks:       virtualNetworksClient,
 		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:         restconfig,
