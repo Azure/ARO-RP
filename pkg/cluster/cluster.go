@@ -98,6 +98,7 @@ type manager struct {
 	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead.
 	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
 	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
+	userAssignedIdentities   armmsi.UserAssignedIdentitiesClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -315,6 +316,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 		m.msiDataplane = msiDataplane
 		m.clusterMsiKeyVaultStore = store.NewMsiKeyVaultStore(clusterMsiSecretsClient)
+
+		userAssignedIdentitiesClient, err := armmsi.NewUserAssignedIdentitiesClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+		if err != nil {
+			return nil, err
+		}
+		m.userAssignedIdentities = userAssignedIdentitiesClient
 	}
 
 	return m, nil
