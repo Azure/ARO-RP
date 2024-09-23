@@ -326,7 +326,10 @@ func (m *manager) bootstrap() []steps.Step {
 	// struct, so we'll rebuild the fpAuthorizer and use the error catching
 	// to advance
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs))
+		s = append(s,
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+		)
 	} else {
 		s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID))
 	}
