@@ -30,6 +30,7 @@ jobs:
       - script: |
           set -xe
           sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+          sudo /usr/bin/crb enable
           sudo dnf install -y openvpn make podman jq conmon containers-common crun iptables netavark nftables slirp4netns
         displayName: Setup (Container)
         target: container
