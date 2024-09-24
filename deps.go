@@ -7,5 +7,5 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
-	_ "github.com/golang/mock/mockgen/model"
+	_ "go.uber.org/mock/mockgen/model"
 )
