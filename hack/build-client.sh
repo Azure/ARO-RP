@@ -68,6 +68,7 @@ function generate_python() {
     "${AUTOREST_IMAGE}" \
     --use=@autorest/python@~5.12.0 \
     --use=@autorest/modelerfour@~4.20.0 \
+    --modelerfour.lenient-model-deduplication=true \
     --version=~3.6.2 \
     --python \
     --azure-arm \
