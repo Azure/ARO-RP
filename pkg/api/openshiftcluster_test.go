@@ -6,6 +6,10 @@ package api
 import (
 	"fmt"
 	"testing"
+
+	"go.uber.org/mock/gomock"
+
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestIsTerminal(t *testing.T) {
@@ -106,6 +110,142 @@ func TestIsWorkloadIdentity(t *testing.T) {
 			got := test.oc.UsesWorkloadIdentity()
 			if got != test.want {
 				t.Error(fmt.Errorf("got != want: %v != %v", got, test.want))
+			}
+		})
+	}
+}
+
+func TestClusterMsiResourceId(t *testing.T) {
+	mockGuid := "00000000-0000-0000-0000-000000000000"
+	clusterRGName := "aro-cluster"
+	miName := "aro-cluster-msi"
+	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+
+	tests := []struct {
+		name    string
+		oc      *OpenShiftCluster
+		wantErr string
+	}{
+		{
+			name:    "error - cluster doc has nil Identity",
+			oc:      &OpenShiftCluster{},
+			wantErr: "could not find cluster MSI in cluster doc",
+		},
+		{
+			name: "error - cluster doc has non-nil Identity but nil Identity.UserAssignedIdentities",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{},
+			},
+			wantErr: "could not find cluster MSI in cluster doc",
+		},
+		{
+			name: "error - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{},
+				},
+			},
+			wantErr: "could not find cluster MSI in cluster doc",
+		},
+		{
+			name: "error - cluster doc has non-nil Identity but two MSIs in Identity.UserAssignedIdentities",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						miResourceId:  ClusterUserAssignedIdentity{},
+						"secondEntry": ClusterUserAssignedIdentity{},
+					},
+				},
+			},
+			wantErr: "unexpectedly found more than one cluster MSI in cluster doc",
+		},
+		{
+			name: "error - invalid resource ID (theoretically not possible, but still)",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"Hi hello I'm not a valid resource ID": ClusterUserAssignedIdentity{},
+					},
+				},
+			},
+			wantErr: "invalid resource ID: resource id 'Hi hello I'm not a valid resource ID' must start with '/'",
+		},
+		{
+			name: "success",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						miResourceId: ClusterUserAssignedIdentity{},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			_, err := tt.oc.ClusterMsiResourceId()
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestHasUserAssignedIdentities(t *testing.T) {
+	mockGuid := "00000000-0000-0000-0000-000000000000"
+	clusterRGName := "aro-cluster"
+	miName := "aro-cluster-msi"
+	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+
+	tests := []struct {
+		name       string
+		oc         *OpenShiftCluster
+		wantResult bool
+	}{
+		{
+			name:       "false - cluster doc has nil Identity",
+			oc:         &OpenShiftCluster{},
+			wantResult: false,
+		},
+		{
+			name: "false - cluster doc has non-nil Identity but nil Identity.UserAssignedIdentities",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{},
+			},
+			wantResult: false,
+		},
+		{
+			name: "false - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{},
+				},
+			},
+			wantResult: false,
+		},
+		{
+			name: "true",
+			oc: &OpenShiftCluster{
+				Identity: &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						miResourceId: ClusterUserAssignedIdentity{},
+					},
+				},
+			},
+			wantResult: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			got := tt.oc.HasUserAssignedIdentities()
+			if got != tt.wantResult {
+				t.Error(fmt.Errorf("got != want: %v != %v", got, tt.wantResult))
 			}
 		})
 	}

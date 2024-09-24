@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	azcloud "github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/msi-dataplane/internal/swagger"
+	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 )
 
 var (
@@ -18,7 +18,8 @@ var (
 	errDecodeClientSecret = errors.New("failed to decode client secret")
 	errParseCertificate   = errors.New("failed to parse certificate")
 	errNilField           = errors.New("expected non nil field in identity")
-	errResourceIDNotFound = errors.New("resource ID not found in user-assigned managed identity	")
+	errNoUserAssignedMSIs = errors.New("credentials object does not contain user-assigned managed identities")
+	errResourceIDNotFound = errors.New("resource ID not found in user-assigned managed identity")
 )
 
 // CredentialsObject is a wrapper around the swagger.CredentialsObject to add additional functionality
@@ -30,6 +31,14 @@ type CredentialsObject struct {
 type UserAssignedIdentities struct {
 	CredentialsObject
 	cloud string
+}
+
+// Constructor for UserAssignedIdentities object
+func NewUserAssignedIdentities(c CredentialsObject, cloud string) (*UserAssignedIdentities, error) {
+	if !c.IsUserAssigned() {
+		return nil, errNoUserAssignedMSIs
+	}
+	return &UserAssignedIdentities{CredentialsObject: c, cloud: cloud}, nil
 }
 
 // This method may be used by clients to check if they can use the object as a user-assigned managed identity
@@ -70,13 +79,17 @@ func getClientCertificateCredential(identity swagger.NestedCredentialsObject, cl
 		return nil, fmt.Errorf("%w: %s", errNilField, strings.Join(missing, ","))
 	}
 
-	// Set the regional AAD endpoint
-	// https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcredentialapiversion2019-08-31
 	opts := &azidentity.ClientCertificateCredentialOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: getAzCoreCloud(cloud),
 		},
+
+		// x5c header required: https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingrequestingatoken
+		SendCertificateChain: true,
 	}
+
+	// Set the regional AAD endpoint
+	// https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcredentialapiversion2019-08-31
 	opts.Cloud.ActiveDirectoryAuthorityHost = *identity.AuthenticationEndpoint
 
 	// Parse the certificate and private key from the base64 encoded secret

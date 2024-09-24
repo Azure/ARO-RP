@@ -148,10 +148,11 @@ func (g *generator) virtualNetworkPeering(name, vnetB string, allowGatewayTransi
 	}
 }
 
-func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessPolicyEntry, condition interface{}, dependsOn []string) *arm.Resource {
+func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessPolicyEntry, condition interface{}, enableEntraIdRbac bool, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtkeyvault.Vault{
 			Properties: &mgmtkeyvault.VaultProperties{
+				EnableRbacAuthorization:  to.BoolPtr(enableEntraIdRbac),
 				EnablePurgeProtection:    to.BoolPtr(true),
 				EnabledForDiskEncryption: to.BoolPtr(true),
 				Sku: &mgmtkeyvault.Sku{

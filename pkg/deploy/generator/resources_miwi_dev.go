@@ -10,6 +10,7 @@ import (
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
@@ -19,8 +20,7 @@ var (
 	storageAccountName         string = "parameters('oidcStorageAccountName')"
 	resourceTypeStorageAccount string = "Microsoft.Storage/storageAccounts"
 
-	SharedMSIKeyVaultName       = "concat(take(resourceGroup().name,10), '" + SharedMSIKeyVaultNameSuffix + "')"
-	SharedMSIKeyVaultNameSuffix = "-dev-msi"
+	SharedMSIKeyVaultName = "concat(take(resourceGroup().name,10), '" + env.SharedMSIKeyVaultNameSuffix + "')"
 )
 
 func (g *generator) oicStorageAccount() *arm.Resource {
@@ -64,7 +64,7 @@ func (g *generator) oicRoleAssignment() *arm.Resource {
 // devMSIKeyvault returns an arm.Resource representing a shared key vault to be used for persisting mock MSI certificates when
 // the RP is running in local development mode.
 func (g *generator) devMSIKeyvault() *arm.Resource {
-	return g.keyVault(fmt.Sprintf("[%s]", SharedMSIKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
+	return g.keyVault(fmt.Sprintf("[%s]", SharedMSIKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, true, nil)
 }
 
 // devMSIKeyvaultRBAC returns an arm.Resource representing a role assignment that grants the local development mode's mock RP identity

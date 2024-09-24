@@ -5,13 +5,15 @@ go 1.21
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.6.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3 v3.0.0-beta.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2 v2.5.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns v1.2.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.4.0
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.2.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2 v2.2.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.5.0
+	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.1.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2
 	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/Azure/go-autorest/autorest/adal v0.9.23
@@ -19,7 +21,7 @@ require (
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/Azure/go-autorest/autorest/validation v0.3.1
 	github.com/Azure/go-autorest/tracing v0.6.0
-	github.com/Azure/msi-dataplane v0.0.3
+	github.com/Azure/msi-dataplane v0.0.6
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
 	github.com/containers/image/v5 v5.30.1
@@ -74,6 +76,7 @@ require (
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.12
 	github.com/vincent-petithory/dataurl v1.0.0
+	go.uber.org/mock v0.4.0
 	golang.org/x/crypto v0.26.0
 	golang.org/x/net v0.28.0
 	golang.org/x/oauth2 v0.18.0
@@ -96,6 +99,7 @@ require (
 require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.8.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect

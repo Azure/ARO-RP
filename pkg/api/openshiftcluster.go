@@ -4,8 +4,11 @@ package api
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"sync"
 	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 )
 
 // OpenShiftCluster represents an OpenShift cluster
@@ -30,6 +33,31 @@ type OpenShiftCluster struct {
 // UsesWorkloadIdentity checks whether a cluster is a Workload Identity cluster or a Service Principal cluster
 func (oc *OpenShiftCluster) UsesWorkloadIdentity() bool {
 	return oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.ServicePrincipalProfile == nil
+}
+
+// ClusterMsiResourceId returns the resource ID of the cluster MSI or an error
+// if it encounters an issue while grabbing the resource ID from the cluster
+// doc. It is written under the assumption that there is only one cluster MSI
+// and will have to be refactored if we ever use more than one.
+func (oc *OpenShiftCluster) ClusterMsiResourceId() (*arm.ResourceID, error) {
+	if !oc.HasUserAssignedIdentities() {
+		return nil, errors.New("could not find cluster MSI in cluster doc")
+	} else if len(oc.Identity.UserAssignedIdentities) > 1 {
+		return nil, errors.New("unexpectedly found more than one cluster MSI in cluster doc")
+	}
+
+	var msiResourceId string
+	for resourceId := range oc.Identity.UserAssignedIdentities {
+		msiResourceId = resourceId
+	}
+
+	return arm.ParseResourceID(msiResourceId)
+}
+
+// HasUserAssignedIdentities returns true if and only if the cluster doc's
+// Identity.UserAssignedIdentities is non-nil and non-empty.
+func (oc *OpenShiftCluster) HasUserAssignedIdentities() bool {
+	return oc.Identity != nil && oc.Identity.UserAssignedIdentities != nil && len(oc.Identity.UserAssignedIdentities) > 0
 }
 
 // CreatedByType by defines user type, which executed the request

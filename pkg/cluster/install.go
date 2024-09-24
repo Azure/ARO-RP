@@ -298,7 +298,16 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 }
 
 func (m *manager) bootstrap() []steps.Step {
-	s := []steps.Step{
+	s := []steps.Step{}
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.ensureClusterMsiCertificate),
+			steps.Action(m.initializeClusterMsiClients),
+		)
+	}
+
+	s = append(s,
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.ensurePreconfiguredNSG),
 		steps.Action(m.ensureACRToken),
@@ -306,15 +315,21 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureSSHKey),
 		steps.Action(m.ensureStorageSuffix),
 		steps.Action(m.populateMTUSize),
-
 		steps.Action(m.createDNS),
 		steps.Action(m.createOIDC),
-		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
+	)
 
-		// TODO: this relies on an authorizer that isn't exposed in the manager
-		// struct, so we'll rebuild the fpAuthorizer and use the error catching
-		// to advance
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
+			// TODO: this relies on an authorizer that isn't exposed in the manager
+			// struct, so we'll rebuild the fpAuthorizer and use the error catching
+			// to advance
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
+		)
+	}
+
+	s = append(s,
 		steps.Action(m.ensureResourceGroup),
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
@@ -325,7 +340,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureGatewayCreate),
 		steps.Action(m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
-	}
+	)
 
 	if m.adoptViaHive || m.installViaHive {
 		// We will always need a Hive namespace, whether we are installing

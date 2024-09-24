@@ -5,13 +5,13 @@ package cluster
 
 import (
 	"context"
-	"net/http"
+	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
+	"github.com/Azure/msi-dataplane/pkg/store"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -33,10 +33,10 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azblob"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -124,6 +124,10 @@ type manager struct {
 
 	aroOperatorDeployer deploy.Operator
 
+	msiDataplane                           *dataplane.ManagedIdentityClient
+	clusterMsiKeyVaultStore                *store.MsiKeyVaultStore
+	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
+
 	now func() time.Time
 
 	openShiftClusterDocumentVersioner openShiftClusterDocumentVersioner
@@ -178,48 +182,39 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
-	clientOptions := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: _env.Environment().Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
-		},
-	}
+	clientOptions := _env.Environment().ArmClientOptions()
 
-	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredRPTenant, &clientOptions)
+	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredRPTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armSecurityGroupsClient, err := armnetwork.NewSecurityGroupsClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	armSecurityGroupsClient, err := armnetwork.NewSecurityGroupsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, msiCredential, &clientOptions)
+	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, msiCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -229,20 +224,14 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, &clientOptions)
+	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
-	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		err = platformWorkloadIdentityRolesByVersion.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
-		if err != nil {
-			return nil, err
-		}
-	}
 
-	return &manager{
+	m := &manager{
 		log:                      log,
 		env:                      _env,
 		db:                       db,
@@ -277,17 +266,56 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
 
-		dns:     dns.NewManager(_env, fpCredRPTenant),
-		storage: storage,
-		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		graph:   graph.NewManager(_env, log, aead, storage),
-		rpBlob:  rpBlob,
-
+		dns:                                    dns.NewManager(_env, fpCredRPTenant),
+		storage:                                storage,
+		subnet:                                 subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		graph:                                  graph.NewManager(_env, log, aead, storage),
+		rpBlob:                                 rpBlob,
 		installViaHive:                         installViaHive,
 		adoptViaHive:                           adoptByHive,
 		hiveClusterManager:                     hiveClusterManager,
 		now:                                    func() time.Time { return time.Now() },
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
-	}, nil
+	}
+
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		err = m.platformWorkloadIdentityRolesByVersion.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
+		if err != nil {
+			return nil, err
+		}
+
+		msiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+		if err != nil {
+			return nil, err
+		}
+
+		msiDataplaneClientOptions, err := _env.MsiDataplaneClientOptions(msiResourceId)
+		if err != nil {
+			return nil, err
+		}
+
+		cloud, err := _env.Environment().CloudNameForMsiDataplane()
+		if err != nil {
+			return nil, err
+		}
+
+		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpCredRPTenant, _env.MsiRpEndpoint())
+		msiDataplane, err := dataplane.NewClient(cloud, authenticatorPolicy, msiDataplaneClientOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		clusterMsiKeyVaultName := _env.ClusterMsiKeyVaultName()
+		clusterMsiKeyVaultURL := fmt.Sprintf("https://%s.%s", clusterMsiKeyVaultName, _env.Environment().KeyVaultDNSSuffix)
+		clusterMsiSecretsClient, err := azsecrets.NewClient(clusterMsiKeyVaultURL, msiCredential, clientOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		m.msiDataplane = msiDataplane
+		m.clusterMsiKeyVaultStore = store.NewMsiKeyVaultStore(clusterMsiSecretsClient)
+	}
+
+	return m, nil
 }

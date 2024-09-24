@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
@@ -36,6 +38,7 @@ const (
 	FeatureDisableReadinessDelay
 	FeatureEnableOCMEndpoints
 	FeatureRequireOIDCStorageWebEndpoint
+	FeatureUseMockMsiRp
 )
 
 const (
@@ -55,6 +58,7 @@ const (
 	GatewayKeyvaultSuffix            = "-gwy"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
+	ClusterMsiKeyVaultSuffix         = "-msi"
 	RPPrivateEndpointPrefix          = "rp-pe-"
 	ProxyHostName                    = "PROXY_HOSTNAME"
 	OIDCBlobDirectoryPrefix          = "oic-"
@@ -82,6 +86,7 @@ type Interface interface {
 	ClusterGenevaLoggingNamespace() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClusterKeyvault() keyvault.Manager
+	ClusterMsiKeyVaultName() string
 	Domain() string
 	FeatureIsSet(Feature) bool
 	// TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
@@ -97,6 +102,8 @@ type Interface interface {
 	OIDCStorageAccountName() string
 	OIDCEndpoint() string
 	OIDCKeyBitSize() int
+	MsiRpEndpoint() string
+	MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy.ClientOptions, error)
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 

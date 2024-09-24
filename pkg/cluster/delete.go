@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	azuresdkerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
@@ -355,6 +356,27 @@ func (m *manager) deleteGateway(ctx context.Context) error {
 	return nil
 }
 
+func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
+	// The cluster MSI may have been deleted prior to cluster deletion. If that's the case
+	// we will have already deleted the certificate.
+	if !m.doc.OpenShiftCluster.HasUserAssignedIdentities() {
+		m.log.Warning("skipping cluster MSI certificate deletion because cluster MSI has already been deleted")
+		return nil
+	}
+
+	secretName, err := m.clusterMsiSecretName()
+	if err != nil {
+		return err
+	}
+
+	err = m.clusterMsiKeyVaultStore.DeleteCredentialsObject(ctx, secretName)
+	if err == nil || azuresdkerrors.IsNotFoundError(err) {
+		return nil
+	}
+
+	return err
+}
+
 func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
@@ -460,6 +482,14 @@ func (m *manager) Delete(ctx context.Context) error {
 	err = m.deleteResourcesAndResourceGroup(ctx)
 	if err != nil {
 		return err
+	}
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		m.log.Printf("deleting cluster MSI certificate")
+		err = m.deleteClusterMsiCertificate(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	if !m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
