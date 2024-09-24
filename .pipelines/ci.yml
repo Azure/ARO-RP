@@ -16,11 +16,14 @@ resources:
     - container: golang
       image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
       options: --user=0
-    - container: python
+    - container: python39
       image: registry.access.redhat.com/ubi8/python-39:latest
       options: --user=0
+    - container: python311
+      image: registry.access.redhat.com/ubi8/python-311:latest
+      options: --user=0
     - container: ubi8
-      image: registry.access.redhat.com/ubi8/toolbox:8.8
+      image: registry.access.redhat.com/ubi8/toolbox:latest
       options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
 
 variables:
@@ -163,6 +166,12 @@ stages:
       - job: Lint_Az_ARO_Extension
         pool:
           name: 1es-aro-ci-pool
+        strategy:
+          matrix:
+            Python39:
+              containerResource: 'python39'
+            Python311:
+              containerResource: 'python311'
         variables:
           HOME: $(Agent.BuildDirectory)
         steps:
@@ -172,4 +181,4 @@ stages:
               export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
               make test-python
               [[ -z "$(git status -s)" ]]
-            target: python
+            target: $[ variables['containerResource'] ]

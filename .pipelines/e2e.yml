@@ -8,7 +8,7 @@ resources:
       trigger: true
   containers:
     - container: container
-      image: registry.access.redhat.com/ubi8/toolbox:8.8
+      image: registry.access.redhat.com/ubi8/toolbox:latest
       options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
 
 # Azure DevOps Pipeline running e2e tests
