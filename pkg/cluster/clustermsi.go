@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/Azure/msi-dataplane/pkg/store"
 
@@ -116,13 +115,8 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 		return err
 	}
 
-	// Note that we are assuming that all of the platform MIs are in the same subscription.
-	pwiResourceId, err := arm.ParseResourceID(m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].ResourceID)
-	if err != nil {
-		return err
-	}
-
-	subId := pwiResourceId.SubscriptionID
+	// Note that we are assuming that all of the platform MIs are in the same subscription as the ARO resource.
+	subId := m.subscriptionDoc.ID
 	clientOptions := m.env.Environment().ArmClientOptions()
 	clusterMsiFederatedIdentityCredentials, err := armmsi.NewFederatedIdentityCredentialsClient(subId, azureCred, clientOptions)
 	if err != nil {

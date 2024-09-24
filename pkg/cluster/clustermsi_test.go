@@ -17,7 +17,6 @@ import (
 	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
-	deprecatedgomock "go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -214,10 +213,7 @@ Response contained no body
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			deprecatedgomockController := deprecatedgomock.NewController(t)
-			defer deprecatedgomockController.Finish()
-
-			mockEnv := mock_env.NewMockInterface(deprecatedgomockController)
+			mockEnv := mock_env.NewMockInterface(controller)
 			if tt.envMocks != nil {
 				tt.envMocks(mockEnv)
 			}
@@ -291,9 +287,6 @@ func TestClusterMsiSecretName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				doc: tt.doc,
