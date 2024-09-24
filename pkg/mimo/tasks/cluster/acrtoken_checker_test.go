@@ -67,7 +67,7 @@ func TestEnsureACRToken(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "TerminalError: no issue date detected",
+			wantErr: "TerminalError: no issue date detected, please rotate token",
 		},
 		{
 			name:     "Expired",
