@@ -13,6 +13,7 @@ import (
 type SubnetsClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, subnetParameters armnetwork.Subnet, options *armnetwork.SubnetsClientBeginCreateOrUpdateOptions) (err error)
 	DeleteAndWait(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, options *armnetwork.SubnetsClientBeginDeleteOptions) error
+	List(ctx context.Context, resourceGroupName, virtualNetworkName string, options *armnetwork.SubnetsClientListOptions) ([]*armnetwork.Subnet, error)
 }
 
 func (c *subnetsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, subnetParameters armnetwork.Subnet, options *armnetwork.SubnetsClientBeginCreateOrUpdateOptions) error {
@@ -31,4 +32,17 @@ func (c *subnetsClient) DeleteAndWait(ctx context.Context, resourceGroupName, vi
 	}
 	_, err = poller.PollUntilDone(ctx, nil)
 	return err
+}
+
+func (c *subnetsClient) List(ctx context.Context, resourceGroupName, virtualNetworkName string, options *armnetwork.SubnetsClientListOptions) (result []*armnetwork.Subnet, err error) {
+	pager := c.SubnetsClient.NewListPager(resourceGroupName, virtualNetworkName, options)
+
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, page.Value...)
+	}
+	return result, nil
 }
