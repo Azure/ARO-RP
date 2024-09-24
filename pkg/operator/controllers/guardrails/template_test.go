@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

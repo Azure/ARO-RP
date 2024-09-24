@@ -8,9 +8,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	samplesv1 "github.com/openshift/api/samples/v1"
+	"go.uber.org/mock/gomock"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"

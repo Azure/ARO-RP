@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 	"k8s.io/utils/strings/slices"
 
 	"github.com/Azure/ARO-RP/pkg/database"

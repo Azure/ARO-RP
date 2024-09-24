@@ -8,8 +8,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"

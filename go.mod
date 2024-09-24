@@ -37,7 +37,6 @@ require (
 	github.com/go-test/deep v1.1.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/golang/mock v1.6.0
 	github.com/google/gnostic v0.5.7-v3refs
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0

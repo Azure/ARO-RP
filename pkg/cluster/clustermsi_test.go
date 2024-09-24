@@ -15,9 +15,9 @@ import (
 	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/Azure/msi-dataplane/pkg/store"
 	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
-	deprecatedgomock "github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+	deprecatedgomock "go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"

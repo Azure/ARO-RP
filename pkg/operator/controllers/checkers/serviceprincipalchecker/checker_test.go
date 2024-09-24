@@ -12,8 +12,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/go-autorest/autorest/azure"
 	jwt "github.com/golang-jwt/jwt/v4"
-	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
