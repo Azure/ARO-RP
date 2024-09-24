@@ -300,14 +300,23 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{}
 
-	// initialize required client to manage cluster credentials, for both CSP or WI clusters
+	// initialize required clients to manage cluster credentials and populate
+	// clientIDs/objectIDs for them (both CSP and WI)
+	// TODO: ensuring credential IDs relies on authorizers that aren't exposed in the
+	// manager struct, so we'll rebuild the fpAuthorizer and use the error catching
+	// to advance
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
 		)
 	} else {
-		s = append(s, steps.Action(m.initializeClusterSPClients))
+		s = append(s,
+			steps.Action(m.initializeClusterSPClients),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
+		)
 	}
 
 	s = append(s,
@@ -320,21 +329,6 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.populateMTUSize),
 		steps.Action(m.createDNS),
 		steps.Action(m.createOIDC),
-	)
-
-	// TODO: these rely on authorizers that aren't exposed in the manager
-	// struct, so we'll rebuild the fpAuthorizer and use the error catching
-	// to advance
-	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		s = append(s,
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
-		)
-	} else {
-		s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID))
-	}
-
-	s = append(s,
 		steps.Action(m.ensureResourceGroup),
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
