@@ -337,11 +337,30 @@ Response contained no body
 		wantErr          string
 	}{
 		{
+			name: "error - CSP cluster",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterResourceId,
+				Key: clusterResourceId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ServicePrincipalProfile: &api.ServicePrincipalProfile{
+							ClientID:     "asdf",
+							ClientSecret: "asdf",
+						},
+					},
+				},
+			},
+			wantErr: "platformWorkloadIdentityIDs called for CSP cluster",
+		},
+		{
 			name: "error - invalid resource ID (theoretically not possible, but still)",
 			doc: &api.OpenShiftClusterDocument{
 				ID:  clusterResourceId,
 				Key: clusterResourceId,
 				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
 					Identity: &api.Identity{
 						UserAssignedIdentities: api.UserAssignedIdentities{
 							"Hi hello I'm not a valid resource ID": api.ClusterUserAssignedIdentity{},
@@ -357,6 +376,9 @@ Response contained no body
 				ID:  clusterResourceId,
 				Key: clusterResourceId,
 				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
 					Identity: &api.Identity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
@@ -381,6 +403,9 @@ Response contained no body
 				ID:  clusterResourceId,
 				Key: clusterResourceId,
 				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
 					Identity: &api.Identity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
@@ -423,6 +448,9 @@ Response contained no body
 				ID:  clusterResourceId,
 				Key: clusterResourceId,
 				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
 					Identity: &api.Identity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,

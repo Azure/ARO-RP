@@ -144,6 +144,10 @@ func (m *manager) clusterMsiSecretName() (string, error) {
 }
 
 func (m *manager) clusterIdentityIDs(ctx context.Context) error {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return fmt.Errorf("platformWorkloadIdentityIDs called for CSP cluster")
+	}
+
 	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
 	if err != nil {
 		return err
