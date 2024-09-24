@@ -65,7 +65,7 @@ type Cluster struct {
 	openshiftclusters    InternalClient
 	securitygroups       armnetwork.SecurityGroupsClient
 	subnets              armnetwork.SubnetsClient
-	routetables          network.RouteTablesClient
+	routetables          armnetwork.RouteTablesClient
 	roleassignments      authorization.RoleAssignmentsClient
 	peerings             network.VirtualNetworkPeeringsClient
 	ciParentVnetPeerings network.VirtualNetworkPeeringsClient
@@ -128,6 +128,11 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
+	routeTablesClient, err := armnetwork.NewRouteTablesClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Cluster{
 		log: log,
 		env: environment,
@@ -139,7 +144,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		openshiftclusters: NewInternalClient(log, environment, authorizer),
 		securitygroups:    securityGroupsClient,
 		subnets:           subnetsClient,
-		routetables:       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		routetables:       routeTablesClient,
 		roleassignments:   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		vaultsClient:      vaultClient,
@@ -868,7 +873,7 @@ func (c *Cluster) deleteVnetResources(ctx context.Context, resourceGroup, vnetNa
 	}
 
 	c.log.Info("deleting route table")
-	if err := c.routetables.DeleteAndWait(ctx, resourceGroup, clusterName+"-rt"); err != nil {
+	if err := c.routetables.DeleteAndWait(ctx, resourceGroup, clusterName+"-rt", nil); err != nil {
 		c.log.Errorf("error when deleting route table: %v", err)
 		errs = append(errs, err)
 	}
