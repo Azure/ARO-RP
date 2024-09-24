@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	samplesv1 "github.com/openshift/api/samples/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"

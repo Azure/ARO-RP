@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"

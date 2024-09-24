@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"

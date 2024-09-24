@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/pires/go-proxyproto"
 	"github.com/sirupsen/logrus"
 

@@ -6,7 +6,7 @@ package cluster
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"

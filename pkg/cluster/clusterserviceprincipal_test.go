@@ -13,7 +13,7 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"

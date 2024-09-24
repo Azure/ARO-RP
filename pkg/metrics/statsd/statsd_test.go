@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"

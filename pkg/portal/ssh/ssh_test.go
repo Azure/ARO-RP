@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"

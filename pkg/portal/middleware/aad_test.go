@@ -19,7 +19,7 @@ import (
 
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/go-test/deep"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"

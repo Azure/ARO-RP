@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockSubnetsClient is a mock of SubnetsClient interface.

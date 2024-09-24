@@ -10,7 +10,7 @@ import (
 
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"

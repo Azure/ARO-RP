@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"

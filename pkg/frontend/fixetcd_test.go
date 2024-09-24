@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	operatorv1fake "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"

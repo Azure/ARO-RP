@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )

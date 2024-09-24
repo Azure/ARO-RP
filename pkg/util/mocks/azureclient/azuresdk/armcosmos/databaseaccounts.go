@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	armcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockDatabaseAccountsClient is a mock of DatabaseAccountsClient interface.

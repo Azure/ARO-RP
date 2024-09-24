@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"

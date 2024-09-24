@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/msi-dataplane/pkg/store"
 	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
-	deprecatedgomock "github.com/golang/mock/gomock"
+	deprecatedgomock "go.uber.org/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"

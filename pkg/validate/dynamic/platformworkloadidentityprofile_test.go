@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
 

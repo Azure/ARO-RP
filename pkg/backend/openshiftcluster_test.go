@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"

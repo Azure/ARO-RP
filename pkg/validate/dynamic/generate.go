@@ -5,7 +5,7 @@ package dynamic
 
 // XXX Using mockgen in source mode here to prevent mockgen from following
 //     type alias azcore.TokenCredential to an internal azcore subpackage.
-//     See https://github.com/golang/mock/issues/244
+//     See https://go.uber.org/mock/issues/244
 
 //go:generate rm -rf ../../../pkg/util/mocks/$GOPACKAGE
 //go:generate mockgen -destination=../../../pkg/util/mocks/$GOPACKAGE/$GOPACKAGE.go -source=dynamic.go

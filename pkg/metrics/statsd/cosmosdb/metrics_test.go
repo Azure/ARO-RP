@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"

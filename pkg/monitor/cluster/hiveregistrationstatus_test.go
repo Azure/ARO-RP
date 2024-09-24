@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"

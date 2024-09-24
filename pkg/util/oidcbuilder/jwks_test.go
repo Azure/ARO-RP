@@ -5,7 +5,7 @@ import (
 	"crypto/rsa"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azblob"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"

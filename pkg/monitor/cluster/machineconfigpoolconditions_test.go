@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"

@@ -15,7 +15,7 @@ import (
 	"net/http/httputil"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
