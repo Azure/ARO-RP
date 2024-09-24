@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"go.uber.org/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"

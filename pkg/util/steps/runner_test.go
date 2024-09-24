@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/mock/gomock"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"

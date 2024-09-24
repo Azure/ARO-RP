@@ -8,11 +8,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"go.uber.org/mock/gomock"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
