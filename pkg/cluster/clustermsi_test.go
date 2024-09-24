@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/Azure/msi-dataplane/pkg/store"
 	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
-	deprecatedgomock "go.uber.org/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -214,10 +213,7 @@ Response contained no body
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			deprecatedgomockController := deprecatedgomock.NewController(t)
-			defer deprecatedgomockController.Finish()
-
-			mockEnv := mock_env.NewMockInterface(deprecatedgomockController)
+			mockEnv := mock_env.NewMockInterface(controller)
 			if tt.envMocks != nil {
 				tt.envMocks(mockEnv)
 			}
