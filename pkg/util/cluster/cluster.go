@@ -44,7 +44,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
@@ -67,8 +66,8 @@ type Cluster struct {
 	subnets              armnetwork.SubnetsClient
 	routetables          armnetwork.RouteTablesClient
 	roleassignments      authorization.RoleAssignmentsClient
-	peerings             network.VirtualNetworkPeeringsClient
-	ciParentVnetPeerings network.VirtualNetworkPeeringsClient
+	peerings             armnetwork.VirtualNetworkPeeringsClient
+	ciParentVnetPeerings armnetwork.VirtualNetworkPeeringsClient
 	vaultsClient         armkeyvault.VaultsClient
 }
 
@@ -133,6 +132,11 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
+	virtualNetworkPeeringsClient, err := armnetwork.NewVirtualNetworkPeeringsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Cluster{
 		log: log,
 		env: environment,
@@ -146,7 +150,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		subnets:           subnetsClient,
 		routetables:       routeTablesClient,
 		roleassignments:   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		peerings:          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		peerings:          virtualNetworkPeeringsClient,
 		vaultsClient:      vaultClient,
 	}
 
@@ -159,7 +163,12 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 			return nil, err
 		}
 
-		c.ciParentVnetPeerings = network.NewVirtualNetworkPeeringsClient(environment.Environment(), r.SubscriptionID, authorizer)
+		ciVirtualNetworkPeeringsClient, err := armnetwork.NewVirtualNetworkPeeringsClient(r.SubscriptionID, spTokenCredential, clientOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		c.ciParentVnetPeerings = ciVirtualNetworkPeeringsClient
 	}
 
 	return c, nil
@@ -841,7 +850,7 @@ func (c *Cluster) deleteResourceGroup(ctx context.Context, resourceGroup string)
 func (c *Cluster) deleteVnetPeerings(ctx context.Context, resourceGroup string) error {
 	r, err := azure.ParseResourceID(c.ciParentVnet)
 	if err == nil {
-		err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, resourceGroup+"-peer")
+		err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, resourceGroup+"-peer", nil)
 	}
 	if err != nil {
 		return fmt.Errorf("error deleting vnet peerings: %w", err)
@@ -889,16 +898,16 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, cluste
 		return err
 	}
 
-	clusterProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
-		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+	clusterProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
+		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &c.ciParentVnet,
 		},
 		AllowVirtualNetworkAccess: to.BoolPtr(true),
 		AllowForwardedTraffic:     to.BoolPtr(true),
 		UseRemoteGateways:         to.BoolPtr(true),
 	}
-	rpProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
-		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+	rpProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
+		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &cluster,
 		},
 		AllowVirtualNetworkAccess: to.BoolPtr(true),
@@ -906,12 +915,12 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, cluste
 		AllowGatewayTransit:       to.BoolPtr(true),
 	}
 
-	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: clusterProp})
+	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: clusterProp}, nil)
 	if err != nil {
 		return err
 	}
 
-	err = c.ciParentVnetPeerings.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: rpProp})
+	err = c.ciParentVnetPeerings.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: rpProp}, nil)
 	if err != nil {
 		return err
 	}
