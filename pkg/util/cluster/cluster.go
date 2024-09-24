@@ -17,10 +17,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -36,7 +38,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -58,8 +63,8 @@ type Cluster struct {
 	deployments          features.DeploymentsClient
 	groups               features.ResourceGroupsClient
 	openshiftclusters    InternalClient
-	securitygroups       network.SecurityGroupsClient
-	subnets              network.SubnetsClient
+	securitygroups       armnetwork.SecurityGroupsClient
+	subnets              armnetwork.SubnetsClient
 	routetables          network.RouteTablesClient
 	roleassignments      authorization.RoleAssignmentsClient
 	peerings             network.VirtualNetworkPeeringsClient
@@ -97,11 +102,32 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		},
 	}
 
-	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
+	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
+	clientOptions := &armsdk.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: environment.Environment().Cloud,
+			Retry: common.RetryOptions,
+			Transport: &http.Client{
+				Transport: customRoundTripper,
+			},
+		},
+	}
 
+	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
 	if err != nil {
 		return nil, err
 	}
+
+	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	subnetsClient, err := armnetwork.NewSubnetsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Cluster{
 		log: log,
 		env: environment,
@@ -111,8 +137,8 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		groups:            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclusters: NewInternalClient(log, environment, authorizer),
-		securitygroups:    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		subnets:           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		securitygroups:    securityGroupsClient,
+		subnets:           subnetsClient,
 		routetables:       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		roleassignments:   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -371,46 +397,26 @@ func ipRangesContainCIDR(ipRanges []*net.IPNet, cidr string) (bool, error) {
 // Because an az subnet can cover multiple ipranges, we need to return a slice
 // instead of just a single ip range. This function never errors. If something
 // goes wrong, it instead returns an empty list.
-func GetIPRangesFromSubnet(subnet mgmtnetwork.Subnet) []*net.IPNet {
+func GetIPRangesFromSubnet(subnet *sdknetwork.Subnet) []*net.IPNet {
 	ipRanges := []*net.IPNet{}
-	if subnet.AddressPrefix != nil {
-		_, ipRange, err := net.ParseCIDR(*subnet.AddressPrefix)
+	if subnet.Properties.AddressPrefix != nil {
+		_, ipRange, err := net.ParseCIDR(*subnet.Properties.AddressPrefix)
 		if err == nil {
 			ipRanges = append(ipRanges, ipRange)
 		}
 	}
 
-	if subnet.AddressPrefixes == nil {
+	if subnet.Properties.AddressPrefixes == nil {
 		return ipRanges
 	}
 
-	for _, snetPrefix := range *subnet.AddressPrefixes {
-		_, ipRange, err := net.ParseCIDR(snetPrefix)
+	for _, snetPrefix := range subnet.Properties.AddressPrefixes {
+		_, ipRange, err := net.ParseCIDR(*snetPrefix)
 		if err == nil {
 			ipRanges = append(ipRanges, ipRange)
 		}
 	}
 	return ipRanges
-}
-
-// getAllDevSubnets queries azure to retrieve all subnets assigned the vnet
-// `dev-vnet` in the current resource group
-func (c *Cluster) getAllDevSubnets() ([]mgmtnetwork.Subnet, error) {
-	allSubnets := []mgmtnetwork.Subnet{}
-	availSnetResults, err := c.subnets.List(context.Background(), c.env.ResourceGroup(), "dev-vnet")
-	if err != nil {
-		return allSubnets, err
-	}
-	allSubnets = append(allSubnets, availSnetResults.Values()...)
-	for availSnetResults.NotDone() {
-		err = availSnetResults.NextWithContext(context.Background())
-		if err != nil {
-			break
-		}
-		allSubnets = append(allSubnets, availSnetResults.Values()...)
-	}
-
-	return allSubnets, nil
 }
 
 func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string, err error) {
@@ -420,7 +426,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
 	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
 
-	allSubnets, err := c.getAllDevSubnets()
+	allSubnets, err := c.subnets.List(context.Background(), c.env.ResourceGroup(), "dev-vnet", nil)
 	if err != nil {
 		c.log.Warnf("Error getting existing subnets. Continuing regardless: %v", err)
 	}
@@ -724,10 +730,10 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 
 	// very occasionally c.securitygroups.List returns an empty list in
 	// production.  No idea why.  Let's try retrying it...
-	var nsgs []mgmtnetwork.SecurityGroup
+	var nsgs []*sdknetwork.SecurityGroup
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		var err error
-		nsgs, err = c.securitygroups.List(ctx, "aro-"+clusterName)
+		nsgs, err = c.securitygroups.List(ctx, "aro-"+clusterName, nil)
 		return len(nsgs) > 0, err
 	}, timeoutCtx.Done())
 	if err != nil {
@@ -735,16 +741,17 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 	}
 
 	for _, subnetName := range []string{clusterName + "-master", clusterName + "-worker"} {
-		subnet, err := c.subnets.Get(ctx, vnetResourceGroup, "dev-vnet", subnetName, "")
+		resp, err := c.subnets.Get(ctx, vnetResourceGroup, "dev-vnet", subnetName, nil)
 		if err != nil {
 			return err
 		}
+		subnet := resp.Subnet
 
-		subnet.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
+		subnet.Properties.NetworkSecurityGroup = &sdknetwork.SecurityGroup{
 			ID: nsgs[0].ID,
 		}
 
-		err = c.subnets.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", subnetName, subnet)
+		err = c.subnets.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", subnetName, subnet, nil)
 		if err != nil {
 			return err
 		}
@@ -850,12 +857,12 @@ func (c *Cluster) deleteVnetResources(ctx context.Context, resourceGroup, vnetNa
 	var errs []error
 
 	c.log.Info("deleting master/worker subnets")
-	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-master"); err != nil {
+	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-master", nil); err != nil {
 		c.log.Errorf("error when deleting master subnet: %v", err)
 		errs = append(errs, err)
 	}
 
-	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-worker"); err != nil {
+	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-worker", nil); err != nil {
 		c.log.Errorf("error when deleting worker subnet: %v", err)
 		errs = append(errs, err)
 	}
