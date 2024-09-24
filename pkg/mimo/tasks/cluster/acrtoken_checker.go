@@ -44,7 +44,7 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 		issueDate := rp.IssueDate
 
 		if issueDate == nil {
-			return mimo.TerminalError(errors.New("no issue date detected"))
+			return mimo.TerminalError(errors.New("no issue date detected, please rotate token"))
 		}
 
 		daysInterval := int32(now.Sub(issueDate.Time).Hours() / 24)
@@ -57,9 +57,7 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 		default:
 			th.SetResultMessage("azure container registry (acr) token is valid")
 		}
-	} else {
-		return mimo.TerminalError(errors.New("no registry profile detected"))
 	}
 
-	return nil
+	return mimo.TerminalError(errors.New("no registry profile detected"))
 }
