@@ -23,7 +23,7 @@ type ArmUserAssignedIdentitiesClient struct {
 var _ UserAssignedIdentitiesClient = &ArmUserAssignedIdentitiesClient{}
 
 // NewUserAssignedIdentitiesClient creates a new UserAssignedIdentitiesClient
-func NewUserAssignedIdentitiesClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (UserAssignedIdentitiesClient, error) {
+func NewUserAssignedIdentitiesClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (*ArmUserAssignedIdentitiesClient, error) {
 	clientFactory, err := armmsi.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {
 		return nil, err
