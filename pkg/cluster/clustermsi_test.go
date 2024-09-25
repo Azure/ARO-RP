@@ -350,7 +350,7 @@ Response contained no body
 					},
 				},
 			},
-			wantErr: "platformWorkloadIdentityIDs called for CSP cluster",
+			wantErr: "clusterIdentityIDs called for CSP cluster",
 		},
 		{
 			name: "error - invalid resource ID (theoretically not possible, but still)",

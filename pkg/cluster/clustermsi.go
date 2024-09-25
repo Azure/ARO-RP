@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
+	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/Azure/msi-dataplane/pkg/store"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -66,12 +67,16 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	if m.env.FeatureIsSet(env.FeatureUseMockMsiRp) {
 		expirationDate = now.AddDate(0, 0, mockMsiCertValidityDays)
 	} else {
-		if msiCredObj.CredentialsObject.ExplicitIdentities == nil || len(msiCredObj.CredentialsObject.ExplicitIdentities) == 0 || msiCredObj.CredentialsObject.ExplicitIdentities[0] == nil || msiCredObj.CredentialsObject.ExplicitIdentities[0].NotAfter == nil {
+		identity, err := getSingleExplicitIdentity(msiCredObj)
+		if err != nil {
+			return err
+		}
+		if identity.NotAfter == nil {
 			return errors.New("unable to pull NotAfter from the MSI CredentialsObject")
 		}
 
 		// The swagger API spec for the MI RP specifies that NotAfter will be "in the format 2017-03-01T14:11:00Z".
-		expirationDate, err = time.Parse(time.RFC3339, *msiCredObj.CredentialsObject.ExplicitIdentities[0].NotAfter)
+		expirationDate, err = time.Parse(time.RFC3339, *identity.NotAfter)
 		if err != nil {
 			return err
 		}
@@ -151,7 +156,7 @@ func (m *manager) clusterMsiSecretName() (string, error) {
 
 func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		return fmt.Errorf("platformWorkloadIdentityIDs called for CSP cluster")
+		return fmt.Errorf("clusterIdentityIDs called for CSP cluster")
 	}
 
 	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
@@ -170,12 +175,12 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 		return err
 	}
 
-	if msiCredObj.CredentialsObject.ExplicitIdentities == nil ||
-		len(msiCredObj.CredentialsObject.ExplicitIdentities) == 0 ||
-		msiCredObj.CredentialsObject.ExplicitIdentities[0] == nil ||
-		msiCredObj.CredentialsObject.ExplicitIdentities[0].ClientID == nil ||
-		msiCredObj.CredentialsObject.ExplicitIdentities[0].ObjectID == nil {
-		return errClusterMsiNotPresentInResponse
+	identity, err := getSingleExplicitIdentity(msiCredObj)
+	if err != nil {
+		return err
+	}
+	if identity.ClientID == nil || identity.ObjectID == nil {
+		return fmt.Errorf("unable to pull clientID and objectID from the MSI CredentialsObject")
 	}
 
 	clientId := *msiCredObj.CredentialsObject.ExplicitIdentities[0].ClientID
@@ -192,4 +197,14 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 	})
 
 	return err
+}
+
+func getSingleExplicitIdentity(msiCredObj *dataplane.UserAssignedIdentities) (*swagger.NestedCredentialsObject, error) {
+	if msiCredObj.CredentialsObject.ExplicitIdentities == nil ||
+		len(msiCredObj.CredentialsObject.ExplicitIdentities) == 0 ||
+		msiCredObj.CredentialsObject.ExplicitIdentities[0] == nil {
+		return nil, errClusterMsiNotPresentInResponse
+	}
+
+	return msiCredObj.CredentialsObject.ExplicitIdentities[0], nil
 }
