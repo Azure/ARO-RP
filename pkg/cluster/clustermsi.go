@@ -128,7 +128,13 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 		return err
 	}
 
+	userAssignedIdentities, err := armmsi.NewUserAssignedIdentitiesClient(subId, azureCred, clientOptions)
+	if err != nil {
+		return err
+	}
+
 	m.clusterMsiFederatedIdentityCredentials = clusterMsiFederatedIdentityCredentials
+	m.userAssignedIdentities = userAssignedIdentities
 	return nil
 }
 
