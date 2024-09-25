@@ -74,7 +74,7 @@ type Configuration struct {
 	GlobalResourceGroupName            *string                `json:"globalResourceGroupName,omitempty" value:"required"`
 	GlobalResourceGroupLocation        *string                `json:"globalResourceGroupLocation,omitempty" value:"required"`
 	GlobalSubscriptionID               *string                `json:"globalSubscriptionId,omitempty" value:"required"`
-	GlobalDevopsManagedIdenetity       *string                `json:"globalDevopsManagedIdenetity,omitempty" value:"required"`
+	GlobalDevopsManagedIdentity        *string                `json:"globalDevopsManagedIdentity,omitempty" value:"required"`
 	KeyvaultDNSSuffix                  *string                `json:"keyvaultDNSSuffix,omitempty" value:"required"`
 	KeyvaultPrefix                     *string                `json:"keyvaultPrefix,omitempty" value:"required"`
 	MDMFrontendURL                     *string                `json:"mdmFrontendUrl,omitempty" value:"required"`

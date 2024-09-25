@@ -29,7 +29,7 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
-	globalDevopsMSI, err := d.userassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdenetity)
+	globalDevopsMSI, err := d.userassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
 	if err != nil {
 		return err
 	}
