@@ -6,5 +6,7 @@
 !go.mod
 !go.sum
 !hack
+!pkg
 !vendor
-!.git
+!.bingo
+!env.example

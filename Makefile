@@ -548,18 +548,24 @@ run-rp: ci-rp podman-secrets
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
 
-.PHONY: shared-rp
-shared-rp: # Build and run a shared-rp container for automating shared-rp dev env
+.PHONY: build-shared-rp
+build-shared-rp: # Build a shared-rp container for automating shared-rp dev env
 	# pass PULL_SECRET to the container
-	docker build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
+	podman build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
 		--build-arg SHARED_RP_PREFIX=$(SHARED_RP_PREFIX) \
 		--build-arg LOCATION=$(SHARED_RP_LOCATION) \
 		--build-arg SECRET_SA_ACCOUNT_NAME=$(SA_ACCOUNT_NAME) \
 		--no-cache=$(NO_CACHE) \
 		-f Dockerfile.shared-rp \
 		-t $(SHARED_RP_IMAGE) .
-	docker run --rm -it --user=0 --privileged \
+
+.PHONY: run-shared-rp
+run-shared-rp: # Run a shared-rp container for automating shared-rp dev env
+	podman run --rm -it --user=0 --privileged \
 		-v "${HOME}/.azure:/root/.azure" \
 		--name shared-rp-container $(SHARED_RP_IMAGE)
 	SECRET_SA_ACCOUNT_NAME=${SA_ACCOUNT_NAME} make secrets
 	ls secrets/*
+
+.PHONY: shared-rp
+shared-rp: build-shared-rp run-shared-rp # Build and run a shared-rp container for automating shared-rp dev env
