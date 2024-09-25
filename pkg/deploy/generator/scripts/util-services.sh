@@ -25,12 +25,10 @@ enable_services() {
 # 1) image - nameref, string; container image
 # 2) role - nameref, string; VMSS role
 # 3) conf_file - nameref, string; aro gateway environment file
-# 4) network - nameref, string; podman network name to be attached
 configure_service_aro_gateway() {
     local -n image="$1"
     local -n role="$2"
     local -n conf_file="$3"
-    local -n network="$4"
     log "starting"
     log "Configuring aro-gateway service"
 
@@ -61,7 +59,6 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -m 2g \
-  --network=$network \
   -p 80:8080 \
   -p 8081:8081 \
   -p 443:8443 \
@@ -87,12 +84,10 @@ WantedBy=multi-user.target
 # 1) image - nameref, string; RP container image
 # 2) role - nameref, string; VMSS role
 # 3) conf_file - nameref, string; aro rp environment file
-# 4) network - nameref, string; podman network name to be attached
 configure_service_aro_rp() {
     local -n image="$1"
     local -n role="$2"
     local -n conf_file="$3"
-    local -n network="$4"
     log "starting"
     log "Configuring aro-rp service"
 
@@ -140,7 +135,6 @@ ExecStart=/usr/bin/podman run \
   -e OIDC_AFD_ENDPOINT \
   -e OIDC_STORAGE_ACCOUNT_NAME \
   -m 2g \
-  --network=$network \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
@@ -162,10 +156,8 @@ WantedBy=multi-user.target"
 # configure_service_aro_monitor
 # args:
 # 1) image - nameref, string; RP container image
-# 2) network - nameref, string; podman network name to be attached
 configure_service_aro_monitor() {
     local -n image="$1"
-    local -n network="$2"
     log "starting"
     log "Configuring aro-monitor service"
 
@@ -207,7 +199,6 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$network \
   -e AZURE_FP_CLIENT_ID \
   -e DOMAIN_NAME \
   -e CLUSTER_MDSD_ACCOUNT \
@@ -240,10 +231,8 @@ WantedBy=multi-user.target"
 # configure_service_aro_portal
 # args:
 # 1) image - nameref, string; RP container image
-# 2) network - nameref, string; podman network name to be attached
 configure_service_aro_portal() {
     local -n image="$1"
-    local -n network="$2"
     log "starting"
     log "Configuring aro portal service"
 
@@ -278,7 +267,6 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$network \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \
@@ -355,12 +343,10 @@ export MDSD_MSGPACK_SORT_COLUMNS=\"1\""
 # args:
 # 1) conf_file - string; fluenbit configuration file
 # 2) image - string; fluentbit container image to run
-# 3) network - nameref, string; podman network name to be attached
 configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -n conf_file="$1"
     local -n image="$2"
-    local -n network="$3"
     log "starting"
     log "Configuring fluentbit service"
 
@@ -576,11 +562,9 @@ WantedBy=multi-user.target'
 # args:
 # 1) role - nameref, string; can be "gateway" or "rp"
 # 2) image - nameref, string; mdm container image to run
-# 3) network - nameref, string; podman network name to be attached
 configure_service_mdm() {
     local -n role="$1"
     local -n image="$2"
-    local -n network="$3"
     log "starting"
     log "Configuring mdm service"
 
@@ -614,7 +598,6 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$network \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
@@ -652,18 +635,18 @@ configure_vmss_aro_services() {
     verify_role "$1"
 
     if [ "$r" == "$role_gateway" ]; then
-        configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}" "${configs["network"]}"
+        configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
-        configure_service_aro_rp "${images["rp"]}" "$1" "${configs["rp_config"]}" "${configs["network"]}"
-        configure_service_aro_monitor "${images["rp"]}" "${configs["network"]}"
-        configure_service_aro_portal "${images["rp"]}" "${configs["network"]}"
+        configure_service_aro_rp "${images["rp"]}" "$1" "${configs["rp_config"]}"
+        configure_service_aro_monitor "${images["rp"]}"
+        configure_service_aro_portal "${images["rp"]}"
         configure_certs_rp
     fi
 
-    configure_service_fluentbit "${configs["fluentbit"]}" "${images["fluentbit"]}" "${configs["network"]}"
+    configure_service_fluentbit "${configs["fluentbit"]}" "${images["fluentbit"]}"
     configure_timers_mdm_mdsd "$1"
-    configure_service_mdm "$1" "${images["mdm"]}" "${configs["network"]}"
+    configure_service_mdm "$1" "${images["mdm"]}"
     configure_service_mdsd "$1" "${configs["mdsd"]}"
     run_azsecd_config_scan
 }
