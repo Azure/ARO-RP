@@ -69,7 +69,7 @@ configure_sshd() {
 # args:
 # 1) dropin_files - nameref, associative array, optional; logrotate files to write to /etc/logrotate.d
 #       Key name dictates filenames written to /etc/logrotate.d.
-# Example: 
+# Example:
 #   Key dictates the filename written in /etc/logrotate.d
 #   shellcheck disable=SC2034
 #   local -rA logrotate_dropins=(
@@ -159,7 +159,7 @@ pull_container_images() {
 
     # This name is used in the case that az acr login searches for this in it's environment
     export REGISTRY_AUTH_FILE="/root/.docker/config.json"
-    
+
     if [ -n "${registry_conf}" ]; then
         write_file REGISTRY_AUTH_FILE registry_conf true
     fi
@@ -243,7 +243,7 @@ configure_certs_devproxy() {
     log "starting"
 
     verify_role role_devproxy
-    
+
     local -r proxy_certs_basedir="/etc/proxy"
     mkdir -p "$proxy_certs_basedir"
     base64 -d <<<"$PROXYCERT" > "$proxy_certs_basedir/proxy.crt"
@@ -307,24 +307,6 @@ create_required_dirs() {
     for d in ${create_dirs[@]}; do
         log "Creating directory $d"
         mkdir -p "$d" || abort "failed to create directory $d"
-    done
-}
-
-# create_podman_networks()
-# args:
-# 1) nets - nameref, associative array; Networks to be created
-#       Key is the network name, value is the subnet with cidr notation
-create_podman_networks() {
-    local -n nets="$1"
-    log "starting"
-
-    # shellcheck disable=SC2068
-    for n in ${!nets[@]}; do
-        log "Creating podman network \"$n\" with subnet \"${nets[$n]}\""
-        podman network \
-            create \
-            --subnet "${nets["$n"]}" \
-            "$n"
     done
 }
 
