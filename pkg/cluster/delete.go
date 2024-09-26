@@ -138,7 +138,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 // parallel and waiting for completion before we proceed.  Any type not in the
 // map is considered to be at level 0.  Keys must be lower case.
 var deleteOrder = map[string]int{
-	"microsoft.compute/virtualmachines":                 -3, // first, and before microsoft.compute/disks, microsoft.network/networkinterfaces
+	"microsoft.compute/virtualmachines":                 -3, // before microsoft.compute/disks and microsoft.network/networkinterfaces
 	"microsoft.network/privatelinkservices":             -3, // before microsoft.network/loadbalancers
 	"microsoft.network/privateendpoints":                -3, // before microsoft.network/networkinterfaces
 	"microsoft.compute/galleries/applications/versions": -2, // before microsoft.compute/galleries/applications
@@ -153,6 +153,19 @@ var deleteOrder = map[string]int{
 
 func (m *manager) deleteResources(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	// Delete deny assignment first. In case deletion fails, resources can be cleaned up manually.
+	if !m.env.IsLocalDevelopmentMode() {
+		fpTokenCredential, err := m.env.FPNewClientCertificateCredential(m.subscriptionDoc.Subscription.Properties.TenantID)
+		if err != nil {
+			return err
+		}
+
+		err = m.denyAssignments.DeleteDenyAssignment(ctx, fpTokenCredential, m.subscriptionDoc, m.doc)
+		if err != nil {
+			return err
+		}
+	}
 
 	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "", nil)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
