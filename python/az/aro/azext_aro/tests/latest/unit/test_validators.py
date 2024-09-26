@@ -113,7 +113,7 @@ test_validate_client_id_data = [
     ),
     (
         "should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
-        Mock(client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret="12345"),
+        Mock(upgradeable_to=None, client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret="12345"),
         None
     )
 ]
@@ -172,14 +172,26 @@ test_validate_client_secret_data = [
     (
         "should not raise any exception when isCreate is true and all arguments valid",
         True,
-        Mock(client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
+        Mock(upgradeable_to=None, client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
         None
     ),
     (
         "should not raise any exception when isCreate is false and all arguments valid",
         False,
-        Mock(client_secret="123", platform_workload_identities=None),
+        Mock(upgradeable_to=None, client_secret="123", platform_workload_identities=None),
         None
+    ),
+    (
+        "should raise any exception when isCreate is true and upgradeable_to, client_id and client_secret are present",
+        True,
+        Mock(upgradeable_to="4.14.2", client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
+        RequiredArgumentMissingError
+    ),
+    (
+        "should raise any exception when isCreate is false and upgradeable_to, client_id and client_secret are present",
+        False,
+        Mock(upgradeable_to="4.14.2", client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
+        RequiredArgumentMissingError
     ),
 ]
 
@@ -1287,18 +1299,6 @@ test_validate_upgradeable_to_data = [
     ),
 
     (
-        "should raise RequiredArgumentMissingError Exception because namespace.client_id is present",
-        Mock(upgradeable_to="4.14.5", client_id="client_id_456", client_secret=None),
-        RequiredArgumentMissingError, '--client-id must be not set with --upgradeable-to.'
-    ),
-
-    (
-        "should raise RequiredArgumentMissingError Exception because namespace.client_secret is present",
-        Mock(upgradeable_to="4.14.5", client_id=None, client_secret="secret_123"),
-        RequiredArgumentMissingError, '--client-secret must be not set with --upgradeable-to.'
-    ),
-
-    (
         "should raise InvalidArgumentValueError Exception because upgradeable_to format is invalid",
         Mock(upgradeable_to="a", client_id=None, client_secret=None),
         InvalidArgumentValueError, "--upgradeable-to is invalid"
@@ -1308,7 +1308,7 @@ test_validate_upgradeable_to_data = [
         "Should raise InvalidArgumentValueError when --upgradeable-to < 4.14.0",
         Mock(upgradeable_to="4.0.4",
              client_id=None, client_secret=None),
-        InvalidArgumentValueError, 'Enabling managed identity requires --upgradeable-to >= 4.14.z'
+        InvalidArgumentValueError, 'Enabling managed identity requires --upgradeable-to >= 4.14.0'
     ),
 
 ]

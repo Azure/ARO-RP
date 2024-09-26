@@ -52,7 +52,8 @@ def validate_client_id(namespace):
 
     if namespace.client_secret is None or not str(namespace.client_secret):
         raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')  # pylint: disable=line-too-long
-    raise RequiredArgumentMissingError('--client-id must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
+    if namespace.upgradeable_to is not None:
+        raise RequiredArgumentMissingError('--client-id must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
 
 
 def validate_client_secret(isCreate):
@@ -65,7 +66,8 @@ def validate_client_secret(isCreate):
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
         if isCreate and (namespace.client_id is None or not str(namespace.client_id)):
             raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
-        raise RequiredArgumentMissingError('--client-secret must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
+        if namespace.upgradeable_to is not None:
+            raise RequiredArgumentMissingError('--client-secret must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
 
     return _validate_client_secret
 
@@ -292,7 +294,7 @@ def validate_version_format(namespace):
 def validate_upgradeable_to_format(namespace):
     if not namespace.upgradeable_to:
         return
-    if not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.upgradeable_to):
+    if not re.match(r'^[4-9]{1}\.(1[4-9]|[1-9][0-9])\.[0-9]{1,2}$', namespace.upgradeable_to):
         raise InvalidArgumentValueError('--upgradeable-to format is invalid')
 
 
