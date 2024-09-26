@@ -2393,10 +2393,6 @@
       "description": "PlatformWorkloadIdentity stores information representing a single workload identity.",
       "type": "object",
       "properties": {
-        "operatorName": {
-          "description": "The name of the operator the PlatformWorkloadIdentity is to be used for",
-          "type": "string"
-        },
         "resourceId": {
           "description": "The resource ID of the PlatformWorkloadIdentity resource",
           "type": "string"
@@ -2421,11 +2417,10 @@
           "$ref": "#/definitions/UpgradeableTo"
         },
         "platformWorkloadIdentities": {
-          "type": "array",
-          "items": {
+          "type": "object",
+          "additionalProperties": {
             "$ref": "#/definitions/PlatformWorkloadIdentity"
-          },
-          "x-ms-identifiers": []
+          }
         }
       }
     },

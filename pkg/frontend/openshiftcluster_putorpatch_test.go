@@ -1952,38 +1952,30 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				}
 				oc.Properties.PlatformWorkloadIdentityProfile = &v20240812preview.PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: []v20240812preview.PlatformWorkloadIdentity{
-						{
-							OperatorName: "AzureFilesStorageOperator",
-							ResourceID:   mockMiResourceId,
+					PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+						"AzureFilesStorageOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "CloudControllerManager",
-							ResourceID:   mockMiResourceId,
+						"CloudControllerManager": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "ClusterIngressOperator",
-							ResourceID:   mockMiResourceId,
+						"ClusterIngressOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "ImageRegistryOperator",
-							ResourceID:   mockMiResourceId,
+						"ImageRegistryOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "MachineApiOperator",
-							ResourceID:   mockMiResourceId,
+						"MachineApiOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "NetworkOperator",
-							ResourceID:   mockMiResourceId,
+						"NetworkOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "ServiceOperator",
-							ResourceID:   mockMiResourceId,
+						"ServiceOperator": {
+							ResourceID: mockMiResourceId,
 						},
-						{
-							OperatorName: "StorageOperator",
-							ResourceID:   mockMiResourceId,
+						"StorageOperator": {
+							ResourceID: mockMiResourceId,
 						},
 					},
 				}
@@ -2051,38 +2043,30 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							OperatorFlags: operator.DefaultOperatorFlags(),
 							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-								PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-									{
-										OperatorName: "AzureFilesStorageOperator",
-										ResourceID:   mockMiResourceId,
+								PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+									"AzureFilesStorageOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "CloudControllerManager",
-										ResourceID:   mockMiResourceId,
+									"CloudControllerManager": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "ClusterIngressOperator",
-										ResourceID:   mockMiResourceId,
+									"ClusterIngressOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "ImageRegistryOperator",
-										ResourceID:   mockMiResourceId,
+									"ImageRegistryOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "MachineApiOperator",
-										ResourceID:   mockMiResourceId,
+									"MachineApiOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "NetworkOperator",
-										ResourceID:   mockMiResourceId,
+									"NetworkOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "ServiceOperator",
-										ResourceID:   mockMiResourceId,
+									"ServiceOperator": {
+										ResourceID: mockMiResourceId,
 									},
-									{
-										OperatorName: "StorageOperator",
-										ResourceID:   mockMiResourceId,
+									"StorageOperator": {
+										ResourceID: mockMiResourceId,
 									},
 								},
 							},
@@ -2123,38 +2107,30 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 					PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: []v20240812preview.PlatformWorkloadIdentity{
-							{
-								OperatorName: "AzureFilesStorageOperator",
-								ResourceID:   mockMiResourceId,
+						PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+							"AzureFilesStorageOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "CloudControllerManager",
-								ResourceID:   mockMiResourceId,
+							"CloudControllerManager": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "ClusterIngressOperator",
-								ResourceID:   mockMiResourceId,
+							"ClusterIngressOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "ImageRegistryOperator",
-								ResourceID:   mockMiResourceId,
+							"ImageRegistryOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "MachineApiOperator",
-								ResourceID:   mockMiResourceId,
+							"MachineApiOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "NetworkOperator",
-								ResourceID:   mockMiResourceId,
+							"NetworkOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "ServiceOperator",
-								ResourceID:   mockMiResourceId,
+							"ServiceOperator": {
+								ResourceID: mockMiResourceId,
 							},
-							{
-								OperatorName: "StorageOperator",
-								ResourceID:   mockMiResourceId,
+							"StorageOperator": {
+								ResourceID: mockMiResourceId,
 							},
 						},
 					},
