@@ -262,6 +262,7 @@ func (t MaintenanceTask) IsMaintenanceOngoingTask() bool {
 	result := (t == MaintenanceTaskEverything) ||
 		(t == MaintenanceTaskOperator) ||
 		(t == MaintenanceTaskRenewCerts) ||
+		(t == MaintenanceTaskSyncClusterObject) ||
 		(t == "")
 	return result
 }

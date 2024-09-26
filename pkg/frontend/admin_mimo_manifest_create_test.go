@@ -114,6 +114,44 @@ func TestMIMOCreateManifest(t *testing.T) {
 			},
 			wantStatusCode: http.StatusCreated,
 		},
+		{
+			name: "default set to pending",
+			fixtures: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				})
+			},
+			body: &admin.MaintenanceManifest{
+				MaintenanceSetID: "exampleset",
+				RunAfter:         1,
+				RunBefore:        1,
+			},
+			wantResult: func(c *testdatabase.Checker) {
+				c.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ID:                "07070707-0707-0707-0707-070707070001",
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceSetID: "exampleset",
+						State:            api.MaintenanceManifestStatePending,
+						RunAfter:         1,
+						RunBefore:        1,
+					},
+				})
+			},
+			wantResponse: &admin.MaintenanceManifest{
+				ID:               "07070707-0707-0707-0707-070707070001",
+				MaintenanceSetID: "exampleset",
+				State:            admin.MaintenanceManifestStatePending,
+				RunAfter:         1,
+				RunBefore:        1,
+			},
+			wantStatusCode: http.StatusCreated,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			now := func() time.Time { return time.Unix(1000, 0) }

@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/url"
 
@@ -31,10 +30,18 @@ var _ = Describe("MIMO Actuator E2E Testing", func() {
 		var oc = &admin.OpenShiftCluster{}
 		testflag := "aro.e2e.testflag." + uuid.DefaultGenerator.Generate()
 
+		ocIn := &admin.OpenShiftCluster{
+			Properties: admin.OpenShiftClusterProperties{
+				MaintenanceTask: admin.MaintenanceTaskSyncClusterObject,
+				OperatorFlags: admin.OperatorFlags{
+					testflag: "true",
+				},
+			},
+		}
+
 		By("set a bogus flag on the cluster")
 		resp, err := adminRequest(ctx,
-			http.MethodPatch, clusterResourceID, nil, true,
-			json.RawMessage("{\"properties\": {\"maintenanceTask\": \"SyncClusterObject\", \"operatorFlags\": {\""+testflag+"\": \"true\"}}}"), oc)
+			http.MethodPatch, clusterResourceID, nil, true, ocIn, oc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
