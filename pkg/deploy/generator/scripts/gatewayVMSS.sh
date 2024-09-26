@@ -48,7 +48,7 @@ main() {
     dnf_install_pkgs install_pkgs \
                      retry_wait_time \
                      "$pkg_retry_count"
-    
+
     fips_configure
 
     # TODO remove this once MicrosoftCBLMariner:cbl-mariner:cbl-mariner-2-gen2-fips supports automatic updates
@@ -72,13 +72,6 @@ main() {
     )
 
     pull_container_images aro_images
-
-    local -r aro_network="aro"
-    # shellcheck disable=SC2034
-    local -rA networks=(
-        ["$aro_network"]="192.168.254.0/24"
-    )
-    create_podman_networks networks
 
     # shellcheck disable=SC2034
     local -ra enable_ports=(
@@ -129,7 +122,6 @@ RPIMAGE='$rpimage'"
         ["gateway_config"]="aro_gateway_conf_file"
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
-        ["network"]="aro_network"
     )
 
     configure_vmss_aro_services role_gateway \

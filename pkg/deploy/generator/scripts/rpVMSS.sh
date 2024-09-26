@@ -76,8 +76,6 @@ main() {
     local -rA networks=(
         ["$aro_network"]="192.168.254.0/24"
     )
-    create_podman_networks networks
-
     # shellcheck disable=SC2034
     local -ra enable_ports=(
         # RP frontend
