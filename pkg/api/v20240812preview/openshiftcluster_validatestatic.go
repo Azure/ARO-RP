@@ -448,13 +448,13 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 
 	if current.UsesWorkloadIdentity() {
 		currentIdentities := map[string]PlatformWorkloadIdentity{}
-		for _, i := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			currentIdentities[i.OperatorName] = i
+		for k, i := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			currentIdentities[k] = i
 		}
 
 		updateIdentities := map[string]PlatformWorkloadIdentity{}
-		for _, i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			updateIdentities[i.OperatorName] = i
+		for k, i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			updateIdentities[k] = i
 		}
 
 		for name, currentIdentity := range currentIdentities {
@@ -482,23 +482,23 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 	operators := map[string]struct{}{}
 
 	// Validate the PlatformWorkloadIdentities
-	for n, p := range pwip.PlatformWorkloadIdentities {
+	for name, p := range pwip.PlatformWorkloadIdentities {
 		resource, err := azcorearm.ParseResourceID(p.ResourceID)
 		if err != nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "ResourceID %s formatted incorrectly.", p.ResourceID)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%s].resourceID", path, name), "ResourceID %s formatted incorrectly.", p.ResourceID)
 		}
 
-		if p.OperatorName == "" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Operator name is empty.")
+		if name == "" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%s].resourceID", path, name), "Operator name is empty.")
 		}
 
-		if _, found := operators[p.OperatorName]; found {
+		if _, found := operators[name]; found {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.platformWorkloadIdentities", path), "Operator identities cannot have duplicate names.")
 		}
-		operators[p.OperatorName] = struct{}{}
+		operators[name] = struct{}{}
 
 		if resource.ResourceType.Type != "userAssignedIdentities" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Resource must be a user assigned identity.")
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%s].resourceID", path, name), "Resource must be a user assigned identity.")
 		}
 	}
 

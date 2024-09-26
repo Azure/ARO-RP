@@ -135,19 +135,16 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	msiResourceID := resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-msi-resource"
 	dummyClientId := uuid.DefaultGenerator.Generate()
 	dummyObjectId := uuid.DefaultGenerator.Generate()
-	platformWorkloadIdentities := []api.PlatformWorkloadIdentity{
-		{
-			OperatorName: "Dummy2",
+	platformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
+		"Dummy2": {
 			ResourceID:   platformIdentity1,
 		},
-		{
-			OperatorName: "Dummy1",
+		"Dummy1": {
 			ResourceID:   platformIdentity1,
 		},
 	}
-	desiredPlatformWorkloadIdentities := []api.PlatformWorkloadIdentity{
-		{
-			OperatorName: "Dummy1",
+	desiredPlatformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
+		"Dummy1": {
 			ResourceID:   platformIdentity1,
 		},
 	}
@@ -174,7 +171,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		platformIdentityRoles            map[string]api.PlatformWorkloadIdentityRole
 		oc                               *api.OpenShiftCluster
 		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient)
-		wantPlatformIdentities           []api.PlatformWorkloadIdentity
+		wantPlatformIdentities           map[string]api.PlatformWorkloadIdentity
 		wantPlatformIdentitiesActionsMap map[string][]string
 		checkAccessMocks                 func(context.CancelFunc, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
 		wantErr                          string
@@ -185,9 +182,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-							{
-								OperatorName: "Dummy1",
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
 								ResourceID:   platformIdentity1,
 							},
 						},
@@ -240,9 +236,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Return(&msiAllowedActions, nil).AnyTimes()
 			},
-			wantPlatformIdentities: []api.PlatformWorkloadIdentity{
-				{
-					OperatorName: "Dummy1",
+			wantPlatformIdentities: map[string]api.PlatformWorkloadIdentity{
+				"Dummy1": {
 					ResourceID:   platformIdentity1,
 				},
 			},
@@ -355,7 +350,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{},
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version: openShiftVersion,
@@ -373,13 +368,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-							{
-								OperatorName: "Dummy2",
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy2": {
 								ResourceID:   platformIdentity1,
 							},
-							{
-								OperatorName: "Dummy3",
+							"Dummy3": {
 								ResourceID:   platformIdentity1,
 							},
 						},
@@ -441,13 +434,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-							{
-								OperatorName: "Dummy2",
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy2": {
 								ResourceID:   "Invalid UUID",
 							},
-							{
-								OperatorName: "Dummy1",
+							"Dummy1": {
 								ResourceID:   "Invalid UUID",
 							},
 						},

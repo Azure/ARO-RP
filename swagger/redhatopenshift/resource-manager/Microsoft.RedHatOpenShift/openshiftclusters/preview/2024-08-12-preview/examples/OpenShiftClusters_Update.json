@@ -21,9 +21,9 @@
           "clientSecret": "clientSecret"
         },
         "platformWorkloadIdentityProfile": {
-          "platformWorkloadIdentities": [
-            {}
-          ]
+          "platformWorkloadIdentities": {
+            "": {}
+          }
         },
         "networkProfile": {
           "podCidr": "10.128.0.0/14",
