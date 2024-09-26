@@ -8,8 +8,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_privatedns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/privatedns"

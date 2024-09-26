@@ -19,8 +19,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	gofrsuuid "github.com/gofrs/uuid"
-	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"

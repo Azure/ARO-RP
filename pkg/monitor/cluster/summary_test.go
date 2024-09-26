@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"

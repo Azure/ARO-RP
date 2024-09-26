@@ -14,11 +14,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 	cryptossh "golang.org/x/crypto/ssh"
 
 	"github.com/Azure/ARO-RP/pkg/api"

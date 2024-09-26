@@ -37,7 +37,6 @@ require (
 	github.com/go-test/deep v1.1.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/golang/mock v1.6.0
 	github.com/google/gnostic v0.5.7-v3refs
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
@@ -1166,7 +1165,6 @@ exclude (
 // trim old golang.org/x/ and github.com/golang/ items
 exclude (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
-	github.com/golang/mock v1.4.4
 	// exclude github.com/golang/protobuf < 1.3.2 https://nvd.nist.gov/vuln/detail/CVE-2021-3121
 	github.com/golang/protobuf v1.0.0
 	github.com/golang/protobuf v1.1.1
@@ -1178,6 +1176,7 @@ exclude (
 	github.com/golang/protobuf v1.4.3
 	github.com/golang/protobuf v1.5.0
 	github.com/golang/protobuf v1.5.2
+	go.uber.org/mock v1.4.4
 	golang.org/x/arch v0.0.0-20180920145803-b19384d3c130
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586

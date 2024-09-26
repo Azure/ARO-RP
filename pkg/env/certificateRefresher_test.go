@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"

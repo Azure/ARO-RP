@@ -7,9 +7,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"

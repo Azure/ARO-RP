@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"

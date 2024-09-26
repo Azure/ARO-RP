@@ -19,7 +19,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azblob"

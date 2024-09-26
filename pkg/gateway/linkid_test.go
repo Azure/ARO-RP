@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"

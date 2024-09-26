@@ -19,9 +19,9 @@ import (
 
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/go-test/deep"
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/oauth2"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"

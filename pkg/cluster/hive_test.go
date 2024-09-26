@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
