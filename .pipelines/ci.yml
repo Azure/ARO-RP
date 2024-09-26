@@ -30,78 +30,20 @@ stages:
   - stage: NotContainerized
     dependsOn: Containerized
     jobs:
-      - job: Python_Unit_Tests
+      - job: Lint_Az_ARO_Extension
         pool:
           name: 1es-aro-ci-pool
         variables:
           HOME: $(Agent.BuildDirectory)
-
         steps:
           - template: ./templates/template-checkout.yml
           - script: |
               set -xe
+              export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
               make test-python
               [[ -z "$(git status -s)" ]]
-            displayName: 🧪 Run Python Unit Tests
+            displayName: 🧪 Lint Az ARO Extension
             target: python
-
-      - job: Golang_Unit_Tests
-        pool:
-          name: 1es-aro-ci-pool
-        variables:
-          GOCACHE: /tmp/gocache
-        steps:
-          - template: ./templates/template-checkout.yml
-
-          - script: |
-              set -xe
-              go version
-              go env
-            displayName: Print Go version & env
-            target: golang
-
-          - script: |
-              echo "##vso[task.prependpath]$(go env GOPATH)/bin"
-            displayName: Add GOBIN to path
-            target: golang
-
-          - script: |
-              set -xe
-              # Required for podman 5
-              sudo tdnf install -y gpgme-devel lvm2-devel btrfs-progs-devel golang-1.21.11-1.cm2
-              make generate
-              [[ -z "$(git status -s)" ]]
-            displayName: ⚙️ Run Golang code generate
-            target: golang
-
-          - script: |
-              set -xe
-              make build-all
-              [[ -z "$(git status -s)" ]]
-            displayName: 🕵️ Build Golang code
-            target: golang
-
-          - script: |
-              set -xe
-              make unit-test-go
-            displayName: 🧪 Run Golang unit tests
-            target: golang
-
-          - script: |
-              make xmlcov
-            displayName: ⚙️ Process Reports
-            condition: succeededOrFailed()
-            target: golang
-
-      - job: Lint_Admin_Portal
-        pool:
-          name: 1es-aro-ci-pool
-        steps:
-          - template: ./templates/template-checkout.yml
-          - script: |
-              set -xe
-              make lint-admin-portal
-            displayName: 🧹 Lint Admin Portal
 
   - stage: Containerized
     dependsOn: []
@@ -159,17 +101,3 @@ stages:
               acrFQDN: 'arosvcdev.azurecr.io'
               repository: 'aro'
               pushLatest: true
-
-      - job: Lint_Az_ARO_Extension
-        pool:
-          name: 1es-aro-ci-pool
-        variables:
-          HOME: $(Agent.BuildDirectory)
-        steps:
-          - template: ./templates/template-checkout.yml
-          - script: |
-              set -xe
-              export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
-              make test-python
-              [[ -z "$(git status -s)" ]]
-            target: python
