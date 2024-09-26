@@ -66,7 +66,7 @@ func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Req
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: "+err.Error())
 	}
 
-	// fill in some sefaults
+	// fill in some defaults
 	ext.ID = dbMaintenanceManifests.NewUUID()
 	ext.State = admin.MaintenanceManifestStatePending
 
