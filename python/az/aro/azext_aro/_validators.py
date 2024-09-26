@@ -53,7 +53,7 @@ def validate_client_id(namespace):
     if namespace.client_secret is None or not str(namespace.client_secret):
         raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')  # pylint: disable=line-too-long
     if namespace.upgradeable_to is not None:
-        raise RequiredArgumentMissingError('--client-id must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
+        raise MutuallyExclusiveArgumentError('Must not specify --client-id when --upgradeable-to is used.')  # pylint: disable=line-too-long
 
 
 def validate_client_secret(isCreate):
@@ -67,7 +67,7 @@ def validate_client_secret(isCreate):
         if isCreate and (namespace.client_id is None or not str(namespace.client_id)):
             raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
         if namespace.upgradeable_to is not None:
-            raise RequiredArgumentMissingError('--client-secret must be not set with --upgradeable-to.')  # pylint: disable=line-too-long
+            raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --upgradeable-to is used.')  # pylint: disable=line-too-long
 
     return _validate_client_secret
 
@@ -284,6 +284,8 @@ def validate_refresh_cluster_credentials(namespace):
         return
     if namespace.client_secret is not None or namespace.client_id is not None:
         raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
+    if namespace.upgradeable_to is not None:
+        raise MutuallyExclusiveArgumentError('Must not specify --refresh-credentials when --upgradeable-to is used.') # pylint: disable=line-too-long
 
 
 def validate_version_format(namespace):

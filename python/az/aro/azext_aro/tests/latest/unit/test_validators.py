@@ -182,16 +182,16 @@ test_validate_client_secret_data = [
         None
     ),
     (
-        "should raise any exception when isCreate is true and upgradeable_to, client_id and client_secret are present",
+        "should raise MutuallyExclusiveArgumentError exception when isCreate is true and upgradeable_to, client_id and client_secret are present",
         True,
         Mock(upgradeable_to="4.14.2", client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
-        RequiredArgumentMissingError
+        MutuallyExclusiveArgumentError
     ),
     (
-        "should raise any exception when isCreate is false and upgradeable_to, client_id and client_secret are present",
+        "should raise MutuallyExclusiveArgumentError exception when isCreate is false and upgradeable_to, client_id and client_secret are present",
         False,
         Mock(upgradeable_to="4.14.2", client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
-        RequiredArgumentMissingError
+        MutuallyExclusiveArgumentError
     ),
 ]
 
@@ -817,9 +817,15 @@ test_validate_refresh_cluster_credentials_data = [
     ),
     (
         "should not raise any Exception because namespace.client_secret is None and namespace.client_id is None",
-        Mock(client_secret=None, client_id=None),
+        Mock(upgradeable_to=None, client_secret=None, client_id=None),
         None
-    )
+    ), 
+    (
+        "should raise RequiredArgumentMissingError Exception because namespace.upgradeable_to is not None",
+        Mock(upgradeable_to="4.14.2", client_id=None, client_secret=None),
+        MutuallyExclusiveArgumentError
+    ), 
+
 ]
 
 
