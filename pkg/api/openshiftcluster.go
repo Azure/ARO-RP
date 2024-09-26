@@ -832,8 +832,8 @@ type HiveProfile struct {
 type PlatformWorkloadIdentityProfile struct {
 	MissingFields
 
-	UpgradeableTo              *UpgradeableTo             `json:"upgradeableTo,omitempty"`
-	PlatformWorkloadIdentities []PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
+	UpgradeableTo              *UpgradeableTo                      `json:"upgradeableTo,omitempty"`
+	PlatformWorkloadIdentities map[string]PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }
 
 // UpgradeableTo stores a single OpenShift version a workload identity cluster can be upgraded to
@@ -842,9 +842,6 @@ type UpgradeableTo string
 // PlatformWorkloadIdentity stores information representing a single workload identity.
 type PlatformWorkloadIdentity struct {
 	MissingFields
-
-	// The name of the operator the PlatformWorkloadIdentity is to be used for
-	OperatorName string `json:"operatorName,omitempty"`
 
 	// The resource ID of the PlatformWorkloadIdentity resource
 	ResourceID string `json:"resourceId,omitempty"`

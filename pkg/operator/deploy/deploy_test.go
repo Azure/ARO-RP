@@ -635,9 +635,8 @@ func TestGenerateOperatorIdentitySecret(t *testing.T) {
 					Location: "eastus1",
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: pkgoperator.OperatorIdentityName,
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								pkgoperator.OperatorIdentityName: {
 									ClientID:     "11111111-1111-1111-1111-111111111111",
 								},
 							},
