@@ -239,6 +239,14 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		t.Resources = append(t.Resources, m.denyAssignment())
 	}
 
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		storageBlobContributorRBAC, err := m.fpspStorageBlobContributorRBAC(clusterStorageAccountName)
+		if err != nil {
+			return err
+		}
+		t.Resources = append(t.Resources, storageBlobContributorRBAC)
+	}
+
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 }
 
