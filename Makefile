@@ -48,6 +48,13 @@ else
 	REGISTRY = $(RP_IMAGE_ACR)
 endif
 
+# (workaround) use git commit sha without dirty suffix for FULL RP Dev automation
+ifeq ($(FULL_RP_DEV),)
+	DEPLOY_COMMIT = $(VERSION)
+else
+	DEPLOY_COMMIT = $(shell git rev-parse --short=7 HEAD)
+endif
+
 # prod images
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
@@ -110,7 +117,7 @@ pre-deploy-full: dev-config.yaml
 # override COMMIT.
 .PHONY: deploy
 deploy: pre-deploy-full
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(DEPLOY_COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: discoverycache
 discoverycache:
@@ -569,6 +576,6 @@ full-rp-dev: # Build and run a full-rp-dev container for automating full-rp-dev
 		--device /dev/net/tun \
 		--name full-rp-dev-container $(FULL_RP_DEV_IMAGE)
 
-.PHONY: full-rp-dev-clenup # Run full-rp-dev-clenup target with AZURE_PREFIX and LOCATION
-full-rp-dev-clenup: # Clean all the full-rp-dev resources by deleting ResourceGroups and KeyVaults
+.PHONY: full-rp-dev-cleanup # Run full-rp-dev-cleanup target with AZURE_PREFIX and LOCATION
+full-rp-dev-cleanup: # Clean all the full-rp-dev resources by deleting ResourceGroups and KeyVaults
 	source hack/devtools/rp_dev_helper.sh && AZURE_PREFIX=$(AZURE_PREFIX) clean_rp_dev_env $(RP_LOCATION)

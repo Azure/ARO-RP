@@ -227,7 +227,7 @@ check_keyvault_certificate() {
     local certificate="${2?$err_str}"
     local skip_deployments="${3:-"true"}"
 
-    # Don't skip deployment creation when skip_deployments was set to 'false'
+    # Don't skip keyvault's certificate import when skip_deployments was set to 'false'
     if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
         abort "'skip_deployments' was set to 'false'. ❌⏩ Don't skip keyvault's certificate $certificate import"
     fi
@@ -264,10 +264,12 @@ skip_and_import_certificates(){
     # Optional flag (last argument)
     local skip_deployments="${*: -1}"
 
-    # Don't skip deployment creation when skip_deployments was set to "false" 
-    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
-        abort "'skip_deployments' was set to 'false'. ❌⏩ Don't skip certs import to keyVault $keyVault"
-    fi
+    upn_oid="$(az ad signed-in-user show --query id -o tsv)"
+    log "Giving UPN OID ${upn_oid} import access in ${keyVault}"
+    az keyvault set-policy \
+         --name "${keyVault}" \
+         --object-id "${upn_oid}" \
+         --certificate-permissions list create update import >/dev/null
 
     # shellcheck disable=SC2068
     for i in ${!certificates[*]}; do
@@ -287,15 +289,8 @@ check_and_import_certificates (){
     err_str="Usage $0 <KEYVAULT_PREFIX> [SKIP_DEPLOYMENTS]. Please try again"
     local keyvault_prefix="${1?$err_str}"
     local skip_deployments="${2:-"true"}"
+    local files certs key_vault
 
-    # Don't skip deployment creation when skip_deployments was set to "false" 
-    if is_boolean "$skip_deployments" && [ "${skip_deployments}" = false ]; then
-        abort "'skip_deployments' was set to 'false'. ❌⏩ Don't skip certs import"
-    fi
-
-    local files
-    local certs
-    local key_vault
     key_vault="${keyvault_prefix}-svc"
     log "Check import certificates for the service keyVault ${key_vault}"
     certs=("rp-mdm" "rp-mdsd" "cluster-mdsd" "dev-arm" "rp-firstparty" "rp-server")

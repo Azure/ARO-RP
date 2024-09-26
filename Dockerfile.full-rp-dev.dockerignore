@@ -12,4 +12,5 @@
 !vendor
 !Dockerfile.aro-multistage
 !.git
+!.gitignore
 !.bingo

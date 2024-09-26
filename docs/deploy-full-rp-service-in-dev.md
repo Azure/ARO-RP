@@ -20,9 +20,9 @@
       to the tag expected by aro deployer
     - with a dirty tag, it's not clear what's actually in the image
 
-## Containerize and Automate the int-like Development RP
+## Automatically deploy an int-like Development RP
 
-The [manual int-like Development RP deployment](#deploying-an-int-like-development-rp) is automated using scripts and functions that ease the process, and reduce the setup toll.
+The [manual int-like Development RP deployment](#deploying-an-int-like-development-rp) is automated and containerized using scripts and functions that ease the process, and reduce the setup toll.
 Run the below command to automate the full RP int-like dev env using a container:
 
    ```bash
@@ -30,6 +30,7 @@ Run the below command to automate the full RP int-like dev env using a container
    ```
 
 - Prior to running the automation a user must be logged in to Azure locally (with Azure CLI), since the local Azure credentials (from `${HOME}/.azure`) are copied to the container.
+    You can run `az account show --query state -o tsv` to check if your login to Azure CLI is successful. Look for`Enabled` in the output.
 - Running the automation will be skipped in case the RP and GWY VMSSs succeed and their final deployment succeeds as well.
 - **AZURE_PREFIX** must be unique to avoid Azure resources collision between other deveolopers.
  This value is also used for truncating the keyVault prefix up to 20 characters.
@@ -47,10 +48,10 @@ Run the below command to automate the full RP int-like dev env using a container
    Or
 
    ```bash
-   AZURE_PREFIX=zzz RP_LOCATION=eastus make full-rp-dev-clenup
+   AZURE_PREFIX=zzz RP_LOCATION=eastus make full-rp-dev-cleanup
    ```
 
-## Deploying an int-like Development RP
+## Manually deploy an int-like Development RP
 
 1. Fetch the most up-to-date secrets specifying `SECRET_SA_ACCOUNT_NAME` to the
    name of the storage account containing your shared development environment

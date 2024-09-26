@@ -231,7 +231,7 @@ fully_deploy_resources() {
     # Don't skip deployment creation when SKIP_DEPLOYMENTS was set to "false" 
     if is_boolean "${skip_deployments}" && [ "${skip_deployments}" = false ]; then
       log "'SKIP_DEPLOYMENTS' env var was set to 'false'.❌⏩ Don't skip full deployments of RP and GYW."
-      make go-verify deploy
+      FULL_RP_DEV=true make go-verify deploy
     else
       local num_deployment=0
       check_deployment "${azure_prefix}-global" "rp-global-${location}" && num_deployment="$((num_deployment + 1))"
@@ -246,7 +246,7 @@ fully_deploy_resources() {
 
       if [[ ${num_deployment} -lt 11 ]]; then
         log "Fully deploy RP and GYW deployments. ${num_deployment}/11 deployments have been deployed."
-        make go-verify deploy
+        FULL_RP_DEV=true make go-verify deploy
       else
         log "All the 11 deployments exists. ⏩📋 Full deployments of RP and GYW was skipped."
       fi
