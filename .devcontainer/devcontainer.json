@@ -1,0 +1,51 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "aro-rp dev",
+	"build": {
+		// Sets the run context to one level up instead of the .devcontainer folder.
+		"context": "..",
+		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
+		"dockerfile": "../Dockerfile.ci-rp",
+        "target": "rp-dev",
+		"args": {
+			"REGISTRY": "registry.access.redhat.com"
+		}
+	},
+	"runArgs": [
+		// our builds are crazy big - need more resources
+		"--ulimit=nofile=8192:8192"
+	],
+	"postCreateCommand": "go mod download && make install-tools",
+
+	// Podman required config
+	"remoteUser": "root",
+	"privileged": true,
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [
+		// ARO RP API
+		8443,
+
+		// SRE Portal Web UI
+		8444,
+
+		// SRE Portal SSH Port
+		2222
+	],
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"settings": {},
+			"extensions": [
+				"golang.go",
+				"ms-vscode.makefile-tools",
+				"ms-vsliveshare.vsliveshare"
+			]
+		}
+	}
+}
