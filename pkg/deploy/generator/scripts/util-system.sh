@@ -323,6 +323,7 @@ create_podman_networks() {
         log "Creating podman network \"$n\" with subnet \"${nets[$n]}\""
         podman network \
             create \
+            --disable-dns \
             --subnet "${nets["$n"]}" \
             "$n"
     done
