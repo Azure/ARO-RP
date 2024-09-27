@@ -137,5 +137,11 @@ func (m *manager) getPlatformWorkloadIdentityFederatedCredName(identity api.Plat
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s-%s", m.doc.ID, identityResourceId.ResourceName), nil
+
+	name := fmt.Sprintf("%s-%s", m.doc.ID, identityResourceId.ResourceName)
+	if len(name) > 120 {
+		name = name[:120]
+	}
+
+	return name, nil
 }
