@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -465,7 +466,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 	}
 
 	if m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil {
-		return fmt.Errorf("OIDCIssuer is nil for the cluster with ID: %s", m.doc.OpenShiftCluster.ID)
+		return errors.New("OIDCIssuer is nil")
 	}
 
 	issuer := to.StringPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
