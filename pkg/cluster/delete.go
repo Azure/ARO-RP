@@ -396,7 +396,7 @@ func (m *manager) deleteIdentityFederations(ctx context.Context) error {
 			return err
 		}
 
-		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFedertedCredName(identity)
+		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(identity)
 		if err != nil {
 			return err
 		}
