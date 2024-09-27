@@ -2150,10 +2150,6 @@
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
         },
-        "identity": {
-          "$ref": "#/definitions/ManagedServiceIdentity",
-          "description": "Identity stores information about the cluster MSI(s) in a workload identity cluster."
-        },
         "systemData": {
           "$ref": "../../../../../../common-types/resource-management/v6/types.json#/definitions/systemData",
           "description": "The system meta data relating to this resource.",
@@ -2281,7 +2277,7 @@
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
         },
-        "identity": {
+        "managedServiceIdentity": {
           "$ref": "#/definitions/ManagedServiceIdentity",
           "description": "Identity stores information about the cluster MSI(s) in a workload identity cluster."
         },
