@@ -351,7 +351,7 @@ func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string) erro
 		return fmt.Errorf("%w: %s", errMissingIdentityParameter, "identity URL")
 	}
 
-	cluster.Identity.IdentityURL = identityURL
+	cluster.ManagedServiceIdentity.IdentityURL = identityURL
 
 	return nil
 }
@@ -361,7 +361,7 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 		return fmt.Errorf("%w: %s", errMissingIdentityParameter, "identity tenant ID")
 	}
 
-	cluster.Identity.TenantID = identityTenantID
+	cluster.ManagedServiceIdentity.TenantID = identityTenantID
 
 	return nil
 }

@@ -137,15 +137,15 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	dummyObjectId := uuid.DefaultGenerator.Generate()
 	platformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
 		"Dummy2": {
-			ResourceID:   platformIdentity1,
+			ResourceID: platformIdentity1,
 		},
 		"Dummy1": {
-			ResourceID:   platformIdentity1,
+			ResourceID: platformIdentity1,
 		},
 	}
 	desiredPlatformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
 		"Dummy1": {
-			ResourceID:   platformIdentity1,
+			ResourceID: platformIdentity1,
 		},
 	}
 	desiredPlatformWorkloadIdentitiesMap := map[string]api.PlatformWorkloadIdentityRole{
@@ -184,7 +184,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 							"Dummy1": {
-								ResourceID:   platformIdentity1,
+								ResourceID: platformIdentity1,
 							},
 						},
 					},
@@ -192,7 +192,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -223,7 +223,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -238,7 +238,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			},
 			wantPlatformIdentities: map[string]api.PlatformWorkloadIdentity{
 				"Dummy1": {
-					ResourceID:   platformIdentity1,
+					ResourceID: platformIdentity1,
 				},
 			},
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -257,7 +257,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -292,7 +292,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -315,7 +315,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -338,7 +338,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -356,7 +356,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -370,10 +370,10 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 							"Dummy2": {
-								ResourceID:   platformIdentity1,
+								ResourceID: platformIdentity1,
 							},
 							"Dummy3": {
-								ResourceID:   platformIdentity1,
+								ResourceID: platformIdentity1,
 							},
 						},
 					},
@@ -381,7 +381,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -399,7 +399,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]api.UserAssignedIdentity{
 						"invalidUUID": {},
 					},
@@ -419,7 +419,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -436,15 +436,15 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 							"Dummy2": {
-								ResourceID:   "Invalid UUID",
+								ResourceID: "Invalid UUID",
 							},
 							"Dummy1": {
-								ResourceID:   "Invalid UUID",
+								ResourceID: "Invalid UUID",
 							},
 						},
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -465,7 +465,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -494,7 +494,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -523,7 +523,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
