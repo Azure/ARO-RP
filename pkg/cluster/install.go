@@ -138,6 +138,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 func (m *manager) getCertificateRenewalSteps() []steps.Step {
 	steps := []steps.Step{
 		steps.Action(m.populateDatabaseIntIP),
+		steps.Action(m.replaceDigicert),
 		steps.Action(m.fixMCSCert),
 		steps.Action(m.fixMCSUserData),
 		steps.Action(m.configureAPIServerCertificate),
@@ -223,6 +224,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 		steps.Action(m.rotateACRTokenPassword),
+		steps.Action(m.replaceDigicert),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.renewMDSDCertificate),
