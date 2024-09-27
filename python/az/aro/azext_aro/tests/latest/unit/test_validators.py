@@ -821,7 +821,7 @@ test_validate_refresh_cluster_credentials_data = [
         None
     ), 
     (
-        "should raise RequiredArgumentMissingError Exception because namespace.upgradeable_to is not None",
+        "should raise MutuallyExclusiveArgumentError exception because namespace.upgradeable_to is not None",
         Mock(upgradeable_to="4.14.2", client_id=None, client_secret=None),
         MutuallyExclusiveArgumentError
     ), 
