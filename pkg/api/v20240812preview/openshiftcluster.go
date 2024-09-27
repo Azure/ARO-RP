@@ -38,7 +38,7 @@ type OpenShiftCluster struct {
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 
 	// Identity stores information about the cluster MSI(s) in a workload identity cluster.
-	ManagedServiceIdentity *ManagedServiceIdentity `json:"identity,omitempty"`
+	ManagedServiceIdentity *ManagedServiceIdentity `json:"managedServiceIdentity,omitempty"`
 }
 
 // UsesWorkloadIdentity checks whether a cluster is a Workload Identity cluster or a Service Principal cluster
@@ -295,7 +295,7 @@ type IngressProfile struct {
 
 // PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
 type PlatformWorkloadIdentityProfile struct {
-	UpgradeableTo              *UpgradeableTo             `json:"upgradeableTo,omitempty" mutable:"true"`
+	UpgradeableTo              *UpgradeableTo                      `json:"upgradeableTo,omitempty" mutable:"true"`
 	PlatformWorkloadIdentities map[string]PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty" mutable:"true"`
 }
 

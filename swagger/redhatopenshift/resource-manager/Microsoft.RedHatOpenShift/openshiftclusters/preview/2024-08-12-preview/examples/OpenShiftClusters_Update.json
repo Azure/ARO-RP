@@ -59,7 +59,7 @@
           }
         ]
       },
-      "identity": {}
+      "managedServiceIdentity": {}
     }
   },
   "responses": {

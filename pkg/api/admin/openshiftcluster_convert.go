@@ -177,14 +177,14 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
-	if oc.Identity != nil {
-		out.Identity.Type = ManagedServiceIdentityType(oc.Identity.Type)
-		out.Identity.UserAssignedIdentities = make(map[string]UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
-		for k := range oc.Identity.UserAssignedIdentities {
+	if oc.ManagedServiceIdentity != nil {
+		out.ManagedServiceIdentity.Type = ManagedServiceIdentityType(oc.ManagedServiceIdentity.Type)
+		out.ManagedServiceIdentity.UserAssignedIdentities = make(map[string]UserAssignedIdentity, len(oc.ManagedServiceIdentity.UserAssignedIdentities))
+		for k := range oc.ManagedServiceIdentity.UserAssignedIdentities {
 			var temp UserAssignedIdentity
-			temp.ClientID = oc.Identity.UserAssignedIdentities[k].ClientID
-			temp.PrincipalID = oc.Identity.UserAssignedIdentities[k].PrincipalID
-			out.Identity.UserAssignedIdentities[k] = temp
+			temp.ClientID = oc.ManagedServiceIdentity.UserAssignedIdentities[k].ClientID
+			temp.PrincipalID = oc.ManagedServiceIdentity.UserAssignedIdentities[k].PrincipalID
+			out.ManagedServiceIdentity.UserAssignedIdentities[k] = temp
 		}
 	}
 
@@ -256,14 +256,14 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			out.Tags[k] = v
 		}
 	}
-	if oc.Identity != nil {
-		out.Identity.Type = api.ManagedServiceIdentityType(oc.Identity.Type)
-		out.Identity.UserAssignedIdentities = make(map[string]api.UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
-		for k := range oc.Identity.UserAssignedIdentities {
+	if oc.ManagedServiceIdentity != nil {
+		out.ManagedServiceIdentity.Type = api.ManagedServiceIdentityType(oc.ManagedServiceIdentity.Type)
+		out.ManagedServiceIdentity.UserAssignedIdentities = make(map[string]api.UserAssignedIdentity, len(oc.ManagedServiceIdentity.UserAssignedIdentities))
+		for k := range oc.ManagedServiceIdentity.UserAssignedIdentities {
 			var temp api.UserAssignedIdentity
-			temp.ClientID = oc.Identity.UserAssignedIdentities[k].ClientID
-			temp.PrincipalID = oc.Identity.UserAssignedIdentities[k].PrincipalID
-			out.Identity.UserAssignedIdentities[k] = temp
+			temp.ClientID = oc.ManagedServiceIdentity.UserAssignedIdentities[k].ClientID
+			temp.PrincipalID = oc.ManagedServiceIdentity.UserAssignedIdentities[k].PrincipalID
+			out.ManagedServiceIdentity.UserAssignedIdentities[k] = temp
 		}
 	}
 	out.Properties.ArchitectureVersion = api.ArchitectureVersion(oc.Properties.ArchitectureVersion)
@@ -423,5 +423,23 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 	oc.Properties.WorkerProfilesStatus = nil
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
 		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
+	}
+	if oc.Properties.PlatformWorkloadIdentityProfile != nil {
+		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if entry, ok := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i]; ok {
+				entry.ClientID = ""
+				entry.ObjectID = ""
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i] = entry
+			}
+		}
+	}
+	if oc.ManagedServiceIdentity != nil {
+		for i := range oc.ManagedServiceIdentity.UserAssignedIdentities {
+			if entry, ok := oc.ManagedServiceIdentity.UserAssignedIdentities[i]; ok {
+				entry.ClientID = ""
+				entry.PrincipalID = ""
+				oc.ManagedServiceIdentity.UserAssignedIdentities[i] = entry
+			}
+		}
 	}
 }

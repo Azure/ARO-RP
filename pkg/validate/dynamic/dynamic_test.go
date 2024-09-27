@@ -616,10 +616,10 @@ var (
 		"Microsoft.Network/virtualNetworks/nointersect/nointersect",
 	}
 	platformIdentities = map[string]api.PlatformWorkloadIdentity{
-		"foo": {
-			ResourceID:   platformIdentity1,
-			ClientID:     dummyClientId,
-			ObjectID:     dummyObjectId,
+		"Dummy": {
+			ResourceID: platformIdentity1,
+			ClientID:   dummyClientId,
+			ObjectID:   dummyObjectId,
 		},
 	}
 	validSubnetsAuthorizationDecisions = remotepdp.AuthorizationDecisionResponse{

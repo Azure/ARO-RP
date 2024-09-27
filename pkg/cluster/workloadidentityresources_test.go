@@ -266,10 +266,10 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			name: "ignores identities with no role present",
 			identities: map[string]api.PlatformWorkloadIdentity{
 				"foo": {
-					ClientID:     "00f00f00-0f00-0f00-0f00-f00f00f00f00",
+					ClientID: "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
 				"bar": {
-					ClientID:     "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
+					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
 			roles: []api.PlatformWorkloadIdentityRole{},

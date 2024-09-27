@@ -395,7 +395,7 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{},
+					ManagedServiceIdentity: &api.ManagedServiceIdentity{},
 				},
 			},
 		},
@@ -404,8 +404,8 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{},
+					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
 					},
 				},
 			},
@@ -415,9 +415,9 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							"not a valid MI resource ID": api.ClusterUserAssignedIdentity{
+					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							"not a valid MI resource ID": {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -432,9 +432,9 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -452,9 +452,9 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
