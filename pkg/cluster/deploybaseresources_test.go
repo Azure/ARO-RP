@@ -1797,7 +1797,7 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Sprintf("OIDCIssuer is nil for the cluster with ID: %s", clusterResourceID),
+			wantErr: "OIDCIssuer is nil",
 		},
 		{
 			name: "Success - Operator name do not exists in PlatformWorkloadIdentityProfile",
