@@ -7,10 +7,7 @@ import (
 	"context"
 	"strings"
 
-	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
-
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 // if the cluster is using a managed domain and has a DigiCert-issued
@@ -18,33 +15,30 @@ import (
 // ensures that clusters upgrading to 4.16 aren't blocked due to the SHA-1
 // signing algorithm in use by DigiCert
 func (m *manager) replaceDigicert(ctx context.Context) error {
-	apiCertName := m.doc.ID + "apiserver"
-
 	if strings.Contains(m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain, ".") {
-		bundle, err := m.env.ClusterKeyvault().GetSecret(ctx, apiCertName)
-		if err != nil {
-			return err
-		}
+		oneCertIssuerName := "OneCertV2-PublicCA"
 
-		// don't need to look at the key, just the cert(s)
-		_, certs, err := utilpem.Parse([]byte(*bundle.Value))
-		if err != nil {
-			return err
-		}
+		for _, certName := range []string{m.doc.ID + "-apiserver", m.doc.ID + "-ingress"} {
+			clusterKeyvault := m.env.ClusterKeyvault()
 
-	outer:
-		for _, cert := range certs {
-			for _, w := range cert.Issuer.Organization {
-				if strings.Contains(w, "DigiCert") {
-					// cluster uses a DigiCert certificate, change it over to OneCert
-					_, err := m.env.ClusterKeyvault().SetCertificateIssuer(ctx, "OneCertV2-PublicCA", azkeyvault.CertificateIssuerSetParameters{})
-					if err != nil {
-						return err
-					}
+			bundle, err := clusterKeyvault.GetCertificate(ctx, certName)
+			if err != nil {
+				return err
+			}
 
-					m.env.ClusterKeyvault().CreateSignedCertificate(ctx, "OneCertV2-PublicCA", apiCertName, cert.Subject.CommonName, keyvault.EkuServerAuth)
-					break outer
+			if strings.Contains(*bundle.Policy.IssuerParameters.Name, "DigiCert") {
+				policy, err := clusterKeyvault.GetCertificatePolicy(ctx, certName)
+				if err != nil {
+					return err
 				}
+
+				policy.IssuerParameters.Name = &oneCertIssuerName
+				err = clusterKeyvault.UpdateCertificatePolicy(ctx, certName, policy)
+				if err != nil {
+					return err
+				}
+
+				m.env.ClusterKeyvault().CreateSignedCertificate(ctx, oneCertIssuerName, certName, certName, keyvault.EkuServerAuth)
 			}
 		}
 	}
