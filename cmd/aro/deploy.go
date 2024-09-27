@@ -99,10 +99,7 @@ func preDeploy(ctx context.Context, log *logrus.Entry, hasAKS bool) error {
 	if err != nil {
 		return err
 	}
-
-	// Must be last step so we can be sure there are no RPs at older versions
-	// still serving
-	return deployer.SaveVersion(ctx)
+	return nil
 }
 
 func deploy(ctx context.Context, log *logrus.Entry) error {
