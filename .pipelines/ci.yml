@@ -26,78 +26,57 @@ resources:
 variables:
   - template: vars.yml
 
-stages:
-  - stage: NotContainerized
-    dependsOn: Containerized
-    jobs:
-      - job: Lint_Az_ARO_Extension
-        pool:
-          name: 1es-aro-ci-pool
-        variables:
-          HOME: $(Agent.BuildDirectory)
-        steps:
-          - template: ./templates/template-checkout.yml
-          - script: |
-              set -xe
-              export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
-              make test-python
-              [[ -z "$(git status -s)" ]]
-            displayName: 🧪 Lint Az ARO Extension
-            target: python
+jobs:
+  - job: Build_Test_And_Push_Az_ARO_Extension
+    pool:
+      name: 1es-aro-ci-pool
+    steps:
+      - template: ./templates/template-checkout.yml
 
-  - stage: Containerized
-    dependsOn: []
-    jobs:
-      - job: Build_Test_And_Push_Az_ARO_Extension
-        pool:
-          name: 1es-aro-ci-pool
-        steps:
-          - template: ./templates/template-checkout.yml
+      # Build and test the Az ARO Extension
+      - script: |
+          set -xe
+          DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(Build.BuildId)
+        displayName: 🛠 Build & Test Az ARO Extension
 
-          # Build and test the Az ARO Extension
-          - script: |
-              set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(Build.BuildId)
-            displayName: 🛠 Build & Test Az ARO Extension
+      # Push the image to ACR
+      - template: ./templates/template-acr-push.yml
+        parameters:
+          acrFQDN: 'arosvcdev.azurecr.io'
+          repository: 'azext-aro'
+          pushLatest: true
 
-          # Push the image to ACR
-          - template: ./templates/template-acr-push.yml
-            parameters:
-              acrFQDN: 'arosvcdev.azurecr.io'
-              repository: 'azext-aro'
-              pushLatest: true
+  - job: Build_Lint_Test_RP_And_Portal
+    pool:
+      name: 1es-aro-ci-pool
+    steps:
+      - template: ./templates/template-checkout.yml
 
-      - job: Build_Lint_Test_RP_And_Portal
-        pool:
-          name: 1es-aro-ci-pool
-        steps:
-          - template: ./templates/template-checkout.yml
+      # Build and test RP and Portal
+      - script: |
+          set -xe
+          DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(Build.BuildId)
+        displayName: 🛠 Build & Test RP and Portal
 
-          # Build and test RP and Portal
-          - script: |
-              set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(Build.BuildId)
-            displayName: 🛠 Build & Test RP and Portal
+      # Publish test results
+      - task: PublishTestResults@2
+        displayName: 📊 Publish tests results
+        inputs:
+          testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
+        condition: succeededOrFailed()
 
-          # Publish test results
-          - task: PublishTestResults@2
-            displayName: 📊 Publish tests results
-            inputs:
-              testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
-            condition: succeededOrFailed()
+      # Publish code coverage results
+      - task: PublishCodeCoverageResults@2
+        displayName: 📈 Publish code coverage
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
+          failIfCoverageEmpty: false
+        condition: succeededOrFailed()
 
-          # Publish code coverage results
-          - task: PublishCodeCoverageResults@2
-            displayName: 📈 Publish code coverage
-            inputs:
-              codeCoverageTool: Cobertura
-              summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
-              failIfCoverageEmpty: false
-            condition: succeededOrFailed()
-
-          # Push the image to ACR
-          - template: ./templates/template-acr-push.yml
-            parameters:
-              acrFQDN: 'arosvcdev.azurecr.io'
-              repository: 'aro'
-              pushLatest: true
+      # Push the image to ACR
+      - template: ./templates/template-acr-push.yml
+        parameters:
+          acrFQDN: 'arosvcdev.azurecr.io'
+          repository: 'aro'
+          pushLatest: true
