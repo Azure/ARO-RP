@@ -483,7 +483,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 			continue
 		}
 
-		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFedertedCredName(identity)
+		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(identity)
 		if err != nil {
 			return err
 		}
