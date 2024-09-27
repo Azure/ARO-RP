@@ -60,9 +60,9 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
 			"": {
-				ResourceID:   "",
-				ClientID:     "",
-				ObjectID:     "",
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
 			},
 		},
 	}
@@ -91,9 +91,9 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
 			"": {
-				ResourceID:   "",
-				ClientID:     "",
-				ObjectID:     "",
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
 			},
 		},
 	}

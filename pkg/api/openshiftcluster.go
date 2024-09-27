@@ -17,14 +17,14 @@ type OpenShiftCluster struct {
 
 	// ID, Name and Type are cased as the user provided them at create time.
 	// ID, Name, Type and Location are immutable.
-	ID         string                     `json:"id,omitempty"`
-	Name       string                     `json:"name,omitempty"`
-	Type       string                     `json:"type,omitempty"`
-	Location   string                     `json:"location,omitempty"`
-	SystemData SystemData                 `json:"systemData,omitempty"`
-	Tags       map[string]string          `json:"tags,omitempty"`
-	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-	Identity   *ManagedServiceIdentity    `json:"identity,omitempty"`
+	ID                     string                     `json:"id,omitempty"`
+	Name                   string                     `json:"name,omitempty"`
+	Type                   string                     `json:"type,omitempty"`
+	Location               string                     `json:"location,omitempty"`
+	SystemData             SystemData                 `json:"systemData,omitempty"`
+	Tags                   map[string]string          `json:"tags,omitempty"`
+	Properties             OpenShiftClusterProperties `json:"properties,omitempty"`
+	ManagedServiceIdentity *ManagedServiceIdentity    `json:"managedServiceIdentity,omitempty"`
 
 	//this property is used in the enrichers. Should not be marshalled
 	Lock sync.Mutex `json:"-"`

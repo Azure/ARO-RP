@@ -2008,7 +2008,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ID:   testdatabase.GetResourcePath(mockGuid, "resourceName"),
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Identity: &api.ManagedServiceIdentity{
+						ManagedServiceIdentity: &api.ManagedServiceIdentity{
 							Type: "UserAssigned",
 							UserAssignedIdentities: map[string]api.UserAssignedIdentity{
 								mockMiResourceId: {},
@@ -3623,11 +3623,11 @@ func TestValidateIdentityUrl(t *testing.T) {
 		{
 			name: "pass - identity URL passed",
 			cluster: &api.OpenShiftCluster{
-				Identity: &api.ManagedServiceIdentity{},
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{},
 			},
 			identityURL: "http://foo.bar",
 			expected: &api.OpenShiftCluster{
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					IdentityURL: "http://foo.bar",
 				},
 			},
@@ -3664,11 +3664,11 @@ func TestValidateIdentityTenantID(t *testing.T) {
 		{
 			name: "pass - tenantID passed",
 			cluster: &api.OpenShiftCluster{
-				Identity: &api.ManagedServiceIdentity{},
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{},
 			},
 			tenantID: "bogus",
 			expected: &api.OpenShiftCluster{
-				Identity: &api.ManagedServiceIdentity{
+				ManagedServiceIdentity: &api.ManagedServiceIdentity{
 					TenantID: "bogus",
 				},
 			},

@@ -637,7 +637,7 @@ func TestGenerateOperatorIdentitySecret(t *testing.T) {
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								pkgoperator.OperatorIdentityName: {
-									ClientID:     "11111111-1111-1111-1111-111111111111",
+									ClientID: "11111111-1111-1111-1111-111111111111",
 								},
 							},
 						},

@@ -447,18 +447,8 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 	}
 
 	if current.UsesWorkloadIdentity() {
-		currentIdentities := map[string]PlatformWorkloadIdentity{}
-		for k, i := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			currentIdentities[k] = i
-		}
-
-		updateIdentities := map[string]PlatformWorkloadIdentity{}
-		for k, i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			updateIdentities[k] = i
-		}
-
-		for name, currentIdentity := range currentIdentities {
-			updateIdentity, present := updateIdentities[name]
+		for name, currentIdentity := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			updateIdentity, present := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name]
 			// this also validates that existing identities' names haven't changed
 			if !present {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity cannot be removed or have its name changed.")
@@ -478,9 +468,6 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 		return nil
 	}
 
-	// collect operator names to check for duplicates
-	operators := map[string]struct{}{}
-
 	// Validate the PlatformWorkloadIdentities
 	for name, p := range pwip.PlatformWorkloadIdentities {
 		resource, err := azcorearm.ParseResourceID(p.ResourceID)
@@ -491,11 +478,6 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 		if name == "" {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%s].resourceID", path, name), "Operator name is empty.")
 		}
-
-		if _, found := operators[name]; found {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.platformWorkloadIdentities", path), "Operator identities cannot have duplicate names.")
-		}
-		operators[name] = struct{}{}
 
 		if resource.ResourceType.Type != "userAssignedIdentities" {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%s].resourceID", path, name), "Resource must be a user assigned identity.")
