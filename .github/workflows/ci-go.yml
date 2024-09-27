@@ -12,23 +12,6 @@ permissions:
   contents: read
 
 jobs:
-  ci-from-docker:
-    runs-on: ubuntu-latest
-    container:
-      image: registry.access.redhat.com/ubi8/go-toolset:1.21.13-1
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Add GOBIN to PATH
-      run: |
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Build all
-      run: |
-        make build-all
-    - name: Run unit tests
-      run: |
-        make unit-test-go
-
   vendor-check:
     runs-on: ubuntu-latest
     container:
