@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	configv1 "github.com/openshift/api/config/v1"
@@ -312,7 +312,7 @@ func subnetReconciliationAnnotationExists(annotations map[string]string) bool {
 var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	var vnetName, location, resourceGroup string
 	var subnetsToReconcile map[string]*string
-	var testNSG mgmtnetwork.SecurityGroup
+	var testNSG armnetwork.SecurityGroup
 
 	const nsg = "e2e-nsg"
 	const emptyMachineSet = "e2e-test-machineset"
@@ -344,23 +344,24 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		// This is expensive but will prevent flakes.
 		By("gathering existing subnet NSGs")
 		for subnet := range subnetsToReconcile {
-			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			subnetsToReconcile[subnet] = subnetObject.NetworkSecurityGroup.ID
+			subnetsToReconcile[subnet] = subnetObject.Properties.NetworkSecurityGroup.ID
 		}
 	}
 
 	cleanUpSubnetNSGs := func(ctx context.Context) {
 		By("cleaning up subnet NSGs")
 		for subnet := range subnetsToReconcile {
-			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			resp, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, nil)
 			Expect(err).NotTo(HaveOccurred())
+			subnetObject := resp.Subnet
 
-			if subnetObject.NetworkSecurityGroup.ID != subnetsToReconcile[subnet] {
-				subnetObject.NetworkSecurityGroup.ID = subnetsToReconcile[subnet]
+			if subnetObject.Properties.NetworkSecurityGroup.ID != subnetsToReconcile[subnet] {
+				subnetObject.Properties.NetworkSecurityGroup.ID = subnetsToReconcile[subnet]
 
-				err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
+				err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject, nil)
 				Expect(err).NotTo(HaveOccurred())
 			}
 		}
@@ -368,17 +369,18 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 
 	createE2ENSG := func(ctx context.Context) {
 		By("creating an empty test NSG")
-		testNSG = mgmtnetwork.SecurityGroup{
-			Location:                      &location,
-			Name:                          to.StringPtr(nsg),
-			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
+		testNSG = armnetwork.SecurityGroup{
+			Location:   &location,
+			Name:       to.StringPtr(nsg),
+			Type:       to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+			Properties: &armnetwork.SecurityGroupPropertiesFormat{},
 		}
-		err := clients.NetworkSecurityGroups.CreateOrUpdateAndWait(ctx, resourceGroup, nsg, testNSG)
+		err := clients.NetworkSecurityGroups.CreateOrUpdateAndWait(ctx, resourceGroup, nsg, testNSG, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the freshly created test NSG resource")
-		testNSG, err = clients.NetworkSecurityGroups.Get(ctx, resourceGroup, nsg, "")
+		resp, err := clients.NetworkSecurityGroups.Get(ctx, resourceGroup, nsg, nil)
+		testNSG = resp.SecurityGroup
 		Expect(err).NotTo(HaveOccurred())
 	}
 
@@ -399,7 +401,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		cleanUpSubnetNSGs(ctx)
 
 		By("deleting test NSG")
-		err := clients.NetworkSecurityGroups.DeleteAndWait(ctx, resourceGroup, nsg)
+		err := clients.NetworkSecurityGroups.DeleteAndWait(ctx, resourceGroup, nsg, nil)
 		if err != nil {
 			log.Warn(err)
 		}
@@ -411,16 +413,20 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 			MatchError(kerrors.IsNotFound),
 		))
 	})
+
 	It("must reconcile list of subnets when NSG is changed", func(ctx context.Context) {
 		for subnet := range subnetsToReconcile {
 			By(fmt.Sprintf("assigning test NSG to subnet %q", subnet))
 			// Gets current subnet NSG and then updates it to testNSG.
-			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			resp, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, nil)
 			Expect(err).NotTo(HaveOccurred())
+			subnetObject := resp.Subnet
 
-			subnetObject.NetworkSecurityGroup = &testNSG
+			subnetObject.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{
+				ID: testNSG.ID,
+			}
 
-			err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
+			err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject, nil)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -448,9 +454,9 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		for subnet, correctNSG := range subnetsToReconcile {
 			By(fmt.Sprintf("waiting for the subnet %q to be reconciled so it includes the original cluster NSG", subnet))
 			Eventually(func(g Gomega, ctx context.Context) {
-				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, nil)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(*s.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
+				g.Expect(*s.Properties.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
 
 				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())

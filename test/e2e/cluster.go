@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -94,20 +94,21 @@ var _ = Describe("Cluster", Serial, func() {
 				vnetR, err := azure.ParseResourceID(vnetID)
 				Expect(err).NotTo(HaveOccurred())
 
-				mgmtSubnet, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, "")
+				resp, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, nil)
 				Expect(err).NotTo(HaveOccurred())
+				subnet := resp.Subnet
 
-				if mgmtSubnet.SubnetPropertiesFormat == nil {
-					mgmtSubnet.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+				if subnet.Properties == nil {
+					subnet.Properties = &armnetwork.SubnetPropertiesFormat{}
 				}
 
-				if mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints == nil {
-					mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+				if subnet.Properties.ServiceEndpoints == nil {
+					subnet.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{}
 				}
 
 				// Check whether service endpoint is already there before trying to add
 				// it; trying to add a duplicate results in an error
-				for _, se := range *mgmtSubnet.ServiceEndpoints {
+				for _, se := range subnet.Properties.ServiceEndpoints {
 					if se.Service != nil && *se.Service == "Microsoft.Storage" {
 						subnetAlreadyHasStorageEndpoint = true
 						break
@@ -115,14 +116,14 @@ var _ = Describe("Cluster", Serial, func() {
 				}
 
 				if !subnetAlreadyHasStorageEndpoint {
-					storageEndpoint := mgmtnetwork.ServiceEndpointPropertiesFormat{
+					storageEndpoint := armnetwork.ServiceEndpointPropertiesFormat{
 						Service:   to.StringPtr("Microsoft.Storage"),
-						Locations: &[]string{"*"},
+						Locations: []*string{to.StringPtr("*")},
 					}
 
-					*mgmtSubnet.ServiceEndpoints = append(*mgmtSubnet.ServiceEndpoints, storageEndpoint)
+					subnet.Properties.ServiceEndpoints = append(subnet.Properties.ServiceEndpoints, &storageEndpoint)
 
-					err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
+					err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, subnet, nil)
 					Expect(err).NotTo(HaveOccurred())
 				}
 			}
@@ -193,16 +194,17 @@ var _ = Describe("Cluster", Serial, func() {
 					vnetR, err := azure.ParseResourceID(vnetID)
 					Expect(err).NotTo(HaveOccurred())
 
-					mgmtSubnet, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, "")
+					resp, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, nil)
 					Expect(err).NotTo(HaveOccurred())
+					subnet := resp.Subnet
 
-					if mgmtSubnet.SubnetPropertiesFormat == nil {
-						mgmtSubnet.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+					if subnet.Properties == nil {
+						subnet.Properties = &armnetwork.SubnetPropertiesFormat{}
 					}
 
-					mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+					subnet.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{}
 
-					err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
+					err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, subnet, nil)
 					Expect(err).NotTo(HaveOccurred())
 				}
 			}
