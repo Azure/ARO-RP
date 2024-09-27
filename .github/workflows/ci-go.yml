@@ -40,3 +40,35 @@ jobs:
       run: |
         make generate
         hack/ci-utils/isClean.sh
+
+  golangci:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: v1.59.1
+        args: -v --timeout 15m
+
+  validate-go:
+    name: validate-go
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - run: make validate-go-action
