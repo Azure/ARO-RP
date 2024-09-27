@@ -59,17 +59,16 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 			subnets[strings.ToLower(*p.SubnetID)] = struct{}{}
 		}
 
-		vnet, err := clients.VirtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+		vnet, err := clients.VirtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		for _, subnet := range *vnet.Subnets {
+		for _, subnet := range vnet.Properties.Subnets {
 			if _, ok := subnets[strings.ToLower(*subnet.ID)]; !ok {
 				continue
 			}
 
-			if subnet.SubnetPropertiesFormat != nil &&
-				subnet.RouteTable != nil {
-				expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*subnet.RouteTable.ID))
+			if subnet.Properties != nil && subnet.Properties.RouteTable != nil {
+				expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*subnet.Properties.RouteTable.ID))
 			}
 		}
 
