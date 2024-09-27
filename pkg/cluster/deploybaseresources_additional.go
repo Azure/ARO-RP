@@ -108,7 +108,7 @@ func (m *manager) ensureWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 
 	resources = append(resources, m.workloadIdentityResourceGroupRBAC(rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, clusterMSI.PrincipalID, managedRG))
 
-	r, err := m.platoformWorkloadIdentityRBAC(managedRG)
+	r, err := m.platformWorkloadIdentityRBAC(managedRG)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (m *manager) ensureWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 	return resources, nil
 }
 
-func (m *manager) platoformWorkloadIdentityRBAC(managedRG string) ([]*arm.Resource, error) {
+func (m *manager) platformWorkloadIdentityRBAC(managedRG string) ([]*arm.Resource, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return nil, nil
 	}

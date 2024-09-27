@@ -128,9 +128,9 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 	}, nil
 }
 
-func (m *manager) getPlatformWorkloadIdentityFedertedCredName(identity api.PlatformWorkloadIdentity) (string, error) {
+func (m *manager) getPlatformWorkloadIdentityFederatedCredName(identity api.PlatformWorkloadIdentity) (string, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		return "", fmt.Errorf("getPlatformWorkloadIdentityFedertedCredName called for a CSP cluster")
+		return "", fmt.Errorf("getPlatformWorkloadIdentityFederatedCredName called for a CSP cluster")
 	}
 
 	identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
