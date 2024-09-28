@@ -171,7 +171,10 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	storage := storage.NewManager(_env, r.SubscriptionID, fpAuthorizer)
+	storage, err := storage.NewManager(_env, r.SubscriptionID, fpCredClusterTenant)
+	if err != nil {
+		return nil, err
+	}
 
 	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
 	if err != nil {
