@@ -17,6 +17,7 @@ import (
 // AccountsClient is a minimal interface for Azure AccountsClient
 type AccountsClient interface {
 	GetProperties(ctx context.Context, resourceGroupName string, accountName string, options *armstorage.AccountsClientGetPropertiesOptions) (armstorage.AccountsClientGetPropertiesResponse, error)
+	ListAccountSAS(ctx context.Context, resourceGroupName string, accountName string, parameters armstorage.AccountSasParameters, options *armstorage.AccountsClientListAccountSASOptions) (armstorage.AccountsClientListAccountSASResponse, error)
 }
 
 type accountsClient struct {
