@@ -33,7 +33,7 @@ jobs:
           # retrieve the oc cli
           wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
           tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-          
+
           OCP_VERSION=4.14.37 OC=./oc make validate-roledef
         displayName: Run check
         target: container
