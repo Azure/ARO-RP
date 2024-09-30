@@ -472,6 +472,20 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 		managedUpgradeOperatorDeployment = "managed-upgrade-operator"
 	)
 
+	JustAfterEach(func(ctx context.Context) {
+		if CurrentSpecReport().Failed() {
+			deployment, err := clients.Kubernetes.AppsV1().
+				Deployments(managedUpgradeOperatorDeployment).
+				Get(ctx, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+
+			if err != nil {
+				AddReportEntry("muo-deployment-get-err", err)
+			} else {
+				AddReportEntry("muo-deployment-get", deployment)
+			}
+		}
+	})
+
 	It("must be deployed by default with FIPS crypto mandated", func(ctx context.Context) {
 		By("getting MUO pods")
 		pods := ListK8sObjectWithRetry(
