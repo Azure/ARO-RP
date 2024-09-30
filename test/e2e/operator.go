@@ -23,6 +23,7 @@ import (
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/ugorji/go/codec"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -484,6 +485,27 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 				AddReportEntry("muo-deployment-get", deployment)
 			}
 		}
+	})
+
+	It("must be Available", func(ctx context.Context) {
+		By("getting MUO deployment and verifying its Available condition")
+		Eventually(func(g Gomega, ctx context.Context) {
+			deployment, err := clients.Kubernetes.AppsV1().
+				Deployments(managedUpgradeOperatorNamespace).
+				Get(ctx, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			getAvailableConditionStatus := func(d *appsv1.Deployment) corev1.ConditionStatus {
+				for _, c := range d.Status.Conditions {
+					if c.Type == appsv1.DeploymentAvailable {
+						return c.Status
+					}
+				}
+				return corev1.ConditionUnknown
+			}
+
+			g.Expect(deployment).To(WithTransform(getAvailableConditionStatus, Equal(corev1.ConditionTrue)))
+		}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 	})
 
 	It("must be deployed by default with FIPS crypto mandated", func(ctx context.Context) {
