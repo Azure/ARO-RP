@@ -475,6 +475,26 @@ var _ = Describe("ARO Operator - MUO Deployment", Focus, MustPassRepeatedly(10),
 
 	JustAfterEach(func(ctx context.Context) {
 		if CurrentSpecReport().Failed() {
+			getOperatorFunc := clients.ConfigClient.ConfigV1().ClusterOperators().Get
+			operator := GetK8sObjectWithRetry(ctx, getOperatorFunc, "aro", metav1.GetOptions{})
+
+			operatorYaml, err := yaml.Marshal(operator)
+
+			AddReportEntry("aro-operator", operatorYaml)
+
+			aroOperatorMasterPods := ListK8sObjectWithRetry(
+				ctx,
+				clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List,
+				metav1.ListOptions{LabelSelector: "app=aro-operator-master"},
+			)
+			Expect(aroOperatorMasterPods.Items).NotTo(BeEmpty())
+
+			logs := GetK8sPodLogsWithRetry(
+				ctx, aroOperatorNamespace, aroOperatorMasterPods.Items[0].Name, corev1.PodLogOptions{},
+			)
+
+			AddReportEntry("aro-operator-logs", logs)
+
 			deployment, err := clients.Kubernetes.AppsV1().
 				Deployments(managedUpgradeOperatorDeployment).
 				Get(ctx, managedUpgradeOperatorDeployment, metav1.GetOptions{})

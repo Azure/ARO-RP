@@ -90,7 +90,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	r.Log.Debug("running")
+	// TODO: change me back to Debug
+	r.Log.Info("running")
 
 	managed := instance.Spec.OperatorFlags.GetWithDefault(operator.MuoManaged, "")
 
