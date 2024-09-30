@@ -102,6 +102,9 @@ func (m *manager) ensureWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 		return nil, err
 	}
 	clusterMSI := m.doc.OpenShiftCluster.Identity.UserAssignedIdentities[clusterMSIResourceId.String()]
+	if strings.TrimSpace(clusterMSI.PrincipalID) == "" {
+		return nil, fmt.Errorf("cluster MSI principal ID '%s' is invalid for clusterMSIResourceId %s", clusterMSI.PrincipalID, clusterMSIResourceId.String())
+	}
 
 	resources := []*arm.Resource{}
 	managedRG := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -130,6 +133,10 @@ func (m *manager) platformWorkloadIdentityRBAC(managedRG string) ([]*arm.Resourc
 		role, exists := platformWIRolesByRoleName[identity.OperatorName]
 		if !exists {
 			continue
+		}
+
+		if strings.TrimSpace(identity.ObjectID) == "" {
+			return nil, fmt.Errorf("WI object ID '%s' is invalid for WI with resource ID %s", identity.ObjectID, identity.ResourceID)
 		}
 
 		roleID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
