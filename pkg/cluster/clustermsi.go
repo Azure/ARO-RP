@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -187,13 +188,20 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 	principalId := *msiCredObj.CredentialsObject.ExplicitIdentities[0].ObjectID
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		identity := doc.OpenShiftCluster.Identity.UserAssignedIdentities[clusterMsiResourceId.String()]
-		identity.ClientID = clientId
-		identity.PrincipalID = principalId
+		// we iterate through the existing identities to find the identity matching
+		// the expected resourceID with casefolding, to ensure we preserve the
+		// passed-in casing on IDs even if it may be incorrect
+		for k, v := range doc.OpenShiftCluster.Identity.UserAssignedIdentities {
+			if strings.EqualFold(k, clusterMsiResourceId.String()) {
+				v.ClientID = clientId
+				v.PrincipalID = principalId
 
-		doc.OpenShiftCluster.Identity.UserAssignedIdentities[clusterMsiResourceId.String()] = identity
+				doc.OpenShiftCluster.Identity.UserAssignedIdentities[k] = v
+				return nil
+			}
+		}
 
-		return nil
+		return fmt.Errorf("no entries found matching clusterMsiResourceId")
 	})
 
 	return err
