@@ -46,7 +46,7 @@ jobs:
           repository: 'azext-aro'
           pushLatest: true
 
-  - job: Build_Lint_Test_RP_And_Portal
+  - job: Build_And_Test_RP_And_Portal
     pool:
       name: 1es-aro-ci-pool
     steps:
