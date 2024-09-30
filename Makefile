@@ -5,6 +5,7 @@ ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 E2E_LABEL ?= !smoke
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+OC ?= oc
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -539,3 +540,7 @@ run-rp: ci-rp podman-secrets
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+
+.PHONY: validate-roledef
+validate-roledef:
+	go run ./hack/role -verified-version $(OCP_VERSION) -oc-bin=$(OC)

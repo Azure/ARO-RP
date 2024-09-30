@@ -29,16 +29,11 @@ jobs:
           azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
       - script: |
+          set -e
           # retrieve the oc cli
           wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
           tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
           
-          verifiedVersion=4.14.37
-          
-          YVersion=$(echo $verifiedVersion | cut -d. -f2)
-  
-          version=$(curl -s "https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.16" | jq -r ".nodes[].version" | sort -V --rev | head -n1)
-          
-          ./oc adm release extract --credentials-requests --to /tmp/credreqs "quay.io/openshift-release-dev/ocp-release:$verifiedYVersion-x86_64"
+          OCP_VERSION=4.14.37 OC=./oc make validate-roledef
         displayName: Run check
         target: container
