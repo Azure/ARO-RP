@@ -29,8 +29,8 @@ type blobsClient struct {
 
 var _ BlobsClient = &blobsClient{}
 
-// NewBlobsClient creates a new BlobsClient
-func NewBlobsClientUsingSAS(ctx context.Context, sasURL string, environment *azureclient.AROEnvironment) (*blobsClient, error) {
+// NewBlobsClient creates a new BlobsClient using SAS
+func NewBlobsClientUsingSAS(ctx context.Context, environment *azureclient.AROEnvironment, sasURL string) (*blobsClient, error) {
 	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
 
 	options := &azblob.ClientOptions{
@@ -42,6 +42,27 @@ func NewBlobsClientUsingSAS(ctx context.Context, sasURL string, environment *azu
 		},
 	}
 	client, err := azblob.NewClientWithNoCredential(sasURL, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return &blobsClient{
+		Client: client,
+	}, nil
+}
+
+func NewBlobsClient(ctx context.Context, environment *azureclient.AROEnvironment, serviceURL string, credential azcore.TokenCredential) (*blobsClient, error) {
+	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
+
+	options := &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: environment.Cloud,
+			Transport: &http.Client{
+				Transport: customRoundTripper,
+			},
+		},
+	}
+	client, err := azblob.NewClient(serviceURL, credential, options)
 	if err != nil {
 		return nil, err
 	}

@@ -137,7 +137,7 @@ func (m *manager) fpspStorageBlobContributorRBAC(storageAccountName string) (*ar
 	resourceTypeStorageAccount := "Microsoft.Storage/storageAccounts"
 	return rbac.ResourceRoleAssignmentWithName(
 		rbac.RoleStorageBlobDataContributor,
-		"'"+m.env.FPClientID()+"'",
+		"'"+m.env.FPServicePrincipalID()+"'",
 		resourceTypeStorageAccount,
 		fmt.Sprintf("'%s'", storageAccountName),
 		fmt.Sprintf("concat('%s', '/Microsoft.Authorization/', guid(resourceId('%s', '%s')))", storageAccountName, resourceTypeStorageAccount, storageAccountName),
