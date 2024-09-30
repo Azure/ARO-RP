@@ -29,6 +29,12 @@ jobs:
           azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
       - script: |
+          az account set -s $AZURE_SUBSCRIPTION_ID
+          SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+          . secrets/env
+        displayName: Setup (Azure)
+
+      - script: |
           set -xe
           # retrieve the oc cli
           wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
