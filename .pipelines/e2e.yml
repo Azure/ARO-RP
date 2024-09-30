@@ -28,7 +28,7 @@ jobs:
           set -xe
           sudo dnf install -y make
         displayName: Setup (Container)
-        target: container
+        target: golang
 
       - template: ./templates/template-az-cli-login.yml
         parameters:
@@ -42,4 +42,4 @@ jobs:
 
           OCP_VERSION=4.14.37 OC=./oc make validate-roledef
         displayName: Run check
-        target: container
+        target: golang
