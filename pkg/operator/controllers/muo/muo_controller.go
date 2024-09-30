@@ -24,6 +24,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
@@ -54,11 +55,9 @@ type MUODeploymentConfig struct {
 }
 
 type Reconciler struct {
-	log *logrus.Entry
+	base.AROController
 
 	deployer deployer.Deployer
-
-	client client.Client
 
 	readinessPollTime time.Duration
 	readinessTimeout  time.Duration
@@ -66,11 +65,13 @@ type Reconciler struct {
 
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log: log,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
 
 		deployer: deployer.NewDeployer(client, dh, staticFiles, "staticresources"),
-
-		client: client,
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -79,17 +80,17 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MuoEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 
 	managed := instance.Spec.OperatorFlags.GetWithDefault(operator.MuoManaged, "")
 
@@ -103,8 +104,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			pullSpec = version.MUOImage(instance.Spec.ACRDomain)
 		}
 
-		usePodSecurityAdmission, err := operator.ShouldUsePodSecurityStandard(ctx, r.client)
+		usePodSecurityAdmission, err := operator.ShouldUsePodSecurityStandard(ctx, r.Client)
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{}, err
 		}
 
@@ -117,7 +121,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if !disableOCM {
 			useOCM := func() bool {
 				userSecret := &corev1.Secret{}
-				err = r.client.Get(ctx, pullSecretName, userSecret)
+				err = r.Client.Get(ctx, pullSecretName, userSecret)
 				if err != nil {
 					// if a pullsecret doesn't exist/etc, fallback to local
 					return false
@@ -146,6 +150,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Deploy the MUO manifests and config
 		err = r.deployer.CreateOrUpdate(ctx, instance, config)
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{}, err
 		}
 
@@ -157,15 +164,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return r.deployer.IsReady(ctx, "openshift-managed-upgrade-operator", "managed-upgrade-operator")
 		}, timeoutCtx.Done())
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("managed Upgrade Operator deployment timed out on Ready: %w", err)
+			err = fmt.Errorf("managed Upgrade Operator deployment timed out on Ready: %w", err)
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
+			return reconcile.Result{}, err
 		}
 	} else if strings.EqualFold(managed, "false") {
 		err := r.deployer.Remove(ctx, config.MUODeploymentConfig{})
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{}, err
 		}
 	}
 
+	r.ClearConditions(ctx)
 	return reconcile.Result{}, nil
 }
 
