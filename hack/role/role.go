@@ -113,6 +113,9 @@ func main() {
 
 	options := environment.Environment().EnvironmentCredentialOptions()
 	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
+	if err != nil {
+		panic(err)
+	}
 	roleDefinitions, err := armauthorization.NewArmRoleDefinitionsClient(tokenCredential, nil)
 	if err != nil {
 		panic(err)
