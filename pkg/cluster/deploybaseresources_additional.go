@@ -154,7 +154,7 @@ func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID, resourceGroup
 		roleID,
 		objID,
 		"Microsoft.Resources/resourceGroups",
-		resourceGroup,
+		fmt.Sprintf("'%s'", resourceGroup),
 	)
 }
 
