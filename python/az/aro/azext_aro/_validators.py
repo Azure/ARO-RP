@@ -285,7 +285,7 @@ def validate_refresh_cluster_credentials(namespace):
     if namespace.client_secret is not None or namespace.client_id is not None:
         raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
     if namespace.platform_workload_identities is not None:
-        raise MutuallyExclusiveArgumentError('--platform-workload-identities must be not set with --refresh-credentials.')
+        raise MutuallyExclusiveArgumentError('--platform-workload-identities must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
 
 
 def validate_version_format(namespace):
