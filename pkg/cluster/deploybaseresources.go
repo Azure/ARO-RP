@@ -197,8 +197,6 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true),
 		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, azureRegion),
-		m.networkPrivateLinkService(azureRegion),
-		m.networkInternalLoadBalancer(azureRegion),
 	}
 
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
@@ -214,7 +212,15 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		}
 
 		resources = append(resources, r...)
+	} else {
+		resources = append(resources, m.clusterServicePrincipalRBAC())
 	}
+
+	resources = append(
+		resources,
+		m.networkPrivateLinkService(azureRegion),
+		m.networkInternalLoadBalancer(azureRegion),
+	)
 
 	// Create a public load balancer routing if needed
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeLoadbalancer {
