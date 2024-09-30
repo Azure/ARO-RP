@@ -467,7 +467,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - MUO Deployment", func() {
+var _ = Describe("ARO Operator - MUO Deployment", Focus, MustPassRepeatedly(10), func() {
 	const (
 		managedUpgradeOperatorNamespace  = "openshift-managed-upgrade-operator"
 		managedUpgradeOperatorDeployment = "managed-upgrade-operator"
