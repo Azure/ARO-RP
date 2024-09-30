@@ -213,6 +213,8 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		}
 
 		resources = append(resources, r...)
+	} else {
+		resources = append(resources, m.clusterServicePrincipalRBAC())
 	}
 
 	// Create a public load balancer routing if needed
