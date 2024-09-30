@@ -97,7 +97,7 @@ func TestDenyAssignment(t *testing.T) {
 
 func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 	storageAccountName := "clustertest"
-	fakeClientID := "fakeID"
+	fakePrincipalID := "fakeID"
 	resourceType := "Microsoft.Storage/storageAccounts"
 	resourceID := "resourceId('" + resourceType + "', '" + storageAccountName + "')"
 	tests := []struct {
@@ -133,7 +133,7 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 				},
 			},
 			mocks: func(menv *mock_env.MockInterface) {
-				menv.EXPECT().FPClientID().Return(fakeClientID)
+				menv.EXPECT().FPServicePrincipalID().Return(fakePrincipalID)
 			},
 			ExpectedArmResource: &arm.Resource{
 				Resource: mgmtauthorization.RoleAssignment{
@@ -142,7 +142,7 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            to.StringPtr("[" + resourceID + "]"),
 						RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleStorageBlobDataContributor + "')]"),
-						PrincipalID:      to.StringPtr("['" + fakeClientID + "']"),
+						PrincipalID:      to.StringPtr("['" + fakePrincipalID + "']"),
 						PrincipalType:    mgmtauthorization.ServicePrincipal,
 					},
 				},
