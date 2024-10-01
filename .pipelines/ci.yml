@@ -21,58 +21,62 @@ variables:
     value: "arosvcdev.azurecr.io/azext-aro"
   - name: LOCAL_VPN_IMAGE
     value: "arosvcdev.azurecr.io/vpn"
+  - name: LOCAL_E2E_IMAGE
+    value: "arosvcdev.azurecr.io/e2e"
   - name: TAG
     value: $(Build.BuildId)
   - name: VERSION
     value: $(Build.BuildId)
 
-jobs:
-  - job: Build_Test_And_Push_Az_ARO_Extension
-    pool:
-      name: 1es-aro-ci-pool
-    steps:
-      - template: ./templates/template-checkout.yml
+stages:
+  - stage: Containerized
+    jobs:
+      - job: Build_Test_And_Push_Az_ARO_Extension
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - template: ./templates/template-checkout.yml
 
-      # Build and test the Az ARO Extension
-      - script: |
-          set -xe
-          DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(VERSION)
-        displayName: 🛠 Build & Test Az ARO Extension
+          # Build and test the Az ARO Extension
+          - script: |
+              set -xe
+              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(VERSION)
+            displayName: 🛠 Build & Test Az ARO Extension
 
-      # Push the image to ACR
-      - template: ./templates/template-acr-push.yml
-        parameters:
-          acrFQDN: 'arosvcdev.azurecr.io'
-          repository: 'azext-aro'
-          pushLatest: true
+          # Push the image to ACR
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              acrFQDN: 'arosvcdev.azurecr.io'
+              repository: 'azext-aro'
+              pushLatest: true
 
-  - job: Build_And_Test_RP_And_Portal
-    pool:
-      name: 1es-aro-ci-pool
-    steps:
-      - template: ./templates/template-checkout.yml
+      - job: Build_And_Test_RP_And_Portal
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - template: ./templates/template-checkout.yml
 
-      # Build and test RP and Portal
-      - script: |
-          set -xe
-          DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(VERSION)
-        displayName: 🛠 Build & Test RP and Portal
+          # Build and test RP and Portal
+          - script: |
+              set -xe
+              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(VERSION)
+            displayName: 🛠 Build & Test RP and Portal
 
-      # Publish test results
-      - task: PublishTestResults@2
-        displayName: 📊 Publish tests results
-        inputs:
-          testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
-        condition: succeededOrFailed()
+          # Publish test results
+          - task: PublishTestResults@2
+            displayName: 📊 Publish tests results
+            inputs:
+              testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
+            condition: succeededOrFailed()
 
-      # Publish code coverage results
-      - task: PublishCodeCoverageResults@2
-        displayName: 📈 Publish code coverage
-        inputs:
-          codeCoverageTool: Cobertura
-          summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
-          failIfCoverageEmpty: false
-        condition: succeededOrFailed()
+          # Publish code coverage results
+          - task: PublishCodeCoverageResults@2
+            displayName: 📈 Publish code coverage
+            inputs:
+              codeCoverageTool: Cobertura
+              summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
+              failIfCoverageEmpty: false
+            condition: succeededOrFailed()
 
           # Push the image to ACR
           - template: ./templates/template-acr-push.yml
@@ -81,92 +85,125 @@ jobs:
               repository: 'aro'
               pushLatest: true
 
-      - job: Lint_Az_ARO_Extension
-        pool:
-          name: 1es-aro-ci-pool
-        variables:
-          HOME: $(Agent.BuildDirectory)
-        steps:
-          - template: ./templates/template-checkout.yml
-          - script: |
-              set -xe
-              export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
-              make test-python
-              [[ -z "$(git status -s)" ]]
-            target: python
-
-  # New E2E Stage with Docker Compose
-  - stage: E2E
+  - stage: E2E  # E2E Stage using Docker Compose
     dependsOn: Containerized
     jobs:
       - job: Run_E2E_Tests
         pool:
           name: 1es-aro-ci-pool
         steps:
-          # Checkout the code
+          # Step 1: Checkout the code
           - template: ./templates/template-checkout.yml
 
-          # Install Docker Compose and pull the RP image
-          - template: ./templates/e2e-pipeline-template.yml
-            parameters:
-              rpImageACR: 'arosvcdev.azurecr.io'
-              acrCredentialsJSON: $(acr-credentials)
-
-          # Install OpenVPN (the command will depend on the agent OS)
+          # Step 2: Install Docker, Docker Compose, and dependencies
           - script: |
-                set -xe
-                sudo apt-get update && sudo apt-get install -y openvpn || \
-                sudo tdnf install -y openvpn || \
-                sudo yum install -y openvpn
-            displayName: Install OpenVPN
+              sudo apt-get update
+              sudo apt-get install -y docker.io docker-compose-plugin make
+              sudo systemctl start docker
+              sudo systemctl enable docker
+            displayName: Install Docker and Docker Compose
 
-          # AZ CLI Login using the existing secret as in the old pipeline
+          # Step 3: AZ CLI Login
           - template: ./templates/template-az-cli-login.yml
             parameters:
               azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
+          # Step 4: Download and extract VPN secrets
           - script: |
-              set -xe
               az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
+              ls -R ./secrets
+              cat ./secrets/env
+              export AZURE_SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID"
+              export PULL_SECRET="$PULL_SECRET"
+            displayName: Download and Setup Secrets
 
-              # Download secrets tarball containing the VPN certificates and config
-              az storage blob download --account-name $(SECRET_SA_ACCOUNT_NAME) --container-name secrets --name vpn-secrets.tar.gz --file vpn-secrets.tar.gz
-
-              # Extract the secrets tarball
-              sudo mkdir -p /etc/openvpn
-              sudo tar -xzf vpn-secrets.tar.gz -C /etc/openvpn
-
-              # Ensure the extracted files contain the required certificates
-              ls /etc/openvpn
-            displayName: Download and Extract VPN Secrets
-
-          # Setup Azure and source secrets/env
+          # Step 5: Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
           - script: |
-              set -xe
+              echo "Setting up Key Vault access..."
+              export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
+              KEYVAULT_URL="https://${KEYVAULT_PREFIX}.vault.azure.net"
+              echo "Using Key Vault URL: $KEYVAULT_URL"
+
+              # Verify if the URL is reachable
+              nslookup ${KEYVAULT_PREFIX}.vault.azure.net || {
+                echo "Failed to resolve Key Vault DNS. Please check the Key Vault configuration."
+                exit 1
+              }
+
+              # Retrieve the kubeconfig
+              hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
+
+              if [ -f admin.kubeconfig ]; then
+                echo "Kubeconfig retrieved successfully."
+                echo "KUBECONFIG=$(pwd)/admin.kubeconfig" >> .env
+                cat admin.kubeconfig
+              else
+                echo "Failed to retrieve Kubeconfig."
+                exit 1
+              fi
+            displayName: Get Kubeconfig for AKS Cluster
+
+          # Step 6: Deploy Hive Operator
+          - script: |
+              export PULL_SECRET="$PULL_SECRET"
+              export KUBECONFIG=$(pwd)/admin.kubeconfig
+              if [ -f "hack/hive/hive-dev-install.sh" ]; then
+                ./hack/hive/hive-dev-install.sh
+              else
+                echo "Hive installation script not found"
+                exit 1
+              fi
+            displayName: Deploy Hive Operator
+
+          # Step 7: Set Up Environment Variables for Docker Compose
+          - script: |
               export RP_IMAGE_ACR=arosvcdev.azurecr.io
               export VERSION=${BUILD_BUILDID}
-              export E2E_FLAGS="--flag1 --flag2"
-              export E2E_LABEL="test-label"
-              export E2E_DELETE_CLUSTER="false"
+              export E2E_IMAGE=${RP_IMAGE_ACR}/e2e:${VERSION}
+              export E2E_LABEL='!smoke&&!regressiontest'
               echo "RP_IMAGE_ACR=$RP_IMAGE_ACR" > .env
               echo "VERSION=$VERSION" >> .env
-              echo "E2E_FLAGS=$E2E_FLAGS" >> .env
+              echo "E2E_IMAGE=$E2E_IMAGE" >> .env
               echo "E2E_LABEL=$E2E_LABEL" >> .env
-
+              echo "KUBECONFIG=$(pwd)/admin.kubeconfig" >> .env
+              . secrets/env
               cat .env
-              sudo openvpn --config /etc/openvpn/vpn.conf &
-              docker-compose --env-file .env -f docker-compose.yml up -d
-            displayName: Start OpenVPN and Run Docker Compose for E2E Services
+            displayName: Set Up Environment Variables
 
-          # Log the output from the e2e container in case of failure
+          # Step 8: Start Services using Docker Compose
           - script: |
-              set -xe
-              docker-compose logs e2e
-            displayName: Log E2E Test Output
+              docker compose --env-file .env -f docker-compose.yml up -d
+              docker ps
+            displayName: Start Services using Docker Compose
+
+          # Step 9: Execute E2E Tests
+          - script: |
+              docker compose up run-e2e --abort-on-container-exit
+            displayName: Execute E2E Tests
+
+          # Step 10: Log the output from the services in case of failure
+          - script: |
+              docker compose logs vpn
+              docker compose logs selenium
+              docker compose logs rp
+              docker compose logs run-e2e
+            displayName: Log Service Output
             condition: failed()
 
-          # Clean up Docker Compose
+          # Step 11: Clean up Docker Compose services
           - script: |
-              docker-compose down
-            displayName: Cleanup Docker Compose
+              docker compose down
+              rm -f admin.kubeconfig
+            displayName: Cleanup Docker Compose Services and Kubeconfig
             condition: always()
+
+          # Step 12: Clean Up Database
+          - script: |
+              az cosmosdb sql database delete --name "$DATABASE_NAME" --yes --account-name "$DATABASE_ACCOUNT_NAME" --resource-group "$RESOURCEGROUP"
+            displayName: Clean Up Database
+            condition: always()
+
+          # Step 13: AZ CLI Logout
+          - template: ./templates/template-az-cli-logout.yml

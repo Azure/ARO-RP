@@ -34,7 +34,7 @@ main() {
 		fi
 	fi
 
-	if [ -z "$PULL_SECRET" ]; then
+	if [[ -z "$PULL_SECRET" ]]; then
 		log "global pull secret variable required, please source ./env"
 		exit
 	fi

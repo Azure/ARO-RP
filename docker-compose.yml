@@ -116,7 +116,7 @@ services:
     container_name: aro-portal
     depends_on:
       rp:
-        condition: service_healthy
+        condition: service_started
     environment:
       - RP_MODE
       - AZURE_SUBSCRIPTION_ID
@@ -151,6 +151,39 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  run-e2e:
+    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+    container_name: run-e2e
+    network_mode: host
+    depends_on:
+      - vpn
+      - rp
+      - portal
+      - selenium
+    environment:
+      - KUBECONFIG=/app/admin.kubeconfig
+      - RP_MODE=development
+      - LOCATION=${LOCATION}
+      - CLUSTER=${CLUSTER}
+      - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - DATABASE_ACCOUNT_NAME=${DATABASE_ACCOUNT_NAME}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - RESOURCEGROUP=${RESOURCEGROUP}
+      - PROXY_HOSTNAME=${PROXY_HOSTNAME}
+    volumes:
+      - ./admin.kubeconfig:/app/admin.kubeconfig:z
+    entrypoint: "/usr/local/bin/e2e.test"
+    command: ["-test.v", "--ginkgo.v", "--ginkgo.timeout=180m", "--ginkgo.flake-attempts=2", "--ginkgo.junit-report=/tmp/e2e-report.xml", "--ginkgo.label-filter=${E2E_LABEL}"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: on-failure:3
 
 secrets:
   proxy-client-key:

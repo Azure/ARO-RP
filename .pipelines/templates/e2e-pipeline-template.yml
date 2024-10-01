@@ -6,7 +6,7 @@ parameters:
     type: string
 
 steps:
-  # Authenticate to ACR and Install Docker Compose
+  # Step 1: Authenticate to ACR and Install Docker Compose
   - task: AzureCLI@2
     displayName: 'Authenticate to ACR and Install Docker Compose'
     inputs:
@@ -31,7 +31,7 @@ steps:
         # Login to ACR
         az acr login --name $REGISTRY_NAME
 
-  # Pull the RP Docker image
+  # Step 2: Pull the RP Docker image
   - script: |
       if [ -z "${{ parameters.rpImageACR }}" ]; then
           echo "Error: RP_IMAGE_ACR is not set"
@@ -42,3 +42,14 @@ steps:
       export VERSION=$(Build.BuildId)
       docker pull ${RP_IMAGE_ACR}/aro:${VERSION}
     displayName: Pull RP Docker Image
+
+  # Step 3: Pull the E2E Docker image (add this step)
+  - script: |
+      if [ -z "${{ parameters.rpImageACR }}" ]; then
+          echo "Error: RP_IMAGE_ACR is not set"
+          exit 1
+      fi
+
+      export E2E_IMAGE=${{ parameters.rpImageACR }}/e2e:${VERSION}
+      docker pull ${E2E_IMAGE}
+    displayName: Pull E2E Docker Image
