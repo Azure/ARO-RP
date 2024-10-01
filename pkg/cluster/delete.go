@@ -382,6 +382,16 @@ func (m *manager) deleteIdentityFederations(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
 		return nil
 	}
+
+	if m.clusterMsiFederatedIdentityCredentials == nil {
+		m.log.Warning("cluster MSI federated identity credentials client is nil, trying to initialize")
+		err := m.initializeClusterMsiClients(ctx)
+		if err != nil {
+			m.log.Errorf("cluster MSI federated identity credentials client initialization failed with error: %v", err)
+			return nil
+		}
+	}
+
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 
@@ -398,7 +408,8 @@ func (m *manager) deleteIdentityFederations(ctx context.Context) error {
 
 		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(identity)
 		if err != nil {
-			return err
+			m.log.Errorf("failed to get federated identity credential name for %s: %v", identity.ResourceID, err)
+			continue
 		}
 
 		_, err = m.clusterMsiFederatedIdentityCredentials.Get(
@@ -422,8 +433,9 @@ func (m *manager) deleteIdentityFederations(ctx context.Context) error {
 			&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
 		)
 
+		// As long as the customer can clean up resources on their own, we don't block deletion on failure to clean up federated credentials
 		if err != nil {
-			return fmt.Errorf("failed to delete federated identity credentials for %s: %w", identity.ResourceID, err)
+			m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err)
 		}
 	}
 
