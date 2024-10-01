@@ -379,7 +379,6 @@ LOCAL_ARO_PORTAL_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-portal-build
 LOCAL_ARO_RP_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-build
 LOCAL_AZ_EXT_ARO_IMAGE ?= azext-aro
 LOCAL_TUNNEL_IMAGE ?= aro-tunnel
-LOCAL_VPN_IMAGE ?= vpn_image
 
 ###############################################################################
 # Targets
@@ -400,28 +399,22 @@ ci-clean:
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	docker build . $(DOCKER_BUILD_CI_ARGS) \
+	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=$(REGISTRY) \
-		--build-arg ARO_VERSION=$(VERSION) \
-		--no-cache=$(NO_CACHE) \
+		--build-arg REGISTRY=${REGISTRY} \
+		--build-arg ARO_VERSION=${VERSION} \
+		--no-cache=${NO_CACHE} \
 		--target=builder \
-		-t $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)
+		-t ${LOCAL_ARO_RP_BUILD_IMAGE}:${VERSION}
 
-	docker build . $(DOCKER_BUILD_CI_ARGS) \
-		-f Dockerfile.ci-rp \
-		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=$(REGISTRY) \
-		--build-arg ARO_VERSION=$(VERSION) \
-		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
+	docker compose build rp
 
 	# Extract test coverage files from build to local filesystem
-	docker create --name extract_cover_out $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
+	docker create --name extract_cover_out ${LOCAL_ARO_RP_BUILD_IMAGE}:${VERSION}; \
 	docker cp extract_cover_out:/app/report.xml ./report.xml; \
 	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
 	docker rm extract_cover_out;
-
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
@@ -457,130 +450,31 @@ podman-secrets: aks.kubeconfig
 	podman $(PODMAN_REMOTE_ARGS) secret create proxy.crt ./secrets/proxy.crt
 
 .PHONY: run-portal
-run-portal: ci-rp podman-secrets
-	podman $(PODMAN_REMOTE_ARGS) \
-		run \
-		--name aro-portal \
-		--rm \
-		-p 127.0.0.1:8444:8444 \
-		-p 127.0.0.1:2222:2222 \
-		--cap-drop net_raw \
-		-e RP_MODE \
-		-e AZURE_SUBSCRIPTION_ID \
-		-e AZURE_TENANT_ID \
-		-e LOCATION \
-		-e RESOURCEGROUP \
-		-e AZURE_PORTAL_CLIENT_ID \
-		-e AZURE_PORTAL_ELEVATED_GROUP_IDS \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
-		-e AZURE_RP_CLIENT_SECRET \
-		-e AZURE_RP_CLIENT_ID \
-		-e KEYVAULT_PREFIX \
-		-e DATABASE_ACCOUNT_NAME \
-		-e DATABASE_NAME \
-		-e NO_NPM=1 \
-		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
-		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
-		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION) portal
+run-portal:
+	docker compose up portal
 
 # run-rp executes the RP locally as similarly as possible to production. That
 # includes the use of Hive, meaning you need a VPN connection.
 .PHONY: run-rp
-run-rp: ci-rp podman-secrets
-	podman $(PODMAN_REMOTE_ARGS) \
-		run \
-		--name aro-rp \
-		--rm \
-		-p 127.0.0.1:8443:8443 \
-		-w /app \
-		-e ARO_IMAGE \
-		-e RP_MODE="development" \
-		-e PROXY_HOSTNAME \
-		-e DOMAIN_NAME \
-		-e AZURE_RP_CLIENT_ID \
-		-e AZURE_FP_CLIENT_ID \
-		-e AZURE_SUBSCRIPTION_ID \
-		-e AZURE_TENANT_ID \
-		-e AZURE_RP_CLIENT_SECRET \
-		-e LOCATION \
-		-e RESOURCEGROUP \
-		-e AZURE_ARM_CLIENT_ID \
-		-e AZURE_FP_SERVICE_PRINCIPAL_ID \
-		-e AZURE_DBTOKEN_CLIENT_ID \
-		-e AZURE_PORTAL_CLIENT_ID \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
-		-e AZURE_CLIENT_ID \
-		-e AZURE_SERVICE_PRINCIPAL_ID \
-		-e AZURE_CLIENT_SECRET \
-		-e AZURE_GATEWAY_CLIENT_ID \
-		-e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
-		-e AZURE_GATEWAY_CLIENT_SECRET \
-		-e DATABASE_NAME \
-		-e PULL_SECRET \
-		-e SECRET_SA_ACCOUNT_NAME \
-		-e DATABASE_ACCOUNT_NAME \
-		-e KEYVAULT_PREFIX \
-		-e ADMIN_OBJECT_ID \
-		-e PARENT_DOMAIN_NAME \
-		-e PARENT_DOMAIN_RESOURCEGROUP \
-		-e AZURE_ENVIRONMENT \
-		-e STORAGE_ACCOUNT_DOMAIN \
-		-e OIDC_STORAGE_ACCOUNT_NAME \
-		-e KUBECONFIG="/app/secrets/aks.kubeconfig" \
-		-e HIVE_KUBE_CONFIG_PATH="/app/secrets/aks.kubeconfig" \
-		-e ARO_CHECKOUT_PATH="/app" \
-		-e ARO_INSTALL_VIA_HIVE="true" \
-		-e ARO_ADOPT_BY_HIVE="true" \
-		-e MOCK_MSI_TENANT_ID \
-		-e MOCK_MSI_CLIENT_ID \
-		-e MOCK_MSI_CERT \
-		--secret aks.kubeconfig,target=/app/secrets/aks.kubeconfig \
-		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
-		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
-		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+run-rp:
+	docker compose rm -sf rp
+	docker compose up rp
 
-# Run selenium using Docker
+.PHONY: vpn
+vpn:
+	docker compose build vpn
+
+.PHONY: run-vpn
+run-vpn:
+	docker compose rm -sf vpn
+	docker compose up vpn
+	docker compose logs --follow vpn
+
+.PHONY: build-selenium
+build-selenium:
+	docker compose build selenium
+
 .PHONY: run-selenium
 run-selenium:
-	docker run -d --name selenium-container selenium/standalone-chrome
-
-# Run RP using Docker
-.PHONY: run-rp-docker
-run-rp: run-selenium
-	docker run -d --name rp-container $(ARO_IMAGE_BASE):$(VERSION)
-
-# Run E2E Tests using Docker
-.PHONY: run-e2e
-run-e2e: e2e.test
-	docker-compose run --rm e2e /usr/local/bin/e2e.test $(E2E_FLAGS) --ginkgo.label-filter=$(E2E_LABEL)
-
-# Clean up containers after E2E tests
-.PHONY: e2e-cluster-clean
-e2e-cluster-clean:
-	docker stop selenium-container rp-container e2e-container || true
-	docker rm selenium-container rp-container e2e-container || true
-
-# Build the VPN Docker image
-.PHONY: build-vpn
-build-vpn:
-	@echo "Building VPN image with VERSION: $(VERSION)"
-	docker build . $(DOCKER_BUILD_CI_ARGS) \
-		-f Dockerfile.vpn \
-		-t $(LOCAL_VPN_IMAGE):$(VERSION)
-
-# Push the VPN image to ACR
-.PHONY: push-vpn
-push-vpn: build-vpn
-	@echo "Pushing VPN image to ACR: $(RP_IMAGE_ACR)"
-	@echo "VERSION is: $(VERSION)"
-	if [ -z "$(RP_IMAGE_ACR)" ]; then \
-	    echo "Error: RP_IMAGE_ACR is not set"; \
-	    exit 1; \
-	fi
-	# Tag the VPN image with the ACR registry and version
-	docker tag $(LOCAL_VPN_IMAGE):$(VERSION) $(RP_IMAGE_ACR)/vpn_image:$(VERSION)
-	# Push the VPN image to ACR
-	docker push $(RP_IMAGE_ACR)/vpn_image:$(VERSION)
+	docker compose up selenium
 
