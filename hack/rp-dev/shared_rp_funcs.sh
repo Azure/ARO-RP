@@ -29,7 +29,7 @@ prerequisites() {
     local secret_storage_resourcegroup="secretstorage-${prefix}"
     log "Create deployment secretstorage under resource group ${secret_storage_resourcegroup}"
     # ./hack/devtools/deploy-shared-env-storage.sh
-    if check_deployment "${parent_domain_resourcegroup}" secretstorage; then
+    if check_deployment "${secret_storage_resourcegroup}" secretstorage; then
         log "⏩📋 secretstorage deployment was skipped"
     else
         az group create --name "${secret_storage_resourcegroup}" --location "${location}"
@@ -40,13 +40,7 @@ prerequisites() {
             --template-file pkg/deploy/assets/shared-rp-secret-storage.json 
         log "secretstorage has been deployed"
     fi
-
-    # Generate new secrets directory
-    local secrets_dir="secrets"
-    if [ -d "$secrets_dir" ]; then
-        rm -R $secrets_dir
-    fi
-    mkdir -p $secrets_dir
+    mkdir -p secrets
 }
 
 aad_applications() {
@@ -210,7 +204,7 @@ aad_applications() {
         log "🟢📦 Deployment '${RBAC_DEV_DEPLOYMENT_NAME}' in the subscription has been provisioned successfully."
         log "(7) ⏩🔑 Skip subscription deployment creation"
     elif [[ "${sub_dep_state}" == "Failed" ]]; then
-        log "⏩🔑 skip deployment '${RBAC_DEV_DEPLOYMENT_NAME}' in the subscription, since the deployment state is $sub_dep_state"
+        log "⏩🔑 skip deployment '${RBAC_DEV_DEPLOYMENT_NAME}' in the subscription, since the deployment state is Failed. This is a workaround for now"
     else
         log "Create deployment '${RBAC_DEV_DEPLOYMENT_NAME}' in the subscription, since the deployment is missing"
         az deployment sub create \
@@ -379,16 +373,18 @@ deploy_shared_rp(){
     # Create the RG
     create_infra_rg
     # # Deploy the predeployment ARM template
-    # deploy_rp_dev_predeploy
+    deploy_rp_dev_predeploy
     # Deploy the infrastructure resources such as Cosmos, KV, Vnet...
     deploy_rp_dev
     # Deploy RP MSI for aks/hive
     deploy_rp_managed_identity
-    # Deploy the proxy and VPN
+    # # Deploy the proxy and VPN
     # deploy_env_dev
     # Deploy AKS resources for Hive
     deploy_aks_dev
     # Deploy the predeployment ARM template
+    # Deploy the proxy and VPN
+    deploy_env_dev
     deploy_rp_dev_predeploy
     # Deploy additional infrastructure required for workload identity clusters
     deploy_miwi_infra_dev
@@ -425,14 +421,14 @@ clean_aad_applications() {
         if [ "${app_info}"  != "[]" ]; then
             # app_id="$(az ad app list --display-name $full_app_name --query '[].id' -o tsv)"
             app_id="$(az ad app list --display-name "$full_app_name" --query '[].appId' -o tsv)"
-            # TODO do we need to delete SP of the app or just the app for cleanup?
-            sp_info="$(az ad sp list --filter "appId eq $app_id" 2>/dev/null)"
-            log "sp_info:$sp_info"
-            if [[ $app_name != "portal" && "${sp_info}"  != "[]" ]]; then
-                sp_id="$(az ad sp list --filter "appId eq $app_id" --query '[].id' -o tsv)"
-                log "❌🔑 delete AAD SP id with object ID '$sp_id'"
-                az ad sp delete --id "$sp_id"
-            fi
+            # # TODO do we need to delete SP of the app or just the app for cleanup?
+            # sp_info="$(az ad sp list --filter "appId eq $app_id" 2>/dev/null)"
+            # log "sp_info:$sp_info"
+            # if [[ $app_name != "portal" && "${sp_info}"  != "[]" ]]; then
+            #     sp_id="$(az ad sp list --filter "appId eq $app_id" --query '[].id' -o tsv)"
+            #     log "❌🔑 delete AAD SP id with object ID '$sp_id'"
+            #     az ad sp delete --id "$sp_id"
+            # fi
             log "❌🔑 delete AAD application with name '$full_app_name' and application ID '$app_id'"
             az ad app delete --id "$app_id"
         else
@@ -440,52 +436,32 @@ clean_aad_applications() {
             log "⏩🔑 AAD application with name '$full_app_name' is missing"
         fi
     done
+    log "❌ subsctiption deployment ${RBAC_DEV_DEPLOYMENT_NAME} is about to be deleted"
     az deployment sub delete --name "${RBAC_DEV_DEPLOYMENT_NAME}"
     log "Finish clean_aad_applications"
 }
 
 clean_resource_groups() {
     # Cleanup prerequisites resource groups
-    az group delete --resource-group "global-infra-${SHARED_RP_PREFIX}" -y || true
-    az group delete --resource-group "global-infra-parent-${SHARED_RP_PREFIX}" -y || true
-    az group delete --resource-group "secretstorage-${SHARED_RP_PREFIX}" -y || true
-
+    rg_prefixes=("global-infra" "global-infra-parent" "secretstorage")
+    # shellcheck disable=SC2068
+    for rg in ${rg_prefixes[@]}; do
+        log "❌ delete resource-group with name '$rg'"
+        az group delete --resource-group "$rg-${SHARED_RP_PREFIX}" -y || true
+    done
     # Cleanup deploy shared RP resource group
+    log "❌ delete resource-group with name '${RESOURCEGROUP_PREFIX}-${LOCATION}'"
     az group delete --resource-group "${RESOURCEGROUP_PREFIX}-${LOCATION}" -y || true
     log "Finish clean_resource_groups"
 }
 
-certificate_rotation(){
-    # Certificate Rotation
-    log "(1) rotate certificates in dev and INT subscriptions after running aad_applications and certificates"
-    source hack/devtools/deploy-shared-env.sh
-    log "(2) dev client key/certificate"
-    import_certs_secrets
-
-    log "(3) Update the Azure VPN Gateway configuration - 'Manuel'"
-    log "(4) OpenVPN configuration file - 'Manuel'"
-    log "(5) Update certificates owned by FP Service Principal"
-    # Import firstparty.pem to keyvault v4-eastus-svc
-    az keyvault certificate import --vault-name <kv_name>  --name rp-firstparty --file firstparty.pem
-
-    # Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable)
-    az ad app credential reset \
-        --id "$AZURE_ARM_CLIENT_ID" \
-        --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
-
-    az ad app credential reset \
-        --id "$AZURE_FP_CLIENT_ID" \
-        --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
-
-    az ad app credential reset \
-        --id "$AZURE_PORTAL_CLIENT_ID" \
-        --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
-
-    log "(6)  VM needs to be deleted & redeployed - 'Manuel'?"
-
-    log "(7) Upload the secrets to the storage account"
-    # [rharosecretsdev|e2earosecrets|e2earoclassicsecrets] make secrets-update
-    # SECRET_SA_ACCOUNT_NAME=[rharosecretsdev|e2earosecrets|e2earoclassicsecrets] make secrets-update
-
-    log "Finish certificate_rotation"
+clean_key_vaults() {
+    # Cleanup keyvaults when deploying shared rp
+    kv_suffixes=("por" "svc" "cls")
+    # shellcheck disable=SC2068
+    for kv in ${kv_suffixes[@]}; do
+        log "########## Delete KeyVault "$1-$kv" in $LOCATION ##########"
+        az keyvault purge --name "$1-$kv" || true  # add --no-wait to stop waiting
+    done
 }
+

@@ -17,8 +17,8 @@ AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
 
 # Variables for shared RP automation
-AZURE_PREFIX ?= zzz
-SHARED_RP_PREFIX ?= zzz
+AZURE_PREFIX ?= aaa
+SHARED_RP_PREFIX ?= xxx
 SA_ACCOUNT_NAME ?= razo${SHARED_RP_PREFIX} # probably rharosecretsdev
 SHARED_RP_LOCATION ?= westcentralus
 SHARED_RP_IMAGE ?= generic-repo/shared-rp:v0.0.1
@@ -569,3 +569,9 @@ run-shared-rp: # Run a shared-rp container for automating shared-rp dev env
 
 .PHONY: shared-rp
 shared-rp: build-shared-rp run-shared-rp # Build and run a shared-rp container for automating shared-rp dev env
+
+.PHONY: cleanup-shared-rp
+cleanup-shared-rp: 
+	source hack/rp-dev/shared_rp_funcs.sh && source hack/devtools/rp_dev_helper.sh && AAD_PREFIX="aro-v4-${SHARED_RP_PREFIX}" RBAC_DEV_DEPLOYMENT_NAME="aro-v4-${SHARED_RP_PREFIX}-rbac-development" clean_aad_applications
+	source hack/rp-dev/shared_rp_funcs.sh && source hack/devtools/rp_dev_helper.sh && SHARED_RP_PREFIX=${SHARED_RP_PREFIX} RESOURCEGROUP_PREFIX="prefix" LOCATION=${SHARED_RP_LOCATION} clean_resource_groups 
+	source hack/rp-dev/shared_rp_funcs.sh && source hack/devtools/rp_dev_helper.sh && LOCATION=${SHARED_RP_LOCATION} clean_key_vaults "prefix-${SHARED_RP_LOCATION}"
