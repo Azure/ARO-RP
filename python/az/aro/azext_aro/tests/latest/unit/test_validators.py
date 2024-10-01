@@ -819,7 +819,7 @@ test_validate_refresh_cluster_credentials_data = [
         "should not raise any Exception because namespace.client_secret is None and namespace.client_id is None",
         Mock(platform_workload_identities=None, client_secret=None, client_id=None),
         None
-    ), 
+    ),
     (
         "should raise MutuallyExclusiveArgumentError Exception because namespace.platform_workload_identities is present", 
         Mock(platform_workload_identities=[Mock(resource_id='Foo')], client_id=None, client_secret=None),
