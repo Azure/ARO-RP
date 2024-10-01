@@ -13,6 +13,7 @@ import (
 
 type RoleDefinitionsClient interface {
 	GetByID(ctx context.Context, roleID string, options *armauthorization.RoleDefinitionsClientGetByIDOptions) (armauthorization.RoleDefinitionsClientGetByIDResponse, error)
+	Get(ctx context.Context, scope string, roleDefinitionID string, options *armauthorization.RoleDefinitionsClientGetOptions) (armauthorization.RoleDefinitionsClientGetResponse, error)
 }
 
 type ArmRoleDefinitionsClient struct {

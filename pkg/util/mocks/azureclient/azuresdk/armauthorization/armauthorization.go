@@ -40,6 +40,21 @@ func (m *MockRoleDefinitionsClient) EXPECT() *MockRoleDefinitionsClientMockRecor
 	return m.recorder
 }
 
+// Get mocks base method.
+func (m *MockRoleDefinitionsClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armauthorization.RoleDefinitionsClientGetOptions) (armauthorization.RoleDefinitionsClientGetResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(armauthorization.RoleDefinitionsClientGetResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockRoleDefinitionsClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).Get), arg0, arg1, arg2, arg3)
+}
+
 // GetByID mocks base method.
 func (m *MockRoleDefinitionsClient) GetByID(arg0 context.Context, arg1 string, arg2 *armauthorization.RoleDefinitionsClientGetByIDOptions) (armauthorization.RoleDefinitionsClientGetByIDResponse, error) {
 	m.ctrl.T.Helper()
