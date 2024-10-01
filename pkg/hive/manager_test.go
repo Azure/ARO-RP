@@ -642,7 +642,6 @@ func TestListSyncSet(t *testing.T) {
 		wantErr   string
 	}{
 		{name: "syncsets exists and are returned"},
-		{name: "syncsets does not exist err returned", label: "", namespace: "", wantErr: `no syncsets for namespace with provided label`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClientBuilder := fake.NewClientBuilder()
@@ -683,6 +682,7 @@ func TestGetSyncSet(t *testing.T) {
 		wantErr     string
 	}{
 		{name: "syncset exists and are returned", syncsetname: syncsetTest.Name, namespace: syncsetTest.Namespace},
+		{name: "syncset does not exist err returned", syncsetname: "", namespace: "", wantErr: `syncsets.hive.openshift.io "" not found`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClientBuilder := fake.NewClientBuilder()
