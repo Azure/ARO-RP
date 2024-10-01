@@ -79,6 +79,10 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	if err != nil {
 		return err
 	}
+	boundSASigningKeySecret, err := boundSASigningKeySecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, doc.OpenShiftCluster)
+	if err != nil {
+		return err
+	}
 
 	resources := []kruntime.Object{
 		azureCredentialSecret,
@@ -87,6 +91,13 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 		psSecret,
 		installConfigCM(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, doc.OpenShiftCluster.Location),
 		cd,
+	}
+
+	if boundSASigningKeySecret != nil {
+		resources = append(resources, boundSASigningKeySecret)
+		cd.Spec.BoundServiceAccountSignkingKeySecretRef = &corev1.LocalObjectReference{
+			Name: boundSASigningKeySecret.ObjectMeta.Name,
+		}
 	}
 
 	err = dynamichelper.Prepare(resources)
