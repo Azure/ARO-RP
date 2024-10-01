@@ -1,11 +1,17 @@
-trigger: none
-pr: none
+trigger:
+  branches:
+    include:
+      - master
+  paths:
+    exclude:
+      - docs/*
+  tags:
+    include:
+      - v2*
+
+# PR triggers are overridden in the ADO UI
 
 resources:
-  pipelines:
-    - pipeline: e2e
-      source: \Public Cloud ARO pipelines\CI\CI
-      trigger: true
   containers:
     - container: container
       image: registry.access.redhat.com/ubi8/toolbox:8.8

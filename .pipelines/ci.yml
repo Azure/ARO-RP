@@ -11,6 +11,8 @@ trigger:
     include:
       - v2*
 
+# PR triggers are overridden in the ADO UI
+
 resources:
   containers:
     - container: golang
