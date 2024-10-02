@@ -45,7 +45,6 @@ def validate_client_id(namespace):
         raise MutuallyExclusiveArgumentError('Must not specify --client-id when --enable-managed-identity is True')  # pylint: disable=line-too-long
     if namespace.platform_workload_identities is not None:
         raise MutuallyExclusiveArgumentError('Must not specify --client-id when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
-
     try:
         uuid.UUID(namespace.client_id)
     except ValueError as e:
@@ -53,6 +52,8 @@ def validate_client_id(namespace):
 
     if namespace.client_secret is None or not str(namespace.client_secret):
         raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')  # pylint: disable=line-too-long
+    if namespace.upgradeable_to is not None:
+        raise MutuallyExclusiveArgumentError('Must not specify --client-id when --upgradeable-to is used.')  # pylint: disable=line-too-long
 
 
 def validate_client_secret(isCreate):
@@ -65,6 +66,8 @@ def validate_client_secret(isCreate):
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
         if isCreate and (namespace.client_id is None or not str(namespace.client_id)):
             raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
+        if namespace.upgradeable_to is not None:
+            raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --upgradeable-to is used.')  # pylint: disable=line-too-long
 
     return _validate_client_secret
 
@@ -281,11 +284,20 @@ def validate_refresh_cluster_credentials(namespace):
         return
     if namespace.client_secret is not None or namespace.client_id is not None:
         raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
+    if namespace.upgradeable_to is not None:
+        raise MutuallyExclusiveArgumentError('Must not specify --refresh-credentials when --upgradeable-to is used.')  # pylint: disable=line-too-long
 
 
 def validate_version_format(namespace):
     if namespace.version is not None and not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
         raise InvalidArgumentValueError('--version is invalid')
+
+
+def validate_upgradeable_to_format(namespace):
+    if not namespace.upgradeable_to:
+        return
+    if not re.match(r'^[4-9]{1}\.(1[4-9]|[1-9][0-9])\.[0-9]{1,2}$', namespace.upgradeable_to):
+        raise InvalidArgumentValueError('--upgradeable-to format is invalid')
 
 
 def validate_load_balancer_managed_outbound_ip_count(namespace):
