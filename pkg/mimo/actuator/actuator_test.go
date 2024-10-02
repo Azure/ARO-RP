@@ -13,8 +13,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+ "github.com/uber-go/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
