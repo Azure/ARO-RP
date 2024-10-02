@@ -25,6 +25,16 @@ var _ = Describe("MIMO Actuator E2E Testing", func() {
 	BeforeEach(func() {
 		skipIfNotInDevelopmentEnv()
 		skipIfMIMOActuatorNotEnabled()
+
+		DeferCleanup(func(ctx context.Context) {
+			// reset feature flags to their default values
+			var oc = &admin.OpenShiftCluster{}
+			resp, err := adminRequest(ctx,
+				http.MethodPatch, clusterResourceID, nil, true,
+				json.RawMessage("{\"operatorFlagsMergeStrategy\": \"reset\", \"properties\": {\"maintenanceTask\": \"SyncClusterObject\"}}"), oc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
 	})
 
 	It("Should be able to schedule and run a maintenance set via the admin API", func(ctx context.Context) {
