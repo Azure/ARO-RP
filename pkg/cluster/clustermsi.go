@@ -184,17 +184,14 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 		return fmt.Errorf("unable to pull clientID and objectID from the MSI CredentialsObject")
 	}
 
-	clientId := *msiCredObj.CredentialsObject.ExplicitIdentities[0].ClientID
-	principalId := *msiCredObj.CredentialsObject.ExplicitIdentities[0].ObjectID
-
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		// we iterate through the existing identities to find the identity matching
 		// the expected resourceID with casefolding, to ensure we preserve the
 		// passed-in casing on IDs even if it may be incorrect
 		for k, v := range doc.OpenShiftCluster.Identity.UserAssignedIdentities {
 			if strings.EqualFold(k, clusterMsiResourceId.String()) {
-				v.ClientID = clientId
-				v.PrincipalID = principalId
+				v.ClientID = *identity.ClientID
+				v.PrincipalID = *identity.ObjectID
 
 				doc.OpenShiftCluster.Identity.UserAssignedIdentities[k] = v
 				return nil
