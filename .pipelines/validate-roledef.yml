@@ -11,11 +11,14 @@ resources:
       image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
       options: --user=0
 
-# Azure DevOps Pipeline running e2e tests
+parameters:
+  - name: OCPVersion
+    type: string
+    default: "4.14.37"
+
 variables:
   - template: vars.yml
 
-# Run the test suite and collect must-gather
 jobs:
   - job:
     timeoutInMinutes: 30
@@ -40,6 +43,6 @@ jobs:
           wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
           tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
 
-          OCP_VERSION=4.14.37 OC=./oc make validate-roledef
+          OCP_VERSION=${{ parameters.OCPVersion }} OC=./oc make validate-roledef
         displayName: Run check
         target: golang
