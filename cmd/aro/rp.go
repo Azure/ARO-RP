@@ -172,6 +172,15 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions)
 
+	// MIMO only activated in development for now
+	if _env.IsLocalDevelopmentMode() {
+		dbMaintenanceManifests, err := database.NewMaintenanceManifests(ctx, dbc, dbName)
+		if err != nil {
+			return err
+		}
+		dbg.WithMaintenanceManifests(dbMaintenanceManifests)
+	}
+
 	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
