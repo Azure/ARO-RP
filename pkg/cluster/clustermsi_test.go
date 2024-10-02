@@ -536,3 +536,95 @@ Response contained no body
 		})
 	}
 }
+
+func TestGetSingleExplicitIdentity(t *testing.T) {
+	placeholderString := "placeholder"
+	validIdentity := &swagger.NestedCredentialsObject{
+		ClientID:                   &placeholderString,
+		ClientSecret:               &placeholderString,
+		TenantID:                   &placeholderString,
+		ResourceID:                 &placeholderString,
+		AuthenticationEndpoint:     &placeholderString,
+		CannotRenewAfter:           &placeholderString,
+		ClientSecretURL:            &placeholderString,
+		MtlsAuthenticationEndpoint: &placeholderString,
+		NotAfter:                   &placeholderString,
+		NotBefore:                  &placeholderString,
+		RenewAfter:                 &placeholderString,
+		CustomClaims: &swagger.CustomClaims{
+			XMSAzNwperimid: []*string{&placeholderString},
+			XMSAzTm:        &placeholderString,
+		},
+		ObjectID: &placeholderString,
+	}
+
+	for _, tt := range []struct {
+		name       string
+		msiCredObj *dataplane.UserAssignedIdentities
+		want       *swagger.NestedCredentialsObject
+		wantErr    string
+	}{
+		{
+			name:       "ExplicitIdentities nil, returns error",
+			msiCredObj: &dataplane.UserAssignedIdentities{},
+			wantErr:    errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities empty, returns error",
+			msiCredObj: &dataplane.UserAssignedIdentities{
+				CredentialsObject: dataplane.CredentialsObject{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{},
+					},
+				},
+			},
+			wantErr: errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities first element is nil, returns error",
+			msiCredObj: &dataplane.UserAssignedIdentities{
+				CredentialsObject: dataplane.CredentialsObject{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{
+							nil,
+						},
+					},
+				},
+			},
+			wantErr: errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities first element is nil, returns error",
+			msiCredObj: &dataplane.UserAssignedIdentities{
+				CredentialsObject: dataplane.CredentialsObject{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{
+							nil,
+						},
+					},
+				},
+			},
+			wantErr: errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities first element is valid, returns it",
+			msiCredObj: &dataplane.UserAssignedIdentities{
+				CredentialsObject: dataplane.CredentialsObject{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{
+							validIdentity,
+						},
+					},
+				},
+			},
+			want: validIdentity,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getSingleExplicitIdentity(tt.msiCredObj)
+
+			assert.Equal(t, tt.want, got)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}

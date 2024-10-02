@@ -204,12 +204,15 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 	return err
 }
 
+// We expect the GetUserAssignedIdentities request to only ever be made for one identity
+// at a time (the cluster MSI) and thus we expect the response to only contain a single
+// identity's details.
 func getSingleExplicitIdentity(msiCredObj *dataplane.UserAssignedIdentities) (*swagger.NestedCredentialsObject, error) {
-	if msiCredObj.CredentialsObject.ExplicitIdentities == nil ||
-		len(msiCredObj.CredentialsObject.ExplicitIdentities) == 0 ||
-		msiCredObj.CredentialsObject.ExplicitIdentities[0] == nil {
+	if msiCredObj.ExplicitIdentities == nil ||
+		len(msiCredObj.ExplicitIdentities) == 0 ||
+		msiCredObj.ExplicitIdentities[0] == nil {
 		return nil, errClusterMsiNotPresentInResponse
 	}
 
-	return msiCredObj.CredentialsObject.ExplicitIdentities[0], nil
+	return msiCredObj.ExplicitIdentities[0], nil
 }
