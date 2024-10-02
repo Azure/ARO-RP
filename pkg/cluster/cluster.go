@@ -171,7 +171,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	storage, err := storage.NewManager(_env, r.SubscriptionID, fpCredClusterTenant, !doc.OpenShiftCluster.UsesWorkloadIdentity())
+	storage, err := storage.NewManager(_env, r.SubscriptionID, fpCredClusterTenant, doc.OpenShiftCluster.UsesWorkloadIdentity())
 	if err != nil {
 		return nil, err
 	}
