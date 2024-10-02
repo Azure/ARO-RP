@@ -54,7 +54,7 @@ func (m *missingPermissionsError) Error() string {
 
 var (
 	verifiedVersion = flag.String("verified-version", "", "verified version")
-	targetVersion   = flag.String("target-version", "", "target version")
+	targetVersion   = flag.String("target-version", "", "(optional) version to be verified")
 	ocBinary        = flag.String("oc-bin", "oc", "path to oc binary")
 	permissionSets  = []permissionSet{
 		{
