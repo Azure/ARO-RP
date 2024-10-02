@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/date"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
