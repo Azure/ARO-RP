@@ -8,18 +8,25 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
+	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/Azure/msi-dataplane/pkg/store"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 )
 
 const (
 	mockMsiCertValidityDays = 90
+)
+
+var (
+	errClusterMsiNotPresentInResponse = errors.New("cluster msi not present in msi credentials response")
 )
 
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
@@ -61,12 +68,16 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	if m.env.FeatureIsSet(env.FeatureUseMockMsiRp) {
 		expirationDate = now.AddDate(0, 0, mockMsiCertValidityDays)
 	} else {
-		if msiCredObj.CredentialsObject.ExplicitIdentities == nil || len(msiCredObj.CredentialsObject.ExplicitIdentities) == 0 || msiCredObj.CredentialsObject.ExplicitIdentities[0] == nil || msiCredObj.CredentialsObject.ExplicitIdentities[0].NotAfter == nil {
+		identity, err := getSingleExplicitIdentity(msiCredObj)
+		if err != nil {
+			return err
+		}
+		if identity.NotAfter == nil {
 			return errors.New("unable to pull NotAfter from the MSI CredentialsObject")
 		}
 
 		// The swagger API spec for the MI RP specifies that NotAfter will be "in the format 2017-03-01T14:11:00Z".
-		expirationDate, err = time.Parse(time.RFC3339, *msiCredObj.CredentialsObject.ExplicitIdentities[0].NotAfter)
+		expirationDate, err = time.Parse(time.RFC3339, *identity.NotAfter)
 		if err != nil {
 			return err
 		}
@@ -123,7 +134,13 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 		return err
 	}
 
+	userAssignedIdentities, err := armmsi.NewUserAssignedIdentitiesClient(subId, azureCred, clientOptions)
+	if err != nil {
+		return err
+	}
+
 	m.clusterMsiFederatedIdentityCredentials = clusterMsiFederatedIdentityCredentials
+	m.userAssignedIdentities = userAssignedIdentities
 	return nil
 }
 
@@ -136,4 +153,66 @@ func (m *manager) clusterMsiSecretName() (string, error) {
 	}
 
 	return fmt.Sprintf("%s-%s", m.doc.ID, clusterMsi.Name), nil
+}
+
+func (m *manager) clusterIdentityIDs(ctx context.Context) error {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return fmt.Errorf("clusterIdentityIDs called for CSP cluster")
+	}
+
+	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	if err != nil {
+		return err
+	}
+
+	uaMsiRequest := dataplane.UserAssignedMSIRequest{
+		IdentityURL: m.doc.OpenShiftCluster.Identity.IdentityURL,
+		ResourceIDs: []string{clusterMsiResourceId.String()},
+		TenantID:    m.doc.OpenShiftCluster.Identity.TenantID,
+	}
+
+	msiCredObj, err := m.msiDataplane.GetUserAssignedIdentities(ctx, uaMsiRequest)
+	if err != nil {
+		return err
+	}
+
+	identity, err := getSingleExplicitIdentity(msiCredObj)
+	if err != nil {
+		return err
+	}
+	if identity.ClientID == nil || identity.ObjectID == nil {
+		return fmt.Errorf("unable to pull clientID and objectID from the MSI CredentialsObject")
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		// we iterate through the existing identities to find the identity matching
+		// the expected resourceID with casefolding, to ensure we preserve the
+		// passed-in casing on IDs even if it may be incorrect
+		for k, v := range doc.OpenShiftCluster.Identity.UserAssignedIdentities {
+			if strings.EqualFold(k, clusterMsiResourceId.String()) {
+				v.ClientID = *identity.ClientID
+				v.PrincipalID = *identity.ObjectID
+
+				doc.OpenShiftCluster.Identity.UserAssignedIdentities[k] = v
+				return nil
+			}
+		}
+
+		return fmt.Errorf("no entries found matching clusterMsiResourceId")
+	})
+
+	return err
+}
+
+// We expect the GetUserAssignedIdentities request to only ever be made for one identity
+// at a time (the cluster MSI) and thus we expect the response to only contain a single
+// identity's details.
+func getSingleExplicitIdentity(msiCredObj *dataplane.UserAssignedIdentities) (*swagger.NestedCredentialsObject, error) {
+	if msiCredObj.ExplicitIdentities == nil ||
+		len(msiCredObj.ExplicitIdentities) == 0 ||
+		msiCredObj.ExplicitIdentities[0] == nil {
+		return nil, errClusterMsiNotPresentInResponse
+	}
+
+	return msiCredObj.ExplicitIdentities[0], nil
 }
