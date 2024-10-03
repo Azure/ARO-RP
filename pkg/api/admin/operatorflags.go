@@ -11,11 +11,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 )
 
-type operatorFlagsMergeStrategyStruct struct {
-	OperatorFlagsMergeStrategy string                `json:"operatorFlagsMergeStrategy,omitempty"`
-	Cluster                    *api.OpenShiftCluster `json:"cluster,omitempty"`
-}
-
 const (
 	OperatorFlagsMergeStrategyMerge string = "merge"
 	OperatorFlagsMergeStrategyReset string = "reset"
