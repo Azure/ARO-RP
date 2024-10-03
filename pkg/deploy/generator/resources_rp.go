@@ -1033,7 +1033,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					ID: to.StringPtr("MaintenanceManifests"),
 					PartitionKey: &sdkcosmos.ContainerPartitionKey{
 						Paths: []*string{
-							to.StringPtr("/id"),
+							to.StringPtr("/clusterResourceID"),
 						},
 						Kind: &hashPartitionKey,
 					},
