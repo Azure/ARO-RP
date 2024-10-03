@@ -51,7 +51,7 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 	}
 	go g.Run()
 
-	dbc, err := service.NewDatabase(ctx, _env, log, m, false)
+	dbc, err := service.NewDatabase(ctx, _env, log, m, true)
 	if err != nil {
 		return err
 	}
