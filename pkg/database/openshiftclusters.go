@@ -23,7 +23,7 @@ const (
 	OpenshiftClustersPrefixQuery                = `SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)`
 	OpenshiftClustersClientIdQuery              = `SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID`
 	OpenshiftClustersResourceGroupQuery         = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
-	OpenshiftClustersClusterResourceIDOnlyQuery = `SELECT {key: doc.key} FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating")`
+	OpenshiftClustersClusterResourceIDOnlyQuery = `SELECT doc.id, doc.key FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState NOT IN ("Creating", "Deleting")`
 )
 
 type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error

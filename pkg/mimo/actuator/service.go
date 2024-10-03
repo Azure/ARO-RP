@@ -254,10 +254,11 @@ func (s *service) checkReady() bool {
 func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
 	defer recover.Panic(s.baseLog)
 
+	log := utillog.EnrichWithResourceID(s.baseLog, id)
+	log.Debugf("starting worker for %s in %s...", id, delay.String())
+
 	// Wait for a randomised delay before starting
 	time.Sleep(delay)
-
-	log := utillog.EnrichWithResourceID(s.baseLog, id)
 
 	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
 	if err != nil {
