@@ -52,9 +52,15 @@ func (mon *monitor) UpsertDoc(doc *api.OpenShiftClusterDocument) {
 func (mon *monitor) FixDoc(doc *api.OpenShiftClusterDocument) {
 	id := strings.ToLower(doc.ID)
 	v := mon.docs[id]
-	_, ours := mon.buckets[v.doc.Bucket]
+
+	mon.baseLog.Debugf("fixing doc %s (%s)", doc.ID, doc.Key)
+
+	// TODO: bucketing logic
+	//_, ours := mon.buckets[v.doc.Bucket]
+	ours := true
 
 	if !ours && v.stop != nil {
+		mon.baseLog.Debugf("stopping channel for %s", doc.ID)
 		close(v.stop)
 		v.stop = nil
 	} else if ours && v.stop == nil {
@@ -63,7 +69,7 @@ func (mon *monitor) FixDoc(doc *api.OpenShiftClusterDocument) {
 
 		delay := time.Duration(rand.Intn(60)) * time.Second
 
-		go mon.worker(ch, delay, id)
+		go mon.worker(ch, delay, doc.Key)
 	}
 }
 

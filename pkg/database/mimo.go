@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	MaintenanceManifestDequeueQueryForCluster = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterResourceID = @clusterID`
-	MaintenanceManifestQueryForCluster        = `SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterID`
+	MaintenanceManifestDequeueQueryForCluster = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterResourceID = @clusterResourceID`
+	MaintenanceManifestQueryForCluster        = `SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterResourceID`
 	MaintenanceManifestQueueLengthQuery       = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
 )
 
@@ -224,7 +224,7 @@ func (c *maintenanceManifests) Lease(ctx context.Context, clusterResourceID stri
 		return nil, fmt.Errorf("clusterID %q is not lower case", clusterResourceID)
 	}
 
-	return c.patchWithLease(ctx, clusterResourceID, id, func(doc *api.MaintenanceManifestDocument) error {
+	return c.patch(ctx, clusterResourceID, id, func(doc *api.MaintenanceManifestDocument) error {
 		doc.LeaseOwner = c.uuid
 		doc.Dequeues++
 		return nil
