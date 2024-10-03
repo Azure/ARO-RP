@@ -540,3 +540,13 @@ run-rp: ci-rp podman-secrets
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+
+.PHONY: vpn
+vpn:
+	docker compose build vpn
+
+.PHONY: run-vpn
+run-vpn:
+	docker compose rm -sf vpn
+	docker compose up vpn
+	docker compose logs --follow vpn

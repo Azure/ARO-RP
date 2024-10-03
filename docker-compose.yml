@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  vpn:
+    image: vpn:${VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile.vpn
+    container_name: vpn
+    privileged: true
+    volumes:
+      - ${PWD}/secrets:/secrets:z
+    entrypoint: "openvpn"
+    command: ["/secrets/vpn-eastus.ovpn"]
+    healthcheck:
+      test: ["CMD", "pidof", "openvpn"]
+      start_period: 20s
+      interval: 20s
+      timeout: 3s
+      retries: 3
