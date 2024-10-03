@@ -128,12 +128,12 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	// Dequeue the document
 	oc, err := a.oc.Get(ctx, a.clusterResourceID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed getting cluster document: %w", err)
 	}
 
 	oc, err = a.oc.DoDequeue(ctx, oc)
 	if err != nil {
-		return false, err // This will include StatusPreconditionFaileds
+		return false, fmt.Errorf("failed dequeuing cluster document: %w", err) // This will include StatusPreconditionFaileds
 	}
 
 	taskContext := newTaskContext(ctx, a.env, a.log, oc)
@@ -185,5 +185,8 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 	// release the OpenShiftCluster
 	_, err = a.oc.EndLease(ctx, a.clusterResourceID, oc.OpenShiftCluster.Properties.ProvisioningState, api.ProvisioningStateMaintenance, nil)
-	return true, err
+	if err != nil {
+		return false, fmt.Errorf("failed ending lease on cluster document: %w", err)
+	}
+	return true, nil
 }
