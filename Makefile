@@ -396,10 +396,6 @@ ci-clean:
 	podman $(PODMAN_REMOTE_ARGS) \
 	    image prune --all --filter="label=aro-*=true"
 
-.PHONY: version
-version:
-	echo "RP $(LOCAL_ARO_RP_IMAGE):$(VERSION)"
-
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
