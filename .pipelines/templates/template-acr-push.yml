@@ -20,6 +20,23 @@ steps:
       scriptLocation: 'inlineScript'
       inlineScript: |
         set -xe
+
+        # Update packages and install docker.io and docker-compose-plugin
+        echo "Installing Docker and Docker Compose Plugin..."
+        sudo apt-get update
+        sudo apt-get install -y ca-certificates curl gnupg
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc
+        sudo chmod a+r /etc/apt/keyrings/docker.asc
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        sudo systemctl start docker
+        sudo systemctl enable docker
+
         echo "Authenticating to Azure and ACR..."
         ACR_FQDN="${{ parameters.acrFQDN }}"
         REGISTRY_NAME=$(echo $ACR_FQDN | cut -d'.' -f1)
@@ -32,34 +49,37 @@ steps:
         docker images
 
         # Ensure the image is available locally before tagging the build ID
-        IMAGE_NAME="${{ parameters.repository }}:$(Build.BuildId)"
+        IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:$(VERSION)"  # Use full image name
+        echo "Checking for image $IMAGE_NAME..."
         if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
           echo "Error: Image $IMAGE_NAME not found. Exiting."
           exit 1
         fi
 
         # Ensure the image is available locally before tagging 'latest'
-        IMAGE_LATEST="${{ parameters.repository }}:latest"
+        IMAGE_LATEST="${ACR_FQDN}/${{ parameters.repository }}:latest"
+        echo "Checking for image $IMAGE_LATEST..."
         if [[ "$(docker images -q $IMAGE_LATEST 2> /dev/null)" == "" ]]; then
-          echo "Warning: Image $IMAGE_LATEST not found. Skipping latest tag."
+          echo "Warning: Image $IMAGE_LATEST not found. Skipping 'latest' tag."
           SKIP_LATEST=true
         else
+          echo "Image $IMAGE_LATEST found. Proceeding with 'latest' tag."
           SKIP_LATEST=false
         fi
 
         # Tag the image with the ACR repository for the build ID
         echo "Tagging image with build ID..."
-        docker tag $IMAGE_NAME ${ACR_FQDN}/${{ parameters.repository }}:$(Build.BuildId)
+        docker tag $IMAGE_NAME ${ACR_FQDN}/${{ parameters.repository }}:$(VERSION)
 
         # If the latest image exists, tag it as well
         if [ "$SKIP_LATEST" == "false" ]; then
           echo "Tagging image with 'latest'..."
-          docker tag $IMAGE_LATEST ${ACR_FQDN}/${{ parameters.repository }}:latest
+          docker tag $IMAGE_NAME ${ACR_FQDN}/${{ parameters.repository }}:latest
         fi
 
         # Push the Docker image to ACR with build ID
         echo "Pushing image with build ID to ACR..."
-        docker push ${ACR_FQDN}/${{ parameters.repository }}:$(Build.BuildId)
+        docker push ${ACR_FQDN}/${{ parameters.repository }}:$(VERSION)
 
         # Optionally push the image as 'latest'
         if [ "${{ parameters.pushLatest }}" == "true" ] && [ "$SKIP_LATEST" == "false" ]; then
