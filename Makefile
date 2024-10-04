@@ -374,6 +374,7 @@ DOCKER_BUILD_CI_ARGS ?=
 
 # Image names that will be found in the local podman image registry after build
 # (tags are always VERSION).
+LOCAL_ARO_RP_IMAGE ?= aro
 LOCAL_ARO_PORTAL_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-portal-build
 LOCAL_ARO_RP_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-build
 LOCAL_AZ_EXT_ARO_IMAGE ?= azext-aro
@@ -480,60 +481,9 @@ run-portal: ci-rp podman-secrets
 # run-rp executes the RP locally as similarly as possible to production. That
 # includes the use of Hive, meaning you need a VPN connection.
 .PHONY: run-rp
-run-rp: ci-rp podman-secrets
-	podman $(PODMAN_REMOTE_ARGS) \
-		run \
-		--name aro-rp \
-		--rm \
-		-p 127.0.0.1:8443:8443 \
-		-w /app \
-		-e ARO_IMAGE \
-		-e RP_MODE="development" \
-		-e PROXY_HOSTNAME \
-		-e DOMAIN_NAME \
-		-e AZURE_RP_CLIENT_ID \
-		-e AZURE_FP_CLIENT_ID \
-		-e AZURE_SUBSCRIPTION_ID \
-		-e AZURE_TENANT_ID \
-		-e AZURE_RP_CLIENT_SECRET \
-		-e LOCATION \
-		-e RESOURCEGROUP \
-		-e AZURE_ARM_CLIENT_ID \
-		-e AZURE_FP_SERVICE_PRINCIPAL_ID \
-		-e AZURE_DBTOKEN_CLIENT_ID \
-		-e AZURE_PORTAL_CLIENT_ID \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
-		-e AZURE_CLIENT_ID \
-		-e AZURE_SERVICE_PRINCIPAL_ID \
-		-e AZURE_CLIENT_SECRET \
-		-e AZURE_GATEWAY_CLIENT_ID \
-		-e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
-		-e AZURE_GATEWAY_CLIENT_SECRET \
-		-e DATABASE_NAME \
-		-e PULL_SECRET \
-		-e SECRET_SA_ACCOUNT_NAME \
-		-e DATABASE_ACCOUNT_NAME \
-		-e KEYVAULT_PREFIX \
-		-e ADMIN_OBJECT_ID \
-		-e PARENT_DOMAIN_NAME \
-		-e PARENT_DOMAIN_RESOURCEGROUP \
-		-e AZURE_ENVIRONMENT \
-		-e STORAGE_ACCOUNT_DOMAIN \
-		-e OIDC_STORAGE_ACCOUNT_NAME \
-		-e KUBECONFIG="/app/secrets/aks.kubeconfig" \
-		-e HIVE_KUBE_CONFIG_PATH="/app/secrets/aks.kubeconfig" \
-		-e ARO_CHECKOUT_PATH="/app" \
-		-e ARO_INSTALL_VIA_HIVE="true" \
-		-e ARO_ADOPT_BY_HIVE="true" \
-		-e MOCK_MSI_TENANT_ID \
-		-e MOCK_MSI_CLIENT_ID \
-		-e MOCK_MSI_OBJECT_ID \
-		-e MOCK_MSI_CERT \
-		--secret aks.kubeconfig,target=/app/secrets/aks.kubeconfig \
-		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
-		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
-		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+run-rp:
+	docker compose rm -sf rp
+	docker compose up rp
 
 .PHONY: vpn
 vpn:
