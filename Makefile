@@ -68,7 +68,7 @@ aro: check-release generate
 
 .PHONY: runlocal-rp
 runlocal-rp:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} rp
 
 .PHONY: az
 az: pyenv
@@ -197,11 +197,11 @@ proxy:
 
 .PHONY: runlocal-portal
 runlocal-portal:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} portal
 
 .PHONY: runlocal-actuator
 runlocal-actuator:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro mimo-actuator
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-actuator
 
 .PHONY: build-portal
 build-portal:
