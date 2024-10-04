@@ -92,7 +92,7 @@ var _ = Describe("MIMO Actuator E2E Testing", func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			fetchedManifest := &admin.MaintenanceManifest{}
 			resp, err = adminRequest(ctx,
-				http.MethodPut, "/admin"+clusterResourceID+"/maintenancemanifests/"+manifestID,
+				http.MethodGet, "/admin"+clusterResourceID+"/maintenancemanifests/"+manifestID,
 				url.Values{}, true, nil, &fetchedManifest)
 
 			g.Expect(err).NotTo(HaveOccurred())
