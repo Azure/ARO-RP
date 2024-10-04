@@ -28,6 +28,27 @@ func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
 }
 
 func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
+	machines, err := m.maocli.MachineV1beta1().Machines("openshift-machine-api").List(ctx, metav1.ListOptions{
+		LabelSelector: "machine.openshift.io/cluster-api-machine-role=worker",
+	})
+	if err != nil {
+		m.log.Error(err)
+		return false, nil
+	}
+
+	readyWorkerMachines := 0
+	for _, machine := range machines.Items {
+		m.log.Infof("Machine %s is %s; status: %s", machine.Name, *machine.Status.Phase, string(machine.Status.ProviderStatus.Raw))
+		if *machine.Status.Phase == "Running" {
+			readyWorkerMachines++
+		}
+	}
+
+	if readyWorkerMachines < minimumWorkerNodes {
+		m.log.Infof("%d machines running", readyWorkerMachines)
+		return false, nil
+	}
+
 	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{
 		LabelSelector: "node-role.kubernetes.io/worker",
 	})
@@ -37,6 +58,7 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 
 	readyWorkers := 0
 	for _, node := range nodes.Items {
+		m.log.Infof("Node %s status: %v", node.Name, node.Status.Conditions)
 		for _, cond := range node.Status.Conditions {
 			if cond.Type == corev1.NodeReady && cond.Status == corev1.ConditionTrue {
 				readyWorkers++
@@ -44,6 +66,7 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 		}
 	}
 
+	m.log.Infof("%d nodes ready", readyWorkerMachines)
 	return readyWorkers >= minimumWorkerNodes, nil
 }
 
