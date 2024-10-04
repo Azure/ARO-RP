@@ -445,3 +445,11 @@ run-portal:
 run-rp: aks.kubeconfig
 	docker compose rm -sf rp
 	docker compose up rp
+
+.PHONY: build-selenium
+build selenium:
+	docker compose build selenium
+
+.PHONY: run selenium
+run selenium:
+	docker-compose up selenium
