@@ -48,17 +48,25 @@ steps:
         echo "Listing Docker images..."
         docker images
 
-        # Check if the image is already tagged with the full repository path
+        # Define both the full repository image name and the local name
         IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:$(VERSION)"
         LOCAL_IMAGE="${{ parameters.repository }}:$(VERSION)"
 
-        echo "Checking for image $LOCAL_IMAGE..."
-        if [[ "$(docker images -q $LOCAL_IMAGE 2> /dev/null)" == "" ]]; then
-          echo "Error: Image $LOCAL_IMAGE not found. Exiting."
-          exit 1
+        # Check if the image exists locally with the full repository tag
+        echo "Checking for image $IMAGE_NAME..."
+        if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
+          # If the full repository tagged image does not exist, check for the local image
+          echo "Full repository image not found. Checking for local image $LOCAL_IMAGE..."
+          if [[ "$(docker images -q $LOCAL_IMAGE 2> /dev/null)" == "" ]]; then
+            echo "Error: Neither $IMAGE_NAME nor $LOCAL_IMAGE found. Exiting."
+            exit 1
+          else
+            # Retag the local image with the full repository path
+            echo "Local image $LOCAL_IMAGE found. Retagging with full repository path..."
+            docker tag $LOCAL_IMAGE $IMAGE_NAME
+          fi
         else
-          echo "Image found. Retagging with full repository path..."
-          docker tag $LOCAL_IMAGE $IMAGE_NAME
+          echo "Image $IMAGE_NAME found. Proceeding to push..."
         fi
 
         # Ensure the image is available locally before tagging 'latest'
