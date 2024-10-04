@@ -4,5 +4,9 @@ package adminactions
 // Licensed under the Apache License 2.0.
 
 //go:generate rm -rf ../../util/mocks/$GOPACKAGE
-//go:generate mockgen -destination=../../util/mocks/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/frontend/$GOPACKAGE KubeActions,AzureActions,AppLensActions
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../util/mocks/$GOPACKAGE/$GOPACKAGE.go
+//go:generate mockgen -source kubeactions.go -destination=../../util/mocks/$GOPACKAGE/kubeactions.go github.com/Azure/ARO-RP/pkg/frontend/$GOPACKAGE KubeActions
+//go:generate mockgen -source azureactions.go -destination=../../util/mocks/$GOPACKAGE/azureactions.go github.com/Azure/ARO-RP/pkg/frontend/$GOPACKAGE AzureActions
+//go:generate mockgen -source applens.go -destination=../../util/mocks/$GOPACKAGE/applens.go github.com/Azure/ARO-RP/pkg/frontend/$GOPACKAGE AppLensActions
+//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../util/mocks/$GOPACKAGE/kubeactions.go
+//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../util/mocks/$GOPACKAGE/azureactions.go
+//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../util/mocks/$GOPACKAGE/applens.go
