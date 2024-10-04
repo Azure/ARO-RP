@@ -17,13 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -32,16 +30,15 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
@@ -101,16 +98,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		},
 	}
 
-	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
-	clientOptions := &armsdk.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Environment().Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
-		},
-	}
+	clientOptions := environment.Environment().ArmClientOptions()
 
 	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
 	if err != nil {
@@ -286,13 +274,13 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	// TODO: ick
 	if os.Getenv("NO_INTERNET") != "" {
 		parameters["routes"] = &arm.ParametersParameter{
-			Value: []mgmtnetwork.Route{
+			Value: []sdknetwork.Route{
 				{
-					RoutePropertiesFormat: &mgmtnetwork.RoutePropertiesFormat{
-						AddressPrefix: to.StringPtr("0.0.0.0/0"),
-						NextHopType:   mgmtnetwork.RouteNextHopTypeNone,
+					Properties: &sdknetwork.RoutePropertiesFormat{
+						AddressPrefix: ptr.To("0.0.0.0/0"),
+						NextHopType:   ptr.To(sdknetwork.RouteNextHopTypeNone),
 					},
-					Name: to.StringPtr("blackhole"),
+					Name: ptr.To("blackhole"),
 				},
 			},
 		}
