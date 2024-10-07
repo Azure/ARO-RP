@@ -7,16 +7,16 @@ import (
 	"context"
 	"time"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
+	"k8s.io/utils/ptr"
 
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func NewFeature(flowLogsClient network.FlowLogsClient, kubeSubnets subnet.KubeManager, subnets subnet.Manager, location string) *nsgFlowLogsFeature {
+func NewFeature(flowLogsClient armnetwork.FlowLogsClient, kubeSubnets subnet.KubeManager, subnets subnet.Manager, location string) *nsgFlowLogsFeature {
 	return &nsgFlowLogsFeature{
 		kubeSubnets:    kubeSubnets,
 		flowLogsClient: flowLogsClient,
@@ -28,7 +28,7 @@ func NewFeature(flowLogsClient network.FlowLogsClient, kubeSubnets subnet.KubeMa
 type nsgFlowLogsFeature struct {
 	kubeSubnets    subnet.KubeManager
 	subnets        subnet.Manager
-	flowLogsClient network.FlowLogsClient
+	flowLogsClient armnetwork.FlowLogsClient
 	location       string
 }
 
@@ -66,7 +66,7 @@ func (n *nsgFlowLogsFeature) Enable(ctx context.Context, instance *aropreviewv1a
 		if err != nil {
 			return err
 		}
-		err = n.flowLogsClient.CreateOrUpdateAndWait(ctx, networkWatcherResource.ResourceGroup, networkWatcherResource.ResourceName, res.ResourceName, *flowLog)
+		err = n.flowLogsClient.CreateOrUpdateAndWait(ctx, networkWatcherResource.ResourceGroup, networkWatcherResource.ResourceName, res.ResourceName, *flowLog, nil)
 		if err != nil {
 			return err
 		}
@@ -75,25 +75,25 @@ func (n *nsgFlowLogsFeature) Enable(ctx context.Context, instance *aropreviewv1a
 	return nil
 }
 
-func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeature, nsgID string) *mgmtnetwork.FlowLog {
+func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeature, nsgID string) *sdknetwork.FlowLog {
 	// build a request as described here https://docs.microsoft.com/en-us/azure/network-watcher/network-watcher-nsg-flow-logging-rest#enable-network-security-group-flow-logs
-	return &mgmtnetwork.FlowLog{
+	return &sdknetwork.FlowLog{
 		Location: &n.location,
-		FlowLogPropertiesFormat: &mgmtnetwork.FlowLogPropertiesFormat{
+		Properties: &sdknetwork.FlowLogPropertiesFormat{
 			TargetResourceID: &nsgID,
-			Enabled:          to.BoolPtr(true),
-			Format: &mgmtnetwork.FlowLogFormatParameters{
-				Type:    mgmtnetwork.JSON,
-				Version: to.Int32Ptr(int32(instance.Spec.NSGFlowLogs.Version)),
+			Enabled:          ptr.To(true),
+			Format: &sdknetwork.FlowLogFormatParameters{
+				Type:    ptr.To(sdknetwork.FlowLogFormatTypeJSON),
+				Version: ptr.To(int32(instance.Spec.NSGFlowLogs.Version)),
 			},
-			RetentionPolicy: &mgmtnetwork.RetentionPolicyParameters{
+			RetentionPolicy: &sdknetwork.RetentionPolicyParameters{
 				Days: &instance.Spec.NSGFlowLogs.RetentionDays,
 			},
 			StorageID: &instance.Spec.NSGFlowLogs.StorageAccountResourceID,
-			FlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsProperties{
-				NetworkWatcherFlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsConfigurationProperties{
+			FlowAnalyticsConfiguration: &sdknetwork.TrafficAnalyticsProperties{
+				NetworkWatcherFlowAnalyticsConfiguration: &sdknetwork.TrafficAnalyticsConfigurationProperties{
 					WorkspaceID:              &instance.Spec.NSGFlowLogs.TrafficAnalyticsLogAnalyticsWorkspaceID,
-					TrafficAnalyticsInterval: to.Int32Ptr(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
+					TrafficAnalyticsInterval: ptr.To(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
 				},
 			},
 		},
@@ -117,7 +117,7 @@ func (n *nsgFlowLogsFeature) Disable(ctx context.Context, instance *aropreviewv1
 			return err
 		}
 
-		err = n.flowLogsClient.DeleteAndWait(ctx, networkWatcherResource.ResourceGroup, networkWatcherResource.ResourceName, res.ResourceName)
+		err = n.flowLogsClient.DeleteAndWait(ctx, networkWatcherResource.ResourceGroup, networkWatcherResource.ResourceName, res.ResourceName, nil)
 		if err != nil {
 			return err
 		}

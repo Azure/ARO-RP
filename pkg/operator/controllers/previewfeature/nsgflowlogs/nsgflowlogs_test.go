@@ -7,13 +7,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -56,26 +58,25 @@ func getValidPreviewFeatureInstance() *aropreviewv1alpha1.PreviewFeature {
 	}
 }
 
-func getValidFlowLogFeature() *mgmtnetwork.FlowLog {
-	return &mgmtnetwork.FlowLog{
-		FlowLogPropertiesFormat: &mgmtnetwork.FlowLogPropertiesFormat{
-			TargetResourceID: to.StringPtr(""),
-			Enabled:          to.BoolPtr(true),
-			StorageID:        to.StringPtr(""),
-			RetentionPolicy: &mgmtnetwork.RetentionPolicyParameters{
-				Days: to.Int32Ptr(0),
+func getValidFlowLogFeature() *armnetwork.FlowLog {
+	return &armnetwork.FlowLog{
+		Properties: &armnetwork.FlowLogPropertiesFormat{
+			TargetResourceID: ptr.To(""),
+			Enabled:          ptr.To(true),
+			StorageID:        ptr.To(""),
+			RetentionPolicy: &armnetwork.RetentionPolicyParameters{
+				Days: ptr.To(int32(0)),
 			},
-			Format: &mgmtnetwork.FlowLogFormatParameters{
-				Type:    mgmtnetwork.JSON,
-				Version: to.Int32Ptr(0),
+			Format: &armnetwork.FlowLogFormatParameters{
+				Type:    ptr.To(armnetwork.FlowLogFormatTypeJSON),
+				Version: ptr.To(int32(0)),
 			},
-			FlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsProperties{
-				NetworkWatcherFlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsConfigurationProperties{
-					TrafficAnalyticsInterval: to.Int32Ptr(0),
-					WorkspaceID:              to.StringPtr(""),
+			FlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsProperties{
+				NetworkWatcherFlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsConfigurationProperties{
+					TrafficAnalyticsInterval: ptr.To(int32(0)),
+					WorkspaceID:              ptr.To(""),
 				},
 			},
-			ProvisioningState: "",
 		},
 		Location: to.StringPtr(location),
 	}
@@ -86,7 +87,7 @@ func TestReconcileManager(t *testing.T) {
 		name              string
 		subnetMock        func(*mock_subnet.MockManager, *mock_subnet.MockKubeManager)
 		instance          func(*aropreviewv1alpha1.PreviewFeature)
-		flowLogClientMock func(*mock_network.MockFlowLogsClient)
+		flowLogClientMock func(*mock_armnetwork.MockFlowLogsClient)
 		wantErr           string
 	}{
 		{
@@ -156,15 +157,15 @@ func TestReconcileManager(t *testing.T) {
 					},
 				}, nil)
 			},
-			flowLogClientMock: func(client *mock_network.MockFlowLogsClient) {
+			flowLogClientMock: func(client *mock_armnetwork.MockFlowLogsClient) {
 				flowLogMaster := getValidFlowLogFeature()
-				flowLogMaster.FlowLogPropertiesFormat.TargetResourceID = &subnetNameMasterNSGID
+				flowLogMaster.Properties.TargetResourceID = &subnetNameMasterNSGID
 
 				flowLogWorker := getValidFlowLogFeature()
-				flowLogWorker.FlowLogPropertiesFormat.TargetResourceID = &subnetNameWorkerNSGID
+				flowLogWorker.Properties.TargetResourceID = &subnetNameWorkerNSGID
 				// enable once per NSG
-				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName, *flowLogMaster)
-				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName, *flowLogWorker)
+				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName, *flowLogMaster, nil)
+				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName, *flowLogWorker, nil)
 			},
 			instance: func(feature *aropreviewv1alpha1.PreviewFeature) {
 				feature.Spec.NSGFlowLogs.Enabled = true
@@ -208,9 +209,9 @@ func TestReconcileManager(t *testing.T) {
 					},
 				}, nil)
 			},
-			flowLogClientMock: func(client *mock_network.MockFlowLogsClient) {
-				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName)
-				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName)
+			flowLogClientMock: func(client *mock_armnetwork.MockFlowLogsClient) {
+				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName, nil)
+				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName, nil)
 			},
 			instance: func(feature *aropreviewv1alpha1.PreviewFeature) {
 				feature.Spec.NSGFlowLogs.Enabled = false
@@ -234,7 +235,7 @@ func TestReconcileManager(t *testing.T) {
 				tt.instance(instance)
 			}
 
-			flowLogsClient := mock_network.NewMockFlowLogsClient(controller)
+			flowLogsClient := mock_armnetwork.NewMockFlowLogsClient(controller)
 			if tt.flowLogClientMock != nil {
 				tt.flowLogClientMock(flowLogsClient)
 			}
