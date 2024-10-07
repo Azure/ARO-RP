@@ -101,6 +101,47 @@ services:
       retries: 3
     restart: on-failure:3
 
+  portal:
+    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+    container_name: aro-portal
+    depends_on:
+      rp:
+        condition: service_started
+    environment:
+      - RP_MODE
+      - AZURE_SUBSCRIPTION_ID
+      - AZURE_TENANT_ID
+      - LOCATION
+      - RESOURCEGROUP
+      - AZURE_PORTAL_CLIENT_ID
+      - AZURE_PORTAL_ELEVATED_GROUP_IDS
+      - AZURE_PORTAL_ACCESS_GROUP_IDS
+      - AZURE_RP_CLIENT_SECRET
+      - AZURE_RP_CLIENT_ID
+      - KEYVAULT_PREFIX
+      - DATABASE_ACCOUNT_NAME
+      - DATABASE_NAME
+      - NO_NPM=1
+    ports:
+      - "127.0.0.1:8444:8444"
+      - "127.0.0.1:2222:2222"
+    secrets:
+      - source: proxy-client-key
+        target: /app/secrets/proxy-client.key
+      - source: proxy-client-crt
+        target: /app/secrets/proxy-client.crt
+      - source: proxy-crt
+        target: /app/secrets/proxy.crt
+    cap_drop:
+      - NET_RAW
+    command: ["portal"]
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "curl", "-k", "http://localhost:8444/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 secrets:
   proxy-client-key:
     file: ./secrets/proxy-client.key

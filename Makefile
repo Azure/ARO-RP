@@ -451,32 +451,8 @@ podman-secrets: aks.kubeconfig
 	podman $(PODMAN_REMOTE_ARGS) secret create proxy.crt ./secrets/proxy.crt
 
 .PHONY: run-portal
-run-portal: ci-rp podman-secrets
-	podman $(PODMAN_REMOTE_ARGS) \
-		run \
-		--name aro-portal \
-		--rm \
-		-p 127.0.0.1:8444:8444 \
-		-p 127.0.0.1:2222:2222 \
-		--cap-drop net_raw \
-		-e RP_MODE \
-		-e AZURE_SUBSCRIPTION_ID \
-		-e AZURE_TENANT_ID \
-		-e LOCATION \
-		-e RESOURCEGROUP \
-		-e AZURE_PORTAL_CLIENT_ID \
-		-e AZURE_PORTAL_ELEVATED_GROUP_IDS \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
-		-e AZURE_RP_CLIENT_SECRET \
-		-e AZURE_RP_CLIENT_ID \
-		-e KEYVAULT_PREFIX \
-		-e DATABASE_ACCOUNT_NAME \
-		-e DATABASE_NAME \
-		-e NO_NPM=1 \
-		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
-		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
-		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION) portal
+run-portal:
+	docker compose up portal
 
 # run-rp executes the RP locally as similarly as possible to production. That
 # includes the use of Hive, meaning you need a VPN connection.
