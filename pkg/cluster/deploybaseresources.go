@@ -207,7 +207,7 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		)
 	}
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		r, err := m.ensureWorkloadIdentityRBAC()
+		r, err := m.platformWorkloadIdentityRBAC()
 		if err != nil {
 			return err
 		}
