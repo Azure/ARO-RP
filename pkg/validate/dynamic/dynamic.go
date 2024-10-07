@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -104,7 +105,7 @@ type dynamic struct {
 	virtualNetworks                       virtualNetworksGetClient
 	diskEncryptionSets                    compute.DiskEncryptionSetsClient
 	resourceSkusClient                    compute.ResourceSkusClient
-	spNetworkUsage                        network.UsageClient
+	spNetworkUsage                        armnetwork.UsagesClient
 	loadBalancerBackendAddressPoolsClient network.LoadBalancerBackendAddressPoolsClient
 	pdpClient                             client.RemotePDPClient
 }
@@ -128,7 +129,14 @@ func NewValidator(
 	authorizerType AuthorizerType,
 	cred azcore.TokenCredential,
 	pdpClient client.RemotePDPClient,
-) Dynamic {
+) (Dynamic, error) {
+	options := azEnv.ArmClientOptions()
+
+	usagesClient, err := armnetwork.NewUsagesClient(subscriptionID, cred, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &dynamic{
 		log:                        log,
 		appID:                      appID,
@@ -137,7 +145,7 @@ func NewValidator(
 		azEnv:                      azEnv,
 		checkAccessSubjectInfoCred: cred,
 
-		spNetworkUsage: network.NewUsageClient(azEnv, subscriptionID, authorizer),
+		spNetworkUsage: usagesClient,
 		virtualNetworks: newVirtualNetworksCache(
 			network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer),
 		),
@@ -145,7 +153,7 @@ func NewValidator(
 		resourceSkusClient:                    compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpClient:                             pdpClient,
 		loadBalancerBackendAddressPoolsClient: network.NewLoadBalancerBackendAddressPoolsClient(azEnv, subscriptionID, authorizer),
-	}
+	}, nil
 }
 
 func NewServicePrincipalValidator(

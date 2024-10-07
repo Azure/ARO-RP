@@ -50,7 +50,7 @@ func (dv *dynamic) validatePublicIPQuota(ctx context.Context, oc *api.OpenShiftC
 		}
 	}
 
-	netUsages, err := dv.spNetworkUsage.List(ctx, oc.Location)
+	netUsages, err := dv.spNetworkUsage.List(ctx, oc.Location, nil)
 	if err != nil {
 		return err
 	}
