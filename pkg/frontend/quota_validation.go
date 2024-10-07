@@ -11,8 +11,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
 
 type QuotaValidator interface {
@@ -44,13 +44,22 @@ func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AR
 		return err
 	}
 
+	credential, err := environment.FPNewClientCertificateCredential(tenantID, []string{})
+	if err != nil {
+		return err
+	}
+	options := environment.Environment().ArmClientOptions()
+
 	spComputeUsage := compute.NewUsageClient(azEnv, subscriptionID, fpAuthorizer)
-	spNetworkUsage := network.NewUsageClient(azEnv, subscriptionID, fpAuthorizer)
+	spNetworkUsage, err := armnetwork.NewUsagesClient(subscriptionID, credential, options)
+	if err != nil {
+		return err
+	}
 
 	return validateQuota(ctx, oc, spNetworkUsage, spComputeUsage)
 }
 
-func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage network.UsageClient, spComputeUsage compute.UsageClient) error {
+func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage armnetwork.UsagesClient, spComputeUsage compute.UsageClient) error {
 	// If ValidateQuota runs outside install process, we should skip quota validation
 	requiredResources := map[string]int{}
 
@@ -89,7 +98,7 @@ func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage
 		}
 	}
 
-	netUsages, err := spNetworkUsage.List(ctx, oc.Location)
+	netUsages, err := spNetworkUsage.List(ctx, oc.Location, nil)
 	if err != nil {
 		return err
 	}
