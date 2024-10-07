@@ -487,13 +487,13 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 			continue
 		}
 
-		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(identity)
-		if err != nil {
-			return err
-		}
-
 		for _, sa := range platformWIRole.ServiceAccounts {
-			_, err := m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
+			federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
+			if err != nil {
+				return err
+			}
+
+			_, err = m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
 				ctx,
 				identityResourceId.ResourceGroup,
 				identityResourceId.ResourceName,
