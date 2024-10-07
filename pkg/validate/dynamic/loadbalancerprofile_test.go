@@ -8,12 +8,14 @@ import (
 	"strconv"
 	"testing"
 
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -27,7 +29,7 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		oc      *api.OpenShiftCluster
-		mocks   func(spNetworkUsage *mock_network.MockUsageClient, loadBalancerBackendAddressPoolsClient *mock_network.MockLoadBalancerBackendAddressPoolsClient)
+		mocks   func(spNetworkUsage *mock_armnetwork.MockUsagesClient, loadBalancerBackendAddressPoolsClient *mock_network.MockLoadBalancerBackendAddressPoolsClient)
 		wantErr string
 	}{
 		{
@@ -71,13 +73,13 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(spNetworkUsage *mock_network.MockUsageClient,
+			mocks: func(spNetworkUsage *mock_armnetwork.MockUsagesClient,
 				loadBalancerBackendAddressPoolsClient *mock_network.MockLoadBalancerBackendAddressPoolsClient) {
 				spNetworkUsage.EXPECT().
-					List(gomock.Any(), location).
-					Return([]mgmtnetwork.Usage{
+					List(gomock.Any(), location, nil).
+					Return([]*sdknetwork.Usage{
 						{
-							Name: &mgmtnetwork.UsageName{
+							Name: &sdknetwork.UsageName{
 								Value: to.StringPtr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
@@ -102,7 +104,7 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 			defer controller.Finish()
 
 			loadBalancerBackendAddressPoolsClient := mock_network.NewMockLoadBalancerBackendAddressPoolsClient(controller)
-			networkUsageClient := mock_network.NewMockUsageClient(controller)
+			networkUsageClient := mock_armnetwork.NewMockUsagesClient(controller)
 
 			if tt.mocks != nil {
 				tt.mocks(networkUsageClient, loadBalancerBackendAddressPoolsClient)
@@ -126,7 +128,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		oc      *api.OpenShiftCluster
-		mocks   func(spNetworkUsage *mock_network.MockUsageClient)
+		mocks   func(spNetworkUsage *mock_armnetwork.MockUsagesClient)
 		wantErr string
 	}{
 		{
@@ -158,12 +160,12 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(spNetworkUsage *mock_network.MockUsageClient) {
+			mocks: func(spNetworkUsage *mock_armnetwork.MockUsagesClient) {
 				spNetworkUsage.EXPECT().
-					List(gomock.Any(), location).
-					Return([]mgmtnetwork.Usage{
+					List(gomock.Any(), location, nil).
+					Return([]*sdknetwork.Usage{
 						{
-							Name: &mgmtnetwork.UsageName{
+							Name: &sdknetwork.UsageName{
 								Value: to.StringPtr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
@@ -201,12 +203,12 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(spNetworkUsage *mock_network.MockUsageClient) {
+			mocks: func(spNetworkUsage *mock_armnetwork.MockUsagesClient) {
 				spNetworkUsage.EXPECT().
-					List(gomock.Any(), location).
-					Return([]mgmtnetwork.Usage{
+					List(gomock.Any(), location, nil).
+					Return([]*sdknetwork.Usage{
 						{
-							Name: &mgmtnetwork.UsageName{
+							Name: &sdknetwork.UsageName{
 								Value: to.StringPtr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(8),
@@ -240,12 +242,12 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(spNetworkUsage *mock_network.MockUsageClient) {
+			mocks: func(spNetworkUsage *mock_armnetwork.MockUsagesClient) {
 				spNetworkUsage.EXPECT().
-					List(gomock.Any(), location).
-					Return([]mgmtnetwork.Usage{
+					List(gomock.Any(), location, nil).
+					Return([]*sdknetwork.Usage{
 						{
-							Name: &mgmtnetwork.UsageName{
+							Name: &sdknetwork.UsageName{
 								Value: to.StringPtr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
@@ -278,12 +280,12 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(spNetworkUsage *mock_network.MockUsageClient) {
+			mocks: func(spNetworkUsage *mock_armnetwork.MockUsagesClient) {
 				spNetworkUsage.EXPECT().
-					List(gomock.Any(), location).
-					Return([]mgmtnetwork.Usage{
+					List(gomock.Any(), location, nil).
+					Return([]*sdknetwork.Usage{
 						{
-							Name: &mgmtnetwork.UsageName{
+							Name: &sdknetwork.UsageName{
 								Value: to.StringPtr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(8),
@@ -301,7 +303,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			networkUsageClient := mock_network.NewMockUsageClient(controller)
+			networkUsageClient := mock_armnetwork.NewMockUsagesClient(controller)
 
 			if tt.mocks != nil {
 				tt.mocks(networkUsageClient)
