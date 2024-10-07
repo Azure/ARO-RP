@@ -101,7 +101,16 @@ func (m *manager) ensureWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 	if err != nil {
 		return nil, err
 	}
-	clusterMSI := m.doc.OpenShiftCluster.Identity.UserAssignedIdentities[clusterMSIResourceId.String()]
+
+	var clusterMSI api.ClusterUserAssignedIdentity
+	// we iterate through the existing identities to find the identity matching
+	// the expected resourceID with casefolding
+	for k, _ := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
+		if strings.EqualFold(k, clusterMSIResourceId.String()) {
+			clusterMSI = m.doc.OpenShiftCluster.Identity.UserAssignedIdentities[k]
+		}
+	}
+
 	if strings.TrimSpace(clusterMSI.PrincipalID) == "" {
 		return nil, fmt.Errorf("cluster MSI principal ID '%s' is invalid for clusterMSIResourceId %s", clusterMSI.PrincipalID, clusterMSIResourceId.String())
 	}
