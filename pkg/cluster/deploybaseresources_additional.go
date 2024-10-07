@@ -105,7 +105,7 @@ func (m *manager) ensureWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 	var clusterMSI api.ClusterUserAssignedIdentity
 	// we iterate through the existing identities to find the identity matching
 	// the expected resourceID with casefolding
-	for k, _ := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
+	for k := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
 		if strings.EqualFold(k, clusterMSIResourceId.String()) {
 			clusterMSI = m.doc.OpenShiftCluster.Identity.UserAssignedIdentities[k]
 		}

@@ -406,36 +406,43 @@ func (m *manager) deleteIdentityFederations(ctx context.Context) error {
 			return err
 		}
 
-		federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(identity)
-		if err != nil {
-			m.log.Errorf("failed to get federated identity credential name for %s: %v", identity.ResourceID, err)
+		platformWIRole, exists := platformWIRolesByRoleName[identity.OperatorName]
+		if !exists {
 			continue
 		}
 
-		_, err = m.clusterMsiFederatedIdentityCredentials.Get(
-			ctx,
-			identityResourceId.ResourceGroup,
-			identityResourceId.ResourceName,
-			federatedIdentityCredentialResourceName,
-			&armmsi.FederatedIdentityCredentialsClientGetOptions{},
-		)
+		for _, sa := range platformWIRole.ServiceAccounts {
+			federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
+			if err != nil {
+				m.log.Errorf("failed to get federated identity credential name for %s: %v", identity.ResourceID, err)
+				continue
+			}
 
-		// If the federated identity credentials do not exist, we can skip the deletion
-		if err != nil {
-			continue
-		}
+			_, err = m.clusterMsiFederatedIdentityCredentials.Get(
+				ctx,
+				identityResourceId.ResourceGroup,
+				identityResourceId.ResourceName,
+				federatedIdentityCredentialResourceName,
+				&armmsi.FederatedIdentityCredentialsClientGetOptions{},
+			)
 
-		_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
-			ctx,
-			identityResourceId.ResourceGroup,
-			identityResourceId.ResourceName,
-			federatedIdentityCredentialResourceName,
-			&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
-		)
+			// If the federated identity credentials do not exist, we can skip the deletion
+			if err != nil {
+				continue
+			}
 
-		// As long as the customer can clean up resources on their own, we don't block deletion on failure to clean up federated credentials
-		if err != nil {
-			m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err)
+			_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
+				ctx,
+				identityResourceId.ResourceGroup,
+				identityResourceId.ResourceName,
+				federatedIdentityCredentialResourceName,
+				&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
+			)
+
+			// As long as the customer can clean up resources on their own, we don't block deletion on failure to clean up federated credentials
+			if err != nil {
+				m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err)
+			}
 		}
 	}
 
