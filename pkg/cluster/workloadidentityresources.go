@@ -4,7 +4,10 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"math/big"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
@@ -128,9 +131,13 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 	}, nil
 }
 
-func (m *manager) getPlatformWorkloadIdentityFederatedCredName(identity api.PlatformWorkloadIdentity) (string, error) {
+func (m *manager) getPlatformWorkloadIdentityFederatedCredName(sa string, identity api.PlatformWorkloadIdentity) (string, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return "", fmt.Errorf("getPlatformWorkloadIdentityFederatedCredName called for a CSP cluster")
+	}
+
+	if strings.TrimSpace(sa) == "" {
+		return "", fmt.Errorf("service account name is required")
 	}
 
 	identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
@@ -138,10 +145,15 @@ func (m *manager) getPlatformWorkloadIdentityFederatedCredName(identity api.Plat
 		return "", err
 	}
 
-	name := fmt.Sprintf("%s-%s", m.doc.ID, identityResourceId.ResourceName)
-	if len(name) > 120 {
-		name = name[:120]
+	name := fmt.Sprintf("%s-%s-%s", m.doc.OpenShiftCluster.ID, sa, identityResourceId.ResourceName)
+	// the base-36 encoded string of a SHA-224 hash will typically be around 43 to 44 characters long.
+	hash := sha256.Sum224([]byte(name))
+	encodedName := (&big.Int{}).SetBytes(hash[:]).Text(36)
+	remainingChars := 120 - len(encodedName) - 1
+
+	if remainingChars < len(m.doc.OpenShiftCluster.ID) {
+		return fmt.Sprintf("%s-%s", m.doc.OpenShiftCluster.ID[:remainingChars], encodedName), nil
 	}
 
-	return name, nil
+	return fmt.Sprintf("%s-%s", m.doc.OpenShiftCluster.ID, encodedName), nil
 }
