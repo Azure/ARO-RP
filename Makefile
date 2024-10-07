@@ -447,9 +447,9 @@ run-rp: aks.kubeconfig
 	docker compose up rp
 
 .PHONY: build-selenium
-build selenium:
+build-selenium:
 	docker compose build selenium
 
-.PHONY: run selenium
-run selenium:
-	docker-compose up selenium
+.PHONY: run-selenium
+run-selenium:
+	docker compose up selenium
