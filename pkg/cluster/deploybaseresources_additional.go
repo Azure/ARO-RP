@@ -92,49 +92,13 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
-func (m *manager) ensureWorkloadIdentityRBAC() ([]*arm.Resource, error) {
+func (m *manager) platformWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return nil, nil
-	}
-
-	clusterMSIResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
-	if err != nil {
-		return nil, err
-	}
-
-	var clusterMSI api.ClusterUserAssignedIdentity
-	// we iterate through the existing identities to find the identity matching
-	// the expected resourceID with casefolding
-	for k := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
-		if strings.EqualFold(k, clusterMSIResourceId.String()) {
-			clusterMSI = m.doc.OpenShiftCluster.Identity.UserAssignedIdentities[k]
-		}
-	}
-
-	if strings.TrimSpace(clusterMSI.PrincipalID) == "" {
-		return nil, fmt.Errorf("cluster MSI principal ID '%s' is invalid for clusterMSIResourceId %s", clusterMSI.PrincipalID, clusterMSIResourceId.String())
 	}
 
 	resources := []*arm.Resource{}
 	managedRG := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	resources = append(resources, m.workloadIdentityResourceGroupRBAC(rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, clusterMSI.PrincipalID, managedRG))
-
-	r, err := m.platformWorkloadIdentityRBAC(managedRG)
-	if err != nil {
-		return nil, err
-	}
-
-	resources = append(resources, r...)
-	return resources, nil
-}
-
-func (m *manager) platformWorkloadIdentityRBAC(managedRG string) ([]*arm.Resource, error) {
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		return nil, nil
-	}
-
-	resources := []*arm.Resource{}
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 
