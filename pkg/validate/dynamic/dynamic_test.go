@@ -11,19 +11,19 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	"github.com/Azure/ARO-RP/test/util/token"
@@ -56,7 +56,7 @@ var (
 func TestGetRouteTableID(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
-		modifyVnet func(*mgmtnetwork.VirtualNetwork)
+		modifyVnet func(*sdknetwork.VirtualNetwork)
 		wantErr    string
 	}{
 		{
@@ -64,14 +64,14 @@ func TestGetRouteTableID(t *testing.T) {
 		},
 		{
 			name: "pass: no route table",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].RouteTable = nil
+			modifyVnet: func(vnet *sdknetwork.VirtualNetwork) {
+				vnet.Properties.Subnets[0].Properties.RouteTable = nil
 			},
 		},
 		{
 			name: "fail: can't find subnet",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
-				vnet.Subnets = nil
+			modifyVnet: func(vnet *sdknetwork.VirtualNetwork) {
+				vnet.Properties.Subnets = nil
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
@@ -80,14 +80,14 @@ func TestGetRouteTableID(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			vnet := &mgmtnetwork.VirtualNetwork{
+			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
+				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
+					Subnets: []*sdknetwork.Subnet{
 						{
 							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								RouteTable: &mgmtnetwork.RouteTable{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								RouteTable: &sdknetwork.RouteTable{
 									ID: &masterRtID,
 								},
 							},
@@ -110,7 +110,7 @@ func TestGetRouteTableID(t *testing.T) {
 func TestGetNatGatewayID(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
-		modifyVnet func(*mgmtnetwork.VirtualNetwork)
+		modifyVnet func(*sdknetwork.VirtualNetwork)
 		wantErr    string
 	}{
 		{
@@ -118,14 +118,14 @@ func TestGetNatGatewayID(t *testing.T) {
 		},
 		{
 			name: "pass: no nat gateway",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NatGateway = nil
+			modifyVnet: func(vnet *sdknetwork.VirtualNetwork) {
+				vnet.Properties.Subnets[0].Properties.NatGateway = nil
 			},
 		},
 		{
 			name: "fail: can't find subnet",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
-				vnet.Subnets = nil
+			modifyVnet: func(vnet *sdknetwork.VirtualNetwork) {
+				vnet.Properties.Subnets = nil
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
@@ -134,14 +134,14 @@ func TestGetNatGatewayID(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			vnet := &mgmtnetwork.VirtualNetwork{
+			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
+				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
+					Subnets: []*sdknetwork.Subnet{
 						{
 							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								NatGateway: &mgmtnetwork.SubResource{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								NatGateway: &sdknetwork.SubResource{
 									ID: &masterNgID,
 								},
 							},
@@ -167,17 +167,17 @@ func TestValidateCIDRRanges(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
 		modifyOC  func(*api.OpenShiftCluster)
-		vnetMocks func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks func(*mock_armnetwork.MockVirtualNetworksClient, sdknetwork.VirtualNetworksClientGetResponse)
 		wantErr   string
 	}{
 		{
 			name: "pass",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
@@ -186,12 +186,12 @@ func TestValidateCIDRRanges(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.0.0/24"
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided CIDRs must not overlap: '10.0.0.0/24 overlaps with 10.0.0.0/24'.",
@@ -224,27 +224,27 @@ func TestValidateCIDRRanges(t *testing.T) {
 				},
 			}
 
-			vnets := []mgmtnetwork.VirtualNetwork{
+			vnets := []sdknetwork.VirtualNetwork{
 				{
 					ID:       &vnetID,
-					Location: to.StringPtr("eastus"),
-					Name:     to.StringPtr("VNET With AddressPrefix"),
-					VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-						Subnets: &[]mgmtnetwork.Subnet{
+					Location: pointerutils.ToPtr("eastus"),
+					Name:     pointerutils.ToPtr("VNET With AddressPrefix"),
+					Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
+						Subnets: []*sdknetwork.Subnet{
 							{
 								ID: &masterSubnet,
-								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-									AddressPrefix: to.StringPtr("10.0.0.0/24"),
-									NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+								Properties: &sdknetwork.SubnetPropertiesFormat{
+									AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &masterNSGv1,
 									},
 								},
 							},
 							{
 								ID: &workerSubnet,
-								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-									AddressPrefix: to.StringPtr("10.0.1.0/24"),
-									NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+								Properties: &sdknetwork.SubnetPropertiesFormat{
+									AddressPrefix: pointerutils.ToPtr("10.0.1.0/24"),
+									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &workerNSGv1,
 									},
 								},
@@ -254,24 +254,24 @@ func TestValidateCIDRRanges(t *testing.T) {
 				},
 				{
 					ID:       &vnetID,
-					Location: to.StringPtr("eastus"),
-					Name:     to.StringPtr("VNET With AddressPrefixes"),
-					VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-						Subnets: &[]mgmtnetwork.Subnet{
+					Location: pointerutils.ToPtr("eastus"),
+					Name:     pointerutils.ToPtr("VNET With AddressPrefixes"),
+					Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
+						Subnets: []*sdknetwork.Subnet{
 							{
 								ID: &masterSubnet,
-								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-									AddressPrefixes: to.StringSlicePtr([]string{"10.0.0.0/24"}),
-									NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+								Properties: &sdknetwork.SubnetPropertiesFormat{
+									AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/24")},
+									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &masterNSGv1,
 									},
 								},
 							},
 							{
 								ID: &workerSubnet,
-								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-									AddressPrefixes: to.StringSlicePtr([]string{"10.0.1.0/24"}),
-									NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+								Properties: &sdknetwork.SubnetPropertiesFormat{
+									AddressPrefixes: []*string{pointerutils.ToPtr("10.0.1.0/24")},
+									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &workerNSGv1,
 									},
 								},
@@ -286,9 +286,9 @@ func TestValidateCIDRRanges(t *testing.T) {
 			}
 
 			for _, vnet := range vnets {
-				vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+				vnetClient := mock_armnetwork.NewMockVirtualNetworksClient(controller)
 				if tt.vnetMocks != nil {
-					tt.vnetMocks(vnetClient, vnet)
+					tt.vnetMocks(vnetClient, sdknetwork.VirtualNetworksClientGetResponse{VirtualNetwork: vnet})
 				}
 
 				dv := &dynamic{
@@ -329,14 +329,16 @@ func TestValidateVnetLocation(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			vnet := mgmtnetwork.VirtualNetwork{
-				ID:       to.StringPtr(vnetID),
-				Location: to.StringPtr(tt.location),
+			vnet := sdknetwork.VirtualNetworksClientGetResponse{
+				VirtualNetwork: sdknetwork.VirtualNetwork{
+					ID:       pointerutils.ToPtr(vnetID),
+					Location: pointerutils.ToPtr(tt.location),
+				},
 			}
 
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_armnetwork.NewMockVirtualNetworksClient(controller)
 			vnetClient.EXPECT().
-				Get(gomock.Any(), resourceGroupName, vnetName, "").
+				Get(gomock.Any(), resourceGroupName, vnetName, nil).
 				Return(vnet, nil)
 
 			dv := &dynamic{
@@ -361,14 +363,14 @@ func TestValidateSubnets(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
 		modifyOC  func(*api.OpenShiftCluster)
-		vnetMocks func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks func(*mock_armnetwork.MockVirtualNetworksClient, sdknetwork.VirtualNetworksClientGetResponse)
 		wantErr   string
 	}{
 		{
 			name: "pass",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
@@ -379,9 +381,9 @@ func TestValidateSubnets(t *testing.T) {
 					SubnetID: masterSubnet,
 				}
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
@@ -390,38 +392,38 @@ func TestValidateSubnets(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NetworkSecurityGroup = nil
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
 		{
 			name: "fail: subnet does not exist on vnet",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnet.Subnets = nil
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
 		{
 			name: "pass: subnet provisioning state is succeeded",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.Succeeded
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.ProvisioningState = pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded)
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
 		{
 			name: "fail: subnet provisioning state is not succeeded",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.Failed
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.ProvisioningState = pointerutils.ToPtr(sdknetwork.ProvisioningStateFailed)
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is not in a Succeeded state",
@@ -432,9 +434,9 @@ func TestValidateSubnets(t *testing.T) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
@@ -444,10 +446,10 @@ func TestValidateSubnets(t *testing.T) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("not-the-correct-nsg")
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("not-the-correct-nsg")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must not have a network security group attached.",
@@ -458,10 +460,10 @@ func TestValidateSubnets(t *testing.T) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("attached")
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("attached")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
@@ -470,19 +472,19 @@ func TestValidateSubnets(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ArchitectureVersion = 9001
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "unknown architecture version 9001",
 		},
 		{
 			name: "fail: nsg id doesn't match expected",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("not matching")
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("not matching")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			modifyOC: func(oc *api.OpenShiftCluster) {
@@ -493,10 +495,10 @@ func TestValidateSubnets(t *testing.T) {
 		},
 		{
 			name: "pass: byonsg doesn't check if nsg ids are matched after creating",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("don't care what it is")
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("don't care what it is")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			modifyOC: func(oc *api.OpenShiftCluster) {
@@ -506,10 +508,10 @@ func TestValidateSubnets(t *testing.T) {
 		},
 		{
 			name: "fail: no nsg attached during update",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = nil
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			modifyOC: func(oc *api.OpenShiftCluster) {
@@ -520,10 +522,10 @@ func TestValidateSubnets(t *testing.T) {
 		},
 		{
 			name: "fail: byonsg requires an nsg to be attached during update",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = nil
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			modifyOC: func(oc *api.OpenShiftCluster) {
@@ -534,20 +536,20 @@ func TestValidateSubnets(t *testing.T) {
 		},
 		{
 			name: "fail: invalid subnet CIDR",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].AddressPrefix = to.StringPtr("not-valid")
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.AddressPrefix = pointerutils.ToPtr("not-valid")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "invalid CIDR address: not-valid",
 		},
 		{
 			name: "fail: too small subnet CIDR",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].AddressPrefix = to.StringPtr("10.0.0.0/28")
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.AddressPrefix = pointerutils.ToPtr("10.0.0.0/28")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must be /27 or larger.",
@@ -564,18 +566,18 @@ func TestValidateSubnets(t *testing.T) {
 					},
 				},
 			}
-			vnet := mgmtnetwork.VirtualNetwork{
+			vnet := sdknetwork.VirtualNetwork{
 				ID: &vnetID,
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
+				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
+					Subnets: []*sdknetwork.Subnet{
 						{
 							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								AddressPrefix: to.StringPtr("10.0.0.0/24"),
-								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 					},
@@ -585,9 +587,9 @@ func TestValidateSubnets(t *testing.T) {
 			if tt.modifyOC != nil {
 				tt.modifyOC(oc)
 			}
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_armnetwork.NewMockVirtualNetworksClient(controller)
 			if tt.vnetMocks != nil {
-				tt.vnetMocks(vnetClient, vnet)
+				tt.vnetMocks(vnetClient, sdknetwork.VirtualNetworksClientGetResponse{VirtualNetwork: vnet})
 			}
 			dv := &dynamic{
 				virtualNetworks: vnetClient,
@@ -871,7 +873,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				env:                        env,
-				appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
 				pdpClient:                  pdpClient,
@@ -952,15 +954,15 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
 		pdpClientMocks      func(*mock_env.MockInterface, *mock_azcore.MockTokenCredential, *mock_checkaccess.MockRemotePDPClient, context.CancelFunc)
-		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks           func(*mock_armnetwork.MockVirtualNetworksClient, sdknetwork.VirtualNetworksClientGetResponse)
 		wantErr             string
 	}{
 		{
 			name:   "fail: failed to get vnet",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, errors.New("failed to get vnet"))
 			},
 			wantErr: "failed to get vnet",
@@ -968,10 +970,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "fail: master subnet doesn't exist",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnet.Subnets = nil
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
@@ -979,10 +981,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "fail: worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[1].ID = pointerutils.ToPtr("not valid")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
@@ -990,20 +992,20 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "pass: no route table to check",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].RouteTable = nil
-				(*vnet.Subnets)[1].RouteTable = nil
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.RouteTable = nil
+				vnet.Properties.Subnets[1].Properties.RouteTable = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
 		{
 			name:   "fail: permissions don't exist",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1027,9 +1029,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1046,9 +1048,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "fail: CheckAccessV2 doesn't return all the entries",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1068,9 +1070,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "pass",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1090,9 +1092,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1109,9 +1111,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActionsNoIntersect,
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
@@ -1126,24 +1128,24 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 			env := mock_env.NewMockInterface(controller)
 			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_armnetwork.NewMockVirtualNetworksClient(controller)
 
-			vnet := &mgmtnetwork.VirtualNetwork{
+			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
+				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
+					Subnets: []*sdknetwork.Subnet{
 						{
 							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								RouteTable: &mgmtnetwork.RouteTable{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								RouteTable: &sdknetwork.RouteTable{
 									ID: &masterRtID,
 								},
 							},
 						},
 						{
 							ID: &workerSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								RouteTable: &mgmtnetwork.RouteTable{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								RouteTable: &sdknetwork.RouteTable{
 									ID: &workerRtID,
 								},
 							},
@@ -1153,7 +1155,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				env:                        env,
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
@@ -1167,7 +1169,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			}
 
 			if tt.vnetMocks != nil {
-				tt.vnetMocks(vnetClient, *vnet)
+				tt.vnetMocks(vnetClient, sdknetwork.VirtualNetworksClientGetResponse{VirtualNetwork: *vnet})
 			}
 
 			if tt.platformIdentities != nil {
@@ -1239,15 +1241,15 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
 		pdpClientMocks      func(*mock_env.MockInterface, *mock_azcore.MockTokenCredential, *mock_checkaccess.MockRemotePDPClient, context.CancelFunc)
-		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks           func(*mock_armnetwork.MockVirtualNetworksClient, sdknetwork.VirtualNetworksClientGetResponse)
 		wantErr             string
 	}{
 		{
 			name:   "fail: failed to get vnet",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, errors.New("failed to get vnet"))
 			},
 			wantErr: "failed to get vnet",
@@ -1255,10 +1257,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "fail: master subnet doesn't exist",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnet.Subnets = nil
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
@@ -1266,10 +1268,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "fail: worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[1].ID = pointerutils.ToPtr("not valid")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
@@ -1277,9 +1279,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "fail: permissions don't exist",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1304,9 +1306,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1323,9 +1325,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "fail: CheckAccessV2 doesn't return all permissions",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1346,9 +1348,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "pass",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1368,9 +1370,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
@@ -1386,20 +1388,20 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActionsNoIntersect,
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
 		{
 			name:   "pass: no nat gateway to check",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NatGateway = nil
-				(*vnet.Subnets)[1].NatGateway = nil
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnet.Properties.Subnets[0].Properties.NatGateway = nil
+				vnet.Properties.Subnets[1].Properties.NatGateway = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
 			},
 		},
@@ -1411,27 +1413,27 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_armnetwork.NewMockVirtualNetworksClient(controller)
 			env := mock_env.NewMockInterface(controller)
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
 
-			vnet := &mgmtnetwork.VirtualNetwork{
+			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
+				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
+					Subnets: []*sdknetwork.Subnet{
 						{
 							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								NatGateway: &mgmtnetwork.SubResource{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								NatGateway: &sdknetwork.SubResource{
 									ID: &masterNgID,
 								},
 							},
 						},
 						{
 							ID: &workerSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								NatGateway: &mgmtnetwork.SubResource{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								NatGateway: &sdknetwork.SubResource{
 									ID: &workerNgID,
 								},
 							},
@@ -1441,7 +1443,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				env:                        env,
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
@@ -1455,7 +1457,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			}
 
 			if tt.vnetMocks != nil {
-				tt.vnetMocks(vnetClient, *vnet)
+				tt.vnetMocks(vnetClient, sdknetwork.VirtualNetworksClientGetResponse{VirtualNetwork: *vnet})
 			}
 
 			if tt.platformIdentities != nil {
@@ -1471,32 +1473,32 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 }
 
 func TestCheckPreconfiguredNSG(t *testing.T) {
-	subnetWithNSG := &mgmtnetwork.Subnet{
-		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+	subnetWithNSG := &sdknetwork.Subnet{
+		Properties: &sdknetwork.SubnetPropertiesFormat{
+			NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 				ID: &masterNSGv1,
 			},
 		},
 	}
-	subnetWithoutNSG := &mgmtnetwork.Subnet{
-		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{},
+	subnetWithoutNSG := &sdknetwork.Subnet{
+		Properties: &sdknetwork.SubnetPropertiesFormat{},
 	}
 
 	for _, tt := range []struct {
 		name       string
-		subnetByID map[string]*mgmtnetwork.Subnet
+		subnetByID map[string]*sdknetwork.Subnet
 		wantErr    string
 	}{
 		{
 			name: "pass: all subnets are attached",
-			subnetByID: map[string]*mgmtnetwork.Subnet{
+			subnetByID: map[string]*sdknetwork.Subnet{
 				"A": subnetWithNSG,
 				"B": subnetWithNSG,
 			},
 		},
 		{
 			name: "fail: no subnets are attached",
-			subnetByID: map[string]*mgmtnetwork.Subnet{
+			subnetByID: map[string]*sdknetwork.Subnet{
 				"A": subnetWithoutNSG,
 				"B": subnetWithoutNSG,
 			},
@@ -1504,7 +1506,7 @@ func TestCheckPreconfiguredNSG(t *testing.T) {
 		},
 		{
 			name: "fail: parts of the subnets are attached",
-			subnetByID: map[string]*mgmtnetwork.Subnet{
+			subnetByID: map[string]*sdknetwork.Subnet{
 				"A": subnetWithNSG,
 				"B": subnetWithoutNSG,
 				"C": subnetWithNSG,
@@ -1548,7 +1550,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
 		checkAccessMocks    func(context.CancelFunc, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, *mock_env.MockInterface)
-		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks           func(*mock_armnetwork.MockVirtualNetworksClient, sdknetwork.VirtualNetworksClientGetResponse)
 		wantErrs            []string
 	}{
 		{
@@ -1562,9 +1564,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					AnyTimes().
 					Return(vnet, nil)
 			},
@@ -1602,9 +1604,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					AnyTimes().
 					Return(vnet, nil)
 			},
@@ -1636,9 +1638,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					AnyTimes().
 					Return(vnet, nil)
 			},
@@ -1662,9 +1664,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					AnyTimes().
 					Return(vnet, nil)
 			},
@@ -1686,9 +1688,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					AnyTimes().
 					Return(vnet, nil)
 			},
@@ -1720,28 +1722,28 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					},
 				},
 			}
-			vnet := mgmtnetwork.VirtualNetwork{
+			vnet := sdknetwork.VirtualNetwork{
 				ID: &vnetID,
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
+				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
+					Subnets: []*sdknetwork.Subnet{
 						{
 							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								AddressPrefix: to.StringPtr("10.0.0.0/24"),
-								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 						{
 							ID: &workerSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								AddressPrefix: to.StringPtr("10.0.1.0/24"),
-								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							Properties: &sdknetwork.SubnetPropertiesFormat{
+								AddressPrefix: pointerutils.ToPtr("10.0.1.0/24"),
+								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &workerNSGv1,
 								},
-								ProvisioningState: mgmtnetwork.Succeeded,
+								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 					},
@@ -1752,10 +1754,10 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 				tt.modifyOC(oc)
 			}
 
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_armnetwork.NewMockVirtualNetworksClient(controller)
 
 			if tt.vnetMocks != nil {
-				tt.vnetMocks(vnetClient, vnet)
+				tt.vnetMocks(vnetClient, sdknetwork.VirtualNetworksClientGetResponse{VirtualNetwork: vnet})
 			}
 
 			env := mock_env.NewMockInterface(controller)
@@ -1768,7 +1770,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				env:                        env,
-				appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				virtualNetworks:            vnetClient,
 				pdpClient:                  pdpClient,
