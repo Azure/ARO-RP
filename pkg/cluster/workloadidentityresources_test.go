@@ -444,10 +444,11 @@ func TestGenerateAuthenticationConfig(t *testing.T) {
 
 func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 	docID := "00000000-0000-0000-0000-000000000000"
-	mockGuid := "00000000-0000-0000-0000-000000000000"
-	clusterRGName := "aro-cluster"
-	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/", mockGuid, clusterRGName)
-	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName", mockGuid, clusterRGName)
+	subID := "00000000-0000-0000-0000-000000000000"
+	clusterRGName := "aro-cluster-rg"
+	clusterName := "aro-cluster"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/", subID, clusterName)
+	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/%s", subID, clusterRGName, clusterName)
 
 	for _, tt := range []struct {
 		name           string
@@ -460,7 +461,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 		{
 			name: "fail - getPlatformWorkloadIdentityFederatedCredName called for a CSP cluster",
 			doc: &api.OpenShiftClusterDocument{
-				ID: mockGuid,
+				ID: docID,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{},
 				},
@@ -502,7 +503,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 			serviceAccount: "openshift-cloud-controller-manager:cloud-controller-manager",
 			identity:       api.PlatformWorkloadIdentity{ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm")},
 			wantErr:        "",
-			want:           clusterResourceID[:75],
+			want:           fmt.Sprintf("%s-%s-%s", subID, clusterRGName, clusterName),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
