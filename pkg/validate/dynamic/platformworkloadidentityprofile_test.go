@@ -201,7 +201,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
@@ -232,7 +232,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
@@ -267,7 +267,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
@@ -431,7 +431,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, errors.New("Generic Error"))
+				roleDefinitions.EXPECT().GetByID(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, errors.New("Generic Error"))
 			},
 			wantErr: "Generic Error",
 		},
@@ -458,7 +458,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 			},
 			wantErr: "parsing failed for Invalid UUID. Invalid resource Id format",
 		},
@@ -479,7 +479,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
@@ -508,7 +508,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
@@ -537,7 +537,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, errors.New("Generic Error"))
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {

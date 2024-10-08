@@ -533,6 +533,7 @@ run-rp: ci-rp podman-secrets
 		-e ARO_ADOPT_BY_HIVE="true" \
 		-e MOCK_MSI_TENANT_ID \
 		-e MOCK_MSI_CLIENT_ID \
+		-e MOCK_MSI_OBJECT_ID \
 		-e MOCK_MSI_CERT \
 		--secret aks.kubeconfig,target=/app/secrets/aks.kubeconfig \
 		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
