@@ -131,6 +131,8 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 	}, nil
 }
 
+// getPlatformWorkloadIdentityFederatedCredName returns a federated identity credential name.
+// name length 3-120 characters. It must be alphanumeric, dash, underscore.
 func (m *manager) getPlatformWorkloadIdentityFederatedCredName(sa string, identity api.PlatformWorkloadIdentity) (string, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return "", fmt.Errorf("getPlatformWorkloadIdentityFederatedCredName called for a CSP cluster")
@@ -144,16 +146,21 @@ func (m *manager) getPlatformWorkloadIdentityFederatedCredName(sa string, identi
 	if err != nil {
 		return "", err
 	}
+	clusterResourceId, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
+	if err != nil {
+		return "", err
+	}
 
-	name := fmt.Sprintf("%s-%s-%s", m.doc.OpenShiftCluster.ID, sa, identityResourceId.ResourceName)
+	clusterResourceKey := fmt.Sprintf("%s-%s-%s", clusterResourceId.SubscriptionID, clusterResourceId.ResourceGroup, clusterResourceId.ResourceName)
+	name := fmt.Sprintf("%s-%s-%s", clusterResourceKey, sa, identityResourceId.ResourceName)
 	// the base-36 encoded string of a SHA-224 hash will typically be around 43 to 44 characters long.
 	hash := sha256.Sum224([]byte(name))
 	encodedName := (&big.Int{}).SetBytes(hash[:]).Text(36)
 	remainingChars := 120 - len(encodedName) - 1
 
-	if remainingChars < len(m.doc.OpenShiftCluster.ID) {
-		return fmt.Sprintf("%s-%s", m.doc.OpenShiftCluster.ID[:remainingChars], encodedName), nil
+	if remainingChars < len(clusterResourceKey) {
+		return fmt.Sprintf("%s-%s", clusterResourceKey[:remainingChars], encodedName), nil
 	}
 
-	return fmt.Sprintf("%s-%s", m.doc.OpenShiftCluster.ID, encodedName), nil
+	return fmt.Sprintf("%s-%s", clusterResourceKey, encodedName), nil
 }
