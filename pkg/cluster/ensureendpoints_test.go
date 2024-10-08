@@ -279,7 +279,7 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			name: "addEndpointsToSubnet should  when the subnet contains all new endpoints in succeeded state",
+			name: "addEndpointsToSubnet should do nothing when the subnet contains all new endpoints in succeeded state",
 			subnet: &armnetwork.Subnet{
 				ID: ptr.To(subnetIdMaster),
 				Properties: &armnetwork.SubnetPropertiesFormat{
