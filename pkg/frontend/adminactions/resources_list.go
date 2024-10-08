@@ -150,7 +150,7 @@ func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResou
 					a.log.Warnf("skipping route table '%s' due to ID parse error: %s", *snet.RouteTable.ID, err)
 					continue
 				}
-				rt, err := a.routeTables.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+				rt, err := a.routeTables.Get(ctx, r.ResourceGroup, r.ResourceName, nil)
 				if err != nil {
 					a.log.Warnf("skipping route table '%s' due to Get error: %s", *snet.RouteTable.ID, err)
 					continue

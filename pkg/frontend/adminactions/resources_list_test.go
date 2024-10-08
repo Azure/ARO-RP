@@ -19,6 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
@@ -150,7 +151,7 @@ func TestResourcesList(t *testing.T) {
 			resources := mock_features.NewMockResourcesClient(controller)
 			virtualMachines := mock_compute.NewMockVirtualMachinesClient(controller)
 			virtualNetworks := mock_network.NewMockVirtualNetworksClient(controller)
-			routeTables := mock_network.NewMockRouteTablesClient(controller)
+			routeTables := mock_armnetwork.NewMockRouteTablesClient(controller)
 			diskEncryptionSets := mock_compute.NewMockDiskEncryptionSetsClient(controller)
 
 			validListByResourceGroupMock(resources)
