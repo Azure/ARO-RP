@@ -47,7 +47,7 @@ type azureActions struct {
 	resources          features.ResourcesClient
 	resourceSkus       compute.ResourceSkusClient
 	virtualMachines    compute.VirtualMachinesClient
-	virtualNetworks    network.VirtualNetworksClient
+	virtualNetworks    armnetwork.VirtualNetworksClient
 	diskEncryptionSets compute.DiskEncryptionSetsClient
 	routeTables        armnetwork.RouteTablesClient
 	storageAccounts    storage.AccountsClient
@@ -76,6 +76,11 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	virtualNetworks, err := armnetwork.NewVirtualNetworksClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
@@ -84,7 +89,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		resources:          features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		resourceSkus:       compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualNetworks:    network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualNetworks:    virtualNetworks,
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		routeTables:        routeTables,
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
