@@ -89,7 +89,7 @@ func (dv *dynamic) validateClusterMSI(ctx context.Context, oc *api.OpenShiftClus
 
 // Validate that the cluster MSI has all permissions specified in AzureRedHatOpenShiftFederatedCredentialRole over each platform managed identity
 func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, oid string, platformIdentities []api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
-	actions, err := getActionsForRoleDefinition(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, roleDefinitions)
+	actions, err := getActionsForRoleDefinition(ctx, fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole), roleDefinitions)
 	if err != nil {
 		return err
 	}
