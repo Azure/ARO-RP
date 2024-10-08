@@ -506,14 +506,14 @@ func (sv openShiftClusterStaticValidator) validatePlatformIdentities(oc *OpenShi
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.servicePrincipalProfile", "Cannot use identities and service principal credentials at the same time.")
 	}
 
-	clusterIdentityPresent := oc.ManagedServiceIdentity != nil
+	clusterIdentityPresent := oc.Identity != nil
 	operatorRolePresent := pwip != nil
 
 	if clusterIdentityPresent != operatorRolePresent {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "identity", "Cluster identity and platform workload identities require each other.")
 	}
 
-	if operatorRolePresent && len(oc.ManagedServiceIdentity.UserAssignedIdentities) != 1 {
+	if operatorRolePresent && len(oc.Identity.UserAssignedIdentities) != 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "identity", "The provided cluster identity is invalid; there should be exactly one.")
 	}
 
