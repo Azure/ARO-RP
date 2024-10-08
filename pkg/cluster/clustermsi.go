@@ -45,9 +45,9 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	}
 
 	uaMsiRequest := dataplane.UserAssignedMSIRequest{
-		IdentityURL: m.doc.OpenShiftCluster.ManagedServiceIdentity.IdentityURL,
+		IdentityURL: m.doc.OpenShiftCluster.Identity.IdentityURL,
 		ResourceIDs: []string{clusterMsiResourceId.String()},
-		TenantID:    m.doc.OpenShiftCluster.ManagedServiceIdentity.TenantID,
+		TenantID:    m.doc.OpenShiftCluster.Identity.TenantID,
 	}
 
 	msiCredObj, err := m.msiDataplane.GetUserAssignedIdentities(ctx, uaMsiRequest)

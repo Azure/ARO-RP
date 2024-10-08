@@ -82,7 +82,7 @@ Response contained no body
 			name: "error - invalid resource ID (theoretically not possible, but still)",
 			doc: &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{
-					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+					Identity: &api.ManagedServiceIdentity{
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
 							"Hi hello I'm not a valid resource ID": {},
 						},
@@ -96,7 +96,7 @@ Response contained no body
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
@@ -118,7 +118,7 @@ Response contained no body
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
@@ -147,7 +147,7 @@ Response contained no body
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
@@ -179,7 +179,7 @@ Response contained no body
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+					Identity: &api.ManagedServiceIdentity{
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
@@ -260,7 +260,7 @@ func TestClusterMsiSecretName(t *testing.T) {
 			name: "error - invalid resource ID (theoretically not possible, but still)",
 			doc: &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{
-					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+					Identity: &api.ManagedServiceIdentity{
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
 							"Hi hello I'm not a valid resource ID": {},
 						},
@@ -274,7 +274,7 @@ func TestClusterMsiSecretName(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					ManagedServiceIdentity: &api.ManagedServiceIdentity{
+					Identity: &api.ManagedServiceIdentity{
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
 							miResourceId: {},
 						},

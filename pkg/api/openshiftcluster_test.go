@@ -134,14 +134,14 @@ func TestClusterMsiResourceId(t *testing.T) {
 		{
 			name: "error - cluster doc has non-nil ManagedServiceIdentity but nil ManagedServiceIdentity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				ManagedServiceIdentity: &ManagedServiceIdentity{},
+				Identity: &ManagedServiceIdentity{},
 			},
 			wantErr: "could not find cluster MSI in cluster doc",
 		},
 		{
 			name: "error - cluster doc has non-nil ManagedServiceIdentity but empty ManagedServiceIdentity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				ManagedServiceIdentity: &ManagedServiceIdentity{
+				Identity: &ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]UserAssignedIdentity{},
 				},
 			},
@@ -150,7 +150,7 @@ func TestClusterMsiResourceId(t *testing.T) {
 		{
 			name: "error - cluster doc has non-nil Identity but two MSIs in Identity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				ManagedServiceIdentity: &ManagedServiceIdentity{
+				Identity: &ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						miResourceId: {
 							ClientID:    "",
@@ -168,7 +168,7 @@ func TestClusterMsiResourceId(t *testing.T) {
 		{
 			name: "success",
 			oc: &OpenShiftCluster{
-				ManagedServiceIdentity: &ManagedServiceIdentity{
+				Identity: &ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						miResourceId: {
 							ClientID:    "",
@@ -210,14 +210,14 @@ func TestHasUserAssignedIdentities(t *testing.T) {
 		{
 			name: "false - cluster doc has non-nil Identity but nil Identity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				ManagedServiceIdentity: &ManagedServiceIdentity{},
+				Identity: &ManagedServiceIdentity{},
 			},
 			wantResult: false,
 		},
 		{
 			name: "false - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				ManagedServiceIdentity: &ManagedServiceIdentity{
+				Identity: &ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]UserAssignedIdentity{},
 				},
 			},
@@ -226,7 +226,7 @@ func TestHasUserAssignedIdentities(t *testing.T) {
 		{
 			name: "true",
 			oc: &OpenShiftCluster{
-				ManagedServiceIdentity: &ManagedServiceIdentity{
+				Identity: &ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]UserAssignedIdentity{
 						miResourceId: {},
 					},

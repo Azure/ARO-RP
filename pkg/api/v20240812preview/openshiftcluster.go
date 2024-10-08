@@ -38,7 +38,7 @@ type OpenShiftCluster struct {
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 
 	// Identity stores information about the cluster MSI(s) in a workload identity cluster.
-	ManagedServiceIdentity *ManagedServiceIdentity `json:"managedServiceIdentity,omitempty"`
+	Identity *ManagedServiceIdentity `json:"managedServiceIdentity,omitempty"`
 }
 
 // UsesWorkloadIdentity checks whether a cluster is a Workload Identity cluster or a Service Principal cluster
