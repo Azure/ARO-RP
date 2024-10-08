@@ -134,6 +134,7 @@ ExecStart=/usr/bin/podman run \
   -e ARO_ADOPT_BY_HIVE \
   -e OIDC_AFD_ENDPOINT \
   -e OIDC_STORAGE_ACCOUNT_NAME \
+  -e MSI_RP_ENDPOINT \
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \

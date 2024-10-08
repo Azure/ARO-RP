@@ -7,11 +7,14 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestInstallConfigMap(t *testing.T) {
@@ -109,6 +112,62 @@ func TestClusterAzureSecret(t *testing.T) {
 			if r.Namespace != "testNamespace" {
 				t.Errorf("Incorrect Secret namespace, expected: testNamespace, found %s", r.Namespace)
 			}
+		})
+	}
+}
+
+func TestBoundSASigningKeySecret(t *testing.T) {
+	testNamespace := "aro-UUID"
+	for _, tt := range []struct {
+		name       string
+		oc         *api.OpenShiftCluster
+		wantSecret *corev1.Secret
+		wantErr    string
+	}{
+		{
+			name: "csp cluster - returns nil",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
+				},
+			},
+		},
+		{
+			name: "miwi cluster - boundServiceAccountSigningKey not set - returns error",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					ClusterProfile:                  api.ClusterProfile{},
+				},
+			},
+			wantErr: "properties.clusterProfile.boundServiceAccountSigningKey not set",
+		},
+		{
+			name: "miwi cluster - creates secret with bound-service-account-signing-key.key contents",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					ClusterProfile: api.ClusterProfile{
+						BoundServiceAccountSigningKey: pointerutils.ToPtr(api.SecureString("fakeboundserviceaccountsigningkey")),
+					},
+				},
+			},
+			wantSecret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      boundServiceAccountSigningKeySecretName,
+					Namespace: testNamespace,
+				},
+				Type: corev1.SecretTypeOpaque,
+				StringData: map[string]string{
+					boundServiceAccountSigningKeySecretKey: "fakeboundserviceaccountsigningkey",
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := boundSASigningKeySecret(testNamespace, tt.oc)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantSecret, secret)
 		})
 	}
 }

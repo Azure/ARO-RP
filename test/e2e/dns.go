@@ -40,7 +40,7 @@ const (
 	resolvConfContainerName = "read-resolv-conf"
 )
 
-var _ = Describe("ARO cluster DNS", func() {
+var _ = Describe("ARO cluster DNS", Label(regressiontest), func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must not be adversely affected by Azure host servicing", func(ctx context.Context) {

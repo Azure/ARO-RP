@@ -62,6 +62,10 @@ import (
 
 const (
 	smoke = "smoke"
+	// regressiontest is for tests designed to ensure that something doesn't
+	// break before we go to release, but doesn't need to be validated in every
+	// PR.
+	regressiontest = "regressiontest"
 )
 
 //go:embed static_resources

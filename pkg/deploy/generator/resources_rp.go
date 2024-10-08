@@ -384,6 +384,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"keyvaultPrefix",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
+		"msiRpEndpoint",
 		"portalAccessGroupIds",
 		"portalClientId",
 		"portalElevatedGroupIds",

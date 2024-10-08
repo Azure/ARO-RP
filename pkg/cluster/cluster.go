@@ -98,6 +98,7 @@ type manager struct {
 	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead.
 	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
 	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
+	userAssignedIdentities   armmsi.UserAssignedIdentitiesClient
 
 	dns     dns.Manager
 	storage storage.Manager

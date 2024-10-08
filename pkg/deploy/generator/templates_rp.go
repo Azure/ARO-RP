@@ -77,6 +77,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"vmssCleanupEnabled",
 			"vmssName",
 			"oidcStorageAccountName",
+			"msiRpEndpoint",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",

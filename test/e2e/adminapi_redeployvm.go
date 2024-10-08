@@ -27,7 +27,7 @@ const (
 	uptimeStrFmt = "2006-01-02 15:04:05" // https://go.dev/src/time/format.go
 )
 
-var _ = Describe("[Admin API] VM redeploy action", func() {
+var _ = Describe("[Admin API] VM redeploy action", Label(regressiontest), func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must trigger a selected VM to redeploy", func(ctx context.Context) {

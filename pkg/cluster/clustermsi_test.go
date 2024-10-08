@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -16,12 +17,14 @@ import (
 	"github.com/Azure/msi-dataplane/pkg/store"
 	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -298,6 +301,330 @@ func TestClusterMsiSecretName(t *testing.T) {
 			if result != tt.wantResult {
 				t.Error(result)
 			}
+		})
+	}
+}
+
+func TestClusterIdentityIDs(t *testing.T) {
+	ctx := context.Background()
+
+	mockGuid := "00000000-0000-0000-0000-000000000000"
+	clusterRGName := "aro-cluster"
+	clusterName := "aro-cluster"
+
+	clusterResourceId := strings.ToLower(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", mockGuid, clusterRGName, clusterName))
+
+	miName := "aro-cluster-msi"
+	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+	miResourceIdIncorrectCasing := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+
+	msiDataPlaneNotFoundError := `failed to get credentials: Request information not available
+--------------------------------------------------------------------------------
+RESPONSE 404: 
+ERROR CODE UNAVAILABLE
+--------------------------------------------------------------------------------
+Response contained no body
+--------------------------------------------------------------------------------
+`
+	miClientId := "ffffffff-ffff-ffff-ffff-ffffffffffff"
+	miObjectId := "99999999-9999-9999-9999-999999999999"
+	placeholderString := "placeholder"
+
+	msiDataPlaneValidStub := policy.ClientOptions{
+		Transport: dataplane.NewStub([]*dataplane.CredentialsObject{
+			{
+				CredentialsObject: swagger.CredentialsObject{
+					ExplicitIdentities: []*swagger.NestedCredentialsObject{
+						{
+							ClientID:   &miClientId,
+							ObjectID:   &miObjectId,
+							ResourceID: &miResourceId,
+
+							ClientSecret:               &placeholderString,
+							TenantID:                   &placeholderString,
+							AuthenticationEndpoint:     &placeholderString,
+							CannotRenewAfter:           &placeholderString,
+							ClientSecretURL:            &placeholderString,
+							MtlsAuthenticationEndpoint: &placeholderString,
+							NotAfter:                   &placeholderString,
+							NotBefore:                  &placeholderString,
+							RenewAfter:                 &placeholderString,
+							CustomClaims: &swagger.CustomClaims{
+								XMSAzNwperimid: []*string{&placeholderString},
+								XMSAzTm:        &placeholderString,
+							},
+						},
+					},
+				},
+			},
+		}),
+	}
+
+	for _, tt := range []struct {
+		name             string
+		doc              *api.OpenShiftClusterDocument
+		msiDataplaneStub policy.ClientOptions
+		wantDoc          *api.OpenShiftClusterDocument
+		wantErr          string
+	}{
+		{
+			name: "error - CSP cluster",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterResourceId,
+				Key: clusterResourceId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ServicePrincipalProfile: &api.ServicePrincipalProfile{
+							ClientID:     "asdf",
+							ClientSecret: "asdf",
+						},
+					},
+				},
+			},
+			wantErr: "clusterIdentityIDs called for CSP cluster",
+		},
+		{
+			name: "error - invalid resource ID (theoretically not possible, but still)",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterResourceId,
+				Key: clusterResourceId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
+					Identity: &api.Identity{
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							"Hi hello I'm not a valid resource ID": api.ClusterUserAssignedIdentity{},
+						},
+					},
+				},
+			},
+			wantErr: "invalid resource ID: resource id 'Hi hello I'm not a valid resource ID' must start with '/'",
+		},
+		{
+			name: "error - encounter error in MSI dataplane",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterResourceId,
+				Key: clusterResourceId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
+					Identity: &api.Identity{
+						IdentityURL: middleware.MockIdentityURL,
+						TenantID:    mockGuid,
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							miResourceId: api.ClusterUserAssignedIdentity{},
+						},
+					},
+				},
+			},
+			msiDataplaneStub: policy.ClientOptions{
+				Transport: dataplane.NewStub([]*dataplane.CredentialsObject{
+					{
+						CredentialsObject: swagger.CredentialsObject{},
+					},
+				}),
+			},
+			wantErr: msiDataPlaneNotFoundError,
+		},
+		{
+			name: "success - ClientID and PrincipalID are updated",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterResourceId,
+				Key: clusterResourceId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
+					Identity: &api.Identity{
+						IdentityURL: middleware.MockIdentityURL,
+						TenantID:    mockGuid,
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							miResourceId: api.ClusterUserAssignedIdentity{},
+						},
+					},
+				},
+			},
+			msiDataplaneStub: msiDataPlaneValidStub,
+			wantDoc: &api.OpenShiftClusterDocument{
+				ID:  clusterResourceId,
+				Key: clusterResourceId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
+					Identity: &api.Identity{
+						IdentityURL: middleware.MockIdentityURL,
+						TenantID:    mockGuid,
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							miResourceId: api.ClusterUserAssignedIdentity{
+								ClientID:    miClientId,
+								PrincipalID: miObjectId,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "success - existing identity resourceID casing is preserved even if it differs from ARM resourceID parsing",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterResourceId,
+				Key: clusterResourceId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
+					Identity: &api.Identity{
+						IdentityURL: middleware.MockIdentityURL,
+						TenantID:    mockGuid,
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							miResourceIdIncorrectCasing: api.ClusterUserAssignedIdentity{},
+						},
+					},
+				},
+			},
+			msiDataplaneStub: msiDataPlaneValidStub,
+			wantDoc: &api.OpenShiftClusterDocument{
+				ID:  clusterResourceId,
+				Key: clusterResourceId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
+					Identity: &api.Identity{
+						IdentityURL: middleware.MockIdentityURL,
+						TenantID:    mockGuid,
+						UserAssignedIdentities: api.UserAssignedIdentities{
+							miResourceIdIncorrectCasing: api.ClusterUserAssignedIdentity{
+								ClientID:    miClientId,
+								PrincipalID: miObjectId,
+							},
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			msiDataplane, err := dataplane.NewClient(dataplane.AzurePublicCloud, nil, &tt.msiDataplaneStub)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
+			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
+			fixture.AddOpenShiftClusterDocuments(tt.doc)
+			if err = fixture.Create(); err != nil {
+				t.Fatal(err)
+			}
+
+			m := manager{
+				log:          logrus.NewEntry(logrus.StandardLogger()),
+				doc:          tt.doc,
+				db:           openShiftClustersDatabase,
+				msiDataplane: msiDataplane,
+			}
+
+			err = m.clusterIdentityIDs(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			if tt.wantDoc != nil {
+				assert.Equal(t, tt.wantDoc.OpenShiftCluster, m.doc.OpenShiftCluster)
+			}
+		})
+	}
+}
+
+func TestGetSingleExplicitIdentity(t *testing.T) {
+	placeholderString := "placeholder"
+	validIdentity := &swagger.NestedCredentialsObject{
+		ClientID:                   &placeholderString,
+		ClientSecret:               &placeholderString,
+		TenantID:                   &placeholderString,
+		ResourceID:                 &placeholderString,
+		AuthenticationEndpoint:     &placeholderString,
+		CannotRenewAfter:           &placeholderString,
+		ClientSecretURL:            &placeholderString,
+		MtlsAuthenticationEndpoint: &placeholderString,
+		NotAfter:                   &placeholderString,
+		NotBefore:                  &placeholderString,
+		RenewAfter:                 &placeholderString,
+		CustomClaims: &swagger.CustomClaims{
+			XMSAzNwperimid: []*string{&placeholderString},
+			XMSAzTm:        &placeholderString,
+		},
+		ObjectID: &placeholderString,
+	}
+
+	for _, tt := range []struct {
+		name       string
+		msiCredObj *dataplane.UserAssignedIdentities
+		want       *swagger.NestedCredentialsObject
+		wantErr    string
+	}{
+		{
+			name:       "ExplicitIdentities nil, returns error",
+			msiCredObj: &dataplane.UserAssignedIdentities{},
+			wantErr:    errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities empty, returns error",
+			msiCredObj: &dataplane.UserAssignedIdentities{
+				CredentialsObject: dataplane.CredentialsObject{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{},
+					},
+				},
+			},
+			wantErr: errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities first element is nil, returns error",
+			msiCredObj: &dataplane.UserAssignedIdentities{
+				CredentialsObject: dataplane.CredentialsObject{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{
+							nil,
+						},
+					},
+				},
+			},
+			wantErr: errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities first element is nil, returns error",
+			msiCredObj: &dataplane.UserAssignedIdentities{
+				CredentialsObject: dataplane.CredentialsObject{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{
+							nil,
+						},
+					},
+				},
+			},
+			wantErr: errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities first element is valid, returns it",
+			msiCredObj: &dataplane.UserAssignedIdentities{
+				CredentialsObject: dataplane.CredentialsObject{
+					CredentialsObject: swagger.CredentialsObject{
+						ExplicitIdentities: []*swagger.NestedCredentialsObject{
+							validIdentity,
+						},
+					},
+				},
+			},
+			want: validIdentity,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getSingleExplicitIdentity(tt.msiCredObj)
+
+			assert.Equal(t, tt.want, got)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

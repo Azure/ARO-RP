@@ -99,6 +99,9 @@
         "mdsdEnvironment": {
             "value": ""
         },
+        "msiRpEndpoint": {
+            "value": ""
+        },
         "nonZonalRegions": {
             "value": [
                 "eastasia",

@@ -23,6 +23,7 @@ from azext_aro._validators import (
     validate_enable_managed_identity,
     validate_platform_workload_identities,
     validate_cluster_identity,
+    validate_upgradeable_to_format,
 )
 from azure.cli.core.commands.parameters import (
     name_type,
@@ -160,6 +161,9 @@ def load_arguments(self, _):
                    options_list=['--assign-platform-workload-identity', '--assign-platform-wi'],
                    validator=validate_platform_workload_identities(isCreate=False),
                    action=AROPlatformWorkloadIdentityAddAction, nargs='+')
+        c.argument('upgradeable_to', arg_group='Identity', options_list=['--upgradeable-to'],
+                   help='OpenShift version to upgrade to.', is_preview=True,
+                   validator=validate_upgradeable_to_format)
 
     with self.argument_context('aro get-admin-kubeconfig') as c:
         c.argument('file',

@@ -455,6 +455,7 @@ def aro_update(cmd,
                client_secret=None,
                platform_workload_identities=None,
                load_balancer_managed_outbound_ip_count=None,
+               upgradeable_to=None,
                no_wait=False):
     # if we can't read cluster spec, we will not be able to do much. Fail.
     oc = client.open_shift_clusters.get(resource_group_name, resource_name)
@@ -479,20 +480,24 @@ def aro_update(cmd,
             if client_id is not None:
                 oc_update.service_principal_profile.client_id = client_id
 
-    if platform_workload_identities is not None:
-        pwis = {}
-        for i in oc.platform_workload_identity_profile.platform_workload_identities:
-            pwis[i.operator_name] = openshiftcluster.PlatformWorkloadIdentity(
-                operator_name=i.operator_name,
-                resource_id=i.resource_id
-            )
+    if oc.platform_workload_identity_profile is not None:
+        if platform_workload_identities is not None or upgradeable_to is not None:
+            oc_update.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile()
 
-        for i in platform_workload_identities:
-            pwis[i.operator_name] = i
+        if platform_workload_identities is not None:
+            pwis = {}
+            for i in oc.platform_workload_identity_profile.platform_workload_identities:
+                pwis[i.operator_name] = openshiftcluster.PlatformWorkloadIdentity(
+                    operator_name=i.operator_name,
+                    resource_id=i.resource_id
+                )
 
-        oc_update.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile(
-            platform_workload_identities=list(pwis.values())
-        )
+            for i in platform_workload_identities:
+                pwis[i.operator_name] = i
+
+            oc_update.platform_workload_identity_profile.platform_workload_identities = list(pwis.values())
+
+        oc_update.platform_workload_identity_profile.upgradeable_to = upgradeable_to
 
     if load_balancer_managed_outbound_ip_count is not None:
         oc_update.network_profile = openshiftcluster.NetworkProfile()

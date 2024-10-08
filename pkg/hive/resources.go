@@ -22,10 +22,12 @@ import (
 // Changing values of these constants most likely would require
 // some sort of migration on the Hive cluster for existing clusters.
 const (
-	ClusterDeploymentName             = "cluster"
-	aroServiceKubeconfigSecretName    = "aro-service-kubeconfig-secret"
-	clusterServicePrincipalSecretName = "cluster-service-principal-secret"
-	clusterManifestsSecretName        = "cluster-manifests-secret"
+	ClusterDeploymentName                   = "cluster"
+	aroServiceKubeconfigSecretName          = "aro-service-kubeconfig-secret"
+	clusterServicePrincipalSecretName       = "cluster-service-principal-secret"
+	clusterManifestsSecretName              = "cluster-manifests-secret"
+	boundServiceAccountSigningKeySecretName = "bound-service-account-signing-key"
+	boundServiceAccountSigningKeySecretKey  = "bound-service-account-signing-key.key"
 )
 
 var (
@@ -142,6 +144,26 @@ func clusterManifestsSecret(namespace string, customManifests map[string]kruntim
 		secret.StringData[key] = string(b)
 	}
 	return secret, nil
+}
+
+func boundSASigningKeySecret(namespace string, oc *api.OpenShiftCluster) (*corev1.Secret, error) {
+	if !oc.UsesWorkloadIdentity() {
+		// no secret required - Hive ClusterDeployment should not reference this secret
+		return nil, nil
+	}
+	if oc.Properties.ClusterProfile.BoundServiceAccountSigningKey == nil {
+		return nil, fmt.Errorf("properties.clusterProfile.boundServiceAccountSigningKey not set")
+	}
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      boundServiceAccountSigningKeySecretName,
+			Namespace: namespace,
+		},
+		StringData: map[string]string{
+			boundServiceAccountSigningKeySecretKey: string(*oc.Properties.ClusterProfile.BoundServiceAccountSigningKey),
+		},
+		Type: corev1.SecretTypeOpaque,
+	}, nil
 }
 
 func envSecret(namespace string, isDevelopment bool) *corev1.Secret {

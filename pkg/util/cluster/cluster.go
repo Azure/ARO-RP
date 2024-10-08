@@ -21,7 +21,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -30,6 +30,7 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
@@ -37,9 +38,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
@@ -58,12 +59,12 @@ type Cluster struct {
 	deployments          features.DeploymentsClient
 	groups               features.ResourceGroupsClient
 	openshiftclusters    InternalClient
-	securitygroups       network.SecurityGroupsClient
-	subnets              network.SubnetsClient
-	routetables          network.RouteTablesClient
+	securitygroups       armnetwork.SecurityGroupsClient
+	subnets              armnetwork.SubnetsClient
+	routetables          armnetwork.RouteTablesClient
 	roleassignments      authorization.RoleAssignmentsClient
-	peerings             network.VirtualNetworkPeeringsClient
-	ciParentVnetPeerings network.VirtualNetworkPeeringsClient
+	peerings             armnetwork.VirtualNetworkPeeringsClient
+	ciParentVnetPeerings armnetwork.VirtualNetworkPeeringsClient
 	vaultsClient         armkeyvault.VaultsClient
 }
 
@@ -97,11 +98,33 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		},
 	}
 
-	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
+	clientOptions := environment.Environment().ArmClientOptions()
 
+	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
 	if err != nil {
 		return nil, err
 	}
+
+	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	subnetsClient, err := armnetwork.NewSubnetsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	routeTablesClient, err := armnetwork.NewRouteTablesClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	virtualNetworkPeeringsClient, err := armnetwork.NewVirtualNetworkPeeringsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Cluster{
 		log: log,
 		env: environment,
@@ -111,11 +134,11 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		groups:            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclusters: NewInternalClient(log, environment, authorizer),
-		securitygroups:    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		subnets:           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		routetables:       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		securitygroups:    securityGroupsClient,
+		subnets:           subnetsClient,
+		routetables:       routeTablesClient,
 		roleassignments:   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		peerings:          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		peerings:          virtualNetworkPeeringsClient,
 		vaultsClient:      vaultClient,
 	}
 
@@ -128,7 +151,12 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 			return nil, err
 		}
 
-		c.ciParentVnetPeerings = network.NewVirtualNetworkPeeringsClient(environment.Environment(), r.SubscriptionID, authorizer)
+		ciVirtualNetworkPeeringsClient, err := armnetwork.NewVirtualNetworkPeeringsClient(r.SubscriptionID, spTokenCredential, clientOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		c.ciParentVnetPeerings = ciVirtualNetworkPeeringsClient
 	}
 
 	return c, nil
@@ -246,13 +274,13 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	// TODO: ick
 	if os.Getenv("NO_INTERNET") != "" {
 		parameters["routes"] = &arm.ParametersParameter{
-			Value: []mgmtnetwork.Route{
+			Value: []sdknetwork.Route{
 				{
-					RoutePropertiesFormat: &mgmtnetwork.RoutePropertiesFormat{
-						AddressPrefix: to.StringPtr("0.0.0.0/0"),
-						NextHopType:   mgmtnetwork.RouteNextHopTypeNone,
+					Properties: &sdknetwork.RoutePropertiesFormat{
+						AddressPrefix: ptr.To("0.0.0.0/0"),
+						NextHopType:   ptr.To(sdknetwork.RouteNextHopTypeNone),
 					},
-					Name: to.StringPtr("blackhole"),
+					Name: ptr.To("blackhole"),
 				},
 			},
 		}
@@ -371,46 +399,26 @@ func ipRangesContainCIDR(ipRanges []*net.IPNet, cidr string) (bool, error) {
 // Because an az subnet can cover multiple ipranges, we need to return a slice
 // instead of just a single ip range. This function never errors. If something
 // goes wrong, it instead returns an empty list.
-func GetIPRangesFromSubnet(subnet mgmtnetwork.Subnet) []*net.IPNet {
+func GetIPRangesFromSubnet(subnet *sdknetwork.Subnet) []*net.IPNet {
 	ipRanges := []*net.IPNet{}
-	if subnet.AddressPrefix != nil {
-		_, ipRange, err := net.ParseCIDR(*subnet.AddressPrefix)
+	if subnet.Properties.AddressPrefix != nil {
+		_, ipRange, err := net.ParseCIDR(*subnet.Properties.AddressPrefix)
 		if err == nil {
 			ipRanges = append(ipRanges, ipRange)
 		}
 	}
 
-	if subnet.AddressPrefixes == nil {
+	if subnet.Properties.AddressPrefixes == nil {
 		return ipRanges
 	}
 
-	for _, snetPrefix := range *subnet.AddressPrefixes {
-		_, ipRange, err := net.ParseCIDR(snetPrefix)
+	for _, snetPrefix := range subnet.Properties.AddressPrefixes {
+		_, ipRange, err := net.ParseCIDR(*snetPrefix)
 		if err == nil {
 			ipRanges = append(ipRanges, ipRange)
 		}
 	}
 	return ipRanges
-}
-
-// getAllDevSubnets queries azure to retrieve all subnets assigned the vnet
-// `dev-vnet` in the current resource group
-func (c *Cluster) getAllDevSubnets() ([]mgmtnetwork.Subnet, error) {
-	allSubnets := []mgmtnetwork.Subnet{}
-	availSnetResults, err := c.subnets.List(context.Background(), c.env.ResourceGroup(), "dev-vnet")
-	if err != nil {
-		return allSubnets, err
-	}
-	allSubnets = append(allSubnets, availSnetResults.Values()...)
-	for availSnetResults.NotDone() {
-		err = availSnetResults.NextWithContext(context.Background())
-		if err != nil {
-			break
-		}
-		allSubnets = append(allSubnets, availSnetResults.Values()...)
-	}
-
-	return allSubnets, nil
 }
 
 func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string, err error) {
@@ -420,7 +428,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
 	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
 
-	allSubnets, err := c.getAllDevSubnets()
+	allSubnets, err := c.subnets.List(context.Background(), c.env.ResourceGroup(), "dev-vnet", nil)
 	if err != nil {
 		c.log.Warnf("Error getting existing subnets. Continuing regardless: %v", err)
 	}
@@ -724,10 +732,10 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 
 	// very occasionally c.securitygroups.List returns an empty list in
 	// production.  No idea why.  Let's try retrying it...
-	var nsgs []mgmtnetwork.SecurityGroup
+	var nsgs []*sdknetwork.SecurityGroup
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		var err error
-		nsgs, err = c.securitygroups.List(ctx, "aro-"+clusterName)
+		nsgs, err = c.securitygroups.List(ctx, "aro-"+clusterName, nil)
 		return len(nsgs) > 0, err
 	}, timeoutCtx.Done())
 	if err != nil {
@@ -735,16 +743,17 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 	}
 
 	for _, subnetName := range []string{clusterName + "-master", clusterName + "-worker"} {
-		subnet, err := c.subnets.Get(ctx, vnetResourceGroup, "dev-vnet", subnetName, "")
+		resp, err := c.subnets.Get(ctx, vnetResourceGroup, "dev-vnet", subnetName, nil)
 		if err != nil {
 			return err
 		}
+		subnet := resp.Subnet
 
-		subnet.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
+		subnet.Properties.NetworkSecurityGroup = &sdknetwork.SecurityGroup{
 			ID: nsgs[0].ID,
 		}
 
-		err = c.subnets.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", subnetName, subnet)
+		err = c.subnets.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", subnetName, subnet, nil)
 		if err != nil {
 			return err
 		}
@@ -829,7 +838,7 @@ func (c *Cluster) deleteResourceGroup(ctx context.Context, resourceGroup string)
 func (c *Cluster) deleteVnetPeerings(ctx context.Context, resourceGroup string) error {
 	r, err := azure.ParseResourceID(c.ciParentVnet)
 	if err == nil {
-		err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, resourceGroup+"-peer")
+		err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, resourceGroup+"-peer", nil)
 	}
 	if err != nil {
 		return fmt.Errorf("error deleting vnet peerings: %w", err)
@@ -850,18 +859,18 @@ func (c *Cluster) deleteVnetResources(ctx context.Context, resourceGroup, vnetNa
 	var errs []error
 
 	c.log.Info("deleting master/worker subnets")
-	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-master"); err != nil {
+	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-master", nil); err != nil {
 		c.log.Errorf("error when deleting master subnet: %v", err)
 		errs = append(errs, err)
 	}
 
-	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-worker"); err != nil {
+	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-worker", nil); err != nil {
 		c.log.Errorf("error when deleting worker subnet: %v", err)
 		errs = append(errs, err)
 	}
 
 	c.log.Info("deleting route table")
-	if err := c.routetables.DeleteAndWait(ctx, resourceGroup, clusterName+"-rt"); err != nil {
+	if err := c.routetables.DeleteAndWait(ctx, resourceGroup, clusterName+"-rt", nil); err != nil {
 		c.log.Errorf("error when deleting route table: %v", err)
 		errs = append(errs, err)
 	}
@@ -877,16 +886,16 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, cluste
 		return err
 	}
 
-	clusterProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
-		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+	clusterProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
+		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &c.ciParentVnet,
 		},
 		AllowVirtualNetworkAccess: to.BoolPtr(true),
 		AllowForwardedTraffic:     to.BoolPtr(true),
 		UseRemoteGateways:         to.BoolPtr(true),
 	}
-	rpProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
-		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+	rpProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
+		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &cluster,
 		},
 		AllowVirtualNetworkAccess: to.BoolPtr(true),
@@ -894,12 +903,12 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, cluste
 		AllowGatewayTransit:       to.BoolPtr(true),
 	}
 
-	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: clusterProp})
+	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: clusterProp}, nil)
 	if err != nil {
 		return err
 	}
 
-	err = c.ciParentVnetPeerings.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: rpProp})
+	err = c.ciParentVnetPeerings.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: rpProp}, nil)
 	if err != nil {
 		return err
 	}
