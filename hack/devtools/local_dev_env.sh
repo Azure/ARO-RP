@@ -121,7 +121,7 @@ get_mock_msi_tenantID() {
     echo "$1" | jq -r .tenant
 }
 
-get_mock_msi_clientID() {
+get_mock_msi_objectID() {
     az ad sp list --all --filter "appId eq '$1'" | jq -r ".[] | .id"
 }
 
@@ -238,7 +238,7 @@ create_miwi_env_file() {
     mockClientID=$(get_mock_msi_clientID "$mockMSI")
     mockTenantID=$(get_mock_msi_tenantID "$mockMSI")
     mockCert=$(get_mock_msi_cert "$mockMSI")
-    mockObjectID=$(get_mock_msi_objectID "$mockMSI")
+    mockObjectID=$(get_mock_msi_objectID "$mockClientID")
 
     setup_platform_identity
     cluster_msi_role_assignment "${mockClientID}"

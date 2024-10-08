@@ -29,12 +29,14 @@ fi
 mockClientID=$(get_mock_msi_clientID "$sp")
 mockTenantID=$(get_mock_msi_tenantID "$sp")
 base64EncodedCert=$(get_mock_msi_cert "$sp")
+mockObjectID=$(get_mock_msi_objectID "$mockClientID")
 
 setup_platform_identity
 cluster_msi_role_assignment "${mockClientID}"
 
 # Print the extracted values
 echo "Cluster MSI Client ID: $mockClientID"
+echo "Cluster MSI Object ID: $mockObjectID"
 echo "Cluster MSI Tenant ID: $mockTenantID"
 echo "Cluster MSI Base64 Encoded Certificate: $base64EncodedCert"
 echo "Platform workload identity role sets: $PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"
