@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -48,7 +49,7 @@ type azureActions struct {
 	virtualMachines    compute.VirtualMachinesClient
 	virtualNetworks    network.VirtualNetworksClient
 	diskEncryptionSets compute.DiskEncryptionSetsClient
-	routeTables        network.RouteTablesClient
+	routeTables        armnetwork.RouteTablesClient
 	storageAccounts    storage.AccountsClient
 	networkInterfaces  network.InterfacesClient
 	loadBalancers      network.LoadBalancersClient
@@ -63,6 +64,18 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	credential, err := env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	options := env.Environment().ArmClientOptions()
+
+	routeTables, err := armnetwork.NewRouteTablesClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
@@ -73,7 +86,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualNetworks:    network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		routeTables:        routeTables,
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		loadBalancers:      network.NewLoadBalancersClient(env.Environment(), subscriptionDoc.ID, fpAuth),
