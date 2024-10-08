@@ -1945,7 +1945,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name: "create a new workload identity cluster",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Version = defaultVersion
-				oc.ManagedServiceIdentity = &v20240812preview.ManagedServiceIdentity{
+				oc.Identity = &v20240812preview.ManagedServiceIdentity{
 					Type: "UserAssigned",
 					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
 						mockMiResourceId: {},
@@ -2008,7 +2008,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ID:   testdatabase.GetResourcePath(mockGuid, "resourceName"),
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						ManagedServiceIdentity: &api.ManagedServiceIdentity{
+						Identity: &api.ManagedServiceIdentity{
 							Type: "UserAssigned",
 							UserAssignedIdentities: map[string]api.UserAssignedIdentity{
 								mockMiResourceId: {},
@@ -2082,7 +2082,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				Name:       "resourceName",
 				Type:       "Microsoft.RedHatOpenShift/openShiftClusters",
 				SystemData: &v20240812preview.SystemData{},
-				ManagedServiceIdentity: &v20240812preview.ManagedServiceIdentity{
+				Identity: &v20240812preview.ManagedServiceIdentity{
 					Type: "UserAssigned",
 					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
 						mockMiResourceId: {},
@@ -3623,11 +3623,11 @@ func TestValidateIdentityUrl(t *testing.T) {
 		{
 			name: "pass - identity URL passed",
 			cluster: &api.OpenShiftCluster{
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{},
+				Identity: &api.ManagedServiceIdentity{},
 			},
 			identityURL: "http://foo.bar",
 			expected: &api.OpenShiftCluster{
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					IdentityURL: "http://foo.bar",
 				},
 			},
@@ -3664,11 +3664,11 @@ func TestValidateIdentityTenantID(t *testing.T) {
 		{
 			name: "pass - tenantID passed",
 			cluster: &api.OpenShiftCluster{
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{},
+				Identity: &api.ManagedServiceIdentity{},
 			},
 			tenantID: "bogus",
 			expected: &api.OpenShiftCluster{
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					TenantID: "bogus",
 				},
 			},

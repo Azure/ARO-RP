@@ -192,7 +192,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -223,7 +223,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -257,7 +257,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -292,7 +292,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -315,7 +315,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -338,7 +338,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -356,7 +356,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -381,7 +381,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -399,7 +399,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]api.UserAssignedIdentity{
 						"invalidUUID": {},
 					},
@@ -419,7 +419,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -444,7 +444,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						},
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -465,7 +465,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -494,7 +494,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
@@ -523,7 +523,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						Version: openShiftVersion,
 					},
 				},
-				ManagedServiceIdentity: &api.ManagedServiceIdentity{
+				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
 			},

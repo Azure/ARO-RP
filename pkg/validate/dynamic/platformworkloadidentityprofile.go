@@ -77,7 +77,7 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 }
 
 func (dv *dynamic) validateClusterMSI(ctx context.Context, oc *api.OpenShiftCluster, roleDefinitions armauthorization.RoleDefinitionsClient) error {
-	for resourceID, identity := range oc.ManagedServiceIdentity.UserAssignedIdentities {
+	for resourceID, identity := range oc.Identity.UserAssignedIdentities {
 		_, err := azure.ParseResourceID(resourceID)
 		if err != nil {
 			return err

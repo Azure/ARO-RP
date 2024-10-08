@@ -39,7 +39,7 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.ID = ""
 	oc.Name = ""
 	oc.Type = ""
-	oc.ManagedServiceIdentity = &ManagedServiceIdentity{
+	oc.Identity = &ManagedServiceIdentity{
 		Type:                   "",
 		UserAssignedIdentities: map[string]UserAssignedIdentity{},
 	}
