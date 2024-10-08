@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "projectrequests",
-            "singularName": "",
+            "singularName": "projectrequest",
             "namespaced": false,
             "kind": "ProjectRequest",
             "verbs": [
@@ -15,7 +15,7 @@
         },
         {
             "name": "projects",
-            "singularName": "",
+            "singularName": "project",
             "namespaced": false,
             "kind": "Project",
             "verbs": [

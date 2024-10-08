@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "buildconfigs",
-            "singularName": "",
+            "singularName": "buildconfig",
             "namespaced": true,
             "kind": "BuildConfig",
             "verbs": [
@@ -55,7 +55,7 @@
         },
         {
             "name": "builds",
-            "singularName": "",
+            "singularName": "build",
             "namespaced": true,
             "kind": "Build",
             "verbs": [

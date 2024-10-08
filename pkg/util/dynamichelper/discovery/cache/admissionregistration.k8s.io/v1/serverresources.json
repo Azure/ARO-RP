@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "mutatingwebhookconfigurations",
-            "singularName": "",
+            "singularName": "mutatingwebhookconfiguration",
             "namespaced": false,
             "kind": "MutatingWebhookConfiguration",
             "verbs": [
@@ -25,7 +25,7 @@
         },
         {
             "name": "validatingwebhookconfigurations",
-            "singularName": "",
+            "singularName": "validatingwebhookconfiguration",
             "namespaced": false,
             "kind": "ValidatingWebhookConfiguration",
             "verbs": [

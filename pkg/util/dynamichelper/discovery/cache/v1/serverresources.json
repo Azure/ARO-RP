@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "bindings",
-            "singularName": "",
+            "singularName": "binding",
             "namespaced": true,
             "kind": "Binding",
             "verbs": [
@@ -14,7 +14,7 @@
         },
         {
             "name": "componentstatuses",
-            "singularName": "",
+            "singularName": "componentstatus",
             "namespaced": false,
             "kind": "ComponentStatus",
             "verbs": [
@@ -27,7 +27,7 @@
         },
         {
             "name": "configmaps",
-            "singularName": "",
+            "singularName": "configmap",
             "namespaced": true,
             "kind": "ConfigMap",
             "verbs": [
@@ -47,7 +47,7 @@
         },
         {
             "name": "endpoints",
-            "singularName": "",
+            "singularName": "endpoints",
             "namespaced": true,
             "kind": "Endpoints",
             "verbs": [
@@ -67,7 +67,7 @@
         },
         {
             "name": "events",
-            "singularName": "",
+            "singularName": "event",
             "namespaced": true,
             "kind": "Event",
             "verbs": [
@@ -87,7 +87,7 @@
         },
         {
             "name": "limitranges",
-            "singularName": "",
+            "singularName": "limitrange",
             "namespaced": true,
             "kind": "LimitRange",
             "verbs": [
@@ -107,7 +107,7 @@
         },
         {
             "name": "namespaces",
-            "singularName": "",
+            "singularName": "namespace",
             "namespaced": false,
             "kind": "Namespace",
             "verbs": [
@@ -146,7 +146,7 @@
         },
         {
             "name": "nodes",
-            "singularName": "",
+            "singularName": "node",
             "namespaced": false,
             "kind": "Node",
             "verbs": [
@@ -190,7 +190,7 @@
         },
         {
             "name": "persistentvolumeclaims",
-            "singularName": "",
+            "singularName": "persistentvolumeclaim",
             "namespaced": true,
             "kind": "PersistentVolumeClaim",
             "verbs": [
@@ -221,7 +221,7 @@
         },
         {
             "name": "persistentvolumes",
-            "singularName": "",
+            "singularName": "persistentvolume",
             "namespaced": false,
             "kind": "PersistentVolume",
             "verbs": [
@@ -252,7 +252,7 @@
         },
         {
             "name": "pods",
-            "singularName": "",
+            "singularName": "pod",
             "namespaced": true,
             "kind": "Pod",
             "verbs": [
@@ -369,7 +369,7 @@
         },
         {
             "name": "podtemplates",
-            "singularName": "",
+            "singularName": "podtemplate",
             "namespaced": true,
             "kind": "PodTemplate",
             "verbs": [
@@ -386,7 +386,7 @@
         },
         {
             "name": "replicationcontrollers",
-            "singularName": "",
+            "singularName": "replicationcontroller",
             "namespaced": true,
             "kind": "ReplicationController",
             "verbs": [
@@ -433,7 +433,7 @@
         },
         {
             "name": "resourcequotas",
-            "singularName": "",
+            "singularName": "resourcequota",
             "namespaced": true,
             "kind": "ResourceQuota",
             "verbs": [
@@ -464,7 +464,7 @@
         },
         {
             "name": "secrets",
-            "singularName": "",
+            "singularName": "secret",
             "namespaced": true,
             "kind": "Secret",
             "verbs": [
@@ -481,7 +481,7 @@
         },
         {
             "name": "serviceaccounts",
-            "singularName": "",
+            "singularName": "serviceaccount",
             "namespaced": true,
             "kind": "ServiceAccount",
             "verbs": [
@@ -512,7 +512,7 @@
         },
         {
             "name": "services",
-            "singularName": "",
+            "singularName": "service",
             "namespaced": true,
             "kind": "Service",
             "verbs": [

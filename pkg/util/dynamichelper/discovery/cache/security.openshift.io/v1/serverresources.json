@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "podsecuritypolicyreviews",
-            "singularName": "",
+            "singularName": "podsecuritypolicyreview",
             "namespaced": true,
             "kind": "PodSecurityPolicyReview",
             "verbs": [
@@ -14,7 +14,7 @@
         },
         {
             "name": "podsecuritypolicyselfsubjectreviews",
-            "singularName": "",
+            "singularName": "podsecuritypolicyselfsubjectreview",
             "namespaced": true,
             "kind": "PodSecurityPolicySelfSubjectReview",
             "verbs": [
@@ -23,7 +23,7 @@
         },
         {
             "name": "podsecuritypolicysubjectreviews",
-            "singularName": "",
+            "singularName": "podsecuritypolicysubjectreview",
             "namespaced": true,
             "kind": "PodSecurityPolicySubjectReview",
             "verbs": [
@@ -32,7 +32,7 @@
         },
         {
             "name": "rangeallocations",
-            "singularName": "",
+            "singularName": "rangeallocation",
             "namespaced": false,
             "kind": "RangeAllocation",
             "verbs": [
@@ -49,7 +49,7 @@
         },
         {
             "name": "securitycontextconstraints",
-            "singularName": "",
+            "singularName": "securitycontextconstraint",
             "namespaced": false,
             "kind": "SecurityContextConstraints",
             "verbs": [

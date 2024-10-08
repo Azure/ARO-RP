@@ -1,0 +1,58 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "ipam.cluster.x-k8s.io/v1beta1",
+    "resources": [
+        {
+            "name": "ipaddressclaims",
+            "singularName": "ipaddressclaim",
+            "namespaced": true,
+            "kind": "IPAddressClaim",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "cluster-api"
+            ],
+            "storageVersionHash": "N6WtanXTMEQ="
+        },
+        {
+            "name": "ipaddressclaims/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "IPAddressClaim",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "ipaddresses",
+            "singularName": "ipaddress",
+            "namespaced": true,
+            "kind": "IPAddress",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "cluster-api"
+            ],
+            "storageVersionHash": "NilqVVotPvk="
+        }
+    ]
+}

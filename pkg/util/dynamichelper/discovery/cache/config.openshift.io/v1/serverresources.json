@@ -259,6 +259,37 @@
             ]
         },
         {
+            "name": "imagedigestmirrorsets",
+            "singularName": "imagedigestmirrorset",
+            "namespaced": false,
+            "kind": "ImageDigestMirrorSet",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "idms"
+            ],
+            "storageVersionHash": "zi/B9bSSdlo="
+        },
+        {
+            "name": "imagedigestmirrorsets/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ImageDigestMirrorSet",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "images",
             "singularName": "image",
             "namespaced": false,
@@ -280,6 +311,37 @@
             "singularName": "",
             "namespaced": false,
             "kind": "Image",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "imagetagmirrorsets",
+            "singularName": "imagetagmirrorset",
+            "namespaced": false,
+            "kind": "ImageTagMirrorSet",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "itms"
+            ],
+            "storageVersionHash": "4StnNv6vobU="
+        },
+        {
+            "name": "imagetagmirrorsets/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ImageTagMirrorSet",
             "verbs": [
                 "get",
                 "patch",

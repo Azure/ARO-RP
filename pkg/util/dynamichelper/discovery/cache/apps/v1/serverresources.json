@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "controllerrevisions",
-            "singularName": "",
+            "singularName": "controllerrevision",
             "namespaced": true,
             "kind": "ControllerRevision",
             "verbs": [
@@ -22,7 +22,7 @@
         },
         {
             "name": "daemonsets",
-            "singularName": "",
+            "singularName": "daemonset",
             "namespaced": true,
             "kind": "DaemonSet",
             "verbs": [
@@ -56,7 +56,7 @@
         },
         {
             "name": "deployments",
-            "singularName": "",
+            "singularName": "deployment",
             "namespaced": true,
             "kind": "Deployment",
             "verbs": [
@@ -103,7 +103,7 @@
         },
         {
             "name": "replicasets",
-            "singularName": "",
+            "singularName": "replicaset",
             "namespaced": true,
             "kind": "ReplicaSet",
             "verbs": [
@@ -150,7 +150,7 @@
         },
         {
             "name": "statefulsets",
-            "singularName": "",
+            "singularName": "statefulset",
             "namespaced": true,
             "kind": "StatefulSet",
             "verbs": [

@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "localsubjectaccessreviews",
-            "singularName": "",
+            "singularName": "localsubjectaccessreview",
             "namespaced": true,
             "kind": "LocalSubjectAccessReview",
             "verbs": [
@@ -14,7 +14,7 @@
         },
         {
             "name": "selfsubjectaccessreviews",
-            "singularName": "",
+            "singularName": "selfsubjectaccessreview",
             "namespaced": false,
             "kind": "SelfSubjectAccessReview",
             "verbs": [
@@ -23,7 +23,7 @@
         },
         {
             "name": "selfsubjectrulesreviews",
-            "singularName": "",
+            "singularName": "selfsubjectrulesreview",
             "namespaced": false,
             "kind": "SelfSubjectRulesReview",
             "verbs": [
@@ -32,7 +32,7 @@
         },
         {
             "name": "subjectaccessreviews",
-            "singularName": "",
+            "singularName": "subjectaccessreview",
             "namespaced": false,
             "kind": "SubjectAccessReview",
             "verbs": [

@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "horizontalpodautoscalers",
-            "singularName": "",
+            "singularName": "horizontalpodautoscaler",
             "namespaced": true,
             "kind": "HorizontalPodAutoscaler",
             "verbs": [
@@ -24,7 +24,7 @@
             "categories": [
                 "all"
             ],
-            "storageVersionHash": "oQlkt7f5j/A="
+            "storageVersionHash": "qwQve8ut294="
         },
         {
             "name": "horizontalpodautoscalers/status",

@@ -4,6 +4,37 @@
     "groupVersion": "k8s.ovn.org/v1",
     "resources": [
         {
+            "name": "adminpolicybasedexternalroutes",
+            "singularName": "adminpolicybasedexternalroute",
+            "namespaced": false,
+            "kind": "AdminPolicyBasedExternalRoute",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "apbexternalroute"
+            ],
+            "storageVersionHash": "mP1M6SN2oOo="
+        },
+        {
+            "name": "adminpolicybasedexternalroutes/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "AdminPolicyBasedExternalRoute",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "egressfirewalls",
             "singularName": "egressfirewall",
             "namespaced": true,
@@ -19,6 +50,17 @@
                 "watch"
             ],
             "storageVersionHash": "AElnPxlhG7g="
+        },
+        {
+            "name": "egressfirewalls/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "EgressFirewall",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
         },
         {
             "name": "egressips",
@@ -62,6 +104,34 @@
             "singularName": "",
             "namespaced": true,
             "kind": "EgressQoS",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "egressservices",
+            "singularName": "egressservice",
+            "namespaced": true,
+            "kind": "EgressService",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "i7/QsTd2GEY="
+        },
+        {
+            "name": "egressservices/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "EgressService",
             "verbs": [
                 "get",
                 "patch",

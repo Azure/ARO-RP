@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "leases",
-            "singularName": "",
+            "singularName": "lease",
             "namespaced": true,
             "kind": "Lease",
             "verbs": [

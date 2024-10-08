@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "oauthaccesstokens",
-            "singularName": "",
+            "singularName": "oauthaccesstoken",
             "namespaced": false,
             "kind": "OAuthAccessToken",
             "verbs": [
@@ -22,7 +22,7 @@
         },
         {
             "name": "oauthauthorizetokens",
-            "singularName": "",
+            "singularName": "oauthauthorizetoken",
             "namespaced": false,
             "kind": "OAuthAuthorizeToken",
             "verbs": [
@@ -39,7 +39,7 @@
         },
         {
             "name": "oauthclientauthorizations",
-            "singularName": "",
+            "singularName": "oauthclientauthorization",
             "namespaced": false,
             "kind": "OAuthClientAuthorization",
             "verbs": [
@@ -56,7 +56,7 @@
         },
         {
             "name": "oauthclients",
-            "singularName": "",
+            "singularName": "oauthclient",
             "namespaced": false,
             "kind": "OAuthClient",
             "verbs": [
@@ -73,7 +73,7 @@
         },
         {
             "name": "tokenreviews",
-            "singularName": "",
+            "singularName": "tokenreview",
             "namespaced": false,
             "group": "authentication.k8s.io",
             "version": "v1",
@@ -84,7 +84,7 @@
         },
         {
             "name": "useroauthaccesstokens",
-            "singularName": "",
+            "singularName": "useroauthaccesstoken",
             "namespaced": false,
             "kind": "UserOAuthAccessToken",
             "verbs": [

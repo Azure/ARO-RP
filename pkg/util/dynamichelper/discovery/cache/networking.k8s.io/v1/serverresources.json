@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "ingressclasses",
-            "singularName": "",
+            "singularName": "ingressclass",
             "namespaced": false,
             "kind": "IngressClass",
             "verbs": [
@@ -22,7 +22,7 @@
         },
         {
             "name": "ingresses",
-            "singularName": "",
+            "singularName": "ingress",
             "namespaced": true,
             "kind": "Ingress",
             "verbs": [
@@ -53,7 +53,7 @@
         },
         {
             "name": "networkpolicies",
-            "singularName": "",
+            "singularName": "networkpolicy",
             "namespaced": true,
             "kind": "NetworkPolicy",
             "verbs": [
@@ -70,17 +70,6 @@
                 "netpol"
             ],
             "storageVersionHash": "YpfwF18m1G8="
-        },
-        {
-            "name": "networkpolicies/status",
-            "singularName": "",
-            "namespaced": true,
-            "kind": "NetworkPolicy",
-            "verbs": [
-                "get",
-                "patch",
-                "update"
-            ]
         }
     ]
 }

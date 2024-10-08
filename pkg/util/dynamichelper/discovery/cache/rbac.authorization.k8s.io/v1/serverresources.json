@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "clusterrolebindings",
-            "singularName": "",
+            "singularName": "clusterrolebinding",
             "namespaced": false,
             "kind": "ClusterRoleBinding",
             "verbs": [
@@ -22,7 +22,7 @@
         },
         {
             "name": "clusterroles",
-            "singularName": "",
+            "singularName": "clusterrole",
             "namespaced": false,
             "kind": "ClusterRole",
             "verbs": [
@@ -39,7 +39,7 @@
         },
         {
             "name": "rolebindings",
-            "singularName": "",
+            "singularName": "rolebinding",
             "namespaced": true,
             "kind": "RoleBinding",
             "verbs": [
@@ -56,7 +56,7 @@
         },
         {
             "name": "roles",
-            "singularName": "",
+            "singularName": "role",
             "namespaced": true,
             "kind": "Role",
             "verbs": [

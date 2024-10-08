@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "clusterrolebindings",
-            "singularName": "",
+            "singularName": "clusterrolebinding",
             "namespaced": false,
             "kind": "ClusterRoleBinding",
             "verbs": [
@@ -19,7 +19,7 @@
         },
         {
             "name": "clusterroles",
-            "singularName": "",
+            "singularName": "clusterrole",
             "namespaced": false,
             "kind": "ClusterRole",
             "verbs": [
@@ -33,7 +33,7 @@
         },
         {
             "name": "localresourceaccessreviews",
-            "singularName": "",
+            "singularName": "localresourceaccessreview",
             "namespaced": true,
             "kind": "LocalResourceAccessReview",
             "verbs": [
@@ -42,7 +42,7 @@
         },
         {
             "name": "localsubjectaccessreviews",
-            "singularName": "",
+            "singularName": "localsubjectaccessreview",
             "namespaced": true,
             "kind": "LocalSubjectAccessReview",
             "verbs": [
@@ -51,7 +51,7 @@
         },
         {
             "name": "resourceaccessreviews",
-            "singularName": "",
+            "singularName": "localresourceaccessreview",
             "namespaced": false,
             "kind": "ResourceAccessReview",
             "verbs": [
@@ -60,7 +60,7 @@
         },
         {
             "name": "rolebindingrestrictions",
-            "singularName": "",
+            "singularName": "rolebindingrestriction",
             "namespaced": true,
             "kind": "RoleBindingRestriction",
             "verbs": [
@@ -76,7 +76,7 @@
         },
         {
             "name": "rolebindings",
-            "singularName": "",
+            "singularName": "rolebinding",
             "namespaced": true,
             "kind": "RoleBinding",
             "verbs": [
@@ -90,7 +90,7 @@
         },
         {
             "name": "roles",
-            "singularName": "",
+            "singularName": "role",
             "namespaced": true,
             "kind": "Role",
             "verbs": [
@@ -104,7 +104,7 @@
         },
         {
             "name": "selfsubjectrulesreviews",
-            "singularName": "",
+            "singularName": "selfsubjectrulesreview",
             "namespaced": true,
             "kind": "SelfSubjectRulesReview",
             "verbs": [
@@ -113,7 +113,7 @@
         },
         {
             "name": "subjectaccessreviews",
-            "singularName": "",
+            "singularName": "subjectaccessreview",
             "namespaced": false,
             "kind": "SubjectAccessReview",
             "verbs": [
@@ -122,7 +122,7 @@
         },
         {
             "name": "subjectrulesreviews",
-            "singularName": "",
+            "singularName": "subjectrulesreview",
             "namespaced": true,
             "kind": "SubjectRulesReview",
             "verbs": [

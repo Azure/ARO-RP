@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "images",
-            "singularName": "",
+            "singularName": "image",
             "namespaced": false,
             "kind": "Image",
             "verbs": [
@@ -22,7 +22,7 @@
         },
         {
             "name": "imagesignatures",
-            "singularName": "",
+            "singularName": "imagesignature",
             "namespaced": false,
             "kind": "ImageSignature",
             "verbs": [
@@ -32,7 +32,7 @@
         },
         {
             "name": "imagestreamimages",
-            "singularName": "",
+            "singularName": "imagestreamimage",
             "namespaced": true,
             "kind": "ImageStreamImage",
             "verbs": [
@@ -44,7 +44,7 @@
         },
         {
             "name": "imagestreamimports",
-            "singularName": "",
+            "singularName": "imagestreamimport",
             "namespaced": true,
             "kind": "ImageStreamImport",
             "verbs": [
@@ -53,7 +53,7 @@
         },
         {
             "name": "imagestreammappings",
-            "singularName": "",
+            "singularName": "imagestreammapping",
             "namespaced": true,
             "kind": "ImageStreamMapping",
             "verbs": [
@@ -62,7 +62,7 @@
         },
         {
             "name": "imagestreams",
-            "singularName": "",
+            "singularName": "imagestream",
             "namespaced": true,
             "kind": "ImageStream",
             "verbs": [
@@ -114,7 +114,7 @@
         },
         {
             "name": "imagestreamtags",
-            "singularName": "",
+            "singularName": "imagestreamtag",
             "namespaced": true,
             "kind": "ImageStreamTag",
             "verbs": [
@@ -131,7 +131,7 @@
         },
         {
             "name": "imagetags",
-            "singularName": "",
+            "singularName": "imagetag",
             "namespaced": true,
             "kind": "ImageTag",
             "verbs": [

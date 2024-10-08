@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "brokertemplateinstances",
-            "singularName": "",
+            "singularName": "brokertemplateinstance",
             "namespaced": false,
             "kind": "BrokerTemplateInstance",
             "verbs": [
@@ -22,7 +22,7 @@
         },
         {
             "name": "processedtemplates",
-            "singularName": "",
+            "singularName": "processedtemplate",
             "namespaced": true,
             "kind": "Template",
             "verbs": [
@@ -31,7 +31,7 @@
         },
         {
             "name": "templateinstances",
-            "singularName": "",
+            "singularName": "templateinstance",
             "namespaced": true,
             "kind": "TemplateInstance",
             "verbs": [
@@ -59,7 +59,7 @@
         },
         {
             "name": "templates",
-            "singularName": "",
+            "singularName": "template",
             "namespaced": true,
             "kind": "Template",
             "verbs": [

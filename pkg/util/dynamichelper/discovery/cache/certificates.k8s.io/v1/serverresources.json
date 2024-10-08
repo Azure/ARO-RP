@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "certificatesigningrequests",
-            "singularName": "",
+            "singularName": "certificatesigningrequest",
             "namespaced": false,
             "kind": "CertificateSigningRequest",
             "verbs": [

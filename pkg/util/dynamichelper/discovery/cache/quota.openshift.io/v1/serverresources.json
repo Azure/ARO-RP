@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "appliedclusterresourcequotas",
-            "singularName": "",
+            "singularName": "appliedclusterresourcequota",
             "namespaced": true,
             "kind": "AppliedClusterResourceQuota",
             "verbs": [
@@ -15,7 +15,7 @@
         },
         {
             "name": "clusterresourcequotas",
-            "singularName": "",
+            "singularName": "clusterresourcequota",
             "namespaced": false,
             "kind": "ClusterResourceQuota",
             "verbs": [

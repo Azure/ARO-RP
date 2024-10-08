@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta2",
+    "groupVersion": "policy.networking.k8s.io/v1alpha1",
     "resources": [
         {
-            "name": "flowschemas",
-            "singularName": "",
+            "name": "adminnetworkpolicies",
+            "singularName": "adminnetworkpolicy",
             "namespaced": false,
-            "kind": "FlowSchema",
+            "kind": "AdminNetworkPolicy",
             "verbs": [
                 "create",
                 "delete",
@@ -18,13 +18,16 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "9bSnTLYweJ0="
+            "shortNames": [
+                "anp"
+            ],
+            "storageVersionHash": "kSYsA/7eg18="
         },
         {
-            "name": "flowschemas/status",
+            "name": "adminnetworkpolicies/status",
             "singularName": "",
             "namespaced": false,
-            "kind": "FlowSchema",
+            "kind": "AdminNetworkPolicy",
             "verbs": [
                 "get",
                 "patch",
@@ -32,10 +35,10 @@
             ]
         },
         {
-            "name": "prioritylevelconfigurations",
-            "singularName": "",
+            "name": "baselineadminnetworkpolicies",
+            "singularName": "baselineadminnetworkpolicy",
             "namespaced": false,
-            "kind": "PriorityLevelConfiguration",
+            "kind": "BaselineAdminNetworkPolicy",
             "verbs": [
                 "create",
                 "delete",
@@ -46,13 +49,16 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "BFVwf8eYnsw="
+            "shortNames": [
+                "banp"
+            ],
+            "storageVersionHash": "KFUZYBf4fKs="
         },
         {
-            "name": "prioritylevelconfigurations/status",
+            "name": "baselineadminnetworkpolicies/status",
             "singularName": "",
             "namespaced": false,
-            "kind": "PriorityLevelConfiguration",
+            "kind": "BaselineAdminNetworkPolicy",
             "verbs": [
                 "get",
                 "patch",
