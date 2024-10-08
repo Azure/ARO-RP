@@ -123,12 +123,14 @@ func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID, resourceGroup
 		return nil
 	}
 
-	return rbac.ResourceRoleAssignment(
+	r := rbac.ResourceGroupRoleAssignmentWithName(
 		roleID,
-		objID,
-		"Microsoft.Resources/resourceGroups",
-		fmt.Sprintf("'%s'", resourceGroup),
+		"'"+objID+"'",
+		"guid(resourceGroup().id, '"+roleID+"')",
 	)
+
+	r.DependsOn = []string{}
+	return r
 }
 
 // storageAccount will return storage account resource.

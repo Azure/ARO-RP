@@ -145,15 +145,15 @@ func (m *manager) getPlatformWorkloadIdentityFederatedCredName(sa string, identi
 		return "", err
 	}
 
-	name := fmt.Sprintf("%s-%s-%s", m.doc.OpenShiftCluster.ID, sa, identityResourceId.ResourceName)
+	name := fmt.Sprintf("%s-%s-%s", m.doc.ID, sa, identityResourceId.ResourceName)
 	// the base-36 encoded string of a SHA-224 hash will typically be around 43 to 44 characters long.
 	hash := sha256.Sum224([]byte(name))
 	encodedName := (&big.Int{}).SetBytes(hash[:]).Text(36)
 	remainingChars := 120 - len(encodedName) - 1
 
-	if remainingChars < len(m.doc.OpenShiftCluster.ID) {
-		return fmt.Sprintf("%s-%s", m.doc.OpenShiftCluster.ID[:remainingChars], encodedName), nil
+	if remainingChars < len(m.doc.ID) {
+		return fmt.Sprintf("%s-%s", m.doc.ID[:remainingChars], encodedName), nil
 	}
 
-	return fmt.Sprintf("%s-%s", m.doc.OpenShiftCluster.ID, encodedName), nil
+	return fmt.Sprintf("%s-%s", m.doc.ID, encodedName), nil
 }
