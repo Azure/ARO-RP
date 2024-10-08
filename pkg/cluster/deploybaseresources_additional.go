@@ -98,7 +98,6 @@ func (m *manager) platformWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 	}
 
 	resources := []*arm.Resource{}
-	managedRG := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 
@@ -113,22 +112,24 @@ func (m *manager) platformWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 		}
 
 		roleID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
-		resources = append(resources, m.workloadIdentityResourceGroupRBAC(roleID, identity.ObjectID, managedRG))
+		resources = append(resources, m.workloadIdentityResourceGroupRBAC(roleID, identity.ObjectID))
 	}
 	return resources, nil
 }
 
-func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID, resourceGroup string) *arm.Resource {
+func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID string) *arm.Resource {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return nil
 	}
 
-	return rbac.ResourceRoleAssignment(
+	r := rbac.ResourceGroupRoleAssignmentWithName(
 		roleID,
 		objID,
-		"Microsoft.Resources/resourceGroups",
-		fmt.Sprintf("'%s'", resourceGroup),
+		"'"+objID+"'",
+		"guid(resourceGroup().id, '"+roleID+"')",
 	)
+	r.DependsOn = []string{}
+	return r
 }
 
 // storageAccount will return storage account resource.
