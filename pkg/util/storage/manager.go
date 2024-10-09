@@ -74,7 +74,7 @@ func getCorrectErrWhenTooManyRequests(err error) error {
 func (m *manager) BlobService(ctx context.Context, resourceGroup, account string, p storagesdk.Permissions, r storagesdk.SignedResourceTypes) (blobClient azblob.BlobsClient, err error) {
 	serviceURL := fmt.Sprintf("https://%s.blob.%s", account, m.env.Environment().StorageEndpointSuffix)
 	if m.usesWorkloadIdentity {
-		blobClient, err = azblob.NewBlobsClient(ctx, m.env.Environment(), serviceURL, m.credential)
+		blobClient, err = azblob.NewBlobsClientUsingEntra(ctx, m.env.Environment(), serviceURL, m.credential)
 		if err != nil {
 			return nil, err
 		}
