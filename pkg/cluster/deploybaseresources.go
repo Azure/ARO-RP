@@ -190,10 +190,10 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	}
 
 	resources := []*arm.Resource{
-		m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true),
+		m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true, true),
 		m.storageAccountBlobContainer(clusterStorageAccountName, graph.IgnitionContainer),
 		m.storageAccountBlobContainer(clusterStorageAccountName, graph.GraphContainer),
-		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true),
+		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true, false),
 		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, azureRegion),
 		m.networkPrivateLinkService(azureRegion),
