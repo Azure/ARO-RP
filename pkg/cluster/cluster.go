@@ -98,11 +98,12 @@ type manager struct {
 	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead.
 	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
 	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
+	armSubnets               armnetwork.SubnetsClient
 	userAssignedIdentities   armmsi.UserAssignedIdentitiesClient
 
 	dns     dns.Manager
 	storage storage.Manager
-	subnet  subnet.Manager
+	subnet  subnet.Manager // TODO: use armSubnet instead.
 	graph   graph.Manager
 	rpBlob  azblob.Manager
 
@@ -225,6 +226,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armSubnetsClient, err := armnetwork.NewSubnetsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, clientOptions)
 	if err != nil {
 		return nil, err
@@ -266,6 +272,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		fpPrivateEndpoints:       network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
+		armSubnets:               armSubnetsClient,
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,
