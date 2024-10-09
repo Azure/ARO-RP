@@ -85,10 +85,10 @@ func TestMIMODeleteManifest(t *testing.T) {
 				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},
