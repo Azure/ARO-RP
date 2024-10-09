@@ -154,7 +154,7 @@ secrets:
     file: ./aks.kubeconfig
 services:
   selenium:
-    image: selenium/standalone-chrome
+    image: selenium/standalone-chrome  # Ensure you have a reason for choosing this image over standalone-edge
     container_name: selenium-container
     network_mode: host
     healthcheck:
