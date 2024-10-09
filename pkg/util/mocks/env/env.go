@@ -344,20 +344,6 @@ func (mr *MockInterfaceMockRecorder) FPNewClientCertificateCredential(arg0 any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPNewClientCertificateCredential", reflect.TypeOf((*MockInterface)(nil).FPNewClientCertificateCredential), arg0)
 }
 
-// FPServicePrincipalID mocks base method.
-func (m *MockInterface) FPServicePrincipalID() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FPServicePrincipalID")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// FPServicePrincipalID indicates an expected call of FPServicePrincipalID.
-func (mr *MockInterfaceMockRecorder) FPServicePrincipalID() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPServicePrincipalID", reflect.TypeOf((*MockInterface)(nil).FPServicePrincipalID))
-}
-
 // FeatureIsSet mocks base method.
 func (m *MockInterface) FeatureIsSet(arg0 env.Feature) bool {
 	m.ctrl.T.Helper()
