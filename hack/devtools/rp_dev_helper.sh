@@ -1,4 +1,14 @@
-#!/bin/bash -e
+#!/bin/bash  
+
+set -o errexit \
+       -o nounset \
+       -o monitor
+
+declare -r utils="hack/util.sh"
+if [ -f "$utils" ]; then
+    source "$utils"
+fi
+
 ######## Helper file to run full RP dev either locally or using Azure DevOps Pipelines ########
 
 # Function to extract the image tag - (FUNCTION_NAME)
@@ -32,6 +42,35 @@ get_digest_tag() {
     local IMAGE_TAG=$(extract_image_tag "$IMAGE_NAME" "$VERSION_CONST_FILE")
     echo "$IMAGE_NAME and Tag: $IMAGE_TAG"
     echo "$IMAGE_TAG"
+}
+
+check_deployment() {
+    err_str="Usage $0 <RESOURCE_GROUP> <DEPLOYMENT_NAME>. Please try again"
+    local resource_group=${1?$err_str}
+    local deployment_name=${2?$err_str}
+
+    # Check if the ResourceGroup exists
+    resource_group_info=$(az group show --resource-group "${resource_group}" 2>/dev/null)
+    if [ -z "${resource_group_info}" ]; then
+        log "🔴❌📦 Resource group '${resource_group}' does not exist."
+        return 1
+    fi
+
+    # Check if the deployment exists
+    deployment_info=$(az deployment group show --resource-group "${resource_group}" --name "${deployment_name}" 2>/dev/null)
+    if [ -z "${deployment_info}" ]; then
+        log "🔴❌📦 Deployment '${deployment_name}' does not exist in resource group '${resource_group}'."
+        return 1
+    fi
+    # Check if the provisioning state is 'Succeeded'
+    # check_jq_installed - Might not needed
+    provisioning_state=$(jq -r '.properties.provisioningState' <<< "${deployment_info}")
+    if [[ "${provisioning_state}" == "Succeeded" ]]; then
+        log "🟢📦 Deployment '${deployment_name}' in resource group '${resource_group}' has been provisioned successfully."
+    else
+        log "🔴📦 Deployment '${deployment_name}' in resource group '${resource_group}' has not been provisioned successfully. Current state: ${provisioning_state}"
+        return 1
+    fi
 }
 
 # Example usage

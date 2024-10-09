@@ -161,8 +161,15 @@ PREFIX=aro-v4-e2e
 1. Create an AAD application which will fake up the RP identity.
 
    ```bash
-   AZURE_RP_CLIENT_SECRET="$(uuidgen)"
-   AZURE_RP_CLIENT_ID="$(az ad app create --display-name ${PREFIX}-rp-shared --end-date '2299-12-31T11:59:59+00:00' --key-type Password --key-value "$AZURE_RP_CLIENT_SECRET" --query appId -o tsv)"
+   AZURE_RP_CLIENT_SECRET="$(openssl rand -base64 32)"
+   AZURE_RP_CLIENT_ID="$(az ad app create \
+      --display-name ${PREFIX}-rp-shared \
+      --end-date '2299-12-31T11:59:59+00:00' \
+      --key-type Symmetric \
+      --key-usage Sign \
+      --key-value "$AZURE_RP_CLIENT_SECRET" \
+      --query appId \
+      -o tsv)"
    az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
    ```
 
@@ -175,12 +182,13 @@ PREFIX=aro-v4-e2e
 1. Create an AAD application which will fake up the gateway identity.
 
    ```bash
-   AZURE_GATEWAY_CLIENT_SECRET="$(uuidgen)"
+   AZURE_GATEWAY_CLIENT_SECRET="$(openssl rand -base64 32)"
    AZURE_GATEWAY_CLIENT_ID="$(az ad app create \
      --display-name ${PREFIX}-gateway-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
-     --key-type password \
-     --password "$AZURE_GATEWAY_CLIENT_SECRET" \
+     --key-type Symmetric \
+     --key-usage Sign \
+     --key-value "$AZURE_GATEWAY_CLIENT_SECRET" \
      --query appId \
      -o tsv)"
    az ad sp create --id "$AZURE_GATEWAY_CLIENT_ID" >/dev/null
@@ -189,12 +197,13 @@ PREFIX=aro-v4-e2e
 1. Create an AAD application which will be used by E2E and tooling.
 
    ```bash
-   AZURE_CLIENT_SECRET="$(uuidgen)"
+   AZURE_CLIENT_SECRET="$(openssl rand -base64 32)"
    AZURE_CLIENT_ID="$(az ad app create \
      --display-name ${PREFIX}-tooling-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
-     --key-type password \
-     --password "$AZURE_CLIENT_SECRET" \
+     --key-type Symmetric \
+     --key-usage Sign \
+     --key-value "$AZURE_CLIENT_SECRET" \
      --query appId \
      -o tsv)"
    az ad sp create --id "$AZURE_CLIENT_ID" >/dev/null
@@ -205,18 +214,39 @@ PREFIX=aro-v4-e2e
    - `Contributor` on your subscription.
    - `User Access Administrator` on your subscription.
 
-   You must also manually grant this application the `Microsoft.Graph/Application.ReadWrite.OwnedBy` permission, which requires admin access, in order for AAD applications to be created/deleted on a per-cluster basis.
+1. Add and grant `Microsoft.Graph/Application.ReadWrite.OwnedBy` permission.
+   It requires admin access in order for AAD applications to be created/deleted on a per-cluster basis.
 
-   - Go into the Azure Portal
-   - Go to Azure Active Directory
-   - Navigate to the `aro-v4-tooling-shared` app registration page
-   - Click 'API permissions' in the left side pane
-   - Click 'Add a permission'.
-   - Click 'Microsoft Graph'
-   - Select 'Application permissions'
-   - Search for 'Application' and select `Application.ReadWrite.OwnedBy`
-   - Click 'Add permissions'
-   - This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
+   ```bash
+   local ms_graph_sp_api_id="00000003-0000-0000-c000-000000000000"
+   local permission_id="$(az ad sp show \
+      --id $ms_graph_sp_api_id \
+      --query "appRoles" \
+      -o jsonc | jq -r '.[] | select(.value=="Application.ReadWrite.OwnedBy") | .id')"
+   local app_premission_info="$(az ad app permission list --id fb194a8e-da8a-4b15-8c1e-ef49b98987dc 2>/dev/null)" 
+   az ad app permission add \
+      --id $AZURE_CLIENT_ID \
+      --api $ms_graph_sp_api_id \
+      --api-permissions $permission_id=Role
+   az ad app permission grant \
+      --id $AZURE_CLIENT_ID \
+      --api $ms_graph_sp_api_id
+   # Only an admin can consent the new premission
+   az ad app permission admin-consent \
+      --id $AZURE_CLIENT_ID
+   ```
+
+   Or manuel way
+      - Go into the Azure Portal
+      - Go to Azure Active Directory
+      - Navigate to the `aro-v4-tooling-shared` app registration page
+      - Click 'API permissions' in the left side pane
+      - Click 'Add a permission'.
+      - Click 'Microsoft Graph'
+      - Select 'Application permissions'
+      - Search for 'Application' and select `Application.ReadWrite.OwnedBy`
+      - Click 'Add permissions'
+      - This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
 
 1. Set up the RP role definitions and subscription role assignments in your Azure subscription. The usage of "uuidgen" for fpRoleDefinitionId is simply there to keep from interfering with any linked resources and to create the role net new. This mimics the RBAC that ARM sets up. With at least `User Access Administrator` permissions on your subscription, do:
 
@@ -401,42 +431,51 @@ az ad app credential reset \
    PROXY_DOMAIN_NAME_LABEL=<your-proxy-domain-name-label>
    ```
 
+1. Export resourceGroup and oidc storageAccountName prefix
+
+   ```bash
+   export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
+   export OIDC_PREFIX="${RESOURCEGROUP//-}"
+   ```
+
 1. Create the secrets/env file:
 
    ```bash
    # use a unique prefix for Azure resources when it is set, otherwise use your user's name
    cat >secrets/env <<EOF
+   ######## Prior to sourcing the file the following env vars must be set:    ########
+   ######## AZURE_PREFIX, LOCATION, ADMIN_OBJECT_ID, RESOURCEGROUP, and PARENT_DOMAIN_NAME   ########
    export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
-   export AZURE_TENANT_ID='$AZURE_TENANT_ID'
-   export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
-   export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
-   export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
-   export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
-   export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
-   export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
-   export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
-   export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
-   export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'
-   export AZURE_RP_CLIENT_SECRET='$AZURE_RP_CLIENT_SECRET'
-   export AZURE_GATEWAY_CLIENT_ID='$AZURE_GATEWAY_CLIENT_ID'
-   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_GATEWAY_CLIENT_SECRET='$AZURE_GATEWAY_CLIENT_SECRET'
-   export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
+   export ADMIN_OBJECT_ID="$ADMIN_OBJECT_ID"
+   export AZURE_TENANT_ID="$AZURE_TENANT_ID"
+   export AZURE_SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID"
+   export AZURE_ARM_CLIENT_ID="$AZURE_ARM_CLIENT_ID"
+   export AZURE_FP_CLIENT_ID="$AZURE_FP_CLIENT_ID"
+   export AZURE_FP_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_PORTAL_CLIENT_ID="$AZURE_PORTAL_CLIENT_ID"
+   export AZURE_PORTAL_ACCESS_GROUP_IDS="$ADMIN_OBJECT_ID"
+   export AZURE_PORTAL_ELEVATED_GROUP_IDS="$ADMIN_OBJECT_ID"
+   export AZURE_CLIENT_ID="$AZURE_CLIENT_ID"
+   export AZURE_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_CLIENT_SECRET="$AZURE_CLIENT_SECRET"
+   export AZURE_RP_CLIENT_ID="$AZURE_RP_CLIENT_ID"
+   export AZURE_RP_CLIENT_SECRET="$AZURE_RP_CLIENT_SECRET"
+   export AZURE_GATEWAY_CLIENT_ID="$AZURE_GATEWAY_CLIENT_ID"
+   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_GATEWAY_CLIENT_SECRET="$AZURE_GATEWAY_CLIENT_SECRET"
+   export RESOURCEGROUP="$RESOURCEGROUP"
    export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
    export DATABASE_NAME="\$AZURE_PREFIX"
-   export RP_MODE='development'
-   export PULL_SECRET='$PULL_SECRET'
-   export SECRET_SA_ACCOUNT_NAME='$SECRET_SA_ACCOUNT_NAME'
+   export RP_MODE="development"
+   export PULL_SECRET="$PULL_SECRET"
+   export SECRET_SA_ACCOUNT_NAME="$SECRET_SA_ACCOUNT_NAME"
    export DATABASE_ACCOUNT_NAME="\$RESOURCEGROUP"
    export KEYVAULT_PREFIX="\$RESOURCEGROUP"
-   export ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
-   export PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
-   PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
+   export PARENT_DOMAIN_NAME="$PARENT_DOMAIN_NAME"
+   export PARENT_DOMAIN_RESOURCEGROUP="$PARENT_DOMAIN_RESOURCEGROUP"
    export DOMAIN_NAME="\$LOCATION.\$PARENT_DOMAIN_NAME"
-   export AZURE_ENVIRONMENT='AzurePublicCloud'
-   export OIDC_STORAGE_ACCOUNT_NAME="${RESOURCEGROUP//-}oic"
+   export AZURE_ENVIRONMENT="AzurePublicCloud"
+   export OIDC_STORAGE_ACCOUNT_NAME="${OIDC_PREFIX}oic"
    EOF
    ```
 
