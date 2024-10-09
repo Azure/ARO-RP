@@ -1,4 +1,4 @@
-# Azure DevOps Pipeline running CI
+# Azure DevOps Pipeline running CI and E2E
 
 trigger:
   branches:
@@ -11,74 +11,168 @@ trigger:
     include:
       - v2*
 
-# PR triggers are overridden in the ADO UI
-
-resources:
-  containers:
-    - container: golang
-      image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
-      options: --user=0
-    - container: python
-      image: registry.access.redhat.com/ubi8/python-39:latest
-      options: --user=0
-    - container: ubi8
-      image: registry.access.redhat.com/ubi8/toolbox:8.8
-      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
-
 variables:
   - template: vars.yml
+  - name: REGISTRY
+    value: registry.access.redhat.com
+  - name: LOCAL_ARO_RP_IMAGE
+    value: "arosvcdev.azurecr.io/aro"
+  - name: LOCAL_ARO_AZEXT_IMAGE
+    value: "arosvcdev.azurecr.io/azext-aro"
+  - name: LOCAL_VPN_IMAGE
+    value: "arosvcdev.azurecr.io/vpn"
+  - name: TAG
+    value: $(Build.BuildId)
+  - name: VERSION
+    value: $(Build.BuildId)
 
-jobs:
-  - job: Build_Test_And_Push_Az_ARO_Extension
-    pool:
-      name: 1es-aro-ci-pool
-    steps:
-      - template: ./templates/template-checkout.yml
+stages:
+  - stage: Containerized
+    jobs:
+      - job: Build_Test_And_Push_Az_ARO_Extension
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - template: ./templates/template-checkout.yml
 
-      # Build and test the Az ARO Extension
-      - script: |
-          set -xe
-          DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(Build.BuildId)
-        displayName: 🛠 Build & Test Az ARO Extension
+          # Build and test the Az ARO Extension
+          - script: |
+              set -xe
+              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(VERSION)
+            displayName: 🛠 Build & Test Az ARO Extension
 
-      # Push the image to ACR
-      - template: ./templates/template-acr-push.yml
-        parameters:
-          acrFQDN: 'arosvcdev.azurecr.io'
-          repository: 'azext-aro'
-          pushLatest: true
+          # Push the image to ACR
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              acrFQDN: 'arosvcdev.azurecr.io'
+              repository: 'azext-aro'
+              pushLatest: true
 
-  - job: Build_And_Test_RP_And_Portal
-    pool:
-      name: 1es-aro-ci-pool
-    steps:
-      - template: ./templates/template-checkout.yml
+      - job: Build_And_Test_RP_And_Portal
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - template: ./templates/template-checkout.yml
 
-      # Build and test RP and Portal
-      - script: |
-          set -xe
-          DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(Build.BuildId)
-        displayName: 🛠 Build & Test RP and Portal
+          # Build and test RP and Portal
+          - script: |
+              set -xe
+              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(VERSION)
+            displayName: 🛠 Build & Test RP and Portal
 
-      # Publish test results
-      - task: PublishTestResults@2
-        displayName: 📊 Publish tests results
-        inputs:
-          testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
-        condition: succeededOrFailed()
+          # Publish test results
+          - task: PublishTestResults@2
+            displayName: 📊 Publish tests results
+            inputs:
+              testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
+            condition: succeededOrFailed()
 
-      # Publish code coverage results
-      - task: PublishCodeCoverageResults@2
-        displayName: 📈 Publish code coverage
-        inputs:
-          codeCoverageTool: Cobertura
-          summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
-          failIfCoverageEmpty: false
-        condition: succeededOrFailed()
+          # Publish code coverage results
+          - task: PublishCodeCoverageResults@2
+            displayName: 📈 Publish code coverage
+            inputs:
+              codeCoverageTool: Cobertura
+              summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
+              failIfCoverageEmpty: false
+            condition: succeededOrFailed()
 
-      # Push the image to ACR
-      - template: ./templates/template-acr-push.yml
-        parameters:
-          acrFQDN: 'arosvcdev.azurecr.io'
-          repository: 'aro'
-          pushLatest: true
+          # Push the image to ACR
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              acrFQDN: 'arosvcdev.azurecr.io'
+              repository: 'aro'
+              pushLatest: true
+
+  - stage: E2E  # E2E Stage using Docker Compose
+    dependsOn: Containerized
+    jobs:
+      - job: Run_E2E_Tests
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          # Step 1: Checkout the code
+          - template: ./templates/template-checkout.yml
+
+          # Step 2: Pull the RP image from ACR
+          - template: ./templates/e2e-pipeline-template.yml
+            parameters:
+              rpImageACR: 'arosvcdev.azurecr.io'
+              acrCredentialsJSON: $(acr-credentials)
+
+          # Step 3: Install Docker Compose and Docker
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y docker.io docker-compose-plugin make
+              sudo apt-get install -y openvpn
+              sudo systemctl start docker
+              sudo systemctl enable docker
+            displayName: Install OpenVPN, Docker, and Docker Compose
+
+          # Step 4: AZ CLI Login using the existing secret as in the old pipeline
+          - template: ./templates/template-az-cli-login.yml
+            parameters:
+              azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+
+          # Step 5: Download and extract VPN secrets with `make secrets`
+          - script: |
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              #command to download the secrets tarball and set the environment
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
+              sudo mkdir -p /etc/openvpn
+              ls -R ./secrets
+              sudo cp ./secrets/* /etc/openvpn
+              ls -R /etc/openvpn
+
+            displayName: Download and Setup VPN Secrets
+
+          # Step 6: Setup environment variables for Docker Compose
+          - script: |
+              export RP_IMAGE_ACR=arosvcdev.azurecr.io
+              export VERSION=${BUILD_BUILDID}
+              export E2E_FLAGS="--flag1 --flag2"
+              export E2E_LABEL="test-label"
+              echo "RP_IMAGE_ACR=$RP_IMAGE_ACR" > .env
+              echo "VERSION=$VERSION" >> .env
+              echo "E2E_FLAGS=$E2E_FLAGS" >> .env
+              echo "E2E_LABEL=$E2E_LABEL" >> .env
+              . secrets/env
+              cat .env
+            displayName: Set Up Environment Variables
+
+          # Step 7: Start services using Docker Compose
+          - script: |
+              docker compose --env-file .env -f docker-compose.yml up -d
+              docker ps
+            displayName: Start Services using Docker Compose
+
+          # Step 8: Execute E2E tests
+          - script: |
+              docker compose exec e2e-container make test-e2e
+            displayName: Execute E2E Tests
+
+          # Step 9: Log the output from the services in case of failure
+          - script: |
+              docker compose logs vpn
+              docker compose logs selenium
+              docker compose logs rp
+              docker compose logs e2e
+            displayName: Log Service Output
+            condition: failed()
+
+          # Step 10: Clean up Docker Compose services
+          - script: |
+              docker compose down
+            displayName: Cleanup Docker Compose Services
+            condition: always()
+
+          # Step 11: Cleanup Azure resources
+          - script: |
+              export CI=true
+              . ./hack/e2e/run-rp-and-e2e.sh
+              clean_e2e_db
+            displayName: Cleanup (Azure)
+            condition: always()
+
+          # Step 12: AZ CLI Logout
+          - template: ./templates/template-az-cli-logout.yml

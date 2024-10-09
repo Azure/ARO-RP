@@ -1,0 +1,8 @@
+# Use a Microsoft-approved image
+FROM mcr.microsoft.com/azure-cli:2.61.0 AS base
+
+# Install OpenVPN
+USER root
+RUN apk add --no-cache openvpn || tdnf install -y openvpn || dnf install -y openvpn
+
+ENTRYPOINT openvpn
