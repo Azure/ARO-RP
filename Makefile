@@ -415,7 +415,6 @@ ci-rp: fix-macos-vendor
 	docker cp extract_cover_out:/app/report.xml ./report.xml; \
 	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
 	docker rm extract_cover_out;
-	
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
@@ -435,20 +434,6 @@ fix-macos-vendor:
 ifeq ($(shell uname -s),Darwin)
 	mv ./vendor/github.com/Microsoft ./vendor/github.com/temp-microsoft && mv ./vendor/github.com/temp-microsoft ./vendor/github.com/microsoft || true
 endif
-
-.PHONY: podman-secrets
-podman-secrets: aks.kubeconfig
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore aks.kubeconfig
-	podman $(PODMAN_REMOTE_ARGS) secret create aks.kubeconfig ./aks.kubeconfig
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.key
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.key ./secrets/proxy-client.key
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.crt
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.crt ./secrets/proxy-client.crt
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy.crt
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy.crt ./secrets/proxy.crt
 
 .PHONY: run-portal
 run-portal:
