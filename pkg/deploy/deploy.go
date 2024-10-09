@@ -31,7 +31,7 @@ import (
 var _ Deployer = (*deployer)(nil)
 
 type Deployer interface {
-	PreDeploy(context.Context, int) error
+	PreDeploy(context.Context, int, bool) error
 	DeployRP(context.Context) error
 	DeployGateway(context.Context) error
 	UpgradeRP(context.Context) error

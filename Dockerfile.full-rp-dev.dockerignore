@@ -1,0 +1,16 @@
+# ignore everything
+*
+
+# ...except these
+!Makefile
+!cmd
+!go.mod
+!go.sum
+!hack
+!pkg
+!test
+!vendor
+!Dockerfile.aro-multistage
+!.git
+!.gitignore
+!.bingo

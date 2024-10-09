@@ -268,7 +268,7 @@ func (g *generator) rpParameters() *arm.Parameters {
 	return p
 }
 
-func (g *generator) rpPredeployTemplate() *arm.Template {
+func (g *generator) rpPredeployTemplate(hasAKS bool) *arm.Template {
 	t := templateStanza()
 
 	if g.production {
@@ -328,8 +328,11 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpClusterKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
-		g.rpServiceKeyvaultDynamic(),
 	)
+
+	if hasAKS {
+		t.Resources = append(t.Resources, g.rpServiceKeyvaultDynamic())
+	}
 
 	if g.production {
 		t.Resources = append(t.Resources,
@@ -341,7 +344,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 }
 
 func (g *generator) rpPredeployParameters() *arm.Parameters {
-	t := g.rpPredeployTemplate()
+	t := g.rpPredeployTemplate(true)
 	p := parametersStanza()
 
 	for name, tp := range t.Parameters {

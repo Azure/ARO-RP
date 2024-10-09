@@ -19,6 +19,12 @@ GATEKEEPER_VERSION = v3.15.1
 # Golang version go mod tidy compatibility
 GOLANG_VERSION ?= 1.21
 
+# Variables for RP full dev automation 
+AZURE_PREFIX ?= zzz
+RP_LOCATION ?= eastus
+SKIP_DEPLOYMENTS ?= true
+FULL_RP_DEV_IMAGE ?= generic-repo/full-rp-dev:v0.0.1
+
 include .bingo/Variables.mk
 
 ifneq ($(shell uname -s),Darwin)
@@ -40,6 +46,13 @@ else ifeq ($(RP_IMAGE_ACR),)
 	REGISTRY = registry.access.redhat.com
 else
 	REGISTRY = $(RP_IMAGE_ACR)
+endif
+
+# (workaround) use git commit sha without dirty suffix for FULL RP Dev automation
+ifeq ($(FULL_RP_DEV),)
+	DEPLOY_COMMIT = $(VERSION)
+else
+	DEPLOY_COMMIT = $(shell git rev-parse --short=7 HEAD)
 endif
 
 # prod images
@@ -88,15 +101,23 @@ clean:
 client: generate $(GOIMPORTS)
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
 
+dev-config.yaml:
+	go run ./hack/gendevconfig >dev-config.yaml
+
+.PHONY: pre-deploy-no-aks
+pre-deploy-no-aks: dev-config.yaml
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro pre-deploy-no-aks dev-config.yaml ${LOCATION}
+
+.PHONY: pre-deploy-full
+pre-deploy-full: dev-config.yaml
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro pre-deploy-full dev-config.yaml ${LOCATION}
+
+
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
-deploy:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
-
-.PHONY: dev-config.yaml
-dev-config.yaml:
-	go run ./hack/gendevconfig >dev-config.yaml
+deploy: pre-deploy-full
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(DEPLOY_COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: discoverycache
 discoverycache:
@@ -215,7 +236,7 @@ secrets:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	rm -rf secrets
 	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	tar -xzf secrets.tar.gz
+	tar -xzf secrets.tar.gz --no-same-owner
 	rm secrets.tar.gz
 
 .PHONY: secrets-update
@@ -539,3 +560,21 @@ run-rp: ci-rp podman-secrets
 		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
 		--secret proxy.crt,target=/app/secrets/proxy.crt \
 		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+
+.PHONY: full-rp-dev
+full-rp-dev: # Build and run a full-rp-dev container for automating full-rp-dev
+	podman build --build-arg AZURE_PREFIX=$(AZURE_PREFIX) \
+		--build-arg LOCATION=$(RP_LOCATION) \
+		--build-arg SKIP_DEPLOYMENTS=$(SKIP_DEPLOYMENTS) \
+		--no-cache=$(NO_CACHE) \
+		-f Dockerfile.full-rp-dev \
+		-t $(FULL_RP_DEV_IMAGE) .
+	podman run --rm -it --user=0 --privileged \
+		-v /dev/shm:/dev/shm \
+		-v "${HOME}/.azure:/root/.azure" \
+		--device /dev/net/tun \
+		--name full-rp-dev-container $(FULL_RP_DEV_IMAGE)
+
+.PHONY: full-rp-dev-cleanup # Run full-rp-dev-cleanup target with AZURE_PREFIX and LOCATION
+full-rp-dev-cleanup: # Clean all the full-rp-dev resources by deleting ResourceGroups and KeyVaults
+	source hack/devtools/rp_dev_helper.sh && AZURE_PREFIX=$(AZURE_PREFIX) clean_rp_dev_env $(RP_LOCATION)

@@ -21,3 +21,10 @@ abort() {
     log "Exiting"
     exit 1
 }
+
+# abort_directory is a wrapper of abort that aborts when the go.mod and .git directory are missing from the current directory
+abort_directory() {
+    if [ ! -f go.mod ] || [ ! -d ".git" ]; then
+        abort "this script must by run from the repo's root directory"
+    fi
+}

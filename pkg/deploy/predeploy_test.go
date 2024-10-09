@@ -494,7 +494,7 @@ func TestPreDeploy(t *testing.T) {
 				m(mockDeployments, mockResourceGroups, mockMSIs, mockKV, mockVMSS, mockVMSSVM, tt.testParams)
 			}
 
-			err := d.PreDeploy(ctx, 0)
+			err := d.PreDeploy(ctx, 0, true)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
