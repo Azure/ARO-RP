@@ -92,7 +92,6 @@ type Interface interface {
 	FPAuthorizer(string, ...string) (autorest.Authorizer, error)
 	FPNewClientCertificateCredential(string) (*azidentity.ClientCertificateCredential, error)
 	FPClientID() string
-	FPServicePrincipalID() string
 	Listen() (net.Listener, error)
 	GatewayDomains() []string
 	GatewayResourceGroup() string

@@ -35,7 +35,7 @@ const (
 
 func (m *manager) generateWorkloadIdentityResources() (map[string]kruntime.Object, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		return nil, fmt.Errorf("generateWorkloadIdentityResources called for a CSP cluster")
+		return nil, fmt.Errorf("generateWorkloadIdentityResources called for a Cluster Service Principal cluster")
 	}
 
 	resources := map[string]kruntime.Object{}

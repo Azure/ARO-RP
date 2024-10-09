@@ -130,14 +130,14 @@ func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID string) *arm.R
 	return r
 }
 
-func (m *manager) fpspStorageBlobContributorRBAC(storageAccountName string) (*arm.Resource, error) {
+func (m *manager) fpspStorageBlobContributorRBAC(storageAccountName, principalID string) (*arm.Resource, error) {
 	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		return nil, fmt.Errorf("fpspStorageBlobContributorRBAC called for a CSP cluster")
+		return nil, fmt.Errorf("fpspStorageBlobContributorRBAC called for a Cluster Service Principal cluster")
 	}
 	resourceTypeStorageAccount := "Microsoft.Storage/storageAccounts"
 	return rbac.ResourceRoleAssignmentWithName(
 		rbac.RoleStorageBlobDataContributor,
-		"'"+m.env.FPServicePrincipalID()+"'",
+		"'"+principalID+"'",
 		resourceTypeStorageAccount,
 		fmt.Sprintf("'%s'", storageAccountName),
 		fmt.Sprintf("concat('%s', '/Microsoft.Authorization/', guid(resourceId('%s', '%s')))", storageAccountName, resourceTypeStorageAccount, storageAccountName),

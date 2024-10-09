@@ -17,6 +17,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 )
 
+const (
+	GraphContainer    = "aro"
+	GraphBlob         = "graph"
+	IgnitionContainer = "ignition"
+)
+
 type Manager interface {
 	Exists(ctx context.Context, resourceGroup, account string) (bool, error)
 	LoadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error)
@@ -48,7 +54,7 @@ func (m *manager) Exists(ctx context.Context, resourceGroup, account string) (bo
 		return false, err
 	}
 
-	return blobService.BlobExists(ctx, "aro", "graph")
+	return blobService.BlobExists(ctx, GraphContainer, GraphBlob)
 }
 
 func (m *manager) LoadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error) {
@@ -77,7 +83,7 @@ func (m *manager) loadPersisted(ctx context.Context, resourceGroup, account stri
 		return nil, err
 	}
 
-	rc, err := blobService.DownloadStream(ctx, "aro", "graph", nil)
+	rc, err := blobService.DownloadStream(ctx, GraphContainer, GraphBlob, nil)
 	if err != nil {
 		return nil, err
 	}

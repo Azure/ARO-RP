@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -42,5 +43,5 @@ func (m *manager) removeBootstrapIgnition(ctx context.Context) error {
 		return err
 	}
 
-	return blobService.DeleteContainer(ctx, "ignition")
+	return blobService.DeleteContainer(ctx, graph.IgnitionContainer)
 }

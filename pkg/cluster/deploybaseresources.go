@@ -25,6 +25,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
@@ -191,8 +192,8 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 
 	resources := []*arm.Resource{
 		m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true),
-		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
-		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
+		m.storageAccountBlobContainer(clusterStorageAccountName, graph.IgnitionContainer),
+		m.storageAccountBlobContainer(clusterStorageAccountName, graph.GraphContainer),
 		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true),
 		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, azureRegion),
@@ -240,7 +241,7 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	}
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		storageBlobContributorRBAC, err := m.fpspStorageBlobContributorRBAC(clusterStorageAccountName)
+		storageBlobContributorRBAC, err := m.fpspStorageBlobContributorRBAC(clusterStorageAccountName, m.fpServicePrincipalID)
 		if err != nil {
 			return err
 		}

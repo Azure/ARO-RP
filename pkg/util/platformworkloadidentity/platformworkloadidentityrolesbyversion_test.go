@@ -34,14 +34,14 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "PopulatePlatformWorkloadIdentityRolesByVersion called for a CSP cluster",
+			wantErr: "PopulatePlatformWorkloadIdentityRolesByVersion called for a Cluster Service Principal cluster",
 		},
 		{
 			name: "Fail - Exit the func for non MIWI clusters that has no PlatformWorkloadIdentityProfile or ServicePrincipalProfile",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{},
 			},
-			wantErr: "PopulatePlatformWorkloadIdentityRolesByVersion called for a CSP cluster",
+			wantErr: "PopulatePlatformWorkloadIdentityRolesByVersion called for a Cluster Service Principal cluster",
 		},
 		{
 			name: "Success - The role set document found for the cluster version",
