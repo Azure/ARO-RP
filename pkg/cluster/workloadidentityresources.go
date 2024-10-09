@@ -26,6 +26,10 @@ const (
 	ccoSecretFilename            = "azure-ad-pod-identity-webhook-config.yaml"
 	authenticationConfigName     = "cluster"
 	authenticationConfigFilename = "cluster-authentication-02-config.yaml"
+
+	base36Encoding             = 36
+	maxFederatedCredNameLength = 120
+	numberOfDelimiters         = 1
 )
 
 func (m *manager) generateWorkloadIdentityResources() (map[string]kruntime.Object, error) {
@@ -155,8 +159,8 @@ func (m *manager) getPlatformWorkloadIdentityFederatedCredName(sa string, identi
 	name := fmt.Sprintf("%s-%s-%s", clusterResourceKey, sa, identityResourceId.ResourceName)
 	// the base-36 encoded string of a SHA-224 hash will typically be around 43 to 44 characters long.
 	hash := sha256.Sum224([]byte(name))
-	encodedName := (&big.Int{}).SetBytes(hash[:]).Text(36)
-	remainingChars := 120 - len(encodedName) - 1
+	encodedName := (&big.Int{}).SetBytes(hash[:]).Text(base36Encoding)
+	remainingChars := maxFederatedCredNameLength - len(encodedName) - numberOfDelimiters
 
 	if remainingChars < len(clusterResourceKey) {
 		return fmt.Sprintf("%s-%s", clusterResourceKey[:remainingChars], encodedName), nil
