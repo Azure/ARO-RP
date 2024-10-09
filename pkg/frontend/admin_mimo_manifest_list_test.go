@@ -66,22 +66,22 @@ func TestMIMOListManifests(t *testing.T) {
 				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},
 			wantResponse: &admin.MaintenanceManifestList{
 				MaintenanceManifests: []*admin.MaintenanceManifest{
 					{
-						ID:               "07070707-0707-0707-0707-070707070001",
-						MaintenanceSetID: "exampleset",
-						State:            admin.MaintenanceManifestStatePending,
-						Priority:         0,
-						RunAfter:         1,
-						RunBefore:        1,
+						ID:                "07070707-0707-0707-0707-070707070001",
+						MaintenanceTaskID: "exampletask",
+						State:             admin.MaintenanceManifestStatePending,
+						Priority:          0,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				},
 			},
@@ -102,19 +102,19 @@ func TestMIMOListManifests(t *testing.T) {
 				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset2",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampleset2",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},
@@ -122,12 +122,12 @@ func TestMIMOListManifests(t *testing.T) {
 				NextLink: "https://mockrefererhost/?%24skipToken=" + url.QueryEscape(base64.StdEncoding.EncodeToString([]byte("FAKE1"))),
 				MaintenanceManifests: []*admin.MaintenanceManifest{
 					{
-						ID:               "07070707-0707-0707-0707-070707070001",
-						MaintenanceSetID: "exampleset",
-						State:            admin.MaintenanceManifestStatePending,
-						Priority:         0,
-						RunAfter:         1,
-						RunBefore:        1,
+						ID:                "07070707-0707-0707-0707-070707070001",
+						MaintenanceTaskID: "exampletask",
+						State:             admin.MaintenanceManifestStatePending,
+						Priority:          0,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				},
 			},

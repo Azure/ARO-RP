@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/mimo/sets"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -85,8 +85,8 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			mmf: manifests,
 			oc:  clusters,
 
-			sets: map[string]sets.MaintenanceSet{},
-			now:  now,
+			tasks: map[string]tasks.MaintenanceTask{},
+			now:   now,
 		}
 	})
 
@@ -158,10 +158,10 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				ID:                manifestID,
 				ClusterResourceID: strings.ToLower(clusterResourceID),
 				MaintenanceManifest: api.MaintenanceManifest{
-					State:            api.MaintenanceManifestStatePending,
-					MaintenanceSetID: "0",
-					RunBefore:        600,
-					RunAfter:         0,
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
 				},
 			})
 
@@ -170,17 +170,17 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				ID:                manifestID,
 				ClusterResourceID: strings.ToLower(clusterResourceID),
 				MaintenanceManifest: api.MaintenanceManifest{
-					State:            api.MaintenanceManifestStateCompleted,
-					MaintenanceSetID: "0",
-					StatusText:       "done",
-					RunBefore:        600,
-					RunAfter:         0,
+					State:             api.MaintenanceManifestStateCompleted,
+					MaintenanceTaskID: "0",
+					StatusText:        "done",
+					RunBefore:         600,
+					RunAfter:          0,
 				},
 			})
 		})
 
 		It("runs them", func() {
-			a.AddMaintenanceSets(map[string]sets.MaintenanceSet{
+			a.AddMaintenanceTasks(map[string]tasks.MaintenanceTask{
 				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 					return api.MaintenanceManifestStateCompleted, "done"
 				},
@@ -212,33 +212,33 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				ID:                manifestIDs[0],
 				ClusterResourceID: strings.ToLower(clusterResourceID),
 				MaintenanceManifest: api.MaintenanceManifest{
-					State:            api.MaintenanceManifestStatePending,
-					MaintenanceSetID: "0",
-					RunBefore:        600,
-					RunAfter:         0,
-					Priority:         2,
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+					Priority:          2,
 				},
 			},
 				&api.MaintenanceManifestDocument{
 					ID:                manifestIDs[1],
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						State:            api.MaintenanceManifestStatePending,
-						MaintenanceSetID: "1",
-						RunBefore:        600,
-						RunAfter:         0,
-						Priority:         1,
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "1",
+						RunBefore:         600,
+						RunAfter:          0,
+						Priority:          1,
 					},
 				},
 				&api.MaintenanceManifestDocument{
 					ID:                manifestIDs[2],
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						State:            api.MaintenanceManifestStatePending,
-						MaintenanceSetID: "2",
-						RunBefore:        600,
-						RunAfter:         1,
-						Priority:         0,
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "2",
+						RunBefore:         600,
+						RunAfter:          1,
+						Priority:          0,
 					},
 				})
 
@@ -247,36 +247,36 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				ID:                manifestIDs[0],
 				ClusterResourceID: strings.ToLower(clusterResourceID),
 				MaintenanceManifest: api.MaintenanceManifest{
-					State:            api.MaintenanceManifestStateCompleted,
-					MaintenanceSetID: "0",
-					StatusText:       "done",
-					RunBefore:        600,
-					RunAfter:         0,
-					Priority:         2,
+					State:             api.MaintenanceManifestStateCompleted,
+					MaintenanceTaskID: "0",
+					StatusText:        "done",
+					RunBefore:         600,
+					RunAfter:          0,
+					Priority:          2,
 				},
 			},
 				&api.MaintenanceManifestDocument{
 					ID:                manifestIDs[1],
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						State:            api.MaintenanceManifestStateCompleted,
-						MaintenanceSetID: "1",
-						StatusText:       "done",
-						RunBefore:        600,
-						RunAfter:         0,
-						Priority:         1,
+						State:             api.MaintenanceManifestStateCompleted,
+						MaintenanceTaskID: "1",
+						StatusText:        "done",
+						RunBefore:         600,
+						RunAfter:          0,
+						Priority:          1,
 					},
 				},
 				&api.MaintenanceManifestDocument{
 					ID:                manifestIDs[2],
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						State:            api.MaintenanceManifestStateCompleted,
-						MaintenanceSetID: "2",
-						StatusText:       "done",
-						RunBefore:        600,
-						RunAfter:         1,
-						Priority:         0,
+						State:             api.MaintenanceManifestStateCompleted,
+						MaintenanceTaskID: "2",
+						StatusText:        "done",
+						RunBefore:         600,
+						RunAfter:          1,
+						Priority:          0,
 					},
 				})
 		})
@@ -284,7 +284,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		It("runs them", func() {
 			ordering := []string{}
 
-			a.AddMaintenanceSets(map[string]sets.MaintenanceSet{
+			a.AddMaintenanceTasks(map[string]tasks.MaintenanceTask{
 				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 					ordering = append(ordering, "0")
 					return api.MaintenanceManifestStateCompleted, "done"

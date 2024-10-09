@@ -21,8 +21,8 @@ type MaintenanceManifest struct {
 	State      MaintenanceManifestState `json:"state,omitempty"`
 	StatusText string                   `json:"statusText,omitempty"`
 
-	MaintenanceSetID string `json:"maintenanceSetID,omitempty"`
-	Priority         int    `json:"priority,omitempty"`
+	MaintenanceTaskID string `json:"maintenanceTaskID,omitempty"`
+	Priority          int    `json:"priority,omitempty"`
 
 	// RunAfter defines the earliest that this manifest should start running
 	RunAfter int `json:"runAfter,omitempty"`

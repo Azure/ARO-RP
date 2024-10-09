@@ -84,7 +84,7 @@ func TestEnsureACRToken(t *testing.T) {
 							{
 								Name:      intACR,
 								Username:  user,
-								IssueDate: &date.Time{Time: time.Now().AddDate(0, 0, -100)},
+								IssueDate: &date.Time{Time: time.Now().UTC().AddDate(0, 0, -100)},
 							},
 						},
 					},
@@ -107,7 +107,7 @@ func TestEnsureACRToken(t *testing.T) {
 							{
 								Name:      intACR,
 								Username:  user,
-								IssueDate: &date.Time{Time: time.Now().AddDate(0, 0, -50)},
+								IssueDate: &date.Time{Time: time.Now().UTC().AddDate(0, 0, -50)},
 							},
 						},
 					},

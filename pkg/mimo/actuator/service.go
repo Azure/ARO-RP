@@ -22,7 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/mimo/sets"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
@@ -55,7 +55,7 @@ type service struct {
 	pollTime time.Duration
 	now      func() time.Time
 
-	sets map[string]sets.MaintenanceSet
+	tasks map[string]tasks.MaintenanceTask
 
 	serveHealthz bool
 }
@@ -89,8 +89,8 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 	return s
 }
 
-func (s *service) SetMaintenanceSets(sets map[string]sets.MaintenanceSet) {
-	s.sets = sets
+func (s *service) SetMaintenanceTasks(tasks map[string]tasks.MaintenanceTask) {
+	s.tasks = tasks
 }
 
 func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
@@ -279,7 +279,7 @@ func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
 	}
 
 	// load in the tasks for the Actuator from the controller
-	a.AddMaintenanceSets(s.sets)
+	a.AddMaintenanceTasks(s.tasks)
 
 	t := time.NewTicker(s.pollTime)
 	defer t.Stop()

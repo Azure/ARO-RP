@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
-	"github.com/Azure/ARO-RP/pkg/mimo/sets"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/service"
 )
@@ -81,7 +81,7 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	a := actuator.NewService(_env, _env.Logger(), dialer, dbg, m)
-	a.SetMaintenanceSets(sets.DEFAULT_MAINTENANCE_SETS)
+	a.SetMaintenanceTasks(tasks.DEFAULT_MAINTENANCE_SETS)
 
 	sigterm := make(chan os.Signal, 1)
 	done := make(chan struct{})

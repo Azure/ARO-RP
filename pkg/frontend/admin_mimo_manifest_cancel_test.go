@@ -86,10 +86,10 @@ func TestMIMOCancelManifest(t *testing.T) {
 				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},
@@ -98,20 +98,20 @@ func TestMIMOCancelManifest(t *testing.T) {
 					ID:                "07070707-0707-0707-0707-070707070001",
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStateCancelled,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStateCancelled,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},
 			wantResponse: &admin.MaintenanceManifest{
-				ID:               "07070707-0707-0707-0707-070707070001",
-				MaintenanceSetID: "exampleset",
-				State:            admin.MaintenanceManifestStateCancelled,
-				Priority:         0,
-				RunAfter:         1,
-				RunBefore:        1,
+				ID:                "07070707-0707-0707-0707-070707070001",
+				MaintenanceTaskID: "exampletask",
+				State:             admin.MaintenanceManifestStateCancelled,
+				Priority:          0,
+				RunAfter:          1,
+				RunBefore:         1,
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -129,10 +129,10 @@ func TestMIMOCancelManifest(t *testing.T) {
 				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStateFailed,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStateFailed,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},
@@ -141,10 +141,10 @@ func TestMIMOCancelManifest(t *testing.T) {
 					ID:                "07070707-0707-0707-0707-070707070001",
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStateFailed,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStateFailed,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},

@@ -71,7 +71,7 @@ func TestMIMOCreateManifest(t *testing.T) {
 				})
 			},
 			body:           &admin.MaintenanceManifest{},
-			wantError:      "400: InvalidParameter: maintenanceSetID: Must be provided",
+			wantError:      "400: InvalidParameter: maintenanceTaskID: Must be provided",
 			wantStatusCode: http.StatusBadRequest,
 		},
 
@@ -88,29 +88,29 @@ func TestMIMOCreateManifest(t *testing.T) {
 				})
 			},
 			body: &admin.MaintenanceManifest{
-				MaintenanceSetID: "exampleset",
-				State:            admin.MaintenanceManifestStatePending,
-				RunAfter:         1,
-				RunBefore:        1,
+				MaintenanceTaskID: "exampletask",
+				State:             admin.MaintenanceManifestStatePending,
+				RunAfter:          1,
+				RunBefore:         1,
 			},
 			wantResult: func(c *testdatabase.Checker) {
 				c.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ID:                "07070707-0707-0707-0707-070707070001",
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},
 			wantResponse: &admin.MaintenanceManifest{
-				ID:               "07070707-0707-0707-0707-070707070001",
-				MaintenanceSetID: "exampleset",
-				State:            admin.MaintenanceManifestStatePending,
-				RunAfter:         1,
-				RunBefore:        1,
+				ID:                "07070707-0707-0707-0707-070707070001",
+				MaintenanceTaskID: "exampletask",
+				State:             admin.MaintenanceManifestStatePending,
+				RunAfter:          1,
+				RunBefore:         1,
 			},
 			wantStatusCode: http.StatusCreated,
 		},
@@ -127,28 +127,28 @@ func TestMIMOCreateManifest(t *testing.T) {
 				})
 			},
 			body: &admin.MaintenanceManifest{
-				MaintenanceSetID: "exampleset",
-				RunAfter:         1,
-				RunBefore:        1,
+				MaintenanceTaskID: "exampletask",
+				RunAfter:          1,
+				RunBefore:         1,
 			},
 			wantResult: func(c *testdatabase.Checker) {
 				c.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ID:                "07070707-0707-0707-0707-070707070001",
 					ClusterResourceID: strings.ToLower(resourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceManifestStatePending,
+						RunAfter:          1,
+						RunBefore:         1,
 					},
 				})
 			},
 			wantResponse: &admin.MaintenanceManifest{
-				ID:               "07070707-0707-0707-0707-070707070001",
-				MaintenanceSetID: "exampleset",
-				State:            admin.MaintenanceManifestStatePending,
-				RunAfter:         1,
-				RunBefore:        1,
+				ID:                "07070707-0707-0707-0707-070707070001",
+				MaintenanceTaskID: "exampletask",
+				State:             admin.MaintenanceManifestStatePending,
+				RunAfter:          1,
+				RunBefore:         1,
 			},
 			wantStatusCode: http.StatusCreated,
 		},
