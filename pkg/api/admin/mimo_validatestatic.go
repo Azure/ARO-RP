@@ -34,8 +34,8 @@ func (sv maintenanceManifestStaticValidator) Static(_new interface{}, _current *
 }
 
 func (sv maintenanceManifestStaticValidator) validate(new *MaintenanceManifest) error {
-	if new.MaintenanceSetID == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "maintenanceSetID", "Must be provided")
+	if new.MaintenanceTaskID == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "maintenanceTaskID", "Must be provided")
 	}
 
 	if new.RunAfter == 0 {

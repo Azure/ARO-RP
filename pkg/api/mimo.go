@@ -14,13 +14,7 @@ const (
 	MaintenanceManifestStateCancelled  MaintenanceManifestState = "Cancelled"
 )
 
-type MaintenanceSet struct {
-	MissingFields
-
-	Name string `json:"name,omitempty"`
-}
-
-// MaintenanceManifest represents an instance of a MaintenanceSet running on a
+// MaintenanceManifest represents an instance of a MaintenanceTask running on a
 // given cluster.
 type MaintenanceManifest struct {
 	MissingFields
@@ -28,8 +22,8 @@ type MaintenanceManifest struct {
 	State      MaintenanceManifestState `json:"state,omitempty"`
 	StatusText string                   `json:"statusText,omitempty"`
 
-	MaintenanceSetID string `json:"maintenanceSetID,omitempty"`
-	Priority         int    `json:"priority,omitempty"`
+	MaintenanceTaskID string `json:"maintenanceTaskID,omitempty"`
+	Priority          int    `json:"priority,omitempty"`
 
 	// RunAfter defines the earliest that this manifest should start running
 	RunAfter int `json:"runAfter,omitempty"`

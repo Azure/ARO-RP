@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/mimo/sets"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -176,10 +176,10 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					ID:                manifestID2,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						State:            api.MaintenanceManifestStatePending,
-						RunBefore:        300,
-						RunAfter:         0,
-						MaintenanceSetID: "0000-0000-0001",
+						State:             api.MaintenanceManifestStatePending,
+						RunBefore:         300,
+						RunAfter:          0,
+						MaintenanceTaskID: "0000-0000-0001",
 					},
 				})
 
@@ -199,11 +199,11 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					ID:                manifestID2,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
-						State:            api.MaintenanceManifestStateCompleted,
-						StatusText:       "ok",
-						RunBefore:        300,
-						RunAfter:         0,
-						MaintenanceSetID: "0000-0000-0001",
+						State:             api.MaintenanceManifestStateCompleted,
+						StatusText:        "ok",
+						RunBefore:         300,
+						RunAfter:          0,
+						MaintenanceTaskID: "0000-0000-0001",
 					},
 				},
 			)
@@ -214,7 +214,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			done := make(chan struct{})
 			svc.pollTime = time.Second
 
-			svc.SetMaintenanceSets(map[string]sets.MaintenanceSet{
+			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 					svc.stopping.Store(true)
 					return api.MaintenanceManifestStateCompleted, "ok"
@@ -232,7 +232,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			done := make(chan struct{})
 			svc.pollTime = time.Second
 
-			svc.SetMaintenanceSets(map[string]sets.MaintenanceSet{
+			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 					// ProvisioningState is in the full document, not just the
 					// ClusterResourceID only as in the bucket worker
