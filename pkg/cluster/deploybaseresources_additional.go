@@ -147,7 +147,7 @@ func (m *manager) fpspStorageBlobContributorRBAC(storageAccountName, principalID
 // storageAccount will return storage account resource.
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.
-func (m *manager) storageAccount(name, region string, ocpSubnets []string, encrypted bool) *arm.Resource {
+func (m *manager) storageAccount(name, region string, ocpSubnets []string, encrypted bool, setSasPolicy bool) *arm.Resource {
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
@@ -205,6 +205,15 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 		Name:     &name,
 		Location: &region,
 		Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	}
+
+	// For Workload Identity Cluster disable shared access keys, only User Delegated SAS are allowed
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() && setSasPolicy {
+		sa.AllowSharedKeyAccess = to.BoolPtr(false)
+		sa.SasPolicy = &mgmtstorage.SasPolicy{
+			SasExpirationPeriod: to.StringPtr("0.01:00:00"),
+			ExpirationAction:    to.StringPtr("Log"),
+		}
 	}
 
 	// In development API calls originates from user laptop so we allow all.
