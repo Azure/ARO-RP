@@ -124,11 +124,9 @@ func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID string) *arm.R
 
 	r := rbac.ResourceGroupRoleAssignmentWithName(
 		roleID,
-		objID,
 		"'"+objID+"'",
 		"guid(resourceGroup().id, '"+roleID+"')",
 	)
-	r.DependsOn = []string{}
 	return r
 }
 
