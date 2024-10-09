@@ -17,14 +17,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/mimo/sets"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 )
 
 const maxDequeueCount = 5
 
 type Actuator interface {
 	Process(context.Context) (bool, error)
-	AddMaintenanceSets(map[string]sets.MaintenanceSet)
+	AddMaintenanceTasks(map[string]tasks.MaintenanceTask)
 }
 
 type actuator struct {
@@ -37,7 +37,7 @@ type actuator struct {
 	oc  database.OpenShiftClusters
 	mmf database.MaintenanceManifests
 
-	sets map[string]sets.MaintenanceSet
+	tasks map[string]tasks.MaintenanceTask
 }
 
 func NewActuator(
@@ -54,7 +54,7 @@ func NewActuator(
 		clusterResourceID: strings.ToLower(clusterResourceID),
 		oc:                oc,
 		mmf:               mmf,
-		sets:              make(map[string]sets.MaintenanceSet),
+		tasks:             make(map[string]tasks.MaintenanceTask),
 
 		now: now,
 	}
@@ -62,8 +62,8 @@ func NewActuator(
 	return a, nil
 }
 
-func (a *actuator) AddMaintenanceSets(sets map[string]sets.MaintenanceSet) {
-	maps.Copy(a.sets, sets)
+func (a *actuator) AddMaintenanceTasks(tasks map[string]tasks.MaintenanceTask) {
+	maps.Copy(a.tasks, tasks)
 }
 
 func (a *actuator) Process(ctx context.Context) (bool, error) {
@@ -141,9 +141,9 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
 		// here
-		f, ok := a.sets[doc.MaintenanceManifest.MaintenanceSetID]
+		f, ok := a.tasks[doc.MaintenanceManifest.MaintenanceTaskID]
 		if !ok {
-			a.log.Infof("not found %v", doc.MaintenanceManifest.MaintenanceSetID)
+			a.log.Infof("not found %v", doc.MaintenanceManifest.MaintenanceTaskID)
 			continue
 		}
 

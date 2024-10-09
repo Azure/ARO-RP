@@ -81,7 +81,7 @@ var _ = Describe("MIMO Actuator E2E Testing", func() {
 		resp, err = adminRequest(ctx,
 			http.MethodPut, "/admin"+clusterResourceID+"/maintenancemanifests",
 			url.Values{}, true, &admin.MaintenanceManifest{
-				MaintenanceSetID: mimo.OPERATOR_FLAGS_UPDATE_ID,
+				MaintenanceTaskID: mimo.OPERATOR_FLAGS_UPDATE_ID,
 			}, &out, logOnError(log)...)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusCreated))
