@@ -461,12 +461,3 @@ run-rp:
 	docker compose rm -sf rp
 	docker compose up rp
 
-.PHONY: vpn
-vpn:
-	docker compose build vpn
-
-.PHONY: run-vpn
-run-vpn:
-	docker compose rm -sf vpn
-	docker compose up vpn
-	docker compose logs --follow vpn

@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile.vpn
     container_name: vpn
     privileged: true
+    network_mode: host
     volumes:
       - ${PWD}/secrets:/secrets:z
     devices:
@@ -106,7 +107,7 @@ services:
     container_name: aro-portal
     depends_on:
       rp:
-        condition: service_started
+        condition: service_healthy
     environment:
       - RP_MODE
       - AZURE_SUBSCRIPTION_ID
