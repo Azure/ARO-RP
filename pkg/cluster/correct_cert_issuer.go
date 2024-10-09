@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -16,18 +17,29 @@ import (
 // signing algorithm in use by DigiCert
 func (m *manager) correctCertificateIssuer(ctx context.Context) error {
 	if !strings.Contains(m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain, ".") {
-		for _, certName := range []string{m.doc.ID + "-apiserver", m.doc.ID + "-ingress"} {
-			err := m.ensureCertificateIssuer(ctx, certName, "OneCertV2-PublicCA")
-			if err != nil {
-				return err
-			}
+		apiCertName := m.doc.ID + "-apiserver"
+		apiHostname := strings.Split(strings.TrimPrefix(m.doc.OpenShiftCluster.Properties.APIServerProfile.URL, "https://"), ":")[0]
+		err := m.ensureCertificateIssuer(ctx, apiCertName, apiHostname, "OneCertV2-PublicCA")
+		if err != nil {
+			return err
+		}
+
+		ingressCertName := m.doc.ID + "-ingress"
+		ingressHostname := "*" + strings.TrimSuffix(strings.TrimPrefix(m.doc.OpenShiftCluster.Properties.ConsoleProfile.URL, "https://console-openshift-console"), "/")
+		err = m.ensureCertificateIssuer(ctx, ingressCertName, ingressHostname, "OneCertV2-PublicCA")
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (m *manager) ensureCertificateIssuer(ctx context.Context, certificateName, issuerName string) error {
+func (m *manager) ensureCertificateIssuer(ctx context.Context, certificateName, dnsName, issuerName string) error {
+	if strings.Count(dnsName, ".") < 2 {
+		return fmt.Errorf("%s is not a valid DNS name", dnsName)
+	}
+
 	clusterKeyvault := m.env.ClusterKeyvault()
 
 	bundle, err := clusterKeyvault.GetCertificate(ctx, certificateName)
@@ -47,7 +59,7 @@ func (m *manager) ensureCertificateIssuer(ctx context.Context, certificateName, 
 			return err
 		}
 
-		err = clusterKeyvault.CreateSignedCertificate(ctx, issuerName, certificateName, certificateName, keyvault.EkuServerAuth)
+		err = clusterKeyvault.CreateSignedCertificate(ctx, issuerName, certificateName, dnsName, keyvault.EkuServerAuth)
 		if err != nil {
 			return err
 		}
