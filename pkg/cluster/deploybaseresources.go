@@ -56,7 +56,7 @@ func (m *manager) createOIDC(ctx context.Context) error {
 		oidcEndpoint = m.env.OIDCEndpoint()
 	}
 
-	oidcBuilder, err := oidcbuilder.NewOIDCBuilder(m.env, oidcEndpoint, env.OIDCBlobDirectoryPrefix+m.doc.ID)
+	oidcBuilder, err := oidcbuilder.NewOIDCBuilder(m.env, oidcEndpoint, fmt.Sprintf("%s/%s", m.subscriptionDoc.Subscription.Properties.TenantID, m.doc.ID))
 	if err != nil {
 		return err
 	}
