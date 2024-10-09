@@ -20,6 +20,16 @@ services:
       timeout: 3s
       retries: 3
 
+  selenium:
+    image: selenium/standalone-chrome
+    container_name: selenium-container
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   rp:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
     build:
@@ -152,13 +162,3 @@ secrets:
     file: ./secrets/proxy.crt
   hive-kubeconfig:
     file: ./aks.kubeconfig
-services:
-  selenium:
-    image: selenium/standalone-chrome  # Ensure you have a reason for choosing this image over standalone-edge
-    container_name: selenium-container
-    network_mode: host
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4444"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
