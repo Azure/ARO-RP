@@ -103,7 +103,6 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 	tests := []struct {
 		Name                string
 		ClusterDocument     *api.OpenShiftClusterDocument
-		mocks               func(menv *mock_env.MockInterface)
 		ExpectedArmResource *arm.Resource
 		wantErr             string
 	}{
@@ -121,7 +120,7 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "fpspStorageBlobContributorRBAC called for a CSP cluster",
+			wantErr: "fpspStorageBlobContributorRBAC called for a Cluster Service Principal cluster",
 		},
 		{
 			Name: "Success : cluster with PlatformWorkloadIdentityProfile",
@@ -131,9 +130,6 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
 				},
-			},
-			mocks: func(menv *mock_env.MockInterface) {
-				menv.EXPECT().FPServicePrincipalID().Return(fakePrincipalID)
 			},
 			ExpectedArmResource: &arm.Resource{
 				Resource: mgmtauthorization.RoleAssignment{
@@ -160,15 +156,12 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
-			if tt.mocks != nil {
-				tt.mocks(env)
-			}
 
 			m := &manager{
 				doc: tt.ClusterDocument,
 				env: env,
 			}
-			resource, err := m.fpspStorageBlobContributorRBAC(storageAccountName)
+			resource, err := m.fpspStorageBlobContributorRBAC(storageAccountName, fakePrincipalID)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if !reflect.DeepEqual(tt.ExpectedArmResource, resource) {

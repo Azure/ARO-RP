@@ -56,7 +56,6 @@ type prod struct {
 
 	fpCertificateRefresher CertificateRefresher
 	fpClientID             string
-	fpServicePrincipalID   string
 
 	clusterKeyvault keyvault.Manager
 	serviceKeyvault keyvault.Manager
@@ -108,8 +107,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		Core:   core,
 		Dialer: dialer,
 
-		fpClientID:           os.Getenv("AZURE_FP_CLIENT_ID"),
-		fpServicePrincipalID: os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID"),
+		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
 
 		clusterGenevaLoggingAccount:       os.Getenv("CLUSTER_MDSD_ACCOUNT"),
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
@@ -351,10 +349,6 @@ func (p *prod) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authori
 
 func (p *prod) FPClientID() string {
 	return p.fpClientID
-}
-
-func (p *prod) FPServicePrincipalID() string {
-	return p.fpServicePrincipalID
 }
 
 func (p *prod) Listen() (net.Listener, error) {
