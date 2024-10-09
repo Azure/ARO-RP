@@ -442,7 +442,6 @@ run-portal:
 # run-rp executes the RP locally as similarly as possible to production. That
 # includes the use of Hive, meaning you need a VPN connection.
 .PHONY: run-rp
-run-rp:
+run-rp: aks.kubeconfig
 	docker compose rm -sf rp
 	docker compose up rp
-
