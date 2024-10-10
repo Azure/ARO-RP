@@ -406,6 +406,7 @@ func (p *prod) MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy
 	if p.FeatureIsSet(FeatureUseMockMsiRp) {
 		keysToValidate := []string{
 			"MOCK_MSI_CLIENT_ID",
+			"MOCK_MSI_OBJECT_ID",
 			"MOCK_MSI_CERT",
 			"MOCK_MSI_TENANT_ID",
 		}
@@ -425,6 +426,7 @@ func (p *prod) MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy
 							ClientID:                   ptr.To(os.Getenv("MOCK_MSI_CLIENT_ID")),
 							ClientSecret:               ptr.To(os.Getenv("MOCK_MSI_CERT")),
 							TenantID:                   ptr.To(os.Getenv("MOCK_MSI_TENANT_ID")),
+							ObjectID:                   ptr.To(os.Getenv("MOCK_MSI_OBJECT_ID")),
 							ResourceID:                 ptr.To(msiResourceId.String()),
 							AuthenticationEndpoint:     ptr.To(p.Environment().Cloud.ActiveDirectoryAuthorityHost),
 							CannotRenewAfter:           &placeholder,
@@ -437,7 +439,6 @@ func (p *prod) MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy
 								XMSAzNwperimid: []*string{&placeholder},
 								XMSAzTm:        &placeholder,
 							},
-							ObjectID: &placeholder,
 						},
 					},
 				},

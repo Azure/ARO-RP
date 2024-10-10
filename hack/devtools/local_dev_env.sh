@@ -121,6 +121,10 @@ get_mock_msi_tenantID() {
     echo "$1" | jq -r .tenant
 }
 
+get_mock_msi_objectID() {
+    az ad sp list --all --filter "appId eq '$1'" | jq -r ".[] | .id"
+}
+
 get_mock_msi_cert() {
     certFilePath=$(echo "$1" | jq -r '.fileWithCertAndPrivateKey')
     base64EncodedCert=$(base64 -w 0 "$certFilePath")
@@ -234,6 +238,7 @@ create_miwi_env_file() {
     mockClientID=$(get_mock_msi_clientID "$mockMSI")
     mockTenantID=$(get_mock_msi_tenantID "$mockMSI")
     mockCert=$(get_mock_msi_cert "$mockMSI")
+    mockObjectID=$(get_mock_msi_objectID "$mockClientID")
 
     setup_platform_identity
     cluster_msi_role_assignment "${mockClientID}"
@@ -243,6 +248,7 @@ export LOCATION=eastus
 export ARO_IMAGE=arointsvc.azurecr.io/aro:latest
 export RP_MODE=development # to use a development RP running at https://localhost:8443/
 export MOCK_MSI_CLIENT_ID="$mockClientID"
+export MOCK_MSI_OBJECT_ID="$mockObjectID"
 export MOCK_MSI_TENANT_ID="$mockTenantID"
 export MOCK_MSI_CERT="$mockCert"
 export PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"
