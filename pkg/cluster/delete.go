@@ -378,7 +378,7 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 	return err
 }
 
-func (m *manager) deleteIdentityFederations(ctx context.Context) error {
+func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
 		return nil
 	}
@@ -558,7 +558,7 @@ func (m *manager) Delete(ctx context.Context) error {
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		m.log.Printf("deleting platform managed identities' federated credentials")
-		err = m.deleteIdentityFederations(ctx)
+		err = m.deleteFederatedCredentials(ctx)
 		if err != nil {
 			return err
 		}

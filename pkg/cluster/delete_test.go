@@ -686,7 +686,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				clusterMsiFederatedIdentityCredentials: fakeClint,
 			}
 
-			err := m.deleteIdentityFederations(ctx)
+			err := m.deleteFederatedCredentials(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
