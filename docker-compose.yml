@@ -21,7 +21,7 @@ services:
       retries: 3
 
   selenium:
-    image: selenium/standalone-chrome
+    image: selenium/standalone-edge:4.10.0-20230607
     container_name: selenium-container
     network_mode: host
     healthcheck:
