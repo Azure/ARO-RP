@@ -15,6 +15,9 @@ import (
 )
 
 const minimumWorkerNodes = 2
+const workerMachineRoleLabel = "machine.openshift.io/cluster-api-machine-role=worker"
+const workerNodeRoleLabel = "node-role.kubernetes.io/worker"
+const phaseRunning = "Running"
 
 // condition functions should return an error only if it's not able to be retried
 // if a condition function encounters a error when retrying it should return false, nil.
@@ -28,8 +31,33 @@ func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
 }
 
 func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
+	machines, err := m.maocli.MachineV1beta1().Machines("openshift-machine-api").List(ctx, metav1.ListOptions{
+		LabelSelector: workerMachineRoleLabel,
+	})
+	if err != nil {
+		m.log.Error(err)
+		return false, nil
+	}
+
+	readyWorkerMachines := 0
+	for _, machine := range machines.Items {
+		if machine.Status.Phase == nil || machine.Status.ProviderStatus == nil {
+			m.log.Infof("Unable to determine status of machine %s: %v", machine.Name, machine.Status)
+			break
+		}
+		m.log.Infof("Machine %s is %s; status: %s", machine.Name, *machine.Status.Phase, string(machine.Status.ProviderStatus.Raw))
+		if *machine.Status.Phase == phaseRunning {
+			readyWorkerMachines++
+		}
+	}
+
+	if readyWorkerMachines < minimumWorkerNodes {
+		m.log.Infof("%d machines running, need at least %d", readyWorkerMachines, minimumWorkerNodes)
+		return false, nil
+	}
+
 	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{
-		LabelSelector: "node-role.kubernetes.io/worker",
+		LabelSelector: workerNodeRoleLabel,
 	})
 	if err != nil {
 		return false, nil
@@ -37,6 +65,7 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 
 	readyWorkers := 0
 	for _, node := range nodes.Items {
+		m.log.Infof("Node %s status: %v", node.Name, node.Status.Conditions)
 		for _, cond := range node.Status.Conditions {
 			if cond.Type == corev1.NodeReady && cond.Status == corev1.ConditionTrue {
 				readyWorkers++
@@ -44,6 +73,7 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 		}
 	}
 
+	m.log.Infof("%d nodes ready, need at least %d", readyWorkerMachines, minimumWorkerNodes)
 	return readyWorkers >= minimumWorkerNodes, nil
 }
 
