@@ -5,6 +5,8 @@ package admin
 
 import (
 	"time"
+
+	"github.com/Azure/go-autorest/autorest/date"
 )
 
 // OpenShiftClusterList represents a list of OpenShift clusters.
@@ -18,13 +20,14 @@ type OpenShiftClusterList struct {
 
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
-	ID         string                     `json:"id,omitempty" mutable:"case"`
-	Name       string                     `json:"name,omitempty" mutable:"case"`
-	Type       string                     `json:"type,omitempty" mutable:"case"`
-	Location   string                     `json:"location,omitempty"`
-	Tags       map[string]string          `json:"tags,omitempty"`
-	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-	Identity   *Identity                  `json:"identity,omitempty"`
+	ID                         string                     `json:"id,omitempty" mutable:"case"`
+	Name                       string                     `json:"name,omitempty" mutable:"case"`
+	Type                       string                     `json:"type,omitempty" mutable:"case"`
+	Location                   string                     `json:"location,omitempty"`
+	Tags                       map[string]string          `json:"tags,omitempty"`
+	Properties                 OpenShiftClusterProperties `json:"properties,omitempty"`
+	Identity                   *Identity                  `json:"identity,omitempty"`
+	OperatorFlagsMergeStrategy string                     `json:"operatorFlagsMergeStrategy,omitempty" mutable:"true"`
 }
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
@@ -466,8 +469,9 @@ const (
 
 // RegistryProfile represents a registry profile
 type RegistryProfile struct {
-	Name     string `json:"name,omitempty"`
-	Username string `json:"username,omitempty"`
+	Name      string     `json:"name,omitempty"`
+	Username  string     `json:"username,omitempty"`
+	IssueDate *date.Time `json:"issueDate,omitempty"`
 }
 
 // ArchitectureVersion represents an architecture version
