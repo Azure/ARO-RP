@@ -20,12 +20,11 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 	oc.SystemData = nil
 	oc.Properties.WorkerProfilesStatus = nil
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
-			{
-				OperatorName: "",
-				ResourceID:   "",
-				ClientID:     "",
-				ObjectID:     "",
+		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+			"": {
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
 			},
 		},
 	}
@@ -40,9 +39,9 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.ID = ""
 	oc.Name = ""
 	oc.Type = ""
-	oc.Identity = &Identity{
+	oc.Identity = &ManagedServiceIdentity{
 		Type:                   "",
-		UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{},
+		UserAssignedIdentities: map[string]UserAssignedIdentity{},
 	}
 	oc.Properties.ProvisioningState = ""
 	oc.Properties.ClusterProfile.Version = ""
@@ -59,12 +58,11 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 		},
 	}
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
-			{
-				OperatorName: "",
-				ResourceID:   "",
-				ClientID:     "",
-				ObjectID:     "",
+		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+			"": {
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
 			},
 		},
 	}
@@ -91,12 +89,11 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 		},
 	}
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
-			{
-				OperatorName: "",
-				ResourceID:   "",
-				ClientID:     "",
-				ObjectID:     "",
+		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+			"": {
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
 			},
 		},
 	}
