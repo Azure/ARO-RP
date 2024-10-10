@@ -1,0 +1,115 @@
+- name: Create resource group
+  ansible.builtin.include_tasks:
+    file: ../tasks/create_resourcegroup.yaml
+- name: Create vnet and subnets
+  ansible.builtin.include_tasks:
+    file: ../tasks/create_vnet.yaml
+
+- name: Generate keyvault name
+  ansible.builtin.set_fact:
+    keyvault_name: "byok-{{ lookup('password', '/dev/null chars=ascii_letters,digits') | to_uuid | replace('-', '') | truncate(24 - 5, end='') }}"
+- name: Debug keyvault_name
+  ansible.builtin.debug:
+    var: keyvault_name
+  tags:
+    - verbose
+- name: Byok keyvault
+  delegate_to: localhost
+  register: byok_keyvault_status
+  azure.azcollection.azure_rm_keyvault:
+    resource_group: "{{ resource_group }}"
+    vault_name: "{{ keyvault_name }}"
+    location: "{{ location }}"
+    enable_purge_protection: true
+    vault_tenant: "{{ sub_info.tenant_id }}"
+    sku:
+      name: standard
+      family: "A"
+    access_policies:
+      - tenant_id: "{{ sub_info.tenant_id }}"
+        object_id: "{{ currentuser_info.id }}"
+        keys: ["encrypt", "decrypt", "wrapkey", "unwrapkey", "sign", "verify", "get", "list",
+               "create", "update", "import", "delete", "backup", "restore", "recover", "purge"]
+    tags:
+      createdby: "{{ currentuser_info.userPrincipalName }}"
+      createdwith: "ansible"
+      purge: "true"
+- name: Debug byok_keyvault_status
+  ansible.builtin.debug:
+    var: byok_keyvault_status
+  tags:
+    - verbose
+- name: Get byok keyvault
+  delegate_to: localhost
+  register: byok_keyvault_info
+  azure.azcollection.azure_rm_keyvault_info:
+    resource_group: "{{ resource_group }}"
+    name: "{{ keyvault_name }}"
+- name: Debug byok_keyvault_info
+  ansible.builtin.debug:
+    var: byok_keyvault_info
+  tags:
+    - verbose
+
+- name: Byok key
+  delegate_to: localhost
+  register: byok_keyvault_key_status
+  azure.azcollection.azure_rm_keyvaultkey:
+    key_name: "{{ name }}-key"
+    keyvault_uri: "{{ byok_keyvault_info.keyvaults[0].vault_uri }}"
+- name: Debug byok_keyvault_key_status
+  ansible.builtin.debug:
+    var: byok_keyvault_key_status
+  tags:
+    - verbose
+- name: Get byok key
+  delegate_to: localhost
+  register: byok_keyvault_key_info
+  azure.azcollection.azure_rm_keyvaultkey_info:
+    vault_uri: "{{ byok_keyvault_info.keyvaults[0].vault_uri }}"
+    name: "{{ name }}-key"
+- name: Debug byok_keyvault_key_info
+  ansible.builtin.debug:
+    var: byok_keyvault_key_info
+  tags:
+    - verbose
+
+- name: Byok disk encryption set
+  delegate_to: localhost
+  register: byok_des_status
+  azure.azcollection.azure_rm_diskencryptionset:
+    resource_group: "{{ resource_group }}"
+    name: "{{ name }}-des"
+    location: "{{ location }}"
+    source_vault: "{{ keyvault_name }}"
+    key_url: "{{ byok_keyvault_key_info['keys'][0].kid }}"
+- name: Debug byok_des_status
+  ansible.builtin.debug:
+    var: byok_des_status
+  tags:
+    - verbose
+
+- name: Byok keyvault
+  delegate_to: localhost
+  register: byok_keyvault_status
+  azure.azcollection.azure_rm_keyvault:
+    resource_group: "{{ resource_group }}"
+    vault_name: "{{ keyvault_name }}"
+    location: "{{ location }}"
+    enable_purge_protection: true
+    vault_tenant: "{{ sub_info.tenant_id }}"
+    sku:
+      name: standard
+      family: "A"
+    access_policies:
+      - tenant_id: "{{ sub_info.tenant_id }}"
+        object_id: "{{ currentuser_info.id }}"
+        keys: ["encrypt", "decrypt", "wrapkey", "unwrapkey", "sign", "verify", "get", "list",
+               "create", "update", "import", "delete", "backup", "restore", "recover", "purge"]
+      - tenant_id: "{{ byok_des_status.state.identity.tenant_id }}"
+        object_id: "{{ byok_des_status.state.identity.principal_id }}"
+        keys: ["wrapkey", "unwrapkey", "get"]
+
+- name: Create aro cluster
+  ansible.builtin.include_tasks:
+    file: ../tasks/create_aro_cluster.yaml

@@ -1,0 +1,68 @@
+- name: provision_pvs | Provision azurefile-csi PVC
+  kubernetes.core.k8s:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: v1
+    namespace: default
+    kind: PersistentVolumeClaim
+    name: azurefile-csi
+    resource_definition:
+      spec:
+        storageClassName: azurefile-csi
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 3Gi
+  delegate_to: "{{ delegation }}"
+  register: pvs_azurefile
+- name: provision_pvs | Debug pvs_azurefile
+  ansible.builtin.debug:
+    var: pvs_azurefile
+  tags:
+    - verbose
+
+- name: provision_pvs | Provision managed-csi PVC
+  kubernetes.core.k8s:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: v1
+    namespace: default
+    kind: PersistentVolumeClaim
+    name: managed-csi
+    resource_definition:
+      spec:
+        storageClassName: managed-csi
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 3Gi
+  delegate_to: "{{ delegation }}"
+  register: pvs_managed
+- name: provision_pvs | Debug pvs_managed
+  ansible.builtin.debug:
+    var: pvs_managed
+  tags:
+    - verbose
+
+- name: provision_pvs | Provision managed-csi-encrypted-cmk PVC
+  kubernetes.core.k8s:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: v1
+    namespace: default
+    kind: PersistentVolumeClaim
+    name: managed-csi-encrypted-cmk
+    resource_definition:
+      spec:
+        storageClassName: managed-csi-encrypted-cmk
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 3Gi
+  delegate_to: "{{ delegation }}"
+  register: pvs_managed_encrypted
+- name: provision_pvs | Debug pvs_managed_encrypted
+  ansible.builtin.debug:
+    var: pvs_managed_encrypted
+  tags:
+    - verbose

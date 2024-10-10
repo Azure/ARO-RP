@@ -1,0 +1,241 @@
+# This must be invoked in a loop over the upgrade variable:
+# - name: upgrade_cluster | Begin upgrade process
+#   loop: "{{ upgrade }}"
+#   when: upgrade is defined
+#   ansible.builtin.include_tasks:
+#     file: ../tasks/upgrade_cluster.yaml
+
+- name: upgrade_cluster | Get clusterversion
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+    api_version: config.openshift.io/v1
+    kind: ClusterVersion
+    name: version
+  delegate_to: "{{ delegation }}"
+  register: oc_get_clusterversion_gate
+- name: upgrade_cluster | Set upgrade gate parameters
+  ansible.builtin.set_fact:
+    gate_desired_version: "{{ oc_get_clusterversion_gate.resources[0].status.desired.version }}"
+    gate_version_history: |-
+      {{ oc_get_clusterversion_gate.resources[0].status.history
+      | items2dict(key_name="version", value_name="state") }}
+- name: upgrade_cluster | Show upgrade details
+  ansible.builtin.debug:
+    msg:
+      - "{{ upgrade_item }}"
+      - 'Current state {{ gate_version_history.get(gate_desired_version, "Unknown") }}'
+      - "Check {{ gate_desired_version }} starts with {{ upgrade_item.from}}"
+
+- name: upgrade_cluster | Upgrade to a version in channel
+  when: gate_version_history.get(gate_desired_version, "Unknown") == "Completed" and gate_desired_version.startswith(upgrade_item.from)
+  block:
+    - name: upgrade_cluster | Get image for disconnected clusters
+      when: apiserver_visibility | d("Public") == "Private" and "image" not in upgrade_item and "version" in upgrade_item
+      ansible.builtin.set_fact:
+        ocp_explicit_image: |-
+          {{
+            lookup("ansible.builtin.url",
+              "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/" + upgrade_item.version + "/release.txt")
+            | regex_search("(?<=Pull From: )(?P<image_url>[a-z0-9.\-/@:]+)")
+          }}
+      delegate_to: localhost
+    - name: upgrade_cluster | Get image signature for disconnected clusters # noqa: command-instead-of-module
+      when: ocp_explicit_image is defined
+      ansible.builtin.shell: |
+        set -o pipefail
+        curl -s "https://mirror.openshift.com/pub/openshift-v4/signatures/openshift/release/{{ image_sig_string }}/signature-1" | base64 -w0
+      vars:
+        image_sig_string: '{{ ocp_explicit_image | regex_replace("^.+@", "") | replace(":", "=") }}'
+      register: ocp_explicit_image_sig
+      delegate_to: localhost
+      changed_when: false
+    - name: upgrade_cluster | Upgrade details
+      when: '"image" in upgrade_item or ocp_explicit_image is defined'
+      ansible.builtin.debug:
+        msg: |-
+          Upgrading cluster to {%
+            if "image" in upgrade_item %}{{ upgrade_item.image }}{% endif %}{%
+            if ocp_explicit_image is defined
+              %}{{ upgrade_item.version }} => {{ ocp_explicit_image }} with signature {{ ocp_explicit_image_sig.stdout  }}{%
+            endif %}
+    - name: upgrade_cluster | Upgrade details
+      when: '"version" in upgrade_item and "channel" in upgrade_item'
+      ansible.builtin.debug:
+        msg: "Upgrading cluster to `{{ upgrade_item.version }}` in channel {{ upgrade_item.channel }}"
+    - name: upgrade_cluster | Apply image signature
+      # Use older method, directly creating the signature ConfigMap
+      # https://docs.openshift.com/container-platform/4.7/updating/updating-restricted-network-cluster.html#update-configuring-image-signature
+      when: ocp_explicit_image_sig is defined
+      kubernetes.core.k8s:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: v1
+        kind: ConfigMap
+        namespace: openshift-config-managed
+        name: release-image-{{ clusterversion_version }}
+        resource_definition: |
+          metadata:
+            labels:
+              release.openshift.io/verification-signatures: ""
+          binaryData:
+            {{ ocp_explicit_image | regex_replace("^.+@", "") | replace(":", "-") }}: "{{ ocp_explicit_image_sig.stdout }}"
+      delegate_to: "{{ delegation }}"
+    - name: upgrade_cluster | Select channel
+      when: '"channel" in upgrade_item and apiserver_visibility | d("Public") == "Public"'
+      kubernetes.core.k8s:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        state: patched
+        api_version: config.openshift.io/v1
+        kind: ClusterVersion
+        name: version
+        resource_definition:
+          spec:
+            channel: "{{ upgrade_item.channel }}"
+      delegate_to: "{{ delegation }}"
+
+    - name: upgrade_cluster | Wait for updates to be retrieved
+      when: apiserver_visibility | d("Public") == "Public"
+      kubernetes.core.k8s_info:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: config.openshift.io/v1
+        kind: ClusterVersion
+        name: version
+      delegate_to: "{{ delegation }}"
+      register: oc_get_clusterversion
+      vars:
+        desired_version: "{{ oc_get_clusterversion.resources[0].status.desired.version }}"
+        version_history: |-
+          {{ oc_get_clusterversion.resources[0].status.history
+          | items2dict(key_name="version", value_name="state") }}
+        conditions: |-
+          {{ oc_get_clusterversion.resources[0].status.conditions
+          | items2dict(key_name="type", value_name="status") }}
+      failed_when: |
+        conditions.get("RetrievedUpdates", "False") != "True"
+      retries: 5
+      delay: 60
+
+    - name: upgrade_cluster | Verify there are upgrades available
+      when: |
+        apiserver_visibility | d("Public") == "Public" and
+        (oc_get_clusterversion.resources[0].status.availableUpdates == None
+        or oc_get_clusterversion.resources[0].status.availableUpdates | length == 0)
+      ansible.builtin.fail:
+        msg: "No upgrades are available."
+
+    - name: upgrade_cluster | Apply admin-acks to allow upgrade
+      when: '"admin_acks" in upgrade_item'
+      loop: "{{ upgrade_item.admin_acks }}"
+      kubernetes.core.k8s:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        state: patched
+        merge_type: merge
+        api_version: v1
+        kind: ConfigMap
+        namespace: openshift-config
+        name: admin-acks
+        resource_definition: "{{ item }}"
+      delegate_to: "{{ delegation }}"
+
+    - name: upgrade_cluster | Wait for cluster to be upgradeable
+      kubernetes.core.k8s_info:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: config.openshift.io/v1
+        kind: ClusterVersion
+        name: version
+      delegate_to: "{{ delegation }}"
+      register: oc_get_clusterversion
+      vars:
+        desired_version: "{{ oc_get_clusterversion.resources[0].status.desired.version }}"
+        version_history: |-
+          {{ oc_get_clusterversion.resources[0].status.history
+          | items2dict(key_name="version", value_name="state") }}
+        conditions: |-
+          {{ oc_get_clusterversion.resources[0].status.conditions
+          | items2dict(key_name="type", value_name="status") }}
+      failed_when: |
+        conditions.get("Upgradeable", "True") == "False"
+      retries: 120
+      delay: 60
+
+    - name: upgrade_cluster | Get oc adm upgrade
+      when: apiserver_visibility | d("Public") == "Public"
+      ansible.builtin.command:
+        argv: "{{ argv | reject('equalto', omit) | list }}"
+      vars:
+        argv:
+          - oc
+          - adm
+          - upgrade
+          - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+      register: oc_adm_upgrade_channel
+      delegate_to: "{{ delegation }}"
+      changed_when: false
+    - name: upgrade_cluster | Show oc adm upgrade
+      when: apiserver_visibility | d("Public") == "Public"
+      ansible.builtin.debug:
+        var: oc_adm_upgrade_channel.stdout_lines
+
+    - name: upgrade_cluster | Begin upgrade
+      ansible.builtin.command:
+        argv: "{{ argv | reject('equalto', omit) | list }}"
+      vars:
+        argv:
+          - oc
+          - adm
+          - upgrade
+          - '{%- if "version" in upgrade_item and ocp_explicit_image is not defined -%}
+            {%- if upgrade_item.version == "latest" %}--to-latest{% else %}--to={{ upgrade_item.version }}{% endif -%}
+            {% else %}{{ omit }}{% endif -%}'
+          - "{% if ocp_explicit_image is defined %}--to-image={{ ocp_explicit_image }}{% else %}{{ omit }}{% endif %}"
+          - '{% if "image" in upgrade_item %}--to-image={{ upgrade_item.image }}{% else %}{{ omit }}{% endif %}'
+          - '{% if upgrade_item.get("force", False) %}--force{% else %}{{ omit }}{% endif %}'
+          - '{% if upgrade_item.get("allow-not-recommended", False) %}--allow-not-recommended{% else %}{{ omit }}{% endif %}'
+          - '{% if upgrade_item.get("include-not-recommended", False) %}--include-not-recommended{% else %}{{ omit }}{% endif %}'
+          - '{% if upgrade_item.get("allow-explicit-upgrade", False) or ocp_explicit_image is defined %}--allow-explicit-upgrade{% else %}{{ omit }}{% endif %}'
+          - --kubeconfig=/tmp/{{ inventory_hostname }}.kubeconfig
+      delegate_to: "{{ delegation }}"
+      register: oc_adm_upgrade
+      changed_when: oc_adm_upgrade.rc == 0
+    - name: upgrade_cluster | Show oc_adm_upgrade output
+      ansible.builtin.debug:
+        var: oc_adm_upgrade.stdout_lines
+    - name: upgrade_cluster | Get desired version
+      kubernetes.core.k8s_info:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: config.openshift.io/v1
+        kind: ClusterVersion
+        name: version
+      delegate_to: "{{ delegation }}"
+      register: oc_get_clusterversion_info
+    - name: upgrade_cluster | Show desired update
+      ansible.builtin.debug:
+        var: oc_get_clusterversion_info.resources[0].spec.desiredUpdate
+    - name: upgrade_cluster | Pause 5 minutes for upgrade to begin
+      # Pausing here because it takes a while for Progressing to become True
+      ansible.builtin.wait_for:
+        timeout: 300
+      delegate_to: "{{ delegation }}"
+    - name: upgrade_cluster | Wait for upgrade to complete
+      kubernetes.core.k8s_info:
+        kubeconfig: /tmp/{{ inventory_hostname }}.kubeconfig
+        api_version: config.openshift.io/v1
+        kind: ClusterVersion
+        name: version
+      delegate_to: "{{ delegation }}"
+      register: oc_get_clusterversion
+      vars:
+        desired_version: "{{ oc_get_clusterversion.resources[0].status.desired.version }}"
+        version_history: |-
+          {{ oc_get_clusterversion.resources[0].status.history
+          | items2dict(key_name="version", value_name="state") }}
+        conditions: |-
+          {{ oc_get_clusterversion.resources[0].status.conditions
+          | items2dict(key_name="type", value_name="status") }}
+      failed_when: |-
+        conditions.get("Progressing", "True") == "True"
+        or conditions.get("ReleaseAccepted", "True") == "False"
+      retries: 120
+      delay: 60
+    - name: upgrade_cluster | Show clusterversion conditions
+      ansible.builtin.debug:
+        var: oc_get_clusterversion.resources[0].status.conditions

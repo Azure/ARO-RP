@@ -1,0 +1,8 @@
+- name: Cleanup clusters
+  hosts: all
+  gather_facts: false
+  serial: "{{ max_simultaneous_clusters | default(1) }}"
+  environment:
+    AZURE_CORE_SURVEY_MESSAGE: "false"
+  roles:
+    - cleanup
