@@ -34,6 +34,7 @@ var _ = Describe("[Admin API] VM serial console action", func() {
 		for _, possibleVM := range vms {
 			if strings.Contains(*possibleVM.Name, "-master-") {
 				vm = *possibleVM.Name
+				break
 			}
 		}
 		log.Infof("selected vm: %s", vm)
