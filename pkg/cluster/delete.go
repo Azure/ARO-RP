@@ -557,13 +557,14 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		m.log.Printf("deleting cluster MSI certificate")
-		err = m.deleteClusterMsiCertificate(ctx)
+		m.log.Printf("deleting platform managed identities' federated credentials")
+		err = m.deleteIdentityFederations(ctx)
 		if err != nil {
 			return err
 		}
 
-		err = m.deleteIdentityFederations(ctx)
+		m.log.Printf("deleting cluster MSI certificate")
+		err = m.deleteClusterMsiCertificate(ctx)
 		if err != nil {
 			return err
 		}
