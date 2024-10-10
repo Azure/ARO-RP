@@ -42,7 +42,7 @@ main() {
 
 	if [ "$( $KUBECTL get namespace $HIVE_OPERATOR_NS -o yaml 2>/dev/null | wc -l )" -ne 0 ]; then
 		log "hive is already installed in namespace $HIVE_OPERATOR_NS"
-			log -n "would you like to reapply the configs? (y/N): "
+			log "would you like to reapply the configs? (y/N): "
 			read answer
 			if [[ "$answer" != "y" ]]; then
 				exit
