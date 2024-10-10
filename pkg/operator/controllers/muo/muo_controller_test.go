@@ -6,10 +6,13 @@ package muo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -19,13 +22,23 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestMUOReconciler(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
+
 	tests := []struct {
 		name           string
 		mocks          func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
@@ -34,7 +47,8 @@ func TestMUOReconciler(t *testing.T) {
 		// connected MUO -- cluster pullsecret
 		pullsecret string
 		// errors
-		wantErr string
+		wantErr        string
+		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
 			name: "disabled",
@@ -43,6 +57,7 @@ func TestMUOReconciler(t *testing.T) {
 				operator.MuoManaged: operator.FlagFalse,
 				controllerPullSpec:  "wonderfulPullspec",
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed",
@@ -57,9 +72,10 @@ func TestMUOReconciler(t *testing.T) {
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed, no pullspec (uses default)",
@@ -73,9 +89,10 @@ func TestMUOReconciler(t *testing.T) {
 					Pullspec:        "acrtest.example.com/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
 					EnableConnected: false,
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed, OCM allowed but pull secret entirely missing",
@@ -91,9 +108,10 @@ func TestMUOReconciler(t *testing.T) {
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed, OCM allowed but empty pullsecret",
@@ -110,9 +128,10 @@ func TestMUOReconciler(t *testing.T) {
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed, OCM allowed but mangled pullsecret",
@@ -129,9 +148,10 @@ func TestMUOReconciler(t *testing.T) {
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed, OCM connected mode",
@@ -149,9 +169,10 @@ func TestMUOReconciler(t *testing.T) {
 					EnableConnected: true,
 					OCMBaseURL:      "https://api.openshift.com",
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed, OCM connected mode, custom OCM URL",
@@ -170,9 +191,10 @@ func TestMUOReconciler(t *testing.T) {
 					EnableConnected: true,
 					OCMBaseURL:      "https://example.com",
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed, pull secret exists, OCM disabled",
@@ -189,9 +211,10 @@ func TestMUOReconciler(t *testing.T) {
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed, MUO does not become ready",
@@ -207,10 +230,20 @@ func TestMUOReconciler(t *testing.T) {
 					EnableConnected:              false,
 					SupportsPodSecurityAdmission: true,
 				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), matchesCluster(cluster), expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 			},
 			wantErr: "managed Upgrade Operator deployment timed out on Ready: timed out waiting for the condition",
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            "managed Upgrade Operator deployment timed out on Ready: timed out waiting for the condition",
+				},
+			},
 		},
 		{
 			name: "managed, could not parse cluster version fails",
@@ -220,6 +253,16 @@ func TestMUOReconciler(t *testing.T) {
 				controllerPullSpec:  "wonderfulPullspec",
 			},
 			wantErr: `could not parse version ""`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `could not parse version ""`,
+				},
+			},
 		},
 		{
 			name: "managed, CreateOrUpdate() fails",
@@ -230,9 +273,25 @@ func TestMUOReconciler(t *testing.T) {
 			},
 			clusterVersion: "4.10.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.MUODeploymentConfig{})).Return(errors.New("failed ensure"))
+				md.EXPECT().
+					CreateOrUpdate(
+						gomock.Any(),
+						matchesCluster(cluster),
+						gomock.AssignableToTypeOf(&config.MUODeploymentConfig{}),
+					).
+					Return(errors.New("failed ensure"))
 			},
 			wantErr: "failed ensure",
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            "failed ensure",
+				},
+			},
 		},
 		{
 			name: "managed=false (removal)",
@@ -244,6 +303,7 @@ func TestMUOReconciler(t *testing.T) {
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(nil)
 			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "managed=false (removal), Remove() fails",
@@ -256,6 +316,16 @@ func TestMUOReconciler(t *testing.T) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(errors.New("failed delete"))
 			},
 			wantErr: "failed delete",
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            "failed delete",
+				},
+			},
 		},
 		{
 			name: "managed=blank (no action)",
@@ -264,6 +334,7 @@ func TestMUOReconciler(t *testing.T) {
 				operator.MuoManaged: "",
 				controllerPullSpec:  "wonderfulPullspec",
 			},
+			wantConditions: defaultConditions,
 		},
 	}
 	for _, tt := range tests {
@@ -283,6 +354,9 @@ func TestMUOReconciler(t *testing.T) {
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: tt.flags,
 					ACRDomain:     "acrtest.example.com",
+				},
+				Status: arov1alpha1.ClusterStatus{
+					Conditions: defaultConditions,
 				},
 			}
 
@@ -319,14 +393,41 @@ func TestMUOReconciler(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logrus.StandardLogger()),
+					Client: clientBuilder.Build(),
+					Name:   ControllerName,
+				},
 				deployer:          deployer,
-				client:            clientBuilder.Build(),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}
 			_, err := r.Reconcile(ctx, reconcile.Request{})
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			utilconditions.AssertControllerConditions(t, ctx, r.AROController.Client, tt.wantConditions)
 		})
 	}
+}
+
+type clusterMatcher struct {
+	expected *arov1alpha1.Cluster
+}
+
+func (m clusterMatcher) Matches(actualRaw interface{}) bool {
+	if actual, ok := actualRaw.(*arov1alpha1.Cluster); !ok {
+		return false
+	} else {
+		if diff := cmp.Diff(m.expected, actual, cmpopts.EquateApproxTime(time.Second)); diff != "" {
+			return false
+		}
+	}
+	return true
+}
+
+func (m clusterMatcher) String() string {
+	return fmt.Sprintf("matches clusterdoc %v", m.expected)
+}
+
+func matchesCluster(expected *arov1alpha1.Cluster) clusterMatcher {
+	return clusterMatcher{expected: expected}
 }
