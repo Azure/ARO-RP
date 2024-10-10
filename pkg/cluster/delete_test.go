@@ -510,7 +510,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "success - cluster properties has nil Platform Workload Identity Profile",
+			name: "success - cluster doc has nil PlatformWorkloadIdentities",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -527,7 +527,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "success - cluster properties has non-nil Platform Workload Identity Profile but empty PlatformWorkloadIdentities list",
+			name: "success - cluster doc has non-nil but empty PlatformWorkloadIdentities",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -545,7 +545,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "success - successfully deleted federated credentials for platform workload Identity",
+			name: "success - successfully delete federated credentials",
 			doc: &api.OpenShiftClusterDocument{
 				ID: docID,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -573,7 +573,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "Success - Operator name do not exists in PlatformWorkloadIdentityProfile",
+			name: "success - skip federated credential deletion because platform workload identities are missing the OperatorName field",
 			doc: &api.OpenShiftClusterDocument{
 				ID: docID,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -586,12 +586,10 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
 								{
-									OperatorName: "CloudControllerManager",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
 								{
-									OperatorName: "ClusterIngressOperator",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
 						},
@@ -601,7 +599,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "error - error deleting federated credentials for platform workload Identity",
+			name: "error - encounter blocking error deleting a federated credential",
 			doc: &api.OpenShiftClusterDocument{
 				ID: docID,
 				OpenShiftCluster: &api.OpenShiftCluster{
