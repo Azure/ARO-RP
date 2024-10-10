@@ -399,28 +399,22 @@ ci-clean:
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	docker build . $(DOCKER_BUILD_CI_ARGS) \
+	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=$(REGISTRY) \
-		--build-arg ARO_VERSION=$(VERSION) \
-		--no-cache=$(NO_CACHE) \
+		--build-arg REGISTRY=${REGISTRY} \
+		--build-arg ARO_VERSION=${VERSION} \
+		--no-cache=${NO_CACHE} \
 		--target=builder \
-		-t $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION)
+		-t ${LOCAL_ARO_RP_BUILD_IMAGE}:${VERSION}
 
-	docker build . $(DOCKER_BUILD_CI_ARGS) \
-		-f Dockerfile.ci-rp \
-		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=$(REGISTRY) \
-		--build-arg ARO_VERSION=$(VERSION) \
-		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
+	docker compose build rp
 
 	# Extract test coverage files from build to local filesystem
-	docker create --name extract_cover_out $(LOCAL_ARO_RP_BUILD_IMAGE):$(VERSION); \
+	docker create --name extract_cover_out ${LOCAL_ARO_RP_BUILD_IMAGE}:${VERSION}; \
 	docker cp extract_cover_out:/app/report.xml ./report.xml; \
 	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
 	docker rm extract_cover_out;
-
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
@@ -441,102 +435,13 @@ ifeq ($(shell uname -s),Darwin)
 	mv ./vendor/github.com/Microsoft ./vendor/github.com/temp-microsoft && mv ./vendor/github.com/temp-microsoft ./vendor/github.com/microsoft || true
 endif
 
-.PHONY: podman-secrets
-podman-secrets: aks.kubeconfig
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore aks.kubeconfig
-	podman $(PODMAN_REMOTE_ARGS) secret create aks.kubeconfig ./aks.kubeconfig
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.key
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.key ./secrets/proxy-client.key
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy-client.crt
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy-client.crt ./secrets/proxy-client.crt
-
-	podman $(PODMAN_REMOTE_ARGS) secret rm --ignore proxy.crt
-	podman $(PODMAN_REMOTE_ARGS) secret create proxy.crt ./secrets/proxy.crt
-
 .PHONY: run-portal
-run-portal: ci-rp podman-secrets
-	podman $(PODMAN_REMOTE_ARGS) \
-		run \
-		--name aro-portal \
-		--rm \
-		-p 127.0.0.1:8444:8444 \
-		-p 127.0.0.1:2222:2222 \
-		--cap-drop net_raw \
-		-e RP_MODE \
-		-e AZURE_SUBSCRIPTION_ID \
-		-e AZURE_TENANT_ID \
-		-e LOCATION \
-		-e RESOURCEGROUP \
-		-e AZURE_PORTAL_CLIENT_ID \
-		-e AZURE_PORTAL_ELEVATED_GROUP_IDS \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
-		-e AZURE_RP_CLIENT_SECRET \
-		-e AZURE_RP_CLIENT_ID \
-		-e KEYVAULT_PREFIX \
-		-e DATABASE_ACCOUNT_NAME \
-		-e DATABASE_NAME \
-		-e NO_NPM=1 \
-		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
-		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
-		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION) portal
+run-portal:
+	docker compose up portal
 
 # run-rp executes the RP locally as similarly as possible to production. That
 # includes the use of Hive, meaning you need a VPN connection.
 .PHONY: run-rp
-run-rp: ci-rp podman-secrets
-	podman $(PODMAN_REMOTE_ARGS) \
-		run \
-		--name aro-rp \
-		--rm \
-		-p 127.0.0.1:8443:8443 \
-		-w /app \
-		-e ARO_IMAGE \
-		-e RP_MODE="development" \
-		-e PROXY_HOSTNAME \
-		-e DOMAIN_NAME \
-		-e AZURE_RP_CLIENT_ID \
-		-e AZURE_FP_CLIENT_ID \
-		-e AZURE_SUBSCRIPTION_ID \
-		-e AZURE_TENANT_ID \
-		-e AZURE_RP_CLIENT_SECRET \
-		-e LOCATION \
-		-e RESOURCEGROUP \
-		-e AZURE_ARM_CLIENT_ID \
-		-e AZURE_FP_SERVICE_PRINCIPAL_ID \
-		-e AZURE_DBTOKEN_CLIENT_ID \
-		-e AZURE_PORTAL_CLIENT_ID \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
-		-e AZURE_CLIENT_ID \
-		-e AZURE_SERVICE_PRINCIPAL_ID \
-		-e AZURE_CLIENT_SECRET \
-		-e AZURE_GATEWAY_CLIENT_ID \
-		-e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
-		-e AZURE_GATEWAY_CLIENT_SECRET \
-		-e DATABASE_NAME \
-		-e PULL_SECRET \
-		-e SECRET_SA_ACCOUNT_NAME \
-		-e DATABASE_ACCOUNT_NAME \
-		-e KEYVAULT_PREFIX \
-		-e ADMIN_OBJECT_ID \
-		-e PARENT_DOMAIN_NAME \
-		-e PARENT_DOMAIN_RESOURCEGROUP \
-		-e AZURE_ENVIRONMENT \
-		-e STORAGE_ACCOUNT_DOMAIN \
-		-e OIDC_STORAGE_ACCOUNT_NAME \
-		-e KUBECONFIG="/app/secrets/aks.kubeconfig" \
-		-e HIVE_KUBE_CONFIG_PATH="/app/secrets/aks.kubeconfig" \
-		-e ARO_CHECKOUT_PATH="/app" \
-		-e ARO_INSTALL_VIA_HIVE="true" \
-		-e ARO_ADOPT_BY_HIVE="true" \
-		-e MOCK_MSI_TENANT_ID \
-		-e MOCK_MSI_CLIENT_ID \
-		-e MOCK_MSI_OBJECT_ID \
-		-e MOCK_MSI_CERT \
-		--secret aks.kubeconfig,target=/app/secrets/aks.kubeconfig \
-		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
-		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
-		--secret proxy.crt,target=/app/secrets/proxy.crt \
-		$(LOCAL_ARO_RP_IMAGE):$(VERSION) rp
+run-rp: aks.kubeconfig
+	docker compose rm -sf rp
+	docker compose up rp
