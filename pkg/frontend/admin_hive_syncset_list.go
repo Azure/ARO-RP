@@ -19,7 +19,7 @@ import (
 func (f *frontend) listAdminHiveSyncSet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	namespace := r.URL.Query().Get("namespace")
+	namespace := r.URL.Query().Get("cdnamespace")
 	label := r.URL.Query().Get("lable")
 	isSyncSet := r.URL.Query().Has("isSyncSet")
 	b, err := f._listAdminHiveSyncSet(ctx, namespace, label, isSyncSet)

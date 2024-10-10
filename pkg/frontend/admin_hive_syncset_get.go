@@ -22,7 +22,7 @@ func (f *frontend) getAdminHiveSyncSet(w http.ResponseWriter, r *http.Request) {
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	syncsetname := chi.URLParam(r, "syncsetname")
 	isSyncSet := r.URL.Query().Has("isSyncSet")
-	namespace := r.URL.Query().Get("namespace")
+	namespace := r.URL.Query().Get("cdnamespace")
 	b, err := f._getAdminHiveSyncSet(ctx, namespace, syncsetname, isSyncSet)
 
 	if cloudErr, ok := err.(*api.CloudError); ok {
