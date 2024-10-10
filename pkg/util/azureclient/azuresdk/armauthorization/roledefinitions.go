@@ -32,6 +32,6 @@ func NewArmRoleDefinitionsClient(credential azcore.TokenCredential, subscription
 }
 
 func (client ArmRoleDefinitionsClient) GetByID(ctx context.Context, roleDefinitionID string, options *armauthorization.RoleDefinitionsClientGetByIDOptions) (armauthorization.RoleDefinitionsClientGetByIDResponse, error) {
-	roleID := fmt.Sprintf("/subscriptions/%s%s", client.subscriptionID, roleDefinitionID)
+	roleID := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.Authorization/roleDefinitions/%s", client.subscriptionID, roleDefinitionID)
 	return client.RoleDefinitionsClient.GetByID(ctx, roleID, options)
 }
