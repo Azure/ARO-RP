@@ -208,11 +208,13 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	}
 
 	// For Workload Identity Cluster disable shared access keys, only User Delegated SAS are allowed
-	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() && setSasPolicy {
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		sa.AllowSharedKeyAccess = to.BoolPtr(false)
-		sa.SasPolicy = &mgmtstorage.SasPolicy{
-			SasExpirationPeriod: to.StringPtr("0.01:00:00"),
-			ExpirationAction:    to.StringPtr("Log"),
+		if setSasPolicy {
+			sa.SasPolicy = &mgmtstorage.SasPolicy{
+				SasExpirationPeriod: to.StringPtr("0.01:00:00"),
+				ExpirationAction:    to.StringPtr("Log"),
+			}
 		}
 	}
 
