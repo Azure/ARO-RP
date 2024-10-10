@@ -35,7 +35,7 @@ configure_service_aro_gateway() {
     log "Configuring aro-gateway service"
 
     local -r aro_gateway_conf_filename='/etc/sysconfig/aro-gateway'
-    local -r add_conf_file="PODMAN_NETWORK='host'
+    local -r add_conf_file="podman_network='podman'
 IPADDRESS='$ipaddress'
 ROLE='${role,,}'"
 
@@ -102,7 +102,7 @@ configure_service_aro_rp() {
     log "Configuring aro-rp service"
 
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
-    local -r add_conf_file="PODMAN_NETWORK='host'
+    local -r add_conf_file="podman_network='podman'
 IPADDRESS='$ipaddress'
 ROLE='${role,,}'"
 
@@ -201,7 +201,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
 RPIMAGE='$image'
-PODMAN_NETWORK='host'
+podman_network='podman'
 IPADDRESS='$ipaddress'"
 
     write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
@@ -274,7 +274,7 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
 RPIMAGE='$image'
-PODMAN_NETWORK='host'
+podman_network='podman'
 IPADDRESS='$ipaddress'"
 
     write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
@@ -344,7 +344,7 @@ MISEIMAGE='$image'
 MISEVALIDAUDIENCES='$MISEVALIDAUDIENCES'
 MISEVALIDAPPIDS='$MISEVALIDAPPIDS'
 LOGININSTANCE='$LOGININSTANCE'
-PODMAN_NETWORK='host'
+podman_network='podman'
 IPADDRESS='$ipaddress'"
 
     write_file aro_mise_service_conf_filename aro_mise_service_conf_file true
@@ -455,7 +455,7 @@ configure_service_aro_otel_collector() {
     # shellcheck disable=SC2034
     local -r aro_otel_collector_service_conf_file="GOMEMLIMIT=1000MiB
 OTELIMAGE='$image'
-PODMAN_NETWORK='host'
+podman_network='podman'
 IPADDRESS='$ipaddress'"
 
     write_file aro_otel_collector_service_conf_filename aro_otel_collector_service_conf_file true
@@ -600,7 +600,7 @@ configure_service_fluentbit() {
     local -r sysconfig_filename='/etc/sysconfig/fluentbit'
     # shellcheck disable=SC2034
     local -r sysconfig_file="FLUENTBITIMAGE=$image
-PODMAN_NETWORK='host'
+podman_network='podman'
 IPADDRESS='$ipaddress'"
 
     write_file sysconfig_filename sysconfig_file true
@@ -825,7 +825,7 @@ MDMSOURCEROLEINSTANCE=\"$(hostname)\"
 MDM_INPUT=statsd_local,otlp_grpc
 MDM_NAMESPACE='OTEL'
 MDM_ACCOUNT='AzureRedHatOpenShiftRP'
-PODMAN_NETWORK='host'
+podman_network='podman'
 IPADDRESS='$ipaddress'"
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
