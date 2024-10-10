@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "deploymentconfigs",
-            "singularName": "",
+            "singularName": "deploymentconfig",
             "namespaced": true,
             "kind": "DeploymentConfig",
             "verbs": [

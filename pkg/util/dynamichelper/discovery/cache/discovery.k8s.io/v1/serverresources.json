@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "endpointslices",
-            "singularName": "",
+            "singularName": "endpointslice",
             "namespaced": true,
             "kind": "EndpointSlice",
             "verbs": [

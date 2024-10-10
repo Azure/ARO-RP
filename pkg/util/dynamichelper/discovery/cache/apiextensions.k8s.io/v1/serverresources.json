@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "customresourcedefinitions",
-            "singularName": "",
+            "singularName": "customresourcedefinition",
             "namespaced": false,
             "kind": "CustomResourceDefinition",
             "verbs": [

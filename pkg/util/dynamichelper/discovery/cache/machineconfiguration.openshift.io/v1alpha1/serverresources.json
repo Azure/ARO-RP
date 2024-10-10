@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "batch/v1beta1",
+    "groupVersion": "machineconfiguration.openshift.io/v1alpha1",
     "resources": [
         {
-            "name": "cronjobs",
-            "singularName": "",
-            "namespaced": true,
-            "kind": "CronJob",
+            "name": "machineconfignodes",
+            "singularName": "machineconfignode",
+            "namespaced": false,
+            "kind": "MachineConfigNode",
             "verbs": [
                 "create",
                 "delete",
@@ -18,19 +18,13 @@
                 "update",
                 "watch"
             ],
-            "shortNames": [
-                "cj"
-            ],
-            "categories": [
-                "all"
-            ],
-            "storageVersionHash": "sd5LIXh4Fjs="
+            "storageVersionHash": "ZdQ5xb1zCcc="
         },
         {
-            "name": "cronjobs/status",
+            "name": "machineconfignodes/status",
             "singularName": "",
-            "namespaced": true,
-            "kind": "CronJob",
+            "namespaced": false,
+            "kind": "MachineConfigNode",
             "verbs": [
                 "get",
                 "patch",

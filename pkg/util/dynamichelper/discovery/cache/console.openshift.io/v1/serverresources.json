@@ -116,6 +116,23 @@
             ]
         },
         {
+            "name": "consoleplugins",
+            "singularName": "consoleplugin",
+            "namespaced": false,
+            "kind": "ConsolePlugin",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "WBtt+/5eUyQ="
+        },
+        {
             "name": "consolequickstarts",
             "singularName": "consolequickstart",
             "namespaced": false,
@@ -131,6 +148,23 @@
                 "watch"
             ],
             "storageVersionHash": "jjkxMYsy4hY="
+        },
+        {
+            "name": "consolesamples",
+            "singularName": "consolesample",
+            "namespaced": false,
+            "kind": "ConsoleSample",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "CXjz4f830fg="
         },
         {
             "name": "consoleyamlsamples",

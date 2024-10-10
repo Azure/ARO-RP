@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "packagemanifests",
-            "singularName": "",
+            "singularName": "packagemanifest",
             "namespaced": true,
             "kind": "PackageManifest",
             "verbs": [

@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "events",
-            "singularName": "",
+            "singularName": "event",
             "namespaced": true,
             "kind": "Event",
             "verbs": [
