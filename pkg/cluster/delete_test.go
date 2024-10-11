@@ -30,6 +30,10 @@ import (
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilmsi "github.com/Azure/ARO-RP/test/util/azure/msi"
+	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -482,6 +486,205 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			m.clusterMsiKeyVaultStore = store.NewMsiKeyVaultStore(mockKvClient)
 
 			err := m.deleteClusterMsiCertificate(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestDeleteFederatedCredentials(t *testing.T) {
+	ctx := context.Background()
+	docID := "00000000-0000-0000-0000-000000000000"
+	clusterResourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/fakeResourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/fakeCluster"
+	mockGuid := "00000000-0000-0000-0000-000000000000"
+	clusterRGName := "aro-cluster"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/", mockGuid, clusterRGName)
+	fakeClint, err := utilmsi.NewTestFederatedIdentityCredentialsClient(mockGuid)
+
+	if err != nil {
+		fmt.Printf("failed to create fake client, err: %v\n", err)
+	}
+
+	tests := []struct {
+		name    string
+		doc     *api.OpenShiftClusterDocument
+		wantErr string
+	}{
+		{
+			name: "success - cluster doc has nil PlatformWorkloadIdentities",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version: "4.14.40",
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "success - cluster doc has non-nil but empty PlatformWorkloadIdentities",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version: "4.14.40",
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{},
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "success - successfully delete federated credentials",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version: "4.14.40",
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: "CloudControllerManager",
+									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+								},
+								{
+									OperatorName: "ClusterIngressOperator",
+									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "success - skip federated credential deletion because platform workload identities are missing the OperatorName field",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version: "4.14.40",
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
+								},
+								{
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "error - encounter blocking error deleting a federated credential",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version: "4.14.40",
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: "CloudControllerManager",
+									ResourceID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "parsing failed for /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster. Invalid resource Id format",
+		},
+	}
+
+	for _, tt := range tests {
+		uuidGen := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.OPENSHIFT_VERSIONS)
+		dbPlatformWorkloadIdentityRoleSets, _ := testdatabase.NewFakePlatformWorkloadIdentityRoleSets(uuidGen)
+		f := testdatabase.NewFixture().WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets, uuidGen)
+		pir := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
+		f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
+			PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+				Name: "testRoleSet",
+				Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+					OpenShiftVersion: "4.14",
+					PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+						{
+							OperatorName:    "CloudControllerManager",
+							ServiceAccounts: []string{"openshift-cloud-controller-manager:cloud-controller-manager"},
+						},
+						{
+							OperatorName:    "ClusterIngressOperator",
+							ServiceAccounts: []string{"openshift-ingress-operator:ingress-operator"},
+						},
+					},
+				},
+			},
+		},
+			&api.PlatformWorkloadIdentityRoleSetDocument{
+				PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+					Name: "testRoleSet",
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.15",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:    "CloudControllerManager",
+								ServiceAccounts: []string{"openshift-cloud-controller-manager:cloud-controller-manager"},
+							},
+							{
+								OperatorName:    "ClusterIngressOperator",
+								ServiceAccounts: []string{"openshift-ingress-operator:ingress-operator"},
+							},
+						},
+					},
+				},
+			},
+		)
+		err := f.Create()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = pir.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, tt.doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			m := manager{
+				log:                                    logrus.NewEntry(logrus.StandardLogger()),
+				doc:                                    tt.doc,
+				platformWorkloadIdentityRolesByVersion: pir,
+				clusterMsiFederatedIdentityCredentials: fakeClint,
+			}
+
+			err := m.deleteFederatedCredentials(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
