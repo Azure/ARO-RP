@@ -116,7 +116,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	roleDefinitions, err := armauthorization.NewArmRoleDefinitionsClient(tokenCredential, nil)
+	roleDefinitions, err := armauthorization.NewArmRoleDefinitionsClient(tokenCredential, environment.SubscriptionID(), nil)
 	if err != nil {
 		panic(err)
 	}
