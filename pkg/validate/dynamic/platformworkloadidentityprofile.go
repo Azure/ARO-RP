@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -63,7 +64,8 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 	}
 
 	for _, role := range platformWorkloadIdentityRolesByRoleName {
-		actions, err := getActionsForRoleDefinition(ctx, role.RoleDefinitionID, roleDefinitions)
+		roleDefinitionID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
+		actions, err := getActionsForRoleDefinition(ctx, roleDefinitionID, roleDefinitions)
 		if err != nil {
 			return err
 		}

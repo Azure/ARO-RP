@@ -1,11 +1,17 @@
-trigger: none
-pr: none
+trigger:
+  branches:
+    include:
+      - master
+  paths:
+    exclude:
+      - docs/*
+  tags:
+    include:
+      - v2*
+
+# PR triggers are overridden in the ADO UI
 
 resources:
-  pipelines:
-    - pipeline: e2e
-      source: \Public Cloud ARO pipelines\CI\CI
-      trigger: true
   containers:
     - container: container
       image: registry.access.redhat.com/ubi8/toolbox:8.8
@@ -44,6 +50,13 @@ jobs:
       - script: |
           make extract-aro-docker
         displayName: Extract ARO binaries from build
+
+      # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
+      # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
+      - script: |
+          echo "##vso[task.setvariable variable=E2E_LABEL]!smoke"
+        displayName: Enable regression tests in CI
+        condition: in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI')
 
       - script: |
           az account set -s $AZURE_SUBSCRIPTION_ID

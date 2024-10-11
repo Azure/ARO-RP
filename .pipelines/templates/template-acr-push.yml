@@ -11,7 +11,6 @@ parameters:
     default: false
 
 steps:
-  # Authenticate to ACR and push the image
   - task: AzureCLI@2
     displayName: 'Authenticate to Azure and Push Docker Image'
     inputs:
@@ -20,6 +19,24 @@ steps:
       scriptLocation: 'inlineScript'
       inlineScript: |
         set -xe
+
+        # Install Docker dependencies
+        echo "Installing Docker and Docker Compose Plugin..."
+        sudo apt-get update
+        sudo apt-get install -y ca-certificates curl gnupg
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc
+        sudo chmod a+r /etc/apt/keyrings/docker.asc
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        sudo systemctl start docker
+        sudo systemctl enable docker
+
+        # Authenticate to Azure and ACR
         echo "Authenticating to Azure and ACR..."
         ACR_FQDN="${{ parameters.acrFQDN }}"
         REGISTRY_NAME=$(echo $ACR_FQDN | cut -d'.' -f1)
@@ -31,38 +48,45 @@ steps:
         echo "Listing Docker images..."
         docker images
 
-        # Ensure the image is available locally before tagging the build ID
-        IMAGE_NAME="${{ parameters.repository }}:$(Build.BuildId)"
+        # Define both the full repository image name and the local name
+        IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:$(VERSION)"
+        LOCAL_IMAGE="${{ parameters.repository }}:$(VERSION)"
+
+        # Check if the image exists locally with the full repository tag
+        echo "Checking for image $IMAGE_NAME..."
         if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
-          echo "Error: Image $IMAGE_NAME not found. Exiting."
-          exit 1
+          # If the full repository tagged image does not exist, check for the local image
+          echo "Full repository image not found. Checking for local image $LOCAL_IMAGE..."
+          if [[ "$(docker images -q $LOCAL_IMAGE 2> /dev/null)" == "" ]]; then
+            echo "Error: Neither $IMAGE_NAME nor $LOCAL_IMAGE found. Exiting."
+            exit 1
+          else
+            # Retag the local image with the full repository path
+            echo "Local image $LOCAL_IMAGE found. Retagging with full repository path..."
+            docker tag $LOCAL_IMAGE $IMAGE_NAME
+          fi
+        else
+          echo "Image $IMAGE_NAME found. Proceeding to push..."
         fi
 
         # Ensure the image is available locally before tagging 'latest'
-        IMAGE_LATEST="${{ parameters.repository }}:latest"
+        IMAGE_LATEST="${ACR_FQDN}/${{ parameters.repository }}:latest"
+        echo "Checking for image $IMAGE_LATEST..."
         if [[ "$(docker images -q $IMAGE_LATEST 2> /dev/null)" == "" ]]; then
-          echo "Warning: Image $IMAGE_LATEST not found. Skipping latest tag."
+          echo "Warning: Image $IMAGE_LATEST not found. Skipping 'latest' tag."
           SKIP_LATEST=true
         else
+          echo "Image $IMAGE_LATEST found. Proceeding with 'latest' tag."
           SKIP_LATEST=false
         fi
 
-        # Tag the image with the ACR repository for the build ID
-        echo "Tagging image with build ID..."
-        docker tag $IMAGE_NAME ${ACR_FQDN}/${{ parameters.repository }}:$(Build.BuildId)
-
-        # If the latest image exists, tag it as well
-        if [ "$SKIP_LATEST" == "false" ]; then
-          echo "Tagging image with 'latest'..."
-          docker tag $IMAGE_LATEST ${ACR_FQDN}/${{ parameters.repository }}:latest
-        fi
-
-        # Push the Docker image to ACR with build ID
+        # Push the Docker image to ACR with the build ID
         echo "Pushing image with build ID to ACR..."
-        docker push ${ACR_FQDN}/${{ parameters.repository }}:$(Build.BuildId)
+        docker push $IMAGE_NAME
 
         # Optionally push the image as 'latest'
         if [ "${{ parameters.pushLatest }}" == "true" ] && [ "$SKIP_LATEST" == "false" ]; then
-          echo "Pushing 'latest' tag to ACR..."
-          docker push ${ACR_FQDN}/${{ parameters.repository }}:latest
+          echo "Tagging image with 'latest' and pushing..."
+          docker tag $IMAGE_NAME $IMAGE_LATEST
+          docker push $IMAGE_LATEST
         fi

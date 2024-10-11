@@ -11,93 +11,72 @@ trigger:
     include:
       - v2*
 
-resources:
-  containers:
-    - container: golang
-      image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
-      options: --user=0
-    - container: python
-      image: registry.access.redhat.com/ubi8/python-39:latest
-      options: --user=0
-    - container: ubi8
-      image: registry.access.redhat.com/ubi8/toolbox:8.8
-      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
-
 variables:
   - template: vars.yml
+  - name: REGISTRY
+    value: registry.access.redhat.com
+  - name: LOCAL_ARO_RP_IMAGE
+    value: "arosvcdev.azurecr.io/aro"
+  - name: LOCAL_ARO_AZEXT_IMAGE
+    value: "arosvcdev.azurecr.io/azext-aro"
+  - name: LOCAL_VPN_IMAGE
+    value: "arosvcdev.azurecr.io/vpn"
+  - name: TAG
+    value: $(Build.BuildId)
+  - name: VERSION
+    value: $(Build.BuildId)
 
-stages:
-  - stage: NotContainerized
-    dependsOn: Containerized
-    jobs:
-      - job: Lint_Az_ARO_Extension
-        pool:
-          name: 1es-aro-ci-pool
-        variables:
-          HOME: $(Agent.BuildDirectory)
-        steps:
-          - template: ./templates/template-checkout.yml
-          - script: |
-              set -xe
-              export AZDEV_CONFIG_DIR=$(Agent.BuildDirectory)/azdev-config
-              make test-python
-              [[ -z "$(git status -s)" ]]
-            displayName: 🧪 Lint Az ARO Extension
-            target: python
+jobs:
+  - job: Build_Test_And_Push_Az_ARO_Extension
+    pool:
+      name: 1es-aro-ci-pool
+    steps:
+      - template: ./templates/template-checkout.yml
 
-  - stage: Containerized
-    dependsOn: []
-    jobs:
-      - job: Build_Test_And_Push_Az_ARO_Extension
-        pool:
-          name: 1es-aro-ci-pool
-        steps:
-          - template: ./templates/template-checkout.yml
+      # Build and test the Az ARO Extension
+      - script: |
+          set -xe
+          DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(VERSION)
+        displayName: 🛠 Build & Test Az ARO Extension
 
-          # Build and test the Az ARO Extension
-          - script: |
-              set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(Build.BuildId)
-            displayName: 🛠 Build & Test Az ARO Extension
+      # Push the image to ACR
+      - template: ./templates/template-acr-push.yml
+        parameters:
+          acrFQDN: 'arosvcdev.azurecr.io'
+          repository: 'azext-aro'
+          pushLatest: true
 
-          # Push the image to ACR
-          - template: ./templates/template-acr-push.yml
-            parameters:
-              acrFQDN: 'arosvcdev.azurecr.io'
-              repository: 'azext-aro'
-              pushLatest: true
+  - job: Build_And_Test_RP_And_Portal
+    pool:
+      name: 1es-aro-ci-pool
+    steps:
+      - template: ./templates/template-checkout.yml
 
-      - job: Build_Lint_Test_RP_And_Portal
-        pool:
-          name: 1es-aro-ci-pool
-        steps:
-          - template: ./templates/template-checkout.yml
+      # Build and test RP and Portal
+      - script: |
+          set -xe
+          DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(VERSION)
+        displayName: 🛠 Build & Test RP and Portal
 
-          # Build and test RP and Portal
-          - script: |
-              set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(Build.BuildId)
-            displayName: 🛠 Build & Test RP and Portal
+      # Publish test results
+      - task: PublishTestResults@2
+        displayName: 📊 Publish tests results
+        inputs:
+          testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
+        condition: succeededOrFailed()
 
-          # Publish test results
-          - task: PublishTestResults@2
-            displayName: 📊 Publish tests results
-            inputs:
-              testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
-            condition: succeededOrFailed()
+      # Publish code coverage results
+      - task: PublishCodeCoverageResults@2
+        displayName: 📈 Publish code coverage
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
+          failIfCoverageEmpty: false
+        condition: succeededOrFailed()
 
-          # Publish code coverage results
-          - task: PublishCodeCoverageResults@2
-            displayName: 📈 Publish code coverage
-            inputs:
-              codeCoverageTool: Cobertura
-              summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
-              failIfCoverageEmpty: false
-            condition: succeededOrFailed()
-
-          # Push the image to ACR
-          - template: ./templates/template-acr-push.yml
-            parameters:
-              acrFQDN: 'arosvcdev.azurecr.io'
-              repository: 'aro'
-              pushLatest: true
+      # Push the image to ACR
+      - template: ./templates/template-acr-push.yml
+        parameters:
+          acrFQDN: 'arosvcdev.azurecr.io'
+          repository: 'aro'
+          pushLatest: true

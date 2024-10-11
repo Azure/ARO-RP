@@ -21,7 +21,8 @@ from azext_aro._validators import (
     validate_load_balancer_managed_outbound_ip_count,
     validate_enable_managed_identity,
     validate_platform_workload_identities,
-    validate_cluster_identity
+    validate_cluster_identity,
+    validate_upgradeable_to_format
 )
 from azure.cli.core.azclierror import (
     InvalidArgumentValueError, RequiredArgumentMissingError,
@@ -112,7 +113,7 @@ test_validate_client_id_data = [
     ),
     (
         "should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
-        Mock(client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret="12345"),
+        Mock(upgradeable_to=None, client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret="12345"),
         None
     )
 ]
@@ -171,14 +172,26 @@ test_validate_client_secret_data = [
     (
         "should not raise any exception when isCreate is true and all arguments valid",
         True,
-        Mock(client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
+        Mock(upgradeable_to=None, client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
         None
     ),
     (
         "should not raise any exception when isCreate is false and all arguments valid",
         False,
-        Mock(client_secret="123", platform_workload_identities=None),
+        Mock(upgradeable_to=None, client_secret="123", platform_workload_identities=None),
         None
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError exception when isCreate is true and upgradeable_to, client_id and client_secret are present",
+        True,
+        Mock(upgradeable_to="4.14.2", client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
+        MutuallyExclusiveArgumentError
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError exception when isCreate is false and upgradeable_to, client_id and client_secret are present",
+        False,
+        Mock(upgradeable_to="4.14.2", client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
+        MutuallyExclusiveArgumentError
     ),
 ]
 
@@ -803,10 +816,21 @@ test_validate_refresh_cluster_credentials_data = [
         RequiredArgumentMissingError
     ),
     (
+        "should raise MutuallyExclusiveArgumentError Exception because namespace.platform_workload_identities is present",
+        Mock(platform_workload_identities=[Mock(resource_id='Foo')], client_id=None, client_secret=None),
+        MutuallyExclusiveArgumentError
+    ),
+    (
         "should not raise any Exception because namespace.client_secret is None and namespace.client_id is None",
-        Mock(client_secret=None, client_id=None),
+        Mock(upgradeable_to=None, client_secret=None, client_id=None, platform_workload_identities=None),
         None
-    )
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError exception because namespace.upgradeable_to is not None",
+        Mock(upgradeable_to="4.14.2", client_id=None, client_secret=None),
+        MutuallyExclusiveArgumentError
+    ),
+
 ]
 
 
@@ -1276,3 +1300,39 @@ def test_validate_cluster_identity(test_description, namespace, expected_excepti
 
     if expected_identity is not None:
         assert (expected_identity == namespace.mi_user_assigned)
+
+
+test_validate_upgradeable_to_data = [
+    (
+        "should not raise any Exception because namespace.upgradeable_to is empty",
+        Mock(upgradeable_to="", client_id=None, client_secret=None),
+        None, None
+    ),
+
+    (
+        "should raise InvalidArgumentValueError Exception because upgradeable_to format is invalid",
+        Mock(upgradeable_to="a", client_id=None, client_secret=None),
+        InvalidArgumentValueError, "--upgradeable-to is invalid"
+    ),
+
+    (
+        "Should raise InvalidArgumentValueError when --upgradeable-to < 4.14.0",
+        Mock(upgradeable_to="4.0.4",
+             client_id=None, client_secret=None),
+        InvalidArgumentValueError, 'Enabling managed identity requires --upgradeable-to >= 4.14.0'
+    ),
+
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception, expected_exception_message",
+    test_validate_upgradeable_to_data,
+    ids=[i[0] for i in test_validate_upgradeable_to_data]
+)
+def test_validate_upgradeable_to_data(test_description, namespace, expected_exception, expected_exception_message):
+    if expected_exception is None:
+        validate_upgradeable_to_format(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_upgradeable_to_format(namespace)
