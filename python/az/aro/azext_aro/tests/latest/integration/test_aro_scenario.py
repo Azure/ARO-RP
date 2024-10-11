@@ -17,8 +17,8 @@ logger = get_logger(__name__)
 
 class AroScenarioTests(ScenarioTest):
     @AllowLargeResponse()
-    @ResourceGroupPreparer(random_name_length=28, name_prefix='clitestaro_create', location='eastus')
-    @AROClusterServicePrincipalPreparer(name_prefix='clitestaro_create')
+    @ResourceGroupPreparer(random_name_length=28, name_prefix='cli_test_aro', location='eastus')
+    @AROClusterServicePrincipalPreparer(name_prefix='cli_test_aro')
     def test_aro_public_cluster(self, resource_group):
         from azure.mgmt.core.tools import resource_id
 
