@@ -201,12 +201,6 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		m.networkInternalLoadBalancer(azureRegion),
 	}
 
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		resources = append(resources,
-			m.clusterServicePrincipalRBAC(),
-		)
-	}
-
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		r, err := m.platformWorkloadIdentityRBAC()
 		if err != nil {
