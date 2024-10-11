@@ -11,22 +11,20 @@ trigger:
     include:
       - v2*
 
-# PR triggers are overridden in the ADO UI
-
-resources:
-  containers:
-    - container: golang
-      image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
-      options: --user=0
-    - container: python
-      image: registry.access.redhat.com/ubi8/python-39:latest
-      options: --user=0
-    - container: ubi8
-      image: registry.access.redhat.com/ubi8/toolbox:8.8
-      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
-
 variables:
   - template: vars.yml
+  - name: REGISTRY
+    value: registry.access.redhat.com
+  - name: LOCAL_ARO_RP_IMAGE
+    value: "arosvcdev.azurecr.io/aro"
+  - name: LOCAL_ARO_AZEXT_IMAGE
+    value: "arosvcdev.azurecr.io/azext-aro"
+  - name: LOCAL_VPN_IMAGE
+    value: "arosvcdev.azurecr.io/vpn"
+  - name: TAG
+    value: $(Build.BuildId)
+  - name: VERSION
+    value: $(Build.BuildId)
 
 jobs:
   - job: Build_Test_And_Push_Az_ARO_Extension
@@ -38,7 +36,7 @@ jobs:
       # Build and test the Az ARO Extension
       - script: |
           set -xe
-          DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(Build.BuildId)
+          DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(VERSION)
         displayName: 🛠 Build & Test Az ARO Extension
 
       # Push the image to ACR
@@ -57,7 +55,7 @@ jobs:
       # Build and test RP and Portal
       - script: |
           set -xe
-          DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(Build.BuildId)
+          DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(VERSION)
         displayName: 🛠 Build & Test RP and Portal
 
       # Publish test results

@@ -195,9 +195,14 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true),
 		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, azureRegion),
-		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(azureRegion),
 		m.networkInternalLoadBalancer(azureRegion),
+	}
+
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		resources = append(resources,
+			m.clusterServicePrincipalRBAC(),
+		)
 	}
 
 	// Create a public load balancer routing if needed
