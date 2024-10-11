@@ -1,1 +1,0 @@
-# Managed Infrastructure Maintenance Operator
