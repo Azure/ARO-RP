@@ -20,6 +20,16 @@ services:
       timeout: 3s
       retries: 3
 
+  selenium:
+    image: selenium/standalone-edge:4.10.0-20230607
+    container_name: selenium-container
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   rp:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
     build:
