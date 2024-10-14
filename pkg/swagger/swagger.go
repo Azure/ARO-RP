@@ -235,6 +235,10 @@ func Run(api, outputDir string) error {
 					Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
 				},
 			}
+
+			if g.managedServiceIdentity {
+				s.defineManagedServiceIdentity(azureResource, g.commonTypesVersion)
+			}
 		} else {
 			update.AllOf = []Schema{}
 		}
@@ -313,6 +317,21 @@ func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
 				},
 			})
 	}
+}
+
+func (s *Swagger) defineManagedServiceIdentity(resource string, commonVersion string) {
+	s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "identity")
+
+	delete(s.Definitions, "identity")
+	s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
+		NameSchema{
+			Name: "identity",
+			Schema: &Schema{
+				Description: "",
+				Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/managedidentity.json#/definitions/ManagedServiceIdentity",
+			},
+		})
+
 }
 
 func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {

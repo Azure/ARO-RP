@@ -57,16 +57,17 @@ type generator struct {
 	examplePlatformWorkloadIdentityRoleSetListResponse func() interface{}
 	exampleOperationListResponse                       func() interface{}
 
-	systemData           bool
-	kubeConfig           bool
-	installVersionList   bool
-	clusterManager       bool
-	workerProfilesStatus bool
-	roleSetList          bool
-	xmsEnum              []string
-	xmsSecretList        []string
-	xmsIdentifiers       []string
-	commonTypesVersion   string
+	systemData             bool
+	kubeConfig             bool
+	installVersionList     bool
+	clusterManager         bool
+	workerProfilesStatus   bool
+	roleSetList            bool
+	managedServiceIdentity bool
+	xmsEnum                []string
+	xmsSecretList          []string
+	xmsIdentifiers         []string
+	commonTypesVersion     string
 }
 
 var apis = map[string]*generator{
@@ -319,16 +320,17 @@ var apis = map[string]*generator{
 		examplePlatformWorkloadIdentityRoleSetListResponse: v20240812preview.ExamplePlatformWorkloadIdentityRoleSetListResponse,
 		exampleOperationListResponse:                       api.ExampleOperationListResponse,
 
-		xmsEnum:              []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType", "ManagedServiceIdentityType"},
-		xmsSecretList:        []string{"kubeconfig", "kubeadminPassword", "secretResources"},
-		xmsIdentifiers:       []string{},
-		commonTypesVersion:   "v6",
-		systemData:           true,
-		clusterManager:       true,
-		installVersionList:   true,
-		kubeConfig:           true,
-		workerProfilesStatus: true,
-		roleSetList:          true,
+		xmsEnum:                []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType", "ManagedServiceIdentityType"},
+		xmsSecretList:          []string{"kubeconfig", "kubeadminPassword", "secretResources"},
+		xmsIdentifiers:         []string{},
+		commonTypesVersion:     "v6",
+		managedServiceIdentity: true,
+		systemData:             true,
+		clusterManager:         true,
+		installVersionList:     true,
+		kubeConfig:             true,
+		workerProfilesStatus:   true,
+		roleSetList:            true,
 	},
 }
 
