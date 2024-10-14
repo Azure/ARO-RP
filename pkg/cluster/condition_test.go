@@ -5,13 +5,17 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	"github.com/sirupsen/logrus"
@@ -28,6 +32,13 @@ import (
 )
 
 const errMustBeNilMsg = "err must be nil; condition is retried until timeout"
+
+func marshalAzureMachineProviderStatus(t *testing.T, status *machinev1beta1.AzureMachineProviderStatus) *runtime.RawExtension {
+	buf, _ := json.Marshal(status)
+	return &runtime.RawExtension{
+		Raw: buf,
+	}
+}
 
 func TestOperatorConsoleExists(t *testing.T) {
 	ctx := context.Background()
@@ -118,6 +129,7 @@ func TestIsOperatorAvailable(t *testing.T) {
 
 func TestMinimumWorkerNodesReady(t *testing.T) {
 	ctx := context.Background()
+	const phaseFailed = "Failed"
 
 	for _, tt := range []struct {
 		name           string
@@ -149,6 +161,59 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 		},
 	} {
 		m := &manager{
+			log: logrus.NewEntry(logrus.StandardLogger()),
+			maocli: machinefake.NewSimpleClientset(
+				&machinev1beta1.Machine{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1",
+						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							"machine.openshift.io/cluster-api-machine-role": "worker",
+							"machine.openshift.io/cluster-api-machine-type": "worker",
+						},
+					},
+					Status: machinev1beta1.MachineStatus{
+						Phase:          to.StringPtr(phaseRunning),
+						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
+					},
+				},
+				&machinev1beta1.Machine{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2",
+						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							"machine.openshift.io/cluster-api-machine-role": "worker",
+							"machine.openshift.io/cluster-api-machine-type": "worker",
+						},
+					},
+					Status: machinev1beta1.MachineStatus{
+						Phase:          to.StringPtr(phaseRunning),
+						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
+					},
+				},
+				&machinev1beta1.Machine{
+					ObjectMeta: metav1.ObjectMeta{Name: "node3",
+						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							"machine.openshift.io/cluster-api-machine-role": "worker",
+							"machine.openshift.io/cluster-api-machine-type": "worker",
+						},
+					},
+					Status: machinev1beta1.MachineStatus{
+						Phase:          to.StringPtr(phaseFailed),
+						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
+					},
+				},
+				&machinev1beta1.Machine{
+					ObjectMeta: metav1.ObjectMeta{Name: "node4-has-no-status",
+						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							"machine.openshift.io/cluster-api-machine-role": "worker",
+							"machine.openshift.io/cluster-api-machine-type": "worker",
+						},
+					},
+				},
+				testMachine(t, "openshift-machine-api", "master1", &machinev1beta1.AzureMachineProviderSpec{}),
+				testMachine(t, "openshift-machine-api", "master2", &machinev1beta1.AzureMachineProviderSpec{}),
+			),
 			kubernetescli: fake.NewSimpleClientset(&corev1.NodeList{
 				Items: []corev1.Node{
 					{
@@ -187,7 +252,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 			t.Error(errMustBeNilMsg)
 		}
 		if ready != tt.want {
-			t.Error(ready)
+			t.Error(tt.name, ready)
 		}
 	}
 }
