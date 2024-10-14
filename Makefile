@@ -105,7 +105,7 @@ discoverycache:
 	$(MAKE) generate
 
 .PHONY: generate
-generate: install-tools fix-macos-mockgen
+generate: install-tools
 	go generate ./...
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
@@ -347,10 +347,7 @@ xmlcov: $(GOCOV) $(GOCOV_XML)
 .PHONY: install-tools
 install-tools: $(BINGO)
 	$(BINGO) get -l
-
-# Fixes https://github.com/uber-go/mock/issues/185
-.PHONY: fix-macos-mockgen
-fix-macos-mockgen:
+# Fixes https://github.com/uber-go/mock/issues/185 for MacOS users
 ifeq ($(shell uname -s),Darwin)
 	codesign -f -s - ${GOPATH}/bin/mockgen
 endif
