@@ -28,6 +28,7 @@ variables:
   - name: VERSION
     value: $(Build.BuildId)
 
+
 stages:
   - stage: Containerized
     jobs:
@@ -97,10 +98,22 @@ stages:
 
           # Step 2: Install Docker, Docker Compose, and dependencies
           - script: |
+              # Install Docker dependencies
+               echo "Installing Docker and Docker Compose Plugin..."
               sudo apt-get update
-              sudo apt-get install -y docker.io docker-compose-plugin make
+              sudo apt-get install -y ca-certificates curl gnupg
+              sudo install -m 0755 -d /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc
+              sudo chmod a+r /etc/apt/keyrings/docker.asc
+              echo \
+              "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+              $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | \
+              sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+              sudo apt-get update
+              sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin make
               sudo systemctl start docker
               sudo systemctl enable docker
+              docker compose version
             displayName: Install Docker and Docker Compose
 
           # Step 3: AZ CLI Login
@@ -108,20 +121,13 @@ stages:
             parameters:
               azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
-          # Step 4: Download and extract VPN secrets
-          - script: |
-              az account set -s $AZURE_SUBSCRIPTION_ID
-              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
-              . secrets/env
-              ls -R ./secrets
-              cat ./secrets/env
-              export AZURE_SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID"
-              export PULL_SECRET="$PULL_SECRET"
-            displayName: Download and Setup Secrets
 
           # Step 5: Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
-          - script: |
-              echo "Setting up Key Vault access..."
+          - bash: |
+             az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
+              export CI=true
               export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
               KEYVAULT_URL="https://${KEYVAULT_PREFIX}.vault.azure.net"
               echo "Using Key Vault URL: $KEYVAULT_URL"
@@ -133,23 +139,37 @@ stages:
               }
 
               # Retrieve the kubeconfig
-              hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
+              hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
 
-              if [ -f admin.kubeconfig ]; then
+              if [ -f aks.kubeconfig ]; then
                 echo "Kubeconfig retrieved successfully."
-                echo "KUBECONFIG=$(pwd)/admin.kubeconfig" >> .env
-                cat admin.kubeconfig
+                echo "KUBECONFIG=$(pwd)/aks.kubeconfig" >> .env
+                cat aks.kubeconfig
               else
                 echo "Failed to retrieve Kubeconfig."
                 exit 1
               fi
             displayName: Get Kubeconfig for AKS Cluster
 
-          # Step 6: Deploy Hive Operator
-          - script: |
-              export PULL_SECRET="$PULL_SECRET"
-              export KUBECONFIG=$(pwd)/admin.kubeconfig
-              if [ -f "hack/hive/hive-dev-install.sh" ]; then
+          # Step 6: Deploy Hive Operator with fix for unbound PULL_SECRET
+          - bash: |
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
+              export CI=true
+              docker compose --env-file .env -f docker-compose.yml up -d vpn
+              while [ "$(docker inspect --format '{{.State.Health.Status}}' vpn)" != "healthy" ]; do
+                echo "Waiting for VPN to be healthy..."
+                sleep 10
+              echo "VPN is not healthy yet. Waiting..."
+              done
+              docker ps
+              export KUBECONFIG=$(pwd)/aks.kubeconfig
+              kubectl get nodes || {
+                echo "Failed to get nodes. Please check the Kubeconfig configuration."
+                exit 1
+              }
+              if [[ -f "hack/hive/hive-dev-install.sh" ]]; then
                 ./hack/hive/hive-dev-install.sh
               else
                 echo "Hive installation script not found"
@@ -158,7 +178,7 @@ stages:
             displayName: Deploy Hive Operator
 
           # Step 7: Set Up Environment Variables for Docker Compose
-          - script: |
+          - bash: |
               export RP_IMAGE_ACR=arosvcdev.azurecr.io
               export VERSION=${BUILD_BUILDID}
               export E2E_IMAGE=${RP_IMAGE_ACR}/e2e:${VERSION}
@@ -167,24 +187,39 @@ stages:
               echo "VERSION=$VERSION" >> .env
               echo "E2E_IMAGE=$E2E_IMAGE" >> .env
               echo "E2E_LABEL=$E2E_LABEL" >> .env
-              echo "KUBECONFIG=$(pwd)/admin.kubeconfig" >> .env
+              echo "KUBECONFIG=$(pwd)/aks.kubeconfig" >> .env
               . secrets/env
               cat .env
             displayName: Set Up Environment Variables
 
           # Step 8: Start Services using Docker Compose
-          - script: |
+          - bash: |
               docker compose --env-file .env -f docker-compose.yml up -d
+              sleep 180
               docker ps
             displayName: Start Services using Docker Compose
 
           # Step 9: Execute E2E Tests
-          - script: |
+          - bash: |
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
+              export CI=true
+              export ARO_SELENIUM_HOSTNAME="localhost"
+              export OS_CLUSTER_VERSION=4.13.40
+              . ./hack/e2e/run-rp-and-e2e.sh
+              deploy_e2e_db
+              register_sub
+              env | sort
+              echo "Waiting for services to stabilize..."
+              sleep 60
+              docker ps
               docker compose up run-e2e --abort-on-container-exit
             displayName: Execute E2E Tests
 
           # Step 10: Log the output from the services in case of failure
-          - script: |
+          - bash: |
+              docker compose logs portal
               docker compose logs vpn
               docker compose logs selenium
               docker compose logs rp
@@ -192,17 +227,46 @@ stages:
             displayName: Log Service Output
             condition: failed()
 
+          #  must-gather collection must be run inside the container so it can access the VPN
+          - bash: |
+              export CI=true
+              set -x
+              hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
+            displayName: Get admin kubeconfig for must-gather
+            condition: failed()
+          - bash: |
+              export CI=true
+              export KUBECONFIG=aks.kubeconfig
+              wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+              tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+              ./oc adm must-gather --image quay.io/cmarches/aro-must-gather:20231030.00
+               tar cf must-gather.tar.gz must-gather.local.*
+            displayName: Collect must-gather
+            condition: failed()
+            # Publish the must-gather result to the pipeline
+          - publish: must-gather.tar.gz
+            artifact: must-gather
+            displayName: Append must-gather to Pipeline
+            condition: failed()
+
           # Step 11: Clean up Docker Compose services
-          - script: |
+          - bash: |
               docker compose down
-              rm -f admin.kubeconfig
+              rm -f aks.kubeconfig
             displayName: Cleanup Docker Compose Services and Kubeconfig
             condition: always()
 
           # Step 12: Clean Up Database
-          - script: |
+          - bash: |
               az cosmosdb sql database delete --name "$DATABASE_NAME" --yes --account-name "$DATABASE_ACCOUNT_NAME" --resource-group "$RESOURCEGROUP"
             displayName: Clean Up Database
+            condition: always()
+
+          # Cleanup Hive Operator
+          - bash: |
+              echo "Cleaning up Hive Operator..."
+              kubectl delete namespace hive || echo "Namespace already deleted or does not exist."
+            displayName: Cleanup Hive Operator
             condition: always()
 
           # Step 13: AZ CLI Logout
