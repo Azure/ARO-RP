@@ -1633,11 +1633,12 @@ func TestCreateOIDC(t *testing.T) {
 			}
 
 			m := &manager{
-				db:     dbOpenShiftClusters,
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				rpBlob: rpBlobManager,
-				doc:    doc,
-				env:    env,
+				db:              dbOpenShiftClusters,
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				rpBlob:          rpBlobManager,
+				doc:             doc,
+				env:             env,
+				subscriptionDoc: m.subscriptionDoc,
 			}
 
 			err = m.createOIDC(ctx)
