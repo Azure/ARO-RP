@@ -205,7 +205,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(r.SubscriptionID, fpCredRPTenant, clientOptions)
+	armFPPrivateEndpoints, err := armnetwork.NewPrivateEndpointsClient(_env.SubscriptionID(), fpCredRPTenant, clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, msiCredential, clientOptions)
+	armRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(_env.SubscriptionID(), msiCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
