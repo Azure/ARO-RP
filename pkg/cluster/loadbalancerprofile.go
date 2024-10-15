@@ -30,6 +30,7 @@ type createIPResult struct {
 	err error
 }
 
+// reconcileLoadBalancerProfile reconciles the outbound IPs of the public load balancer.
 func (m *manager) reconcileLoadBalancerProfile(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType != api.OutboundTypeLoadbalancer || m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
 		return nil
@@ -106,7 +107,7 @@ func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb sdknet
 	return nil
 }
 
-// Remove outbound-rule-v4 IPs and corresponding frontendIPConfig from load balancer
+// removeOutboundIPsFromLB removes outbound-rule-v4 IPs and corresponding frontendIPConfig from load balancer
 func removeOutboundIPsFromLB(lb sdknetwork.LoadBalancer) {
 	removeOutboundRuleV4FrontendIPConfig(lb)
 	setOutboundRuleV4(lb, []*sdknetwork.SubResource{})
@@ -141,7 +142,7 @@ func getOutboundRuleV4FIPConfigs(lb sdknetwork.LoadBalancer) map[string]sdknetwo
 	return obRuleV4FIPConfigs
 }
 
-// Returns a map of Frontend IP Configurations.  Frontend IP Configurations can be looked up by Public IP Address ID or Frontend IP Configuration ID
+// getFrontendIPConfigs returns a map of Frontend IP Configurations from the given load balancer
 func getFrontendIPConfigs(lb sdknetwork.LoadBalancer) map[string]sdknetwork.FrontendIPConfiguration {
 	var frontendIPConfigs = make(map[string]sdknetwork.FrontendIPConfiguration, len(lb.Properties.FrontendIPConfigurations))
 
@@ -155,7 +156,7 @@ func getFrontendIPConfigs(lb sdknetwork.LoadBalancer) map[string]sdknetwork.Fron
 	return frontendIPConfigs
 }
 
-// Adds IPs or IPPrefixes to the load balancer outbound rule "outbound-rule-v4".
+// addOutboundIPsToLB adds IPs or IPPrefixes to the load balancer outbound rule "outbound-rule-v4".
 func addOutboundIPsToLB(resourceGroupID string, lb sdknetwork.LoadBalancer, obIPsOrIPPrefixes []api.ResourceReference) {
 	frontendIPConfigs := getFrontendIPConfigs(lb)
 	var outboundRuleV4FrontendIPConfig []*sdknetwork.SubResource
@@ -187,7 +188,7 @@ func setOutboundRuleV4(lb sdknetwork.LoadBalancer, outboundRuleV4FrontendIPConfi
 	}
 }
 
-// Delete all managed outbound IPs that are not in use by the load balancer.
+// deleteUnusedManagedIPs all managed outbound IPs that are not in use by the load balancer.
 // The default outbound ip is saved if the api server is public.
 func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -261,8 +262,8 @@ func (m *manager) getUnusedManagedIPs(ctx context.Context) ([]string, error) {
 	return unusedManagedIPs, nil
 }
 
-// Returns the desired RP managed outbound publicIPAddresses.  Additional Managed Outbound IPs
-// will be created as required to satisfy ManagedOutboundIP.Count.
+// reconcileOutboundIPs returns the desired RP managed outbound publicIPAddresses.
+// Additional Managed Outbound IPs will be created as required to satisfy ManagedOutboundIP.Count.
 func (m *manager) reconcileOutboundIPs(ctx context.Context) ([]api.ResourceReference, error) {
 	// Determine source of outbound IPs
 	// TODO: add customer provided ip and ip prefixes
@@ -272,7 +273,7 @@ func (m *manager) reconcileOutboundIPs(ctx context.Context) ([]api.ResourceRefer
 	return nil, nil
 }
 
-// Returns RP managed outbound ips to be added to the outbound rule.
+// reconcileDesiredManagedIPs returns RP managed outbound ips to be added to the outbound rule.
 // If the default outbound IP is present it will be added to ensure reuse of the ip when the
 // api server is public.  If additional IPs are required they will be created.
 func (m *manager) reconcileDesiredManagedIPs(ctx context.Context) ([]api.ResourceReference, error) {
@@ -297,9 +298,10 @@ func (m *manager) reconcileDesiredManagedIPs(ctx context.Context) ([]api.Resourc
 	return desiredIPAddresses, nil
 }
 
+// getDesiredOutboundIPs returns the desired outbound IPs to be used by the load balancer.
 func getDesiredOutboundIPs(managedOBIPCount int, ipAddresses map[string]sdknetwork.PublicIPAddress, infraID string) []api.ResourceReference {
 	desiredIPAddresses := make([]api.ResourceReference, 0, managedOBIPCount)
-	// ensure that when scaling managed ips down the default outbound IP is reused incase the api server visibility is public
+	// ensure that when scaling managed ips down the default outbound IP is reused in case the api server visibility is public
 	desiredCount := 0
 	if defaultIP, ok := ipAddresses[infraID+"-pip-v4"]; ok {
 		desiredIPAddresses = append(desiredIPAddresses, api.ResourceReference{ID: *defaultIP.ID})
@@ -318,6 +320,7 @@ func getDesiredOutboundIPs(managedOBIPCount int, ipAddresses map[string]sdknetwo
 	return desiredIPAddresses
 }
 
+// createPublicIPAddresses creates managed outbound IP Addresses.
 func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[string]sdknetwork.PublicIPAddress, numToCreate int) error {
 	ch := make(chan createIPResult)
 	defer close(ch)
@@ -342,7 +345,7 @@ func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[s
 	return nil
 }
 
-// Get all current managed IP Addresses in cluster resource group based on naming convention.
+// getClusterManagedIPs gets all current managed IP Addresses in cluster resource group based on naming convention.
 func (m *manager) getClusterManagedIPs(ctx context.Context) (map[string]sdknetwork.PublicIPAddress, error) {
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
@@ -353,10 +356,10 @@ func (m *manager) getClusterManagedIPs(ctx context.Context) (map[string]sdknetwo
 		return nil, err
 	}
 
-	for i := 0; i < len(result); i++ {
+	for _, ip := range result {
 		// <infraID>-pip-v4 is the default installed outbound IP
-		if *result[i].Name == infraID+"-pip-v4" || strings.Contains(*result[i].Name, "-outbound-pip-v4") {
-			ipAddresses[*result[i].Name] = *result[i]
+		if *ip.Name == infraID+"-pip-v4" || strings.Contains(*ip.Name, "-outbound-pip-v4") {
+			ipAddresses[*ip.Name] = *ip
 		}
 	}
 
@@ -367,7 +370,7 @@ func genManagedOutboundIPName() string {
 	return uuid.DefaultGenerator.Generate() + "-outbound-pip-v4"
 }
 
-// Create a managed outbound IP Address.
+// createPublicIPAddress creates a managed outbound IP Address.
 func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPResult) {
 	name := genManagedOutboundIPName()
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -382,6 +385,7 @@ func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPR
 	}
 }
 
+// getOutboundIPsFromLB returns the public IP addresses used by the load balancer outbound rule "outbound-rule-v4".
 func getOutboundIPsFromLB(lb sdknetwork.LoadBalancer) []api.ResourceReference {
 	var outboundIPs []api.ResourceReference
 	fipConfigs := getFrontendIPConfigs(lb)
