@@ -1417,11 +1417,12 @@ func TestCreateOIDC(t *testing.T) {
 			},
 		},
 	}
+	OIDCIssuerPath := m.subscriptionDoc.Subscription.Properties.TenantID
 	storageWebEndpointForDev := oidcStorageAccountName + ".web." + azureclient.PublicCloud.StorageEndpointSuffix
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
 	blobContainerURL := fmt.Sprintf("https://%s.blob.%s/%s", oidcStorageAccountName, azureclient.PublicCloud.StorageEndpointSuffix, oidcbuilder.WebContainer)
-	prodOIDCIssuer := fmt.Sprintf("https://%s/%s%s", afdEndpoint, m.subscriptionDoc.Subscription.Properties.TenantID, clusterID)
-	devOIDCIssuer := fmt.Sprintf("https://%s/%s%s", storageWebEndpointForDev, m.subscriptionDoc.Subscription.Properties.TenantID, clusterID)
+	prodOIDCIssuer := fmt.Sprintf("https://%s/%s/%s", afdEndpoint, OIDCIssuerPath, clusterID)
+	devOIDCIssuer := fmt.Sprintf("https://%s/%s/%s", storageWebEndpointForDev, OIDCIssuerPath, clusterID)
 	containerProperties := azstorage.AccountsClientGetPropertiesResponse{
 		Account: azstorage.Account{
 			Properties: &azstorage.AccountProperties{
@@ -1497,8 +1498,8 @@ func TestCreateOIDC(t *testing.T) {
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", OIDCIssuerPath, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", OIDCIssuerPath, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
 			},
 			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(prodOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
@@ -1525,8 +1526,8 @@ func TestCreateOIDC(t *testing.T) {
 				blob.EXPECT().GetContainerProperties(gomock.Any(), resourceGroupName, oidcStorageAccountName, oidcbuilder.WebContainer).Return(containerProperties, nil)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", OIDCIssuerPath, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", OIDCIssuerPath, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
 			},
 			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(devOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
@@ -1600,7 +1601,7 @@ func TestCreateOIDC(t *testing.T) {
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(errors.New("generic error"))
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(fmt.Sprintf("%s/%s", OIDCIssuerPath, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(errors.New("generic error"))
 			},
 			wantBoundServiceAccountSigningKey: false,
 			wantErr:                           "generic error",
