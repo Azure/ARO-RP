@@ -92,6 +92,20 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
+func (m *manager) fpspStorageBlobContributorRBAC(storageAccountName, principalID string) (*arm.Resource, error) {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil, fmt.Errorf("fpspStorageBlobContributorRBAC called for a Cluster Service Principal cluster")
+	}
+	resourceTypeStorageAccount := "Microsoft.Storage/storageAccounts"
+	return rbac.ResourceRoleAssignmentWithName(
+		rbac.RoleStorageBlobDataContributor,
+		"'"+principalID+"'",
+		resourceTypeStorageAccount,
+		fmt.Sprintf("'%s'", storageAccountName),
+		fmt.Sprintf("concat('%s', '/Microsoft.Authorization/', guid(resourceId('%s', '%s')))", storageAccountName, resourceTypeStorageAccount, storageAccountName),
+	), nil
+}
+
 // storageAccount will return storage account resource.
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.

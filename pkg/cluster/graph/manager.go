@@ -9,12 +9,18 @@ import (
 	"io"
 	"strings"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
+)
+
+const (
+	GraphContainer    = "aro"
+	GraphBlob         = "graph"
+	IgnitionContainer = "ignition"
 )
 
 type Manager interface {
@@ -43,13 +49,12 @@ func NewManager(env env.Interface, log *logrus.Entry, aead encryption.AEAD, stor
 func (m *manager) Exists(ctx context.Context, resourceGroup, account string) (bool, error) {
 	m.log.Print("checking if graph exists")
 
-	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, armstorage.Permissions("r"), armstorage.SignedResourceTypesO)
 	if err != nil {
 		return false, err
 	}
 
-	aro := blobService.GetContainerReference("aro")
-	return aro.GetBlobReference("graph").Exists()
+	return blobService.BlobExists(ctx, GraphContainer, GraphBlob)
 }
 
 func (m *manager) LoadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error) {
@@ -73,20 +78,18 @@ func (m *manager) reloadAead(ctx context.Context) (err error) {
 func (m *manager) loadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error) {
 	m.log.Print("load persisted graph")
 
-	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, armstorage.Permissions("r"), armstorage.SignedResourceTypesO)
 	if err != nil {
 		return nil, err
 	}
 
-	aro := blobService.GetContainerReference("aro")
-	cluster := aro.GetBlobReference("graph")
-	rc, err := cluster.Get(nil)
+	rc, err := blobService.DownloadStream(ctx, GraphContainer, GraphBlob, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
+	defer rc.Body.Close()
 
-	b, err := io.ReadAll(rc)
+	b, err := io.ReadAll(rc.Body)
 	if err != nil {
 		return nil, err
 	}
