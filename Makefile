@@ -347,6 +347,10 @@ xmlcov: $(GOCOV) $(GOCOV_XML)
 .PHONY: install-tools
 install-tools: $(BINGO)
 	$(BINGO) get -l
+# Fixes https://github.com/uber-go/mock/issues/185 for MacOS users
+ifeq ($(shell uname -s),Darwin)
+	codesign -f -s - ${GOPATH}/bin/mockgen
+endif
 
 ###############################################################################
 # Containerized CI/CD RP
