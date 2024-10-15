@@ -51,6 +51,10 @@ var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardD16asV5: api.VMSizeStandardD16asV5Struct,
 	api.VMSizeStandardD32asV5: api.VMSizeStandardD32asV5Struct,
 
+	api.VMSizeStandardD8dsV5:  api.VMSizeStandardD8dsV5Struct,
+	api.VMSizeStandardD16dsV5: api.VMSizeStandardD16dsV5Struct,
+	api.VMSizeStandardD32dsV5: api.VMSizeStandardD32dsV5Struct,
+
 	// Memory optimized
 	api.VMSizeStandardE8sV3:  api.VMSizeStandardE8sV3Struct,
 	api.VMSizeStandardE16sV3: api.VMSizeStandardE16sV3Struct,
@@ -135,6 +139,13 @@ var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardD32asV5: api.VMSizeStandardD32asV5Struct,
 	api.VMSizeStandardD64asV5: api.VMSizeStandardD64asV5Struct,
 	api.VMSizeStandardD96asV5: api.VMSizeStandardD96asV5Struct,
+
+	api.VMSizeStandardD4dsV5:  api.VMSizeStandardD4dsV5Struct,
+	api.VMSizeStandardD8dsV5:  api.VMSizeStandardD8dsV5Struct,
+	api.VMSizeStandardD16dsV5: api.VMSizeStandardD16dsV5Struct,
+	api.VMSizeStandardD32dsV5: api.VMSizeStandardD32dsV5Struct,
+	api.VMSizeStandardD64dsV5: api.VMSizeStandardD64dsV5Struct,
+	api.VMSizeStandardD96dsV5: api.VMSizeStandardD96dsV5Struct,
 
 	// Memory optimized
 	api.VMSizeStandardE4sV3:  api.VMSizeStandardE4sV3Struct,
