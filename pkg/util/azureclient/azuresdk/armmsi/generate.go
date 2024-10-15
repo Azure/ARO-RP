@@ -5,6 +5,7 @@ package armmsi
 
 // Use source mode to prevent some issues related to generics being present in the interface.
 //go:generate rm -rf ../../../../../pkg/util/mocks/azureclient/azuresdk/$GOPACKAGE
-//go:generate mockgen -source ./federated_identity_credentials.go -destination=../../../mocks/azureclient/azuresdk/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/$GOPACKAGE FederatedIdentityCredentialsClient
-//go:generate mockgen -source ./user_assigned_identities.go -destination=../../../mocks/azureclient/azuresdk/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/$GOPACKAGE UserAssignedIdentitiesClient
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../mocks/azureclient/azuresdk/$GOPACKAGE/$GOPACKAGE.go
+//go:generate mockgen -source ./federated_identity_credentials.go -destination=../../../mocks/azureclient/azuresdk/$GOPACKAGE/federated_identity_credentials.go github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/$GOPACKAGE FederatedIdentityCredentialsClient
+//go:generate mockgen -source ./user_assigned_identities.go -destination=../../../mocks/azureclient/azuresdk/$GOPACKAGE/user_assigned_identities.go github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/$GOPACKAGE UserAssignedIdentitiesClient
+//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../mocks/azureclient/azuresdk/$GOPACKAGE/federated_identity_credentials.go
+//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../mocks/azureclient/azuresdk/$GOPACKAGE/user_assigned_identities.go
