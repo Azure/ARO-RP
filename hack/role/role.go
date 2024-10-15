@@ -52,6 +52,12 @@ func (m *missingPermissionsError) Error() string {
 	return "missing permissions"
 }
 
+type emptyVersionsError struct{}
+
+func (e *emptyVersionsError) Error() string {
+	return "no versions found"
+}
+
 var (
 	verifiedVersion = flag.String("verified-version", "", "verified version")
 	targetVersion   = flag.String("target-version", "", "(optional) version to be verified")
@@ -183,8 +189,8 @@ func versionsToValidate(verifiedVersion string) ([]string, error) {
 	}
 
 	var vers []string
-	for v.V[1]++; ; v.V[1]++ {
-		res, err := http.Get(fmt.Sprintf("https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-%s", v.MinorVersion()))
+	for ; ; v.V[1]++ {
+		res, err := http.Get(fmt.Sprintf("https://api.openshift.com/api/upgrades_info/v1/graph?channel=candidate-%s", v.MinorVersion()))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get upgrade graph: %w", err)
 		}
@@ -193,15 +199,24 @@ func versionsToValidate(verifiedVersion string) ([]string, error) {
 			return nil, fmt.Errorf("failed to decode upgrade graph: %w", err)
 		}
 
-		// If there are no nodes, the version is not released.
-		// We don't need to check further versions.
 		if len(g.Nodes) == 0 {
 			return vers, nil
 		}
 
 		latest, err := getLatest(&g)
 		if err != nil {
+			if errors.Is(err, &emptyVersionsError{}) {
+				// If there are no versions available, the version and all later versions are not released.
+				// We don't need to check further versions.
+				return vers, nil
+			}
 			return nil, fmt.Errorf("failed to get latest version: %w", err)
+		}
+		if latest.MinorVersion() != v.MinorVersion() {
+			// Candidate channels have old versions.
+			// If the latest version of the channel is different from the channel version,
+			// that channel version is not released yet.
+			return vers, nil
 		}
 		vers = append(vers, latest.String())
 	}
@@ -214,12 +229,16 @@ func getLatest(g *graph) (*version.Version, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse version: %w", err)
 		}
+		if v.Suffix != "" {
+			// skip suffixed versions because it's too early to check them
+			continue
+		}
 		if latest == nil || latest.Lt(v) {
 			latest = v
 		}
 	}
 	if latest == nil {
-		return nil, fmt.Errorf("no versions found")
+		return nil, &emptyVersionsError{}
 	}
 	return latest, nil
 }

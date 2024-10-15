@@ -453,4 +453,4 @@ run-selenium:
 
 .PHONY: validate-roledef
 validate-roledef:
-	go run ./hack/role -verified-version $(OCP_VERSION) -oc-bin=$(OC)
+	go run ./hack/role -verified-version "$(OCP_VERSION)" -oc-bin=$(OC)
