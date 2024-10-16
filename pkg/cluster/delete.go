@@ -448,11 +448,10 @@ func (m *manager) Delete(ctx context.Context) error {
 		m.log.Printf("deleting OIDC configuration")
 		blobContainerURL := oidcbuilder.GenerateBlobContainerURL(m.env)
 		azBlobClient, err := m.rpBlob.GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{})
-		OIDCIssuerPath := m.subscriptionDoc.Subscription.Properties.TenantID
 		if err != nil {
 			return err
 		}
-		err = oidcbuilder.DeleteOidcFolder(ctx, fmt.Sprintf("%s/%s", OIDCIssuerPath, m.doc.ID), azBlobClient)
+		err = oidcbuilder.DeleteOidcFolder(ctx, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, m.doc.ID), azBlobClient)
 		if err != nil {
 			return err
 		}

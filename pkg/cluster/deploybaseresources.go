@@ -55,8 +55,7 @@ func (m *manager) createOIDC(ctx context.Context) error {
 		// For Production Azure Front Door Endpoint will be the OIDC Endpoint
 		oidcEndpoint = m.env.OIDCEndpoint()
 	}
-	OIDCIssuerPath := m.subscriptionDoc.Subscription.Properties.TenantID
-	oidcBuilder, err := oidcbuilder.NewOIDCBuilder(m.env, oidcEndpoint, fmt.Sprintf("%s/%s", OIDCIssuerPath, m.doc.ID))
+	oidcBuilder, err := oidcbuilder.NewOIDCBuilder(m.env, oidcEndpoint, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, m.doc.ID))
 	if err != nil {
 		return err
 	}
