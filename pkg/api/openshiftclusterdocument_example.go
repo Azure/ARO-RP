@@ -34,6 +34,12 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 			Tags: map[string]string{
 				"key": "value",
 			},
+			Identity: &ManagedServiceIdentity{
+				Type: ManagedServiceIdentityUserAssigned,
+				UserAssignedIdentities: map[string]UserAssignedIdentity{
+					"": {},
+				},
+			},
 			Properties: OpenShiftClusterProperties{
 				ProvisioningState: ProvisioningStateSucceeded,
 				ClusterProfile: ClusterProfile{

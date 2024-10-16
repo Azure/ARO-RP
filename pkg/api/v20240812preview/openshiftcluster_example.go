@@ -19,6 +19,12 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 	oc.Location = ""
 	oc.SystemData = nil
 	oc.Properties.WorkerProfilesStatus = nil
+	oc.Identity = &ManagedServiceIdentity{
+		Type: ManagedServiceIdentityUserAssigned,
+		UserAssignedIdentities: map[string]UserAssignedIdentity{
+			"": {},
+		},
+	}
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
 			"": {
@@ -40,8 +46,10 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Name = ""
 	oc.Type = ""
 	oc.Identity = &ManagedServiceIdentity{
-		Type:                   "",
-		UserAssignedIdentities: map[string]UserAssignedIdentity{},
+		Type: ManagedServiceIdentityUserAssigned,
+		UserAssignedIdentities: map[string]UserAssignedIdentity{
+			"": {},
+		},
 	}
 	oc.Properties.ProvisioningState = ""
 	oc.Properties.ClusterProfile.Version = ""

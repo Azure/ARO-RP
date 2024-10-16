@@ -60,7 +60,12 @@
           }
         ]
       },
-      "identity": {}
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "": {}
+        }
+      }
     }
   },
   "responses": {
@@ -124,6 +129,12 @@
               "ip": "1.2.3.4"
             }
           ]
+        },
+        "identity": {
+          "type": "UserAssigned",
+          "userAssignedIdentities": {
+            "": {}
+          }
         }
       }
     },
@@ -187,6 +198,12 @@
               "ip": "1.2.3.4"
             }
           ]
+        },
+        "identity": {
+          "type": "UserAssigned",
+          "userAssignedIdentities": {
+            "": {}
+          }
         }
       }
     }

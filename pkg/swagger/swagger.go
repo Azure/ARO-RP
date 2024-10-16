@@ -235,10 +235,6 @@ func Run(api, outputDir string) error {
 					Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
 				},
 			}
-
-			if g.managedServiceIdentity {
-				s.defineManagedServiceIdentity(azureResource, g.commonTypesVersion)
-			}
 		} else {
 			update.AllOf = []Schema{}
 		}
@@ -254,15 +250,20 @@ func Run(api, outputDir string) error {
 		}
 		s.Definitions[azureResource].Properties = properties
 
-		// Don't include an update object for "OpenShiftVersion" as it is not updatable via the API
+		// Don't include an update object for either "OpenShiftVersion"
+		// or "PlatformWorkloadIdentityRoleSet" as they are not updatable via the API
 		azureResources := []string{azureResource}
-		if azureResource != "OpenShiftVersion" {
+		if azureResource != "OpenShiftVersion" && azureResource != "PlatformWorkloadIdentityRoleSet" {
 			s.Definitions[azureResource+"Update"] = update
 			azureResources = append(azureResources, azureResource+"Update")
 		}
 
 		if g.systemData {
 			s.defineSystemData(azureResources, g.commonTypesVersion)
+		}
+
+		if g.managedServiceIdentity {
+			s.defineManagedServiceIdentity(g.commonTypesVersion)
 		}
 	}
 
@@ -319,7 +320,8 @@ func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
 	}
 }
 
-func (s *Swagger) defineManagedServiceIdentity(resource string, commonVersion string) {
+func (s *Swagger) defineManagedServiceIdentity(commonVersion string) {
+	resource := "OpenShiftCluster"
 	s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "identity")
 
 	delete(s.Definitions, "identity")
@@ -327,11 +329,10 @@ func (s *Swagger) defineManagedServiceIdentity(resource string, commonVersion st
 		NameSchema{
 			Name: "identity",
 			Schema: &Schema{
-				Description: "",
+				Description: "Identity stores information about the cluster MSI(s) in a workload identity cluster.",
 				Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/managedidentity.json#/definitions/ManagedServiceIdentity",
 			},
 		})
-
 }
 
 func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {

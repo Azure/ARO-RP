@@ -2150,13 +2150,14 @@
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
         },
-        "identity": {
-          "$ref": "../../../../../../common-types/resource-management/v6/managedidentity.json#/definitions/ManagedServiceIdentity"
-        },
         "systemData": {
           "$ref": "../../../../../../common-types/resource-management/v6/types.json#/definitions/systemData",
           "description": "The system meta data relating to this resource.",
           "readOnly": true
+        },
+        "identity": {
+          "$ref": "../../../../../../common-types/resource-management/v6/managedidentity.json#/definitions/ManagedServiceIdentity",
+          "description": "Identity stores information about the cluster MSI(s) in a workload identity cluster."
         }
       }
     },
@@ -2495,22 +2496,6 @@
             "$ref": "#/definitions/PlatformWorkloadIdentityRole"
           },
           "x-ms-identifiers": []
-        }
-      }
-    },
-    "PlatformWorkloadIdentityRoleSetUpdate": {
-      "description": "PlatformWorkloadIdentityRoleSet represents a mapping from the names of OCP operators to the built-in roles that should be assigned to those operator's corresponding managed identities for a particular OCP version.",
-      "type": "object",
-      "properties": {
-        "properties": {
-          "$ref": "#/definitions/PlatformWorkloadIdentityRoleSetProperties",
-          "description": "The properties for the PlatformWorkloadIdentityRoleSet resource.",
-          "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v6/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
