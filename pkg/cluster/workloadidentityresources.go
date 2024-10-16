@@ -4,13 +4,18 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"math/big"
+	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 )
 
@@ -22,6 +27,10 @@ const (
 	ccoSecretFilename            = "azure-ad-pod-identity-webhook-config.yaml"
 	authenticationConfigName     = "cluster"
 	authenticationConfigFilename = "cluster-authentication-02-config.yaml"
+
+	base36Encoding             = 36
+	maxFederatedCredNameLength = 120
+	numberOfDelimiters         = 1
 )
 
 func (m *manager) generateWorkloadIdentityResources() (map[string]kruntime.Object, error) {
@@ -132,4 +141,38 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 			ServiceAccountIssuer: (string)(*oidcIssuer),
 		},
 	}, nil
+}
+
+// getPlatformWorkloadIdentityFederatedCredName returns a federated identity credential name.
+// name length 3-120 characters. It must be alphanumeric, dash, underscore.
+func (m *manager) getPlatformWorkloadIdentityFederatedCredName(sa string, identity api.PlatformWorkloadIdentity) (string, error) {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return "", fmt.Errorf("getPlatformWorkloadIdentityFederatedCredName called for a CSP cluster")
+	}
+
+	if strings.TrimSpace(sa) == "" {
+		return "", fmt.Errorf("service account name is required")
+	}
+
+	identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
+	if err != nil {
+		return "", err
+	}
+	clusterResourceId, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
+	if err != nil {
+		return "", err
+	}
+
+	clusterResourceKey := fmt.Sprintf("%s-%s-%s", clusterResourceId.SubscriptionID, clusterResourceId.ResourceGroup, clusterResourceId.ResourceName)
+	name := fmt.Sprintf("%s-%s-%s", clusterResourceKey, sa, identityResourceId.ResourceName)
+	// the base-36 encoded string of a SHA-224 hash will typically be around 43 to 44 characters long.
+	hash := sha256.Sum224([]byte(name))
+	encodedName := (&big.Int{}).SetBytes(hash[:]).Text(base36Encoding)
+	remainingChars := maxFederatedCredNameLength - len(encodedName) - numberOfDelimiters
+
+	if remainingChars < len(clusterResourceKey) {
+		return fmt.Sprintf("%s-%s", clusterResourceKey[:remainingChars], encodedName), nil
+	}
+
+	return fmt.Sprintf("%s-%s", clusterResourceKey, encodedName), nil
 }

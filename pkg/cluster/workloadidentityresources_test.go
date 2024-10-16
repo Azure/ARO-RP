@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -12,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_platformworkloadidentity "github.com/Azure/ARO-RP/pkg/util/mocks/platformworkloadidentity"
@@ -485,6 +487,82 @@ func TestGenerateAuthenticationConfig(t *testing.T) {
 			got, err := m.generateAuthenticationConfig()
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
+	docID := "00000000-0000-0000-0000-000000000000"
+	subID := "00000000-0000-0000-0000-000000000000"
+	clusterRGName := "aro-cluster-rg"
+	clusterName := "aro-cluster"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/", subID, clusterName)
+	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/%s", subID, clusterRGName, clusterName)
+
+	for _, tt := range []struct {
+		name           string
+		doc            *api.OpenShiftClusterDocument
+		identity       api.PlatformWorkloadIdentity
+		serviceAccount string
+		wantErr        string
+		want           string
+	}{
+		{
+			name: "fail - getPlatformWorkloadIdentityFederatedCredName called for a CSP cluster",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{},
+				},
+			},
+			identity: api.PlatformWorkloadIdentity{},
+			wantErr:  "getPlatformWorkloadIdentityFederatedCredName called for a CSP cluster",
+			want:     "",
+		},
+		{
+			name: "fail - invalid service account name",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						},
+					},
+				},
+			},
+			serviceAccount: "   ",
+			identity:       api.PlatformWorkloadIdentity{},
+			wantErr:        "service account name is required",
+			want:           "",
+		},
+		{
+			name: "success - return federated identity name for platform workload identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						},
+					},
+				},
+			},
+			serviceAccount: "openshift-cloud-controller-manager:cloud-controller-manager",
+			identity:       api.PlatformWorkloadIdentity{ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm")},
+			wantErr:        "",
+			want:           fmt.Sprintf("%s-%s-%s", subID, clusterRGName, clusterName),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m := manager{
+				doc: tt.doc,
+			}
+			got, err := m.getPlatformWorkloadIdentityFederatedCredName(tt.serviceAccount, tt.identity)
+
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			assert.Contains(t, got, tt.want)
 		})
 	}
 }
