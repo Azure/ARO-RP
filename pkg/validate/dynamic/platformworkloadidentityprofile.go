@@ -22,13 +22,13 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 	dv.log.Print("ValidatePlatformWorkloadIdentityProfile")
 
 	dv.platformIdentitiesActionsMap = map[string][]string{}
-	dv.platformIdentities = []api.PlatformWorkloadIdentity{}
+	dv.platformIdentities = map[string]api.PlatformWorkloadIdentity{}
 
-	for _, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		_, ok := platformWorkloadIdentityRolesByRoleName[pwi.OperatorName]
+	for k, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		_, ok := platformWorkloadIdentityRolesByRoleName[k]
 		if ok {
-			dv.platformIdentitiesActionsMap[pwi.OperatorName] = nil
-			dv.platformIdentities = append(dv.platformIdentities, pwi)
+			dv.platformIdentitiesActionsMap[k] = nil
+			dv.platformIdentities[k] = pwi
 		}
 	}
 
@@ -90,14 +90,14 @@ func (dv *dynamic) validateClusterMSI(ctx context.Context, oc *api.OpenShiftClus
 }
 
 // Validate that the cluster MSI has all permissions specified in AzureRedHatOpenShiftFederatedCredentialRole over each platform managed identity
-func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, oid string, platformIdentities []api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, oid string, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
 	actions, err := getActionsForRoleDefinition(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, roleDefinitions)
 	if err != nil {
 		return err
 	}
 
-	for _, platformIdentity := range platformIdentities {
-		dv.log.Printf("validateClusterMSIPermissions for %s", platformIdentity.OperatorName)
+	for name, platformIdentity := range platformIdentities {
+		dv.log.Printf("validateClusterMSIPermissions for %s", name)
 		pid, err := azure.ParseResourceID(platformIdentity.ResourceID)
 		if err != nil {
 			return err

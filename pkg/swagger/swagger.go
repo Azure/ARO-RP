@@ -25,6 +25,7 @@ var proxyResources = []string{
 	"MachinePool",
 	"Secret",
 	"OpenShiftVersion",
+	"PlatformWorkloadIdentityRoleSet",
 }
 
 // resourceNamePattern is a regex pattern to validate resource names
@@ -132,6 +133,22 @@ func Run(api, outputDir string) error {
 		}
 	}
 
+	if g.roleSetList {
+		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityroleset"] = &PathItem{
+			Get: &Operation{
+				Tags:        []string{"PlatformWorkloadIdentityRoleSet"},
+				Summary:     "Lists a mapping of OpenShift versions to identity requirements, which include operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
+				Description: "This operation returns PlatformWorkloadIdentityRoleSet as a string",
+				OperationID: "PlatformWorkloadIdentityRoleSet_List",
+				Parameters:  g.populateParameters(6, "PlatformWorkloadIdentityRoleSetList", "Platform Workload Identity Role Set"),
+				Responses:   g.populateResponses("PlatformWorkloadIdentityRoleSetList", false, http.StatusOK),
+				Pageable: &Pageable{
+					NextLinkName: "nextLink",
+				},
+			},
+		}
+	}
+
 	if g.clusterManager {
 		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "syncSet", "SyncSet")
 		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "machinePool", "MachinePool")
@@ -148,6 +165,10 @@ func Run(api, outputDir string) error {
 
 	if g.installVersionList {
 		names = append(names, "OpenShiftVersionList")
+	}
+
+	if g.roleSetList {
+		names = append(names, "PlatformWorkloadIdentityRoleSetList")
 	}
 
 	if g.clusterManager {
@@ -180,6 +201,10 @@ func Run(api, outputDir string) error {
 		azureResources = append(azureResources, "OpenShiftVersion")
 	}
 
+	if g.roleSetList {
+		azureResources = append(azureResources, "PlatformWorkloadIdentityRoleSet")
+	}
+
 	for _, azureResource := range azureResources {
 		def, err := deepCopy(s.Definitions[azureResource])
 		if err != nil {
@@ -207,7 +232,7 @@ func Run(api, outputDir string) error {
 		if !slices.Contains(proxyResources, azureResource) {
 			s.Definitions[azureResource].AllOf = []Schema{
 				{
-					Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
+					Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
 				},
 			}
 		} else {
@@ -225,15 +250,20 @@ func Run(api, outputDir string) error {
 		}
 		s.Definitions[azureResource].Properties = properties
 
-		// Don't include an update object for "OpenShiftVersion" as it is not updatable via the API
+		// Don't include an update object for either "OpenShiftVersion"
+		// or "PlatformWorkloadIdentityRoleSet" as they are not updatable via the API
 		azureResources := []string{azureResource}
-		if azureResource != "OpenShiftVersion" {
+		if azureResource != "OpenShiftVersion" && azureResource != "PlatformWorkloadIdentityRoleSet" {
 			s.Definitions[azureResource+"Update"] = update
 			azureResources = append(azureResources, azureResource+"Update")
 		}
 
 		if g.systemData {
 			s.defineSystemData(azureResources, g.commonTypesVersion)
+		}
+
+		if g.managedServiceIdentity {
+			s.defineManagedServiceIdentity(g.commonTypesVersion)
 		}
 	}
 
@@ -284,10 +314,25 @@ func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
 				Schema: &Schema{
 					ReadOnly:    true,
 					Description: "The system meta data relating to this resource.",
-					Ref:         "../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
+					Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
 				},
 			})
 	}
+}
+
+func (s *Swagger) defineManagedServiceIdentity(commonVersion string) {
+	resource := "OpenShiftCluster"
+	s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "identity")
+
+	delete(s.Definitions, "identity")
+	s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
+		NameSchema{
+			Name: "identity",
+			Schema: &Schema{
+				Description: "Identity stores information about the cluster MSI(s) in a workload identity cluster.",
+				Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/managedidentity.json#/definitions/ManagedServiceIdentity",
+			},
+		})
 }
 
 func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {

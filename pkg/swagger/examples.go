@@ -10,6 +10,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
+const commonTypesVersion6 string = "v6"
+
 func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 	err := os.RemoveAll(outputDir + "/examples")
 	if err != nil {
@@ -37,22 +39,27 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 				switch param := param.(type) {
 				case Reference:
 					switch param.Ref {
-					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ApiVersionParameter":
+					case "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ApiVersionParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "api-version",
 							Parameter: stringutils.LastTokenByte(outputDir, '/'),
 						})
-					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter":
+					case "../../../../../../common-types/resource-management/" + commonTypesVersion6 + "/types.json#/parameters/SubscriptionIdParameter":
+						example.Parameters = append(example.Parameters, NameParameter{
+							Name:      "subscriptionId",
+							Parameter: "00000000-0000-0000-0000-000000000000",
+						})
+					case "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "subscriptionId",
 							Parameter: "subscriptionId",
 						})
-					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ResourceGroupNameParameter":
+					case "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ResourceGroupNameParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "resourceGroupName",
 							Parameter: "resourceGroup",
 						})
-					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter":
+					case "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "location",
 							Parameter: "location",
@@ -174,6 +181,8 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 						body = g.exampleOperationListResponse()
 					case "#/definitions/OpenShiftVersionList":
 						body = g.exampleOpenShiftVersionListResponse()
+					case "#/definitions/PlatformWorkloadIdentityRoleSetList":
+						body = g.examplePlatformWorkloadIdentityRoleSetListResponse()
 					}
 				}
 

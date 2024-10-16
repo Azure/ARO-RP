@@ -127,22 +127,22 @@ func TestClusterMsiResourceId(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name:    "error - cluster doc has nil Identity",
+			name:    "error - cluster doc has nil ManagedServiceIdentity",
 			oc:      &OpenShiftCluster{},
 			wantErr: "could not find cluster MSI in cluster doc",
 		},
 		{
-			name: "error - cluster doc has non-nil Identity but nil Identity.UserAssignedIdentities",
+			name: "error - cluster doc has non-nil ManagedServiceIdentity but nil ManagedServiceIdentity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				Identity: &Identity{},
+				Identity: &ManagedServiceIdentity{},
 			},
 			wantErr: "could not find cluster MSI in cluster doc",
 		},
 		{
-			name: "error - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
+			name: "error - cluster doc has non-nil ManagedServiceIdentity but empty ManagedServiceIdentity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				Identity: &Identity{
-					UserAssignedIdentities: UserAssignedIdentities{},
+				Identity: &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{},
 				},
 			},
 			wantErr: "could not find cluster MSI in cluster doc",
@@ -150,32 +150,30 @@ func TestClusterMsiResourceId(t *testing.T) {
 		{
 			name: "error - cluster doc has non-nil Identity but two MSIs in Identity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				Identity: &Identity{
-					UserAssignedIdentities: UserAssignedIdentities{
-						miResourceId:  ClusterUserAssignedIdentity{},
-						"secondEntry": ClusterUserAssignedIdentity{},
+				Identity: &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						miResourceId: {
+							ClientID:    "",
+							PrincipalID: "",
+						},
+						"secondEntry": {
+							ClientID:    "",
+							PrincipalID: "",
+						},
 					},
 				},
 			},
 			wantErr: "unexpectedly found more than one cluster MSI in cluster doc",
 		},
 		{
-			name: "error - invalid resource ID (theoretically not possible, but still)",
-			oc: &OpenShiftCluster{
-				Identity: &Identity{
-					UserAssignedIdentities: UserAssignedIdentities{
-						"Hi hello I'm not a valid resource ID": ClusterUserAssignedIdentity{},
-					},
-				},
-			},
-			wantErr: "invalid resource ID: resource id 'Hi hello I'm not a valid resource ID' must start with '/'",
-		},
-		{
 			name: "success",
 			oc: &OpenShiftCluster{
-				Identity: &Identity{
-					UserAssignedIdentities: UserAssignedIdentities{
-						miResourceId: ClusterUserAssignedIdentity{},
+				Identity: &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						miResourceId: {
+							ClientID:    "",
+							PrincipalID: "",
+						},
 					},
 				},
 			},
@@ -212,15 +210,15 @@ func TestHasUserAssignedIdentities(t *testing.T) {
 		{
 			name: "false - cluster doc has non-nil Identity but nil Identity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				Identity: &Identity{},
+				Identity: &ManagedServiceIdentity{},
 			},
 			wantResult: false,
 		},
 		{
 			name: "false - cluster doc has non-nil Identity but empty Identity.UserAssignedIdentities",
 			oc: &OpenShiftCluster{
-				Identity: &Identity{
-					UserAssignedIdentities: UserAssignedIdentities{},
+				Identity: &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{},
 				},
 			},
 			wantResult: false,
@@ -228,9 +226,9 @@ func TestHasUserAssignedIdentities(t *testing.T) {
 		{
 			name: "true",
 			oc: &OpenShiftCluster{
-				Identity: &Identity{
-					UserAssignedIdentities: UserAssignedIdentities{
-						miResourceId: ClusterUserAssignedIdentity{},
+				Identity: &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						miResourceId: {},
 					},
 				},
 			},

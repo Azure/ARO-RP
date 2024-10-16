@@ -121,6 +121,21 @@ func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{AdminUpdating, Canceled, Creating, Deleting, Failed, Succeeded, Updating}
 }
 
+// ResourceIdentityType enumerates the values for resource identity type.
+type ResourceIdentityType string
+
+const (
+	// SystemAssigned ...
+	SystemAssigned ResourceIdentityType = "SystemAssigned"
+	// UserAssigned ...
+	UserAssigned ResourceIdentityType = "UserAssigned"
+)
+
+// PossibleResourceIdentityTypeValues returns an array of possible values for the ResourceIdentityType const type.
+func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
+	return []ResourceIdentityType{SystemAssigned, UserAssigned}
+}
+
 // Visibility enumerates the values for visibility.
 type Visibility string
 

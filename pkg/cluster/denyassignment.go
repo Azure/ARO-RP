@@ -21,7 +21,7 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		for _, i := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if i.ObjectID == "" {
-				m.log.Print(fmt.Sprintf("skipping createOrUpdateDenyAssignment: ObjectID for identity %s is empty", i.OperatorName))
+				m.log.Print(fmt.Sprintf("skipping createOrUpdateDenyAssignment: ObjectID for identity %s is empty", i))
 				return nil
 			}
 		}

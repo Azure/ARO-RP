@@ -29,7 +29,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 	for _, tt := range []struct {
 		name                 string
 		usesWorkloadIdentity bool
-		identities           []api.PlatformWorkloadIdentity
+		identities           map[string]api.PlatformWorkloadIdentity
 		roles                []api.PlatformWorkloadIdentityRole
 		want                 map[string]kruntime.Object
 		wantErr              string
@@ -41,14 +41,12 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 		{
 			name:                 "generates all expected resources",
 			usesWorkloadIdentity: true,
-			identities: []api.PlatformWorkloadIdentity{
-				{
-					OperatorName: "foo",
-					ClientID:     "00f00f00-0f00-0f00-0f00-f00f00f00f00",
+			identities: map[string]api.PlatformWorkloadIdentity{
+				"foo": {
+					ClientID: "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
-				{
-					OperatorName: "bar",
-					ClientID:     "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
+				"bar": {
+					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
 			roles: []api.PlatformWorkloadIdentityRole{
@@ -189,26 +187,24 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 
 	for _, tt := range []struct {
 		name       string
-		identities []api.PlatformWorkloadIdentity
+		identities map[string]api.PlatformWorkloadIdentity
 		roles      []api.PlatformWorkloadIdentityRole
 		want       []*corev1.Secret
 	}{
 		{
 			name:       "no identities, no secrets",
-			identities: []api.PlatformWorkloadIdentity{},
+			identities: map[string]api.PlatformWorkloadIdentity{},
 			roles:      []api.PlatformWorkloadIdentityRole{},
 			want:       []*corev1.Secret{},
 		},
 		{
 			name: "converts cluster PWIs if a role definition is present",
-			identities: []api.PlatformWorkloadIdentity{
-				{
-					OperatorName: "foo",
-					ClientID:     "00f00f00-0f00-0f00-0f00-f00f00f00f00",
+			identities: map[string]api.PlatformWorkloadIdentity{
+				"foo": {
+					ClientID: "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
-				{
-					OperatorName: "bar",
-					ClientID:     "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
+				"bar": {
+					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
 			roles: []api.PlatformWorkloadIdentityRole{
@@ -268,14 +264,12 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 		},
 		{
 			name: "ignores identities with no role present",
-			identities: []api.PlatformWorkloadIdentity{
-				{
-					OperatorName: "foo",
-					ClientID:     "00f00f00-0f00-0f00-0f00-f00f00f00f00",
+			identities: map[string]api.PlatformWorkloadIdentity{
+				"foo": {
+					ClientID: "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
-				{
-					OperatorName: "bar",
-					ClientID:     "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
+				"bar": {
+					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
 			roles: []api.PlatformWorkloadIdentityRole{},

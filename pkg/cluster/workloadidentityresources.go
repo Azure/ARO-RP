@@ -70,8 +70,8 @@ func (m *manager) generatePlatformWorkloadIdentitySecrets() ([]*corev1.Secret, e
 	roles := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 
 	secrets := []*corev1.Secret{}
-	for _, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		if role, ok := roles[identity.OperatorName]; ok {
+	for name, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		if role, ok := roles[name]; ok {
 			secrets = append(secrets, &corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: corev1.SchemeGroupVersion.Identifier(),

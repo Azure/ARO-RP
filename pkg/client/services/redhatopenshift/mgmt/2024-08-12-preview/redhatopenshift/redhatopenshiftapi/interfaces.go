@@ -41,6 +41,14 @@ type OpenShiftVersionsClientAPI interface {
 
 var _ OpenShiftVersionsClientAPI = (*redhatopenshift.OpenShiftVersionsClient)(nil)
 
+// PlatformWorkloadIdentityRoleSetClientAPI contains the set of methods on the PlatformWorkloadIdentityRoleSetClient type.
+type PlatformWorkloadIdentityRoleSetClientAPI interface {
+	List(ctx context.Context, location string) (result redhatopenshift.PlatformWorkloadIdentityRoleSetListPage, err error)
+	ListComplete(ctx context.Context, location string) (result redhatopenshift.PlatformWorkloadIdentityRoleSetListIterator, err error)
+}
+
+var _ PlatformWorkloadIdentityRoleSetClientAPI = (*redhatopenshift.PlatformWorkloadIdentityRoleSetClient)(nil)
+
 // OpenShiftClustersClientAPI contains the set of methods on the OpenShiftClustersClient type.
 type OpenShiftClustersClientAPI interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) (result redhatopenshift.OpenShiftClustersCreateOrUpdateFuture, err error)
