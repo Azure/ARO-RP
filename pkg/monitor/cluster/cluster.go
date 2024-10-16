@@ -29,6 +29,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
+	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
 var _ monitoring.Monitor = (*Monitor)(nil)
@@ -60,10 +61,11 @@ type Monitor struct {
 		arodl *appsv1.DeploymentList
 	}
 
-	wg *sync.WaitGroup
+	wg        *sync.WaitGroup
+	validator dynamic.Dynamic
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup, validator dynamic.Dynamic) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -136,6 +138,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		ocpclientset:  ocpclientset,
 		hiveclientset: hiveclientset,
 		wg:            wg,
+		validator:     validator,
 	}, nil
 }
 
@@ -207,6 +210,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
 		mon.emitSummary,
+		mon.emitValidatePermissions,
 		mon.emitHiveRegistrationStatus,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitMaintenanceState,
