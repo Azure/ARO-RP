@@ -92,6 +92,44 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
+func (m *manager) platformWorkloadIdentityRBAC() ([]*arm.Resource, error) {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil, nil
+	}
+
+	resources := []*arm.Resource{}
+	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
+	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+
+	for _, identity := range platformWorkloadIdentities {
+		role, exists := platformWIRolesByRoleName[identity.OperatorName]
+		if !exists {
+			continue
+		}
+
+		if strings.TrimSpace(identity.ObjectID) == "" {
+			return nil, fmt.Errorf("WI object ID '%s' is invalid for WI with resource ID %s", identity.ObjectID, identity.ResourceID)
+		}
+
+		roleID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
+		resources = append(resources, m.workloadIdentityResourceGroupRBAC(roleID, identity.ObjectID))
+	}
+	return resources, nil
+}
+
+func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID string) *arm.Resource {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil
+	}
+
+	r := rbac.ResourceGroupRoleAssignmentWithName(
+		roleID,
+		"'"+objID+"'",
+		"guid(resourceGroup().id, '"+roleID+"')",
+	)
+	return r
+}
+
 // storageAccount will return storage account resource.
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.
