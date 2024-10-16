@@ -441,7 +441,7 @@ Response contained no body
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: api.UserAssignedIdentity{},
+							miResourceId: {},
 						},
 					},
 				},
@@ -458,7 +458,7 @@ Response contained no body
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    miClientId,
 								PrincipalID: miObjectId,
 							},
@@ -497,7 +497,7 @@ Response contained no body
 						IdentityURL: middleware.MockIdentityURL,
 						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceIdIncorrectCasing: api.UserAssignedIdentity{
+							miResourceIdIncorrectCasing: {
 								ClientID:    miClientId,
 								PrincipalID: miObjectId,
 							},

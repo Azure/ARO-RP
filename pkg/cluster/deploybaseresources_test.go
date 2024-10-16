@@ -1679,7 +1679,8 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 	afdEndpoint := "fake.oic.aro.test.net"
 	clusterResourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/fakeResourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/fakeCluster"
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/fakeResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities"
-	OIDCIssuer := pointerutils.ToPtr(api.OIDCIssuer(fmt.Sprintf("https://%s/%s%s", afdEndpoint, env.OIDCBlobDirectoryPrefix, docID)))
+	tenantId := "00000000-0000-0000-0000-000000000000"
+	OIDCIssuer := pointerutils.ToPtr(api.OIDCIssuer(fmt.Sprintf("https://%s/%s", afdEndpoint, oidcbuilder.GetBlobName(tenantId, docID))))
 	fakeClint, _ := utilmsi.NewTestFederatedIdentityCredentialsClient(subID)
 
 	for _, tt := range []struct {
@@ -1730,13 +1731,11 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
-									OperatorName: "ClusterIngressOperator",
+								"ClusterIngressOperator": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
@@ -1794,13 +1793,11 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
-									OperatorName: "ClusterIngressOperator",
+								"ClusterIngressOperator": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
@@ -1823,9 +1820,8 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "DummyOperator",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"DummyOperator": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
 							},

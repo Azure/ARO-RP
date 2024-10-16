@@ -101,8 +101,8 @@ func (m *manager) platformWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 
-	for _, identity := range platformWorkloadIdentities {
-		role, exists := platformWIRolesByRoleName[identity.OperatorName]
+	for name, identity := range platformWorkloadIdentities {
+		role, exists := platformWIRolesByRoleName[name]
 		if !exists {
 			continue
 		}

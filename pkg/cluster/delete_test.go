@@ -537,7 +537,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{},
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
 						},
 					},
 				},
@@ -556,14 +556,12 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
-									OperatorName: "ClusterIngressOperator",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+								"ClusterIngressOperator": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
 						},
@@ -584,11 +582,11 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"foo": {
 									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
+								"bar": {
 									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
@@ -610,9 +608,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
 									ResourceID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
 								},
 							},

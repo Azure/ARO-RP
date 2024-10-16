@@ -14,12 +14,12 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 
 	return &OpenShiftClusterDocument{
 		ID:                        "00000000-0000-0000-0000-000000000000",
-		Key:                       "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+		Key:                       "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
 		Bucket:                    42,
-		ClusterResourceGroupIDKey: "/subscriptions/subscriptionid/resourcegroups/clusterresourcegroup",
+		ClusterResourceGroupIDKey: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterresourcegroup",
 		ClientIDKey:               "11111111-1111-1111-1111-111111111111",
 		OpenShiftCluster: &OpenShiftCluster{
-			ID:       "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName",
+			ID:       "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName",
 			Name:     "resourceName",
 			Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
 			Location: "location",
@@ -34,13 +34,19 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 			Tags: map[string]string{
 				"key": "value",
 			},
+			Identity: &ManagedServiceIdentity{
+				Type: ManagedServiceIdentityUserAssigned,
+				UserAssignedIdentities: map[string]UserAssignedIdentity{
+					"": {},
+				},
+			},
 			Properties: OpenShiftClusterProperties{
 				ProvisioningState: ProvisioningStateSucceeded,
 				ClusterProfile: ClusterProfile{
 					PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 					Domain:          "cluster.location.aroapp.io",
 					Version:         "4.11.0",
-					ResourceGroupID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup",
+					ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clusterResourceGroup",
 				},
 				ConsoleProfile: ConsoleProfile{
 					URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
@@ -56,14 +62,14 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				},
 				MasterProfile: MasterProfile{
 					VMSize:   VMSizeStandardD8sV3,
-					SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master",
+					SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master",
 				},
 				WorkerProfiles: []WorkerProfile{
 					{
 						Name:       "worker",
 						VMSize:     VMSizeStandardD2sV3,
 						DiskSizeGB: 128,
-						SubnetID:   "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+						SubnetID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 						Count:      3,
 					},
 				},
@@ -72,21 +78,21 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 						Name:       "worker1",
 						VMSize:     VMSizeStandardD2sV3,
 						DiskSizeGB: 128,
-						SubnetID:   "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+						SubnetID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 						Count:      1,
 					},
 					{
 						Name:       "worker2",
 						VMSize:     VMSizeStandardD2sV3,
 						DiskSizeGB: 128,
-						SubnetID:   "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+						SubnetID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 						Count:      1,
 					},
 					{
 						Name:       "worker3",
 						VMSize:     VMSizeStandardD2sV3,
 						DiskSizeGB: 128,
-						SubnetID:   "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+						SubnetID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 						Count:      1,
 					},
 				},

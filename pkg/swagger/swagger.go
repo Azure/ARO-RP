@@ -177,13 +177,13 @@ func Run(api, outputDir string) error {
 		names = append(names, "SyncSetList", "MachinePoolList", "SyncIdentityProviderList", "SecretList")
 	}
 
-	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)
+	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, g.commonTypesVersion, names...)
 	if err != nil {
 		return err
 	}
 
 	names = []string{"CloudError", "OperationList"}
-	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)
+	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, g.commonTypesVersion, names...)
 	if err != nil {
 		return err
 	}
@@ -235,10 +235,6 @@ func Run(api, outputDir string) error {
 					Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
 				},
 			}
-
-			if g.managedServiceIdentity {
-				s.defineManagedServiceIdentity(azureResource, g.commonTypesVersion)
-			}
 		} else {
 			update.AllOf = []Schema{}
 		}
@@ -254,15 +250,20 @@ func Run(api, outputDir string) error {
 		}
 		s.Definitions[azureResource].Properties = properties
 
-		// Don't include an update object for "OpenShiftVersion" as it is not updatable via the API
+		// Don't include an update object for either "OpenShiftVersion"
+		// or "PlatformWorkloadIdentityRoleSet" as they are not updatable via the API
 		azureResources := []string{azureResource}
-		if azureResource != "OpenShiftVersion" {
+		if azureResource != "OpenShiftVersion" && azureResource != "PlatformWorkloadIdentityRoleSet" {
 			s.Definitions[azureResource+"Update"] = update
 			azureResources = append(azureResources, azureResource+"Update")
 		}
 
 		if g.systemData {
-			s.defineSystemData(azureResources, g.commonTypesVersion)
+			s.defineSystemData(azureResources)
+		}
+
+		if g.managedServiceIdentity {
+			s.defineManagedServiceIdentity(g.commonTypesVersion)
 		}
 	}
 
@@ -299,39 +300,35 @@ func deepCopy(v interface{}) (interface{}, error) {
 // defineSystemData will configure systemData fields for required definitions.
 // SystemData is not user consumable, so we remove definitions from auto-generated code
 // In addition to this we use common-types definition so we replace one we generate with common-types
-func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
+func (s *Swagger) defineSystemData(resources []string) {
 	for _, resource := range resources {
 		s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "systemData")
+	}
+	// SystemData is not user side consumable type. It is being returned as Read-Only,
+	// but should not be generated into API or swagger as API/SDK type
+	delete(s.Definitions, "SystemData")
+	delete(s.Definitions, "CreatedByType")
+}
 
-		// SystemData is not user side consumable type. It is being returned as Read-Only,
-		// but should not be generated into API or swagger as API/SDK type
-		delete(s.Definitions, "SystemData")
-		delete(s.Definitions, "CreatedByType")
+func (s *Swagger) defineManagedServiceIdentity(commonVersion string) {
+	resources := []string{"OpenShiftCluster", "OpenShiftClusterUpdate"}
+	for _, resource := range resources {
+		s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "identity")
+
 		s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
 			NameSchema{
-				Name: "systemData",
+				Name: "identity",
 				Schema: &Schema{
-					ReadOnly:    true,
-					Description: "The system meta data relating to this resource.",
-					Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
+					Description: "Identity stores information about the cluster MSI(s) in a workload identity cluster.",
+					Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/managedidentity.json#/definitions/ManagedServiceIdentity",
 				},
 			})
 	}
-}
 
-func (s *Swagger) defineManagedServiceIdentity(resource string, commonVersion string) {
-	s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "identity")
-
-	delete(s.Definitions, "identity")
-	s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
-		NameSchema{
-			Name: "identity",
-			Schema: &Schema{
-				Description: "",
-				Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/managedidentity.json#/definitions/ManagedServiceIdentity",
-			},
-		})
-
+	delete(s.Definitions, "ManagedServiceIdentity")
+	delete(s.Definitions, "ManagedServiceIdentityType")
+	delete(s.Definitions, "UserAssignedIdentity")
+	delete(s.Definitions, "Resource")
 }
 
 func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {
