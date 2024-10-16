@@ -70,6 +70,7 @@
                     "defaultConsistencyLevel": "Strong"
                 },
                 "databaseAccountOfferType": "Standard",
+                "disableLocalAuth": true,
                 "locations": [
                     {
                         "locationName": "[resourceGroup().location]"
