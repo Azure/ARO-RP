@@ -10,8 +10,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-const commonTypesVersion6 string = "v6"
-
 func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 	err := os.RemoveAll(outputDir + "/examples")
 	if err != nil {
@@ -44,15 +42,10 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							Name:      "api-version",
 							Parameter: stringutils.LastTokenByte(outputDir, '/'),
 						})
-					case "../../../../../../common-types/resource-management/" + commonTypesVersion6 + "/types.json#/parameters/SubscriptionIdParameter":
-						example.Parameters = append(example.Parameters, NameParameter{
-							Name:      "subscriptionId",
-							Parameter: "00000000-0000-0000-0000-000000000000",
-						})
 					case "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "subscriptionId",
-							Parameter: "subscriptionId",
+							Parameter: "00000000-0000-0000-0000-000000000000",
 						})
 					case "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ResourceGroupNameParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
