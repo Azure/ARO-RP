@@ -279,6 +279,55 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			roles: []api.PlatformWorkloadIdentityRole{},
 			want:  []*corev1.Secret{},
 		},
+		{
+			name: "skips ARO operator identity",
+			identities: []api.PlatformWorkloadIdentity{
+				{
+					OperatorName: "foo",
+					ClientID:     "00f00f00-0f00-0f00-0f00-f00f00f00f00",
+				},
+				{
+					OperatorName: "ServiceOperator",
+					ClientID:     "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
+				},
+			},
+			roles: []api.PlatformWorkloadIdentityRole{
+				{
+					OperatorName: "foo",
+					SecretLocation: api.SecretLocation{
+						Namespace: "openshift-foo",
+						Name:      "azure-cloud-credentials",
+					},
+				},
+				{
+					OperatorName: "ServiceOperator",
+					SecretLocation: api.SecretLocation{
+						Namespace: "openshift-bar",
+						Name:      "azure-cloud-credentials",
+					},
+				},
+			},
+			want: []*corev1.Secret{
+				{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "openshift-foo",
+						Name:      "azure-cloud-credentials",
+					},
+					Type: corev1.SecretTypeOpaque,
+					StringData: map[string]string{
+						"azure_client_id":            "00f00f00-0f00-0f00-0f00-f00f00f00f00",
+						"azure_subscription_id":      subscriptionId,
+						"azure_tenant_id":            tenantId,
+						"azure_region":               location,
+						"azure_federated_token_file": azureFederatedTokenFileLocation,
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
