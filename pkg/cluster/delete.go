@@ -427,7 +427,7 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 			if err != nil {
 				cloudErr := err.(*api.CloudError)
 
-				if cloudErr.StatusCode != http.StatusNotFound {
+				if cloudErr.StatusCode == http.StatusNotFound {
 					m.log.Errorf("federated identity credentials not found for %s: %v", identity.ResourceID, cloudErr.Error())
 					continue
 				} else {
