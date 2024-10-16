@@ -14,7 +14,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"slices"
+	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
@@ -38,12 +41,28 @@ type manager struct {
 	roleDefinitions armauthorization.RoleDefinitionsClient
 }
 
-type node struct {
-	Version string `json:"version"`
+type response struct {
+	Tags          []tag `json:"tags"`
+	Page          int   `json:"page"`
+	HasAdditional bool  `json:"has_additional"`
 }
 
-type graph struct {
-	Nodes []node `json:"nodes"`
+type tag struct {
+	Name         string   `json:"name"`
+	LastModified datetime `json:"last_modified"`
+}
+
+type datetime struct {
+	time.Time
+}
+
+func (d *datetime) UnmarshalJSON(data []byte) error {
+	dd, err := time.Parse("\"Mon, 02 Jan 2006 15:04:05 -0700\"", string(data))
+	if err != nil {
+		return err
+	}
+	d.Time = dd
+	return nil
 }
 
 type missingPermissionsError struct{}
@@ -57,6 +76,8 @@ type emptyVersionsError struct{}
 func (e *emptyVersionsError) Error() string {
 	return "no versions found"
 }
+
+var rxImage = regexp.MustCompile(`\d+\.\d+\.\d+(-(rc|ec).\d+)?-x86_64`)
 
 var (
 	verifiedVersion = flag.String("verified-version", "", "verified version")
@@ -190,57 +211,58 @@ func versionsToValidate(verifiedVersion string) ([]string, error) {
 
 	var vers []string
 	for ; ; v.V[1]++ {
-		res, err := http.Get(fmt.Sprintf("https://api.openshift.com/api/upgrades_info/v1/graph?channel=candidate-%s", v.MinorVersion()))
-		if err != nil {
-			return nil, fmt.Errorf("failed to get upgrade graph: %w", err)
-		}
-		var g graph
-		if err = json.NewDecoder(res.Body).Decode(&g); err != nil {
-			return nil, fmt.Errorf("failed to decode upgrade graph: %w", err)
-		}
-
-		if len(g.Nodes) == 0 {
-			return vers, nil
-		}
-
-		latest, err := getLatest(&g)
+		latest, err := getLatestVersion(v)
 		if err != nil {
 			if errors.Is(err, &emptyVersionsError{}) {
-				// If there are no versions available, the version and all later versions are not released.
-				// We don't need to check further versions.
-				return vers, nil
+				break
 			}
-			return nil, fmt.Errorf("failed to get latest version: %w", err)
+			return nil, fmt.Errorf("failed to get latest image for %s: %w", v, err)
 		}
-		if latest.MinorVersion() != v.MinorVersion() {
-			// Candidate channels have old versions.
-			// If the latest version of the channel is different from the channel version,
-			// that channel version is not released yet.
-			return vers, nil
-		}
-		vers = append(vers, latest.String())
+		vers = append(vers, latest)
 	}
+	return vers, nil
 }
 
-func getLatest(g *graph) (*version.Version, error) {
-	var latest *version.Version
-	for _, node := range g.Nodes {
-		v, err := version.ParseVersion(node.Version)
+func getLatestVersion(v *version.Version) (string, error) {
+	tags, err := getAvailableTags(v)
+	if err != nil {
+		return "", fmt.Errorf("failed to get available tags: %w", err)
+	}
+	if len(tags) == 0 {
+		return "", &emptyVersionsError{}
+	}
+	t := slices.MaxFunc(tags, func(a, b tag) int {
+		return a.LastModified.Compare(b.LastModified.Time)
+	})
+	return strings.TrimSuffix(t.Name, "-x86_64"), nil
+}
+
+func getAvailableTags(v *version.Version) ([]tag, error) {
+	// Get the latest version from quay.io
+	hasAdditional := true
+	page := 1
+	var tags []tag
+	for hasAdditional {
+		// https://docs.redhat.com/en/documentation/red_hat_quay/3/html-single/red_hat_quay_api_guide/index#red_hat_quay_application_programming_interface_api
+		res, err := http.Get(fmt.Sprintf("https://quay.io/api/v1/repository/openshift-release-dev/ocp-release/tag/?limit=100&page=%d&filter_tag_name=like:%s.%%-x86_64", page, v.MinorVersion()))
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse version: %w", err)
+			return nil, fmt.Errorf("failed to list tags: %w", err)
 		}
-		if v.Suffix != "" {
-			// skip suffixed versions because it's too early to check them
-			continue
+		var r response
+		if err = json.NewDecoder(res.Body).Decode(&r); err != nil {
+			return nil, fmt.Errorf("failed to decode tag: %w", err)
 		}
-		if latest == nil || latest.Lt(v) {
-			latest = v
+
+		for _, t := range r.Tags {
+			if !rxImage.MatchString(t.Name) {
+				continue
+			}
+			tags = append(tags, t)
 		}
+		hasAdditional = r.HasAdditional
+		page = r.Page + 1
 	}
-	if latest == nil {
-		return nil, &emptyVersionsError{}
-	}
-	return latest, nil
+	return tags, nil
 }
 
 func extractCredReq(v, outDir string) error {
