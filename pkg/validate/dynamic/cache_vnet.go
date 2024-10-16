@@ -6,35 +6,35 @@ package dynamic
 import (
 	"context"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 )
 
 type virtualNetworksGetClient interface {
-	Get(context.Context, string, string, string) (mgmtnetwork.VirtualNetwork, error)
+	Get(ctx context.Context, resourceGroupName string, virtualNetworkName string, options *armnetwork.VirtualNetworksClientGetOptions) (vnet armnetwork.VirtualNetworksClientGetResponse, err error)
 }
 
 type virtualNetworksCacheKey struct {
 	resourceGroupName  string
 	virtualNetworkName string
-	expand             string
+	options            *armnetwork.VirtualNetworksClientGetOptions
 }
 
 type virtualNetworksCache struct {
 	c virtualNetworksGetClient
-	m map[virtualNetworksCacheKey]mgmtnetwork.VirtualNetwork
+	m map[virtualNetworksCacheKey]armnetwork.VirtualNetworksClientGetResponse
 }
 
-func (vnc *virtualNetworksCache) Get(ctx context.Context, resourceGroupName string, virtualNetworkName string, expand string) (mgmtnetwork.VirtualNetwork, error) {
-	if _, ok := vnc.m[virtualNetworksCacheKey{resourceGroupName, virtualNetworkName, expand}]; !ok {
-		vnet, err := vnc.c.Get(ctx, resourceGroupName, virtualNetworkName, expand)
+func (vnc *virtualNetworksCache) Get(ctx context.Context, resourceGroupName string, virtualNetworkName string, options *armnetwork.VirtualNetworksClientGetOptions) (armnetwork.VirtualNetworksClientGetResponse, error) {
+	if _, ok := vnc.m[virtualNetworksCacheKey{resourceGroupName, virtualNetworkName, options}]; !ok {
+		vnet, err := vnc.c.Get(ctx, resourceGroupName, virtualNetworkName, options)
 		if err != nil {
 			return vnet, err
 		}
 
-		vnc.m[virtualNetworksCacheKey{resourceGroupName, virtualNetworkName, expand}] = vnet
+		vnc.m[virtualNetworksCacheKey{resourceGroupName, virtualNetworkName, options}] = vnet
 	}
 
-	return vnc.m[virtualNetworksCacheKey{resourceGroupName, virtualNetworkName, expand}], nil
+	return vnc.m[virtualNetworksCacheKey{resourceGroupName, virtualNetworkName, options}], nil
 }
 
 // newVirtualNetworksCache returns a new virtualNetworksCache.  It knows nothing
@@ -43,6 +43,6 @@ func (vnc *virtualNetworksCache) Get(ctx context.Context, resourceGroupName stri
 func newVirtualNetworksCache(c virtualNetworksGetClient) virtualNetworksGetClient {
 	return &virtualNetworksCache{
 		c: c,
-		m: map[virtualNetworksCacheKey]mgmtnetwork.VirtualNetwork{},
+		m: map[virtualNetworksCacheKey]armnetwork.VirtualNetworksClientGetResponse{},
 	}
 }

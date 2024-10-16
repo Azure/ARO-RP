@@ -50,7 +50,7 @@ func (dv *dynamic) validatePublicIPQuota(ctx context.Context, oc *api.OpenShiftC
 		}
 	}
 
-	netUsages, err := dv.spNetworkUsage.List(ctx, oc.Location)
+	netUsages, err := dv.spNetworkUsage.List(ctx, oc.Location, nil)
 	if err != nil {
 		return err
 	}
@@ -75,12 +75,12 @@ func (dv *dynamic) validateOBRuleV4FrontendPorts(ctx context.Context, oc *api.Op
 	loadBalancerName := oc.Properties.InfraID
 	backendAddressPoolName := oc.Properties.InfraID
 
-	backendPools, err := dv.loadBalancerBackendAddressPoolsClient.Get(ctx, rgName, loadBalancerName, backendAddressPoolName)
+	backendPools, err := dv.loadBalancerBackendAddressPoolsClient.Get(ctx, rgName, loadBalancerName, backendAddressPoolName, nil)
 	if err != nil {
 		return err
 	}
 
-	totalBackendInstances := len(*backendPools.BackendAddressPoolPropertiesFormat.BackendIPConfigurations)
+	totalBackendInstances := len(backendPools.Properties.BackendIPConfigurations)
 	// TODO: update once allocatedOutboundPorts is implemented
 	allocatedOutboundPorts := 1024
 	var desiredNumIPs int
