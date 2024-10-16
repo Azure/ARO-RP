@@ -36,11 +36,14 @@ type Manager interface {
 	EnsureCertificateDeleted(context.Context, string) error
 	GetBase64Secret(context.Context, string, string) ([]byte, error)
 	GetBase64Secrets(context.Context, string) ([][]byte, error)
+	GetCertificate(context.Context, string) (azkeyvault.CertificateBundle, error)
+	GetCertificatePolicy(ctx context.Context, certificateName string) (azkeyvault.CertificatePolicy, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string) (azkeyvault.SecretBundle, error)
 	GetSecrets(context.Context) ([]azkeyvault.SecretItem, error)
 	SetCertificateIssuer(ctx context.Context, issuerName string, parameter azkeyvault.CertificateIssuerSetParameters) (result azkeyvault.IssuerBundle, err error)
 	SetSecret(context.Context, string, azkeyvault.SecretSetParameters) error
+	UpdateCertificatePolicy(context.Context, string, azkeyvault.CertificatePolicy) error
 	WaitForCertificateOperation(context.Context, string) error
 }
 
@@ -174,6 +177,14 @@ func (m *manager) GetBase64Secrets(ctx context.Context, secretName string) (bs [
 	return bs, nil
 }
 
+func (m *manager) GetCertificate(ctx context.Context, certificateName string) (azkeyvault.CertificateBundle, error) {
+	return m.kv.GetCertificate(ctx, m.keyvaultURI, certificateName, "")
+}
+
+func (m *manager) GetCertificatePolicy(ctx context.Context, certificateName string) (azkeyvault.CertificatePolicy, error) {
+	return m.kv.GetCertificatePolicy(ctx, m.keyvaultURI, certificateName)
+}
+
 func (m *manager) GetCertificateSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, []*x509.Certificate, error) {
 	bundle, err := m.kv.GetSecret(ctx, m.keyvaultURI, secretName, "")
 	if err != nil {
@@ -210,6 +221,11 @@ func (m *manager) SetCertificateIssuer(ctx context.Context, issuerName string, p
 
 func (m *manager) SetSecret(ctx context.Context, secretName string, parameters azkeyvault.SecretSetParameters) error {
 	_, err := m.kv.SetSecret(ctx, m.keyvaultURI, secretName, parameters)
+	return err
+}
+
+func (m *manager) UpdateCertificatePolicy(ctx context.Context, certificateName string, certificatePolicy azkeyvault.CertificatePolicy) error {
+	_, err := m.kv.UpdateCertificatePolicy(ctx, m.keyvaultURI, certificateName, certificatePolicy)
 	return err
 }
 
