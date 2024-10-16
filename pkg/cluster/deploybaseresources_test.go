@@ -1411,11 +1411,21 @@ func TestCreateOIDC(t *testing.T) {
 	resourceGroupName := "fakeResourceGroup"
 	oidcStorageAccountName := "eastusoic"
 	afdEndpoint := "fake.oic.aro.test.net"
+	tenantId := "00000000-0000-0000-0000-000000000000"
+	m := manager{
+		subscriptionDoc: &api.SubscriptionDocument{
+			Subscription: &api.Subscription{
+				Properties: &api.SubscriptionProperties{
+					TenantID: tenantId,
+				},
+			},
+		},
+	}
 	storageWebEndpointForDev := oidcStorageAccountName + ".web." + azureclient.PublicCloud.StorageEndpointSuffix
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
 	blobContainerURL := fmt.Sprintf("https://%s.blob.%s/%s", oidcStorageAccountName, azureclient.PublicCloud.StorageEndpointSuffix, oidcbuilder.WebContainer)
-	prodOIDCIssuer := fmt.Sprintf("https://%s/%s%s", afdEndpoint, env.OIDCBlobDirectoryPrefix, clusterID)
-	devOIDCIssuer := fmt.Sprintf("https://%s/%s%s", storageWebEndpointForDev, env.OIDCBlobDirectoryPrefix, clusterID)
+	prodOIDCIssuer := fmt.Sprintf("https://%s/%s", afdEndpoint, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID))
+	devOIDCIssuer := fmt.Sprintf("https://%s/%s", storageWebEndpointForDev, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID))
 	containerProperties := azstorage.AccountsClientGetPropertiesResponse{
 		Account: azstorage.Account{
 			Properties: &azstorage.AccountProperties{
@@ -1491,8 +1501,8 @@ func TestCreateOIDC(t *testing.T) {
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
 			},
 			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(prodOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
@@ -1519,8 +1529,8 @@ func TestCreateOIDC(t *testing.T) {
 				blob.EXPECT().GetContainerProperties(gomock.Any(), resourceGroupName, oidcStorageAccountName, oidcbuilder.WebContainer).Return(containerProperties, nil)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
 			},
 			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(devOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
@@ -1594,7 +1604,7 @@ func TestCreateOIDC(t *testing.T) {
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(errors.New("generic error"))
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(errors.New("generic error"))
 			},
 			wantBoundServiceAccountSigningKey: false,
 			wantErr:                           "generic error",
@@ -1627,11 +1637,12 @@ func TestCreateOIDC(t *testing.T) {
 			}
 
 			m := &manager{
-				db:     dbOpenShiftClusters,
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				rpBlob: rpBlobManager,
-				doc:    doc,
-				env:    env,
+				db:              dbOpenShiftClusters,
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				rpBlob:          rpBlobManager,
+				doc:             doc,
+				env:             env,
+				subscriptionDoc: m.subscriptionDoc,
 			}
 
 			err = m.createOIDC(ctx)

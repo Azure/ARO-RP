@@ -514,7 +514,7 @@ func (m *manager) Delete(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		err = oidcbuilder.DeleteOidcFolder(ctx, env.OIDCBlobDirectoryPrefix+m.doc.ID, azBlobClient)
+		err = oidcbuilder.DeleteOidcFolder(ctx, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, m.doc.ID), azBlobClient)
 		if err != nil {
 			return err
 		}
