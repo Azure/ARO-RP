@@ -282,12 +282,19 @@ func validate(ctx context.Context, m *manager, verifiedDir, targetDir string, pe
 			return fmt.Errorf("failed to get role definition permission: %w", err)
 		}
 		if missingActions := missingElements(deref(rolePerms.Actions), spec.Permissions); len(missingActions) > 0 {
-			fmt.Printf("%s: missing actions:\n%v\n", ps.name, missingActions)
+			fmt.Printf("\t%s: missing actions:\n", ps.name)
+			for _, action := range missingActions {
+				fmt.Printf("\t\t%s\n", action)
+			}
 			missing = true
 		}
 
 		if missingDataActions := missingElements(deref(rolePerms.DataActions), spec.DataPermissions); len(missingDataActions) > 0 {
-			fmt.Printf("%s: missing data actions:\n%v\n", ps.name, missingDataActions)
+			fmt.Printf("\t%s: missing data actions:\n", ps.name)
+			for _, action := range missingDataActions {
+				fmt.Printf("\t\t%s\n", action)
+			}
+
 			missing = true
 		}
 	}
