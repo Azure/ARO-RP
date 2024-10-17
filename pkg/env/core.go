@@ -14,6 +14,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 )
 
 type ServiceComponent string
@@ -75,12 +77,22 @@ func (c *core) Logger() *logrus.Entry {
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
-	msiAuthorizer, err := c.NewMSIAuthorizer(c.Environment().ResourceManagerScope)
+	tokenizer, err := c.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
 
-	mcc := containerservice.NewManagedClustersClient(c.Environment(), c.SubscriptionID(), msiAuthorizer)
+	options := arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: c.Environment().Cloud,
+		},
+	}
+	clientFactory, err := armcontainerservice.NewClientFactory(c.SubscriptionID(), tokenizer, &options)
+	if err != nil {
+		return nil, err
+	}
+
+	mcc := containerservice.NewManagedClustersClient(clientFactory)
 
 	if c.isLocalDevelopmentMode {
 		return liveconfig.NewDev(c.Location(), mcc), nil

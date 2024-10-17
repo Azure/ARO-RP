@@ -9,23 +9,25 @@ import (
 	"os"
 	"strings"
 
-	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 )
 
-func getAksClusterByNameAndLocation(ctx context.Context, aksClusters mgmtcontainerservice.ManagedClusterListResultPage, aksClusterName, location string) (*mgmtcontainerservice.ManagedCluster, error) {
-	for aksClusters.NotDone() {
-		for _, cluster := range aksClusters.Values() {
-			if strings.EqualFold(*cluster.Name, aksClusterName) && strings.EqualFold(*cluster.Location, location) {
-				return &cluster, nil
-			}
-		}
-		err := aksClusters.NextWithContext(ctx)
+func getAksClusterByNameAndLocation(ctx context.Context, aksClusters *runtime.Pager[armcontainerservice.ManagedClustersClientListResponse], aksClusterName, location string) (*armcontainerservice.ManagedCluster, error) {
+	for aksClusters.More() {
+		nr, err := aksClusters.NextPage(ctx)
 		if err != nil {
 			return nil, err
+		}
+
+		for _, cluster := range nr.Value {
+			if strings.EqualFold(*cluster.Name, aksClusterName) && strings.EqualFold(*cluster.Location, location) {
+				return cluster, nil
+			}
 		}
 	}
 	return nil, nil
@@ -34,10 +36,7 @@ func getAksClusterByNameAndLocation(ctx context.Context, aksClusters mgmtcontain
 func getAksShardKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, location string, shard int) (*rest.Config, error) {
 	aksClusterName := fmt.Sprintf("aro-aks-cluster-%03d", shard)
 
-	aksClusters, err := managedClustersClient.List(ctx)
-	if err != nil {
-		return nil, err
-	}
+	aksClusters := managedClustersClient.List(ctx)
 
 	aksCluster, err := getAksClusterByNameAndLocation(ctx, aksClusters, aksClusterName, location)
 	if err != nil {
@@ -47,18 +46,18 @@ func getAksShardKubeconfig(ctx context.Context, managedClustersClient containers
 		return nil, fmt.Errorf("failed to find the AKS cluster %s in %s", aksClusterName, location)
 	}
 
-	aksResourceGroup := strings.Replace(*aksCluster.NodeResourceGroup, fmt.Sprintf("-aks%d", shard), "", 1)
+	aksResourceGroup := strings.Replace(*aksCluster.Properties.NodeResourceGroup, fmt.Sprintf("-aks%d", shard), "", 1)
 
-	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName, "public")
+	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseKubeconfig(*res.Kubeconfigs)
+	return parseKubeconfig(res.Kubeconfigs)
 }
 
-func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
-	clientconfig, err := clientcmd.NewClientConfigFromBytes(*credentials[0].Value)
+func parseKubeconfig(credentials []*armcontainerservice.CredentialResult) (*rest.Config, error) {
+	clientconfig, err := clientcmd.NewClientConfigFromBytes(credentials[0].Value)
 	if err != nil {
 		return nil, err
 	}
