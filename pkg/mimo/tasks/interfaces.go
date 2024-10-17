@@ -8,4 +8,4 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
-type MaintenanceTask func(mimo.TaskContext, *api.MaintenanceManifestDocument, *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string)
+type MaintenanceTask func(mimo.TaskContext, *api.MaintenanceManifestDocument, *api.OpenShiftClusterDocument) error
