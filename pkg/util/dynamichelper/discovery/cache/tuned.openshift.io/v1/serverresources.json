@@ -21,6 +21,17 @@
             "storageVersionHash": "Ymd5utw2PCg="
         },
         {
+            "name": "profiles/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "Profile",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "tuneds",
             "singularName": "tuned",
             "namespaced": true,

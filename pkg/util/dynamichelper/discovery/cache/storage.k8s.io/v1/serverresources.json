@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "csidrivers",
-            "singularName": "",
+            "singularName": "csidriver",
             "namespaced": false,
             "kind": "CSIDriver",
             "verbs": [
@@ -22,7 +22,7 @@
         },
         {
             "name": "csinodes",
-            "singularName": "",
+            "singularName": "csinode",
             "namespaced": false,
             "kind": "CSINode",
             "verbs": [
@@ -39,7 +39,7 @@
         },
         {
             "name": "csistoragecapacities",
-            "singularName": "",
+            "singularName": "csistoragecapacity",
             "namespaced": true,
             "kind": "CSIStorageCapacity",
             "verbs": [
@@ -52,11 +52,11 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "4as6MA/kOg0="
+            "storageVersionHash": "xeVl+2Ly1kE="
         },
         {
             "name": "storageclasses",
-            "singularName": "",
+            "singularName": "storageclass",
             "namespaced": false,
             "kind": "StorageClass",
             "verbs": [
@@ -76,7 +76,7 @@
         },
         {
             "name": "volumeattachments",
-            "singularName": "",
+            "singularName": "volumeattachment",
             "namespaced": false,
             "kind": "VolumeAttachment",
             "verbs": [

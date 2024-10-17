@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "cronjobs",
-            "singularName": "",
+            "singularName": "cronjob",
             "namespaced": true,
             "kind": "CronJob",
             "verbs": [
@@ -39,7 +39,7 @@
         },
         {
             "name": "jobs",
-            "singularName": "",
+            "singularName": "job",
             "namespaced": true,
             "kind": "Job",
             "verbs": [
