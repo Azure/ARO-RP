@@ -45,8 +45,8 @@ main() {
     )
 
     dnf_install_pkgs install_pkgs \
-                     retry_wait_time \
-                     "$pkg_retry_count"
+                      retry_wait_time \
+                      "$pkg_retry_count"
 
     fips_configure
 
@@ -56,6 +56,8 @@ main() {
     # shellcheck disable=SC2153 disable=SC2034
     local -r mdmimage="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
     local -r rpimage="$RPIMAGE"
+    local -r miseimage="${RPIMAGE%%/*}/${MISEIMAGE#*/}"
+    local -r otelimage="$OTELIMAGE"
     # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
     # shellcheck disable=SC2034
@@ -63,15 +65,12 @@ main() {
         ["mdm"]="mdmimage"
         ["rp"]="rpimage"
         ["fluentbit"]="fluentbit_image"
+        ["mise"]="miseimage"
+        ["otel"]="otelimage"
     )
 
     pull_container_images aro_images
 
-    local -r aro_network="aro"
-    # shellcheck disable=SC2034
-    local -rA networks=(
-        ["$aro_network"]="192.168.254.0/24"
-    )
     # shellcheck disable=SC2034
     local -ra enable_ports=(
         # RP frontend
@@ -121,6 +120,26 @@ main() {
 	Match *
 	Port 29230"
 
+    # values are references to variables, they should not be dereferenced here
+    # shellcheck disable=SC2034
+    local -rA aro_configs=(
+        ["rp_config"]="aro_rp_conf_file"
+        ["fluentbit"]="fluentbit_conf_file"
+        ["mdsd"]="mdsd_config_version"
+        ["static_ip_address"]="static_ip_addresses"
+    )
+
+    # shellcheck disable=SC2034
+    # use default podman network with range 10.88.0.0/16
+    local -rA static_ip_addresses=(
+        ["rp"]="10.88.0.2"
+        ["monitor"]="10.88.0.3"
+        ["portal"]="10.88.0.4"
+        ["mise"]="10.88.0.5"
+        ["otel_collector"]="10.88.0.6"
+        ["fluentbit"]="10.88.0.7"
+        ["mdm"]="10.88.0.8"
+    )
 
     # shellcheck disable=SC2034
     local -r mdsd_config_version="$RPMDSDCONFIGVERSION"
@@ -144,6 +163,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE='${role_rp^^}'
 MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
+MISE_ADDRESS='http://${static_ip_addresses["mise"]}:5000'
 RP_FEATURES='$RPFEATURES'
 RPIMAGE='$rpimage'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
@@ -154,22 +174,15 @@ OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
 MSI_RP_ENDPOINT='$MSIRPENDPOINT'
 "
 
-    # values are references to variables, they should not be dereferenced here
-    # shellcheck disable=SC2034
-    local -rA aro_configs=(
-        ["rp_config"]="aro_rp_conf_file"
-        ["fluentbit"]="fluentbit_conf_file"
-        ["mdsd"]="mdsd_config_version"
-        ["network"]="aro_network"
-    )
-
     configure_vmss_aro_services role_rp \
                                 aro_images \
                                 aro_configs
 
     # shellcheck disable=SC2034
     local -ra aro_services=(
+        "aro-mise"
         "aro-monitor"
+        "aro-otel-collector"
         "aro-portal"
         "aro-rp"
         "azsecd"

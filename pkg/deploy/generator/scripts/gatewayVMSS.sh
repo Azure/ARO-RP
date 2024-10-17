@@ -118,6 +118,15 @@ RPIMAGE='$rpimage'"
         ["gateway_config"]="aro_gateway_conf_file"
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
+        ["static_ip_address"]="static_ip_addresses"
+    )
+
+    # shellcheck disable=SC2034
+    # use default podman network with range 10.88.0.0/16
+    local -rA static_ip_addresses=(
+        ["gateway"]="10.88.0.2"
+        ["fluentbit"]="10.88.0.7"
+        ["mdm"]="10.88.0.8"
     )
 
     configure_vmss_aro_services role_gateway \
