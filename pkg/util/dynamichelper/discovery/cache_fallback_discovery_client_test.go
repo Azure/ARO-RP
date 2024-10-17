@@ -36,7 +36,6 @@ func TestVersion(t *testing.T) {
 	}
 
 	assetsVersion := strings.TrimSuffix(string(b), "\n")
-	// NOTE: This is checking for the version of the oldest supported minor stream.
 	if assetsVersion != "4.16.14" {
 		t.Error("discovery cache is out of date: run make discoverycache")
 	}
