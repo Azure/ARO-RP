@@ -317,7 +317,6 @@
             "name": "parameters",
             "in": "body",
             "description": "The OpenShift cluster resource.",
-            "required": true,
             "schema": {
               "$ref": "#/definitions/OpenShiftClusterUpdate"
             }
@@ -650,11 +649,6 @@
           "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v2/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -764,11 +758,6 @@
           "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v2/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },

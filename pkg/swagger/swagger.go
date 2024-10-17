@@ -259,7 +259,7 @@ func Run(api, outputDir string) error {
 		}
 
 		if g.systemData {
-			s.defineSystemData(azureResources, g.commonTypesVersion)
+			s.defineSystemData(azureResources)
 		}
 
 		if g.managedServiceIdentity {
@@ -300,39 +300,35 @@ func deepCopy(v interface{}) (interface{}, error) {
 // defineSystemData will configure systemData fields for required definitions.
 // SystemData is not user consumable, so we remove definitions from auto-generated code
 // In addition to this we use common-types definition so we replace one we generate with common-types
-func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
+func (s *Swagger) defineSystemData(resources []string) {
 	for _, resource := range resources {
 		s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "systemData")
-
-		// SystemData is not user side consumable type. It is being returned as Read-Only,
-		// but should not be generated into API or swagger as API/SDK type
-		delete(s.Definitions, "SystemData")
-		delete(s.Definitions, "CreatedByType")
-		s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
-			NameSchema{
-				Name: "systemData",
-				Schema: &Schema{
-					ReadOnly:    true,
-					Description: "The system meta data relating to this resource.",
-					Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
-				},
-			})
 	}
+	// SystemData is not user side consumable type. It is being returned as Read-Only,
+	// but should not be generated into API or swagger as API/SDK type
+	delete(s.Definitions, "SystemData")
+	delete(s.Definitions, "CreatedByType")
 }
 
 func (s *Swagger) defineManagedServiceIdentity(commonVersion string) {
-	resource := "OpenShiftCluster"
-	s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "identity")
+	resources := []string{"OpenShiftCluster", "OpenShiftClusterUpdate"}
+	for _, resource := range resources {
+		s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "identity")
 
-	delete(s.Definitions, "identity")
-	s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
-		NameSchema{
-			Name: "identity",
-			Schema: &Schema{
-				Description: "Identity stores information about the cluster MSI(s) in a workload identity cluster.",
-				Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/managedidentity.json#/definitions/ManagedServiceIdentity",
-			},
-		})
+		s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
+			NameSchema{
+				Name: "identity",
+				Schema: &Schema{
+					Description: "Identity stores information about the cluster MSI(s) in a workload identity cluster.",
+					Ref:         "../../../../../../common-types/resource-management/" + commonVersion + "/managedidentity.json#/definitions/ManagedServiceIdentity",
+				},
+			})
+	}
+
+	delete(s.Definitions, "ManagedServiceIdentity")
+	delete(s.Definitions, "ManagedServiceIdentityType")
+	delete(s.Definitions, "UserAssignedIdentity")
+	delete(s.Definitions, "Resource")
 }
 
 func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {

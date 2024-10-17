@@ -572,7 +572,6 @@
             "name": "parameters",
             "in": "body",
             "description": "The OpenShift cluster resource.",
-            "required": true,
             "schema": {
               "$ref": "#/definitions/OpenShiftClusterUpdate"
             }
@@ -1951,11 +1950,6 @@
           "$ref": "#/definitions/MachinePoolProperties",
           "description": "The MachinePool Properties",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -1994,11 +1988,6 @@
           "$ref": "#/definitions/MachinePoolProperties",
           "description": "The MachinePool Properties",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2070,11 +2059,6 @@
           "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2184,11 +2168,6 @@
           "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2205,11 +2184,6 @@
           "$ref": "#/definitions/OpenShiftVersionProperties",
           "description": "The properties for the OpenShiftVersion resource.",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2335,11 +2309,6 @@
           "$ref": "#/definitions/SecretProperties",
           "description": "The Secret Properties",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2380,11 +2349,6 @@
           "$ref": "#/definitions/SecretProperties",
           "description": "The Secret Properties",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2415,11 +2379,6 @@
           "$ref": "#/definitions/SyncIdentityProviderProperties",
           "description": "The SyncIdentityProvider Properties",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2458,11 +2417,6 @@
           "$ref": "#/definitions/SyncIdentityProviderProperties",
           "description": "The SyncIdentityProvider Properties",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2479,11 +2433,6 @@
           "$ref": "#/definitions/SyncSetProperties",
           "description": "The Syncsets properties",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },
@@ -2523,11 +2472,6 @@
           "$ref": "#/definitions/SyncSetProperties",
           "description": "The Syncsets properties",
           "x-ms-client-flatten": true
-        },
-        "systemData": {
-          "$ref": "../../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
-          "description": "The system meta data relating to this resource.",
-          "readOnly": true
         }
       }
     },

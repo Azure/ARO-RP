@@ -317,7 +317,6 @@
             "name": "parameters",
             "in": "body",
             "description": "The OpenShift cluster resource.",
-            "required": true,
             "schema": {
               "$ref": "#/definitions/OpenShiftClusterUpdate"
             }
