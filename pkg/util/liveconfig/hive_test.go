@@ -6,13 +6,19 @@ package liveconfig
 import (
 	"context"
 	"embed"
+	"net/http"
 	"testing"
 
-	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
+	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
+
 	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 
-	mock_containerservice "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerservice"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
+
+	azfake "github.com/Azure/azure-sdk-for-go/sdk/azcore/fake"
+	fake "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6/fake"
 )
 
 //go:embed testdata
@@ -24,29 +30,59 @@ func TestProdHiveAdmin(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	mcc := mock_containerservice.NewMockManagedClustersClient(controller)
+	dummySubscription := ""
 
-	managedClustersList := mgmtcontainerservice.ManagedClusterListResult{
-		Value: &[]mgmtcontainerservice.ManagedCluster{
+	transporter := fake.ManagedClustersServer{
+
+		// next, provide implementations for the APIs you wish to fake.
+		// this fake corresponds to the VirtualMachinesClient.Get() API.
+		Get: func(ctx context.Context, resourceGroupName, resourceName string, options *armcontainerservice.ManagedClustersClientGetOptions) (resp azfake.Responder[armcontainerservice.ManagedClustersClientGetResponse], errResp azfake.ErrorResponder) {
+			// the values of ctx, resourceGroupName, resourceName, and options come from the API call.
+
+			// the named return values resp and errResp are used to construct the response
+			// and are meant to be mutually exclusive. if both responses have been constructed,
+			// the error response is selected.
+
+			// construct the response type, populating fields as required
+			clusterResp := armcontainerservice.ManagedClustersClientGetResponse{}
+			clusterResp.ID = to.Ptr("/fake/resource/id")
+
+			// use resp to set the desired response
+			resp.SetResponse(http.StatusOK, clusterResp, nil)
+
+			// to simulate the failure case, use errResp
+			// errResp.SetResponseError(http.StatusBadRequest, "ThisIsASimulatedError")
+
+			return
+		},
+	}
+
+	mcc, err := containerservice.NewManagedClustersClientWithTransport(&azureclient.PublicCloud, dummySubscription, &azfake.TokenCredential{}, transporter)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	managedClustersList := armcontainerservice.ManagedClusterListResult{
+		Value: &[]armcontainerservice.ManagedCluster{
 			{
 				Name:     to.StringPtr("aro-aks-cluster-001"),
 				Location: to.StringPtr("eastus"),
-				ManagedClusterProperties: &mgmtcontainerservice.ManagedClusterProperties{
+				ManagedClusterProperties: &armcontainerservice.ManagedClusterProperties{
 					NodeResourceGroup: to.StringPtr("rp-eastus-aks1"),
 				},
 			},
 			{
 				Name:     to.StringPtr("aro-aks-cluster-002"),
 				Location: to.StringPtr("eastus"),
-				ManagedClusterProperties: &mgmtcontainerservice.ManagedClusterProperties{
+				ManagedClusterProperties: &armcontainerservice.ManagedClusterProperties{
 					NodeResourceGroup: to.StringPtr("rp-eastus-aks2"),
 				},
 			},
 		},
 	}
 
-	resultPage := mgmtcontainerservice.NewManagedClusterListResultPage(managedClustersList, func(ctx context.Context, mclr mgmtcontainerservice.ManagedClusterListResult) (mgmtcontainerservice.ManagedClusterListResult, error) {
-		return mgmtcontainerservice.ManagedClusterListResult{}, nil
+	resultPage := armcontainerservice.NewManagedClusterListResultPage(managedClustersList, func(ctx context.Context, mclr armcontainerservice.ManagedClusterListResult) (armcontainerservice.ManagedClusterListResult, error) {
+		return armcontainerservice.ManagedClusterListResult{}, nil
 	})
 	// Note that ".AnyTimes()" is not added to the 'List' function below to ensure it can only
 	// run once, which ensures that the caching for the credentials is taking place successfully
@@ -57,14 +93,14 @@ func TestProdHiveAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	kcresp := &[]mgmtcontainerservice.CredentialResult{
+	kcresp := &[]armcontainerservice.CredentialResult{
 		{
 			Name:  to.StringPtr("admin config"),
 			Value: to.ByteSlicePtr(kc),
 		},
 	}
 
-	resp := mgmtcontainerservice.CredentialResults{
+	resp := armcontainerservice.CredentialResults{
 		Kubeconfigs: kcresp,
 	}
 
