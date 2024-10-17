@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	utilmimo "github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
 const maxDequeueCount = 5
@@ -136,6 +136,28 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("failed dequeuing cluster document: %w", err) // This will include StatusPreconditionFaileds
 	}
 
+	// Save these so we can reset them after
+	previousProvisioningState := oc.OpenShiftCluster.Properties.ProvisioningState
+	previousFailedProvisioningState := oc.OpenShiftCluster.Properties.FailedProvisioningState
+
+	// Mark the maintenance state as unplanned and put it in AdminUpdating
+	oc, err = a.oc.PatchWithLease(ctx, a.clusterResourceID, func(oscd *api.OpenShiftClusterDocument) error {
+		oscd.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+		oscd.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateUnplanned
+		return nil
+	})
+	if err != nil {
+		err = fmt.Errorf("failed setting provisioning state on cluster document: %w", err)
+		a.log.Error(err)
+
+		// attempt to dequeue the document, for what it's worth
+		_, leaseErr := a.oc.EndLease(ctx, a.clusterResourceID, previousProvisioningState, previousFailedProvisioningState, nil)
+		if leaseErr != nil {
+			return false, fmt.Errorf("failed ending lease early on cluster document: %w", leaseErr)
+		}
+		return false, err
+	}
+
 	taskContext := newTaskContext(ctx, a.env, a.log, oc)
 
 	// Execute on the manifests we want to action
@@ -155,26 +177,39 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 			continue
 		}
 
-		// if we've tried too many times, give up
-		if doc.Dequeues > maxDequeueCount {
-			err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
-			_, leaseErr := a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, api.MaintenanceManifestStateTimedOut, to.StringPtr(err.Error()))
-			if leaseErr != nil {
-				a.log.Error(err)
-			}
-			continue
-		}
-
 		var state api.MaintenanceManifestState
 		var msg string
 
 		// Perform the task with a timeout
 		err = taskContext.RunInTimeout(time.Minute*60, func() error {
-			state, msg = f(taskContext, doc, oc)
+			innerErr := f(taskContext, doc, oc)
+			if innerErr != nil {
+				return innerErr
+			}
 			return taskContext.Err()
 		})
+
+		// Pull the result message out of the task context to save, if it is set
+		msg = taskContext.GetResultMessage()
+
 		if err != nil {
 			a.log.Error(err)
+
+			if doc.Dequeues >= maxDequeueCount {
+				msg = fmt.Sprintf("did not succeed after %d times, failing -- %s", doc.Dequeues, err.Error())
+				state = api.MaintenanceManifestStateRetriesExceeded
+			} else if utilmimo.IsRetryableError(err) {
+				// If an error is retryable (i.e explicitly marked as a transient error
+				// by wrapping it in utilmimo.TransientError), then mark it back as
+				// Pending so that it will get picked up and retried.
+				state = api.MaintenanceManifestStatePending
+			} else {
+				// Terminal errors (explicitly marked or unwrapped) cause task failure
+				state = api.MaintenanceManifestStateFailed
+			}
+		} else {
+			// Mark tasks that don't have an error as succeeded implicitly
+			state = api.MaintenanceManifestStateCompleted
 		}
 
 		_, err = a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, state, &msg)
@@ -183,8 +218,17 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		}
 	}
 
+	// Remove any set maintenance state
+	oc, err = a.oc.PatchWithLease(ctx, a.clusterResourceID, func(oscd *api.OpenShiftClusterDocument) error {
+		oscd.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
+		return nil
+	})
+	if err != nil {
+		a.log.Error(fmt.Errorf("failed removing maintenance state on cluster document, but continuing: %w", err))
+	}
+
 	// release the OpenShiftCluster
-	_, err = a.oc.EndLease(ctx, a.clusterResourceID, oc.OpenShiftCluster.Properties.ProvisioningState, api.ProvisioningStateMaintenance, nil)
+	_, err = a.oc.EndLease(ctx, a.clusterResourceID, previousProvisioningState, previousFailedProvisioningState, nil)
 	if err != nil {
 		return false, fmt.Errorf("failed ending lease on cluster document: %w", err)
 	}

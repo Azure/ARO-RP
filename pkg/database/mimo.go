@@ -211,9 +211,6 @@ func (c *maintenanceManifests) EndLease(ctx context.Context, clusterResourceID s
 		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
-		if provisioningState != api.MaintenanceManifestStateFailed {
-			doc.Dequeues = 0
-		}
 		return nil
 	}, nil)
 }
@@ -227,6 +224,7 @@ func (c *maintenanceManifests) Lease(ctx context.Context, clusterResourceID stri
 	return c.patch(ctx, clusterResourceID, id, func(doc *api.MaintenanceManifestDocument) error {
 		doc.LeaseOwner = c.uuid
 		doc.Dequeues++
+		doc.MaintenanceManifest.State = api.MaintenanceManifestStateInProgress
 		return nil
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }

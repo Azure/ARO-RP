@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
-func ACRTokenChecker(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+func ACRTokenChecker(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
 	s := []steps.Step{
 		steps.Action(cluster.EnsureACRTokenIsValid),
 	}

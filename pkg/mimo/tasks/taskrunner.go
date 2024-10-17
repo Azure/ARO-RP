@@ -6,7 +6,6 @@ package tasks
 import (
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/mimo"
 	utilmimo "github.com/Azure/ARO-RP/pkg/util/mimo"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
@@ -21,14 +20,7 @@ var DEFAULT_MAINTENANCE_SETS = map[string]MaintenanceTask{
 	mimo.OPERATOR_FLAGS_UPDATE_ID: UpdateOperatorFlags,
 }
 
-func run(t utilmimo.TaskContext, s []steps.Step) (api.MaintenanceManifestState, string) {
+func run(t utilmimo.TaskContext, s []steps.Step) error {
 	_, err := steps.Run(t, t.Log(), DEFAULT_POLL_TIME, s, t.Now)
-
-	if err != nil {
-		if utilmimo.IsRetryableError(err) {
-			return api.MaintenanceManifestStatePending, err.Error()
-		}
-		return api.MaintenanceManifestStateFailed, err.Error()
-	}
-	return api.MaintenanceManifestStateCompleted, t.GetResultMessage()
+	return err
 }

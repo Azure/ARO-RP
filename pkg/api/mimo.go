@@ -6,12 +6,13 @@ package api
 type MaintenanceManifestState string
 
 const (
-	MaintenanceManifestStatePending    MaintenanceManifestState = "Pending"
-	MaintenanceManifestStateInProgress MaintenanceManifestState = "InProgress"
-	MaintenanceManifestStateCompleted  MaintenanceManifestState = "Completed"
-	MaintenanceManifestStateFailed     MaintenanceManifestState = "Failed"
-	MaintenanceManifestStateTimedOut   MaintenanceManifestState = "TimedOut"
-	MaintenanceManifestStateCancelled  MaintenanceManifestState = "Cancelled"
+	MaintenanceManifestStatePending         MaintenanceManifestState = "Pending"
+	MaintenanceManifestStateInProgress      MaintenanceManifestState = "InProgress"
+	MaintenanceManifestStateCompleted       MaintenanceManifestState = "Completed"
+	MaintenanceManifestStateFailed          MaintenanceManifestState = "Failed"
+	MaintenanceManifestStateRetriesExceeded MaintenanceManifestState = "RetriesExceeded"
+	MaintenanceManifestStateTimedOut        MaintenanceManifestState = "TimedOut"
+	MaintenanceManifestStateCancelled       MaintenanceManifestState = "Cancelled"
 )
 
 // MaintenanceManifest represents an instance of a MaintenanceTask running on a

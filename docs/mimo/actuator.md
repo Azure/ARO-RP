@@ -14,7 +14,7 @@ graph TD;
     ISEXPIRED-- No --> DEQUEUECLUSTER;
     DEQUEUECLUSTER[Claim lease on OpenShiftClusterDocument] --> DEQUEUE;
     DEQUEUE[Actuator dequeues task]--> ISRETRYLIMIT;
-    ISRETRYLIMIT{{Have we retried the task too many times?}} -- Yes --> STATETIMEDOUT;
+    ISRETRYLIMIT{{Have we retried the task too many times?}} -- Yes --> STATERETRYEXCEEDED([State = RetriesExceeded]) --> CONTINUE;
     ISRETRYLIMIT -- No -->STATEINPROGRESS;
     STATEINPROGRESS([State = InProgress]) -->RUN[[Task is run]];
     RUN -- Success --> SUCCESS

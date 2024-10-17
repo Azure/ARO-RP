@@ -156,6 +156,9 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					ID: clusterResourceID,
 					Properties: api.OpenShiftClusterProperties{
 						ProvisioningState: api.ProvisioningStateSucceeded,
+						NetworkProfile: api.NetworkProfile{
+							PodCIDR: "0.0.0.0/32",
+						},
 					},
 				},
 			})
@@ -197,6 +200,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				},
 				&api.MaintenanceManifestDocument{
 					ID:                manifestID2,
+					Dequeues:          1,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStateCompleted,
@@ -215,9 +219,10 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			svc.pollTime = time.Second
 
 			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
-				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					svc.stopping.Store(true)
-					return api.MaintenanceManifestStateCompleted, "ok"
+					th.SetResultMessage("ok")
+					return nil
 				},
 			})
 
@@ -233,13 +238,14 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			svc.pollTime = time.Second
 
 			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
-				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
-					// ProvisioningState is in the full document, not just the
-					// ClusterResourceID only as in the bucket worker
-					Expect(oscd.OpenShiftCluster.Properties.ProvisioningState).To(Equal(api.ProvisioningStateSucceeded))
+				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					// Only the ClusterResourceID is available to the bucket
+					// worker, so make sure this is the full document
+					Expect(oscd.OpenShiftCluster.Properties.NetworkProfile.PodCIDR).To(Equal("0.0.0.0/32"))
 
 					svc.stopping.Store(true)
-					return api.MaintenanceManifestStateCompleted, "ok"
+					th.SetResultMessage("ok")
+					return nil
 				},
 			})
 
