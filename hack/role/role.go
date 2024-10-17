@@ -57,7 +57,7 @@ type datetime struct {
 }
 
 func (d *datetime) UnmarshalJSON(data []byte) error {
-	dd, err := time.Parse("\"Mon, 02 Jan 2006 15:04:05 -0700\"", string(data))
+	dd, err := time.Parse(fmt.Sprintf("\"%s\"", time.RFC1123Z), string(data))
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func main() {
 	}
 }
 
-// versionsToValidate returns available versions later than the verified version
+// versionsToValidate returns all the latest patch versions for each minor version later than the given verified version.
 func versionsToValidate(verifiedVersion string) ([]string, error) {
 	v, err := version.ParseVersion(verifiedVersion)
 	if err != nil {
@@ -223,6 +223,8 @@ func versionsToValidate(verifiedVersion string) ([]string, error) {
 	return vers, nil
 }
 
+// getLatestVersion returns the latest available patch version for the given minor version.
+// The version could be a candidate version (e.g. 4.17.0-rc1, 4.17.0-ec2).
 func getLatestVersion(v *version.Version) (string, error) {
 	tags, err := getAvailableTags(v)
 	if err != nil {
@@ -237,13 +239,15 @@ func getLatestVersion(v *version.Version) (string, error) {
 	return strings.TrimSuffix(t.Name, "-x86_64"), nil
 }
 
+// getAvailableTags returns all available tags in quay.io/openshift-release-dev/ocp-release for given minor version.
+// The tags are like 4.14.37-x86_64, 4.17.0-rc1-x86_64, 4.17.0-ec2-x86_64, etc.
 func getAvailableTags(v *version.Version) ([]tag, error) {
-	// Get the latest version from quay.io
 	hasAdditional := true
 	page := 1
 	var tags []tag
 	for hasAdditional {
 		// https://docs.redhat.com/en/documentation/red_hat_quay/3/html-single/red_hat_quay_api_guide/index#red_hat_quay_application_programming_interface_api
+		// It paginates with hasAdditional and page parameters to fetch all tags.
 		res, err := http.Get(fmt.Sprintf("https://quay.io/api/v1/repository/openshift-release-dev/ocp-release/tag/?limit=100&page=%d&filter_tag_name=like:%s.%%-x86_64", page, v.MinorVersion()))
 		if err != nil {
 			return nil, fmt.Errorf("failed to list tags: %w", err)
