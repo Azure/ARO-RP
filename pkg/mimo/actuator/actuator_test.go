@@ -5,6 +5,7 @@ package actuator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -168,6 +169,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			checker.Clear()
 			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:                manifestID,
+				Dequeues:          1,
 				ClusterResourceID: strings.ToLower(clusterResourceID),
 				MaintenanceManifest: api.MaintenanceManifest{
 					State:             api.MaintenanceManifestStateCompleted,
@@ -181,8 +183,68 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 		It("runs them", func() {
 			a.AddMaintenanceTasks(map[string]tasks.MaintenanceTask{
-				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
-					return api.MaintenanceManifestStateCompleted, "done"
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					// check that we are in progress during this
+					Expect(mmd.MaintenanceManifest.State).To(Equal(api.MaintenanceManifestStateInProgress))
+
+					th.SetResultMessage("done")
+					return nil
+				},
+			})
+
+			didWork, err := a.Process(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(didWork).To(BeTrue())
+
+			errs := checker.CheckMaintenanceManifests(manifestsClient)
+			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+		})
+	})
+
+	When("new manifest for a task which repeatedly fails", func() {
+		var manifestID string
+
+		BeforeEach(func() {
+			fixtures.Clear()
+			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key: strings.ToLower(clusterResourceID),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+				},
+			})
+
+			manifestID = manifests.NewUUID()
+			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID: manifestID,
+				// Set the dequeue count to right before it would fail
+				Dequeues:          maxDequeueCount - 1,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+
+			checker.Clear()
+			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				Dequeues:          maxDequeueCount,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStateRetriesExceeded,
+					MaintenanceTaskID: "0",
+					StatusText:        "did not succeed after 5 times, failing -- TransientError: oh no",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+		})
+		It("stops after retries exceeded", func() {
+			a.AddMaintenanceTasks(map[string]tasks.MaintenanceTask{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					return mimo.TransientError(errors.New("oh no"))
 				},
 			})
 
@@ -243,20 +305,23 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				})
 
 			checker.Clear()
-			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-				ID:                manifestIDs[0],
-				ClusterResourceID: strings.ToLower(clusterResourceID),
-				MaintenanceManifest: api.MaintenanceManifest{
-					State:             api.MaintenanceManifestStateCompleted,
-					MaintenanceTaskID: "0",
-					StatusText:        "done",
-					RunBefore:         600,
-					RunAfter:          0,
-					Priority:          2,
+			checker.AddMaintenanceManifestDocuments(
+				&api.MaintenanceManifestDocument{
+					ID:                manifestIDs[0],
+					Dequeues:          1,
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStateCompleted,
+						MaintenanceTaskID: "0",
+						StatusText:        "done",
+						RunBefore:         600,
+						RunAfter:          0,
+						Priority:          2,
+					},
 				},
-			},
 				&api.MaintenanceManifestDocument{
 					ID:                manifestIDs[1],
+					Dequeues:          1,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStateCompleted,
@@ -269,6 +334,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				},
 				&api.MaintenanceManifestDocument{
 					ID:                manifestIDs[2],
+					Dequeues:          1,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStateCompleted,
@@ -281,21 +347,24 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				})
 		})
 
-		It("runs them", func() {
+		It("runs them in priority order", func() {
 			ordering := []string{}
 
 			a.AddMaintenanceTasks(map[string]tasks.MaintenanceTask{
-				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					ordering = append(ordering, "0")
-					return api.MaintenanceManifestStateCompleted, "done"
+					th.SetResultMessage("done")
+					return nil
 				},
-				"1": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+				"1": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					ordering = append(ordering, "1")
-					return api.MaintenanceManifestStateCompleted, "done"
+					th.SetResultMessage("done")
+					return nil
 				},
-				"2": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+				"2": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					ordering = append(ordering, "2")
-					return api.MaintenanceManifestStateCompleted, "done"
+					th.SetResultMessage("done")
+					return nil
 				},
 			})
 
