@@ -8,7 +8,8 @@ import (
 	"embed"
 	"testing"
 
-	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
+	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
+
 	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 
@@ -26,27 +27,27 @@ func TestProdHiveAdmin(t *testing.T) {
 
 	mcc := mock_containerservice.NewMockManagedClustersClient(controller)
 
-	managedClustersList := mgmtcontainerservice.ManagedClusterListResult{
-		Value: &[]mgmtcontainerservice.ManagedCluster{
+	managedClustersList := armcontainerservice.ManagedClusterListResult{
+		Value: &[]armcontainerservice.ManagedCluster{
 			{
 				Name:     to.StringPtr("aro-aks-cluster-001"),
 				Location: to.StringPtr("eastus"),
-				ManagedClusterProperties: &mgmtcontainerservice.ManagedClusterProperties{
+				ManagedClusterProperties: &armcontainerservice.ManagedClusterProperties{
 					NodeResourceGroup: to.StringPtr("rp-eastus-aks1"),
 				},
 			},
 			{
 				Name:     to.StringPtr("aro-aks-cluster-002"),
 				Location: to.StringPtr("eastus"),
-				ManagedClusterProperties: &mgmtcontainerservice.ManagedClusterProperties{
+				ManagedClusterProperties: &armcontainerservice.ManagedClusterProperties{
 					NodeResourceGroup: to.StringPtr("rp-eastus-aks2"),
 				},
 			},
 		},
 	}
 
-	resultPage := mgmtcontainerservice.NewManagedClusterListResultPage(managedClustersList, func(ctx context.Context, mclr mgmtcontainerservice.ManagedClusterListResult) (mgmtcontainerservice.ManagedClusterListResult, error) {
-		return mgmtcontainerservice.ManagedClusterListResult{}, nil
+	resultPage := armcontainerservice.NewManagedClusterListResultPage(managedClustersList, func(ctx context.Context, mclr armcontainerservice.ManagedClusterListResult) (armcontainerservice.ManagedClusterListResult, error) {
+		return armcontainerservice.ManagedClusterListResult{}, nil
 	})
 	// Note that ".AnyTimes()" is not added to the 'List' function below to ensure it can only
 	// run once, which ensures that the caching for the credentials is taking place successfully
@@ -57,14 +58,14 @@ func TestProdHiveAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	kcresp := &[]mgmtcontainerservice.CredentialResult{
+	kcresp := &[]armcontainerservice.CredentialResult{
 		{
 			Name:  to.StringPtr("admin config"),
 			Value: to.ByteSlicePtr(kc),
 		},
 	}
 
-	resp := mgmtcontainerservice.CredentialResults{
+	resp := armcontainerservice.CredentialResults{
 		Kubeconfigs: kcresp,
 	}
 
