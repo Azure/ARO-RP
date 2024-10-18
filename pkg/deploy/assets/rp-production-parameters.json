@@ -84,6 +84,9 @@
         "gatewayServicePrincipalId": {
             "value": ""
         },
+        "globalDevopsServicePrincipalId": {
+            "value": ""
+        },
         "ipRules": {
             "value": ""
         },
