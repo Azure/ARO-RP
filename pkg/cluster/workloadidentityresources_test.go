@@ -36,7 +36,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 	}{
 		{
 			name:    "returns error if cluster is not using workload identity",
-			wantErr: "generateWorkloadIdentityResources called for a CSP cluster",
+			wantErr: "generateWorkloadIdentityResources called for a Cluster Service Principal cluster",
 		},
 		{
 			name:                 "generates all expected resources",
