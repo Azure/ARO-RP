@@ -224,6 +224,12 @@ setup_platform_identity() {
         create_platform_identity_and_assign_role "${operatorName}" "${roleDefinitionId}"
 
     done <<< "$platformWorkloadIdentityRoles"
+
+    # Create the cluster identity
+    echo "INFO: Creating cluster identity under RG ($RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
+    echo ""
+
+    create_platform_identity_and_assign_role "Cluster" "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
 }
 
 cluster_msi_role_assignment() {
