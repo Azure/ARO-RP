@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // OpenShiftVersionsClient is the rest API for Azure Red Hat OpenShift 4
@@ -33,20 +34,20 @@ type OpenShiftVersionsClient struct {
 }
 
 // NewOpenShiftVersionsClient creates an instance of the OpenShiftVersionsClient client.
-func NewOpenShiftVersionsClient(subscriptionID string) OpenShiftVersionsClient {
+func NewOpenShiftVersionsClient(subscriptionID uuid.UUID) OpenShiftVersionsClient {
 	return NewOpenShiftVersionsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
 // NewOpenShiftVersionsClientWithBaseURI creates an instance of the OpenShiftVersionsClient client using a custom
 // endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure
 // stack).
-func NewOpenShiftVersionsClientWithBaseURI(baseURI string, subscriptionID string) OpenShiftVersionsClient {
+func NewOpenShiftVersionsClientWithBaseURI(baseURI string, subscriptionID uuid.UUID) OpenShiftVersionsClient {
 	return OpenShiftVersionsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
 // List the operation returns the installable OpenShift versions as strings.
 // Parameters:
-// location - the name of Azure region.
+// location - the name of the Azure region.
 func (client OpenShiftVersionsClient) List(ctx context.Context, location string) (result OpenShiftVersionListPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftVersionsClient.List")
@@ -59,8 +60,6 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", err.Error())

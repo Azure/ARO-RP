@@ -19,15 +19,6 @@ from six import with_metaclass
 from azure.core import CaseInsensitiveEnumMeta
 
 
-class CreatedByType(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
-    """The type of identity that created the resource.
-    """
-
-    USER = "User"
-    APPLICATION = "Application"
-    MANAGED_IDENTITY = "ManagedIdentity"
-    KEY = "Key"
-
 class EncryptionAtHost(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """EncryptionAtHost represents encryption at host state
     """

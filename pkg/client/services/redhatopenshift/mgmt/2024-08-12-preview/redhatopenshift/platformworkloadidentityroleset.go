@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // PlatformWorkloadIdentityRoleSetClient is the rest API for Azure Red Hat OpenShift 4
@@ -33,20 +34,20 @@ type PlatformWorkloadIdentityRoleSetClient struct {
 }
 
 // NewPlatformWorkloadIdentityRoleSetClient creates an instance of the PlatformWorkloadIdentityRoleSetClient client.
-func NewPlatformWorkloadIdentityRoleSetClient(subscriptionID string) PlatformWorkloadIdentityRoleSetClient {
+func NewPlatformWorkloadIdentityRoleSetClient(subscriptionID uuid.UUID) PlatformWorkloadIdentityRoleSetClient {
 	return NewPlatformWorkloadIdentityRoleSetClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
 // NewPlatformWorkloadIdentityRoleSetClientWithBaseURI creates an instance of the PlatformWorkloadIdentityRoleSetClient
 // client using a custom endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI
 // (sovereign clouds, Azure stack).
-func NewPlatformWorkloadIdentityRoleSetClientWithBaseURI(baseURI string, subscriptionID string) PlatformWorkloadIdentityRoleSetClient {
+func NewPlatformWorkloadIdentityRoleSetClientWithBaseURI(baseURI string, subscriptionID uuid.UUID) PlatformWorkloadIdentityRoleSetClient {
 	return PlatformWorkloadIdentityRoleSetClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
 // List this operation returns PlatformWorkloadIdentityRoleSet as a string
 // Parameters:
-// location - the name of Azure region.
+// location - the name of the Azure region.
 func (client PlatformWorkloadIdentityRoleSetClient) List(ctx context.Context, location string) (result PlatformWorkloadIdentityRoleSetListPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/PlatformWorkloadIdentityRoleSetClient.List")
@@ -59,8 +60,6 @@ func (client PlatformWorkloadIdentityRoleSetClient) List(ctx context.Context, lo
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "List", err.Error())

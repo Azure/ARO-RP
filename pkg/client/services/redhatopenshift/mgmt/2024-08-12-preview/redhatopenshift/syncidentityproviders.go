@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // SyncIdentityProvidersClient is the rest API for Azure Red Hat OpenShift 4
@@ -33,14 +34,14 @@ type SyncIdentityProvidersClient struct {
 }
 
 // NewSyncIdentityProvidersClient creates an instance of the SyncIdentityProvidersClient client.
-func NewSyncIdentityProvidersClient(subscriptionID string) SyncIdentityProvidersClient {
+func NewSyncIdentityProvidersClient(subscriptionID uuid.UUID) SyncIdentityProvidersClient {
 	return NewSyncIdentityProvidersClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
 // NewSyncIdentityProvidersClientWithBaseURI creates an instance of the SyncIdentityProvidersClient client using a
 // custom endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds,
 // Azure stack).
-func NewSyncIdentityProvidersClientWithBaseURI(baseURI string, subscriptionID string) SyncIdentityProvidersClient {
+func NewSyncIdentityProvidersClientWithBaseURI(baseURI string, subscriptionID uuid.UUID) SyncIdentityProvidersClient {
 	return SyncIdentityProvidersClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
@@ -62,8 +63,6 @@ func (client SyncIdentityProvidersClient) CreateOrUpdate(ctx context.Context, re
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -159,8 +158,6 @@ func (client SyncIdentityProvidersClient) Delete(ctx context.Context, resourceGr
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -253,8 +250,6 @@ func (client SyncIdentityProvidersClient) Get(ctx context.Context, resourceGroup
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -347,8 +342,6 @@ func (client SyncIdentityProvidersClient) List(ctx context.Context, resourceGrou
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -480,8 +473,6 @@ func (client SyncIdentityProvidersClient) Update(ctx context.Context, resourceGr
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -532,7 +523,6 @@ func (client SyncIdentityProvidersClient) UpdatePreparer(ctx context.Context, re
 		"api-version": APIVersion,
 	}
 
-	parameters.SystemData = nil
 	preparer := autorest.CreatePreparer(
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
