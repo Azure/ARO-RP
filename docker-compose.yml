@@ -13,6 +13,8 @@ services:
       - /dev/net/tun  # required to modify VPN on host
     entrypoint: "openvpn"
     command: ["/secrets/vpn-eastus.ovpn"]
+    ports:
+      - "443:443"
     healthcheck:
       test: ["CMD", "pidof", "openvpn"]
       start_period: 20s
@@ -24,6 +26,8 @@ services:
     image: selenium/standalone-edge:4.10.0-20230607
     container_name: selenium-container
     network_mode: host
+    ports:
+      - "4444:4444"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4444"]
       interval: 30s
@@ -43,6 +47,7 @@ services:
           soft: 4096
           hard: 4096
     container_name: aro-rp
+    network_mode: host
     depends_on:
       vpn:
         condition: service_healthy
@@ -101,10 +106,8 @@ services:
       - HIVE_KUBE_CONFIG_PATH=/app/secrets/aks.kubeconfig
       - KUBECONFIG=/app/secrets/aks.kubeconfig
       - RP_MODE=development
-    expose:
-      - "8443"
     ports:
-      - "127.0.0.1:8443:8443"
+      - "8443:8443"
     healthcheck:
       test: ["CMD", "curl", "-k", "http://localhost:8443/healthz"]
       interval: 30s
@@ -117,7 +120,8 @@ services:
     container_name: aro-portal
     depends_on:
       rp:
-        condition: service_healthy
+        condition: service_started
+    network_mode: host
     environment:
       - RP_MODE
       - AZURE_SUBSCRIPTION_ID
@@ -134,8 +138,8 @@ services:
       - DATABASE_NAME
       - NO_NPM=1
     ports:
-      - "127.0.0.1:8444:8444"
-      - "127.0.0.1:2222:2222"
+      - "8444:8444"
+      - "2222:2222"
     secrets:
       - source: proxy-client-key
         target: /app/secrets/proxy-client.key
@@ -153,6 +157,37 @@ services:
       timeout: 10s
       retries: 3
 
+  run-e2e:
+    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+    container_name: run-e2e
+    depends_on:
+      - vpn
+      - rp
+      - portal
+      - selenium
+    network_mode: host
+    environment:
+      - E2E_LABEL
+      - RP_MODE=development
+      - LOCATION
+      - CLUSTER
+      - AZURE_SUBSCRIPTION_ID
+      - AZURE_TENANT_ID
+      - AZURE_CLIENT_ID
+      - AZURE_CLIENT_SECRET
+      - DATABASE_ACCOUNT_NAME
+      - DATABASE_NAME
+      - RESOURCEGROUP
+      - PROXY_HOSTNAME
+    entrypoint: "/usr/local/bin/e2e.test"
+    command: ["-test.v", "--ginkgo.v", "--ginkgo.timeout=180m", "--ginkgo.flake-attempts=2", "--ginkgo.junit-report=/tmp/e2e-report.xml", "--ginkgo.label-filter=${E2E_LABEL}"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: on-failure:3
+
 secrets:
   proxy-client-key:
     file: ./secrets/proxy-client.key
@@ -161,4 +196,4 @@ secrets:
   proxy-crt:
     file: ./secrets/proxy.crt
   hive-kubeconfig:
-    file: ./aks.kubeconfig
+    file: ./secrets/aks.kubeconfig
