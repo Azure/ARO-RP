@@ -189,7 +189,10 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		hubPort  = 4444
 		hostPort = 8444
 	)
-	hubAddress := os.Getenv("ARO_SELENIUM_HOSTNAME")
+	hubAddress, exists := os.LookupEnv("ARO_SELENIUM_HOSTNAME")
+	if !exists {
+		hubAddress = "localhost"
+	}
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
 	caps := selenium.Capabilities{
