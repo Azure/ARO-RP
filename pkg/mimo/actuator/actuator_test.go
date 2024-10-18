@@ -34,7 +34,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	var manifests database.MaintenanceManifests
 	var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
 	var clusters database.OpenShiftClusters
-	//var clustersClient cosmosdb.OpenShiftClusterDocumentClient
+	var clustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient
 
 	var a Actuator
 
@@ -75,7 +75,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	BeforeEach(func() {
 		now := func() time.Time { return time.Unix(120, 0) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
-		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
+		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
 
 		a = &actuator{
 			log: log,
@@ -105,6 +105,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				Key: strings.ToLower(clusterResourceID),
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+					},
 				},
 			})
 
@@ -130,6 +133,15 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 					RunAfter:   0,
 				},
 			})
+			checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key: strings.ToLower(clusterResourceID),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+					},
+				},
+			})
 		})
 
 		It("expires them", func() {
@@ -138,6 +150,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			Expect(didWork).To(BeFalse())
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
+			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+
+			errs = checker.CheckOpenShiftClusters(clustersClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
 		})
 	})
@@ -151,6 +166,10 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				Key: strings.ToLower(clusterResourceID),
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+						MaintenanceState:  api.MaintenanceStateNone,
+					},
 				},
 			})
 
@@ -179,6 +198,16 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 					RunAfter:          0,
 				},
 			})
+			checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key: strings.ToLower(clusterResourceID),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+						MaintenanceState:  api.MaintenanceStateNone,
+					},
+				},
+			})
 		})
 
 		It("runs them", func() {
@@ -197,6 +226,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			Expect(didWork).To(BeTrue())
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
+			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+
+			errs = checker.CheckOpenShiftClusters(clustersClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
 		})
 	})
