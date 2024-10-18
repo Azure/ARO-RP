@@ -205,10 +205,10 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     if enable_managed_identity is True:
         oc.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile(
-            platform_workload_identities=platform_workload_identities
+            platform_workload_identities=dict(platform_workload_identities)
         )
 
-        oc.identity = openshiftcluster.Identity(
+        oc.identity = openshiftcluster.ManagedServiceIdentity(
             type='UserAssigned',
             user_assigned_identities={mi_user_assigned: {}}
         )
@@ -485,17 +485,7 @@ def aro_update(cmd,
             oc_update.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile()
 
         if platform_workload_identities is not None:
-            pwis = {}
-            for i in oc.platform_workload_identity_profile.platform_workload_identities:
-                pwis[i.operator_name] = openshiftcluster.PlatformWorkloadIdentity(
-                    operator_name=i.operator_name,
-                    resource_id=i.resource_id
-                )
-
-            for i in platform_workload_identities:
-                pwis[i.operator_name] = i
-
-            oc_update.platform_workload_identity_profile.platform_workload_identities = list(pwis.values())
+            oc_update.platform_workload_identity_profile.platform_workload_identities.update(platform_workload_identities)
 
         oc_update.platform_workload_identity_profile.upgradeable_to = upgradeable_to
 
