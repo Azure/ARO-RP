@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/go-autorest/autorest/date"
 )
 
 // OpenShiftCluster represents an OpenShift cluster
@@ -211,6 +212,7 @@ const (
 	ProvisioningStateUpdating      ProvisioningState = "Updating"
 	ProvisioningStateAdminUpdating ProvisioningState = "AdminUpdating"
 	ProvisioningStateCanceled      ProvisioningState = "Canceled"
+	ProvisioningStateMaintenance   ProvisioningState = "Maintenance"
 	ProvisioningStateDeleting      ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
 	ProvisioningStateFailed        ProvisioningState = "Failed"
@@ -260,6 +262,7 @@ func (t MaintenanceTask) IsMaintenanceOngoingTask() bool {
 	result := (t == MaintenanceTaskEverything) ||
 		(t == MaintenanceTaskOperator) ||
 		(t == MaintenanceTaskRenewCerts) ||
+		(t == MaintenanceTaskSyncClusterObject) ||
 		(t == "")
 	return result
 }
@@ -783,9 +786,10 @@ type IngressProfile struct {
 type RegistryProfile struct {
 	MissingFields
 
-	Name     string       `json:"name,omitempty"`
-	Username string       `json:"username,omitempty"`
-	Password SecureString `json:"password,omitempty"`
+	Name      string       `json:"name,omitempty"`
+	Username  string       `json:"username,omitempty"`
+	Password  SecureString `json:"password,omitempty"`
+	IssueDate *date.Time   `json:"issueDate,omitempty"`
 }
 
 // Install represents an install process

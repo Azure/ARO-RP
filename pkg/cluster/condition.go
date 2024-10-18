@@ -12,6 +12,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
 )
 
 const minimumWorkerNodes = 2
@@ -27,7 +29,7 @@ func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, nil
 	}
-	return isOperatorAvailable(apiserver), nil
+	return clusteroperators.IsOperatorAvailable(apiserver), nil
 }
 
 func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
@@ -87,7 +89,7 @@ func (m *manager) operatorConsoleReady(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, nil
 	}
-	return isOperatorAvailable(consoleOperator), nil
+	return clusteroperators.IsOperatorAvailable(consoleOperator), nil
 }
 
 func (m *manager) clusterVersionReady(ctx context.Context) (bool, error) {
@@ -107,15 +109,7 @@ func (m *manager) ingressControllerReady(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, nil
 	}
-	return isOperatorAvailable(ingressOperator), nil
-}
-
-func isOperatorAvailable(operator *configv1.ClusterOperator) bool {
-	m := make(map[configv1.ClusterStatusConditionType]configv1.ConditionStatus, len(operator.Status.Conditions))
-	for _, cond := range operator.Status.Conditions {
-		m[cond.Type] = cond.Status
-	}
-	return m[configv1.OperatorAvailable] == configv1.ConditionTrue && m[configv1.OperatorProgressing] == configv1.ConditionFalse
+	return clusteroperators.IsOperatorAvailable(ingressOperator), nil
 }
 
 // aroCredentialsRequestReconciled evaluates whether the openshift-azure-operator CredentialsRequest has recently been reconciled and returns true

@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
-var _ = Describe("[Admin API] Cluster admin update action", func() {
+var _ = Describe("[Admin API] Cluster admin update action", Serial, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must run cluster update operation on a cluster", func(ctx context.Context) {
