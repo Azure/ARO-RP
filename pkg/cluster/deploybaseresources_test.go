@@ -1731,13 +1731,11 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
-									OperatorName: "ClusterIngressOperator",
+								"ClusterIngressOperator": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
@@ -1795,13 +1793,11 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
-									OperatorName: "ClusterIngressOperator",
+								"ClusterIngressOperator": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
@@ -1824,9 +1820,8 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "DummyOperator",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"DummyOperator": {
 									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
 							},

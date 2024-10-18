@@ -18,10 +18,7 @@ class AROPlatformWorkloadIdentityAddAction(argparse._AppendAction):
                 raise argparse.ArgumentError(self, msg)
 
             operator_name, resource_id = values
-            parsed = PlatformWorkloadIdentity(
-                operator_name=operator_name,
-                resource_id=resource_id
-            )
+            parsed = (operator_name, PlatformWorkloadIdentity(resource_id=resource_id))
 
             super().__call__(parser, namespace, parsed, option_string)
 

@@ -434,8 +434,6 @@ class OpenShiftCluster(TrackedResource):
     :vartype tags: dict[str, str]
     :ivar location: Required. The geo-location where the resource lives.
     :vartype location: str
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_04_01.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
      "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
@@ -464,7 +462,6 @@ class OpenShiftCluster(TrackedResource):
         'name': {'readonly': True},
         'type': {'readonly': True},
         'location': {'required': True},
-        'system_data': {'readonly': True},
     }
 
     _attribute_map = {
@@ -473,7 +470,6 @@ class OpenShiftCluster(TrackedResource):
         'type': {'key': 'type', 'type': 'str'},
         'tags': {'key': 'tags', 'type': '{str}'},
         'location': {'key': 'location', 'type': 'str'},
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
@@ -518,7 +514,6 @@ class OpenShiftCluster(TrackedResource):
          list[~azure.mgmt.redhatopenshift.v2022_04_01.models.IngressProfile]
         """
         super(OpenShiftCluster, self).__init__(**kwargs)
-        self.system_data = None
         self.provisioning_state = kwargs.get('provisioning_state', None)
         self.cluster_profile = kwargs.get('cluster_profile', None)
         self.console_profile = kwargs.get('console_profile', None)
@@ -614,12 +609,8 @@ class OpenShiftClusterList(msrest.serialization.Model):
 class OpenShiftClusterUpdate(msrest.serialization.Model):
     """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
     :ivar tags: A set of tags. The resource tags.
     :vartype tags: dict[str, str]
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_04_01.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
      "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
@@ -643,13 +634,8 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :vartype ingress_profiles: list[~azure.mgmt.redhatopenshift.v2022_04_01.models.IngressProfile]
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
         'tags': {'key': 'tags', 'type': '{str}'},
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
@@ -693,7 +679,6 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         """
         super(OpenShiftClusterUpdate, self).__init__(**kwargs)
         self.tags = kwargs.get('tags', None)
-        self.system_data = None
         self.provisioning_state = kwargs.get('provisioning_state', None)
         self.cluster_profile = kwargs.get('cluster_profile', None)
         self.console_profile = kwargs.get('console_profile', None)
@@ -798,65 +783,6 @@ class ServicePrincipalProfile(msrest.serialization.Model):
         super(ServicePrincipalProfile, self).__init__(**kwargs)
         self.client_id = kwargs.get('client_id', None)
         self.client_secret = kwargs.get('client_secret', None)
-
-
-class SystemData(msrest.serialization.Model):
-    """Metadata pertaining to creation and last modification of the resource.
-
-    :ivar created_by: The identity that created the resource.
-    :vartype created_by: str
-    :ivar created_by_type: The type of identity that created the resource. Possible values include:
-     "User", "Application", "ManagedIdentity", "Key".
-    :vartype created_by_type: str or ~azure.mgmt.redhatopenshift.v2022_04_01.models.CreatedByType
-    :ivar created_at: The timestamp of resource creation (UTC).
-    :vartype created_at: ~datetime.datetime
-    :ivar last_modified_by: The identity that last modified the resource.
-    :vartype last_modified_by: str
-    :ivar last_modified_by_type: The type of identity that last modified the resource. Possible
-     values include: "User", "Application", "ManagedIdentity", "Key".
-    :vartype last_modified_by_type: str or
-     ~azure.mgmt.redhatopenshift.v2022_04_01.models.CreatedByType
-    :ivar last_modified_at: The type of identity that last modified the resource.
-    :vartype last_modified_at: ~datetime.datetime
-    """
-
-    _attribute_map = {
-        'created_by': {'key': 'createdBy', 'type': 'str'},
-        'created_by_type': {'key': 'createdByType', 'type': 'str'},
-        'created_at': {'key': 'createdAt', 'type': 'iso-8601'},
-        'last_modified_by': {'key': 'lastModifiedBy', 'type': 'str'},
-        'last_modified_by_type': {'key': 'lastModifiedByType', 'type': 'str'},
-        'last_modified_at': {'key': 'lastModifiedAt', 'type': 'iso-8601'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        :keyword created_by: The identity that created the resource.
-        :paramtype created_by: str
-        :keyword created_by_type: The type of identity that created the resource. Possible values
-         include: "User", "Application", "ManagedIdentity", "Key".
-        :paramtype created_by_type: str or ~azure.mgmt.redhatopenshift.v2022_04_01.models.CreatedByType
-        :keyword created_at: The timestamp of resource creation (UTC).
-        :paramtype created_at: ~datetime.datetime
-        :keyword last_modified_by: The identity that last modified the resource.
-        :paramtype last_modified_by: str
-        :keyword last_modified_by_type: The type of identity that last modified the resource. Possible
-         values include: "User", "Application", "ManagedIdentity", "Key".
-        :paramtype last_modified_by_type: str or
-         ~azure.mgmt.redhatopenshift.v2022_04_01.models.CreatedByType
-        :keyword last_modified_at: The type of identity that last modified the resource.
-        :paramtype last_modified_at: ~datetime.datetime
-        """
-        super(SystemData, self).__init__(**kwargs)
-        self.created_by = kwargs.get('created_by', None)
-        self.created_by_type = kwargs.get('created_by_type', None)
-        self.created_at = kwargs.get('created_at', None)
-        self.last_modified_by = kwargs.get('last_modified_by', None)
-        self.last_modified_by_type = kwargs.get('last_modified_by_type', None)
-        self.last_modified_at = kwargs.get('last_modified_at', None)
 
 
 class WorkerProfile(msrest.serialization.Model):
