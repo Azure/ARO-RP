@@ -5,6 +5,7 @@ ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+OC ?= oc
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -453,3 +454,7 @@ run-rp: aks.kubeconfig
 .PHONY: run-selenium
 run-selenium:
 	docker compose up selenium
+
+.PHONY: validate-roledef
+validate-roledef:
+	go run ./hack/role -verified-version "$(OCP_VERSION)" -oc-bin=$(OC)
