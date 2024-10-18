@@ -2,10 +2,6 @@ trigger: none
 pr: none
 
 resources:
-  pipelines:
-    - pipeline: validate-roledef
-      source: \Public Cloud ARO pipelines\CI\CI
-      trigger: true
   containers:
     - container: golang
       image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
