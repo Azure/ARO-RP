@@ -125,6 +125,8 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
+	a.log.Infof("Processing %d manifests", len(manifestsToAction))
+
 	// Dequeue the document
 	oc, err := a.oc.Get(ctx, a.clusterResourceID)
 	if err != nil {
@@ -136,12 +138,10 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("failed dequeuing cluster document: %w", err) // This will include StatusPreconditionFaileds
 	}
 
-	// Save these so we can reset them after
-	previousProvisioningState := oc.OpenShiftCluster.Properties.ProvisioningState
-	previousFailedProvisioningState := oc.OpenShiftCluster.Properties.FailedProvisioningState
-
 	// Mark the maintenance state as unplanned and put it in AdminUpdating
+	a.log.Infof("Marking cluster as in AdminUpdating")
 	oc, err = a.oc.PatchWithLease(ctx, a.clusterResourceID, func(oscd *api.OpenShiftClusterDocument) error {
+		oscd.OpenShiftCluster.Properties.LastProvisioningState = oscd.OpenShiftCluster.Properties.ProvisioningState
 		oscd.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 		oscd.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateUnplanned
 		return nil
@@ -151,7 +151,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		a.log.Error(err)
 
 		// attempt to dequeue the document, for what it's worth
-		_, leaseErr := a.oc.EndLease(ctx, a.clusterResourceID, previousProvisioningState, previousFailedProvisioningState, nil)
+		_, leaseErr := a.oc.EndLease(ctx, a.clusterResourceID, oc.OpenShiftCluster.Properties.LastProvisioningState, oc.OpenShiftCluster.Properties.FailedProvisioningState, nil)
 		if leaseErr != nil {
 			return false, fmt.Errorf("failed ending lease early on cluster document: %w", leaseErr)
 		}
@@ -162,12 +162,11 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
-		// here
-		f, ok := a.tasks[doc.MaintenanceManifest.MaintenanceTaskID]
-		if !ok {
-			a.log.Infof("not found %v", doc.MaintenanceManifest.MaintenanceTaskID)
-			continue
-		}
+		taskLog := a.log.WithFields(logrus.Fields{
+			"manifestID": doc.ID,
+			"taskID":     doc.MaintenanceManifest.MaintenanceTaskID,
+		})
+		taskLog.Info("begin processing manifest")
 
 		// Attempt a dequeue
 		doc, err = a.mmf.Lease(ctx, a.clusterResourceID, doc.ID)
@@ -177,8 +176,22 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 			continue
 		}
 
+		// error if we don't know what this task is, then continue
+		f, ok := a.tasks[doc.MaintenanceManifest.MaintenanceTaskID]
+		if !ok {
+			a.log.Errorf("not found %v", doc.MaintenanceManifest.MaintenanceTaskID)
+			msg := "task ID not registered"
+			_, err = a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, api.MaintenanceManifestStateFailed, &msg)
+			if err != nil {
+				a.log.Error(fmt.Errorf("failed ending lease early on manifest: %w", err))
+			}
+			continue
+		}
+
 		var state api.MaintenanceManifestState
 		var msg string
+
+		taskLog.Info("executing manifest")
 
 		// Perform the task with a timeout
 		err = taskContext.RunInTimeout(time.Minute*60, func() error {
@@ -193,32 +206,36 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		msg = taskContext.GetResultMessage()
 
 		if err != nil {
-			a.log.Error(err)
-
 			if doc.Dequeues >= maxDequeueCount {
 				msg = fmt.Sprintf("did not succeed after %d times, failing -- %s", doc.Dequeues, err.Error())
 				state = api.MaintenanceManifestStateRetriesExceeded
+				taskLog.Error(msg)
 			} else if utilmimo.IsRetryableError(err) {
 				// If an error is retryable (i.e explicitly marked as a transient error
 				// by wrapping it in utilmimo.TransientError), then mark it back as
 				// Pending so that it will get picked up and retried.
 				state = api.MaintenanceManifestStatePending
+				taskLog.Error(fmt.Errorf("task returned a retryable error: %w", err))
 			} else {
 				// Terminal errors (explicitly marked or unwrapped) cause task failure
 				state = api.MaintenanceManifestStateFailed
+				taskLog.Error(fmt.Errorf("task returned a terminal error: %w", err))
 			}
 		} else {
 			// Mark tasks that don't have an error as succeeded implicitly
 			state = api.MaintenanceManifestStateCompleted
+			taskLog.Info("manifest executed successfully")
 		}
 
 		_, err = a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, state, &msg)
 		if err != nil {
-			a.log.Error(err)
+			taskLog.Error(fmt.Errorf("failed ending lease on manifest: %w", err))
 		}
+		taskLog.Info("manifest processing complete")
 	}
 
 	// Remove any set maintenance state
+	a.log.Info("removing maintenance state on cluster")
 	oc, err = a.oc.PatchWithLease(ctx, a.clusterResourceID, func(oscd *api.OpenShiftClusterDocument) error {
 		oscd.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
 		return nil
@@ -228,7 +245,8 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	}
 
 	// release the OpenShiftCluster
-	_, err = a.oc.EndLease(ctx, a.clusterResourceID, previousProvisioningState, previousFailedProvisioningState, nil)
+	a.log.Info("ending lease on cluster")
+	_, err = a.oc.EndLease(ctx, a.clusterResourceID, oc.OpenShiftCluster.Properties.LastProvisioningState, oc.OpenShiftCluster.Properties.FailedProvisioningState, nil)
 	if err != nil {
 		return false, fmt.Errorf("failed ending lease on cluster document: %w", err)
 	}
