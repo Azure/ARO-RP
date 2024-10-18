@@ -31,8 +31,9 @@ func NewManager(subscriptionID string, credential azcore.TokenCredential, option
 		return nil, err
 	}
 	return &manager{
-		cred:    credential,
-		account: accountsClient,
+		cred:          credential,
+		account:       accountsClient,
+		clientOptions: options,
 	}, nil
 }
 
