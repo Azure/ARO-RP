@@ -222,7 +222,9 @@ rules:
   - dnses
   - featuregates
   - imagecontentpolicies
+  - imagedigestmirrorsets
   - images
+  - imagetagmirrorsets
   - infrastructures
   - ingresses
   - networks
@@ -245,6 +247,7 @@ rules:
   - consolenotifications
   - consoleplugins
   - consolequickstarts
+  - consolesamples
   - consoleyamlsamples
   verbs:
   - get
@@ -333,9 +336,27 @@ rules:
   - list
   - watch
 - apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - metal3remediations
+  - metal3remediationtemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - ingress.operator.openshift.io
   resources:
   - dnsrecords
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ipam.cluster.x-k8s.io
+  resources:
+  - ipaddressclaims
+  - ipaddresses
   verbs:
   - get
   - list
@@ -351,9 +372,11 @@ rules:
 - apiGroups:
   - k8s.ovn.org
   resources:
+  - adminpolicybasedexternalroutes
   - egressfirewalls
   - egressips
   - egressqoses
+  - egressservices
   verbs:
   - get
   - list
@@ -361,10 +384,10 @@ rules:
 - apiGroups:
   - machine.openshift.io
   resources:
+  - controlplanemachinesets
   - machinehealthchecks
   - machines
   - machinesets
-  - controlplanemachinesets
   verbs:
   - get
   - list
@@ -375,8 +398,25 @@ rules:
   - containerruntimeconfigs
   - controllerconfigs
   - kubeletconfigs
+  - machineconfignodes
   - machineconfigpools
   - machineconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts
+  - bmceventsubscriptions
+  - dataimages
+  - firmwareschemas
+  - hardwaredata
+  - hostfirmwarecomponents
+  - hostfirmwaresettings
+  - preprovisioningimages
+  - provisionings
   verbs:
   - get
   - list
@@ -409,6 +449,15 @@ rules:
   - prometheusrules
   - servicemonitors
   - thanosrulers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitoring.openshift.io
+  resources:
+  - alertingrules
+  - alertrelabelconfigs
   verbs:
   - get
   - list
@@ -453,10 +502,12 @@ rules:
   - etcds
   - imagecontentsourcepolicies
   - ingresscontrollers
+  - insightsoperators
   - kubeapiservers
   - kubecontrollermanagers
   - kubeschedulers
   - kubestorageversionmigrators
+  - machineconfigurations
   - networks
   - openshiftapiservers
   - openshiftcontrollermanagers
@@ -500,7 +551,15 @@ rules:
   - policy
   resources:
   - poddisruptionbudgets
-  - podsecuritypolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy.networking.k8s.io
+  resources:
+  - adminnetworkpolicies
+  - baselineadminnetworkpolicies
   verbs:
   - get
   - list

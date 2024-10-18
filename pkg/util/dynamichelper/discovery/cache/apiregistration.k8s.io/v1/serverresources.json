@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "apiservices",
-            "singularName": "",
+            "singularName": "apiservice",
             "namespaced": false,
             "kind": "APIService",
             "verbs": [

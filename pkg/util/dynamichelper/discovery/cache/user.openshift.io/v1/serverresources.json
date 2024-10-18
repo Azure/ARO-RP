@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "groups",
-            "singularName": "",
+            "singularName": "group",
             "namespaced": false,
             "kind": "Group",
             "verbs": [
@@ -22,7 +22,7 @@
         },
         {
             "name": "identities",
-            "singularName": "",
+            "singularName": "identity",
             "namespaced": false,
             "kind": "Identity",
             "verbs": [
@@ -39,7 +39,7 @@
         },
         {
             "name": "useridentitymappings",
-            "singularName": "",
+            "singularName": "useridentitymapping",
             "namespaced": false,
             "kind": "UserIdentityMapping",
             "verbs": [
@@ -52,7 +52,7 @@
         },
         {
             "name": "users",
-            "singularName": "",
+            "singularName": "user",
             "namespaced": false,
             "kind": "User",
             "verbs": [

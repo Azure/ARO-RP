@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "runtimeclasses",
-            "singularName": "",
+            "singularName": "runtimeclass",
             "namespaced": false,
             "kind": "RuntimeClass",
             "verbs": [

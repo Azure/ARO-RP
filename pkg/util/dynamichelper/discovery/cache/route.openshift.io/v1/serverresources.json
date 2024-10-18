@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "routes",
-            "singularName": "",
+            "singularName": "route",
             "namespaced": true,
             "kind": "Route",
             "verbs": [

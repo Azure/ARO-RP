@@ -27,6 +27,17 @@
             "storageVersionHash": "NshW3zg1K7o="
         },
         {
+            "name": "alertmanagers/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "Alertmanager",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "podmonitors",
             "singularName": "podmonitor",
             "namespaced": true,
@@ -94,6 +105,19 @@
                 "prometheus-operator"
             ],
             "storageVersionHash": "C8naPY4eojU="
+        },
+        {
+            "name": "prometheuses/scale",
+            "singularName": "",
+            "namespaced": true,
+            "group": "autoscaling",
+            "version": "v1",
+            "kind": "Scale",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
         },
         {
             "name": "prometheuses/status",
@@ -174,6 +198,17 @@
                 "prometheus-operator"
             ],
             "storageVersionHash": "YBxpg/kA6UI="
+        },
+        {
+            "name": "thanosrulers/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "ThanosRuler",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
         }
     ]
 }

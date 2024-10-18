@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "priorityclasses",
-            "singularName": "",
+            "singularName": "priorityclass",
             "namespaced": false,
             "kind": "PriorityClass",
             "verbs": [
