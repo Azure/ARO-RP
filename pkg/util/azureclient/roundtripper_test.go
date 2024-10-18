@@ -132,7 +132,7 @@ func TestUpdateCorrelationDataAndEnrichLogWithResponse(t *testing.T) {
 			expecetdCorrelationIDUpdated: "the_correlation_request_id",
 			res: &http.Response{
 				StatusCode:    http.StatusOK,
-				Header:        http.Header{"X-Ms-Correlation-Request-Id": []string{"the_correlation_request_id"}},
+				Header:        http.Header{correlationIdHeader: []string{"the_correlation_request_id"}},
 				ContentLength: int64(10),
 			},
 			expectedSubfields: logrus.Fields{
