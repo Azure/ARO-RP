@@ -1,0 +1,44 @@
+trigger: none
+pr: none
+
+resources:
+  containers:
+    - container: golang
+      image: mcr.microsoft.com/onebranch/cbl-mariner/build:2.0
+      options: --user=0
+
+parameters:
+  - name: OCPVersion
+    type: string
+    default: "4.14.37"
+
+variables:
+  - template: vars.yml
+
+jobs:
+  - job:
+    timeoutInMinutes: 30
+    pool:
+      name: 1es-aro-ci-pool
+    steps:
+      - template: ./templates/template-checkout.yml
+
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+
+      - script: |
+          az account set -s $AZURE_SUBSCRIPTION_ID
+          SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+        displayName: Setup (Azure)
+
+      - script: |
+          set -e
+          . secrets/env
+          # retrieve the oc cli
+          wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+          tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+
+          OCP_VERSION=${{ parameters.OCPVersion }} OC=./oc make validate-roledef
+        displayName: Run check
+        target: golang
