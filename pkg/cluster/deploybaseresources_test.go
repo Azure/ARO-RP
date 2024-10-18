@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -35,10 +36,13 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilmsi "github.com/Azure/ARO-RP/test/util/azure/msi"
+	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -1407,11 +1411,21 @@ func TestCreateOIDC(t *testing.T) {
 	resourceGroupName := "fakeResourceGroup"
 	oidcStorageAccountName := "eastusoic"
 	afdEndpoint := "fake.oic.aro.test.net"
+	tenantId := "00000000-0000-0000-0000-000000000000"
+	m := manager{
+		subscriptionDoc: &api.SubscriptionDocument{
+			Subscription: &api.Subscription{
+				Properties: &api.SubscriptionProperties{
+					TenantID: tenantId,
+				},
+			},
+		},
+	}
 	storageWebEndpointForDev := oidcStorageAccountName + ".web." + azureclient.PublicCloud.StorageEndpointSuffix
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
 	blobContainerURL := fmt.Sprintf("https://%s.blob.%s/%s", oidcStorageAccountName, azureclient.PublicCloud.StorageEndpointSuffix, oidcbuilder.WebContainer)
-	prodOIDCIssuer := fmt.Sprintf("https://%s/%s%s", afdEndpoint, env.OIDCBlobDirectoryPrefix, clusterID)
-	devOIDCIssuer := fmt.Sprintf("https://%s/%s%s", storageWebEndpointForDev, env.OIDCBlobDirectoryPrefix, clusterID)
+	prodOIDCIssuer := fmt.Sprintf("https://%s/%s", afdEndpoint, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID))
+	devOIDCIssuer := fmt.Sprintf("https://%s/%s", storageWebEndpointForDev, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID))
 	containerProperties := azstorage.AccountsClientGetPropertiesResponse{
 		Account: azstorage.Account{
 			Properties: &azstorage.AccountProperties{
@@ -1487,8 +1501,8 @@ func TestCreateOIDC(t *testing.T) {
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
 			},
 			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(prodOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
@@ -1515,8 +1529,8 @@ func TestCreateOIDC(t *testing.T) {
 				blob.EXPECT().GetContainerProperties(gomock.Any(), resourceGroupName, oidcStorageAccountName, oidcbuilder.WebContainer).Return(containerProperties, nil)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
 			},
 			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(devOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
@@ -1590,7 +1604,7 @@ func TestCreateOIDC(t *testing.T) {
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(env.OIDCBlobDirectoryPrefix+clusterID, oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(errors.New("generic error"))
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(errors.New("generic error"))
 			},
 			wantBoundServiceAccountSigningKey: false,
 			wantErr:                           "generic error",
@@ -1623,11 +1637,12 @@ func TestCreateOIDC(t *testing.T) {
 			}
 
 			m := &manager{
-				db:     dbOpenShiftClusters,
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				rpBlob: rpBlobManager,
-				doc:    doc,
-				env:    env,
+				db:              dbOpenShiftClusters,
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				rpBlob:          rpBlobManager,
+				doc:             doc,
+				env:             env,
+				subscriptionDoc: m.subscriptionDoc,
 			}
 
 			err = m.createOIDC(ctx)
@@ -1653,6 +1668,228 @@ func TestCreateOIDC(t *testing.T) {
 			if checkDoc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey == nil && tt.wantBoundServiceAccountSigningKey {
 				t.Fatalf("Bound Service Account Token is not as expected - wantBoundServiceAccountSigningKey is %t", tt.wantBoundServiceAccountSigningKey)
 			}
+		})
+	}
+}
+
+func TestGenerateFederatedIdentityCredentials(t *testing.T) {
+	ctx := context.Background()
+	docID := "00000000-0000-0000-0000-000000000000"
+	subID := "00000000-0000-0000-0000-000000000000"
+	afdEndpoint := "fake.oic.aro.test.net"
+	clusterResourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/fakeResourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/fakeCluster"
+	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/fakeResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities"
+	tenantId := "00000000-0000-0000-0000-000000000000"
+	OIDCIssuer := pointerutils.ToPtr(api.OIDCIssuer(fmt.Sprintf("https://%s/%s", afdEndpoint, oidcbuilder.GetBlobName(tenantId, docID))))
+	fakeClint, _ := utilmsi.NewTestFederatedIdentityCredentialsClient(subID)
+
+	for _, tt := range []struct {
+		name    string
+		oc      *api.OpenShiftClusterDocument
+		fixture func(f *testdatabase.Fixture)
+		wantErr string
+	}{
+		{
+			name: "Success - Exit generateFederatedIdentityCredentials for non MIWI clusters that has ServicePrincipalProfile",
+			oc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroup,
+						},
+						ServicePrincipalProfile: &api.ServicePrincipalProfile{
+							SPObjectID: fakeClusterSPObjectId,
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "Success - Exit generateFederatedIdentityCredentials for non MIWI clusters that has no PlatformWorkloadIdentityProfile",
+			oc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID:         clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "Success - Generate Federated Identity Credentials for MIWI cluster",
+			oc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							OIDCIssuer: OIDCIssuer,
+							Version:    "4.14.40",
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: "CloudControllerManager",
+									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+								},
+								{
+									OperatorName: "ClusterIngressOperator",
+									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+								},
+							},
+						},
+					},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Name: "testRoleSet",
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{
+									OperatorName:    "CloudControllerManager",
+									ServiceAccounts: []string{"openshift-cloud-controller-manager:cloud-controller-manager"},
+								},
+								{
+									OperatorName:    "ClusterIngressOperator",
+									ServiceAccounts: []string{"openshift-ingress-operator:ingress-operator"},
+								},
+							},
+						},
+					},
+				},
+					&api.PlatformWorkloadIdentityRoleSetDocument{
+						PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+							Name: "testRoleSet",
+							Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+								OpenShiftVersion: "4.15",
+								PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+									{
+										OperatorName:    "CloudControllerManager",
+										ServiceAccounts: []string{"openshift-cloud-controller-manager:cloud-controller-manager"},
+									},
+									{
+										OperatorName:    "ClusterIngressOperator",
+										ServiceAccounts: []string{"openshift-ingress-operator:ingress-operator"},
+									},
+								},
+							},
+						},
+					},
+				)
+			},
+			wantErr: "",
+		},
+		{
+			name: "Fail - OIDCIssuer is nil",
+			oc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: "CloudControllerManager",
+									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+								},
+								{
+									OperatorName: "ClusterIngressOperator",
+									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "OIDCIssuer is nil",
+		},
+		{
+			name: "Success - Operator name do not exists in PlatformWorkloadIdentityProfile",
+			oc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							OIDCIssuer: OIDCIssuer,
+							Version:    "4.14.40",
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: "DummyOperator",
+									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+								},
+							},
+						},
+					},
+				},
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Name: "CloudControllerManager",
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{OperatorName: "CloudControllerManager"},
+							},
+						},
+					},
+				},
+					&api.PlatformWorkloadIdentityRoleSetDocument{
+						PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+							Name: "CloudControllerManager",
+							Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+								OpenShiftVersion: "4.15",
+								PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+									{OperatorName: "CloudControllerManager"},
+								},
+							},
+						},
+					},
+				)
+			},
+			wantErr: "",
+		},
+	} {
+		uuidGen := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.OPENSHIFT_VERSIONS)
+		dbPlatformWorkloadIdentityRoleSets, _ := testdatabase.NewFakePlatformWorkloadIdentityRoleSets(uuidGen)
+		f := testdatabase.NewFixture().WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets, uuidGen)
+		pir := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
+
+		if tt.fixture != nil {
+			tt.fixture(f)
+			err := f.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = pir.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, tt.oc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			m := &manager{
+				log:                                    logrus.NewEntry(logrus.StandardLogger()),
+				doc:                                    tt.oc,
+				platformWorkloadIdentityRolesByVersion: pir,
+				clusterMsiFederatedIdentityCredentials: fakeClint,
+			}
+
+			err := m.federateIdentityCredentials(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

@@ -333,6 +333,15 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate),
+	)
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.federateIdentityCredentials),
+		)
+	}
+
+	s = append(s,
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.attachNSGs),
 		steps.Action(m.updateAPIIPEarly),
 		steps.Action(m.createOrUpdateRouterIPEarly),
