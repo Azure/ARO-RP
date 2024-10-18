@@ -622,6 +622,7 @@ ExecStart=/usr/bin/podman run \
   --entrypoint /opt/td-agent-bit/bin/td-agent-bit \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
+  -p 29230:29230 \
   --hostname %H \
   --name %N \
   --rm \
