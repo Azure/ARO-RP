@@ -51,7 +51,7 @@ def build_list_request(
     # Construct URL
     _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityroleset")  # pylint: disable=line-too-long
     path_format_arguments = {
-        "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
+        "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str'),
         "location": _SERIALIZER.url("location", location, 'str', min_length=1),
     }
 
@@ -108,7 +108,7 @@ class PlatformWorkloadIdentityRoleSetOperations(object):
 
         This operation returns PlatformWorkloadIdentityRoleSet as a string.
 
-        :param location: The name of Azure region.
+        :param location: The name of the Azure region.
         :type location: str
         :keyword callable cls: A custom type or function that will be passed the direct response
         :return: An iterator like instance of either PlatformWorkloadIdentityRoleSetList or the result

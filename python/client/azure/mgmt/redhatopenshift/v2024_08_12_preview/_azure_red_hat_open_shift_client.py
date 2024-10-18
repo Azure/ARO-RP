@@ -59,7 +59,7 @@ class AzureRedHatOpenShiftClient(object):    # pylint: disable=too-many-instance
      azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.SyncSetsOperations
     :param credential: Credential needed for the client to connect to Azure.
     :type credential: ~azure.core.credentials.TokenCredential
-    :param subscription_id: The ID of the target subscription.
+    :param subscription_id: The ID of the target subscription. The value must be an UUID.
     :type subscription_id: str
     :param base_url: Service URL. Default value is 'https://management.azure.com'.
     :type base_url: str

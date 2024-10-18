@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // OperationsClient is the rest API for Azure Red Hat OpenShift 4
@@ -32,13 +33,13 @@ type OperationsClient struct {
 }
 
 // NewOperationsClient creates an instance of the OperationsClient client.
-func NewOperationsClient(subscriptionID string) OperationsClient {
+func NewOperationsClient(subscriptionID uuid.UUID) OperationsClient {
 	return NewOperationsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
 // NewOperationsClientWithBaseURI creates an instance of the OperationsClient client using a custom endpoint.  Use this
 // when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
-func NewOperationsClientWithBaseURI(baseURI string, subscriptionID string) OperationsClient {
+func NewOperationsClientWithBaseURI(baseURI string, subscriptionID uuid.UUID) OperationsClient {
 	return OperationsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 

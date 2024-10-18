@@ -532,7 +532,6 @@ func (client SyncIdentityProvidersClient) UpdatePreparer(ctx context.Context, re
 		"api-version": APIVersion,
 	}
 
-	parameters.SystemData = nil
 	preparer := autorest.CreatePreparer(
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),

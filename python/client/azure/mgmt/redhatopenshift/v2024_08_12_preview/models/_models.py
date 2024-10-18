@@ -159,35 +159,6 @@ class ClusterProfile(msrest.serialization.Model):
         self.oidc_issuer = kwargs.get('oidc_issuer', None)
 
 
-class ClusterUserAssignedIdentity(msrest.serialization.Model):
-    """ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
-
-    :ivar client_id: The ClientID of the ClusterUserAssignedIdentity resource.
-    :vartype client_id: str
-    :ivar principal_id: The PrincipalID of the ClusterUserAssignedIdentity resource.
-    :vartype principal_id: str
-    """
-
-    _attribute_map = {
-        'client_id': {'key': 'clientId', 'type': 'str'},
-        'principal_id': {'key': 'principalId', 'type': 'str'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        :keyword client_id: The ClientID of the ClusterUserAssignedIdentity resource.
-        :paramtype client_id: str
-        :keyword principal_id: The PrincipalID of the ClusterUserAssignedIdentity resource.
-        :paramtype principal_id: str
-        """
-        super(ClusterUserAssignedIdentity, self).__init__(**kwargs)
-        self.client_id = kwargs.get('client_id', None)
-        self.principal_id = kwargs.get('principal_id', None)
-
-
 class ConsoleProfile(msrest.serialization.Model):
     """ConsoleProfile represents a console profile.
 
@@ -279,58 +250,6 @@ class EffectiveOutboundIP(msrest.serialization.Model):
         self.id = kwargs.get('id', None)
 
 
-class Identity(msrest.serialization.Model):
-    """Identity stores information about the cluster MSI(s) in a workload identity cluster.
-
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar type: The type of the Identity resource. Possible values include: "SystemAssigned",
-     "UserAssigned".
-    :vartype type: str or
-     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ResourceIdentityType
-    :ivar principal_id: The PrincipalID of the Identity resource.
-    :vartype principal_id: str
-    :ivar tenant_id: The TenantID provided by the MSI RP.
-    :vartype tenant_id: str
-    :ivar user_assigned_identities: A map of ClusterUserAssigned identities attached to the
-     cluster, specified in a type required by Microsoft's Managed Identity team.
-    :vartype user_assigned_identities: dict[str,
-     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ClusterUserAssignedIdentity]
-    """
-
-    _validation = {
-        'principal_id': {'readonly': True},
-        'tenant_id': {'readonly': True},
-    }
-
-    _attribute_map = {
-        'type': {'key': 'type', 'type': 'str'},
-        'principal_id': {'key': 'principalId', 'type': 'str'},
-        'tenant_id': {'key': 'tenantId', 'type': 'str'},
-        'user_assigned_identities': {'key': 'userAssignedIdentities', 'type': '{ClusterUserAssignedIdentity}'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        :keyword type: The type of the Identity resource. Possible values include: "SystemAssigned",
-         "UserAssigned".
-        :paramtype type: str or
-         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ResourceIdentityType
-        :keyword user_assigned_identities: A map of ClusterUserAssigned identities attached to the
-         cluster, specified in a type required by Microsoft's Managed Identity team.
-        :paramtype user_assigned_identities: dict[str,
-         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ClusterUserAssignedIdentity]
-        """
-        super(Identity, self).__init__(**kwargs)
-        self.type = kwargs.get('type', None)
-        self.principal_id = None
-        self.tenant_id = None
-        self.user_assigned_identities = kwargs.get('user_assigned_identities', None)
-
-
 class IngressProfile(msrest.serialization.Model):
     """IngressProfile represents an ingress profile.
 
@@ -414,8 +333,8 @@ class Resource(msrest.serialization.Model):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -459,8 +378,8 @@ class ProxyResource(Resource):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -500,8 +419,8 @@ class MachinePool(ProxyResource):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -574,20 +493,11 @@ class MachinePoolList(msrest.serialization.Model):
 class MachinePoolUpdate(msrest.serialization.Model):
     """MachinePool represents a MachinePool.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
     :ivar resources:
     :vartype resources: str
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'resources': {'key': 'properties.resources', 'type': 'str'},
     }
 
@@ -600,7 +510,6 @@ class MachinePoolUpdate(msrest.serialization.Model):
         :paramtype resources: str
         """
         super(MachinePoolUpdate, self).__init__(**kwargs)
-        self.system_data = None
         self.resources = kwargs.get('resources', None)
 
 
@@ -629,6 +538,69 @@ class ManagedOutboundIPs(msrest.serialization.Model):
         """
         super(ManagedOutboundIPs, self).__init__(**kwargs)
         self.count = kwargs.get('count', None)
+
+
+class ManagedServiceIdentity(msrest.serialization.Model):
+    """Managed service identity (system assigned and/or user assigned identities).
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar principal_id: The service principal ID of the system assigned identity. This property
+     will only be provided for a system assigned identity.
+    :vartype principal_id: str
+    :ivar tenant_id: The tenant ID of the system assigned identity. This property will only be
+     provided for a system assigned identity.
+    :vartype tenant_id: str
+    :ivar type: Required. Type of managed service identity (where both SystemAssigned and
+     UserAssigned types are allowed). Possible values include: "None", "SystemAssigned",
+     "UserAssigned", "SystemAssigned,UserAssigned".
+    :vartype type: str or
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ManagedServiceIdentityType
+    :ivar user_assigned_identities: The set of user assigned identities associated with the
+     resource. The userAssignedIdentities dictionary keys will be ARM resource ids in the form:
+     '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{identityName}.
+     The dictionary values can be empty objects ({}) in requests.
+    :vartype user_assigned_identities: dict[str,
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.UserAssignedIdentity]
+    """
+
+    _validation = {
+        'principal_id': {'readonly': True},
+        'tenant_id': {'readonly': True},
+        'type': {'required': True},
+    }
+
+    _attribute_map = {
+        'principal_id': {'key': 'principalId', 'type': 'str'},
+        'tenant_id': {'key': 'tenantId', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'user_assigned_identities': {'key': 'userAssignedIdentities', 'type': '{UserAssignedIdentity}'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword type: Required. Type of managed service identity (where both SystemAssigned and
+         UserAssigned types are allowed). Possible values include: "None", "SystemAssigned",
+         "UserAssigned", "SystemAssigned,UserAssigned".
+        :paramtype type: str or
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ManagedServiceIdentityType
+        :keyword user_assigned_identities: The set of user assigned identities associated with the
+         resource. The userAssignedIdentities dictionary keys will be ARM resource ids in the form:
+         '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{identityName}.
+         The dictionary values can be empty objects ({}) in requests.
+        :paramtype user_assigned_identities: dict[str,
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.UserAssignedIdentity]
+        """
+        super(ManagedServiceIdentity, self).__init__(**kwargs)
+        self.principal_id = None
+        self.tenant_id = None
+        self.type = kwargs['type']
+        self.user_assigned_identities = kwargs.get('user_assigned_identities', None)
 
 
 class MasterProfile(msrest.serialization.Model):
@@ -742,8 +714,8 @@ class TrackedResource(Resource):
 
     All required parameters must be populated in order to send to Azure.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -798,8 +770,8 @@ class OpenShiftCluster(TrackedResource):
 
     All required parameters must be populated in order to send to Azure.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -815,7 +787,8 @@ class OpenShiftCluster(TrackedResource):
     :vartype location: str
     :ivar identity: Identity stores information about the cluster MSI(s) in a workload identity
      cluster.
-    :vartype identity: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.Identity
+    :vartype identity:
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ManagedServiceIdentity
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
      "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
@@ -864,7 +837,7 @@ class OpenShiftCluster(TrackedResource):
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'tags': {'key': 'tags', 'type': '{str}'},
         'location': {'key': 'location', 'type': 'str'},
-        'identity': {'key': 'identity', 'type': 'Identity'},
+        'identity': {'key': 'identity', 'type': 'ManagedServiceIdentity'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
@@ -889,7 +862,8 @@ class OpenShiftCluster(TrackedResource):
         :paramtype location: str
         :keyword identity: Identity stores information about the cluster MSI(s) in a workload identity
          cluster.
-        :paramtype identity: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.Identity
+        :paramtype identity:
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ManagedServiceIdentity
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
          "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
@@ -1026,9 +1000,8 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :vartype tags: dict[str, str]
     :ivar identity: Identity stores information about the cluster MSI(s) in a workload identity
      cluster.
-    :vartype identity: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.Identity
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
+    :vartype identity:
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ManagedServiceIdentity
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
      "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
@@ -1062,14 +1035,12 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     """
 
     _validation = {
-        'system_data': {'readonly': True},
         'worker_profiles_status': {'readonly': True},
     }
 
     _attribute_map = {
         'tags': {'key': 'tags', 'type': '{str}'},
-        'identity': {'key': 'identity', 'type': 'Identity'},
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'identity': {'key': 'identity', 'type': 'ManagedServiceIdentity'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
@@ -1092,7 +1063,8 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         :paramtype tags: dict[str, str]
         :keyword identity: Identity stores information about the cluster MSI(s) in a workload identity
          cluster.
-        :paramtype identity: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.Identity
+        :paramtype identity:
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ManagedServiceIdentity
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
          "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
@@ -1127,7 +1099,6 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         super(OpenShiftClusterUpdate, self).__init__(**kwargs)
         self.tags = kwargs.get('tags', None)
         self.identity = kwargs.get('identity', None)
-        self.system_data = None
         self.provisioning_state = kwargs.get('provisioning_state', None)
         self.cluster_profile = kwargs.get('cluster_profile', None)
         self.console_profile = kwargs.get('console_profile', None)
@@ -1146,8 +1117,8 @@ class OpenShiftVersion(ProxyResource):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -1288,8 +1259,6 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar operator_name: The name of the operator the PlatformWorkloadIdentity is to be used for.
-    :vartype operator_name: str
     :ivar resource_id: The resource ID of the PlatformWorkloadIdentity resource.
     :vartype resource_id: str
     :ivar client_id: The ClientID of the PlatformWorkloadIdentity resource.
@@ -1304,7 +1273,6 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
     }
 
     _attribute_map = {
-        'operator_name': {'key': 'operatorName', 'type': 'str'},
         'resource_id': {'key': 'resourceId', 'type': 'str'},
         'client_id': {'key': 'clientId', 'type': 'str'},
         'object_id': {'key': 'objectId', 'type': 'str'},
@@ -1315,14 +1283,10 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword operator_name: The name of the operator the PlatformWorkloadIdentity is to be used
-         for.
-        :paramtype operator_name: str
         :keyword resource_id: The resource ID of the PlatformWorkloadIdentity resource.
         :paramtype resource_id: str
         """
         super(PlatformWorkloadIdentity, self).__init__(**kwargs)
-        self.operator_name = kwargs.get('operator_name', None)
         self.resource_id = kwargs.get('resource_id', None)
         self.client_id = None
         self.object_id = None
@@ -1334,14 +1298,14 @@ class PlatformWorkloadIdentityProfile(msrest.serialization.Model):
     :ivar upgradeable_to: UpgradeableTo stores a single OpenShift version a workload identity
      cluster can be upgraded to.
     :vartype upgradeable_to: str
-    :ivar platform_workload_identities:
-    :vartype platform_workload_identities:
-     list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentity]
+    :ivar platform_workload_identities: Dictionary of :code:`<PlatformWorkloadIdentity>`.
+    :vartype platform_workload_identities: dict[str,
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentity]
     """
 
     _attribute_map = {
         'upgradeable_to': {'key': 'upgradeableTo', 'type': 'str'},
-        'platform_workload_identities': {'key': 'platformWorkloadIdentities', 'type': '[PlatformWorkloadIdentity]'},
+        'platform_workload_identities': {'key': 'platformWorkloadIdentities', 'type': '{PlatformWorkloadIdentity}'},
     }
 
     def __init__(
@@ -1352,9 +1316,9 @@ class PlatformWorkloadIdentityProfile(msrest.serialization.Model):
         :keyword upgradeable_to: UpgradeableTo stores a single OpenShift version a workload identity
          cluster can be upgraded to.
         :paramtype upgradeable_to: str
-        :keyword platform_workload_identities:
-        :paramtype platform_workload_identities:
-         list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentity]
+        :keyword platform_workload_identities: Dictionary of :code:`<PlatformWorkloadIdentity>`.
+        :paramtype platform_workload_identities: dict[str,
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentity]
         """
         super(PlatformWorkloadIdentityProfile, self).__init__(**kwargs)
         self.upgradeable_to = kwargs.get('upgradeable_to', None)
@@ -1402,8 +1366,8 @@ class PlatformWorkloadIdentityRoleSet(ProxyResource):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -1487,58 +1451,13 @@ class PlatformWorkloadIdentityRoleSetList(msrest.serialization.Model):
         self.next_link = kwargs.get('next_link', None)
 
 
-class PlatformWorkloadIdentityRoleSetUpdate(msrest.serialization.Model):
-    """PlatformWorkloadIdentityRoleSet represents a mapping from the names of OCP operators to the built-in roles that should be assigned to those operator's corresponding managed identities for a particular OCP version.
-
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
-    :ivar open_shift_version: OpenShiftVersion represents the version associated with this set of
-     roles.
-    :vartype open_shift_version: str
-    :ivar platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
-     roles associated with this version.
-    :vartype platform_workload_identity_roles:
-     list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRole]
-    """
-
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
-    _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
-        'open_shift_version': {'key': 'properties.openShiftVersion', 'type': 'str'},
-        'platform_workload_identity_roles': {'key': 'properties.platformWorkloadIdentityRoles', 'type': '[PlatformWorkloadIdentityRole]'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        :keyword open_shift_version: OpenShiftVersion represents the version associated with this set
-         of roles.
-        :paramtype open_shift_version: str
-        :keyword platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
-         roles associated with this version.
-        :paramtype platform_workload_identity_roles:
-         list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRole]
-        """
-        super(PlatformWorkloadIdentityRoleSetUpdate, self).__init__(**kwargs)
-        self.system_data = None
-        self.open_shift_version = kwargs.get('open_shift_version', None)
-        self.platform_workload_identity_roles = kwargs.get('platform_workload_identity_roles', None)
-
-
 class Secret(ProxyResource):
     """Secret represents a secret.
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -1611,20 +1530,11 @@ class SecretList(msrest.serialization.Model):
 class SecretUpdate(msrest.serialization.Model):
     """Secret represents a secret.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
     :ivar secret_resources: The Secrets Resources.
     :vartype secret_resources: str
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'secret_resources': {'key': 'properties.secretResources', 'type': 'str'},
     }
 
@@ -1637,7 +1547,6 @@ class SecretUpdate(msrest.serialization.Model):
         :paramtype secret_resources: str
         """
         super(SecretUpdate, self).__init__(**kwargs)
-        self.system_data = None
         self.secret_resources = kwargs.get('secret_resources', None)
 
 
@@ -1675,8 +1584,8 @@ class SyncIdentityProvider(ProxyResource):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -1751,20 +1660,11 @@ class SyncIdentityProviderList(msrest.serialization.Model):
 class SyncIdentityProviderUpdate(msrest.serialization.Model):
     """SyncIdentityProvider represents a SyncIdentityProvider.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
     :ivar resources:
     :vartype resources: str
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'resources': {'key': 'properties.resources', 'type': 'str'},
     }
 
@@ -1777,7 +1677,6 @@ class SyncIdentityProviderUpdate(msrest.serialization.Model):
         :paramtype resources: str
         """
         super(SyncIdentityProviderUpdate, self).__init__(**kwargs)
-        self.system_data = None
         self.resources = kwargs.get('resources', None)
 
 
@@ -1786,8 +1685,8 @@ class SyncSet(ProxyResource):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :ivar id: Fully qualified resource ID for the resource. E.g.
+     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}".
     :vartype id: str
     :ivar name: The name of the resource.
     :vartype name: str
@@ -1860,20 +1759,11 @@ class SyncSetList(msrest.serialization.Model):
 class SyncSetUpdate(msrest.serialization.Model):
     """SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
     :ivar resources: Resources represents the SyncSets configuration.
     :vartype resources: str
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'resources': {'key': 'properties.resources', 'type': 'str'},
     }
 
@@ -1886,7 +1776,6 @@ class SyncSetUpdate(msrest.serialization.Model):
         :paramtype resources: str
         """
         super(SyncSetUpdate, self).__init__(**kwargs)
-        self.system_data = None
         self.resources = kwargs.get('resources', None)
 
 
@@ -1949,6 +1838,38 @@ class SystemData(msrest.serialization.Model):
         self.last_modified_by = kwargs.get('last_modified_by', None)
         self.last_modified_by_type = kwargs.get('last_modified_by_type', None)
         self.last_modified_at = kwargs.get('last_modified_at', None)
+
+
+class UserAssignedIdentity(msrest.serialization.Model):
+    """User assigned identity properties.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar principal_id: The principal ID of the assigned identity.
+    :vartype principal_id: str
+    :ivar client_id: The client ID of the assigned identity.
+    :vartype client_id: str
+    """
+
+    _validation = {
+        'principal_id': {'readonly': True},
+        'client_id': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'principal_id': {'key': 'principalId', 'type': 'str'},
+        'client_id': {'key': 'clientId', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        """
+        super(UserAssignedIdentity, self).__init__(**kwargs)
+        self.principal_id = None
+        self.client_id = None
 
 
 class WorkerProfile(msrest.serialization.Model):

@@ -42,6 +42,16 @@ class FipsValidatedModules(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     DISABLED = "Disabled"
     ENABLED = "Enabled"
 
+class ManagedServiceIdentityType(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
+    """Type of managed service identity (where both SystemAssigned and UserAssigned types are
+    allowed).
+    """
+
+    NONE = "None"
+    SYSTEM_ASSIGNED = "SystemAssigned"
+    USER_ASSIGNED = "UserAssigned"
+    SYSTEM_ASSIGNED_USER_ASSIGNED = "SystemAssigned,UserAssigned"
+
 class OutboundType(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """The outbound routing strategy used to provide your cluster egress to the internet.
     """
@@ -67,13 +77,6 @@ class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     FAILED = "Failed"
     SUCCEEDED = "Succeeded"
     UPDATING = "Updating"
-
-class ResourceIdentityType(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
-    """The identity type.
-    """
-
-    SYSTEM_ASSIGNED = "SystemAssigned"
-    USER_ASSIGNED = "UserAssigned"
 
 class Visibility(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """Visibility represents visibility.

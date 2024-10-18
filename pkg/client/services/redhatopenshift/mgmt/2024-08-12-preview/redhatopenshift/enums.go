@@ -66,6 +66,25 @@ func PossibleFipsValidatedModulesValues() []FipsValidatedModules {
 	return []FipsValidatedModules{FipsValidatedModulesDisabled, FipsValidatedModulesEnabled}
 }
 
+// ManagedServiceIdentityType enumerates the values for managed service identity type.
+type ManagedServiceIdentityType string
+
+const (
+	// None ...
+	None ManagedServiceIdentityType = "None"
+	// SystemAssigned ...
+	SystemAssigned ManagedServiceIdentityType = "SystemAssigned"
+	// SystemAssignedUserAssigned ...
+	SystemAssignedUserAssigned ManagedServiceIdentityType = "SystemAssigned,UserAssigned"
+	// UserAssigned ...
+	UserAssigned ManagedServiceIdentityType = "UserAssigned"
+)
+
+// PossibleManagedServiceIdentityTypeValues returns an array of possible values for the ManagedServiceIdentityType const type.
+func PossibleManagedServiceIdentityTypeValues() []ManagedServiceIdentityType {
+	return []ManagedServiceIdentityType{None, SystemAssigned, SystemAssignedUserAssigned, UserAssigned}
+}
+
 // OutboundType enumerates the values for outbound type.
 type OutboundType string
 
@@ -121,19 +140,23 @@ func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{AdminUpdating, Canceled, Creating, Deleting, Failed, Succeeded, Updating}
 }
 
-// ResourceIdentityType enumerates the values for resource identity type.
-type ResourceIdentityType string
+// SkuTier enumerates the values for sku tier.
+type SkuTier string
 
 const (
-	// SystemAssigned ...
-	SystemAssigned ResourceIdentityType = "SystemAssigned"
-	// UserAssigned ...
-	UserAssigned ResourceIdentityType = "UserAssigned"
+	// Basic ...
+	Basic SkuTier = "Basic"
+	// Free ...
+	Free SkuTier = "Free"
+	// Premium ...
+	Premium SkuTier = "Premium"
+	// Standard ...
+	Standard SkuTier = "Standard"
 )
 
-// PossibleResourceIdentityTypeValues returns an array of possible values for the ResourceIdentityType const type.
-func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
-	return []ResourceIdentityType{SystemAssigned, UserAssigned}
+// PossibleSkuTierValues returns an array of possible values for the SkuTier const type.
+func PossibleSkuTierValues() []SkuTier {
+	return []SkuTier{Basic, Free, Premium, Standard}
 }
 
 // Visibility enumerates the values for visibility.
