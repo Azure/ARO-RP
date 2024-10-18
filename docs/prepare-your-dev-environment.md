@@ -2,7 +2,24 @@
 
 This document goes through the development dependencies one requires in order to build the RP code.
 
-## Software Required
+## Containerized RP Software Required
+
+If you just want to get up and running with a minimal dev environment I recommend starting out with our conainerized setup. For a containerized setup, the only local bins you need are:
+
+```text
+az
+make
+podman
+openvpn
+```
+
+> NOTE: Instructions for these binaries are found below. In particular, see the `Podman` instructions below for a setup based on your OS flavor (Linux vs MacOS + Podman Machine)
+
+That's it! You can jump to [Getting Started](#getting-started) below to grab the source code before heading to [deploy your own development RP](./deploy-development-rp.md) - but **instead of `make runlocal-rp`, invoke `make run-rp` instead** to use a containerized version of the app without needing additional local binaries.
+
+## Local RP Software Required
+
+If you'd like to run an RP instance as a golang process (via `go run`) locally - you'll need additional tools:
 
 1. Install [Go 1.21](https://golang.org/dl) or later, if you haven't already.
    1. After downloading follow the [Install instructions](https://go.dev/doc/install), replacing the tar archive with your download.
@@ -139,7 +156,7 @@ Make sure that `PKG_CONFIG_PATH` contains the pkgconfig files of the above packa
     Alternatively you can also use:
 
     ```bash
-    git clone https://github.com/Azure/ARO-RP.git $GOPATH/src/github.com/Azure/ARO-RP
+    git clone https://github.com/Azure/ARO-RP.git ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
     ```
 
 1. Go to project:
