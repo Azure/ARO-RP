@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -510,11 +509,11 @@ func (m *manager) Delete(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		m.log.Printf("deleting OIDC configuration")
 		blobContainerURL := oidcbuilder.GenerateBlobContainerURL(m.env)
-		azBlobClient, err := m.rpBlob.GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{})
+		blobsClient, err := m.rpBlob.GetBlobsClient(blobContainerURL)
 		if err != nil {
 			return err
 		}
-		err = oidcbuilder.DeleteOidcFolder(ctx, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, m.doc.ID), azBlobClient)
+		err = oidcbuilder.DeleteOidcFolder(ctx, oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, m.doc.ID), blobsClient)
 		if err != nil {
 			return err
 		}

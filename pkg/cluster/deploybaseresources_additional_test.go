@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -99,7 +100,7 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 	storageAccountName := "clustertest"
 	fakePrincipalID := "fakeID"
 	resourceType := "Microsoft.Storage/storageAccounts"
-	resourceID := "resourceId('" + resourceType + "', '" + storageAccountName + "')"
+	resourceID := fmt.Sprintf("resourceId('%s', '%s')", resourceType, storageAccountName)
 	tests := []struct {
 		Name                string
 		ClusterDocument     *api.OpenShiftClusterDocument

@@ -33,7 +33,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
-	"github.com/Azure/ARO-RP/pkg/util/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
@@ -44,6 +43,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
+	"github.com/Azure/ARO-RP/pkg/util/blob"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -106,7 +106,7 @@ type manager struct {
 	storage storage.Manager
 	subnet  subnet.Manager
 	graph   graph.Manager
-	rpBlob  azblob.Manager
+	rpBlob  blob.Manager
 
 	ch               clienthelper.Interface
 	kubernetescli    kubernetes.Interface
@@ -183,11 +183,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	storage, err := storage.NewManager(_env, r.SubscriptionID, fpCredClusterTenant, doc.OpenShiftCluster.UsesWorkloadIdentity())
-	if err != nil {
-		return nil, err
-	}
-
 	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
 	if err != nil {
 		return nil, err
@@ -235,7 +230,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	rpBlob, err := azblob.NewManager(_env.Environment(), _env.SubscriptionID(), msiCredential)
+	storage, err := storage.NewManager(r.SubscriptionID, _env.Environment().StorageEndpointSuffix, fpCredClusterTenant, doc.OpenShiftCluster.UsesWorkloadIdentity(), clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	rpBlob, err := blob.NewManager(_env.SubscriptionID(), msiCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}

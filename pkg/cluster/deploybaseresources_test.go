@@ -31,8 +31,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azblob"
+	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azblob"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	mock_blob "github.com/Azure/ARO-RP/pkg/util/mocks/blob"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
@@ -1436,11 +1437,12 @@ func TestCreateOIDC(t *testing.T) {
 		},
 	}
 	testOIDCKeyBitSize := 256
+	uploadResponse := azblob.UploadBufferResponse{}
 
 	for _, tt := range []struct {
 		name                              string
 		oc                                *api.OpenShiftClusterDocument
-		mocks                             func(*mock_azblob.MockManager, *mock_env.MockInterface, *mock_azblob.MockAZBlobClient)
+		mocks                             func(*mock_blob.MockManager, *mock_env.MockInterface, *mock_azblob.MockBlobsClient)
 		wantedOIDCIssuer                  *api.OIDCIssuer
 		wantErr                           string
 		wantBoundServiceAccountSigningKey bool
@@ -1494,15 +1496,15 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+			mocks: func(blob *mock_blob.MockManager, menv *mock_env.MockInterface, blobsClient *mock_azblob.MockBlobsClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(false)
 				menv.EXPECT().OIDCKeyBitSize().Return(testOIDCKeyBitSize)
 				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
-				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
+				blob.EXPECT().GetBlobsClient(blobContainerURL).Return(blobsClient, nil)
+				blobsClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any(), nil).Return(uploadResponse, nil)
+				blobsClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any(), nil).Return(uploadResponse, nil)
 			},
 			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(prodOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
@@ -1521,16 +1523,16 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+			mocks: func(blob *mock_blob.MockManager, menv *mock_env.MockInterface, blobsClient *mock_azblob.MockBlobsClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(true)
 				menv.EXPECT().ResourceGroup().Return(resourceGroupName)
 				menv.EXPECT().OIDCKeyBitSize().Return(testOIDCKeyBitSize)
 				menv.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
 				blob.EXPECT().GetContainerProperties(gomock.Any(), resourceGroupName, oidcStorageAccountName, oidcbuilder.WebContainer).Return(containerProperties, nil)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
-				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any()).Return(nil)
+				blob.EXPECT().GetBlobsClient(blobContainerURL).Return(blobsClient, nil)
+				blobsClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any(), nil).Return(uploadResponse, nil)
+				blobsClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.JWKSKey), gomock.Any(), nil).Return(uploadResponse, nil)
 			},
 			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(devOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
@@ -1549,7 +1551,7 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblob *mock_azblob.MockAZBlobClient) {
+			mocks: func(blob *mock_blob.MockManager, menv *mock_env.MockInterface, azblob *mock_azblob.MockBlobsClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(true)
 				menv.EXPECT().ResourceGroup().Return(resourceGroupName)
 				menv.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
@@ -1559,7 +1561,7 @@ func TestCreateOIDC(t *testing.T) {
 			wantErr:                           "generic error",
 		},
 		{
-			name: "Fail - azBlobClient creation failure",
+			name: "Fail - blobsClient creation failure",
 			oc: &api.OpenShiftClusterDocument{
 				Key: strings.ToLower(resourceID),
 				ID:  clusterID,
@@ -1572,13 +1574,13 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+			mocks: func(blob *mock_blob.MockManager, menv *mock_env.MockInterface, blobsClient *mock_azblob.MockBlobsClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(false)
 				menv.EXPECT().OIDCKeyBitSize().Return(testOIDCKeyBitSize)
 				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
-				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, errors.New("generic error"))
+				blob.EXPECT().GetBlobsClient(blobContainerURL).Return(blobsClient, errors.New("generic error"))
 			},
 			wantBoundServiceAccountSigningKey: false,
 			wantErr:                           "generic error",
@@ -1597,14 +1599,14 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+			mocks: func(blob *mock_blob.MockManager, menv *mock_env.MockInterface, blobsClient *mock_azblob.MockBlobsClient) {
 				menv.EXPECT().FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint).Return(false)
 				menv.EXPECT().OIDCKeyBitSize().Return(testOIDCKeyBitSize)
 				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
 				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
-				blob.EXPECT().GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{}).Return(azblobClient, nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any()).Return(errors.New("generic error"))
+				blob.EXPECT().GetBlobsClient(blobContainerURL).Return(blobsClient, nil)
+				blobsClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DocumentKey(oidcbuilder.GetBlobName(m.subscriptionDoc.Subscription.Properties.TenantID, clusterID), oidcbuilder.DiscoveryDocumentKey), gomock.Any(), nil).Return(uploadResponse, errors.New("generic error"))
 			},
 			wantBoundServiceAccountSigningKey: false,
 			wantErr:                           "generic error",
@@ -1616,11 +1618,11 @@ func TestCreateOIDC(t *testing.T) {
 
 			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 
-			rpBlobManager := mock_azblob.NewMockManager(controller)
+			rpBlobManager := mock_blob.NewMockManager(controller)
 			env := mock_env.NewMockInterface(controller)
-			azBlobClient := mock_azblob.NewMockAZBlobClient(controller)
+			blobsClient := mock_azblob.NewMockBlobsClient(controller)
 			if tt.mocks != nil {
-				tt.mocks(rpBlobManager, env, azBlobClient)
+				tt.mocks(rpBlobManager, env, blobsClient)
 			}
 
 			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
