@@ -8,7 +8,7 @@ func ExampleOpenShiftVersionDocument() *OpenShiftVersionDocument {
 		MissingFields: MissingFields{},
 		ID:            "00000000-0000-0000-0000-000000000000",
 		OpenShiftVersion: &OpenShiftVersion{
-			ID:   "00000000-0000-0000-0000-000000000000",
+			ID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroupName/providers/resourceProviderNamespace/resourceType/resourceName",
 			Name: "default",
 			Type: "Microsoft.RedHatOpenShift/OpenShiftVersion",
 			Properties: OpenShiftVersionProperties{
