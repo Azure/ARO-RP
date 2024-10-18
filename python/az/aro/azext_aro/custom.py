@@ -485,7 +485,7 @@ def aro_update(cmd,
             oc_update.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile()
 
         if platform_workload_identities is not None:
-            oc_update.platform_workload_identity_profile.platform_workload_identities.update(platform_workload_identities)
+            oc_update.platform_workload_identity_profile.platform_workload_identities.update(platform_workload_identities)  # pylint: disable=line-too-long
 
         oc_update.platform_workload_identity_profile.upgradeable_to = upgradeable_to
 
