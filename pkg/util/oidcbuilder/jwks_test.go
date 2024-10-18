@@ -7,7 +7,6 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azblob"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -29,7 +28,6 @@ func TestKeyIDFromPublicKey(t *testing.T) {
 
 	for _, tt := range []struct {
 		name      string
-		mocks     func(*mock_azblob.MockAZBlobClient)
 		publicKey interface{}
 		wantkid   string
 		wantErr   string

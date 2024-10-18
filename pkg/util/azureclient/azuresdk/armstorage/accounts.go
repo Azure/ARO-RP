@@ -5,18 +5,16 @@ package armstorage
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
-
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // AccountsClient is a minimal interface for Azure AccountsClient
 type AccountsClient interface {
 	GetProperties(ctx context.Context, resourceGroupName string, accountName string, options *armstorage.AccountsClientGetPropertiesOptions) (armstorage.AccountsClientGetPropertiesResponse, error)
+	ListAccountSAS(ctx context.Context, resourceGroupName string, accountName string, parameters armstorage.AccountSasParameters, options *armstorage.AccountsClientListAccountSASOptions) (armstorage.AccountsClientListAccountSASResponse, error)
 }
 
 type accountsClient struct {
@@ -26,18 +24,8 @@ type accountsClient struct {
 var _ AccountsClient = &accountsClient{}
 
 // NewAccountsClient creates a new AccountsClient
-func NewAccountsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (AccountsClient, error) {
-	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
-
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Cloud,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
-		},
-	}
-	clientFactory, err := armstorage.NewClientFactory(subscriptionID, credential, &options)
+func NewAccountsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (AccountsClient, error) {
+	clientFactory, err := armstorage.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {
 		return nil, err
 	}
