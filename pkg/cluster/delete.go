@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -426,8 +427,8 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 				&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
 			)
 			if err != nil {
-				cloudErr, ok := err.(*azcore.ResponseError)
-				if ok && cloudErr.StatusCode == http.StatusNotFound {
+				var respErr *azcore.ResponseError
+				if errors.As(err, &respErr); respErr.StatusCode == http.StatusNotFound {
 					m.log.Errorf("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
 					continue
 				} else {
