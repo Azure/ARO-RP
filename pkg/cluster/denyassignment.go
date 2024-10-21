@@ -19,9 +19,9 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 
 	// needed for AdminUpdate so it would not block other steps
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		for _, i := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			if i.ObjectID == "" {
-				m.log.Print(fmt.Sprintf("skipping createOrUpdateDenyAssignment: ObjectID for identity %s is empty", i))
+		for operatorName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if identity.ObjectID == "" {
+				m.log.Print(fmt.Sprintf("skipping createOrUpdateDenyAssignment: ObjectID for identity %s is empty", operatorName))
 				return nil
 			}
 		}

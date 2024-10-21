@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest"
+	gofrsuuid "github.com/gofrs/uuid"
 
 	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -29,7 +30,7 @@ var _ OperationsClient = &operationsClient{}
 func NewOperationsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
 	var client mgmtredhatopenshift20240812preview.OperationsClient
 	if env.IsLocalDevelopmentMode() {
-		client = mgmtredhatopenshift20240812preview.NewOperationsClientWithBaseURI("https://localhost:8443", subscriptionID)
+		client = mgmtredhatopenshift20240812preview.NewOperationsClientWithBaseURI("https://localhost:8443", gofrsuuid.FromStringOrNil(subscriptionID))
 		client.Sender = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -38,7 +39,7 @@ func NewOperationsClient(environment *azureclient.AROEnvironment, subscriptionID
 			},
 		}
 	} else {
-		client = mgmtredhatopenshift20240812preview.NewOperationsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
+		client = mgmtredhatopenshift20240812preview.NewOperationsClientWithBaseURI(environment.ResourceManagerEndpoint, gofrsuuid.FromStringOrNil(subscriptionID))
 		client.Authorizer = authorizer
 	}
 

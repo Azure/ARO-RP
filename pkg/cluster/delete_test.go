@@ -610,7 +610,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
-									ResourceID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
+									ResourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
 								},
 							},
 						},

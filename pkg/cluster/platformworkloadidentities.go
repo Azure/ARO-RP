@@ -22,21 +22,21 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 	identities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 	updatedIdentities := make(map[string]api.PlatformWorkloadIdentity, len(identities))
 
-	for i, identity := range identities {
+	for operatorName, identity := range identities {
 		resourceId, err := arm.ParseResourceID(identity.ResourceID)
 		if err != nil {
-			return fmt.Errorf("platform workload identity '%s' invalid: %w", i, err)
+			return fmt.Errorf("platform workload identity '%s' invalid: %w", operatorName, err)
 		}
 
 		identityDetails, err := m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
 		if err != nil {
-			return fmt.Errorf("error occured when retrieving platform workload identity '%s' details: %w", i, err)
+			return fmt.Errorf("error occured when retrieving platform workload identity '%s' details: %w", operatorName, err)
 		}
 
-		updatedIdentities[i] = api.PlatformWorkloadIdentity{
-			ResourceID:   identity.ResourceID,
-			ClientID:     *identityDetails.Properties.ClientID,
-			ObjectID:     *identityDetails.Properties.PrincipalID,
+		updatedIdentities[operatorName] = api.PlatformWorkloadIdentity{
+			ResourceID: identity.ResourceID,
+			ClientID:   *identityDetails.Properties.ClientID,
+			ObjectID:   *identityDetails.Properties.PrincipalID,
 		}
 	}
 
