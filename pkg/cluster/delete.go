@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -425,13 +426,12 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 				&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
 			)
 			if err != nil {
-				cloudErr := err.(*api.CloudError)
-
-				if cloudErr.StatusCode == http.StatusNotFound {
-					m.log.Errorf("federated identity credentials not found for %s: %v", identity.ResourceID, cloudErr.Error())
+				cloudErr, ok := err.(*azcore.ResponseError)
+				if ok && cloudErr.StatusCode == http.StatusNotFound {
+					m.log.Errorf("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
 					continue
 				} else {
-					return fmt.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, cloudErr.Error())
+					return fmt.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
 				}
 			}
 		}
