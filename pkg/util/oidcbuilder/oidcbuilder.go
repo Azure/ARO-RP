@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	utilazblob "github.com/Azure/ARO-RP/pkg/util/azblob"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
 )
 
 const (
@@ -46,7 +46,7 @@ func GenerateBlobContainerURL(env env.Interface) string {
 	return fmt.Sprintf("https://%s.blob.%s/%s", env.OIDCStorageAccountName(), env.Environment().StorageEndpointSuffix, WebContainer)
 }
 
-func (b *OIDCBuilder) EnsureOIDCDocs(ctx context.Context, azBlobClient utilazblob.AZBlobClient) error {
+func (b *OIDCBuilder) EnsureOIDCDocs(ctx context.Context, blobsClient azblob.BlobsClient) error {
 	// Create the OIDC configuration
 	discoveryDocument := GenerateDiscoveryDocument(b.endpointURL)
 
@@ -56,7 +56,7 @@ func (b *OIDCBuilder) EnsureOIDCDocs(ctx context.Context, azBlobClient utilazblo
 		return err
 	}
 
-	return populateOidcFolder(ctx, b.directory, discoveryDocument, jwks, azBlobClient)
+	return populateOidcFolder(ctx, b.directory, discoveryDocument, jwks, blobsClient)
 }
 
 func (b *OIDCBuilder) GetEndpointUrl() string {
@@ -71,28 +71,31 @@ func (b *OIDCBuilder) GetBlobContainerURL() string {
 	return b.blobContainerURL
 }
 
-func populateOidcFolder(ctx context.Context, directory string, discoveryDocument string, jwks []byte, azBlobClient utilazblob.AZBlobClient) error {
-	err := azBlobClient.UploadBuffer(
+func populateOidcFolder(ctx context.Context, directory string, discoveryDocument string, jwks []byte, blobsClient azblob.BlobsClient) error {
+	_, err := blobsClient.UploadBuffer(
 		ctx,
 		"",
 		DocumentKey(directory, DiscoveryDocumentKey),
 		[]byte(discoveryDocument),
+		nil,
 	)
 	if err != nil {
 		return err
 	}
 
-	return azBlobClient.UploadBuffer(
+	_, err = blobsClient.UploadBuffer(
 		ctx,
 		"",
 		DocumentKey(directory, JWKSKey),
 		jwks,
+		nil,
 	)
+	return err
 }
 
-func DeleteOidcFolder(ctx context.Context, directory string, azBlobClient utilazblob.AZBlobClient) error {
+func DeleteOidcFolder(ctx context.Context, directory string, blobsClient azblob.BlobsClient) error {
 	for _, key := range []string{DiscoveryDocumentKey, JWKSKey} {
-		err := azBlobClient.DeleteBlob(ctx, "", DocumentKey(directory, key))
+		_, err := blobsClient.DeleteBlob(ctx, "", DocumentKey(directory, key), nil)
 		if err != nil && !bloberror.HasCode(err, bloberror.BlobNotFound) {
 			return err
 		}

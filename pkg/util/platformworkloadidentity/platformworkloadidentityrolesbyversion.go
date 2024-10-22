@@ -35,7 +35,7 @@ func NewPlatformWorkloadIdentityRolesByVersionService() *PlatformWorkloadIdentit
 // PopulatePlatformWorkloadIdentityRolesByVersion aims to populate platformWorkloadIdentityRoles for current OpenShift minor version and also for UpgradeableTo minor version if provided and is greater than the current version
 func (service *PlatformWorkloadIdentityRolesByVersionService) PopulatePlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets) error {
 	if !oc.UsesWorkloadIdentity() {
-		return fmt.Errorf("PopulatePlatformWorkloadIdentityRolesByVersion called for a CSP cluster")
+		return fmt.Errorf("PopulatePlatformWorkloadIdentityRolesByVersion called for a Cluster Service Principal cluster")
 	}
 	currentOpenShiftVersion, err := version.ParseVersion(oc.Properties.ClusterProfile.Version)
 	if err != nil {

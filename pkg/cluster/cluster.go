@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
@@ -32,7 +33,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
-	"github.com/Azure/ARO-RP/pkg/util/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
@@ -43,6 +43,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
+	"github.com/Azure/ARO-RP/pkg/util/blob"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -51,6 +52,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
 type Interface interface {
@@ -105,7 +107,7 @@ type manager struct {
 	storage storage.Manager
 	subnet  subnet.Manager // TODO: use armSubnets instead. https://issues.redhat.com/browse/ARO-4665
 	graph   graph.Manager
-	rpBlob  azblob.Manager
+	rpBlob  blob.Manager
 
 	ch               clienthelper.Interface
 	kubernetescli    kubernetes.Interface
@@ -120,9 +122,10 @@ type manager struct {
 	arocli           aroclient.Interface
 	imageregistrycli imageregistryclient.Interface
 
-	installViaHive     bool
-	adoptViaHive       bool
-	hiveClusterManager hive.ClusterManager
+	installViaHive       bool
+	adoptViaHive         bool
+	hiveClusterManager   hive.ClusterManager
+	fpServicePrincipalID string
 
 	aroOperatorDeployer deploy.Operator
 
@@ -162,6 +165,15 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	t, err := fpCredClusterTenant.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{_env.Environment().ResourceManagerScope}})
+	if err != nil {
+		return nil, err
+	}
+	fpspID, err := token.GetObjectId(t.Token)
+	if err != nil {
+		return nil, err
+	}
+
 	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID())
 	if err != nil {
 		return nil, err
@@ -171,8 +183,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	if err != nil {
 		return nil, err
 	}
-
-	storage := storage.NewManager(_env, r.SubscriptionID, fpAuthorizer)
 
 	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
 	if err != nil {
@@ -221,7 +231,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	rpBlob, err := azblob.NewManager(_env.Environment(), _env.SubscriptionID(), msiCredential)
+	storage, err := storage.NewManager(r.SubscriptionID, _env.Environment().StorageEndpointSuffix, fpCredClusterTenant, doc.OpenShiftCluster.UsesWorkloadIdentity(), clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	rpBlob, err := blob.NewManager(_env.SubscriptionID(), msiCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -285,6 +300,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		now:                                    func() time.Time { return time.Now() },
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
+		fpServicePrincipalID:                   fpspID,
 	}
 
 	if doc.OpenShiftCluster.UsesWorkloadIdentity() {

@@ -5,49 +5,56 @@ package storage
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/date"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	storagesdk "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armstorage"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
 )
 
-type BlobStorageClient interface {
-	Get(uri string) (io.ReadCloser, error)
-	GetContainerReference(name string) *azstorage.Container
-}
-
 type Manager interface {
-	BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (BlobStorageClient, error)
+	BlobService(ctx context.Context, resourceGroup, account string, p storagesdk.Permissions, r storagesdk.SignedResourceTypes) (azblob.BlobsClient, error)
 }
 
 type manager struct {
-	env             env.Core
-	storageAccounts storage.AccountsClient
+	storageAccounts       armstorage.AccountsClient
+	credential            azcore.TokenCredential
+	usesWorkloadIdentity  bool
+	storageEndpointSuffix string
+	clientOptions         *arm.ClientOptions
 }
 
-func NewManager(env env.Core, subscriptionID string, authorizer autorest.Authorizer) Manager {
-	return &manager{
-		env:             env,
-		storageAccounts: storage.NewAccountsClient(env.Environment(), subscriptionID, authorizer),
+func NewManager(subscriptionID, storageEndpointSuffix string, credential azcore.TokenCredential, usesWorkloadIdentity bool, options *arm.ClientOptions) (m Manager, err error) {
+	var accountsClient armstorage.AccountsClient
+	if !usesWorkloadIdentity {
+		accountsClient, err = armstorage.NewAccountsClient(subscriptionID, credential, options)
+		if err != nil {
+			return nil, err
+		}
 	}
+	return &manager{
+		storageAccounts:       accountsClient,
+		usesWorkloadIdentity:  usesWorkloadIdentity,
+		credential:            credential,
+		storageEndpointSuffix: storageEndpointSuffix,
+		clientOptions:         options,
+	}, nil
 }
 
 func getCorrectErrWhenTooManyRequests(err error) error {
-	detailedError, ok := err.(autorest.DetailedError)
+	responseError, ok := err.(*azcore.ResponseError)
 	if !ok {
 		return err
 	}
-	if detailedError.StatusCode != http.StatusTooManyRequests {
+	if responseError.StatusCode != http.StatusTooManyRequests {
 		return err
 	}
 	msg := "Requests are being throttled due to Azure Storage limits being exceeded. Please visit https://learn.microsoft.com/en-us/azure/openshift/troubleshoot#exceeding-azure-storage-limits for more details."
@@ -66,43 +73,30 @@ func getCorrectErrWhenTooManyRequests(err error) error {
 	return cloudError
 }
 
-func (m *manager) BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (BlobStorageClient, error) {
+func (m *manager) BlobService(ctx context.Context, resourceGroup, account string, p storagesdk.Permissions, r storagesdk.SignedResourceTypes) (blobsClient azblob.BlobsClient, err error) {
+	serviceURL := fmt.Sprintf("https://%s.blob.%s", account, m.storageEndpointSuffix)
+	if m.usesWorkloadIdentity {
+		return azblob.NewBlobsClientUsingEntra(serviceURL, m.credential, m.clientOptions)
+	}
+
 	t := time.Now().UTC().Truncate(time.Second)
-	res, err := m.storageAccounts.ListAccountSAS(ctx, resourceGroup, account, mgmtstorage.AccountSasParameters{
-		Services:               mgmtstorage.ServicesB,
-		ResourceTypes:          r,
-		Permissions:            p,
-		Protocols:              mgmtstorage.HTTPProtocolHTTPS,
-		SharedAccessStartTime:  &date.Time{Time: t},
-		SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
-	})
+	res, err := m.storageAccounts.ListAccountSAS(ctx, resourceGroup, account, storagesdk.AccountSasParameters{
+		Services:               to.Ptr(storagesdk.ServicesB),
+		ResourceTypes:          to.Ptr(r),
+		Permissions:            to.Ptr(p),
+		Protocols:              to.Ptr(storagesdk.HTTPProtocolHTTPS),
+		SharedAccessStartTime:  &t,
+		SharedAccessExpiryTime: to.Ptr(t.Add(24 * time.Hour)),
+	}, nil)
 	if err != nil {
 		return nil, getCorrectErrWhenTooManyRequests(err)
 	}
 
-	v, err := url.ParseQuery(*res.AccountSasToken)
+	_, err = url.ParseQuery(*res.AccountSasToken)
 	if err != nil {
 		return nil, err
 	}
 
-	blobcli := azstorage.NewAccountSASClient(account, v, (*m.env.Environment()).Environment).GetBlobService()
-
-	return &wrappedStorageClient{&blobcli}, nil
-}
-
-type wrappedStorageClient struct {
-	client *azstorage.BlobStorageClient
-}
-
-func (c *wrappedStorageClient) GetContainerReference(name string) *azstorage.Container {
-	return c.client.GetContainerReference(name)
-}
-
-func (c *wrappedStorageClient) Get(uri string) (io.ReadCloser, error) {
-	parts := strings.Split(uri, "/")
-
-	container := c.client.GetContainerReference(parts[1])
-	b := container.GetBlobReference(parts[2])
-
-	return b.Get(nil)
+	sasURL := fmt.Sprintf("%s/?%s", serviceURL, *res.AccountSasToken)
+	return azblob.NewBlobsClientUsingSAS(sasURL, m.clientOptions)
 }
