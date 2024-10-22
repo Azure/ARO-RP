@@ -78,11 +78,11 @@ type manager struct {
 	spGraphClient            *utilgraph.GraphServiceClient
 	disks                    compute.DisksClient
 	virtualMachines          compute.VirtualMachinesClient
-	interfaces               network.InterfacesClient // TODO: use armInterfaces instead.
+	interfaces               network.InterfacesClient // TODO: use armInterfaces instead. https://issues.redhat.com/browse/ARO-4665
 	armInterfaces            armnetwork.InterfacesClient
-	publicIPAddresses        network.PublicIPAddressesClient // TODO: use armPublicIPAddresses instead.
+	publicIPAddresses        network.PublicIPAddressesClient // TODO: use armPublicIPAddresses instead. https://issues.redhat.com/browse/ARO-4665
 	armPublicIPAddresses     armnetwork.PublicIPAddressesClient
-	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead.
+	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead. https://issues.redhat.com/browse/ARO-4665
 	armLoadBalancers         armnetwork.LoadBalancersClient
 	armPrivateEndpoints      armnetwork.PrivateEndpointsClient
 	armSecurityGroups        armnetwork.SecurityGroupsClient
@@ -95,14 +95,15 @@ type manager struct {
 	roleDefinitions          authorization.RoleDefinitionsClient
 	armRoleDefinitions       armauthorization.RoleDefinitionsClient
 	denyAssignments          authorization.DenyAssignmentClient
-	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead.
+	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead. https://issues.redhat.com/browse/ARO-4665
 	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
 	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
+	armSubnets               armnetwork.SubnetsClient
 	userAssignedIdentities   armmsi.UserAssignedIdentitiesClient
 
 	dns     dns.Manager
 	storage storage.Manager
-	subnet  subnet.Manager
+	subnet  subnet.Manager // TODO: use armSubnets instead. https://issues.redhat.com/browse/ARO-4665
 	graph   graph.Manager
 	rpBlob  azblob.Manager
 
@@ -225,6 +226,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armSubnetsClient, err := armnetwork.NewSubnetsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	armRoleDefinitionsClient, err := armauthorization.NewArmRoleDefinitionsClient(fpCredClusterTenant, r.SubscriptionID, clientOptions)
 	if err != nil {
 		return nil, err
@@ -266,6 +272,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		fpPrivateEndpoints:       network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
+		armSubnets:               armSubnetsClient,
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,
