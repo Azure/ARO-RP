@@ -44,7 +44,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
-	"github.com/Azure/ARO-RP/pkg/util/rolesets"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -69,6 +68,17 @@ type Cluster struct {
 }
 
 const GenerateSubnetMaxTries = 100
+const localDefaultURL string = "https://localhost:8443"
+
+func insecureLocalClient() *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+}
 
 func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	if env.IsLocalDevelopmentMode() {
@@ -369,7 +379,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 		if env.IsLocalDevelopmentMode() {
 			c.log.Info("peering subnets to CI infra")
-			err = c.peerSubnetsToCI(ctx, vnetResourceGroup, clusterName)
+			err = c.peerSubnetsToCI(ctx, vnetResourceGroup)
 			if err != nil {
 				return err
 			}
@@ -560,17 +570,12 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	}
 
 	if c.env.IsLocalDevelopmentMode() {
-		err := c.registerSubscription(ctx)
+		err := c.registerSubscription()
 		if err != nil {
 			return err
 		}
 
 		err = c.ensureDefaultVersionInCosmosdb(ctx)
-		if err != nil {
-			return err
-		}
-
-		err = c.insertPlatformWorkloadIdentityRoleSetsIntoCosmosdb()
 		if err != nil {
 			return err
 		}
@@ -581,17 +586,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
 }
 
-var insecureLocalClient *http.Client = &http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	},
-}
-
-const localDefaultURL string = "https://localhost:8443"
-
-func (c *Cluster) registerSubscription(ctx context.Context) error {
+func (c *Cluster) registerSubscription() error {
 	b, err := json.Marshal(&api.Subscription{
 		State: api.SubscriptionStateRegistered,
 		Properties: &api.SubscriptionProperties{
@@ -615,7 +610,7 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := insecureLocalClient.Do(req)
+	resp, err := insecureLocalClient().Do(req)
 	if err != nil {
 		return err
 	}
@@ -637,7 +632,7 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 
 	getRequest.Header.Set("Content-Type", "application/json")
 
-	getResponse, err := insecureLocalClient.Do(getRequest)
+	getResponse, err := insecureLocalClient().Do(getRequest)
 	if err != nil {
 		return nil, fmt.Errorf("error couldn't retrieve versions in cosmos db: %w", err)
 	}
@@ -651,7 +646,7 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 
 // ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
 // cosmos DB IF it doesn't already contain an entry for the default version. It
-// is hardcoded to use the local-RP endpoint `https://localhost:8443`
+// is hardcoded to use the local-RP endpoint
 //
 // It returns without an error when a default version is already present or a
 // default version was successfully put into the db.
@@ -690,35 +685,7 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := insecureLocalClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-func (c *Cluster) insertPlatformWorkloadIdentityRoleSetsIntoCosmosdb() error {
-	b, err := json.Marshal(rolesets.DefaultPlatformWorkloadIdentityRoleSet)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/admin/platformworkloadidentityrolesets/", bytes.NewReader(b))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	cli := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-
-	resp, err := cli.Do(req)
+	resp, err := insecureLocalClient().Do(req)
 	if err != nil {
 		return err
 	}
@@ -878,7 +845,7 @@ func (c *Cluster) deleteVnetResources(ctx context.Context, resourceGroup, vnetNa
 	return errors.Join(errs...)
 }
 
-func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, clusterName string) error {
+func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string) error {
 	cluster := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), vnetResourceGroup)
 
 	r, err := azure.ParseResourceID(c.ciParentVnet)

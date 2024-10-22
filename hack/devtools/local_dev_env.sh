@@ -5,7 +5,7 @@ set -o pipefail
 
 # Local development environment script.
 # Execute this script from the root folder of the repo (ARO-RP).
-# This script is aimed to provide an automatic and easy way to prepare 
+# This script is aimed to provide an automatic and easy way to prepare
 # the environment and execute the ARO RP locally.
 # The steps here are the ones defined in docs/deploy-development-rp.md
 # We recommend to use this script after you understand the steps of the process, not before.
@@ -15,29 +15,29 @@ PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
         "openShiftVersion": "4.14",
         "platformWorkloadIdentityRoles": [
             {
-                "operatorName": "CloudControllerManager",
-                "roleDefinitionName": "Azure Red Hat OpenShift Cloud Controller Manager Role",
+                "operatorName": "cloud-controller-manager",
+                "roleDefinitionName": "Azure Red Hat OpenShift Cloud Controller Manager",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
                 "serviceAccounts": ["system:serviceaccount:openshift-cloud-controller-manager:cloud-controller-manager"],
                 "secretLocation": { "namespace": "openshift-cloud-controller-manager", "name": "azure-cloud-credentials" }
             },
             {
-                "operatorName": "ClusterIngressOperator",
-                "roleDefinitionName": "Azure Red Hat OpenShift Cluster Ingress Operator Role",
+                "operatorName": "ingress",
+                "roleDefinitionName": "Azure Red Hat OpenShift Cluster Ingress Operator",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
                 "serviceAccounts": ["system:serviceaccount:openshift-ingress-operator:ingress-operator"],
                 "secretLocation": { "namespace": "openshift-ingress-operator", "name": "cloud-credentials" }
             },
             {
-                "operatorName": "MachineApiOperator",
-                "roleDefinitionName": "Azure Red Hat OpenShift Machine API Operator Role",
+                "operatorName": "machine-api",
+                "roleDefinitionName": "Azure Red Hat OpenShift Machine API Operator",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0358943c-7e01-48ba-8889-02cc51d78637",
                 "serviceAccounts": ["system:serviceaccount:openshift-machine-api:machine-api-controllers"],
                 "secretLocation": { "namespace": "openshift-machine-api", "name": "azure-cloud-credentials" }
             },
             {
-                "operatorName": "StorageOperator",
-                "roleDefinitionName": "Azure Red Hat OpenShift Storage Operator Role",
+                "operatorName": "disk-csi-driver",
+                "roleDefinitionName": "Azure Red Hat OpenShift Disk Storage Operator",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/5b7237c5-45e1-49d6-bc18-a1f62f400748",
                 "serviceAccounts": [
                     "system:serviceaccount:openshift-cluster-csi-drivers:azure-disk-csi-driver-operator",
@@ -46,15 +46,15 @@ PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
                 "secretLocation": { "namespace": "openshift-cluster-csi-drivers", "name": "azure-disk-credentials" }
             },
             {
-                "operatorName": "NetworkOperator",
-                "roleDefinitionName": "Azure Red Hat OpenShift Network Operator Role",
+                "operatorName": "cloud-network-config",
+                "roleDefinitionName": "Azure Red Hat OpenShift Network Operator",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/be7a6435-15ae-4171-8f30-4a343eff9e8f",
                 "serviceAccounts": ["system:serviceaccount:openshift-cloud-network-config-controller:cloud-network-config-controller"],
                 "secretLocation": { "namespace": "openshift-cloud-network-config-controller", "name": "cloud-credentials" }
             },
             {
-                "operatorName": "ImageRegistryOperator",
-                "roleDefinitionName": "Azure Red Hat OpenShift Image Registry Operator Role",
+                "operatorName": "image-registry",
+                "roleDefinitionName": "Azure Red Hat OpenShift Image Registry Operator",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/8b32b316-c2f5-4ddf-b05b-83dacd2d08b5",
                 "serviceAccounts": [
                     "system:serviceaccount:openshift-image-registry:cluster-image-registry-operator",
@@ -63,8 +63,8 @@ PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
                 "secretLocation": { "namespace": "openshift-image-registry", "name": "installer-cloud-credentials" }
             },
             {
-                "operatorName": "AzureFilesStorageOperator",
-                "roleDefinitionName": "Azure Red Hat OpenShift Azure Files Storage Operator Role",
+                "operatorName": "file-csi-driver",
+                "roleDefinitionName": "Azure Red Hat OpenShift File Storage Operator",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/0d7aedc0-15fd-4a67-a412-efad370c947e",
                 "serviceAccounts": [
                     "system:serviceaccount:openshift-cluster-csi-drivers:azure-file-csi-driver-operator",
@@ -74,8 +74,8 @@ PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
                 "secretLocation": { "namespace": "openshift-cluster-csi-drivers", "name": "azure-file-credentials" }
             },
             {
-                "operatorName": "ServiceOperator",
-                "roleDefinitionName": "Azure Red Hat OpenShift Service Operator Role",
+                "operatorName": "aro-operator",
+                "roleDefinitionName": "Azure Red Hat OpenShift Service Operator",
                 "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/4436bae4-7702-4c84-919b-c4069ff25ee2",
                 "serviceAccounts": ["system:serviceaccount:openshift-azure-operator:aro-operator-master"],
                 "secretLocation": { "namespace": "openshift-azure-operator", "name": "azure-cloud-credentials" }
@@ -145,12 +145,12 @@ create_env_file() {
     read -r -p "Do you want to create an env file for Managed/Workload identity development? (y / n) " answer
     if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
         create_miwi_env_file
-    else 
+    else
         create_regular_env_file
     fi
 }
 
-get_platform_workloadIdentity_role_sets() {   
+get_platform_workloadIdentity_role_sets() {
     # Parse the JSON data using jq
     platformWorkloadIdentityRoles=$(echo "${PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS}" | jq -c '.[].platformWorkloadIdentityRoles[]')
 
@@ -210,7 +210,7 @@ create_platform_identity_and_assign_role() {
 
 setup_platform_identity() {
     local platformWorkloadIdentityRoles
-    
+
     platformWorkloadIdentityRoles=$(get_platform_workloadIdentity_role_sets)
 
     echo "INFO: Creating platform identities under RG ($CLUSTER_RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
@@ -236,7 +236,7 @@ cluster_msi_role_assignment() {
     local clusterMSIAppID="${1}"
     local FEDERATED_CREDENTIAL_ROLE_ID="ef318e2a-8334-4a05-9e4a-295a196c6a6e"
     local clusterMSIObjectID
-    
+
     clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' | jq -r .objectId)
 
     echo "INFO: Assigning role to cluster MSI: ${clusterMSIAppID}"
@@ -316,7 +316,7 @@ create_Azure_deployment() {
         "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
         "databaseName=$DATABASE_NAME" \
         >/dev/null
-    
+
     echo "INFO: Azure deployment created."
 }
 
