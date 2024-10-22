@@ -29,7 +29,7 @@ services:
     ports:
       - "4444:4444"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4444"]
+      test: ["CMD", "curl", "-sS", "-f", "http://localhost:4444"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -108,7 +108,7 @@ services:
     ports:
       - "8443:8443"
     healthcheck:
-      test: ["CMD", "curl", "-k", "http://localhost:8443/healthz"]
+      test: ["CMD", "curl", "-k", "-sS", "https://localhost:8443/healthz/ready"]
       interval: 60s
       timeout: 30s
       retries: 5
@@ -151,14 +151,25 @@ services:
     command: ["portal"]
     restart: on-failure:3
     healthcheck:
-      test: ["CMD", "curl", "-k", "http://localhost:8444/healthz"]
+      test: ["CMD", "curl", "-k", "-sS", "https://localhost:8444/healthz/ready"]
       interval: 60s
       timeout: 20s
       retries: 5
 
   run-e2e:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile.aro-e2e
+      args:
+        - REGISTRY=${REGISTRY}
+        - ARO_VERSION=${VERSION}
+      ulimits:
+        nofile:
+          soft: 4096
+          hard: 4096
     container_name: run-e2e
+    network_mode: host # required for VPN
     depends_on:
      vpn:
         condition: service_healthy
@@ -170,7 +181,8 @@ services:
         condition: service_healthy
     environment:
       - E2E_LABEL
-      - RP_MODE=development
+      - CI
+      - RP_MODE
       - LOCATION
       - CLUSTER
       - AZURE_SUBSCRIPTION_ID
@@ -181,6 +193,13 @@ services:
       - DATABASE_NAME
       - RESOURCEGROUP
       - PROXY_HOSTNAME
+      - ARO_SELENIUM_HOSTNAME
+      - OS_CLUSTER_VERSION
+      - AZURE_FP_CLIENT_ID
+      - AZURE_RP_CLIENT_SECRET
+      - AZURE_FP_SERVICE_PRINCIPAL_ID
+      - AZURE_SERVICE_PRINCIPAL_ID
+      - RP_BASE_URL=https://localhost:8443
     entrypoint: "/usr/local/bin/e2e.test"
     command: ["-test.v", "--ginkgo.v", "--ginkgo.timeout=180m", "--ginkgo.flake-attempts=2", "--ginkgo.junit-report=/tmp/e2e-report.xml", "--ginkgo.label-filter=${E2E_LABEL}"]
     healthcheck:

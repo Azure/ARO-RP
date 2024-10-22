@@ -195,7 +195,6 @@ stages:
           # Step 8: Start Services using Docker Compose
           - bash: |
               docker compose --env-file .env -f docker-compose.yml up -d
-              sleep 180
               docker ps
             displayName: Start Services using Docker Compose
 
@@ -207,13 +206,11 @@ stages:
               export CI=true
               export ARO_SELENIUM_HOSTNAME="localhost"
               export OS_CLUSTER_VERSION=4.13.40
+              export E2E_LABEL='!smoke&&!regressiontest'
               . ./hack/e2e/run-rp-and-e2e.sh
               deploy_e2e_db
               register_sub
               env | sort
-              echo "Waiting for services to stabilize..."
-              sleep 60
-              docker ps
               docker compose up run-e2e --abort-on-container-exit
             displayName: Execute E2E Tests
 
