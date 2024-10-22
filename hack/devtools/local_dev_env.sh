@@ -160,7 +160,7 @@ get_platform_workloadIdentity_role_sets() {
 assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
-    local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
+    local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${CLUSTER_RESOURCEGROUP}"
     local roles
 
     if ! roles=$(az role assignment list --assignee "${objectId}" --role "${roleId}" --scope "${scope}" 2>/dev/null); then
@@ -184,9 +184,9 @@ create_platform_identity_and_assign_role() {
     local identityName="aro-${operatorName}"
     local identity
 
-    if ! identity=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null); then
+    if ! identity=$(az identity show --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null); then
         echo "INFO: Creating platform identity for operator: ${operatorName}"
-        identity=$(az identity create --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+        identity=$(az identity create --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
     fi
 
     # Extract the client ID, principal Id, resource ID and name from the result
@@ -213,7 +213,7 @@ setup_platform_identity() {
     
     platformWorkloadIdentityRoles=$(get_platform_workloadIdentity_role_sets)
 
-    echo "INFO: Creating platform identities under RG ($RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
+    echo "INFO: Creating platform identities under RG ($CLUSTER_RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
     echo ""
 
     # Loop through each element under platformWorkloadIdentityRoles
@@ -226,7 +226,7 @@ setup_platform_identity() {
     done <<< "$platformWorkloadIdentityRoles"
 
     # Create the cluster identity
-    echo "INFO: Creating cluster identity under RG ($RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
+    echo "INFO: Creating cluster identity under RG ($CLUSTER_RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
     echo ""
 
     create_platform_identity_and_assign_role "Cluster" "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
