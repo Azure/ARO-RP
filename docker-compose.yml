@@ -6,15 +6,18 @@ services:
       dockerfile: Dockerfile.vpn
     container_name: vpn
     privileged: true
-    network_mode: host
     volumes:
       - ${PWD}/secrets:/secrets:z
     devices:
       - /dev/net/tun  # required to modify VPN on host
     entrypoint: "openvpn"
     command: ["/secrets/vpn-eastus.ovpn"]
+    networks:
+      - aro-dev
     ports:
-      - "443:443"
+      - 8443:8443
+      - 8444:8444
+      - 2222:2222
     healthcheck:
       test: ["CMD", "pidof", "openvpn"]
       start_period: 20s
@@ -25,11 +28,12 @@ services:
   selenium:
     image: selenium/standalone-edge:4.10.0-20230607
     container_name: selenium-container
-    network_mode: host
+    networks:
+      - aro-dev
     ports:
       - "4444:4444"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4444"]
+      test: ["CMD", "curl", "-sS", "-f", "http://localhost:4444"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -47,21 +51,12 @@ services:
           soft: 4096
           hard: 4096
     container_name: aro-rp
-    network_mode: host
     depends_on:
       vpn:
         condition: service_healthy
     command: ["rp"]
-    secrets:
-      - source: proxy-client-key
-        target: /app/secrets/proxy-client.key
-      - source: proxy-client-crt
-        target: /app/secrets/proxy-client.crt
-      - source: proxy-crt
-        target: /app/secrets/proxy.crt
-      - source: hive-kubeconfig
-        target: /app/secrets/aks.kubeconfig
-    environment:
+    volumes:
+      - ${PWD}/secrets:/app/secrets:z
       # inherit from host
       - ADMIN_OBJECT_ID
       - ARO_IMAGE
@@ -105,19 +100,18 @@ services:
       - HIVE_KUBE_CONFIG_PATH=/app/secrets/aks.kubeconfig
       - KUBECONFIG=/app/secrets/aks.kubeconfig
       - RP_MODE=development
-    ports:
-      - "8443:8443"
     healthcheck:
-      test: ["CMD", "curl", "-k", "http://localhost:8443/healthz"]
+      test: ["CMD", "curl", "-k", "-sS", "https://localhost:8443/healthz/ready"]
       interval: 60s
-      timeout: 30s
+      timeout: 20s
       retries: 5
     restart: on-failure:3
 
   portal:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
     container_name: aro-portal
-    network_mode: host
+    networks:
+      - aro-dev
     depends_on:
       rp:
         condition: service_started
@@ -136,9 +130,6 @@ services:
       - DATABASE_ACCOUNT_NAME
       - DATABASE_NAME
       - NO_NPM=1
-    ports:
-      - "8444:8444"
-      - "2222:2222"
     secrets:
       - source: proxy-client-key
         target: /app/secrets/proxy-client.key
@@ -151,13 +142,23 @@ services:
     command: ["portal"]
     restart: on-failure:3
     healthcheck:
-      test: ["CMD", "curl", "-k", "http://localhost:8444/healthz"]
-      interval: 60s
+      test: ["CMD", "curl", "-k", "-sS", "https://localhost:8444/healthz/ready"]
+      interval: 30s
       timeout: 20s
-      retries: 5
+      retries: 3
 
   run-e2e:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile.aro-e2e
+      args:
+        - REGISTRY=${REGISTRY}
+        - ARO_VERSION=${VERSION}
+      ulimits:
+        nofile:
+          soft: 4096
+          hard: 4096
     container_name: run-e2e
     depends_on:
      vpn:
@@ -170,7 +171,8 @@ services:
         condition: service_healthy
     environment:
       - E2E_LABEL
-      - RP_MODE=development
+      - CI
+      - RP_MODE
       - LOCATION
       - CLUSTER
       - AZURE_SUBSCRIPTION_ID
@@ -181,13 +183,20 @@ services:
       - DATABASE_NAME
       - RESOURCEGROUP
       - PROXY_HOSTNAME
+      - ARO_SELENIUM_HOSTNAME
+      - OS_CLUSTER_VERSION
+      - AZURE_FP_CLIENT_ID
+      - AZURE_RP_CLIENT_SECRET
+      - AZURE_FP_SERVICE_PRINCIPAL_ID
+      - AZURE_SERVICE_PRINCIPAL_ID
+      - RP_BASE_URL=https://localhost:8443
     entrypoint: "/usr/local/bin/e2e.test"
     command: ["-test.v", "--ginkgo.v", "--ginkgo.timeout=180m", "--ginkgo.flake-attempts=2", "--ginkgo.junit-report=/tmp/e2e-report.xml", "--ginkgo.label-filter=${E2E_LABEL}"]
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
-      interval: 60s
+      interval: 30s
       timeout: 20s
-      retries: 5
+      retries: 3
     restart: on-failure:3
 
 secrets:
@@ -199,3 +208,6 @@ secrets:
     file: ./secrets/proxy.crt
   hive-kubeconfig:
     file: ./secrets/aks.kubeconfig
+
+networks:
+  aro-dev:
