@@ -22,6 +22,7 @@ const (
 	responseCode         = "response_status_code"
 	contentLength        = "content_length"
 	durationMilliseconds = "duration_milliseconds"
+	correlationIdHeader  = "X-Ms-Correlation-Request-Id"
 )
 
 func NewCustomRoundTripper(next http.RoundTripper) http.RoundTripper {
@@ -38,6 +39,8 @@ func (crt *customRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 	correlationData := api.GetCorrelationDataFromCtx(req.Context())
 	if correlationData == nil {
 		correlationData = api.CreateCorrelationDataFromReq(req)
+	} else if correlationData.CorrelationID != "" {
+		req.Header.Set(correlationIdHeader, correlationData.CorrelationID)
 	}
 
 	requestTime := time.Now()
@@ -75,7 +78,7 @@ func updateCorrelationDataAndEnrichLogWithResponse(correlationData *api.Correlat
 		})
 	}
 
-	correlationData.CorrelationID = res.Header.Get("X-Ms-Correlation-Request-Id")
+	correlationData.CorrelationID = res.Header.Get(correlationIdHeader)
 	l = utillog.EnrichWithCorrelationData(l, correlationData)
 
 	return l.WithFields(logrus.Fields{
