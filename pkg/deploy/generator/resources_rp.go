@@ -914,8 +914,10 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		rs = append(rs, g.rpCosmosDBAlert(10, 90, 3, "rp-cosmosdb-alert", "PT5M", "PT1H"))
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "rp"))
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "gateway"))
+		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "globalDevops"))
 	} else {
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("''", "rp"))
+		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "globalDevops"))
 	}
 
 	return rs
