@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/form3tech-oss/jwt-go"
@@ -18,7 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
@@ -127,11 +128,20 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	aroEnv := dv.env.Environment()
-	pdpClient := remotepdp.NewRemotePDPClient(
+	clientOptions := &azcore.ClientOptions{
+		Transport: &http.Client{
+			Transport: azureclient.NewCustomRoundTripper(http.DefaultTransport),
+		},
+	}
+	pdpClient, err := client.NewRemotePDPClient(
 		fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),
 		aroEnv.OAuthScope,
 		fpClientCred,
+		clientOptions,
 	)
+	if err != nil {
+		return err
+	}
 
 	scopes := []string{dv.env.Environment().ResourceManagerScope}
 	var spDynamic dynamic.Dynamic
