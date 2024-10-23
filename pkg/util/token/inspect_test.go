@@ -12,7 +12,7 @@ import (
 
 func TestExtractClaims(t *testing.T) {
 	dummyObjectId := "1234567890"
-	validTestToken, err := token.CreateTestToken(dummyObjectId)
+	validTestToken, err := token.CreateTestToken(dummyObjectId, nil)
 	if err != nil {
 		t.Errorf("Error creating test token: %v", err)
 	}
@@ -21,7 +21,6 @@ func TestExtractClaims(t *testing.T) {
 		name       string
 		token      string
 		wantOid    string
-		wantGroups []string
 		wantClaims map[string]interface{}
 		wantErr    bool
 	}{
@@ -29,7 +28,6 @@ func TestExtractClaims(t *testing.T) {
 			name:       "Can extract oid from a valid token",
 			token:      validTestToken,
 			wantOid:    dummyObjectId,
-			wantGroups: []string{"group1", "group2"},
 			wantClaims: map[string]interface{}{"example_claim": "example_value"},
 			wantErr:    false,
 		},
@@ -37,7 +35,6 @@ func TestExtractClaims(t *testing.T) {
 			name:       "Return an error when given an invalid jwt",
 			token:      "invalid",
 			wantOid:    "",
-			wantGroups: []string{},
 			wantClaims: nil,
 			wantErr:    true,
 		},
@@ -57,9 +54,6 @@ func TestExtractClaims(t *testing.T) {
 				}
 				if diff := cmp.Diff(got.ClaimNames, tt.wantClaims); diff != "" {
 					t.Errorf("Got claimNames: %q, want %q", got.ClaimNames, tt.wantClaims)
-				}
-				if diff := cmp.Diff(got.Groups, tt.wantGroups); diff != "" {
-					t.Errorf("Got groups: %q, want %q", got.Groups, tt.wantGroups)
 				}
 				if err != nil {
 					t.Errorf("Expect no error but got one")
