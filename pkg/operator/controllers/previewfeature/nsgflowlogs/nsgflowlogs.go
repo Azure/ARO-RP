@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"k8s.io/utils/ptr"
@@ -16,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func NewFeature(flowLogsClient armnetwork.FlowLogsClient, kubeSubnets subnet.KubeManager, subnets subnet.Manager, location string) *nsgFlowLogsFeature {
+func NewFeature(flowLogsClient armnetwork.FlowLogsClient, kubeSubnets subnet.KubeManager, subnets armnetwork.SubnetsClient, location string) *nsgFlowLogsFeature {
 	return &nsgFlowLogsFeature{
 		kubeSubnets:    kubeSubnets,
 		flowLogsClient: flowLogsClient,
@@ -27,7 +28,7 @@ func NewFeature(flowLogsClient armnetwork.FlowLogsClient, kubeSubnets subnet.Kub
 
 type nsgFlowLogsFeature struct {
 	kubeSubnets    subnet.KubeManager
-	subnets        subnet.Manager
+	subnets        armnetwork.SubnetsClient
 	flowLogsClient armnetwork.FlowLogsClient
 	location       string
 }
@@ -135,11 +136,15 @@ func (n *nsgFlowLogsFeature) getNSGs(ctx context.Context) (map[string]struct{}, 
 
 	nsgs := map[string]struct{}{}
 	for _, kubeSubnet := range subnets {
-		net, err := n.subnets.Get(ctx, kubeSubnet.ResourceID)
+		r, err := arm.ParseResourceID(kubeSubnet.ResourceID)
 		if err != nil {
 			return nil, err
 		}
-		nsgs[*net.NetworkSecurityGroup.ID] = struct{}{}
+		net, err := n.subnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+		if err != nil {
+			return nil, err
+		}
+		nsgs[*net.Properties.NetworkSecurityGroup.ID] = struct{}{}
 	}
 	return nsgs, nil
 }

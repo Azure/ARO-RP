@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature/nsgflowlogs"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -73,17 +72,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// create refreshable authorizer from token
-	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.client)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	authorizer, err := azRefreshAuthorizer.NewRefreshableAuthorizerToken(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	credential, err := azidentity.NewDefaultAzureCredential(azEnv.DefaultAzureCredentialOptions())
 	if err != nil {
 		return reconcile.Result{}, err
@@ -97,7 +85,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	kubeSubnets := subnet.NewKubeManager(r.client, resource.SubscriptionID)
-	subnets := subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer)
+	subnets, err := armnetwork.NewSubnetsClient(resource.SubscriptionID, credential, options)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	features := []feature{
 		nsgflowlogs.NewFeature(flowLogsClient, kubeSubnets, subnets, clusterInstance.Spec.Location),
