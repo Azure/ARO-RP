@@ -2,7 +2,7 @@
 
 ## Why to use it?
 This is the **preferred** and fast way to have your own local development RP setup, while also having a functional cluster.
-It uses hacks scripts around a lot of the setup to make things easier to bootstrap and be more sensible for running off of your local laptop. 
+It uses hacks scripts around a lot of the setup to make things easier to bootstrap and be more sensible for running off of your local laptop.
 
 - Check the specific use-case examples where [deploying full RP service](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-full-rp-service-in-dev.md) can be a better match.
 
@@ -60,7 +60,7 @@ It uses hacks scripts around a lot of the setup to make things easier to bootstr
    SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
    ```
 
-1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to 
+1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to
 mock a cluster MSI. This script will also create the platform identities, platform identity role assignments, and role assignment on mock cluster MSI to federate the platform identities. Platform identities will be created in resource group `RESOURCEGROUP` and subscription `SUBSCRIPTION`. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`. Additionally, save the value for `Platform workload identity role sets`.
 
 1. Copy, edit (if necessary) and source your environment file. The required
@@ -532,7 +532,7 @@ shpaitha-aro-cluster-4sp5c-master-1                   Ready    control-plane,mas
 shpaitha-aro-cluster-4sp5c-master-2                   Ready    control-plane,master   39m   v1.25.11+1485cc9
 shpaitha-aro-cluster-4sp5c-worker-westeurope1-j9c76   Ready    worker                 29m   v1.25.11+1485cc9
 shpaitha-aro-cluster-4sp5c-worker-westeurope2-j9zrs   Ready    worker                 27m   v1.25.11+1485cc9
-shpaitha-aro-cluster-4sp5c-worker-westeurope3-56tk7   Ready    worker                 28m   v1.25.11+1485cc9 
+shpaitha-aro-cluster-4sp5c-worker-westeurope3-56tk7   Ready    worker                 28m   v1.25.11+1485cc9
 ```
 
 ## Troubleshooting
@@ -545,7 +545,7 @@ shpaitha-aro-cluster-4sp5c-worker-westeurope3-56tk7   Ready    worker           
 - Check if env var `AZURE_EXTENSION_DEV_SOURCES` is set. If yes, unset it.
 
 - Installation fails with authorization errors:
-```bash 
+```bash
 Message="authorization.RoleAssignmentsClient#Create: Failure responding to request: StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code=\"AuthorizationFailed\" Message=\"The client '$SP_ID' with object id '$SP_ID' does not have authorization to perform action 'Microsoft.Authorization/roleAssignments/write' over scope '/subscriptions/$SRE_SUBSCRIPTION/resourceGroups/$myresourcegroup/providers/Microsoft.Authorization/roleAssignments/b5a083aa-f555-466e-a268-4352b3b8394d' or the scope is invalid. If access was recently granted, please refresh your credentials.\"" Target="encountered error"
 exit status 1
 ```
