@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
+	gofrsuuid "github.com/gofrs/uuid"
 
 	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -33,7 +34,7 @@ var _ OpenShiftClustersClient = &openShiftClustersClient{}
 func NewOpenShiftClustersClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) OpenShiftClustersClient {
 	var client mgmtredhatopenshift20240812preview.OpenShiftClustersClient
 	if env.IsLocalDevelopmentMode() {
-		client = mgmtredhatopenshift20240812preview.NewOpenShiftClustersClientWithBaseURI("https://localhost:8443", subscriptionID)
+		client = mgmtredhatopenshift20240812preview.NewOpenShiftClustersClientWithBaseURI("https://localhost:8443", gofrsuuid.FromStringOrNil(subscriptionID))
 		client.Sender = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -42,7 +43,7 @@ func NewOpenShiftClustersClient(environment *azureclient.AROEnvironment, subscri
 			},
 		}
 	} else {
-		client = mgmtredhatopenshift20240812preview.NewOpenShiftClustersClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
+		client = mgmtredhatopenshift20240812preview.NewOpenShiftClustersClientWithBaseURI(environment.ResourceManagerEndpoint, gofrsuuid.FromStringOrNil(subscriptionID))
 		client.Authorizer = authorizer
 	}
 	client.PollingDelay = 10 * time.Second

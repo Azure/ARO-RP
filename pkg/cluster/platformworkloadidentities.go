@@ -34,9 +34,9 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 		}
 
 		updatedIdentities[i] = api.PlatformWorkloadIdentity{
-			ResourceID:   identity.ResourceID,
-			ClientID:     *identityDetails.Properties.ClientID,
-			ObjectID:     *identityDetails.Properties.PrincipalID,
+			ResourceID: identity.ResourceID,
+			ClientID:   *identityDetails.Properties.ClientID,
+			ObjectID:   *identityDetails.Properties.PrincipalID,
 		}
 	}
 

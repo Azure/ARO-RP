@@ -1733,10 +1733,10 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
 								"ClusterIngressOperator": {
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
 						},
@@ -1795,10 +1795,10 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
 								"ClusterIngressOperator": {
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
 						},
@@ -1822,7 +1822,7 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"DummyOperator": {
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
 							},
 						},
