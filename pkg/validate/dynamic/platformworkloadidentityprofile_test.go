@@ -11,78 +11,78 @@ import (
 	"testing"
 
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
+	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
-	mock_remotepdp "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_armauthorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armauthorization"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
+	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 var (
-	msiAllowedActions = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	msiAllowedActions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "FakeMSIAction1",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "FakeMSIAction2",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "FakeMSIDataAction1",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "FakeMSIDataAction2",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}
 
-	msiNotAllowedActions = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	msiNotAllowedActions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "FakeMSIAction1",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "FakeMSIAction2",
-				AccessDecision: remotepdp.Denied,
+				AccessDecision: client.Denied,
 			},
 			{
 				ActionId:       "FakeMSIDataAction1",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "FakeMSIDataAction2",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}
 
-	msiActionMissing = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	msiActionMissing = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "FakeMSIAction1",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "FakeMSIAction2",
-				AccessDecision: remotepdp.Denied,
+				AccessDecision: client.Denied,
 			},
 			{
 				ActionId:       "FakeMSIDataAction2",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}
@@ -106,6 +106,17 @@ var (
 		},
 	}
 	msiRequiredPermissionsList = []string{"FakeMSIAction1", "FakeMSIAction2", "FakeMSIDataAction1", "FakeMSIDataAction2"}
+
+	msiAuthZRequest = client.AuthorizationRequest{
+		Subject: client.SubjectInfo{
+			Attributes: client.SubjectAttributes{
+				ObjectId:  dummyObjectId,
+				ClaimName: client.GroupExpansion,
+			},
+		},
+		Actions:  []client.ActionInfo{{Id: "FakeMSIAction1"}, {Id: "FakeMSIAction2"}, {Id: "FakeMSIDataAction1"}, {Id: "FakeMSIDataAction2"}},
+		Resource: client.ResourceInfo{Id: platformIdentity1},
+	}
 
 	platformIdentityRequiredPermissions = sdkauthorization.RoleDefinitionsClientGetByIDResponse{
 		RoleDefinition: sdkauthorization.RoleDefinition{
@@ -133,11 +144,10 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	msiResourceID := resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-msi-resource"
-	dummyClientId := uuid.DefaultGenerator.Generate()
-	dummyObjectId := uuid.DefaultGenerator.Generate()
-	platformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
-		"Dummy2": {
-			ResourceID: platformIdentity1,
+	platformWorkloadIdentities := []api.PlatformWorkloadIdentity{
+		{
+			OperatorName: "Dummy2",
+			ResourceID:   platformIdentity1,
 		},
 		"Dummy1": {
 			ResourceID: platformIdentity1,
@@ -173,7 +183,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient)
 		wantPlatformIdentities           map[string]api.PlatformWorkloadIdentity
 		wantPlatformIdentitiesActionsMap map[string][]string
-		checkAccessMocks                 func(context.CancelFunc, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
+		checkAccessMocks                 func(context.CancelFunc, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
 		wantErr                          string
 	}{
 		{
@@ -200,10 +210,14 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
-				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Return(&msiAllowedActions, nil).AnyTimes()
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
+				).AnyTimes().Return(msiAuthZRequest)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -231,10 +245,14 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
-				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Return(&msiAllowedActions, nil).AnyTimes()
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
+				).AnyTimes().Return(msiAuthZRequest)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: map[string]api.PlatformWorkloadIdentity{
 				"Dummy1": {
@@ -265,10 +283,14 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
-				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Return(&msiAllowedActions, nil).AnyTimes()
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
+				).AnyTimes().Return(msiAuthZRequest)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -473,10 +495,14 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
-				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Do(func(arg0, arg1 interface{}) {
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
+				).AnyTimes().Return(msiAuthZRequest)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
 					cancel()
 				}).Return(&msiNotAllowedActions, nil).AnyTimes()
 			},
@@ -502,10 +528,14 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
-				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Do(func(arg0, arg1 interface{}) {
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
+				).AnyTimes().Return(msiAuthZRequest)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
 					cancel()
 				}).Return(&msiActionMissing, nil).AnyTimes()
 			},
@@ -531,10 +561,14 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, errors.New("Generic Error"))
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
-				msiAuthReq := createAuthorizationRequest(dummyObjectId, platformIdentity1, msiRequiredPermissionsList...)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthReq).Return(&msiAllowedActions, errors.New("Generic Error")).AnyTimes()
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
+				).AnyTimes().Return(msiAuthZRequest)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, errors.New("Generic Error")).AnyTimes()
 			},
 			wantErr: "Generic Error",
 		},
@@ -545,16 +579,17 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 
 			_env := mock_env.NewMockInterface(controller)
 			roleDefinitions := mock_armauthorization.NewMockRoleDefinitionsClient(controller)
-			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
+			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 
 			dv := &dynamic{
-				env:            _env,
-				authorizerType: AuthorizerClusterServicePrincipal,
-				log:            logrus.NewEntry(logrus.StandardLogger()),
-				pdpClient:      pdpClient,
+				env:                        _env,
+				authorizerType:             AuthorizerClusterServicePrincipal,
+				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				pdpClient:                  pdpClient,
+				azEnv:                      &azureclient.PublicCloud,
+				checkAccessSubjectInfoCred: tokenCred,
 			}
-
-			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 
 			if tt.checkAccessMocks != nil {
 				tt.checkAccessMocks(cancel, pdpClient, tokenCred)

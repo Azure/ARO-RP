@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -19,10 +20,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
-	mock_remotepdp "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/authz/remotepdp"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -48,10 +48,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 			for _, tt := range []struct {
 				name                string
 				oc                  *api.OpenShiftCluster
-				actionInfos         []remotepdp.ActionInfo
-				platformIdentities  map[string]api.PlatformWorkloadIdentity
+				actionInfos         []client.ActionInfo
+				platformIdentities  []api.PlatformWorkloadIdentity
 				platformIdentityMap map[string][]string
-				mocks               func(*mock_compute.MockDiskEncryptionSetsClient, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc)
+				mocks               func(*mock_compute.MockDiskEncryptionSetsClient, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc)
 				wantErr             string
 				wantFPSPErr         string
 			}{
@@ -72,8 +72,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(validDiskEncryptionAuthorizationDecision, nil)
@@ -95,8 +97,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(validDiskEncryptionAuthorizationDecision, nil)
@@ -122,7 +126,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
@@ -146,8 +150,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(validDiskEncryptionAuthorizationDecision, nil)
@@ -169,11 +175,15 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(client.AuthorizationRequest{
+							Resource: client.ResourceInfo{Id: fakeDesR1.String()},
+						})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
-							DoAndReturn(func(_ context.Context, authReq remotepdp.AuthorizationRequest) (*remotepdp.AuthorizationDecisionResponse, error) {
+							DoAndReturn(func(_ context.Context, authReq client.AuthorizationRequest) (*client.AuthorizationDecisionResponse, error) {
 								cancel() // wait.PollImmediateUntil will always be invoked at least once
 								switch authReq.Resource.Id {
 								case fakeDesR1.String():
@@ -205,8 +215,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(validDiskEncryptionAuthorizationDecision, nil)
@@ -229,8 +241,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(nil, errors.New("fakeerr"))
@@ -250,8 +264,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(validDiskEncryptionAuthorizationDecision, nil)
@@ -274,8 +290,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Do(func(arg0, arg1 interface{}) {
@@ -297,8 +315,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Do(func(arg0, arg1 interface{}) {
@@ -325,11 +345,19 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+							Resource: client.ResourceInfo{Id: fakeDesID1},
+						}).Times(1)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+							Resource: client.ResourceInfo{Id: fakeDesID2},
+						})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
-							DoAndReturn(func(_ context.Context, authReq remotepdp.AuthorizationRequest) (*remotepdp.AuthorizationDecisionResponse, error) {
+							DoAndReturn(func(_ context.Context, authReq client.AuthorizationRequest) (*client.AuthorizationDecisionResponse, error) {
 								cancel() // wait.PollImmediateUntil will always be invoked at least once
 								switch authReq.Resource.Id {
 								case fakeDesR1.String():
@@ -359,8 +387,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
 						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().CreateAuthorizationRequest(
+							gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(validDiskEncryptionAuthorizationDecision, nil)
@@ -380,7 +410,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 
 					diskEncryptionSetsClient := mock_compute.NewMockDiskEncryptionSetsClient(controller)
 					tokenCred := mock_azcore.NewMockTokenCredential(controller)
-					remotePDPClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+					remotePDPClient := mock_checkaccess.NewMockRemotePDPClient(controller)
 
 					if tt.mocks != nil {
 						tt.mocks(diskEncryptionSetsClient, remotePDPClient, tokenCred, cancel)
@@ -415,19 +445,19 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 }
 
 var (
-	invalidDiskEncryptionAuthorizationDecisionsReadNotAllowed = &remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	invalidDiskEncryptionAuthorizationDecisionsReadNotAllowed = &client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Compute/diskEncryptionSets/read",
-				AccessDecision: remotepdp.NotAllowed,
+				AccessDecision: client.NotAllowed,
 			},
 		},
 	}
-	validDiskEncryptionAuthorizationDecision = &remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	validDiskEncryptionAuthorizationDecision = &client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Compute/diskEncryptionSets/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}

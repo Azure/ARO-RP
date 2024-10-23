@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
@@ -19,12 +20,13 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
-	mock_remotepdp "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/ARO-RP/test/util/token"
 )
 
 var (
@@ -599,10 +601,13 @@ func TestValidateSubnets(t *testing.T) {
 // This will totally replace the current unit tests using ListPermissions (ListForResource)
 // once fully migrated to CheckAccessV2
 
-var mockAccessToken = azcore.AccessToken{
-	Token:     "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJPbmxpbmUgSldUIEJ1aWxkZXIiLCJpYXQiOjE2ODExNDk2NjksImV4cCI6MTcxMjY4NTY2OSwiYXVkIjoid3d3LmV4YW1wbGUuY29tIiwic3ViIjoianJvY2tldEBleGFtcGxlLmNvbSIsIkdpdmVuTmFtZSI6IkpvaG5ueSIsIlN1cm5hbWUiOiJSb2NrZXQiLCJFbWFpbCI6Impyb2NrZXRAZXhhbXBsZS5jb20iLCJSb2xlIjpbIk1hbmFnZXIiLCJQcm9qZWN0IEFkbWluaXN0cmF0b3IiXSwib2lkIjoiYmlsbHlxZWlsbG9yIn0.3MZk1YRSME8FW0l2DzXsIilEZh08CzjVopy30lbvLqQ", // mocked up data
-	ExpiresOn: time.Now(),
-}
+var (
+	validTestToken, _ = token.CreateTestToken(dummyObjectId, nil)
+	mockAccessToken   = azcore.AccessToken{
+		Token:     validTestToken, // mocked up data
+		ExpiresOn: time.Now(),
+	}
+)
 
 var (
 	platformIdentity1SubnetActions = []string{
@@ -622,85 +627,85 @@ var (
 			ObjectID:   dummyObjectId,
 		},
 	}
-	validSubnetsAuthorizationDecisions = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	validSubnetsAuthorizationDecisions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/write",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/write",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}
 
-	invalidSubnetsAuthorizationDecisionsReadNotAllowed = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	invalidSubnetsAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/read",
-				AccessDecision: remotepdp.NotAllowed,
+				AccessDecision: client.NotAllowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/write",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/write",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}
 
-	invalidSubnetsAuthorizationDecisionsMissingWrite = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	invalidSubnetsAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/read",
-				AccessDecision: remotepdp.NotAllowed,
+				AccessDecision: client.NotAllowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/write",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			// deliberately missing subnets write
 		},
@@ -721,13 +726,15 @@ func TestValidateVnetPermissions(t *testing.T) {
 		name                string
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
-		mocks               func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		mocks               func(*mock_azcore.MockTokenCredential, *mock_checkaccess.MockRemotePDPClient, context.CancelFunc)
 		wantErr             string
 	}{
 		{
 			name: "pass",
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, _ context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validSubnetsAuthorizationDecisions, nil)
@@ -739,8 +746,10 @@ func TestValidateVnetPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
 			},
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, _ context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validSubnetsAuthorizationDecisions, nil)
@@ -752,14 +761,16 @@ func TestValidateVnetPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActionsNoIntersect,
 			},
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, _ context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 			},
 		},
 		{
 			name: "fail: missing permissions",
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -775,8 +786,10 @@ func TestValidateVnetPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
 			},
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -788,8 +801,10 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 		{
 			name: "fail: CheckAccess Return less entries than requested",
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -801,7 +816,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 		{
 			name: "fail: getting an invalid token from AAD",
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, _ *mock_remotepdp.MockRemotePDPClient, _ context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, _ *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).
 					Return(azcore.AccessToken{}, nil)
 			},
@@ -809,8 +824,10 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 		{
 			name: "fail: getting an error when calling CheckAccessV2",
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -822,8 +839,10 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 		{
 			name: "fail: getting a nil response from CheckAccessV2",
-			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -843,7 +862,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 
-			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
 			tt.mocks(tokenCred, pdpClient, cancel)
 
 			dv := &dynamic{
@@ -873,48 +892,48 @@ func TestValidateVnetPermissions(t *testing.T) {
 }
 
 var (
-	invalidRouteTablesAuthorizationDecisionsWriteNotAllowed = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	invalidRouteTablesAuthorizationDecisionsWriteNotAllowed = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/routeTables/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/routeTables/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/routeTables/write",
-				AccessDecision: remotepdp.NotAllowed,
+				AccessDecision: client.NotAllowed,
 			},
 		},
 	}
-	invalidRouteTablesAuthorizationDecisionsMissingWrite = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	invalidRouteTablesAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/routeTables/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/routeTables/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			// deliberately missing routetables write
 		},
 	}
-	validRouteTablesAuthorizationDecisions = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	validRouteTablesAuthorizationDecisions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/routeTables/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/routeTables/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/routeTables/write",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}
@@ -928,7 +947,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		subnet              Subnet
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
-		pdpClientMocks      func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		pdpClientMocks      func(*mock_azcore.MockTokenCredential, *mock_checkaccess.MockRemotePDPClient, context.CancelFunc)
 		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
 		wantErr             string
 	}{
@@ -983,8 +1002,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -1006,8 +1027,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -1025,8 +1048,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -1044,8 +1069,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validRouteTablesAuthorizationDecisions, nil)
@@ -1063,8 +1090,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validRouteTablesAuthorizationDecisions, nil)
@@ -1082,7 +1111,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 			},
 		},
@@ -1096,7 +1125,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 
-			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
 
 			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
 
@@ -1155,48 +1184,48 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 }
 
 var (
-	invalidNatGWAuthorizationDecisionsReadNotAllowed = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	invalidNatGWAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/natGateways/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/natGateways/read",
-				AccessDecision: remotepdp.NotAllowed,
+				AccessDecision: client.NotAllowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/natGateways/write",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}
-	invalidNatGWAuthorizationDecisionsMissingWrite = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	invalidNatGWAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/natGateways/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/natGateways/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			// deliberately missing natGateway write
 		},
 	}
-	validNatGWAuthorizationDecision = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	validNatGWAuthorizationDecision = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/natGateways/join/action",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/natGateways/read",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/natGateways/write",
-				AccessDecision: remotepdp.Allowed,
+				AccessDecision: client.Allowed,
 			},
 		},
 	}
@@ -1210,7 +1239,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		subnet              Subnet
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
-		pdpClientMocks      func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		pdpClientMocks      func(*mock_azcore.MockTokenCredential, *mock_checkaccess.MockRemotePDPClient, context.CancelFunc)
 		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
 		wantErr             string
 	}{
@@ -1254,8 +1283,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
@@ -1278,8 +1309,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
@@ -1298,8 +1331,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
@@ -1318,8 +1353,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validNatGWAuthorizationDecision, nil)
@@ -1337,8 +1374,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validNatGWAuthorizationDecision, nil)
@@ -1356,7 +1395,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 			},
 		},
@@ -1383,7 +1422,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 
-			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
 
 			vnet := &mgmtnetwork.VirtualNetwork{
 				ID: &vnetID,
@@ -1492,19 +1531,19 @@ func TestCheckPreconfiguredNSG(t *testing.T) {
 }
 
 var (
-	canJoinNSG = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	canJoinNSG = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/networkSecurityGroups/join/action",
-				AccessDecision: remotepdp.Allowed},
+				AccessDecision: client.Allowed},
 		},
 	}
 
-	cannotJoinNSG = remotepdp.AuthorizationDecisionResponse{
-		Value: []remotepdp.AuthorizationDecision{
+	cannotJoinNSG = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/networkSecurityGroups/join/action",
-				AccessDecision: remotepdp.NotAllowed},
+				AccessDecision: client.NotAllowed},
 		},
 	}
 )
@@ -1516,7 +1555,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 		modifyOC            func(*api.OpenShiftCluster)
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
-		checkAccessMocks    func(context.CancelFunc, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
+		checkAccessMocks    func(context.CancelFunc, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
 		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
 		wantErr             string
 	}{
@@ -1537,10 +1576,18 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					AnyTimes().
 					Return(vnet, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					Resource: client.ResourceInfo{Id: masterNSGv1},
+				}).Times(1)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					Resource: client.ResourceInfo{Id: workerNSGv1},
+				})
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, authReq remotepdp.AuthorizationRequest) (*remotepdp.AuthorizationDecisionResponse, error) {
+					DoAndReturn(func(_ context.Context, authReq client.AuthorizationRequest) (*client.AuthorizationDecisionResponse, error) {
 						cancel() // wait.PollImmediateUntil will always be invoked at least once
 						switch authReq.Resource.Id {
 						case masterNSGv1:
@@ -1565,10 +1612,18 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					AnyTimes().
 					Return(vnet, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					Resource: client.ResourceInfo{Id: masterNSGv1},
+				}).Times(1)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					Resource: client.ResourceInfo{Id: workerNSGv1},
+				})
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, authReq remotepdp.AuthorizationRequest) (*remotepdp.AuthorizationDecisionResponse, error) {
+					DoAndReturn(func(_ context.Context, authReq client.AuthorizationRequest) (*client.AuthorizationDecisionResponse, error) {
 						cancel() // wait.PollImmediateUntil will always be invoked at least once
 						switch authReq.Resource.Id {
 						case masterNSGv1:
@@ -1597,8 +1652,12 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					AnyTimes().
 					Return(vnet, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					Resource: client.ResourceInfo{Id: workerNSGv1},
+				}).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(_, _ interface{}) {
 						cancel()
@@ -1618,8 +1677,12 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					AnyTimes().
 					Return(vnet, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					Resource: client.ResourceInfo{Id: workerNSGv1},
+				}).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(_, _ interface{}) {
 						cancel()
@@ -1643,7 +1706,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					AnyTimes().
 					Return(vnet, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(_, _ interface{}) {
@@ -1711,7 +1774,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			}
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
-			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
 
 			if tt.checkAccessMocks != nil {
 				tt.checkAccessMocks(cancel, pdpClient, tokenCred)
@@ -1772,6 +1835,78 @@ func TestValidateSubnetSize(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateSubnetSize(tt.subnet, tt.address)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestCheckAccessAuthReqPayloadData(t *testing.T) {
+	for _, tt := range []struct {
+		name                  string
+		claims                *token.Custom
+		wantSubjectAttributes client.SubjectAttributes
+		wantErr               string
+	}{
+		{
+			name: "pass - don't set claimName or groups when both don't exist",
+			claims: &token.Custom{
+				ObjectId: dummyObjectId,
+			},
+			wantSubjectAttributes: client.SubjectAttributes{ObjectId: dummyObjectId},
+		},
+		{
+			name: "pass - don't set claimName or groups when both exist",
+			claims: &token.Custom{
+				ObjectId: dummyObjectId,
+				ClaimNames: map[string]interface{}{
+					"groups": "src1",
+				},
+				Groups: []string{"group1", "group2"},
+			},
+			wantSubjectAttributes: client.SubjectAttributes{ObjectId: dummyObjectId},
+		},
+		{
+			name: "pass - set claimName when claimName exits and groups don't exist",
+			claims: &token.Custom{
+				ObjectId: dummyObjectId,
+				ClaimNames: map[string]interface{}{
+					"groups": "src1",
+				},
+			},
+			wantSubjectAttributes: client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
+		},
+		{
+			name: "pass - set groups when groups exits and claimName don't exist",
+			claims: &token.Custom{
+				ObjectId: dummyObjectId,
+				Groups:   []string{"group1", "group2"},
+			},
+			wantSubjectAttributes: client.SubjectAttributes{ObjectId: dummyObjectId, Groups: []string{"group1", "group2"}},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			tokenCred := mock_azcore.NewMockTokenCredential(controller)
+			testAccessToken, err := token.CreateTestToken(dummyObjectId, tt.claims)
+			if err != nil {
+				t.Errorf("Error creating test token: %v", err)
+			}
+
+			tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).AnyTimes().Return(azcore.AccessToken{Token: testAccessToken, ExpiresOn: time.Now()}, nil)
+
+			dv := &dynamic{
+				azEnv:                      &azureclient.PublicCloud,
+				checkAccessSubjectInfoCred: tokenCred,
+				log:                        logrus.NewEntry(logrus.StandardLogger()),
+			}
+			c := &closure{dv: dv, oid: &dummyObjectId}
+
+			err = c.checkAccessAuthReqPayloadData()
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if diff := cmp.Diff(c.subjectAttributes, tt.wantSubjectAttributes); diff != "" {
+				t.Errorf("Got subjectAttributes: %q, want %q", c.subjectAttributes, tt.wantSubjectAttributes)
+			}
 		})
 	}
 }
