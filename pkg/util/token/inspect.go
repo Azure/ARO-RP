@@ -6,17 +6,19 @@ package token
 import "github.com/golang-jwt/jwt/v4"
 
 type custom struct {
-	ObjectId string `json:"oid"`
-	jwt.StandardClaims
+	ObjectId   string                 `json:"oid"`
+	ClaimNames map[string]interface{} `json:"_claim_names"`
+	Groups     []string               `json:"groups"`
+	jwt.RegisteredClaims
 }
 
-// GetObjectId extracts the "oid" claim from a given access jwtToken
-func GetObjectId(jwtToken string) (string, error) {
+// ExtractClaims extracts the "oid", "_claim_names", and "groups" claims from a given access jwtToken and return them as a custom struct
+func ExtractClaims(jwtToken string) (*custom, error) {
 	p := jwt.NewParser(jwt.WithoutClaimsValidation())
 	c := &custom{}
 	_, _, err := p.ParseUnverified(jwtToken, c)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return c.ObjectId, nil
+	return c, nil
 }
