@@ -169,10 +169,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	if err != nil {
 		return nil, err
 	}
-	fpspID, err := token.GetObjectId(t.Token)
+	tokenClaims, err := token.ExtractClaims(t.Token)
 	if err != nil {
 		return nil, err
 	}
+	fpspID := tokenClaims.ObjectId
 
 	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID())
 	if err != nil {
