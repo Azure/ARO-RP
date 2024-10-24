@@ -61,12 +61,11 @@ func TestDenyAssignment(t *testing.T) {
 							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster",
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "anything",
-									ObjectID:     "00000000-0000-0000-0000-000000000000",
-									ClientID:     "11111111-1111-1111-1111-111111111111",
-									ResourceID:   "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"anything": {
+									ObjectID:   "00000000-0000-0000-0000-000000000000",
+									ClientID:   "11111111-1111-1111-1111-111111111111",
+									ResourceID: "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name",
 								},
 							},
 						},

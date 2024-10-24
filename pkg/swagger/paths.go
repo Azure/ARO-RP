@@ -29,25 +29,25 @@ import (
 func (g *generator) populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 	s = []interface{}{
 		Reference{
-			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ApiVersionParameter",
+			Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ApiVersionParameter",
 		},
 	}
 	if n > 0 {
 		s = append(s, Reference{
-			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter",
+			Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter",
 		})
 	}
 
 	if n == 6 {
 		s = append(s, Reference{
-			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter",
+			Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter",
 		})
 		return
 	}
 
 	if n > 1 {
 		s = append(s, Reference{
-			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ResourceGroupNameParameter",
+			Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ResourceGroupNameParameter",
 		})
 	}
 
@@ -88,7 +88,7 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 	// TODO: refactor this entire function to make sense
 	// so we can stop thinking about what int value builds a proper swagger parameter
 	if n > 3 && n != 7 && n != 10 {
-		s = append(s, Parameter{
+		resourceParameter := Parameter{
 			Name:        "parameters",
 			In:          "body",
 			Description: "The " + friendlyName + " resource.",
@@ -96,7 +96,9 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 			Schema: &Schema{
 				Ref: "#/definitions/" + typ,
 			},
-		})
+		}
+
+		s = append(s, resourceParameter)
 	}
 
 	if n == 5 || n == 9 {

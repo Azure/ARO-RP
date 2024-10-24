@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // The package's fully qualified name.
@@ -55,7 +56,7 @@ func (asp APIServerProfile) MarshalJSON() ([]byte, error) {
 type AzureEntityResource struct {
 	// Etag - READ-ONLY; Resource Etag.
 	Etag *string `json:"etag,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -105,13 +106,6 @@ type ClusterProfile struct {
 	OidcIssuer *string `json:"oidcIssuer,omitempty"`
 }
 
-// ClusterUserAssignedIdentity clusterUserAssignedIdentity stores information about a user-assigned managed
-// identity in a predefined format required by Microsoft's Managed Identity team.
-type ClusterUserAssignedIdentity struct {
-	ClientID    *string `json:"clientId,omitempty"`
-	PrincipalID *string `json:"principalId,omitempty"`
-}
-
 // ConsoleProfile consoleProfile represents a console profile.
 type ConsoleProfile struct {
 	// URL - READ-ONLY; The URL to access the cluster console.
@@ -141,24 +135,6 @@ type Display struct {
 type EffectiveOutboundIP struct {
 	// ID - The fully qualified Azure resource id of an IP address resource.
 	ID *string `json:"id,omitempty"`
-}
-
-// Identity identity stores information about the cluster MSI(s) in a workload identity cluster.
-type Identity struct {
-	Type                   *string                                 `json:"type,omitempty"`
-	UserAssignedIdentities map[string]*ClusterUserAssignedIdentity `json:"userAssignedIdentities"`
-}
-
-// MarshalJSON is the custom marshaler for Identity.
-func (i Identity) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if i.Type != nil {
-		objectMap["type"] = i.Type
-	}
-	if i.UserAssignedIdentities != nil {
-		objectMap["userAssignedIdentities"] = i.UserAssignedIdentities
-	}
-	return json.Marshal(objectMap)
 }
 
 // IngressProfile ingressProfile represents an ingress profile.
@@ -205,7 +181,7 @@ type MachinePool struct {
 	autorest.Response `json:"-"`
 	// MachinePoolProperties - The MachinePool Properties
 	*MachinePoolProperties `json:"properties,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -452,8 +428,6 @@ type MachinePoolProperties struct {
 type MachinePoolUpdate struct {
 	// MachinePoolProperties - The MachinePool Properties
 	*MachinePoolProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for MachinePoolUpdate.
@@ -483,15 +457,6 @@ func (mpu *MachinePoolUpdate) UnmarshalJSON(body []byte) error {
 				}
 				mpu.MachinePoolProperties = &machinePoolProperties
 			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				mpu.SystemData = &systemData
-			}
 		}
 	}
 
@@ -503,6 +468,30 @@ func (mpu *MachinePoolUpdate) UnmarshalJSON(body []byte) error {
 type ManagedOutboundIPs struct {
 	// Count - Count represents the desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.  Allowed values are in the range of 1 - 20.  The default value is 1.
 	Count *int32 `json:"count,omitempty"`
+}
+
+// ManagedServiceIdentity managed service identity (system assigned and/or user assigned identities)
+type ManagedServiceIdentity struct {
+	// PrincipalID - READ-ONLY; The service principal ID of the system assigned identity. This property will only be provided for a system assigned identity.
+	PrincipalID *uuid.UUID `json:"principalId,omitempty"`
+	// TenantID - READ-ONLY; The tenant ID of the system assigned identity. This property will only be provided for a system assigned identity.
+	TenantID *uuid.UUID `json:"tenantId,omitempty"`
+	// Type - Possible values include: 'None', 'SystemAssigned', 'UserAssigned', 'SystemAssignedUserAssigned'
+	Type ManagedServiceIdentityType `json:"type,omitempty"`
+	// UserAssignedIdentities - The set of user assigned identities associated with the resource. The userAssignedIdentities dictionary keys will be ARM resource ids in the form: '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{identityName}. The dictionary values can be empty objects ({}) in requests.
+	UserAssignedIdentities map[string]*UserAssignedIdentity `json:"userAssignedIdentities"`
+}
+
+// MarshalJSON is the custom marshaler for ManagedServiceIdentity.
+func (msi ManagedServiceIdentity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if msi.Type != "" {
+		objectMap["type"] = msi.Type
+	}
+	if msi.UserAssignedIdentities != nil {
+		objectMap["userAssignedIdentities"] = msi.UserAssignedIdentities
+	}
+	return json.Marshal(objectMap)
 }
 
 // MasterProfile masterProfile represents a master profile.
@@ -537,12 +526,12 @@ type OpenShiftCluster struct {
 	// OpenShiftClusterProperties - The cluster properties.
 	*OpenShiftClusterProperties `json:"properties,omitempty"`
 	// Identity - Identity stores information about the cluster MSI(s) in a workload identity cluster.
-	Identity *Identity `json:"identity,omitempty"`
+	Identity *ManagedServiceIdentity `json:"identity,omitempty"`
 	// Tags - Resource tags.
 	Tags map[string]*string `json:"tags"`
 	// Location - The geo-location where the resource lives
 	Location *string `json:"location,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -590,7 +579,7 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 			}
 		case "identity":
 			if v != nil {
-				var identity Identity
+				var identity ManagedServiceIdentity
 				err = json.Unmarshal(*v, &identity)
 				if err != nil {
 					return err
@@ -1025,9 +1014,7 @@ type OpenShiftClusterUpdate struct {
 	// OpenShiftClusterProperties - The cluster properties.
 	*OpenShiftClusterProperties `json:"properties,omitempty"`
 	// Identity - Identity stores information about the cluster MSI(s) in a workload identity cluster.
-	Identity *Identity `json:"identity,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
+	Identity *ManagedServiceIdentity `json:"identity,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for OpenShiftClusterUpdate.
@@ -1074,21 +1061,12 @@ func (oscu *OpenShiftClusterUpdate) UnmarshalJSON(body []byte) error {
 			}
 		case "identity":
 			if v != nil {
-				var identity Identity
+				var identity ManagedServiceIdentity
 				err = json.Unmarshal(*v, &identity)
 				if err != nil {
 					return err
 				}
 				oscu.Identity = &identity
-			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				oscu.SystemData = &systemData
 			}
 		}
 	}
@@ -1100,7 +1078,7 @@ func (oscu *OpenShiftClusterUpdate) UnmarshalJSON(body []byte) error {
 type OpenShiftVersion struct {
 	// OpenShiftVersionProperties - The properties for the OpenShiftVersion resource.
 	*OpenShiftVersionProperties `json:"properties,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -1513,23 +1491,34 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 	}
 }
 
+// Plan plan for the resource.
+type Plan struct {
+	// Name - A user defined name of the 3rd Party Artifact that is being procured.
+	Name *string `json:"name,omitempty"`
+	// Publisher - The publisher of the 3rd Party Artifact that is being bought. E.g. NewRelic
+	Publisher *string `json:"publisher,omitempty"`
+	// Product - The 3rd Party artifact that is being procured. E.g. NewRelic. Product maps to the OfferID specified for the artifact at the time of Data Market onboarding.
+	Product *string `json:"product,omitempty"`
+	// PromotionCode - A publisher provided promotion code as provisioned in Data Market for the said product/artifact.
+	PromotionCode *string `json:"promotionCode,omitempty"`
+	// Version - The version of the desired product/artifact.
+	Version *string `json:"version,omitempty"`
+}
+
 // PlatformWorkloadIdentity platformWorkloadIdentity stores information representing a single workload
 // identity.
 type PlatformWorkloadIdentity struct {
-	OperatorName *string `json:"operatorName,omitempty"`
-	ResourceID   *string `json:"resourceId,omitempty"`
-	// ClientID - READ-ONLY
+	// ResourceID - The resource ID of the PlatformWorkloadIdentity resource
+	ResourceID *string `json:"resourceId,omitempty"`
+	// ClientID - READ-ONLY; The ClientID of the PlatformWorkloadIdentity resource
 	ClientID *string `json:"clientId,omitempty"`
-	// ObjectID - READ-ONLY
+	// ObjectID - READ-ONLY; The ObjectID of the PlatformWorkloadIdentity resource
 	ObjectID *string `json:"objectId,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for PlatformWorkloadIdentity.
 func (pwi PlatformWorkloadIdentity) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if pwi.OperatorName != nil {
-		objectMap["operatorName"] = pwi.OperatorName
-	}
 	if pwi.ResourceID != nil {
 		objectMap["resourceId"] = pwi.ResourceID
 	}
@@ -1539,14 +1528,291 @@ func (pwi PlatformWorkloadIdentity) MarshalJSON() ([]byte, error) {
 // PlatformWorkloadIdentityProfile platformWorkloadIdentityProfile encapsulates all information that is
 // specific to workload identity clusters.
 type PlatformWorkloadIdentityProfile struct {
-	UpgradeableTo              *string                     `json:"upgradeableTo,omitempty"`
-	PlatformWorkloadIdentities *[]PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
+	UpgradeableTo              *string                              `json:"upgradeableTo,omitempty"`
+	PlatformWorkloadIdentities map[string]*PlatformWorkloadIdentity `json:"platformWorkloadIdentities"`
+}
+
+// MarshalJSON is the custom marshaler for PlatformWorkloadIdentityProfile.
+func (pwip PlatformWorkloadIdentityProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pwip.UpgradeableTo != nil {
+		objectMap["upgradeableTo"] = pwip.UpgradeableTo
+	}
+	if pwip.PlatformWorkloadIdentities != nil {
+		objectMap["platformWorkloadIdentities"] = pwip.PlatformWorkloadIdentities
+	}
+	return json.Marshal(objectMap)
+}
+
+// PlatformWorkloadIdentityRole platformWorkloadIdentityRole represents a mapping from a particular OCP
+// operator to the built-in role that should be assigned to that operator's corresponding managed identity.
+type PlatformWorkloadIdentityRole struct {
+	// OperatorName - OperatorName represents the name of the operator that this role is for.
+	OperatorName *string `json:"operatorName,omitempty"`
+	// RoleDefinitionName - RoleDefinitionName represents the name of the role.
+	RoleDefinitionName *string `json:"roleDefinitionName,omitempty"`
+	// RoleDefinitionID - RoleDefinitionID represents the resource ID of the role definition.
+	RoleDefinitionID *string `json:"roleDefinitionId,omitempty"`
+}
+
+// PlatformWorkloadIdentityRoleSet platformWorkloadIdentityRoleSet represents a mapping from the names of
+// OCP operators to the built-in roles that should be assigned to those operator's corresponding managed
+// identities for a particular OCP version.
+type PlatformWorkloadIdentityRoleSet struct {
+	// PlatformWorkloadIdentityRoleSetProperties - The properties for the PlatformWorkloadIdentityRoleSet resource.
+	*PlatformWorkloadIdentityRoleSetProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PlatformWorkloadIdentityRoleSet.
+func (pwirs PlatformWorkloadIdentityRoleSet) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pwirs.PlatformWorkloadIdentityRoleSetProperties != nil {
+		objectMap["properties"] = pwirs.PlatformWorkloadIdentityRoleSetProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PlatformWorkloadIdentityRoleSet struct.
+func (pwirs *PlatformWorkloadIdentityRoleSet) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var platformWorkloadIdentityRoleSetProperties PlatformWorkloadIdentityRoleSetProperties
+				err = json.Unmarshal(*v, &platformWorkloadIdentityRoleSetProperties)
+				if err != nil {
+					return err
+				}
+				pwirs.PlatformWorkloadIdentityRoleSetProperties = &platformWorkloadIdentityRoleSetProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				pwirs.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				pwirs.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				pwirs.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				pwirs.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
+// PlatformWorkloadIdentityRoleSetList platformWorkloadIdentityRoleSetList represents a List of role sets.
+type PlatformWorkloadIdentityRoleSetList struct {
+	autorest.Response `json:"-"`
+	// Value - The list of role sets.
+	Value *[]PlatformWorkloadIdentityRoleSet `json:"value,omitempty"`
+	// NextLink - Next Link to next operation.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// PlatformWorkloadIdentityRoleSetListIterator provides access to a complete listing of
+// PlatformWorkloadIdentityRoleSet values.
+type PlatformWorkloadIdentityRoleSetListIterator struct {
+	i    int
+	page PlatformWorkloadIdentityRoleSetListPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *PlatformWorkloadIdentityRoleSetListIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PlatformWorkloadIdentityRoleSetListIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *PlatformWorkloadIdentityRoleSetListIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter PlatformWorkloadIdentityRoleSetListIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter PlatformWorkloadIdentityRoleSetListIterator) Response() PlatformWorkloadIdentityRoleSetList {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter PlatformWorkloadIdentityRoleSetListIterator) Value() PlatformWorkloadIdentityRoleSet {
+	if !iter.page.NotDone() {
+		return PlatformWorkloadIdentityRoleSet{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the PlatformWorkloadIdentityRoleSetListIterator type.
+func NewPlatformWorkloadIdentityRoleSetListIterator(page PlatformWorkloadIdentityRoleSetListPage) PlatformWorkloadIdentityRoleSetListIterator {
+	return PlatformWorkloadIdentityRoleSetListIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (pwirsl PlatformWorkloadIdentityRoleSetList) IsEmpty() bool {
+	return pwirsl.Value == nil || len(*pwirsl.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (pwirsl PlatformWorkloadIdentityRoleSetList) hasNextLink() bool {
+	return pwirsl.NextLink != nil && len(*pwirsl.NextLink) != 0
+}
+
+// platformWorkloadIdentityRoleSetListPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (pwirsl PlatformWorkloadIdentityRoleSetList) platformWorkloadIdentityRoleSetListPreparer(ctx context.Context) (*http.Request, error) {
+	if !pwirsl.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(pwirsl.NextLink)))
+}
+
+// PlatformWorkloadIdentityRoleSetListPage contains a page of PlatformWorkloadIdentityRoleSet values.
+type PlatformWorkloadIdentityRoleSetListPage struct {
+	fn     func(context.Context, PlatformWorkloadIdentityRoleSetList) (PlatformWorkloadIdentityRoleSetList, error)
+	pwirsl PlatformWorkloadIdentityRoleSetList
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *PlatformWorkloadIdentityRoleSetListPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PlatformWorkloadIdentityRoleSetListPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.pwirsl)
+		if err != nil {
+			return err
+		}
+		page.pwirsl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *PlatformWorkloadIdentityRoleSetListPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page PlatformWorkloadIdentityRoleSetListPage) NotDone() bool {
+	return !page.pwirsl.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page PlatformWorkloadIdentityRoleSetListPage) Response() PlatformWorkloadIdentityRoleSetList {
+	return page.pwirsl
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page PlatformWorkloadIdentityRoleSetListPage) Values() []PlatformWorkloadIdentityRoleSet {
+	if page.pwirsl.IsEmpty() {
+		return nil
+	}
+	return *page.pwirsl.Value
+}
+
+// Creates a new instance of the PlatformWorkloadIdentityRoleSetListPage type.
+func NewPlatformWorkloadIdentityRoleSetListPage(cur PlatformWorkloadIdentityRoleSetList, getNextPage func(context.Context, PlatformWorkloadIdentityRoleSetList) (PlatformWorkloadIdentityRoleSetList, error)) PlatformWorkloadIdentityRoleSetListPage {
+	return PlatformWorkloadIdentityRoleSetListPage{
+		fn:     getNextPage,
+		pwirsl: cur,
+	}
+}
+
+// PlatformWorkloadIdentityRoleSetProperties platformWorkloadIdentityRoleSetProperties represents the
+// properties of a PlatformWorkloadIdentityRoleSet resource.
+type PlatformWorkloadIdentityRoleSetProperties struct {
+	// OpenShiftVersion - OpenShiftVersion represents the version associated with this set of roles.
+	OpenShiftVersion *string `json:"openShiftVersion,omitempty"`
+	// PlatformWorkloadIdentityRoles - PlatformWorkloadIdentityRoles represents the set of roles associated with this version.
+	PlatformWorkloadIdentityRoles *[]PlatformWorkloadIdentityRole `json:"platformWorkloadIdentityRoles,omitempty"`
 }
 
 // ProxyResource the resource model definition for a Azure Resource Manager proxy resource. It will not
 // have tags and a location
 type ProxyResource struct {
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -1564,7 +1830,7 @@ func (pr ProxyResource) MarshalJSON() ([]byte, error) {
 
 // Resource common fields that are returned in the response for all Azure Resource Manager resources
 type Resource struct {
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -1580,12 +1846,66 @@ func (r Resource) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// ResourceModelWithAllowedPropertySet the resource model definition containing the full set of allowed
+// properties for a resource. Except properties bag, there cannot be a top level property outside of this
+// set.
+type ResourceModelWithAllowedPropertySet struct {
+	// ManagedBy - The fully qualified resource ID of the resource that manages this resource. Indicates if this resource is managed by another Azure resource. If this is present, complete mode deployment will not delete the resource if it is removed from the template since it is managed by another resource.
+	ManagedBy *string `json:"managedBy,omitempty"`
+	// Kind - Metadata used by portal/tooling/etc to render different UX experiences for resources of the same type. E.g. ApiApps are a kind of Microsoft.Web/sites type.  If supported, the resource provider must validate and persist this value.
+	Kind *string `json:"kind,omitempty"`
+	// Etag - READ-ONLY; The etag field is *not* required. If it is provided in the response body, it must also be provided as a header per the normal etag convention.  Entity tags are used for comparing two or more entities from the same requested resource. HTTP/1.1 uses entity tags in the etag (section 14.19), If-Match (section 14.24), If-None-Match (section 14.26), and If-Range (section 14.27) header fields.
+	Etag     *string                 `json:"etag,omitempty"`
+	Identity *ManagedServiceIdentity `json:"identity,omitempty"`
+	Sku      *Sku                    `json:"sku,omitempty"`
+	Plan     *Plan                   `json:"plan,omitempty"`
+	// Tags - Resource tags.
+	Tags map[string]*string `json:"tags"`
+	// Location - The geo-location where the resource lives
+	Location *string `json:"location,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ResourceModelWithAllowedPropertySet.
+func (rmwaps ResourceModelWithAllowedPropertySet) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if rmwaps.ManagedBy != nil {
+		objectMap["managedBy"] = rmwaps.ManagedBy
+	}
+	if rmwaps.Kind != nil {
+		objectMap["kind"] = rmwaps.Kind
+	}
+	if rmwaps.Identity != nil {
+		objectMap["identity"] = rmwaps.Identity
+	}
+	if rmwaps.Sku != nil {
+		objectMap["sku"] = rmwaps.Sku
+	}
+	if rmwaps.Plan != nil {
+		objectMap["plan"] = rmwaps.Plan
+	}
+	if rmwaps.Tags != nil {
+		objectMap["tags"] = rmwaps.Tags
+	}
+	if rmwaps.Location != nil {
+		objectMap["location"] = rmwaps.Location
+	}
+	return json.Marshal(objectMap)
+}
+
 // Secret secret represents a secret.
 type Secret struct {
 	autorest.Response `json:"-"`
 	// SecretProperties - The Secret Properties
 	*SecretProperties `json:"properties,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -1833,8 +2153,6 @@ type SecretProperties struct {
 type SecretUpdate struct {
 	// SecretProperties - The Secret Properties
 	*SecretProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for SecretUpdate.
@@ -1864,15 +2182,6 @@ func (su *SecretUpdate) UnmarshalJSON(body []byte) error {
 				}
 				su.SecretProperties = &secretProperties
 			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				su.SystemData = &systemData
-			}
 		}
 	}
 
@@ -1887,12 +2196,26 @@ type ServicePrincipalProfile struct {
 	ClientSecret *string `json:"clientSecret,omitempty"`
 }
 
+// Sku the resource model definition representing SKU
+type Sku struct {
+	// Name - The name of the SKU. E.g. P3. It is typically a letter+number code
+	Name *string `json:"name,omitempty"`
+	// Tier - Possible values include: 'Free', 'Basic', 'Standard', 'Premium'
+	Tier SkuTier `json:"tier,omitempty"`
+	// Size - The SKU size. When the name field is the combination of tier and some other value, this would be the standalone code.
+	Size *string `json:"size,omitempty"`
+	// Family - If the service has different generations of hardware, for the same SKU, then that can be captured here.
+	Family *string `json:"family,omitempty"`
+	// Capacity - If the SKU supports scale out/in then the capacity integer should be included. If scale out/in is not possible for the resource this may be omitted.
+	Capacity *int32 `json:"capacity,omitempty"`
+}
+
 // SyncIdentityProvider syncIdentityProvider represents a SyncIdentityProvider
 type SyncIdentityProvider struct {
 	autorest.Response `json:"-"`
 	// SyncIdentityProviderProperties - The SyncIdentityProvider Properties
 	*SyncIdentityProviderProperties `json:"properties,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -2139,8 +2462,6 @@ type SyncIdentityProviderProperties struct {
 type SyncIdentityProviderUpdate struct {
 	// SyncIdentityProviderProperties - The SyncIdentityProvider Properties
 	*SyncIdentityProviderProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for SyncIdentityProviderUpdate.
@@ -2170,15 +2491,6 @@ func (sipu *SyncIdentityProviderUpdate) UnmarshalJSON(body []byte) error {
 				}
 				sipu.SyncIdentityProviderProperties = &syncIdentityProviderProperties
 			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				sipu.SystemData = &systemData
-			}
 		}
 	}
 
@@ -2190,7 +2502,7 @@ type SyncSet struct {
 	autorest.Response `json:"-"`
 	// SyncSetProperties - The Syncsets properties
 	*SyncSetProperties `json:"properties,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -2438,8 +2750,6 @@ type SyncSetProperties struct {
 type SyncSetUpdate struct {
 	// SyncSetProperties - The Syncsets properties
 	*SyncSetProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for SyncSetUpdate.
@@ -2468,15 +2778,6 @@ func (ssu *SyncSetUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				ssu.SyncSetProperties = &syncSetProperties
-			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				ssu.SystemData = &systemData
 			}
 		}
 	}
@@ -2507,7 +2808,7 @@ type TrackedResource struct {
 	Tags map[string]*string `json:"tags"`
 	// Location - The geo-location where the resource lives
 	Location *string `json:"location,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
@@ -2526,6 +2827,20 @@ func (tr TrackedResource) MarshalJSON() ([]byte, error) {
 	if tr.Location != nil {
 		objectMap["location"] = tr.Location
 	}
+	return json.Marshal(objectMap)
+}
+
+// UserAssignedIdentity user assigned identity properties
+type UserAssignedIdentity struct {
+	// PrincipalID - READ-ONLY; The principal ID of the assigned identity.
+	PrincipalID *uuid.UUID `json:"principalId,omitempty"`
+	// ClientID - READ-ONLY; The client ID of the assigned identity.
+	ClientID *uuid.UUID `json:"clientId,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for UserAssignedIdentity.
+func (uai UserAssignedIdentity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
 	return json.Marshal(objectMap)
 }
 

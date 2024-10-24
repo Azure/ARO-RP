@@ -18,17 +18,16 @@ try:
     from ._models_py3 import APIServerProfile
     from ._models_py3 import CloudErrorBody
     from ._models_py3 import ClusterProfile
-    from ._models_py3 import ClusterUserAssignedIdentity
     from ._models_py3 import ConsoleProfile
     from ._models_py3 import Display
     from ._models_py3 import EffectiveOutboundIP
-    from ._models_py3 import Identity
     from ._models_py3 import IngressProfile
     from ._models_py3 import LoadBalancerProfile
     from ._models_py3 import MachinePool
     from ._models_py3 import MachinePoolList
     from ._models_py3 import MachinePoolUpdate
     from ._models_py3 import ManagedOutboundIPs
+    from ._models_py3 import ManagedServiceIdentity
     from ._models_py3 import MasterProfile
     from ._models_py3 import NetworkProfile
     from ._models_py3 import OpenShiftCluster
@@ -42,6 +41,9 @@ try:
     from ._models_py3 import OperationList
     from ._models_py3 import PlatformWorkloadIdentity
     from ._models_py3 import PlatformWorkloadIdentityProfile
+    from ._models_py3 import PlatformWorkloadIdentityRole
+    from ._models_py3 import PlatformWorkloadIdentityRoleSet
+    from ._models_py3 import PlatformWorkloadIdentityRoleSetList
     from ._models_py3 import ProxyResource
     from ._models_py3 import Resource
     from ._models_py3 import Secret
@@ -56,22 +58,22 @@ try:
     from ._models_py3 import SyncSetUpdate
     from ._models_py3 import SystemData
     from ._models_py3 import TrackedResource
+    from ._models_py3 import UserAssignedIdentity
     from ._models_py3 import WorkerProfile
 except (SyntaxError, ImportError):
     from ._models import APIServerProfile  # type: ignore
     from ._models import CloudErrorBody  # type: ignore
     from ._models import ClusterProfile  # type: ignore
-    from ._models import ClusterUserAssignedIdentity  # type: ignore
     from ._models import ConsoleProfile  # type: ignore
     from ._models import Display  # type: ignore
     from ._models import EffectiveOutboundIP  # type: ignore
-    from ._models import Identity  # type: ignore
     from ._models import IngressProfile  # type: ignore
     from ._models import LoadBalancerProfile  # type: ignore
     from ._models import MachinePool  # type: ignore
     from ._models import MachinePoolList  # type: ignore
     from ._models import MachinePoolUpdate  # type: ignore
     from ._models import ManagedOutboundIPs  # type: ignore
+    from ._models import ManagedServiceIdentity  # type: ignore
     from ._models import MasterProfile  # type: ignore
     from ._models import NetworkProfile  # type: ignore
     from ._models import OpenShiftCluster  # type: ignore
@@ -85,6 +87,9 @@ except (SyntaxError, ImportError):
     from ._models import OperationList  # type: ignore
     from ._models import PlatformWorkloadIdentity  # type: ignore
     from ._models import PlatformWorkloadIdentityProfile  # type: ignore
+    from ._models import PlatformWorkloadIdentityRole  # type: ignore
+    from ._models import PlatformWorkloadIdentityRoleSet  # type: ignore
+    from ._models import PlatformWorkloadIdentityRoleSetList  # type: ignore
     from ._models import ProxyResource  # type: ignore
     from ._models import Resource  # type: ignore
     from ._models import Secret  # type: ignore
@@ -99,12 +104,14 @@ except (SyntaxError, ImportError):
     from ._models import SyncSetUpdate  # type: ignore
     from ._models import SystemData  # type: ignore
     from ._models import TrackedResource  # type: ignore
+    from ._models import UserAssignedIdentity  # type: ignore
     from ._models import WorkerProfile  # type: ignore
 
 from ._azure_red_hat_open_shift_client_enums import (
     CreatedByType,
     EncryptionAtHost,
     FipsValidatedModules,
+    ManagedServiceIdentityType,
     OutboundType,
     PreconfiguredNSG,
     ProvisioningState,
@@ -115,17 +122,16 @@ __all__ = [
     'APIServerProfile',
     'CloudErrorBody',
     'ClusterProfile',
-    'ClusterUserAssignedIdentity',
     'ConsoleProfile',
     'Display',
     'EffectiveOutboundIP',
-    'Identity',
     'IngressProfile',
     'LoadBalancerProfile',
     'MachinePool',
     'MachinePoolList',
     'MachinePoolUpdate',
     'ManagedOutboundIPs',
+    'ManagedServiceIdentity',
     'MasterProfile',
     'NetworkProfile',
     'OpenShiftCluster',
@@ -139,6 +145,9 @@ __all__ = [
     'OperationList',
     'PlatformWorkloadIdentity',
     'PlatformWorkloadIdentityProfile',
+    'PlatformWorkloadIdentityRole',
+    'PlatformWorkloadIdentityRoleSet',
+    'PlatformWorkloadIdentityRoleSetList',
     'ProxyResource',
     'Resource',
     'Secret',
@@ -153,10 +162,12 @@ __all__ = [
     'SyncSetUpdate',
     'SystemData',
     'TrackedResource',
+    'UserAssignedIdentity',
     'WorkerProfile',
     'CreatedByType',
     'EncryptionAtHost',
     'FipsValidatedModules',
+    'ManagedServiceIdentityType',
     'OutboundType',
     'PreconfiguredNSG',
     'ProvisioningState',

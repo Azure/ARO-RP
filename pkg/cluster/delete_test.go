@@ -395,7 +395,7 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{},
+					Identity: &api.ManagedServiceIdentity{},
 				},
 			},
 		},
@@ -404,8 +404,8 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
 					},
 				},
 			},
@@ -415,9 +415,9 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							"not a valid MI resource ID": api.ClusterUserAssignedIdentity{
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							"not a valid MI resource ID": {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -432,9 +432,9 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -452,9 +452,9 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.Identity{
-						UserAssignedIdentities: api.UserAssignedIdentities{
-							miResourceId: api.ClusterUserAssignedIdentity{
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
 								ClientID:    mockGuid,
 								PrincipalID: mockGuid,
 							},
@@ -537,7 +537,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{},
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
 						},
 					},
 				},
@@ -556,14 +556,12 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
-									OperatorName: "ClusterIngressOperator",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+								"ClusterIngressOperator": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
 						},
@@ -584,11 +582,11 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"foo": {
 									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
+								"bar": {
 									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
@@ -610,10 +608,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
-									ResourceID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
 								},
 							},
 						},

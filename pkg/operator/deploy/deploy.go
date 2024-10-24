@@ -272,8 +272,8 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 
 func (o *operator) generateOperatorIdentitySecret() (*corev1.Secret, error) {
 	var operatorIdentity *api.PlatformWorkloadIdentity // use a pointer to make it easy to check if we found an identity below
-	for _, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		if i.OperatorName == pkgoperator.OperatorIdentityName {
+	for k, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		if k == pkgoperator.OperatorIdentityName {
 			operatorIdentity = &i
 			break
 		}
