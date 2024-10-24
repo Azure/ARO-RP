@@ -5,7 +5,7 @@
     "resources": [
         {
             "name": "poddisruptionbudgets",
-            "singularName": "",
+            "singularName": "poddisruptionbudget",
             "namespaced": true,
             "kind": "PodDisruptionBudget",
             "verbs": [
@@ -21,7 +21,7 @@
             "shortNames": [
                 "pdb"
             ],
-            "storageVersionHash": "6BGBu0kpHtk="
+            "storageVersionHash": "EVWiDmWqyJw="
         },
         {
             "name": "poddisruptionbudgets/status",

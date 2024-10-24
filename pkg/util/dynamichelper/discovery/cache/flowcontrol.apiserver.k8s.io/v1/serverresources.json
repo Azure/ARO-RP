@@ -1,11 +1,11 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta1",
+    "groupVersion": "flowcontrol.apiserver.k8s.io/v1",
     "resources": [
         {
             "name": "flowschemas",
-            "singularName": "",
+            "singularName": "flowschema",
             "namespaced": false,
             "kind": "FlowSchema",
             "verbs": [
@@ -18,7 +18,7 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "9bSnTLYweJ0="
+            "storageVersionHash": "9NnFrw7ZEmA="
         },
         {
             "name": "flowschemas/status",
@@ -33,7 +33,7 @@
         },
         {
             "name": "prioritylevelconfigurations",
-            "singularName": "",
+            "singularName": "prioritylevelconfiguration",
             "namespaced": false,
             "kind": "PriorityLevelConfiguration",
             "verbs": [
@@ -46,7 +46,7 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "BFVwf8eYnsw="
+            "storageVersionHash": "+CwSrEWTDhc="
         },
         {
             "name": "prioritylevelconfigurations/status",

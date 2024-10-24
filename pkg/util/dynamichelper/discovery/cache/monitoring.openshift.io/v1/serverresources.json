@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "policy/v1beta1",
+    "groupVersion": "monitoring.openshift.io/v1",
     "resources": [
         {
-            "name": "poddisruptionbudgets",
-            "singularName": "",
+            "name": "alertingrules",
+            "singularName": "alertingrule",
             "namespaced": true,
-            "kind": "PodDisruptionBudget",
+            "kind": "AlertingRule",
             "verbs": [
                 "create",
                 "delete",
@@ -18,16 +18,13 @@
                 "update",
                 "watch"
             ],
-            "shortNames": [
-                "pdb"
-            ],
-            "storageVersionHash": "6BGBu0kpHtk="
+            "storageVersionHash": "bsdwDVR+1Pw="
         },
         {
-            "name": "poddisruptionbudgets/status",
+            "name": "alertingrules/status",
             "singularName": "",
             "namespaced": true,
-            "kind": "PodDisruptionBudget",
+            "kind": "AlertingRule",
             "verbs": [
                 "get",
                 "patch",
@@ -35,10 +32,10 @@
             ]
         },
         {
-            "name": "podsecuritypolicies",
-            "singularName": "",
-            "namespaced": false,
-            "kind": "PodSecurityPolicy",
+            "name": "alertrelabelconfigs",
+            "singularName": "alertrelabelconfig",
+            "namespaced": true,
+            "kind": "AlertRelabelConfig",
             "verbs": [
                 "create",
                 "delete",
@@ -49,10 +46,18 @@
                 "update",
                 "watch"
             ],
-            "shortNames": [
-                "psp"
-            ],
-            "storageVersionHash": "khBLobUXkqA="
+            "storageVersionHash": "T/uaSH4Ar1I="
+        },
+        {
+            "name": "alertrelabelconfigs/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "AlertRelabelConfig",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
         }
     ]
 }
