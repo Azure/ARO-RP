@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
@@ -735,7 +734,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validSubnetsAuthorizationDecisions, nil)
@@ -750,7 +749,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validSubnetsAuthorizationDecisions, nil)
@@ -771,7 +770,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -790,7 +789,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -805,7 +804,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -828,7 +827,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -843,7 +842,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -1006,7 +1005,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -1031,7 +1030,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -1052,7 +1051,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(arg0, arg1 interface{}) {
@@ -1073,7 +1072,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validRouteTablesAuthorizationDecisions, nil)
@@ -1094,7 +1093,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validRouteTablesAuthorizationDecisions, nil)
@@ -1287,7 +1286,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
@@ -1313,7 +1312,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
@@ -1335,7 +1334,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
@@ -1357,7 +1356,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validNatGWAuthorizationDecision, nil)
@@ -1378,7 +1377,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{})
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validNatGWAuthorizationDecision, nil)
@@ -1580,13 +1579,13 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{
 					Resource: client.ResourceInfo{Id: masterNSGv1},
-				}).Times(1)
+				}, nil).Times(1)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{
 					Resource: client.ResourceInfo{Id: workerNSGv1},
-				})
+				}, nil)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(_ context.Context, authReq client.AuthorizationRequest) (*client.AuthorizationDecisionResponse, error) {
 						cancel() // wait.PollImmediateUntil will always be invoked at least once
@@ -1616,13 +1615,13 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{
 					Resource: client.ResourceInfo{Id: masterNSGv1},
-				}).Times(1)
+				}, nil).Times(1)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{
 					Resource: client.ResourceInfo{Id: workerNSGv1},
-				})
+				}, nil)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(_ context.Context, authReq client.AuthorizationRequest) (*client.AuthorizationDecisionResponse, error) {
 						cancel() // wait.PollImmediateUntil will always be invoked at least once
@@ -1656,9 +1655,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{
 					Resource: client.ResourceInfo{Id: workerNSGv1},
-				}).AnyTimes()
+				}, nil).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(_, _ interface{}) {
 						cancel()
@@ -1681,9 +1680,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(client.AuthorizationRequest{
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{
 					Resource: client.ResourceInfo{Id: workerNSGv1},
-				}).AnyTimes()
+				}, nil).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
 					Do(func(_, _ interface{}) {
 						cancel()
@@ -1836,78 +1835,6 @@ func TestValidateSubnetSize(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateSubnetSize(tt.subnet, tt.address)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
-func TestCheckAccessAuthReqPayloadData(t *testing.T) {
-	for _, tt := range []struct {
-		name                  string
-		claims                *token.Custom
-		wantSubjectAttributes client.SubjectAttributes
-		wantErr               string
-	}{
-		{
-			name: "pass - don't set claimName or groups when both don't exist",
-			claims: &token.Custom{
-				ObjectId: dummyObjectId,
-			},
-			wantSubjectAttributes: client.SubjectAttributes{ObjectId: dummyObjectId},
-		},
-		{
-			name: "pass - don't set claimName or groups when both exist",
-			claims: &token.Custom{
-				ObjectId: dummyObjectId,
-				ClaimNames: map[string]interface{}{
-					"groups": "src1",
-				},
-				Groups: []string{"group1", "group2"},
-			},
-			wantSubjectAttributes: client.SubjectAttributes{ObjectId: dummyObjectId},
-		},
-		{
-			name: "pass - set claimName when claimName exits and groups don't exist",
-			claims: &token.Custom{
-				ObjectId: dummyObjectId,
-				ClaimNames: map[string]interface{}{
-					"groups": "src1",
-				},
-			},
-			wantSubjectAttributes: client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
-		},
-		{
-			name: "pass - set groups when groups exits and claimName don't exist",
-			claims: &token.Custom{
-				ObjectId: dummyObjectId,
-				Groups:   []string{"group1", "group2"},
-			},
-			wantSubjectAttributes: client.SubjectAttributes{ObjectId: dummyObjectId, Groups: []string{"group1", "group2"}},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			tokenCred := mock_azcore.NewMockTokenCredential(controller)
-			testAccessToken, err := token.CreateTestToken(dummyObjectId, tt.claims)
-			if err != nil {
-				t.Errorf("Error creating test token: %v", err)
-			}
-
-			tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).AnyTimes().Return(azcore.AccessToken{Token: testAccessToken, ExpiresOn: time.Now()}, nil)
-
-			dv := &dynamic{
-				azEnv:                      &azureclient.PublicCloud,
-				checkAccessSubjectInfoCred: tokenCred,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
-			}
-			c := &closure{dv: dv, oid: &dummyObjectId}
-
-			err = c.checkAccessAuthReqPayloadData()
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			if diff := cmp.Diff(c.subjectAttributes, tt.wantSubjectAttributes); diff != "" {
-				t.Errorf("Got subjectAttributes: %q, want %q", c.subjectAttributes, tt.wantSubjectAttributes)
-			}
 		})
 	}
 }

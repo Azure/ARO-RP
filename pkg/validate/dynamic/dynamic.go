@@ -435,45 +435,35 @@ func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, 
 	defer cancel()
 
 	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions, oid: oid}
-	if err := c.checkAccessAuthReqPayloadData(); err != nil {
-		return err
-	}
 
 	return wait.PollImmediateUntil(30*time.Second, c.usingCheckAccessV2, timeoutCtx.Done())
 }
 
 // closure is the closure used in PollImmediateUntil's ConditionalFunc
 type closure struct {
-	dv                *dynamic
-	ctx               context.Context
-	resource          *azure.Resource
-	actions           []string
-	oid               *string
-	subjectAttributes client.SubjectAttributes
+	dv       *dynamic
+	ctx      context.Context
+	resource *azure.Resource
+	actions  []string
+	oid      *string
+	jwtToken *string
 }
 
-func (c *closure) checkAccessAuthReqPayloadData() error {
-	c.dv.log.Info("Prepare payload for CheckAccessV2 AuthZ")
+func (c *closure) checkAccessAuthReqToken() error {
 	scope := c.dv.azEnv.ResourceManagerEndpoint + "/.default"
 	t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
 	if err != nil {
 		c.dv.log.Error("Unable to get the token from AAD: ", err)
 		return err
 	}
-
-	tokenClaims, err := token.ExtractClaims(t.Token)
+	claims, err := token.ExtractClaims(t.Token)
 	if err != nil {
-		c.dv.log.Error("Unable to parse the token oid claim: ", err)
+		c.dv.log.Error("Unable to get the oid from token: ", err)
 		return err
 	}
-	c.subjectAttributes.ObjectId = tokenClaims.ObjectId
 
-	if tokenClaims.ClaimNames != nil && len(tokenClaims.Groups) == 0 {
-		c.subjectAttributes.ClaimName = client.GroupExpansion
-	} else if tokenClaims.ClaimNames == nil && len(tokenClaims.Groups) > 0 {
-		c.subjectAttributes.Groups = tokenClaims.Groups
-	}
-
+	c.oid = &claims.ObjectId
+	c.jwtToken = &t.Token
 	return nil
 }
 
@@ -481,16 +471,20 @@ func (c *closure) checkAccessAuthReqPayloadData() error {
 func (c closure) usingCheckAccessV2() (bool, error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
-	// reusing oid and groups/claimNames during retries
-	if c.subjectAttributes.ObjectId == "" ||
-		(c.subjectAttributes.ClaimName == "" && len(c.subjectAttributes.Groups) == 0) {
-		if err := c.checkAccessAuthReqPayloadData(); err != nil {
+	//ensure token and oid is available during retries
+	if c.jwtToken == nil || c.oid == nil {
+		if err := c.checkAccessAuthReqToken(); err != nil {
 			return false, err
 		}
 	}
 
-	authReq := c.dv.pdpClient.CreateAuthorizationRequest(c.resource.String(), c.actions, c.subjectAttributes)
-	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
+	authReq, err := c.dv.pdpClient.CreateAuthorizationRequest(c.resource.String(), c.actions, *c.jwtToken)
+	if err != nil {
+		c.dv.log.Error("Unexpected error when creating CheckAccessV2 AuthorizationRequest: ", err)
+		return false, err
+	}
+
+	results, err := c.dv.pdpClient.CheckAccess(c.ctx, *authReq)
 	if err != nil {
 		c.dv.log.Error("Unexpected error when calling CheckAccessV2: ", err)
 		return false, err
@@ -515,7 +509,7 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 		}
 	}
 	if len(actionsToFind) > 0 {
-		c.dv.log.Infof("The result didn't include permissions %v for object ID: %s", actionsToFind, c.subjectAttributes.ObjectId)
+		c.dv.log.Infof("The result didn't include permissions %v for object ID: %s", actionsToFind, *c.oid)
 		return false, nil
 	}
 
