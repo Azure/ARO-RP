@@ -36,7 +36,7 @@ spec:
               key: azure_client_id
         {{ if .UsesWorkloadIdentity }}
         - name: AZURE_FEDERATED_TOKEN_FILE
-          value: "{{ .TokenVolumeMountPath }}"
+          value: "{{ .FederatedTokenFilePath }}"
         {{ else }}
         - name: AZURE_CLIENT_SECRET
           valueFrom:

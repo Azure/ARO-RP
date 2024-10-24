@@ -111,6 +111,7 @@ type deploymentData struct {
 	SupportsPodSecurityAdmission bool
 	UsesWorkloadIdentity         bool
 	TokenVolumeMountPath         string
+	FederatedTokenFilePath       string
 }
 
 func (o *operator) SetForceReconcile(ctx context.Context, enable bool) error {
@@ -191,6 +192,7 @@ func (o *operator) createDeploymentData(ctx context.Context) (deploymentData, er
 	if o.oc.UsesWorkloadIdentity() {
 		data.UsesWorkloadIdentity = o.oc.UsesWorkloadIdentity()
 		data.TokenVolumeMountPath = filepath.Dir(pkgoperator.OperatorTokenFile)
+		data.FederatedTokenFilePath = pkgoperator.OperatorTokenFile
 	}
 
 	return data, nil
