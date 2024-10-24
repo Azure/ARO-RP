@@ -6,19 +6,22 @@ package containerservice
 import (
 	"context"
 
-	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 )
 
 // ManagedClustersAddons is a minimal interface for azure ManagedClustersAddons
 type ManagedClustersAddons interface {
-	ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (mgmtcontainerservice.CredentialResults, error)
-	List(ctx context.Context) (mgmtcontainerservice.ManagedClusterListResultPage, error)
+	ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (armcontainerservice.ManagedClustersClientListClusterAdminCredentialsResponse, error)
+	List(ctx context.Context) *runtime.Pager[armcontainerservice.ManagedClustersClientListResponse]
 }
 
-func (r *managedClustersClient) ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (mgmtcontainerservice.CredentialResults, error) {
-	return r.ManagedClustersClient.ListClusterAdminCredentials(ctx, resourceGroupName, resourceName, serverFqdn)
+func (r *managedClustersClient) ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (armcontainerservice.ManagedClustersClientListClusterAdminCredentialsResponse, error) {
+	// TODO Determine if options need to be specified below
+	return r.ManagedClustersClient.ListClusterAdminCredentials(ctx, resourceGroupName, resourceName, nil)
 }
 
-func (r *managedClustersClient) List(ctx context.Context) (mgmtcontainerservice.ManagedClusterListResultPage, error) {
-	return r.ManagedClustersClient.List(ctx)
+func (r *managedClustersClient) List(ctx context.Context) *runtime.Pager[armcontainerservice.ManagedClustersClientListResponse] {
+	// TODO Determine if options need to be specified below
+	return r.ManagedClustersClient.NewListPager(nil)
 }
