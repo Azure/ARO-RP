@@ -8,25 +8,35 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-// if the cluster isn't using a managed domain and has a DigiCert-issued
+const (
+	OneCertIssuerName = "OneCertV2-PublicCA"
+)
+
+// if the cluster is using a managed domain and has a DigiCert-issued
 // certificate, replace the certificate with one issued by OneCert. This
 // ensures that clusters upgrading to 4.16 aren't blocked due to the SHA-1
 // signing algorithm in use by DigiCert
 func (m *manager) correctCertificateIssuer(ctx context.Context) error {
-	if !strings.Contains(m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain, ".") {
+	domain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	if err != nil {
+		return err
+	}
+
+	if domain != "" {
 		apiCertName := m.doc.ID + "-apiserver"
 		apiHostname := strings.Split(strings.TrimPrefix(m.doc.OpenShiftCluster.Properties.APIServerProfile.URL, "https://"), ":")[0]
-		err := m.ensureCertificateIssuer(ctx, apiCertName, apiHostname, "OneCertV2-PublicCA")
+		err := m.ensureCertificateIssuer(ctx, apiCertName, apiHostname, OneCertIssuerName)
 		if err != nil {
 			return err
 		}
 
 		ingressCertName := m.doc.ID + "-ingress"
 		ingressHostname := "*" + strings.TrimSuffix(strings.TrimPrefix(m.doc.OpenShiftCluster.Properties.ConsoleProfile.URL, "https://console-openshift-console"), "/")
-		err = m.ensureCertificateIssuer(ctx, ingressCertName, ingressHostname, "OneCertV2-PublicCA")
+		err = m.ensureCertificateIssuer(ctx, ingressCertName, ingressHostname, OneCertIssuerName)
 		if err != nil {
 			return err
 		}
