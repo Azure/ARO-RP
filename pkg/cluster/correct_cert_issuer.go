@@ -55,6 +55,16 @@ func (m *manager) ensureCertificateIssuer(ctx context.Context, certificateName, 
 		return err
 	}
 
+	if bundle.Policy == nil {
+		return fmt.Errorf("bundle for %s contains nil pointer policy", certificateName)
+	}
+	if bundle.Policy.IssuerParameters == nil {
+		return fmt.Errorf("bundle for %s contains nil pointer policy issuer parameters", certificateName)
+	}
+	if bundle.Policy.IssuerParameters.Name == nil {
+		return fmt.Errorf("bundle for %s contains nil pointer policy issuer parameters name", certificateName)
+	}
+
 	if *bundle.Policy.IssuerParameters.Name != issuerName {
 		policy, err := clusterKeyvault.GetCertificatePolicy(ctx, certificateName)
 		if err != nil {
