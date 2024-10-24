@@ -13,6 +13,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+
+	"github.com/Azure/checkaccess-v2-go-sdk/client/internal/token"
 )
 
 // this asserts that &remotePDPClient{} would always implement RemotePDPClient
@@ -21,7 +23,7 @@ var _ RemotePDPClient = &remotePDPClient{}
 // RemotePDPClient represents the Microsoft Remote PDP API Spec
 type RemotePDPClient interface {
 	CheckAccess(context.Context, AuthorizationRequest) (*AuthorizationDecisionResponse, error)
-	CreateAuthorizationRequest(string, []string, SubjectAttributes) AuthorizationRequest
+	CreateAuthorizationRequest(string, []string, string) (*AuthorizationRequest, error)
 }
 
 // remotePDPClient implements RemotePDPClient
@@ -108,13 +110,31 @@ func newCheckAccessError(r *http.Response) error {
 }
 
 // CreateAuthorizationRequest creates an AuthorizationRequest object
-func (r *remotePDPClient) CreateAuthorizationRequest(resourceId string, actions []string, subjectAttributes SubjectAttributes) AuthorizationRequest {
+func (r *remotePDPClient) CreateAuthorizationRequest(resourceId string, actions []string, jwtToken string) (*AuthorizationRequest, error) {
+	if strings.TrimSpace(jwtToken) == "" {
+		return nil, fmt.Errorf("need token in creating AuthorizationRequest")
+	}
+
+	tokenClaims, err := token.ExtractClaims(jwtToken)
+	if err != nil {
+		return nil, fmt.Errorf("error while parse the token, err: %v", err)
+	}
+
+	subjectAttributes := SubjectAttributes{}
+	subjectAttributes.ObjectId = tokenClaims.ObjectId
+
+	if tokenClaims.ClaimNames != nil && len(tokenClaims.Groups) == 0 {
+		subjectAttributes.ClaimName = GroupExpansion
+	} else if tokenClaims.ClaimNames == nil && len(tokenClaims.Groups) > 0 {
+		subjectAttributes.Groups = tokenClaims.Groups
+	}
+
 	actionInfos := []ActionInfo{}
 	for _, action := range actions {
 		actionInfos = append(actionInfos, ActionInfo{Id: action})
 	}
 
-	return AuthorizationRequest{
+	return &AuthorizationRequest{
 		Subject: SubjectInfo{
 			Attributes: subjectAttributes,
 		},
@@ -122,5 +142,5 @@ func (r *remotePDPClient) CreateAuthorizationRequest(resourceId string, actions 
 		Resource: ResourceInfo{
 			Id: resourceId,
 		},
-	}
+	}, nil
 }
