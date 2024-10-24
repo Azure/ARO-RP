@@ -105,9 +105,19 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 
 1. Run the RP
 
-   ```bash
-   make runlocal-rp
-   ```
+    Option 1: using local compilation and binaries (requires local `go`/build dependencies/etc):
+    ```bash
+    make runlocal-rp
+    ```
+
+    Option 2: using containerized build and run (requires local `podman` and `openvpn`):
+    ```bash
+    # establish a VPN connection to the shared dev environment Hive cluster
+    sudo openvpn secrets/vpn-${LOCATION}.ovpn &
+
+    # build/run the RP as a container
+    make run-rp
+    ```
 
 1. To create a cluster, use one of the following methods:
 
