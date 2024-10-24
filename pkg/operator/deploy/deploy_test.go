@@ -219,10 +219,11 @@ func TestCreateDeploymentData(t *testing.T) {
 			},
 			clusterVersion: "4.10.0",
 			expected: deploymentData{
-				Image:                operatorImageWithTag,
-				Version:              operatorImageTag,
-				UsesWorkloadIdentity: true,
-				TokenVolumeMountPath: filepath.Dir(pkgoperator.OperatorTokenFile),
+				Image:                  operatorImageWithTag,
+				Version:                operatorImageTag,
+				UsesWorkloadIdentity:   true,
+				TokenVolumeMountPath:   filepath.Dir(pkgoperator.OperatorTokenFile),
+				FederatedTokenFilePath: pkgoperator.OperatorTokenFile,
 			},
 		},
 		{
