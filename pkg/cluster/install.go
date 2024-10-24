@@ -463,7 +463,7 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic str
 		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
 	}
 	if err != nil {
-		m.gatherFailureLogs(ctx)
+		m.gatherFailureLogs(ctx, metricsTopic)
 	}
 	return err
 }
