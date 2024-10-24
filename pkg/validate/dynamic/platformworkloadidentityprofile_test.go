@@ -215,8 +215,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
-					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
-				).AnyTimes().Return(msiAuthZRequest)
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
@@ -250,8 +250,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
-					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
-				).AnyTimes().Return(msiAuthZRequest)
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: map[string]api.PlatformWorkloadIdentity{
@@ -288,8 +288,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
-					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
-				).AnyTimes().Return(msiAuthZRequest)
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
@@ -500,8 +500,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
-					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
-				).AnyTimes().Return(msiAuthZRequest)
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
 					cancel()
 				}).Return(&msiNotAllowedActions, nil).AnyTimes()
@@ -533,8 +533,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
-					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
-				).AnyTimes().Return(msiAuthZRequest)
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
 					cancel()
 				}).Return(&msiActionMissing, nil).AnyTimes()
@@ -566,8 +566,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
-					client.SubjectAttributes{ObjectId: dummyObjectId, ClaimName: client.GroupExpansion},
-				).AnyTimes().Return(msiAuthZRequest)
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, errors.New("Generic Error")).AnyTimes()
 			},
 			wantErr: "Generic Error",
