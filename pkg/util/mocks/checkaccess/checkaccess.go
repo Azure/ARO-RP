@@ -56,11 +56,12 @@ func (mr *MockRemotePDPClientMockRecorder) CheckAccess(arg0, arg1 any) *gomock.C
 }
 
 // CreateAuthorizationRequest mocks base method.
-func (m *MockRemotePDPClient) CreateAuthorizationRequest(arg0 string, arg1 []string, arg2 client.SubjectAttributes) client.AuthorizationRequest {
+func (m *MockRemotePDPClient) CreateAuthorizationRequest(arg0 string, arg1 []string, arg2 string) (*client.AuthorizationRequest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAuthorizationRequest", arg0, arg1, arg2)
-	ret0, _ := ret[0].(client.AuthorizationRequest)
-	return ret0
+	ret0, _ := ret[0].(*client.AuthorizationRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreateAuthorizationRequest indicates an expected call of CreateAuthorizationRequest.
