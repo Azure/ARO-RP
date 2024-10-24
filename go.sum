@@ -38,8 +38,8 @@ github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.1 h1:9fXQS
 github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.1/go.mod h1:f+OaoSg0VQYPMqB0Jp2D54j1VHzITYcJaCNwV+k00ts=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2 h1:YUUxeiOWgdAQE3pXt2H7QXzZs0q8UBjgRbl56qo8GYM=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2/go.mod h1:dmXQgZuiSubAecswZE+Sm8jkvEa7kQgTPVRvwL/nd0E=
-github.com/Azure/checkaccess-v2-go-sdk v0.0.2 h1:XJfusXoOV5+UTHSDRfCNnzKTprp1hgOxasnTLHE+Zzc=
-github.com/Azure/checkaccess-v2-go-sdk v0.0.2/go.mod h1:bbLlNghQgEMAeKiteKctKDwjX6UmxUgxENzemylzql4=
+github.com/Azure/checkaccess-v2-go-sdk v0.0.3 h1:c0RL1qvQV/YvM4XVuHkJr1dVI2m5T9cZxtyUeFSQWeU=
+github.com/Azure/checkaccess-v2-go-sdk v0.0.3/go.mod h1:rpcmeUsB980fGSfoxhGdU9e52mHzNyRgWftOm93Tkio=
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 h1:L/gRVlceqvL25UVaW/CKtUDjefjrs0SPonmDGUVOYP0=
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/Azure/go-autorest v14.2.0+incompatible h1:V5VMDjClD3GiElqLWO7mz2MxNAK/vTfRHdAubSIPRgs=
