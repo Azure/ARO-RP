@@ -18,13 +18,14 @@ type OpenShiftClusterList struct {
 
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
-	ID         string                     `json:"id,omitempty" mutable:"case"`
-	Name       string                     `json:"name,omitempty" mutable:"case"`
-	Type       string                     `json:"type,omitempty" mutable:"case"`
-	Location   string                     `json:"location,omitempty"`
-	Tags       map[string]string          `json:"tags,omitempty"`
-	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-	Identity   *Identity                  `json:"identity,omitempty"`
+	ID                         string                     `json:"id,omitempty" mutable:"case"`
+	Name                       string                     `json:"name,omitempty" mutable:"case"`
+	Type                       string                     `json:"type,omitempty" mutable:"case"`
+	Location                   string                     `json:"location,omitempty"`
+	Tags                       map[string]string          `json:"tags,omitempty"`
+	Properties                 OpenShiftClusterProperties `json:"properties,omitempty"`
+	Identity                   *Identity                  `json:"identity,omitempty"`
+	OperatorFlagsMergeStrategy string                     `json:"operatorFlagsMergeStrategy,omitempty" mutable:"true"`
 }
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
