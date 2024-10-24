@@ -7,14 +7,14 @@ import (
 	"context"
 	"testing"
 
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -23,13 +23,13 @@ func TestValidateQuota(t *testing.T) {
 
 	type test struct {
 		name    string
-		mocks   func(*test, *mock_compute.MockUsageClient, *mock_network.MockUsageClient)
+		mocks   func(*test, *mock_compute.MockUsageClient, *mock_armnetwork.MockUsagesClient)
 		wantErr string
 	}
 	for _, tt := range []*test{
 		{
 			name: "allow when there's enough resources - limits set to exact requirements, offset by 100 of current value",
-			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
+			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_armnetwork.MockUsagesClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
 					Return([]mgmtcompute.Usage{
@@ -63,10 +63,10 @@ func TestValidateQuota(t *testing.T) {
 						},
 					}, nil)
 				nuc.EXPECT().
-					List(ctx, "ocLocation").
-					Return([]mgmtnetwork.Usage{
+					List(ctx, "ocLocation", nil).
+					Return([]*sdknetwork.Usage{
 						{
-							Name: &mgmtnetwork.UsageName{
+							Name: &sdknetwork.UsageName{
 								Value: to.StringPtr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
@@ -78,7 +78,7 @@ func TestValidateQuota(t *testing.T) {
 		{
 			name:    "not enough cores",
 			wantErr: "400: ResourceQuotaExceeded: : Resource quota of cores exceeded. Maximum allowed: 212, Current in use: 101, Additional requested: 112.",
-			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
+			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_armnetwork.MockUsagesClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
 					Return([]mgmtcompute.Usage{
@@ -95,7 +95,7 @@ func TestValidateQuota(t *testing.T) {
 		{
 			name:    "not enough virtualMachines",
 			wantErr: "400: ResourceQuotaExceeded: : Resource quota of virtualMachines exceeded. Maximum allowed: 114, Current in use: 101, Additional requested: 14.",
-			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
+			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_armnetwork.MockUsagesClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
 					Return([]mgmtcompute.Usage{
@@ -112,7 +112,7 @@ func TestValidateQuota(t *testing.T) {
 		{
 			name:    "not enough standardDSv3Family",
 			wantErr: "400: ResourceQuotaExceeded: : Resource quota of standardDSv3Family exceeded. Maximum allowed: 212, Current in use: 101, Additional requested: 112.",
-			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
+			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_armnetwork.MockUsagesClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
 					Return([]mgmtcompute.Usage{
@@ -129,7 +129,7 @@ func TestValidateQuota(t *testing.T) {
 		{
 			name:    "not enough premium disks",
 			wantErr: "400: ResourceQuotaExceeded: : Resource quota of PremiumDiskCount exceeded. Maximum allowed: 114, Current in use: 101, Additional requested: 14.",
-			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
+			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_armnetwork.MockUsagesClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
 					Return([]mgmtcompute.Usage{
@@ -146,15 +146,15 @@ func TestValidateQuota(t *testing.T) {
 		{
 			name:    "not enough public ip addresses",
 			wantErr: "400: ResourceQuotaExceeded: : Resource quota of PublicIPAddresses exceeded. Maximum allowed: 6, Current in use: 4, Additional requested: 3.",
-			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
+			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_armnetwork.MockUsagesClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
 					Return([]mgmtcompute.Usage{}, nil)
 				nuc.EXPECT().
-					List(ctx, "ocLocation").
-					Return([]mgmtnetwork.Usage{
+					List(ctx, "ocLocation", nil).
+					Return([]*sdknetwork.Usage{
 						{
-							Name: &mgmtnetwork.UsageName{
+							Name: &sdknetwork.UsageName{
 								Value: to.StringPtr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
@@ -169,7 +169,7 @@ func TestValidateQuota(t *testing.T) {
 			defer controller.Finish()
 
 			computeUsageClient := mock_compute.NewMockUsageClient(controller)
-			networkUsageClient := mock_network.NewMockUsageClient(controller)
+			networkUsageClient := mock_armnetwork.NewMockUsagesClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, computeUsageClient, networkUsageClient)
 			}
