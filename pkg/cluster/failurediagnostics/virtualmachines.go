@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -71,26 +73,43 @@ func (m *manager) logVMSerialConsole(ctx context.Context, log_limit_kb int) (int
 		}
 
 		logForVM := m.log.WithField("failedRoleInstance", vmName)
-		scanner := bufio.NewScanner(bytes.NewBuffer(blob.Bytes()[blobOffset:]))
 
-		// if we're limiting the logs by kb, then scan once to consume any cut-off messages
+		reader := bufio.NewReader(blob)
+		_, err = reader.Discard(blobOffset)
+		if err != nil {
+			items = append(items, fmt.Sprintf("blob storage reader discard on %s: %s", vmName, err))
+			continue
+		}
+
+		// if we're limiting the logs by kb, then consume once to remove any cut-off messages
 		if blobOffset > 0 {
-			scanner.Scan()
+			_, err := reader.ReadString('\n')
+			if err != nil {
+				items = append(items, fmt.Sprintf("blob storage reading after discard on %s: %s", vmName, err))
+				continue
+			}
 		}
 
 		lastLine := ""
 
-		for scanner.Scan() {
-			thisLog := scanner.Text()
-			// try and remove duplicate lines from the logs
-			if thisLog == lastLine {
-				continue
+		for {
+			line, err := reader.ReadString('\n')
+
+			// trim whitespace
+			line = strings.TrimSpace(line)
+
+			// don't print empty lines or duplicates
+			if line != "" && line != lastLine {
+				lastLine = line
+				logForVM.Info(line)
 			}
-			lastLine = thisLog
-			logForVM.Info(thisLog)
-		}
-		if err := scanner.Err(); err != nil {
-			items = append(items, fmt.Sprintf("blob storage scan on %s: %s", vmName, err))
+
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				items = append(items, fmt.Sprintf("blob storage reading on %s: %s", vmName, err))
+				break
+			}
 		}
 	}
 
