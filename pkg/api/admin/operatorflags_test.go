@@ -1,5 +1,8 @@
 package admin
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"testing"
 
@@ -7,14 +10,10 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
-
 func TestOperatorFlagsMergeStrategy(t *testing.T) {
 	tests := []struct {
 		name    string
 		oc      *api.OpenShiftCluster
-		wantOc  *api.OpenShiftCluster
 		body    []byte
 		wantErr string
 	}{
