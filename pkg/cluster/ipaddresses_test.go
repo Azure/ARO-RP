@@ -23,7 +23,6 @@ import (
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/dns"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -197,7 +196,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient)
-		mocks          func(*mock_network.MockPublicIPAddressesClient, *mock_dns.MockManager, *mock_subnet.MockManager)
+		mocks          func(*mock_armnetwork.MockPublicIPAddressesClient, *mock_dns.MockManager, *mock_armnetwork.MockSubnetsClient)
 		wantErr        string
 	}{
 		{
@@ -227,12 +226,15 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = publicIP
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
+			mocks: func(publicIPAddresses *mock_armnetwork.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				publicIPAddresses.EXPECT().
-					Get(gomock.Any(), "clusterResourceGroup", "infra-default-v4", "").
-					Return(mgmtnetwork.PublicIPAddress{
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							IPAddress: to.StringPtr(publicIP),
+					Get(gomock.Any(), "clusterResourceGroup", "infra-default-v4", nil).
+					Return(armnetwork.PublicIPAddressesClientGetResponse{
+						PublicIPAddress: armnetwork.PublicIPAddress{
+							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+								IPAddress: to.StringPtr(publicIP),
+							},
 						},
 					}, nil)
 				dns.EXPECT().
@@ -253,7 +255,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 							},
 							WorkerProfiles: []api.WorkerProfile{
 								{
-									SubnetID: "subnetid",
+									SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 								},
 							},
 							IngressProfiles: []api.IngressProfile{
@@ -269,13 +271,20 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = publicIP
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "10.0.255.254"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
+			mocks: func(publicIPAddresses *mock_armnetwork.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_armnetwork.MockSubnetsClient) {
+				publicIPAddresses.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				subnet.EXPECT().
-					GetHighestFreeIP(gomock.Any(), "subnetid").
-					Return(publicIP, nil)
+					Get(gomock.Any(), "vnetResourceGroup", "vnet", "worker", gomock.Any()).
+					Return(armnetwork.SubnetsClientGetResponse{
+						Subnet: armnetwork.Subnet{
+							Properties: &armnetwork.SubnetPropertiesFormat{
+								AddressPrefix: to.StringPtr("10.0.0.0/16"),
+							},
+						},
+					}, nil)
 				dns.EXPECT().
 					CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
@@ -294,12 +303,12 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 							},
 							WorkerProfiles: []api.WorkerProfile{
 								{
-									SubnetID: "subnetid",
+									SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 								},
 							},
 							WorkerProfilesStatus: []api.WorkerProfile{
 								{
-									SubnetID: "enricheWPsubnetid",
+									SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/enrichedWorkerProfile",
 								},
 							},
 							IngressProfiles: []api.IngressProfile{
@@ -315,13 +324,21 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = publicIP
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "10.0.255.254"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
+			mocks: func(publicIPAddresses *mock_armnetwork.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_armnetwork.MockSubnetsClient) {
+				publicIPAddresses.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				subnet.EXPECT().Get(gomock.Any(), "vnetResourceGroup", "vnet", "worker", gomock.Any()).Times(0)
 				subnet.EXPECT().
-					GetHighestFreeIP(gomock.Any(), "enricheWPsubnetid").
-					Return(publicIP, nil)
+					Get(gomock.Any(), "vnetResourceGroup", "vnet", "enrichedWorkerProfile", gomock.Any()).
+					Return(armnetwork.SubnetsClientGetResponse{
+						Subnet: armnetwork.Subnet{
+							Properties: &armnetwork.SubnetPropertiesFormat{
+								AddressPrefix: to.StringPtr("10.0.0.0/16"),
+							},
+						},
+					}, nil)
 				dns.EXPECT().
 					CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
@@ -332,9 +349,9 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			publicIPAddresses := mock_network.NewMockPublicIPAddressesClient(controller)
+			publicIPAddresses := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 			dns := mock_dns.NewMockManager(controller)
-			subnet := mock_subnet.NewMockManager(controller)
+			subnet := mock_armnetwork.NewMockSubnetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(publicIPAddresses, dns, subnet)
 			}
@@ -358,11 +375,11 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 			}
 
 			m := &manager{
-				doc:               doc,
-				db:                dbOpenShiftClusters,
-				publicIPAddresses: publicIPAddresses,
-				dns:               dns,
-				subnet:            subnet,
+				doc:                  doc,
+				db:                   dbOpenShiftClusters,
+				armPublicIPAddresses: publicIPAddresses,
+				dns:                  dns,
+				armSubnets:           subnet,
 			}
 
 			err = m.createOrUpdateRouterIPEarly(ctx)
@@ -921,6 +938,95 @@ func TestEnsureGatewayCreate(t *testing.T) {
 			errs = c.CheckGateways(clientGateway)
 			for _, err := range errs {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestGetHighestFreeIP(t *testing.T) {
+	const subnetID = "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet"
+
+	type test struct {
+		name    string
+		subnet  armnetwork.Subnet
+		wantIP  string
+		wantErr string
+	}
+
+	for _, tt := range []*test{
+		{
+			name: "valid",
+			subnet: armnetwork.Subnet{
+				ID: to.StringPtr(subnetID),
+				Properties: &armnetwork.SubnetPropertiesFormat{
+					AddressPrefix: to.StringPtr("10.0.0.0/29"),
+				},
+			},
+			wantIP: "10.0.0.6",
+		},
+		{
+			name: "valid, use addressPrefixes",
+			subnet: armnetwork.Subnet{
+				ID: to.StringPtr(subnetID),
+				Properties: &armnetwork.SubnetPropertiesFormat{
+					AddressPrefixes: []*string{to.StringPtr("10.0.0.0/29")},
+				},
+			},
+			wantIP: "10.0.0.6",
+		},
+		{
+			name: "valid, top address used",
+			subnet: armnetwork.Subnet{
+				ID: to.StringPtr(subnetID),
+				Properties: &armnetwork.SubnetPropertiesFormat{
+					AddressPrefix: to.StringPtr("10.0.0.0/29"),
+					IPConfigurations: []*armnetwork.IPConfiguration{
+						{
+							Properties: &armnetwork.IPConfigurationPropertiesFormat{
+								PrivateIPAddress: to.StringPtr("10.0.0.6"),
+							},
+						},
+						{
+							Properties: &armnetwork.IPConfigurationPropertiesFormat{},
+						},
+					},
+				},
+			},
+			wantIP: "10.0.0.5",
+		},
+		{
+			name: "exhausted",
+			subnet: armnetwork.Subnet{
+				ID: to.StringPtr(subnetID),
+				Properties: &armnetwork.SubnetPropertiesFormat{
+					AddressPrefix: to.StringPtr("10.0.0.0/29"),
+					IPConfigurations: []*armnetwork.IPConfiguration{
+						{
+							Properties: &armnetwork.IPConfigurationPropertiesFormat{
+								PrivateIPAddress: to.StringPtr("10.0.0.4"),
+							},
+						},
+						{
+							Properties: &armnetwork.IPConfigurationPropertiesFormat{
+								PrivateIPAddress: to.StringPtr("10.0.0.5"),
+							},
+						},
+						{
+							Properties: &armnetwork.IPConfigurationPropertiesFormat{
+								PrivateIPAddress: to.StringPtr("10.0.0.6"),
+							},
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ip, err := getHighestFreeIP(&tt.subnet)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			if ip != tt.wantIP {
+				t.Error(ip)
 			}
 		})
 	}
