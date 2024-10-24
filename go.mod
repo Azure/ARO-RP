@@ -59,9 +59,9 @@ require (
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
-	github.com/openshift/cloud-credential-operator v0.0.0-20240910012137-a0245d57d1e6
-	github.com/openshift/hive/apis v0.0.0-20241008210644-986c5efa21e7
-	github.com/openshift/library-go v0.0.0-20230620084201-504ca4bd5a83
+	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
+	github.com/openshift/hive/apis v0.0.0-20240821011206-1ec27ad45d5a
+	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d
 	github.com/pires/go-proxyproto v0.6.2
 	github.com/pkg/errors v0.9.1

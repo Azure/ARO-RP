@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -544,6 +545,55 @@ func TestGetClusterDeployment(t *testing.T) {
 
 			if result != nil && result.Name != cd.Name && result.Namespace != cd.Namespace {
 				t.Fatal("Unexpected cluster deployment returned", result)
+			}
+		})
+	}
+}
+
+func TestGetClusterSyncforClusterDeployment(t *testing.T) {
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
+	doc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				HiveProfile: api.HiveProfile{
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	}
+
+	cs := &hivev1alpha1.ClusterSync{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ClusterDeploymentName,
+			Namespace: fakeNamespace,
+		},
+	}
+
+	for _, tt := range []struct {
+		name    string
+		wantErr string
+	}{
+		{name: "syncset exists and returned"},
+		{name: "syncset does not exist err returned", wantErr: `clustersyncs.hiveinternal.openshift.io "cluster" not found`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClientBuilder := fake.NewClientBuilder()
+			if tt.wantErr == "" {
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(cs)
+			}
+			c := clusterManager{
+				hiveClientset: fakeClientBuilder.Build(),
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			result, err := c.GetClusterSync(context.Background(), doc)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			if result != nil && result.Name != cs.Name && result.Namespace != cs.Namespace {
+				t.Error("Unexpected cluster sync returned", result)
 			}
 		})
 	}
