@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -15,6 +17,10 @@ import (
 // LogVMSerialConsole fetches the serial console from VMs and logs them with
 // the associated VM name.
 func (m *manager) LogVMSerialConsole(ctx context.Context) (interface{}, error) {
+	return m.logVMSerialConsole(ctx, 50)
+}
+
+func (m *manager) logVMSerialConsole(ctx context.Context, log_limit_kb int) (interface{}, error) {
 	items := make([]interface{}, 0)
 
 	if m.virtualMachines == nil {
@@ -58,13 +64,52 @@ func (m *manager) LogVMSerialConsole(ctx context.Context) (interface{}, error) {
 			continue
 		}
 
-		logForVM := m.log.WithField("failedRoleInstance", vmName)
-		scanner := bufio.NewScanner(blob)
-		for scanner.Scan() {
-			logForVM.Info(scanner.Text())
+		// limit what we write to the last log_limit_kb amount
+		blobOffset := 0
+		blobLength := blob.Len()
+
+		if blobLength > log_limit_kb*1024 {
+			blobOffset = blobLength - (log_limit_kb * 1024)
 		}
-		if err := scanner.Err(); err != nil {
-			items = append(items, fmt.Sprintf("blob storage scan on %s: %s", vmName, err))
+
+		logForVM := m.log.WithField("failedRoleInstance", vmName)
+
+		reader := bufio.NewReader(blob)
+		_, err = reader.Discard(blobOffset)
+		if err != nil {
+			items = append(items, fmt.Sprintf("blob storage reader discard on %s: %s", vmName, err))
+			continue
+		}
+
+		// if we're limiting the logs by kb, then consume once to remove any cut-off messages
+		if blobOffset > 0 {
+			_, err := reader.ReadString('\n')
+			if err != nil {
+				items = append(items, fmt.Sprintf("blob storage reading after discard on %s: %s", vmName, err))
+				continue
+			}
+		}
+
+		lastLine := ""
+
+		for {
+			line, err := reader.ReadString('\n')
+
+			// trim whitespace
+			line = strings.TrimSpace(line)
+
+			// don't print empty lines or duplicates
+			if line != "" && line != lastLine {
+				lastLine = line
+				logForVM.Info(line)
+			}
+
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				items = append(items, fmt.Sprintf("blob storage reading on %s: %s", vmName, err))
+				break
+			}
 		}
 	}
 
