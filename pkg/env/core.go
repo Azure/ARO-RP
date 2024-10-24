@@ -75,12 +75,15 @@ func (c *core) Logger() *logrus.Entry {
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
-	msiAuthorizer, err := c.NewMSIAuthorizer(c.Environment().ResourceManagerScope)
+	tokenizer, err := c.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
 
-	mcc := containerservice.NewManagedClustersClient(c.Environment(), c.SubscriptionID(), msiAuthorizer)
+	mcc, err := containerservice.NewDefaultManagedClustersClient(c.Environment(), c.SubscriptionID(), tokenizer)
+	if err != nil {
+		return nil, err
+	}
 
 	if c.isLocalDevelopmentMode {
 		return liveconfig.NewDev(c.Location(), mcc), nil
