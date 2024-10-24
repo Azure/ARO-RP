@@ -2,7 +2,7 @@ SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
-E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
+E2E_FLAGS ?= -test.v --ginkgo.vv --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
@@ -68,7 +68,7 @@ aro: check-release generate
 
 .PHONY: runlocal-rp
 runlocal-rp:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} rp
 
 .PHONY: az
 az: pyenv
@@ -197,7 +197,11 @@ proxy:
 
 .PHONY: runlocal-portal
 runlocal-portal:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} portal
+
+.PHONY: runlocal-actuator
+runlocal-actuator:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-actuator
 
 .PHONY: build-portal
 build-portal:
