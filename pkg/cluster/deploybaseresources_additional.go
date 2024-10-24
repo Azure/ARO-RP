@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"strings"
 
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -531,87 +533,87 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 }
 
 func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []api.ResourceReference) *arm.Resource {
-	lb := &mgmtnetwork.LoadBalancer{
-		Sku: &mgmtnetwork.LoadBalancerSku{
-			Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+	lb := &sdknetwork.LoadBalancer{
+		SKU: &sdknetwork.LoadBalancerSKU{
+			Name: ptr.To(sdknetwork.LoadBalancerSKUNameStandard),
 		},
-		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{},
-			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+		Properties: &sdknetwork.LoadBalancerPropertiesFormat{
+			FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{},
+			BackendAddressPools: []*sdknetwork.BackendAddressPool{
 				{
-					Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
+					Name: ptr.To(m.doc.OpenShiftCluster.Properties.InfraID),
 				},
 			},
-			LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
-			Probes:             &[]mgmtnetwork.Probe{},             //required to override default LB rules for port 80 and 443
-			OutboundRules: &[]mgmtnetwork.OutboundRule{
+			LoadBalancingRules: []*sdknetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
+			Probes:             []*sdknetwork.Probe{},             //required to override default LB rules for port 80 and 443
+			OutboundRules: []*sdknetwork.OutboundRule{
 				{
-					OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
-						FrontendIPConfigurations: &[]mgmtnetwork.SubResource{},
-						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+					Properties: &sdknetwork.OutboundRulePropertiesFormat{
+						FrontendIPConfigurations: []*sdknetwork.SubResource{},
+						BackendAddressPool: &sdknetwork.SubResource{
+							ID: ptr.To(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 						},
-						Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
-						IdleTimeoutInMinutes: to.Int32Ptr(30),
+						Protocol:             ptr.To(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+						IdleTimeoutInMinutes: ptr.To(int32(30)),
 					},
-					Name: to.StringPtr("outbound-rule-v4"),
+					Name: ptr.To("outbound-rule-v4"),
 				},
 			},
 		},
 		Name:     &m.doc.OpenShiftCluster.Properties.InfraID,
-		Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+		Type:     ptr.To("Microsoft.Network/loadBalancers"),
 		Location: &azureRegion,
 	}
 
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-		*lb.FrontendIPConfigurations = append(*lb.FrontendIPConfigurations, mgmtnetwork.FrontendIPConfiguration{
-			FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-				PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-					ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
+		lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, &sdknetwork.FrontendIPConfiguration{
+			Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
+				PublicIPAddress: &sdknetwork.PublicIPAddress{
+					ID: ptr.To("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
 				},
 			},
-			Name: to.StringPtr("public-lb-ip-v4"),
+			Name: ptr.To("public-lb-ip-v4"),
 		})
 
-		*lb.LoadBalancingRules = append(*lb.LoadBalancingRules, mgmtnetwork.LoadBalancingRule{
-			LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-				FrontendIPConfiguration: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &sdknetwork.LoadBalancingRule{
+			Properties: &sdknetwork.LoadBalancingRulePropertiesFormat{
+				FrontendIPConfiguration: &sdknetwork.SubResource{
+					ID: ptr.To(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
-				BackendAddressPool: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+				BackendAddressPool: &sdknetwork.SubResource{
+					ID: ptr.To(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
-				Probe: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+				Probe: &sdknetwork.SubResource{
+					ID: ptr.To(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
-				Protocol:             mgmtnetwork.TransportProtocolTCP,
-				LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-				FrontendPort:         to.Int32Ptr(6443),
-				BackendPort:          to.Int32Ptr(6443),
-				IdleTimeoutInMinutes: to.Int32Ptr(30),
-				DisableOutboundSnat:  to.BoolPtr(true),
+				Protocol:             ptr.To(sdknetwork.TransportProtocolTCP),
+				LoadDistribution:     ptr.To(sdknetwork.LoadDistributionDefault),
+				FrontendPort:         ptr.To(int32(6443)),
+				BackendPort:          ptr.To(int32(6443)),
+				IdleTimeoutInMinutes: ptr.To(int32(30)),
+				DisableOutboundSnat:  ptr.To(true),
 			},
-			Name: to.StringPtr("api-internal-v4"),
+			Name: ptr.To("api-internal-v4"),
 		})
 
-		*lb.Probes = append(*lb.Probes, mgmtnetwork.Probe{
-			ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-				Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
-				Port:              to.Int32Ptr(6443),
-				IntervalInSeconds: to.Int32Ptr(5),
-				NumberOfProbes:    to.Int32Ptr(2),
-				RequestPath:       to.StringPtr("/readyz"),
+		lb.Properties.Probes = append(lb.Properties.Probes, &sdknetwork.Probe{
+			Properties: &sdknetwork.ProbePropertiesFormat{
+				Protocol:          ptr.To(sdknetwork.ProbeProtocolHTTPS),
+				Port:              ptr.To(int32(6443)),
+				IntervalInSeconds: ptr.To(int32(5)),
+				NumberOfProbes:    ptr.To(int32(2)),
+				RequestPath:       ptr.To("/readyz"),
 			},
-			Name: to.StringPtr("api-internal-probe"),
+			Name: ptr.To("api-internal-probe"),
 		})
 	}
 
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
-		for i := len(*lb.FrontendIPConfigurations); i < m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count; i++ {
+		for i := len(lb.Properties.FrontendIPConfigurations); i < m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count; i++ {
 			resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
 			frontendIPConfigName := stringutils.LastTokenByte(outboundIPs[i].ID, '/')
 			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-			*lb.FrontendIPConfigurations = append(*lb.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, outboundIPs[i].ID))
+			lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, outboundIPs[i].ID))
 		}
 
 		for i := 0; i < m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count; i++ {
@@ -619,12 +621,12 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 			if i == 0 && m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 				frontendIPConfigName := "public-lb-ip-v4"
 				frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-				*(*lb.OutboundRules)[0].FrontendIPConfigurations = append(*(*lb.OutboundRules)[0].FrontendIPConfigurations, newOutboundRuleFrontendIPConfig(frontendConfigID))
+				lb.Properties.OutboundRules[0].Properties.FrontendIPConfigurations = append(lb.Properties.OutboundRules[0].Properties.FrontendIPConfigurations, newOutboundRuleFrontendIPConfig(frontendConfigID))
 				continue
 			}
 			frontendIPConfigName := stringutils.LastTokenByte(outboundIPs[i].ID, '/')
 			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-			*(*lb.OutboundRules)[0].FrontendIPConfigurations = append(*(*lb.OutboundRules)[0].FrontendIPConfigurations, newOutboundRuleFrontendIPConfig(frontendConfigID))
+			lb.Properties.OutboundRules[0].Properties.FrontendIPConfigurations = append(lb.Properties.OutboundRules[0].Properties.FrontendIPConfigurations, newOutboundRuleFrontendIPConfig(frontendConfigID))
 		}
 	}
 

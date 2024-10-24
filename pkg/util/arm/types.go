@@ -40,6 +40,10 @@ type Resource struct {
 	Tags       map[string]interface{} `json:"tags,omitempty"`
 	Copy       *Copy                  `json:"copy,omitempty"`
 	Comments   string                 `json:"comments,omitempty"`
+	// Etag is required to omit Etag member when it's not set.
+	// arm* SDK uses its own MarshalJSON, and empty members are converted to nil,
+	// but Etag: nil fails the ARM template validation.
+	Etag string `json:"etag,omitempty"`
 }
 
 // Deployment represents a nested ARM deployment in a deployment
