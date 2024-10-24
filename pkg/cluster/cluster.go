@@ -343,3 +343,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 	return m, nil
 }
+
+func (m *manager) APICertName() string {
+	return m.doc.ID + "-apiserver"
+}
+
+func (m *manager) IngressCertName() string {
+	return m.doc.ID + "-ingress"
+}

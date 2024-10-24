@@ -27,16 +27,14 @@ func (m *manager) correctCertificateIssuer(ctx context.Context) error {
 	}
 
 	if domain != "" {
-		apiCertName := m.doc.ID + "-apiserver"
 		apiHostname := strings.Split(strings.TrimPrefix(m.doc.OpenShiftCluster.Properties.APIServerProfile.URL, "https://"), ":")[0]
-		err := m.ensureCertificateIssuer(ctx, apiCertName, apiHostname, OneCertIssuerName)
+		err := m.ensureCertificateIssuer(ctx, m.APICertName(), apiHostname, OneCertIssuerName)
 		if err != nil {
 			return err
 		}
 
-		ingressCertName := m.doc.ID + "-ingress"
 		ingressHostname := "*" + strings.TrimSuffix(strings.TrimPrefix(m.doc.OpenShiftCluster.Properties.ConsoleProfile.URL, "https://console-openshift-console"), "/")
-		err = m.ensureCertificateIssuer(ctx, ingressCertName, ingressHostname, OneCertIssuerName)
+		err = m.ensureCertificateIssuer(ctx, m.IngressCertName(), ingressHostname, OneCertIssuerName)
 		if err != nil {
 			return err
 		}
