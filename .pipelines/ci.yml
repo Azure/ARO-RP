@@ -194,12 +194,16 @@ stages:
 
           # Step 8: Start Services using Docker Compose
           - bash: |
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
               docker compose --env-file .env -f docker-compose.yml up -d
               docker ps
             displayName: Start Services using Docker Compose
 
           # Step 9: Execute E2E Tests
           - bash: |
+              docker compose logs rp
               az account set -s $AZURE_SUBSCRIPTION_ID
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
               . secrets/env
@@ -211,6 +215,7 @@ stages:
               deploy_e2e_db
               register_sub
               env | sort
+              docker ps
               docker compose up run-e2e --abort-on-container-exit
             displayName: Execute E2E Tests
 

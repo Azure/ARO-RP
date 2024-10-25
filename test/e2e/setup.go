@@ -212,12 +212,10 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 			err = nil
 			break
 		}
-		log.Infof("Attempt %d: Unable to connect to Selenium at %s:%d: %v", i+1, hubAddress, hubPort, err)
 		time.Sleep(time.Second)
 	}
 
 	if err != nil {
-		log.Fatalf("Failed to start Selenium WebDriver session after 10 attempts: %v", err)
 		panic(err)
 	}
 
@@ -274,78 +272,37 @@ func resourceIDFromEnv() string {
 }
 
 func newClientSet(ctx context.Context) (*clientSet, error) {
-	log.Info("Starting to create a new clientSet...")
-	log.Info("Creating Azure Environment Credential...")
 	options := _env.Environment().EnvironmentCredentialOptions()
 	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
-		log.Fatalf("Failed to create Azure Environment Credential: %v", err)
 		return nil, err
 	}
-	log.Info("Azure Environment Credential created successfully.")
+
 	scopes := []string{_env.Environment().ResourceManagerScope}
-	log.Infof("Authorization scopes: %v", scopes)
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	// Initialize clients here, before using them
-	clients := &clientSet{
-		OpenshiftClusters: redhatopenshift20231122.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-	}
-	// Ensure that OpenshiftClusters client is not nil
-	if clients.OpenshiftClusters == nil {
-		log.Fatalf("Failed to initialize OpenshiftClusters client")
-		return nil, fmt.Errorf("OpenshiftClusters client is nil")
-	}
-	// POLLING: Check if the cluster is ready before fetching the kubeconfig
-	log.Info("Checking if the cluster is ready before fetching kubeconfig...")
-	for retries := 0; retries < 10; retries++ {
-		// This checks if the cluster exists in Azure
-		_, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
-		if err == nil {
-			log.Info("Cluster is available. Proceeding to fetch kubeconfig.")
-			break
-		} else {
-			log.Infof("Cluster not available yet, retrying in 30 seconds... (Attempt %d)", retries+1)
-			time.Sleep(30 * time.Second)
-		}
-
-		if retries == 9 {
-			log.Fatalf("Cluster did not become available within the expected time.")
-			return nil, fmt.Errorf("Cluster not ready")
-		}
-	}
-
-	log.Info("Fetching kubeadmin kubeconfig...")
 	configv1, err := kubeadminkubeconfig.Get(ctx, log, _env, authorizer, resourceIDFromEnv())
 	if err != nil {
-		log.Fatalf("Failed to get kubeadmin kubeconfig: %v", err)
 		return nil, err
 	}
-	log.Info("Kubeadmin kubeconfig fetched successfully.")
 
-	log.Info("Converting kubeconfig...")
 	var config api.Config
 	err = latest.Scheme.Convert(configv1, &config, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info("Building restconfig...")
 	kubeconfig := clientcmd.NewDefaultClientConfig(config, &clientcmd.ConfigOverrides{})
 
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
-		log.Fatalf("Failed to build restconfig: %v", err)
 		return nil, err
 	}
 
-	log.Info("Creating Kubernetes client...")
 	cli, err := kubernetes.NewForConfig(restconfig)
 	if err != nil {
-		log.Fatalf("Failed to create Kubernetes client: %v", err)
 		return nil, err
 	}
-	log.Info("Kubernetes client created successfully.")
 
 	controllerRuntimeClient, err := client.New(restconfig, client.Options{})
 	if err != nil {
@@ -426,7 +383,6 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 		hiveCM, err = hive.NewFromConfig(log, _env, hiveRestConfig)
 		if err != nil {
-			log.Fatalf("Failed to create Hive Cluster Manager: %v", err)
 			return nil, err
 		}
 	}
@@ -502,10 +458,6 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 }
 
 func setup(ctx context.Context) error {
-	log.Info("Starting setup...")
-	log = logrus.WithField("component", "e2e-setup") // Initialize the log properly
-
-	log.Info("Validating environment variables...")
 	err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
@@ -515,68 +467,45 @@ func setup(ctx context.Context) error {
 		"LOCATION")
 
 	if err != nil {
-		log.Fatalf("Missing or invalid environment variables: %v", err)
 		return err
 	}
-
-	log.Info("Environment variables are valid.")
-	log.Info("Creating core environment for CI...")
 
 	_env, err = env.NewCoreForCI(ctx, log)
 	if err != nil {
-		log.Fatalf("Failed to create core environment for CI: %v", err)
 		return err
 	}
 
-	// Check for nil pointers before proceeding
-	if log == nil || _env == nil {
-		log.Fatalf("Log or Env is not initialized")
-		return fmt.Errorf("Log or Env is nil")
-	}
-
-	log.Infof("Setting resource group and cluster name from environment variables...")
 	vnetResourceGroup = os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
 	if os.Getenv("CI") != "" {
 		vnetResourceGroup = os.Getenv("CLUSTER")
 	}
 	clusterName = os.Getenv("CLUSTER")
 
-	log.Infof("Resource group: %s, Cluster name: %s", vnetResourceGroup, clusterName)
 	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
 
 	if os.Getenv("CI") != "" { // always create cluster in CI
-		log.Infof("Creating cluster in CI mode, vnetResourceGroup: %s, clusterName: %s", vnetResourceGroup, clusterName)
 		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
-			log.Fatalf("Failed to create a new cluster: %v", err)
 			return err
 		}
-
-		log.Infof("OpenShift cluster version: %s", osClusterVersion)
 
 		if osClusterVersion == "" {
 			osClusterVersion = version.DefaultInstallStream.Version.String()
 		}
 
-		log.Info("Creating the cluster...")
 		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
 		if err != nil {
-			log.Fatalf("Failed to create cluster (RG: %s, Cluster: %s, Version: %s): %v", vnetResourceGroup, clusterName, osClusterVersion, err)
 			return err
 		}
-		log.Info("Cluster created successfully.")
 	}
 
 	clusterResourceID = resourceIDFromEnv()
-	log.Infof("Cluster resource ID: %s", clusterResourceID)
 
-	log.Info("Creating clients...")
 	clients, err = newClientSet(ctx)
 	if err != nil {
-		log.Fatalf("Failed to create clientSet: %v", err)
 		return err
 	}
-	log.Info("Clients created successfully.")
+
 	return nil
 }
 
@@ -606,10 +535,8 @@ var _ = BeforeSuite(func() {
 	if err := setup(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
-			log.Fatalf("OData Error: %v", oDataError.GetErrorEscaped())
-		} else {
-			log.Fatalf("Setup error: %v", err)
 		}
+		panic(err)
 	}
 })
 
@@ -619,9 +546,7 @@ var _ = AfterSuite(func() {
 	if err := done(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
-			log.Fatalf("OData Error in cleanup: %v", oDataError.GetErrorEscaped())
-		} else {
-			log.Fatalf("Cleanup error: %v", err)
 		}
+		panic(err)
 	}
 })
