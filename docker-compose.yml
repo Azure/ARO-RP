@@ -12,8 +12,7 @@ services:
       - /dev/net/tun  # required to modify VPN on host
     entrypoint: "openvpn"
     command: ["/secrets/vpn-eastus.ovpn"]
-    networks:
-      - aro-dev
+    network_mode: host
     ports:
       - 8443:8443
       - 8444:8444
@@ -28,8 +27,7 @@ services:
   selenium:
     image: selenium/standalone-edge:4.10.0-20230607
     container_name: selenium-container
-    networks:
-      - aro-dev
+    network_mode: host
     ports:
       - "4444:4444"
     healthcheck:
@@ -110,8 +108,6 @@ services:
   portal:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
     container_name: aro-portal
-    networks:
-      - aro-dev
     depends_on:
       rp:
         condition: service_started
@@ -208,6 +204,3 @@ secrets:
     file: ./secrets/proxy.crt
   hive-kubeconfig:
     file: ./secrets/aks.kubeconfig
-
-networks:
-  aro-dev:
