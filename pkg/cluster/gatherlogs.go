@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,17 +23,23 @@ type diagnosticStep struct {
 	isJSON bool
 }
 
-func (m *manager) gatherFailureLogs(ctx context.Context) {
+func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines)
 
-	for _, f := range []diagnosticStep{
+	s := []diagnosticStep{
 		{f: m.logClusterVersion, isJSON: true},
 		{f: m.logNodes, isJSON: true},
 		{f: m.logClusterOperators, isJSON: true},
 		{f: m.logIngressControllers, isJSON: true},
 		{f: m.logPodLogs, isJSON: false},
-		{f: d.LogVMSerialConsole, isJSON: false},
-	} {
+	}
+
+	// only log serial consoles on an install, not on updates/adminUpdates
+	if runType == "install" {
+		s = append(s, diagnosticStep{f: d.LogVMSerialConsole, isJSON: false})
+	}
+
+	for _, f := range s {
 		o, err := f.f(ctx)
 		if err != nil {
 			m.log.Error(err)
@@ -157,7 +164,7 @@ func (m *manager) logPodLogs(ctx context.Context) (interface{}, error) {
 		reader := bufio.NewReader(logStream)
 		for {
 			line, err := reader.ReadString('\n')
-			logForPod.Info(line)
+			logForPod.Info(strings.TrimSpace(line))
 			if err == io.EOF {
 				break
 			}
