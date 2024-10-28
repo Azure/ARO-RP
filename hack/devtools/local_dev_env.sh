@@ -1,5 +1,5 @@
 #!/bin/bash
-set -o errexit
+
 set -o nounset
 set -o pipefail
 
@@ -263,7 +263,7 @@ export MOCK_MSI_CLIENT_ID="$mockClientID"
 export MOCK_MSI_OBJECT_ID="$mockObjectID"
 export MOCK_MSI_TENANT_ID="$mockTenantID"
 export MOCK_MSI_CERT="$mockCert"
-export PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"
+export PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS'
 
 source secrets/env
 EOF
