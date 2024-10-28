@@ -198,6 +198,16 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// provide single field json to be updated in the database.
 	// Patch should be used for updating individual fields of the document.
 	case http.MethodPatch:
+		if putOrPatchClusterParameters.apiVersion == admin.APIVersion {
+			// OperatorFlagsMergeStrategy==reset will place the default flags in
+			// the external object and then merge in the body's flags when the
+			// request is unmarshaled below.
+			err = admin.OperatorFlagsMergeStrategy(doc.OpenShiftCluster, putOrPatchClusterParameters.body)
+			if err != nil {
+				// OperatorFlagsMergeStrategy returns CloudErrors
+				return nil, err
+			}
+		}
 		ext = putOrPatchClusterParameters.converter.ToExternal(doc.OpenShiftCluster)
 	}
 
