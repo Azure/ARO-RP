@@ -81,7 +81,7 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	a := actuator.NewService(_env, _env.Logger(), dialer, dbg, m)
-	a.SetMaintenanceTasks(tasks.DEFAULT_MAINTENANCE_SETS)
+	a.SetMaintenanceTasks(tasks.DEFAULT_MAINTENANCE_TASKS)
 
 	sigterm := make(chan os.Signal, 1)
 	done := make(chan struct{})
