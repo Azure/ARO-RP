@@ -98,7 +98,7 @@ stages:
 
           # Step 2: Install Docker, Docker Compose, and dependencies
           - script: |
-              export CI=true
+              set -xe
               . ./hack/e2e/run-rp-and-e2e.sh
               setup_environment
               install_docker_dependencies
