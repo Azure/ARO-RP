@@ -426,6 +426,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
+			steps.Action(m.removeAzureFileCSIStorageClass),
 			steps.Action(m.disableOperatorReconciliation),
 			steps.Action(m.finishInstallation),
 		},
