@@ -36,7 +36,7 @@ class AzureRedHatOpenShiftClientConfiguration(Configuration):  # pylint: disable
 
     :param credential: Credential needed for the client to connect to Azure.
     :type credential: ~azure.core.credentials.TokenCredential
-    :param subscription_id: The ID of the target subscription.
+    :param subscription_id: The ID of the target subscription. The value must be an UUID.
     :type subscription_id: str
     :keyword api_version: Api Version. The default value is "2024-08-12-preview". Note that
      overriding this default value may result in unsupported behavior.

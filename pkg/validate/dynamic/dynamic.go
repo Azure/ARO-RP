@@ -90,7 +90,7 @@ type dynamic struct {
 	checkAccessSubjectInfoCred   azcore.TokenCredential
 	env                          env.Interface
 	azEnv                        *azureclient.AROEnvironment
-	platformIdentities           []api.PlatformWorkloadIdentity
+	platformIdentities           map[string]api.PlatformWorkloadIdentity
 	platformIdentitiesActionsMap map[string][]string
 
 	virtualNetworks                       virtualNetworksGetClient
@@ -828,11 +828,11 @@ func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenSh
 // validateActions calls validateActionsByOID with object ID in case of MIWI cluster otherwise without object ID
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) (*string, error) {
 	if dv.platformIdentities != nil {
-		for _, platformIdentity := range dv.platformIdentities {
-			actionsToValidate := stringutils.GroupsIntersect(actions, dv.platformIdentitiesActionsMap[platformIdentity.OperatorName])
+		for name, platformIdentity := range dv.platformIdentities {
+			actionsToValidate := stringutils.GroupsIntersect(actions, dv.platformIdentitiesActionsMap[name])
 			if len(actionsToValidate) > 0 {
 				if err := dv.validateActionsByOID(ctx, r, actionsToValidate, &platformIdentity.ObjectID); err != nil {
-					return &platformIdentity.OperatorName, err
+					return &name, err
 				}
 			}
 		}

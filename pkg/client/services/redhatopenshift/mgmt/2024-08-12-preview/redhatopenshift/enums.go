@@ -66,6 +66,25 @@ func PossibleFipsValidatedModulesValues() []FipsValidatedModules {
 	return []FipsValidatedModules{FipsValidatedModulesDisabled, FipsValidatedModulesEnabled}
 }
 
+// ManagedServiceIdentityType enumerates the values for managed service identity type.
+type ManagedServiceIdentityType string
+
+const (
+	// None ...
+	None ManagedServiceIdentityType = "None"
+	// SystemAssigned ...
+	SystemAssigned ManagedServiceIdentityType = "SystemAssigned"
+	// SystemAssignedUserAssigned ...
+	SystemAssignedUserAssigned ManagedServiceIdentityType = "SystemAssigned,UserAssigned"
+	// UserAssigned ...
+	UserAssigned ManagedServiceIdentityType = "UserAssigned"
+)
+
+// PossibleManagedServiceIdentityTypeValues returns an array of possible values for the ManagedServiceIdentityType const type.
+func PossibleManagedServiceIdentityTypeValues() []ManagedServiceIdentityType {
+	return []ManagedServiceIdentityType{None, SystemAssigned, SystemAssignedUserAssigned, UserAssigned}
+}
+
 // OutboundType enumerates the values for outbound type.
 type OutboundType string
 
@@ -119,6 +138,25 @@ const (
 // PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
 func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{AdminUpdating, Canceled, Creating, Deleting, Failed, Succeeded, Updating}
+}
+
+// SkuTier enumerates the values for sku tier.
+type SkuTier string
+
+const (
+	// Basic ...
+	Basic SkuTier = "Basic"
+	// Free ...
+	Free SkuTier = "Free"
+	// Premium ...
+	Premium SkuTier = "Premium"
+	// Standard ...
+	Standard SkuTier = "Standard"
+)
+
+// PossibleSkuTierValues returns an array of possible values for the SkuTier const type.
+func PossibleSkuTierValues() []SkuTier {
+	return []SkuTier{Basic, Free, Premium, Standard}
 }
 
 // Visibility enumerates the values for visibility.

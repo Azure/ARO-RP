@@ -32,7 +32,6 @@ try:
     from ._models_py3 import OperationList
     from ._models_py3 import Resource
     from ._models_py3 import ServicePrincipalProfile
-    from ._models_py3 import SystemData
     from ._models_py3 import TrackedResource
     from ._models_py3 import WorkerProfile
 except (SyntaxError, ImportError):
@@ -53,12 +52,10 @@ except (SyntaxError, ImportError):
     from ._models import OperationList  # type: ignore
     from ._models import Resource  # type: ignore
     from ._models import ServicePrincipalProfile  # type: ignore
-    from ._models import SystemData  # type: ignore
     from ._models import TrackedResource  # type: ignore
     from ._models import WorkerProfile  # type: ignore
 
 from ._azure_red_hat_open_shift_client_enums import (
-    CreatedByType,
     EncryptionAtHost,
     ProvisioningState,
     SoftwareDefinedNetwork,
@@ -84,10 +81,8 @@ __all__ = [
     'OperationList',
     'Resource',
     'ServicePrincipalProfile',
-    'SystemData',
     'TrackedResource',
     'WorkerProfile',
-    'CreatedByType',
     'EncryptionAtHost',
     'ProvisioningState',
     'SoftwareDefinedNetwork',

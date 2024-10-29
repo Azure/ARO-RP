@@ -1733,14 +1733,12 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
-									OperatorName: "ClusterIngressOperator",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+								"ClusterIngressOperator": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
 						},
@@ -1797,14 +1795,12 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "CloudControllerManager",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
-								{
-									OperatorName: "ClusterIngressOperator",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "cio"),
+								"ClusterIngressOperator": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "cio"),
 								},
 							},
 						},
@@ -1826,10 +1822,9 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: "DummyOperator",
-									ResourceID:   fmt.Sprintf("%s/%s", resourceID, "ccm"),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"DummyOperator": {
+									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
 								},
 							},
 						},

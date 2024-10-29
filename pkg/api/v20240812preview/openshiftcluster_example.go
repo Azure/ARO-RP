@@ -19,13 +19,18 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 	oc.Location = ""
 	oc.SystemData = nil
 	oc.Properties.WorkerProfilesStatus = nil
+	oc.Identity = &ManagedServiceIdentity{
+		Type: ManagedServiceIdentityUserAssigned,
+		UserAssignedIdentities: map[string]UserAssignedIdentity{
+			"": {},
+		},
+	}
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
-			{
-				OperatorName: "",
-				ResourceID:   "",
-				ClientID:     "",
-				ObjectID:     "",
+		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+			"": {
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
 			},
 		},
 	}
@@ -40,9 +45,11 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.ID = ""
 	oc.Name = ""
 	oc.Type = ""
-	oc.Identity = &Identity{
-		Type:                   "",
-		UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{},
+	oc.Identity = &ManagedServiceIdentity{
+		Type: ManagedServiceIdentityUserAssigned,
+		UserAssignedIdentities: map[string]UserAssignedIdentity{
+			"": {},
+		},
 	}
 	oc.Properties.ProvisioningState = ""
 	oc.Properties.ClusterProfile.Version = ""
@@ -59,12 +66,11 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 		},
 	}
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
-			{
-				OperatorName: "",
-				ResourceID:   "",
-				ClientID:     "",
-				ObjectID:     "",
+		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+			"": {
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
 			},
 		},
 	}
@@ -83,7 +89,7 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
 		EffectiveOutboundIPs: []EffectiveOutboundIP{
 			{
-				ID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/publicIPAddresses/publicIPAddressName",
+				ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/publicIPAddresses/publicIPAddressName",
 			},
 		},
 		ManagedOutboundIPs: &ManagedOutboundIPs{
@@ -91,12 +97,11 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 		},
 	}
 	oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
-			{
-				OperatorName: "",
-				ResourceID:   "",
-				ClientID:     "",
-				ObjectID:     "",
+		PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+			"": {
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
 			},
 		},
 	}

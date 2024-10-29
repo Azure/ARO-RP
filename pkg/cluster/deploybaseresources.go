@@ -477,13 +477,13 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 
-	for _, identity := range platformWorkloadIdentities {
+	for name, identity := range platformWorkloadIdentities {
 		identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
 		if err != nil {
 			return err
 		}
 
-		platformWIRole, exists := platformWIRolesByRoleName[identity.OperatorName]
+		platformWIRole, exists := platformWIRolesByRoleName[name]
 		if !exists {
 			continue
 		}

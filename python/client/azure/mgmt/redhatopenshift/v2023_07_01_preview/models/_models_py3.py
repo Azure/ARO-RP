@@ -544,20 +544,11 @@ class MachinePoolList(msrest.serialization.Model):
 class MachinePoolUpdate(msrest.serialization.Model):
     """MachinePool represents a MachinePool.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.SystemData
     :ivar resources:
     :vartype resources: str
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'resources': {'key': 'properties.resources', 'type': 'str'},
     }
 
@@ -572,7 +563,6 @@ class MachinePoolUpdate(msrest.serialization.Model):
         :paramtype resources: str
         """
         super(MachinePoolUpdate, self).__init__(**kwargs)
-        self.system_data = None
         self.resources = resources
 
 
@@ -995,12 +985,8 @@ class OpenShiftClusterList(msrest.serialization.Model):
 class OpenShiftClusterUpdate(msrest.serialization.Model):
     """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
     :ivar tags: A set of tags. The resource tags.
     :vartype tags: dict[str, str]
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
      "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
@@ -1027,13 +1013,8 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
      list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.IngressProfile]
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
         'tags': {'key': 'tags', 'type': '{str}'},
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
@@ -1093,7 +1074,6 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         """
         super(OpenShiftClusterUpdate, self).__init__(**kwargs)
         self.tags = tags
-        self.system_data = None
         self.provisioning_state = provisioning_state
         self.cluster_profile = cluster_profile
         self.console_profile = console_profile
@@ -1393,20 +1373,11 @@ class SecretList(msrest.serialization.Model):
 class SecretUpdate(msrest.serialization.Model):
     """Secret represents a secret.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.SystemData
     :ivar secret_resources: The Secrets Resources.
     :vartype secret_resources: str
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'secret_resources': {'key': 'properties.secretResources', 'type': 'str'},
     }
 
@@ -1421,7 +1392,6 @@ class SecretUpdate(msrest.serialization.Model):
         :paramtype secret_resources: str
         """
         super(SecretUpdate, self).__init__(**kwargs)
-        self.system_data = None
         self.secret_resources = secret_resources
 
 
@@ -1543,20 +1513,11 @@ class SyncIdentityProviderList(msrest.serialization.Model):
 class SyncIdentityProviderUpdate(msrest.serialization.Model):
     """SyncIdentityProvider represents a SyncIdentityProvider.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.SystemData
     :ivar resources:
     :vartype resources: str
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'resources': {'key': 'properties.resources', 'type': 'str'},
     }
 
@@ -1571,7 +1532,6 @@ class SyncIdentityProviderUpdate(msrest.serialization.Model):
         :paramtype resources: str
         """
         super(SyncIdentityProviderUpdate, self).__init__(**kwargs)
-        self.system_data = None
         self.resources = resources
 
 
@@ -1659,20 +1619,11 @@ class SyncSetList(msrest.serialization.Model):
 class SyncSetUpdate(msrest.serialization.Model):
     """SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
 
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.SystemData
     :ivar resources: Resources represents the SyncSets configuration.
     :vartype resources: str
     """
 
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
     _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'resources': {'key': 'properties.resources', 'type': 'str'},
     }
 
@@ -1687,7 +1638,6 @@ class SyncSetUpdate(msrest.serialization.Model):
         :paramtype resources: str
         """
         super(SyncSetUpdate, self).__init__(**kwargs)
-        self.system_data = None
         self.resources = resources
 
 

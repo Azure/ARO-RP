@@ -8,7 +8,7 @@ func ExamplePlatformWorkloadIdentityRoleSetDocument() *PlatformWorkloadIdentityR
 		MissingFields: MissingFields{},
 		ID:            "00000000-0000-0000-0000-000000000000",
 		PlatformWorkloadIdentityRoleSet: &PlatformWorkloadIdentityRoleSet{
-			ID:   "00000000-0000-0000-0000-000000000000",
+			ID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroupName/providers/resourceProviderNamespace/resourceType/resourceName",
 			Name: "4.14",
 			Type: "Microsoft.RedHatOpenShift/PlatformWorkloadIdentityRoleSet",
 			Properties: PlatformWorkloadIdentityRoleSetProperties{
