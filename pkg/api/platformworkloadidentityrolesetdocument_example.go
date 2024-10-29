@@ -15,8 +15,8 @@ func ExamplePlatformWorkloadIdentityRoleSetDocument() *PlatformWorkloadIdentityR
 				OpenShiftVersion: "4.14",
 				PlatformWorkloadIdentityRoles: []PlatformWorkloadIdentityRole{
 					{
-						OperatorName:       "ServiceOperator",
-						RoleDefinitionName: "AzureRedHatOpenShiftServiceOperator",
+						OperatorName:       "aro-operator",
+						RoleDefinitionName: "Azure Red Hat OpenShift Service Operator",
 						RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/00000000-0000-0000-0000-000000000000",
 						ServiceAccounts: []string{
 							"aro-operator-master",

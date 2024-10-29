@@ -289,7 +289,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID:     "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
 				{
-					OperatorName: "ServiceOperator",
+					OperatorName: "aro-operator",
 					ClientID:     "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
@@ -302,7 +302,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 				{
-					OperatorName: "ServiceOperator",
+					OperatorName: "aro-operator",
 					SecretLocation: api.SecretLocation{
 						Namespace: "openshift-bar",
 						Name:      "azure-cloud-credentials",
