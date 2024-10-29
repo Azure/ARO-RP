@@ -70,14 +70,18 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	// Get the manifests for this cluster which need to be worked
 	i, err := a.mmf.GetQueuedByClusterResourceID(ctx, a.clusterResourceID, "")
 	if err != nil {
-		return false, fmt.Errorf("failed getting manifests: %w", err)
+		err = fmt.Errorf("failed getting manifests: %w", err)
+		a.log.Error(err)
+		return false, err
 	}
 
 	docList := make([]*api.MaintenanceManifestDocument, 0)
 	for {
 		docs, err := i.Next(ctx, -1)
 		if err != nil {
-			return false, fmt.Errorf("failed reading next manifest document: %w", err)
+			err = fmt.Errorf("failed reading next manifest document: %w", err)
+			a.log.Error(err)
+			return false, err
 		}
 		if docs == nil {
 			break
