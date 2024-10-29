@@ -56,7 +56,7 @@ kill_podman() {
 setup_environment() {
     echo "########## 🌐 Setting up Azure account and secrets ##########"
     az account set -s "$AZURE_SUBSCRIPTION_ID"
-    SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+    SECRET_SA_ACCOUNT_NAME="$SECRET_SA_ACCOUNT_NAME" make secrets
     . secrets/env
     export CI=true
     echo "Environment setup complete."

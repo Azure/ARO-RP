@@ -116,9 +116,8 @@ stages:
               setup_environment
               export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
               KEYVAULT_URL="https://${KEYVAULT_PREFIX}.vault.azure.net"
-              echo "Using Key Vault URL: $KEYVAULT_URL"
 
-              # Retrieve the kubeconfig
+               # Retrieve the kubeconfig
               hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
 
               if [ -f aks.kubeconfig ]; then
@@ -133,9 +132,10 @@ stages:
 
           # Step 5: Deploy Hive Operator with fix for unbound PULL_SECRET
           - bash: |
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
               export CI=true
-              . ./hack/e2e/utils.sh
-              setup_environment
               docker compose --env-file .env -f docker-compose.yml up -d vpn
               while [ "$(docker inspect --format '{{.State.Health.Status}}' vpn)" != "healthy" ]; do
                 echo "Waiting for VPN to be healthy..."
@@ -144,16 +144,8 @@ stages:
               done
               docker ps
               export KUBECONFIG=$(pwd)/aks.kubeconfig
-              kubectl get nodes || {
-                echo "Failed to get nodes. Please check the Kubeconfig configuration."
-                exit 1
-              }
-              if [[ -f "hack/hive/hive-dev-install.sh" ]]; then
-                ./hack/hive/hive-dev-install.sh
-              else
-                echo "Hive installation script not found"
-                exit 1
-              fi
+              kubectl get nodes
+              ./hack/hive/hive-dev-install.sh
             displayName: Deploy Hive Operator
 
           # Step 6: Start Services using Docker Compose
@@ -200,7 +192,6 @@ stages:
           #  must-gather collection must be run inside the container so it can access the VPN
           - bash: |
               export CI=true
-              set -x
               hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
             displayName: Get admin kubeconfig for must-gather
             condition: failed()
