@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
@@ -21,6 +22,10 @@ const (
 // ensures that clusters upgrading to 4.16 aren't blocked due to the SHA-1
 // signing algorithm in use by DigiCert
 func (m *manager) correctCertificateIssuer(ctx context.Context) error {
+	if m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
+		return nil
+	}
+
 	domain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
