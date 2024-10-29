@@ -99,7 +99,7 @@ stages:
           # Step 2: Install Docker, Docker Compose, and dependencies
           - script: |
               set -xe
-              . ./hack/e2e/utils.sh
+              . ./hack/e2e/run-rp-and-e2e.sh
               install_docker_dependencies
             displayName: Install Docker and Docker Compose
 
@@ -111,7 +111,7 @@ stages:
 
           # Step 4: Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
           - bash: |
-              . ./hack/e2e/utils.sh
+              . ./hack/e2e/run-rp-and-e2e.sh
               setup_environment
               export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
               KEYVAULT_URL="https://${KEYVAULT_PREFIX}.vault.azure.net"
@@ -132,7 +132,7 @@ stages:
 
           # Step 5: Deploy Hive Operator with fix for unbound PULL_SECRET
           - bash: |
-              . ./hack/e2e/utils.sh
+              . ./hack/e2e/run-rp-and-e2e.sh
               setup_environment
               docker compose --env-file .env -f docker-compose.yml up -d vpn
               while [ "$(docker inspect --format '{{.State.Health.Status}}' vpn)" != "healthy" ]; do
@@ -156,7 +156,7 @@ stages:
 
           # Step 6: Start Services using Docker Compose
           - bash: |
-              . ./hack/e2e/utils.sh
+              . ./hack/e2e/run-rp-and-e2e.sh
               setup_environment
               export RP_IMAGE_ACR=arosvcdev.azurecr.io
               export VERSION=${BUILD_BUILDID}
@@ -169,12 +169,11 @@ stages:
           # Step 7: Execute E2E Tests
           - bash: |
               docker compose logs rp
-              . ./hack/e2e/utils.sh
+              . ./hack/e2e/run-rp-and-e2e.sh
               setup_environment
               export ARO_SELENIUM_HOSTNAME="localhost"
               export OS_CLUSTER_VERSION=4.13.40
               export E2E_LABEL='!smoke&&!regressiontest'
-              . ./hack/e2e/run-rp-and-e2e.sh
               deploy_e2e_db
               register_sub
               env | sort
