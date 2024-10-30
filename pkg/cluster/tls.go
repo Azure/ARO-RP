@@ -17,6 +17,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
+const (
+	OneCertPublicIssuerName = "OneCertV2-PublicCA"
+)
+
 func (m *manager) createCertificates(ctx context.Context) error {
 	if m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
 		return nil
@@ -36,18 +40,18 @@ func (m *manager) createCertificates(ctx context.Context) error {
 		commonName      string
 	}{
 		{
-			certificateName: m.doc.ID + "-apiserver",
+			certificateName: m.APICertName(),
 			commonName:      "api." + managedDomain,
 		},
 		{
-			certificateName: m.doc.ID + "-ingress",
+			certificateName: m.IngressCertName(),
 			commonName:      "*.apps." + managedDomain,
 		},
 	}
 
 	for _, c := range certs {
 		m.log.Printf("creating certificate %s", c.certificateName)
-		err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, "OneCertV2-PublicCA", c.certificateName, c.commonName, keyvault.EkuServerAuth)
+		err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, OneCertPublicIssuerName, c.certificateName, c.commonName, keyvault.EkuServerAuth)
 		if err != nil {
 			return err
 		}
@@ -80,7 +84,7 @@ func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
 	}
 
 	for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
-		err = EnsureTLSSecretFromKeyvault(ctx, m.env.ClusterKeyvault(), m.ch, types.NamespacedName{Name: m.doc.ID + "-apiserver", Namespace: namespace}, m.doc.ID+"-apiserver")
+		err = EnsureTLSSecretFromKeyvault(ctx, m.env.ClusterKeyvault(), m.ch, types.NamespacedName{Name: m.APICertName(), Namespace: namespace}, m.APICertName())
 		if err != nil {
 			return err
 		}
@@ -98,7 +102,7 @@ func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
 					"api." + managedDomain,
 				},
 				ServingCertificate: configv1.SecretNameReference{
-					Name: m.doc.ID + "-apiserver",
+					Name: m.APICertName(),
 				},
 			},
 		}
@@ -123,7 +127,7 @@ func (m *manager) configureIngressCertificate(ctx context.Context) error {
 	}
 
 	for _, namespace := range []string{"openshift-ingress", "openshift-azure-operator"} {
-		err = EnsureTLSSecretFromKeyvault(ctx, m.env.ClusterKeyvault(), m.ch, types.NamespacedName{Namespace: namespace, Name: m.doc.ID + "-ingress"}, m.doc.ID+"-ingress")
+		err = EnsureTLSSecretFromKeyvault(ctx, m.env.ClusterKeyvault(), m.ch, types.NamespacedName{Namespace: namespace, Name: m.IngressCertName()}, m.IngressCertName())
 		if err != nil {
 			return err
 		}
@@ -136,7 +140,7 @@ func (m *manager) configureIngressCertificate(ctx context.Context) error {
 		}
 
 		ic.Spec.DefaultCertificate = &corev1.LocalObjectReference{
-			Name: m.doc.ID + "-ingress",
+			Name: m.IngressCertName(),
 		}
 
 		_, err = m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ctx, ic, metav1.UpdateOptions{})

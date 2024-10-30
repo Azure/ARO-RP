@@ -13,10 +13,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-const (
-	OneCertIssuerName = "OneCertV2-PublicCA"
-)
-
 // if the cluster is using a managed domain and has a DigiCert-issued
 // certificate, replace the certificate with one issued by OneCert. This
 // ensures that clusters upgrading to 4.16 aren't blocked due to the SHA-1
@@ -33,13 +29,13 @@ func (m *manager) correctCertificateIssuer(ctx context.Context) error {
 
 	if domain != "" {
 		apiHostname := strings.Split(strings.TrimPrefix(m.doc.OpenShiftCluster.Properties.APIServerProfile.URL, "https://"), ":")[0]
-		err := m.ensureCertificateIssuer(ctx, m.APICertName(), apiHostname, OneCertIssuerName)
+		err := m.ensureCertificateIssuer(ctx, m.APICertName(), apiHostname, OneCertPublicIssuerName)
 		if err != nil {
 			return err
 		}
 
 		ingressHostname := "*" + strings.TrimSuffix(strings.TrimPrefix(m.doc.OpenShiftCluster.Properties.ConsoleProfile.URL, "https://console-openshift-console"), "/")
-		err = m.ensureCertificateIssuer(ctx, m.IngressCertName(), ingressHostname, OneCertIssuerName)
+		err = m.ensureCertificateIssuer(ctx, m.IngressCertName(), ingressHostname, OneCertPublicIssuerName)
 		if err != nil {
 			return err
 		}
