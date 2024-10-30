@@ -8,14 +8,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
-	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
 func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, error) {
@@ -32,16 +30,11 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus
 		return nil, err
 	}
 
-	msiToken, err := _env.NewMSITokenCredential()
-	if err != nil {
-		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
-	}
-
 	m := statsd.New(ctx, log.WithField("component", "update-role-sets"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed creating database client: %w", err)
 	}
 
 	dbName, err := env.DBName(_env)
@@ -49,27 +42,12 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus
 		return nil, err
 	}
 
-	dbAccountName, err := env.DBAccountName()
+	dbPlatformWorkloadIdentityRoleSets, err := database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
 	if err != nil {
 		return nil, err
 	}
 
-	clientOptions := &policy.ClientOptions{
-		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
-	}
-
-	logrusEntry := log.WithField("component", "database")
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
-	if err != nil {
-		return nil, err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, dbAccountName)
-	if err != nil {
-		return nil, err
-	}
-
-	return database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
+	return dbPlatformWorkloadIdentityRoleSets, nil
 }
 
 func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, log *logrus.Entry) error {
