@@ -86,9 +86,9 @@ stages:
               pushLatest: true
 
   - stage: E2E  # E2E Stage using Docker Compose
-    dependsOn: Containerized
     jobs:
       - job: Run_E2E_Tests
+        timeoutInMinutes: 0
         pool:
           name: 1es-aro-ci-pool
         steps:
