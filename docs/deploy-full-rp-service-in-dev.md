@@ -151,14 +151,14 @@
 
    1. Mirror upstream distroless Geneva MDM/MDSD images to your ACR
 
-        Run the following commands to mirror two Microsoft Geneva images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1).
+        Run the following commands to mirror two Microsoft Geneva images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1). Make sure the value of $mdm_image_tag and $mdsd_image only has the value "sourcerepository:sourcetag" (e.g. linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:mariner_20240711.1) and not "MdsdImage and Tag: /distroless/genevamdsd:mariner_20240711.1 /distroless/genevamdsd:mariner_20240711.1".
 
         ```bash
             source hack/devtools/rp_dev_helper.sh
             mdm_image_tag=$(get_digest_tag "MdmImage")
             az acr import --name $DST_ACR_NAME.azurecr.io --source linuxgeneva-microsoft.azurecr.io$mdm_image_tag
             mdsd_image_tag=$(get_digest_tag "MdsdImage")
-            az acr import --name $DST_ACR_NAME.azurecr.io$mdsd_image_tag --source linuxgeneva-microsoft.azurecr.io$mdsd_image_tag
+            az acr import --name $DST_ACR_NAME.azurecr.io --source linuxgeneva-microsoft.azurecr.io$mdsd_image_tag
         ```
 
    1. Push the ARO image to your ACR
