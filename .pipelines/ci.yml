@@ -155,14 +155,14 @@ stages:
               export ARO_SELENIUM_HOSTNAME="localhost"
               export OS_CLUSTER_VERSION=4.13.40
               export RP_IMAGE_ACR=arosvcdev.azurecr.io
-              export LOCAL_E2E_IMAGE=${LOCAL_E2E_IMAGE}:${VERSION}    # Consistent with LOCAL_E2E_IMAGE
+              export LOCAL_E2E_IMAGE=${LOCAL_E2E_IMAGE}    # Consistent with LOCAL_E2E_IMAGE
               export E2E_LABEL='!smoke&&!regressiontest'
               . ./hack/e2e/run-rp-and-e2e.sh
               deploy_e2e_db
               register_sub
               env | sort
               docker ps
-              docker compose build run-e2e
+              docker compose up run-e2e
               docker ps
             displayName: Start Services using Docker Compose
 
@@ -174,7 +174,7 @@ stages:
               docker compose logs rp
               docker compose logs run-e2e
             displayName: Log Service Output
-            condition: failed()
+            condition: always()
 
           # must-gather collection must be run inside the container so it can access the VPN
           - bash: |
