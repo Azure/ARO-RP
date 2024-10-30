@@ -106,9 +106,9 @@
         ```bash
         make aks.kubeconfig
         ./hack/hive/hive-generate-config.sh
-        KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive/hive-dev-install.sh
+        export KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive/hive-dev-install.sh
         ```
-
+`
 1. Mirror the OpenShift images to your new Azure Container Registry (ACR)
     <!-- TODO (bv) allow mirroring through a pipeline would be faster and a nice to have -->
     > __NOTE:__ Running the mirroring through a VM in Azure rather than a local workstation is recommended for better performance.
@@ -156,7 +156,7 @@
         ```bash
             source hack/devtools/rp_dev_helper.sh
             mdm_image_tag=$(get_digest_tag "MdmImage")
-            az acr import --name $DST_ACR_NAME.azurecr.io$mdm_image_tag --source linuxgeneva-microsoft.azurecr.io$mdm_image_tag
+            az acr import --name $DST_ACR_NAME.azurecr.io --source linuxgeneva-microsoft.azurecr.io$mdm_image_tag
             mdsd_image_tag=$(get_digest_tag "MdsdImage")
             az acr import --name $DST_ACR_NAME.azurecr.io$mdsd_image_tag --source linuxgeneva-microsoft.azurecr.io$mdsd_image_tag
         ```
