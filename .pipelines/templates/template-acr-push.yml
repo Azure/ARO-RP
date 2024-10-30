@@ -5,7 +5,7 @@ parameters:
   - name: acrFQDN
     type: string
   - name: repository  # This is both the ACR and local repository name
-    type: string  # The local and ACR image repository name
+    type: string
   - name: pushLatest
     type: boolean
     default: false
@@ -14,7 +14,7 @@ steps:
   - task: AzureCLI@2
     displayName: 'Authenticate to Azure and Push Docker Image'
     inputs:
-      azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
+      azureSubscription: 'ado-pipeline-dev-image-push'
       scriptType: bash
       scriptLocation: 'inlineScript'
       inlineScript: |
@@ -44,40 +44,28 @@ steps:
         # Login to ACR
         az acr login --name $REGISTRY_NAME
 
-        # List Docker images to verify the built image exists
-        echo "Listing Docker images..."
-        docker images
-
         # Define both the full repository image name and the local name
         IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:$(VERSION)"
-        LOCAL_IMAGE="${{ parameters.repository }}:$(VERSION)"
+        LOCAL_IMAGE="localhost/${{ parameters.repository }}:$(VERSION)"
+        ORIGINAL_LOCAL_IMAGE="${{ parameters.repository }}:$(VERSION)"  # Without the localhost prefix
 
-        # Check if the image exists locally with the full repository tag
-        echo "Checking for image $IMAGE_NAME..."
-        if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
-          # If the full repository tagged image does not exist, check for the local image
-          echo "Full repository image not found. Checking for local image $LOCAL_IMAGE..."
-          if [[ "$(docker images -q $LOCAL_IMAGE 2> /dev/null)" == "" ]]; then
-            echo "Error: Neither $IMAGE_NAME nor $LOCAL_IMAGE found. Exiting."
+        # Check if the image exists with the localhost prefix
+        echo "Checking for image $LOCAL_IMAGE..."
+        if [[ "$(docker images -q $LOCAL_IMAGE 2> /dev/null)" == "" ]]; then
+          echo "Local image with localhost prefix not found. Checking for original local image $ORIGINAL_LOCAL_IMAGE..."
+          
+          if [[ "$(docker images -q $ORIGINAL_LOCAL_IMAGE 2> /dev/null)" == "" ]]; then
+            echo "Error: Neither $LOCAL_IMAGE nor $ORIGINAL_LOCAL_IMAGE found. Exiting."
             exit 1
           else
-            # Retag the local image with the full repository path
-            echo "Local image $LOCAL_IMAGE found. Retagging with full repository path..."
-            docker tag $LOCAL_IMAGE $IMAGE_NAME
+            # Retag the original local image with the full repository path
+            echo "Original local image $ORIGINAL_LOCAL_IMAGE found. Retagging with full repository path..."
+            docker tag $ORIGINAL_LOCAL_IMAGE $IMAGE_NAME
           fi
         else
-          echo "Image $IMAGE_NAME found. Proceeding to push..."
-        fi
-
-        # Ensure the image is available locally before tagging 'latest'
-        IMAGE_LATEST="${ACR_FQDN}/${{ parameters.repository }}:latest"
-        echo "Checking for image $IMAGE_LATEST..."
-        if [[ "$(docker images -q $IMAGE_LATEST 2> /dev/null)" == "" ]]; then
-          echo "Warning: Image $IMAGE_LATEST not found. Skipping 'latest' tag."
-          SKIP_LATEST=true
-        else
-          echo "Image $IMAGE_LATEST found. Proceeding with 'latest' tag."
-          SKIP_LATEST=false
+          # Retag the local image with the full repository path if found
+          echo "Local image $LOCAL_IMAGE found. Retagging with full repository path..."
+          docker tag $LOCAL_IMAGE $IMAGE_NAME
         fi
 
         # Push the Docker image to ACR with the build ID
@@ -85,7 +73,8 @@ steps:
         docker push $IMAGE_NAME
 
         # Optionally push the image as 'latest'
-        if [ "${{ parameters.pushLatest }}" == "true" ] && [ "$SKIP_LATEST" == "false" ]; then
+        if [ "${{ parameters.pushLatest }}" == "true" ]; then
+          IMAGE_LATEST="${ACR_FQDN}/${{ parameters.repository }}:latest"
           echo "Tagging image with 'latest' and pushing..."
           docker tag $IMAGE_NAME $IMAGE_LATEST
           docker push $IMAGE_LATEST

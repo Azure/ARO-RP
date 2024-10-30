@@ -16,18 +16,17 @@ variables:
   - name: REGISTRY
     value: registry.access.redhat.com
   - name: LOCAL_ARO_RP_IMAGE
-    value: "arosvcdev.azurecr.io/aro"
+    value: "localhost/aro"              # Local image for ARO RP
   - name: LOCAL_ARO_AZEXT_IMAGE
     value: "arosvcdev.azurecr.io/azext-aro"
   - name: LOCAL_VPN_IMAGE
     value: "arosvcdev.azurecr.io/vpn"
   - name: LOCAL_E2E_IMAGE
-    value: "arosvcdev.azurecr.io/e2e"
+    value: "localhost/e2e"              # Local image for E2E
   - name: TAG
     value: $(Build.BuildId)
   - name: VERSION
     value: $(Build.BuildId)
-
 
 stages:
   - stage: Containerized
@@ -79,7 +78,7 @@ stages:
               failIfCoverageEmpty: false
             condition: succeededOrFailed()
 
-          # Push the image to ACR
+          # Push the RP image to ACR
           - template: ./templates/template-acr-push.yml
             parameters:
               acrFQDN: 'arosvcdev.azurecr.io'
@@ -108,7 +107,6 @@ stages:
             parameters:
               azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
-
           # Step 4: Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
           - bash: |
               az account set -s $AZURE_SUBSCRIPTION_ID
@@ -118,7 +116,7 @@ stages:
               export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
               KEYVAULT_URL="https://${KEYVAULT_PREFIX}.vault.azure.net"
 
-               # Retrieve the kubeconfig
+              # Retrieve the kubeconfig
               hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
 
               if [ -f aks.kubeconfig ]; then
@@ -141,7 +139,6 @@ stages:
               while [ "$(docker inspect --format '{{.State.Health.Status}}' vpn)" != "healthy" ]; do
                 echo "Waiting for VPN to be healthy..."
                 sleep 10
-              echo "VPN is not healthy yet. Waiting..."
               done
               docker ps
               export KUBECONFIG=$(pwd)/aks.kubeconfig
@@ -155,31 +152,19 @@ stages:
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
               . secrets/env
               export CI=true
-              export RP_IMAGE_ACR=arosvcdev.azurecr.io
-              export VERSION=${BUILD_BUILDID}
-              export E2E_IMAGE=${RP_IMAGE_ACR}/e2e:${VERSION}
-              export E2E_LABEL='!smoke&&!regressiontest'
-              docker compose --env-file .env -f docker-compose.yml up -d
-              docker ps
-            displayName: Start Services using Docker Compose
-
-          # Step 7: Execute E2E Tests
-          - bash: |
-              docker compose logs rp
-              az account set -s $AZURE_SUBSCRIPTION_ID
-              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
-              . secrets/env
-              export CI=true
               export ARO_SELENIUM_HOSTNAME="localhost"
               export OS_CLUSTER_VERSION=4.13.40
+              export RP_IMAGE_ACR=arosvcdev.azurecr.io
+              export LOCAL_E2E_IMAGE=${LOCAL_E2E_IMAGE}:${VERSION}    # Consistent with LOCAL_E2E_IMAGE
               export E2E_LABEL='!smoke&&!regressiontest'
               . ./hack/e2e/run-rp-and-e2e.sh
               deploy_e2e_db
               register_sub
               env | sort
               docker ps
-              docker compose up run-e2e --abort-on-container-exit
-            displayName: Execute E2E Tests
+              docker compose build run-e2e
+              docker ps
+            displayName: Start Services using Docker Compose
 
           # Step 8: Log the output from the services in case of failure
           - bash: |
@@ -191,7 +176,7 @@ stages:
             displayName: Log Service Output
             condition: failed()
 
-          #  must-gather collection must be run inside the container so it can access the VPN
+          # must-gather collection must be run inside the container so it can access the VPN
           - bash: |
               export CI=true
               hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
@@ -203,10 +188,10 @@ stages:
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               ./oc adm must-gather --image quay.io/cmarches/aro-must-gather:20231030.00
-               tar cf must-gather.tar.gz must-gather.local.*
+              tar cf must-gather.tar.gz must-gather.local.*
             displayName: Collect must-gather
             condition: failed()
-            # Publish the must-gather result to the pipeline
+          # Publish the must-gather result to the pipeline
           - publish: must-gather.tar.gz
             artifact: must-gather
             displayName: Append must-gather to Pipeline
@@ -225,7 +210,7 @@ stages:
             displayName: Clean Up Database
             condition: always()
 
-          # Step 11:Cleanup Hive Operator
+          # Step 11: Cleanup Hive Operator
           - bash: |
               echo "Cleaning up Hive Operator..."
               kubectl delete namespace hive || echo "Namespace already deleted or does not exist."
