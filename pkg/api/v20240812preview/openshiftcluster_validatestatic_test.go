@@ -1380,6 +1380,44 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile: Must provide either an identity or service principal credentials.",
 		},
 		{
+			name: "duplicate operator identities",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Identity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+						"FAKE-OPERATOR":         platformIdentity1,
+						"ANOTHER-FAKE-OPERATOR": platformIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities: ResourceID /subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name used by multiple identities.",
+		},
+		{
+			name: "duplicate operator identities, different cases",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Identity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+						"FAKE-OPERATOR": platformIdentity1,
+						"ANOTHER-FAKE-OPERATOR": {
+							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/FAKE-CLUSTER-NAME",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities: ResourceID /subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name used by multiple identities.",
+		},
+		{
 			name: "valid UpgradeableTo value",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Identity = &ManagedServiceIdentity{
