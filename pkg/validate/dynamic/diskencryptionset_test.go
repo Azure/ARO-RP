@@ -49,7 +49,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 				name                string
 				oc                  *api.OpenShiftCluster
 				actionInfos         []client.ActionInfo
-				platformIdentities  []api.PlatformWorkloadIdentity
+				platformIdentities  map[string]api.PlatformWorkloadIdentity
 				platformIdentityMap map[string][]string
 				mocks               func(*mock_compute.MockDiskEncryptionSetsClient, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc)
 				wantErr             string

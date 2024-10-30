@@ -144,10 +144,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	msiResourceID := resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-msi-resource"
-	platformWorkloadIdentities := []api.PlatformWorkloadIdentity{
-		{
-			OperatorName: "Dummy2",
-			ResourceID:   platformIdentity1,
+	platformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
+		"Dummy2": {
+			ResourceID: platformIdentity1,
 		},
 		"Dummy1": {
 			ResourceID: platformIdentity1,
