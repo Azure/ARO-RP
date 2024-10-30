@@ -8,6 +8,9 @@ import (
 	"errors"
 	"testing"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	"github.com/stretchr/testify/assert"
 	storagev1 "k8s.io/api/storage/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -198,6 +201,91 @@ func TestConfigureStorageClass(t *testing.T) {
 				if !kerrors.IsNotFound(err) {
 					t.Error(err)
 				}
+			}
+		})
+	}
+}
+
+func TestRemoveAzureFileCSIStorageClass(t *testing.T) {
+	ctx := context.Background()
+
+	type test struct {
+		name        string
+		operatorcli func() *operatorfake.Clientset
+		doc         api.OpenShiftCluster
+		wantRemoved bool
+	}
+
+	for _, tt := range []*test{
+		{
+			name: "noop - Cluster Service Principal Cluster",
+			doc: api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
+						ClientID:     "aadClientId",
+						ClientSecret: "aadClientSecret",
+					},
+				},
+			},
+		},
+		{
+			name: "noop - fileCSIProvisioner doesn't exist",
+			doc: api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+				},
+			},
+			operatorcli: func() *operatorfake.Clientset {
+				return operatorfake.NewSimpleClientset(
+					&operatorv1.ClusterCSIDriver{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "nonFileCSIProvisioner",
+						},
+					},
+				)
+			},
+		},
+		{
+			name: "Pass - updated fileCSIProvisioner",
+			doc: api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+				},
+			},
+			operatorcli: func() *operatorfake.Clientset {
+				return operatorfake.NewSimpleClientset(
+					&operatorv1.ClusterCSIDriver{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: fileCSIProvisioner,
+						},
+					},
+				)
+			},
+			wantRemoved: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &manager{
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &tt.doc,
+				},
+			}
+
+			if tt.operatorcli != nil {
+				m.operatorcli = tt.operatorcli()
+			}
+
+			err := m.removeAzureFileCSIStorageClass(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.wantRemoved {
+				clusterCSIDriver, err := m.operatorcli.OperatorV1().ClusterCSIDrivers().Get(ctx, fileCSIProvisioner, metav1.GetOptions{})
+				if err != nil || clusterCSIDriver == nil {
+					t.Fatal("Expected clusterCSIDriver but returned error")
+				}
+				assert.Equal(t, clusterCSIDriver.Spec.StorageClassState, operatorv1.StorageClassStateName("Removed"))
 			}
 		})
 	}
