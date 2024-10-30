@@ -177,7 +177,7 @@
         > If the push fails on error like `unable to retrieve auth token:
         > invalid username/password: unauthorized: authentication required`,
         > try to create `DST_AUTH` variable and login to the container
-        > registry (as explained in steps above) again. It will resolve the
+        > registry (as explained above in step 10 i. and ii.) again. It will resolve the
         > failure in case of an expired auth token.
 
         ```bash
