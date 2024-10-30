@@ -111,9 +111,10 @@ stages:
 
           # Step 4: Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
           - bash: |
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
               export CI=true
-              . ./hack/e2e/utils.sh
-              setup_environment
               export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
               KEYVAULT_URL="https://${KEYVAULT_PREFIX}.vault.azure.net"
 
@@ -150,10 +151,10 @@ stages:
 
           # Step 6: Start Services using Docker Compose
           - bash: |
-              export CI=true
-              . ./hack/e2e/utils.sh
-              setup_environment
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
               . secrets/env
+              export CI=true
               export RP_IMAGE_ACR=arosvcdev.azurecr.io
               export VERSION=${BUILD_BUILDID}
               export E2E_IMAGE=${RP_IMAGE_ACR}/e2e:${VERSION}
@@ -165,9 +166,10 @@ stages:
           # Step 7: Execute E2E Tests
           - bash: |
               docker compose logs rp
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
               export CI=true
-              . ./hack/e2e/utils.sh
-              setup_environment
               export ARO_SELENIUM_HOSTNAME="localhost"
               export OS_CLUSTER_VERSION=4.13.40
               export E2E_LABEL='!smoke&&!regressiontest'
