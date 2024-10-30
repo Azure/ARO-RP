@@ -228,6 +228,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.renewMDSDCertificate),
+		steps.Action(m.fixUserAdminKubeconfig),
 		steps.Action(m.ensureCredentialsRequest),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
