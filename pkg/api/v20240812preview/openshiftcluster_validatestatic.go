@@ -469,7 +469,14 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 	}
 
 	// Validate the PlatformWorkloadIdentities
+	foundIdentityResourceIDs := map[string]string{}
+
 	for name, p := range pwip.PlatformWorkloadIdentities {
+		if _, present := foundIdentityResourceIDs[strings.ToLower(p.ResourceID)]; present {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities", path), "ResourceID %s used by multiple identities.", p.ResourceID)
+		}
+		foundIdentityResourceIDs[strings.ToLower(p.ResourceID)] = ""
+
 		resource, err := azcorearm.ParseResourceID(p.ResourceID)
 		if err != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%s].resourceID", path, name), "ResourceID %s formatted incorrectly.", p.ResourceID)
