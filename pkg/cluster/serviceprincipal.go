@@ -54,7 +54,7 @@ func (m *manager) clusterSPObjectID(ctx context.Context) error {
 }
 
 func (m *manager) fixupClusterSPObjectID(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID != "" {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return nil
 	}
 
