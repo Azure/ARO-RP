@@ -199,7 +199,7 @@ services:
       - AZURE_SERVICE_PRINCIPAL_ID
       - RP_BASE_URL=https://localhost:8443
       - PULL_SECRET
-      - USER_PULL_SECRET=${PULL_SECRET}
+      - USER_PULL_SECRET
     entrypoint: "/usr/local/bin/e2e.test"
     command: ["-test.v", "--ginkgo.v", "--ginkgo.timeout=180m", "--ginkgo.flake-attempts=2", "--ginkgo.junit-report=/tmp/e2e-report.xml", "--ginkgo.label-filter=${E2E_LABEL}"]
     healthcheck:
