@@ -85,8 +85,8 @@ func (c *maintenanceManifests) Get(ctx context.Context, clusterResourceID string
 	return c.c.Get(ctx, clusterResourceID, id, nil)
 }
 
-// QueueLength returns maintenanceManifests un-queued document count.
-// If error occurs, 0 is returned with error message
+// QueueLength returns the number of MaintenanceManifests which are waiting to
+// be unqueued. If error occurs, 0 is returned with error message
 func (c *maintenanceManifests) QueueLength(ctx context.Context, collid string) (int, error) {
 	partitions, err := c.collc.PartitionKeyRanges(ctx, collid)
 	if err != nil {
