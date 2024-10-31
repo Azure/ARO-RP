@@ -566,13 +566,13 @@ func (m *manager) Delete(ctx context.Context) error {
 
 		if managedDomain != "" {
 			m.log.Print("deleting signed apiserver certificate")
-			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.doc.ID+"-apiserver")
+			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.APICertName())
 			if err != nil {
 				return err
 			}
 
 			m.log.Print("deleting signed ingress certificate")
-			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.doc.ID+"-ingress")
+			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.IngressCertName())
 			if err != nil {
 				return err
 			}
