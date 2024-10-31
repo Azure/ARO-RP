@@ -179,6 +179,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	}
 
 	if oc.Identity != nil {
+		out.Identity = &ManagedServiceIdentity{}
 		out.Identity.Type = ManagedServiceIdentityType(oc.Identity.Type)
 		out.Identity.UserAssignedIdentities = make(map[string]UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
 		for k := range oc.Identity.UserAssignedIdentities {
