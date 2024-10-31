@@ -180,6 +180,7 @@ services:
       - E2E_LABEL
       - CI
       - RP_MODE
+      - RP_IMAGE_ACR=localhost/aro
       - LOCATION
       - CLUSTER
       - AZURE_SUBSCRIPTION_ID

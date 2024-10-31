@@ -154,7 +154,6 @@ stages:
               export CI=true
               export ARO_SELENIUM_HOSTNAME="localhost"
               export OS_CLUSTER_VERSION=4.13.40
-              export RP_IMAGE_ACR=arosvcdev.azurecr.io
               export LOCAL_E2E_IMAGE=${LOCAL_E2E_IMAGE}    # Consistent with LOCAL_E2E_IMAGE
               export E2E_LABEL='!smoke&&!regressiontest'
               . ./hack/e2e/run-rp-and-e2e.sh
@@ -163,7 +162,6 @@ stages:
               env | sort
               docker ps
               docker compose up run-e2e
-              docker ps
             displayName: Start Services using Docker Compose
 
           # Step 8: Log the output from the services in case of failure
