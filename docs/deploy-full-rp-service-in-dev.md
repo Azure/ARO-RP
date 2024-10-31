@@ -184,7 +184,7 @@
         make publish-image-aro-multistage
         ```
 
-    1. Copy the Fluentbit image from arointsvc ACR to your ACR
+    1. Copy the Fluentbit image from arointsvc ACR to your ACR. 
 
         ```bash
         source hack/devtools/rp_dev_helper.sh
@@ -192,6 +192,8 @@
         copy_digest_tag $PULL_SECRET "arointsvc" $DST_ACR_NAME $fluentbit_image_tag
         ```
 
+         > If $fluentbit_image_tag does not return a value, manually copy the value (e.g. /fluentbit:1.9.10-cm20240628)  returned by func FluentbitImage from pkg/util/version/const.go 
+        
 1. Update the DNS Child Domains
     ```bash
     export PARENT_DOMAIN_NAME=osadev.cloud
