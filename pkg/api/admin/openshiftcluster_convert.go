@@ -54,6 +54,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				APIServerPrivateEndpointIP: oc.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				GatewayPrivateEndpointIP:   oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
 				GatewayPrivateLinkID:       oc.Properties.NetworkProfile.GatewayPrivateLinkID,
+				PreconfiguredNSG:           PreconfiguredNSG(oc.Properties.NetworkProfile.PreconfiguredNSG),
 			},
 			MasterProfile: MasterProfile{
 				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
@@ -178,6 +179,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	}
 
 	if oc.Identity != nil {
+		out.Identity = &ManagedServiceIdentity{}
 		out.Identity.Type = ManagedServiceIdentityType(oc.Identity.Type)
 		out.Identity.UserAssignedIdentities = make(map[string]UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
 		for k := range oc.Identity.UserAssignedIdentities {

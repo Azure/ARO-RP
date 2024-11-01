@@ -146,7 +146,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: admin.MaintenanceTaskEverything,
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -245,7 +246,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						LastProvisioningState: admin.ProvisioningStateSucceeded,
 						MaintenanceTask:       admin.MaintenanceTaskOperator,
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -343,7 +345,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						LastProvisioningState: admin.ProvisioningStateSucceeded,
 						MaintenanceTask:       admin.MaintenanceTaskEverything,
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -442,7 +445,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: admin.MaintenanceTaskOperator,
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -551,7 +555,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						LastProvisioningState: admin.ProvisioningStateSucceeded,
 						MaintenanceTask:       admin.MaintenanceTaskOperator,
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -654,7 +659,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: admin.MaintenanceTaskOperator,
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -835,7 +841,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: "",
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -935,7 +942,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: "",
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1034,7 +1042,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: admin.MaintenanceTaskEverything,
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1134,7 +1143,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: "",
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1234,7 +1244,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: "",
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1332,7 +1343,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 						MaintenanceTask: admin.MaintenanceTaskEverything,
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1433,7 +1445,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 						},
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1535,7 +1548,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 						},
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1637,7 +1651,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 						},
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1739,7 +1754,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 						},
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
@@ -1842,7 +1858,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 						},
 						NetworkProfile: admin.NetworkProfile{
-							OutboundType: admin.OutboundTypeLoadbalancer,
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
 							LoadBalancerProfile: &admin.LoadBalancerProfile{
 								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
 									Count: 1,
