@@ -216,7 +216,14 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 	}
 
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.ensureClusterMsiCertificate),
+			steps.Action(m.initializeClusterMsiClients),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+		)
+	} else {
 		s = append(s,
 			// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
 			// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
