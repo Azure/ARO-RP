@@ -450,7 +450,7 @@ type closure struct {
 }
 
 func (c *closure) checkAccessAuthReqToken() error {
-	scope := c.dv.azEnv.ResourceManagerEndpoint + "/.default"
+	scope := c.dv.env.Environment().ResourceManagerEndpoint + "/.default"
 	t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
 	if err != nil {
 		c.dv.log.Error("Unable to get the token from AAD: ", err)

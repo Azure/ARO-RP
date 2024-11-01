@@ -182,7 +182,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient)
 		wantPlatformIdentities           map[string]api.PlatformWorkloadIdentity
 		wantPlatformIdentitiesActionsMap map[string][]string
-		checkAccessMocks                 func(context.CancelFunc, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
+		checkAccessMocks                 func(context.CancelFunc, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, *mock_env.MockInterface)
 		wantErr                          string
 	}{
 		{
@@ -209,8 +209,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
@@ -244,8 +245,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
@@ -282,8 +284,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
@@ -494,8 +497,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
@@ -527,8 +531,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
@@ -560,8 +565,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, errors.New("Generic Error"))
 			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().CreateAuthorizationRequest(
 					platformIdentity1,
 					msiRequiredPermissionsList,
@@ -586,12 +592,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
 				pdpClient:                  pdpClient,
-				azEnv:                      &azureclient.PublicCloud,
 				checkAccessSubjectInfoCred: tokenCred,
 			}
 
 			if tt.checkAccessMocks != nil {
-				tt.checkAccessMocks(cancel, pdpClient, tokenCred)
+				tt.checkAccessMocks(cancel, pdpClient, tokenCred, _env)
 			}
 
 			if tt.mocks != nil {
