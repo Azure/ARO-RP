@@ -129,7 +129,7 @@ get_mock_msi_tenantID() {
 }
 
 get_mock_msi_objectID() {
-    az ad sp list --all --filter "appId eq '$1'" | jq -r ".[] | .id"
+    az ad sp list --all --filter "appId eq '$1'" --output json | jq -r ".[] | .id"
 }
 
 get_mock_msi_cert() {
@@ -236,7 +236,7 @@ cluster_msi_role_assignment() {
     local FEDERATED_CREDENTIAL_ROLE_ID="ef318e2a-8334-4a05-9e4a-295a196c6a6e"
     local clusterMSIObjectID
 
-    clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' | jq -r .objectId)
+    clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' --output json | jq -r .objectId)
 
     echo "INFO: Assigning role to cluster MSI: ${clusterMSIAppID}"
     assign_role_to_identity "${clusterMSIObjectID}" "${FEDERATED_CREDENTIAL_ROLE_ID}"
@@ -299,7 +299,7 @@ ask_to_create_Azure_deployment() {
 
 list_Azure_deployment_names() {
     echo "INFO: Existing deployment names in the current subscription ($AZURE_SUBSCRIPTION_ID):"
-    az deployment group list --resource-group "$RESOURCEGROUP" | jq '[ .[] | {deployment_name: ( .id ) | split("/deployments/")[1] } | .deployment_name ]'
+    az deployment group list --resource-group "$RESOURCEGROUP" --output json | jq '[ .[] | {deployment_name: ( .id ) | split("/deployments/")[1] } | .deployment_name ]'
 }
 
 create_Azure_deployment() {
