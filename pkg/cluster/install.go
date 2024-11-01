@@ -222,6 +222,7 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.Action(m.initializeClusterMsiClients),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.Action(m.federateIdentityCredentials),
 		)
 	} else {
 		s = append(s,
