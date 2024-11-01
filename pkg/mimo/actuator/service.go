@@ -149,7 +149,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
 
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
-
 	for {
 		if s.stopping.Load() {
 			break
@@ -282,7 +281,10 @@ func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
 	a.AddMaintenanceTasks(s.tasks)
 
 	t := time.NewTicker(s.pollTime)
-	defer t.Stop()
+	defer func() {
+		log.Debugf("stopping worker for %s...", id)
+		t.Stop()
+	}()
 
 out:
 	for {

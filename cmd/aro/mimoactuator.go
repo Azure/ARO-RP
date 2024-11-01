@@ -29,10 +29,8 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	var keys []string
-	if _env.IsLocalDevelopmentMode() {
-		keys = []string{}
-	} else {
+	keys := []string{}
+	if !_env.IsLocalDevelopmentMode() {
 		keys = []string{
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
