@@ -133,33 +133,35 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: admin.MaintenanceTaskEverything,
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: admin.MaintenanceTaskEverything,
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
+						MaintenanceState: admin.MaintenanceStateUnplanned,
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState: admin.MaintenanceStateUnplanned,
-				},
-			},
-		},
+				}
+			}},
 		{
 			name: "patch with flags merges the flags together",
 			request: func(oc *admin.OpenShiftCluster) {
@@ -234,33 +236,35 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					MaintenanceTask:       admin.MaintenanceTaskOperator,
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						MaintenanceTask:       admin.MaintenanceTaskOperator,
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:    admin.OperatorFlags{"exploding-flag": "true", "overwrittenFlag": "true", "testFlag": "true"},
+						MaintenanceState: admin.MaintenanceStateUnplanned,
 					},
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:    admin.OperatorFlags{"exploding-flag": "true", "overwrittenFlag": "true", "testFlag": "true"},
-					MaintenanceState: admin.MaintenanceStateUnplanned,
-				},
-			},
-		},
+				}
+			}},
 		{
 			name: "patch an existing cluster with no flags in db will use defaults",
 			request: func(oc *admin.OpenShiftCluster) {
@@ -331,33 +335,35 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					MaintenanceTask:       admin.MaintenanceTaskEverything,
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						MaintenanceTask:       admin.MaintenanceTaskEverything,
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
+						MaintenanceState: admin.MaintenanceStateUnplanned,
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
-					MaintenanceState: admin.MaintenanceStateUnplanned,
-				},
-			},
-		},
+				}
+			}},
 		{
 			name: "patch with operator update request",
 			request: func(oc *admin.OpenShiftCluster) {
@@ -426,31 +432,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: admin.MaintenanceTaskOperator,
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: admin.MaintenanceTaskOperator,
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
+						MaintenanceState: admin.MaintenanceStateUnplanned,
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
-					MaintenanceState: admin.MaintenanceStateUnplanned,
-				},
+				}
 			},
 		},
 		{
@@ -524,31 +533,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: admin.MaintenanceTaskOperator,
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: admin.MaintenanceTaskOperator,
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
+						MaintenanceState: admin.MaintenanceStateUnplanned,
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState: admin.MaintenanceStateUnplanned,
-				},
+				}
 			},
 		},
 		{
@@ -702,31 +714,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateSucceeded,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: "",
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateSucceeded,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: "",
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MaintenanceState: admin.MaintenanceStatePending,
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
 					},
-					MaintenanceState: admin.MaintenanceStatePending,
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
-				},
+				}
 			},
 		},
 		{
@@ -800,31 +815,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateSucceeded,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: "",
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateSucceeded,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: "",
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MaintenanceState: admin.MaintenanceStatePending,
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
 					},
-					MaintenanceState: admin.MaintenanceStatePending,
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
-				},
+				}
 			},
 		},
 		{
@@ -897,31 +915,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: admin.MaintenanceTaskEverything,
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: admin.MaintenanceTaskEverything,
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
+						MaintenanceState: admin.MaintenanceStatePlanned,
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
-					MaintenanceState: admin.MaintenanceStatePlanned,
-				},
+				}
 			},
 		},
 		{
@@ -995,31 +1016,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateSucceeded,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: "",
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateSucceeded,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: "",
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MaintenanceState: admin.MaintenanceStateNone,
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
 					},
-					MaintenanceState: admin.MaintenanceStateNone,
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
-				},
+				}
 			},
 		},
 		{
@@ -1093,31 +1117,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateSucceeded,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: "",
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateSucceeded,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: "",
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MaintenanceState: admin.MaintenanceStateNone,
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
 					},
-					MaintenanceState: admin.MaintenanceStateNone,
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
-				},
+				}
 			},
 		},
 		{
@@ -1189,31 +1216,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					MaintenanceTask: admin.MaintenanceTaskEverything,
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						MaintenanceTask: admin.MaintenanceTaskEverything,
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
+						MaintenanceState: admin.MaintenanceStateUnplanned,
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState: admin.MaintenanceStateUnplanned,
-				},
+				}
 			},
 		},
 		{
@@ -1289,31 +1319,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateSucceeded,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateSucceeded,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
+						MaintenanceState:     admin.MaintenanceStateCustomerActionNeeded,
+						LastAdminUpdateError: "error",
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState:     admin.MaintenanceStateCustomerActionNeeded,
-					LastAdminUpdateError: "error",
-				},
+				}
 			},
 		},
 		{
@@ -1389,31 +1422,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:       admin.ProvisioningStateSucceeded,
-					FailedProvisioningState: admin.ProvisioningStateUpdating,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:       admin.ProvisioningStateSucceeded,
+						FailedProvisioningState: admin.ProvisioningStateUpdating,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
+						MaintenanceState:     admin.MaintenanceStateCustomerActionNeeded,
+						LastAdminUpdateError: "error",
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState:     admin.MaintenanceStateCustomerActionNeeded,
-					LastAdminUpdateError: "error",
-				},
+				}
 			},
 		},
 		{
@@ -1489,31 +1525,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:       admin.ProvisioningStateSucceeded,
-					FailedProvisioningState: admin.ProvisioningStateUpdating,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:       admin.ProvisioningStateSucceeded,
+						FailedProvisioningState: admin.ProvisioningStateUpdating,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
+						MaintenanceState:     admin.MaintenanceStateCustomerActionNeeded,
+						LastAdminUpdateError: "error",
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState:     admin.MaintenanceStateCustomerActionNeeded,
-					LastAdminUpdateError: "error",
-				},
+				}
 			},
 		},
 		{
@@ -1589,31 +1628,34 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:       admin.ProvisioningStateSucceeded,
-					FailedProvisioningState: admin.ProvisioningStateUpdating,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:       admin.ProvisioningStateSucceeded,
+						FailedProvisioningState: admin.ProvisioningStateUpdating,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
+						MaintenanceState:     admin.MaintenanceStateNone,
+						LastAdminUpdateError: "error",
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState:     admin.MaintenanceStateNone,
-					LastAdminUpdateError: "error",
-				},
+				}
 			},
 		},
 		{
@@ -1689,32 +1731,35 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:       admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState:   admin.ProvisioningStateSucceeded,
-					FailedProvisioningState: admin.ProvisioningStateUpdating,
-					ClusterProfile: admin.ClusterProfile{
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					NetworkProfile: admin.NetworkProfile{
-						OutboundType: admin.OutboundTypeLoadbalancer,
-						LoadBalancerProfile: &admin.LoadBalancerProfile{
-							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
-								Count: 1,
+			wantResponse: func() *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+					Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:       admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState:   admin.ProvisioningStateSucceeded,
+						FailedProvisioningState: admin.ProvisioningStateUpdating,
+						ClusterProfile: admin.ClusterProfile{
+							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+						},
+						NetworkProfile: admin.NetworkProfile{
+							OutboundType:     admin.OutboundTypeLoadbalancer,
+							PreconfiguredNSG: admin.PreconfiguredNSGDisabled,
+							LoadBalancerProfile: &admin.LoadBalancerProfile{
+								ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+									Count: 1,
+								},
 							},
 						},
+						MasterProfile: admin.MasterProfile{
+							EncryptionAtHost: admin.EncryptionAtHostDisabled,
+						},
+						OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
+						MaintenanceState: admin.MaintenanceStateUnplanned,
+						MaintenanceTask:  admin.MaintenanceTaskEverything,
 					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState: admin.MaintenanceStateUnplanned,
-					MaintenanceTask:  admin.MaintenanceTaskEverything,
-				},
+				}
 			},
 		},
 	} {
