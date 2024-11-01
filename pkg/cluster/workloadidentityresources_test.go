@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_platformworkloadidentity "github.com/Azure/ARO-RP/pkg/util/mocks/platformworkloadidentity"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -140,13 +141,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			pwiRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
-			platformWorkloadIdentityRolesByRoleName := map[string]api.PlatformWorkloadIdentityRole{}
-			for _, role := range tt.roles {
-				platformWorkloadIdentityRolesByRoleName[role.OperatorName] = role
-			}
-			pwiRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(platformWorkloadIdentityRolesByRoleName)
-
 			m := manager{
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -169,7 +163,9 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 
-				platformWorkloadIdentityRolesByVersion: pwiRolesByVersion,
+				platformWorkloadIdentityRolesByVersion: mockPlatformWorkloadIdentityRolesByVersion(
+					controller, tt.roles,
+				),
 			}
 			if tt.usesWorkloadIdentity {
 				m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{
@@ -269,13 +265,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			pwiRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
-			platformWorkloadIdentityRolesByRoleName := map[string]api.PlatformWorkloadIdentityRole{}
-			for _, role := range tt.roles {
-				platformWorkloadIdentityRolesByRoleName[role.OperatorName] = role
-			}
-			pwiRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(platformWorkloadIdentityRolesByRoleName)
-
 			clientFake := ctrlfake.NewClientBuilder().Build()
 
 			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
@@ -302,7 +291,9 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 
 				ch: ch,
 
-				platformWorkloadIdentityRolesByVersion: pwiRolesByVersion,
+				platformWorkloadIdentityRolesByVersion: mockPlatformWorkloadIdentityRolesByVersion(
+					controller, tt.roles,
+				),
 			}
 			err := m.deployPlatformWorkloadIdentitySecrets(ctx)
 
@@ -467,13 +458,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			pwiRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
-			platformWorkloadIdentityRolesByRoleName := map[string]api.PlatformWorkloadIdentityRole{}
-			for _, role := range tt.roles {
-				platformWorkloadIdentityRolesByRoleName[role.OperatorName] = role
-			}
-			pwiRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(platformWorkloadIdentityRolesByRoleName)
-
 			m := manager{
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -494,7 +478,9 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 
-				platformWorkloadIdentityRolesByVersion: pwiRolesByVersion,
+				platformWorkloadIdentityRolesByVersion: mockPlatformWorkloadIdentityRolesByVersion(
+					controller, tt.roles,
+				),
 			}
 			got, err := m.generatePlatformWorkloadIdentitySecrets()
 
@@ -697,4 +683,15 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 			assert.Contains(t, got, tt.want)
 		})
 	}
+}
+
+func mockPlatformWorkloadIdentityRolesByVersion(controller *gomock.Controller, roles []api.PlatformWorkloadIdentityRole) platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion {
+	pwiRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
+	platformWorkloadIdentityRolesByRoleName := map[string]api.PlatformWorkloadIdentityRole{}
+	for _, role := range roles {
+		platformWorkloadIdentityRolesByRoleName[role.OperatorName] = role
+	}
+	pwiRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(platformWorkloadIdentityRolesByRoleName)
+
+	return pwiRolesByVersion
 }
