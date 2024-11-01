@@ -239,23 +239,28 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 	}
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
-		out.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
+		if out.Properties.PlatformWorkloadIdentityProfile == nil {
+			out.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
+		}
 
 		if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
 			temp := api.UpgradeableTo(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
 			out.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = &temp
 		}
 
-		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make(map[string]api.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
+		if out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities == nil {
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make(map[string]api.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
+		}
 
-		for k := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			pwi := api.PlatformWorkloadIdentity{
-				ClientID:   oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ClientID,
-				ObjectID:   oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ObjectID,
-				ResourceID: oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ResourceID,
+		for k, identity := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if pwi, exists := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k]; exists {
+				pwi.ResourceID = identity.ResourceID
+				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = pwi
+			} else {
+				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = api.PlatformWorkloadIdentity{
+					ResourceID: identity.ResourceID,
+				}
 			}
-
-			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = pwi
 		}
 	}
 

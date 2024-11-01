@@ -2112,30 +2112,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				}
 				oc.Properties.PlatformWorkloadIdentityProfile = &v20240812preview.PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
-						"AzureFilesStorageOperator": {
-							ResourceID: mockMiResourceId,
-						},
-						"CloudControllerManager": {
-							ResourceID: mockMiResourceId,
-						},
-						"ClusterIngressOperator": {
-							ResourceID: mockMiResourceId,
-						},
-						"ImageRegistryOperator": {
-							ResourceID: mockMiResourceId,
-						},
-						"MachineApiOperator": {
-							ResourceID: mockMiResourceId,
-						},
-						"NetworkOperator": {
-							ResourceID: mockMiResourceId,
-						},
-						"ServiceOperator": {
-							ResourceID: mockMiResourceId,
-						},
-						"StorageOperator": {
-							ResourceID: mockMiResourceId,
-						},
+						"file-csi-driver":          {ResourceID: mockMiResourceId},
+						"cloud-controller-manager": {ResourceID: mockMiResourceId},
+						"ingress":                  {ResourceID: mockMiResourceId},
+						"image-registry":           {ResourceID: mockMiResourceId},
+						"machine-api":              {ResourceID: mockMiResourceId},
+						"cloud-network-config":     {ResourceID: mockMiResourceId},
+						"aro-operator":             {ResourceID: mockMiResourceId},
+						"disk-csi-driver":          {ResourceID: mockMiResourceId},
 					},
 				}
 			},
@@ -2203,30 +2187,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							OperatorFlags: operator.DefaultOperatorFlags(),
 							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 								PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
-									"AzureFilesStorageOperator": {
-										ResourceID: mockMiResourceId,
-									},
-									"CloudControllerManager": {
-										ResourceID: mockMiResourceId,
-									},
-									"ClusterIngressOperator": {
-										ResourceID: mockMiResourceId,
-									},
-									"ImageRegistryOperator": {
-										ResourceID: mockMiResourceId,
-									},
-									"MachineApiOperator": {
-										ResourceID: mockMiResourceId,
-									},
-									"NetworkOperator": {
-										ResourceID: mockMiResourceId,
-									},
-									"ServiceOperator": {
-										ResourceID: mockMiResourceId,
-									},
-									"StorageOperator": {
-										ResourceID: mockMiResourceId,
-									},
+									"file-csi-driver":          {ResourceID: mockMiResourceId},
+									"cloud-controller-manager": {ResourceID: mockMiResourceId},
+									"ingress":                  {ResourceID: mockMiResourceId},
+									"image-registry":           {ResourceID: mockMiResourceId},
+									"machine-api":              {ResourceID: mockMiResourceId},
+									"cloud-network-config":     {ResourceID: mockMiResourceId},
+									"aro-operator":             {ResourceID: mockMiResourceId},
+									"disk-csi-driver":          {ResourceID: mockMiResourceId},
 								},
 							},
 						},
@@ -2267,30 +2235,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 					PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
-							"AzureFilesStorageOperator": {
-								ResourceID: mockMiResourceId,
-							},
-							"CloudControllerManager": {
-								ResourceID: mockMiResourceId,
-							},
-							"ClusterIngressOperator": {
-								ResourceID: mockMiResourceId,
-							},
-							"ImageRegistryOperator": {
-								ResourceID: mockMiResourceId,
-							},
-							"MachineApiOperator": {
-								ResourceID: mockMiResourceId,
-							},
-							"NetworkOperator": {
-								ResourceID: mockMiResourceId,
-							},
-							"ServiceOperator": {
-								ResourceID: mockMiResourceId,
-							},
-							"StorageOperator": {
-								ResourceID: mockMiResourceId,
-							},
+							"file-csi-driver":          {ResourceID: mockMiResourceId},
+							"cloud-controller-manager": {ResourceID: mockMiResourceId},
+							"ingress":                  {ResourceID: mockMiResourceId},
+							"image-registry":           {ResourceID: mockMiResourceId},
+							"machine-api":              {ResourceID: mockMiResourceId},
+							"cloud-network-config":     {ResourceID: mockMiResourceId},
+							"aro-operator":             {ResourceID: mockMiResourceId},
+							"disk-csi-driver":          {ResourceID: mockMiResourceId},
 						},
 					},
 				},
@@ -2887,6 +2839,236 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
 						},
 					},
+					MasterProfile: v20240812preview.MasterProfile{
+						EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
+					},
+					NetworkProfile: v20240812preview.NetworkProfile{
+						OutboundType:     v20240812preview.OutboundTypeLoadbalancer,
+						PreconfiguredNSG: v20240812preview.PreconfiguredNSGDisabled,
+						LoadBalancerProfile: &v20240812preview.LoadBalancerProfile{
+							ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
+								Count: 1,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "patch a workload identity cluster succeeded",
+			request: func(oc *v20240812preview.OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &v20240812preview.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+						"file-csi-driver":          {ResourceID: mockMiResourceId},
+						"cloud-controller-manager": {ResourceID: mockMiResourceId},
+						"ingress":                  {ResourceID: mockMiResourceId},
+						"image-registry":           {ResourceID: mockMiResourceId},
+						"machine-api":              {ResourceID: mockMiResourceId},
+						"cloud-network-config":     {ResourceID: mockMiResourceId},
+						"aro-operator":             {ResourceID: mockMiResourceId},
+						"disk-csi-driver":          {ResourceID: mockMiResourceId},
+						"new":                      {ResourceID: mockMiResourceId},
+					},
+				}
+			},
+			isPatch: true,
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockGuid,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockGuid, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockGuid, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							IngressProfiles:   []api.IngressProfile{{Name: "default"}},
+							WorkerProfiles: []api.WorkerProfile{
+								{
+									Name:             "default",
+									EncryptionAtHost: api.EncryptionAtHostDisabled,
+								},
+							},
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+							OperatorFlags: api.OperatorFlags{},
+							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+								PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+									"file-csi-driver": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"cloud-controller-manager": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"ingress": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"image-registry": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"machine-api": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"cloud-network-config": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"aro-operator": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"disk-csi-driver": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+								},
+							},
+						},
+					},
+				})
+			},
+			wantSystemDataEnriched: true,
+			wantDocuments: func(c *testdatabase.Checker) {
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockGuid, "resourceName")),
+					AsyncOperation: &api.AsyncOperation{
+						InitialProvisioningState: api.ProvisioningStateUpdating,
+						ProvisioningState:        api.ProvisioningStateUpdating,
+					},
+				})
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockGuid, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockGuid, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:     api.ProvisioningStateUpdating,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
+							IngressProfiles: []api.IngressProfile{{Name: "default"}},
+							WorkerProfiles: []api.WorkerProfile{
+								{
+									Name:             "default",
+									EncryptionAtHost: api.EncryptionAtHostDisabled,
+								},
+							},
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG:       api.PreconfiguredNSGDisabled,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 1,
+									},
+								},
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+							OperatorFlags: api.OperatorFlags{},
+							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+								PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+									"file-csi-driver": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"cloud-controller-manager": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"ingress": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"image-registry": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"machine-api": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"cloud-network-config": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"aro-operator": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"disk-csi-driver": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"new": {
+										ResourceID: mockMiResourceId,
+									},
+								},
+							},
+						},
+					},
+				})
+			},
+			wantEnriched:   []string{testdatabase.GetResourcePath(mockGuid, "resourceName")},
+			wantAsync:      true,
+			wantStatusCode: http.StatusOK,
+			wantResponse: &v20240812preview.OpenShiftCluster{
+				ID:         testdatabase.GetResourcePath(mockGuid, "resourceName"),
+				Name:       "resourceName",
+				Type:       "Microsoft.RedHatOpenShift/openShiftClusters",
+				SystemData: &v20240812preview.SystemData{},
+				Tags:       map[string]string{"tag": "will-be-kept"},
+				Properties: v20240812preview.OpenShiftClusterProperties{
+					ProvisioningState: v20240812preview.ProvisioningStateUpdating,
+					ClusterProfile: v20240812preview.ClusterProfile{
+						FipsValidatedModules: v20240812preview.FipsValidatedModulesDisabled,
+					},
+					IngressProfiles: []v20240812preview.IngressProfile{{Name: "default"}},
+					WorkerProfiles: []v20240812preview.WorkerProfile{
+						{
+							Name:             "default",
+							EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
+						},
+					},
 
 					MasterProfile: v20240812preview.MasterProfile{
 						EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
@@ -2897,6 +3079,53 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						LoadBalancerProfile: &v20240812preview.LoadBalancerProfile{
 							ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
 								Count: 1,
+							},
+						},
+					},
+					PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+							"file-csi-driver": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"cloud-controller-manager": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"ingress": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"image-registry": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"machine-api": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"cloud-network-config": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"aro-operator": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"disk-csi-driver": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"new": {
+								ResourceID: mockMiResourceId,
 							},
 						},
 					},
