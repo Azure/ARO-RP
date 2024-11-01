@@ -98,7 +98,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		globalgroups:                 features.NewResourceGroupsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		globalrecordsets:             dns.NewRecordSetsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		globalaccounts:               storage.NewAccountsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
-		globaluserassignedidentities: msi.NewUserAssignedIdentitiesClient(_env.Environment(), config.GlobalSubscriptionID, authorizer),
+		globaluserassignedidentities: msi.NewUserAssignedIdentitiesClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:                  features.NewDeploymentsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		groups:                       features.NewResourceGroupsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		userassignedidentities:       msi.NewUserAssignedIdentitiesClient(_env.Environment(), config.SubscriptionID, authorizer),
