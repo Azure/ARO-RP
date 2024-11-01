@@ -251,6 +251,7 @@ func (m *manager) Update(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
 			steps.Action(m.ensureUpgradeAnnotation),
+			steps.Action(m.deployPlatformWorkloadIdentitySecrets),
 		)
 	} else {
 		s = append(s,
