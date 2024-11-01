@@ -214,12 +214,20 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
-		// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
-		// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+	}
 
-		// credentials rotation flow steps
-		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
+			// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+
+			// CSP credentials rotation flow steps
+			steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
+		)
+	}
+
+	s = append(s,
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
@@ -229,14 +237,22 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.renewMDSDCertificate),
 		steps.Action(m.fixUserAdminKubeconfig),
-		steps.Action(m.ensureCredentialsRequest),
-		steps.Action(m.updateOpenShiftSecret),
-		steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
-		steps.Action(m.updateAROSecret),
-		steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
-		steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
-		steps.Action(m.ensureUpgradeAnnotation),
 		steps.Action(m.reconcileLoadBalancerProfile),
+	)
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.ensureUpgradeAnnotation),
+		)
+	} else {
+		s = append(s,
+			steps.Action(m.ensureCredentialsRequest),
+			steps.Action(m.updateOpenShiftSecret),
+			steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
+			steps.Action(m.updateAROSecret),
+			steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
+			steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
+		)
 	}
 
 	if m.adoptViaHive {
