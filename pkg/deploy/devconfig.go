@@ -152,7 +152,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			},
 			FluentbitImage:       ptr.To(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
 			FPClientID:           ptr.To(os.Getenv("AZURE_FP_CLIENT_ID")),
-			FPTENANTID:           ptr.To(os.Getenv("AZURE_TENANT_ID")),
+			FPTenantID:           ptr.To(os.Getenv("AZURE_TENANT_ID")),
 			FPServicePrincipalID: ptr.To(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
 			GatewayDomains: []string{
 				"eastus-shared.ppe.warm.ingest.monitor.core.windows.net",
