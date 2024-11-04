@@ -473,7 +473,7 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 
 	for name, p := range pwip.PlatformWorkloadIdentities {
 		if _, present := foundIdentityResourceIDs[strings.ToLower(p.ResourceID)]; present {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities", path), "ResourceID %s used by multiple identities.", p.ResourceID)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities", path), "ResourceID %s used by multiple identities.", strings.ToLower(p.ResourceID))
 		}
 		foundIdentityResourceIDs[strings.ToLower(p.ResourceID)] = ""
 
