@@ -207,7 +207,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					}
 				} else {
 					if err.Error() != tt.wantErr {
-						t.Error(err)
+						t.Errorf("got %s, wanted %s", err, tt.wantErr)
 					}
 
 					cloudErr := err.(*api.CloudError)
@@ -1395,7 +1395,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 			},
-			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities: ResourceID /subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name used by multiple identities.",
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities: ResourceID /subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/a-fake-group/providers/microsoft.redhatopenshift/userassignedidentities/fake-cluster-name used by multiple identities.",
 		},
 		{
 			name: "duplicate operator identities, different cases",
@@ -1415,7 +1415,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 			},
-			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities: ResourceID /subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name used by multiple identities.",
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities: ResourceID /subscriptions/12345678-1234-1234-1234-123456789012/resourcegroups/a-fake-group/providers/microsoft.redhatopenshift/userassignedidentities/fake-cluster-name used by multiple identities.",
 		},
 		{
 			name: "valid UpgradeableTo value",
