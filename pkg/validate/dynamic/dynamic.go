@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
@@ -24,7 +25,6 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -98,7 +98,7 @@ type dynamic struct {
 	resourceSkusClient                    compute.ResourceSkusClient
 	spNetworkUsage                        network.UsageClient
 	loadBalancerBackendAddressPoolsClient network.LoadBalancerBackendAddressPoolsClient
-	pdpClient                             remotepdp.RemotePDPClient
+	pdpClient                             client.RemotePDPClient
 }
 
 type AuthorizerType string
@@ -118,7 +118,7 @@ func NewValidator(
 	appID *string,
 	authorizerType AuthorizerType,
 	cred azcore.TokenCredential,
-	pdpClient remotepdp.RemotePDPClient,
+	pdpClient client.RemotePDPClient,
 ) Dynamic {
 	return &dynamic{
 		log:                        log,
@@ -446,31 +446,45 @@ type closure struct {
 	resource *azure.Resource
 	actions  []string
 	oid      *string
+	jwtToken *string
+}
+
+func (c *closure) checkAccessAuthReqToken() error {
+	scope := c.dv.env.Environment().ResourceManagerEndpoint + "/.default"
+	t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
+	if err != nil {
+		c.dv.log.Error("Unable to get the token from AAD: ", err)
+		return err
+	}
+	claims, err := token.ExtractClaims(t.Token)
+	if err != nil {
+		c.dv.log.Error("Unable to get the oid from token: ", err)
+		return err
+	}
+
+	c.oid = &claims.ObjectId
+	c.jwtToken = &t.Token
+	return nil
 }
 
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
 func (c closure) usingCheckAccessV2() (bool, error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
-	// reusing oid during retries
-	if c.oid == nil {
-		scope := c.dv.azEnv.ResourceManagerEndpoint + "/.default"
-		t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
-		if err != nil {
-			c.dv.log.Error("Unable to get the token from AAD: ", err)
+	//ensure token and oid is available during retries
+	if c.jwtToken == nil || c.oid == nil {
+		if err := c.checkAccessAuthReqToken(); err != nil {
 			return false, err
 		}
-
-		oid, err := token.GetObjectId(t.Token)
-		if err != nil {
-			c.dv.log.Error("Unable to parse the token oid claim: ", err)
-			return false, err
-		}
-		c.oid = &oid
 	}
 
-	authReq := createAuthorizationRequest(*c.oid, c.resource.String(), c.actions...)
-	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
+	authReq, err := c.dv.pdpClient.CreateAuthorizationRequest(c.resource.String(), c.actions, *c.jwtToken)
+	if err != nil {
+		c.dv.log.Error("Unexpected error when creating CheckAccessV2 AuthorizationRequest: ", err)
+		return false, err
+	}
+
+	results, err := c.dv.pdpClient.CheckAccess(c.ctx, *authReq)
 	if err != nil {
 		c.dv.log.Error("Unexpected error when calling CheckAccessV2: ", err)
 		return false, err
@@ -489,7 +503,7 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 		_, ok := actionsToFind[result.ActionId]
 		if ok {
 			delete(actionsToFind, result.ActionId)
-			if result.AccessDecision != remotepdp.Allowed {
+			if result.AccessDecision != client.Allowed {
 				return false, nil
 			}
 		}
@@ -500,26 +514,6 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 	}
 
 	return true, nil
-}
-
-func createAuthorizationRequest(subject, resourceId string, actions ...string) remotepdp.AuthorizationRequest {
-	actionInfos := []remotepdp.ActionInfo{}
-	for _, action := range actions {
-		actionInfos = append(actionInfos, remotepdp.ActionInfo{Id: action})
-	}
-
-	return remotepdp.AuthorizationRequest{
-		Subject: remotepdp.SubjectInfo{
-			Attributes: remotepdp.SubjectAttributes{
-				ObjectId:  subject,
-				ClaimName: remotepdp.GroupExpansion, // always do group expansion
-			},
-		},
-		Actions: actionInfos,
-		Resource: remotepdp.ResourceInfo{
-			Id: resourceId,
-		},
-	}
 }
 
 func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, additionalCIDRs ...string) error {
