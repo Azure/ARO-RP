@@ -286,10 +286,8 @@ func TestPullSecretReconciler(t *testing.T) {
 
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
 
-			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: clientFake,
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
 			}
@@ -301,7 +299,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			s := &corev1.Secret{}
-			err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
+			err = r.Client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
 			if err != nil {
 				t.Error(err)
 			}
@@ -363,9 +361,7 @@ func TestParseRedHatKeys(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Reconciler{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), nil)
 
 			out, err := r.parseRedHatKeys(tt.ps)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
@@ -766,10 +762,7 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				clientBuilder = clientBuilder.WithObjects(tt.initialSecret)
 			}
 
-			r := &Reconciler{
-				client: clientBuilder.Build(),
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientBuilder.Build())
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
