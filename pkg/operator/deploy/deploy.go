@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -544,18 +545,20 @@ func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 	upgradeableTo := string(*o.oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
 	upgradeableAnnotation := "cloudcredential.openshift.io/upgradeable-to"
 
-	cloudcredentialobject, err := o.operatorcli.OperatorV1().CloudCredentials().Get(ctx, "cluster", metav1.GetOptions{})
+	patch := &metav1.PartialObjectMetadata{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				upgradeableAnnotation: upgradeableTo,
+			},
+		},
+	}
+
+	patchBytes, err := json.Marshal(patch)
 	if err != nil {
 		return err
 	}
 
-	if cloudcredentialobject.Annotations == nil {
-		cloudcredentialobject.Annotations = map[string]string{}
-	}
-
-	cloudcredentialobject.Annotations[upgradeableAnnotation] = upgradeableTo
-
-	_, err = o.operatorcli.OperatorV1().CloudCredentials().Update(ctx, cloudcredentialobject, metav1.UpdateOptions{})
+	_, err = o.operatorcli.OperatorV1().CloudCredentials().Patch(ctx, "cluster", types.MergePatchType, patchBytes, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
