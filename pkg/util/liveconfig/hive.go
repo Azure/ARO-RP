@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
+	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 )
 
 func getAksClusterByNameAndLocation(ctx context.Context, aksClusters *runtime.Pager[armcontainerservice.ManagedClustersClientListResponse], aksClusterName, location string) (*armcontainerservice.ManagedCluster, error) {
@@ -33,7 +33,7 @@ func getAksClusterByNameAndLocation(ctx context.Context, aksClusters *runtime.Pa
 	return nil, nil
 }
 
-func getAksShardKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, location string, shard int) (*rest.Config, error) {
+func getAksShardKubeconfig(ctx context.Context, managedClustersClient utilcontainerservice.ManagedClustersClient, location string, shard int) (*rest.Config, error) {
 	aksClusterName := fmt.Sprintf("aro-aks-cluster-%03d", shard)
 
 	aksClusters := managedClustersClient.List(ctx)

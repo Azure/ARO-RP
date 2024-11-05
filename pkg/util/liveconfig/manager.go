@@ -9,7 +9,7 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
+	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 )
 
 const (
@@ -30,13 +30,13 @@ type Manager interface {
 
 type dev struct {
 	location              string
-	managedClustersClient containerservice.ManagedClustersClient
+	managedClustersClient utilcontainerservice.ManagedClustersClient
 
 	hiveCredentialsMutex sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
 }
 
-func NewDev(location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
+func NewDev(location string, managedClustersClient utilcontainerservice.ManagedClustersClient) Manager {
 	return &dev{location: location,
 		managedClustersClient: managedClustersClient,
 		cachedCredentials:     make(map[int]*rest.Config),
@@ -46,13 +46,13 @@ func NewDev(location string, managedClustersClient containerservice.ManagedClust
 
 type prod struct {
 	location              string
-	managedClustersClient containerservice.ManagedClustersClient
+	managedClustersClient utilcontainerservice.ManagedClustersClient
 
 	hiveCredentialsMutex sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
 }
 
-func NewProd(location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
+func NewProd(location string, managedClustersClient utilcontainerservice.ManagedClustersClient) Manager {
 	return &prod{
 		location:              location,
 		managedClustersClient: managedClustersClient,

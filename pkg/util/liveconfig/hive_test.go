@@ -16,7 +16,7 @@ import (
 	fake "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
+	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 )
 
 //go:embed testdata
@@ -87,7 +87,7 @@ func TestProdHiveAdmin(t *testing.T) {
 		},
 	}
 
-	mcc, err := containerservice.NewManagedClustersClientWithTransport(&azureclient.PublicCloud, dummySubscription, &azfake.TokenCredential{}, fake.NewManagedClustersServerTransport(&transporter))
+	mcc, err := utilcontainerservice.NewManagedClustersClientWithTransport(&azureclient.PublicCloud, dummySubscription, &azfake.TokenCredential{}, fake.NewManagedClustersServerTransport(&transporter))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
+	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
@@ -80,7 +80,7 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 		return nil, err
 	}
 
-	mcc, err := containerservice.NewDefaultManagedClustersClient(c.Environment(), c.SubscriptionID(), tokenizer)
+	mcc, err := utilcontainerservice.NewDefaultManagedClustersClient(c.Environment(), c.SubscriptionID(), tokenizer)
 	if err != nil {
 		return nil, err
 	}
