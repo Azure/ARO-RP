@@ -17,11 +17,9 @@ type ManagedClustersAddons interface {
 }
 
 func (r *managedClustersClient) ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (armcontainerservice.ManagedClustersClientListClusterAdminCredentialsResponse, error) {
-	// TODO Determine if options need to be specified below
 	return r.ManagedClustersClient.ListClusterAdminCredentials(ctx, resourceGroupName, resourceName, nil)
 }
 
 func (r *managedClustersClient) List(ctx context.Context) *runtime.Pager[armcontainerservice.ManagedClustersClientListResponse] {
-	// TODO Determine if options need to be specified below
 	return r.ManagedClustersClient.NewListPager(nil)
 }
