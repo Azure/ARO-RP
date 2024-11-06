@@ -229,7 +229,7 @@ type NetworkProfile struct {
 	APIServerPrivateEndpointIP string               `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string               `json:"gatewayPrivateEndpointIp,omitempty"`
 	GatewayPrivateLinkID       string               `json:"gatewayPrivateLinkId,omitempty"`
-	PreconfiguredNSG           PreconfiguredNSG     `json:"preconfiguredNSG,omitempty"`
+	PreconfiguredNSG           PreconfiguredNSG     `json:"preconfiguredNSG,omitempty" mutable:"true"`
 	LoadBalancerProfile        *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
