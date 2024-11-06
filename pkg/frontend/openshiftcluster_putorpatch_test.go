@@ -2012,6 +2012,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name: "create a new cluster",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Version = defaultVersion
+				oc.Properties.ServicePrincipalProfile = &v20240812preview.ServicePrincipalProfile{
+					ClientID: mockGuid,
+				}
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2035,8 +2038,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:    strings.ToLower(testdatabase.GetResourcePath(mockGuid, "resourceName")),
-					Bucket: 1,
+					Key:         strings.ToLower(testdatabase.GetResourcePath(mockGuid, "resourceName")),
+					ClientIDKey: mockGuid,
+					Bucket:      1,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockGuid, "resourceName"),
 						Name: "resourceName",
@@ -2050,6 +2054,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								Version:              defaultVersion,
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
+								ClientID: mockGuid,
 							},
 							NetworkProfile: api.NetworkProfile{
 								OutboundType:     api.OutboundTypeLoadbalancer,
@@ -2084,6 +2091,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					ClusterProfile: v20240812preview.ClusterProfile{
 						Version:              defaultVersion,
 						FipsValidatedModules: v20240812preview.FipsValidatedModulesDisabled,
+					},
+					ServicePrincipalProfile: &v20240812preview.ServicePrincipalProfile{
+						ClientID: mockGuid,
 					},
 					MasterProfile: v20240812preview.MasterProfile{
 						EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
@@ -2161,8 +2171,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:    strings.ToLower(testdatabase.GetResourcePath(mockGuid, "resourceName")),
-					Bucket: 1,
+					Key:         strings.ToLower(testdatabase.GetResourcePath(mockGuid, "resourceName")),
+					ClientIDKey: strings.ToLower(mockMiResourceId),
+					Bucket:      1,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockGuid, "resourceName"),
 						Name: "resourceName",
@@ -3219,7 +3230,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantSystemDataEnriched: true,
 			wantAsync:              true,
 			wantStatusCode:         http.StatusBadRequest,
-			wantError:              fmt.Sprintf("400: DuplicateClientID: : The provided client ID '%s' is already in use by a cluster.", mockGuid),
+			wantError:              fmt.Sprintf("400: DuplicateClientID: : The provided service principal with client ID '%s' is already in use by a cluster.", mockGuid),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
