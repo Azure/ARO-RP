@@ -10,8 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -38,11 +36,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	tokenCredential, err := azidentity.NewAzureCLICredential(nil)
-	if err != nil {
-		return err
-	}
-
 	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
@@ -64,17 +57,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
-	clientOptions := &policy.ClientOptions{
-		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
-	}
-	logrusEntry := log.WithField("component", "database")
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, tokenCredential, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, dbAccountName)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, &noop.Noop{}, aead)
 	if err != nil {
 		return err
 	}
