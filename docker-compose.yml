@@ -83,6 +83,7 @@ services:
       - LOCATION
       - MOCK_MSI_CERT
       - MOCK_MSI_CLIENT_ID
+      - MOCK_MSI_OBJECT_ID
       - MOCK_MSI_TENANT_ID
       - OIDC_STORAGE_ACCOUNT_NAME
       - PARENT_DOMAIN_NAME
