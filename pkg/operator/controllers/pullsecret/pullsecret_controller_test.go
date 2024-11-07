@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -285,8 +287,10 @@ func TestPullSecretReconciler(t *testing.T) {
 			ctx := context.Background()
 
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
+			assert.NotNil(t, clientFake)
 
 			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			assert.NotNil(t, r)
 
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
@@ -299,6 +303,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			s := &corev1.Secret{}
+			assert.NotNil(t, s)
 			err = r.Client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
 			if err != nil {
 				t.Error(err)
@@ -313,6 +318,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			cluster := &arov1alpha1.Cluster{}
+			assert.NotNil(t, cluster)
 			err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 			if err != nil {
 				t.Fatal("Error found")
@@ -362,6 +368,7 @@ func TestParseRedHatKeys(t *testing.T) {
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
 			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), nil)
+			assert.NotNil(t, r)
 
 			out, err := r.parseRedHatKeys(tt.ps)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
@@ -756,6 +763,7 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			assert.NotNil(t, ctx)
 
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.initialSecret != nil {
@@ -763,6 +771,7 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			}
 
 			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientBuilder.Build())
+			assert.NotNil(t, r)
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
