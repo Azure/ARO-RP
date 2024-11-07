@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-func EmitMetrics(ctx context.Context, log *logrus.Entry, dbOpenShiftClusters OpenShiftClusters, m metrics.Emitter) {
+func EmitOpenShiftClustersMetrics(ctx context.Context, log *logrus.Entry, dbOpenShiftClusters OpenShiftClusters, m metrics.Emitter) {
 	defer recover.Panic(log)
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()

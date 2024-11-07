@@ -154,7 +154,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	go database.EmitMetrics(ctx, log, dbOpenShiftClusters, metrics)
+	go database.EmitOpenShiftClustersMetrics(ctx, log, dbOpenShiftClusters, metrics)
 
 	feAead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.FrontendEncryptionSecretV2Name, env.FrontendEncryptionSecretName)
 	if err != nil {
