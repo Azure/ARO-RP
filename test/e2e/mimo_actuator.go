@@ -21,7 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-var _ = Describe("MIMO Actuator E2E Testing", func() {
+var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 	BeforeEach(func() {
 		skipIfNotInDevelopmentEnv()
 		skipIfMIMOActuatorNotEnabled()
@@ -37,7 +37,7 @@ var _ = Describe("MIMO Actuator E2E Testing", func() {
 		})
 	})
 
-	It("Should be able to schedule and run a maintenance set via the admin API", Serial, func(ctx context.Context) {
+	It("Should be able to schedule and run a maintenance set via the admin API", func(ctx context.Context) {
 		var oc = &admin.OpenShiftCluster{}
 		testflag := "aro.e2e.testflag." + uuid.DefaultGenerator.Generate()
 
