@@ -17,6 +17,7 @@ import (
 const (
 	MaintenanceManifestDequeueQueryForCluster = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterResourceID = @clusterResourceID`
 	MaintenanceManifestQueryForCluster        = `SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterResourceID`
+	MaintenanceManifestQueueOverallQuery      = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
 	MaintenanceManifestQueueLengthQuery       = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
 )
 
@@ -39,6 +40,8 @@ type MaintenanceManifests interface {
 	EndLease(context.Context, string, string, api.MaintenanceManifestState, *string) (*api.MaintenanceManifestDocument, error)
 	Get(context.Context, string, string) (*api.MaintenanceManifestDocument, error)
 	Delete(context.Context, string, string) error
+	QueueLength(context.Context) (int, error)
+	Queued(ctx context.Context, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 
 	NewUUID() string
 }
@@ -87,8 +90,8 @@ func (c *maintenanceManifests) Get(ctx context.Context, clusterResourceID string
 
 // QueueLength returns the number of MaintenanceManifests which are waiting to
 // be unqueued. If error occurs, 0 is returned with error message
-func (c *maintenanceManifests) QueueLength(ctx context.Context, collid string) (int, error) {
-	partitions, err := c.collc.PartitionKeyRanges(ctx, collid)
+func (c *maintenanceManifests) QueueLength(ctx context.Context) (int, error) {
+	partitions, err := c.collc.PartitionKeyRanges(ctx, "MaintenanceManifests")
 	if err != nil {
 		return 0, err
 	}
@@ -114,6 +117,15 @@ func (c *maintenanceManifests) QueueLength(ctx context.Context, collid string) (
 		countTotal = countTotal + data.Document[0]
 	}
 	return countTotal, nil
+}
+
+// Queued returns the number of MaintenanceManifests which are waiting to
+// be unqueued. If error occurs, 0 is returned with error message
+func (c *maintenanceManifests) Queued(ctx context.Context, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
+	return c.c.Query("", &cosmosdb.Query{
+		Query:      MaintenanceManifestQueueOverallQuery,
+		Parameters: []cosmosdb.Parameter{},
+	}, &cosmosdb.Options{Continuation: continuation}), nil
 }
 
 func (c *maintenanceManifests) Patch(ctx context.Context, clusterResourceID string, id string, f MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error) {

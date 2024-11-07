@@ -9,9 +9,15 @@ import (
 
 type maintenanceManifestConverter struct{}
 
-func (m maintenanceManifestConverter) ToExternal(d *api.MaintenanceManifestDocument) interface{} {
+func (m maintenanceManifestConverter) ToExternal(d *api.MaintenanceManifestDocument, clusterNamespaced bool) interface{} {
+	clusterResourceID := ""
+	if !clusterNamespaced {
+		clusterResourceID = d.ClusterResourceID
+	}
 	return &MaintenanceManifest{
 		ID: d.ID,
+
+		ClusterResourceID: clusterResourceID,
 
 		State:      MaintenanceManifestState(d.MaintenanceManifest.State),
 		StatusText: d.MaintenanceManifest.StatusText,
@@ -24,14 +30,14 @@ func (m maintenanceManifestConverter) ToExternal(d *api.MaintenanceManifestDocum
 	}
 }
 
-func (m maintenanceManifestConverter) ToExternalList(docs []*api.MaintenanceManifestDocument, nextLink string) interface{} {
+func (m maintenanceManifestConverter) ToExternalList(docs []*api.MaintenanceManifestDocument, nextLink string, clusterNamespaced bool) interface{} {
 	l := &MaintenanceManifestList{
 		MaintenanceManifests: make([]*MaintenanceManifest, 0, len(docs)),
 		NextLink:             nextLink,
 	}
 
 	for _, doc := range docs {
-		l.MaintenanceManifests = append(l.MaintenanceManifests, m.ToExternal(doc).(*MaintenanceManifest))
+		l.MaintenanceManifests = append(l.MaintenanceManifests, m.ToExternal(doc, clusterNamespaced).(*MaintenanceManifest))
 	}
 
 	return l

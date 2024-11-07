@@ -19,6 +19,8 @@ type MaintenanceManifest struct {
 	// The ID for the resource.
 	ID string `json:"id,omitempty"`
 
+	ClusterResourceID string `json:"clusterResourceID,omitempty"`
+
 	State      MaintenanceManifestState `json:"state,omitempty"`
 	StatusText string                   `json:"statusText,omitempty"`
 

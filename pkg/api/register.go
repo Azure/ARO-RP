@@ -72,8 +72,8 @@ type SecretConverter interface {
 }
 
 type MaintenanceManifestConverter interface {
-	ToExternal(*MaintenanceManifestDocument) interface{}
-	ToExternalList([]*MaintenanceManifestDocument, string) interface{}
+	ToExternal(doc *MaintenanceManifestDocument, clusterNamespaced bool) interface{}
+	ToExternalList(docs []*MaintenanceManifestDocument, nextLink string, clusterNamespaced bool) interface{}
 	ToInternal(interface{}, *MaintenanceManifestDocument)
 }
 

@@ -12,13 +12,13 @@ import (
 
 type maintenanceManifestStaticValidator struct{}
 
-// Validate validates an OpenShift cluster
+// Validate validates a MaintenanceManifest
 func (sv maintenanceManifestStaticValidator) Static(_new interface{}, _current *api.MaintenanceManifestDocument) error {
 	new := _new.(*MaintenanceManifest)
 
 	var current *MaintenanceManifest
 	if _current != nil {
-		current = (&maintenanceManifestConverter{}).ToExternal(_current).(*MaintenanceManifest)
+		current = (&maintenanceManifestConverter{}).ToExternal(_current, false).(*MaintenanceManifest)
 	}
 
 	err := sv.validate(new)
