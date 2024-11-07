@@ -34,25 +34,14 @@ func (f *frontend) deleteAdminMaintManifest(w http.ResponseWriter, r *http.Reque
 func (f *frontend) _deleteAdminMaintManifest(ctx context.Context, r *http.Request, resourceID string) ([]byte, error) {
 	manifestId := chi.URLParam(r, "manifestId")
 
-	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
-	}
-
 	dbMaintenanceManifests, err := f.dbGroup.MaintenanceManifests()
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", fmt.Sprintf("cluster not found: %s", err.Error()))
-	}
-
-	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateDeleting {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster being deleted")
-	}
-
+	// Note: We do not check if the MaintenanceManifest has a matching cluster,
+	// since it might be possible for a race condition to have a
+	// deleting/deleted cluster having a queued Manifest.
 	err = dbMaintenanceManifests.Delete(ctx, resourceID, manifestId)
 	if err != nil {
 		cloudErr, ok := err.(*api.CloudError)

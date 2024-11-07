@@ -33,30 +33,6 @@ func TestMIMODeleteManifest(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:           "no cluster",
-			wantError:      "404: NotFound: : cluster not found: 404 : ",
-			fixtures:       func(f *testdatabase.Fixture) {},
-			wantStatusCode: http.StatusNotFound,
-		},
-		{
-			name: "cluster being deleted",
-			fixtures: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(resourceID),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   resourceID,
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateDeleting,
-						},
-					},
-				})
-			},
-			wantError:      "404: NotFound: : cluster being deleted",
-			wantStatusCode: http.StatusNotFound,
-		},
-		{
 			name: "no item",
 			fixtures: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
