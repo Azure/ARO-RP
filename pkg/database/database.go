@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	azcorepolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/sirupsen/logrus"
@@ -21,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcosmos"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
@@ -55,22 +53,6 @@ func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Aut
 	}
 
 	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
-}
-
-func NewMasterKeyAuthorizer(ctx context.Context, log *logrus.Entry, token azcore.TokenCredential, clientOptions *policy.ClientOptions, subscriptionID, resourceGroup, databaseAccountName string) (cosmosdb.Authorizer, error) {
-	databaseaccounts, err := armcosmos.NewDatabaseAccountsClient(subscriptionID, token, clientOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	// no options defined in the SDK at the moment, but better than passing a nil.
-	opt := sdkcosmos.DatabaseAccountsClientListKeysOptions{}
-	keys, err := databaseaccounts.ListKeys(ctx, resourceGroup, databaseAccountName, &opt)
-	if err != nil {
-		return nil, err
-	}
-
-	return cosmosdb.NewMasterKeyAuthorizer(getDatabaseKey(keys, log))
 }
 
 func NewTokenAuthorizer(ctx context.Context, log *logrus.Entry, cred azcore.TokenCredential, databaseAccountName string, scopes []string) (cosmosdb.Authorizer, error) {
