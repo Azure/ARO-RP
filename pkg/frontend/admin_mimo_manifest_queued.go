@@ -18,11 +18,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-func (f *frontend) getAdminMaintManifests(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) getAdminQueuedMaintManifests(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	resourceID := resourceIdFromURLParams(r)
-	b, err := f._getAdminMaintManifests(ctx, r, resourceID)
+	b, err := f._getAdminQueuedMaintManifests(ctx, r)
 
 	if cloudErr, ok := err.(*api.CloudError); ok {
 		api.WriteCloudError(w, cloudErr)
@@ -32,7 +31,7 @@ func (f *frontend) getAdminMaintManifests(w http.ResponseWriter, r *http.Request
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request, resourceID string) ([]byte, error) {
+func (f *frontend) _getAdminQueuedMaintManifests(ctx context.Context, r *http.Request) ([]byte, error) {
 	limitstr := r.URL.Query().Get("limit")
 	limit, err := strconv.Atoi(limitstr)
 	if err != nil {
@@ -41,23 +40,9 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 
 	converter := f.apis[admin.APIVersion].MaintenanceManifestConverter
 
-	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
-	}
-
 	dbMaintenanceManifests, err := f.dbGroup.MaintenanceManifests()
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
-	}
-
-	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", fmt.Sprintf("cluster not found: %s", err.Error()))
-	}
-
-	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateDeleting {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster being deleted")
 	}
 
 	skipToken, err := f.parseSkipToken(r.URL.String())
@@ -65,7 +50,7 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 		return nil, err
 	}
 
-	i, err := dbMaintenanceManifests.GetByClusterResourceID(ctx, resourceID, skipToken)
+	i, err := dbMaintenanceManifests.Queued(ctx, skipToken)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
@@ -92,5 +77,5 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 		return nil, err
 	}
 
-	return json.MarshalIndent(converter.ToExternalList(docList, nextLink, true), "", "    ")
+	return json.MarshalIndent(converter.ToExternalList(docList, nextLink, false), "", "    ")
 }

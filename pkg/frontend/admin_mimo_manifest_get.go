@@ -60,5 +60,5 @@ func (f *frontend) _getSingleAdminMaintManifest(ctx context.Context, r *http.Req
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", fmt.Sprintf("manifest not found: %s", err.Error()))
 	}
 
-	return json.MarshalIndent(converter.ToExternal(manifest), "", "    ")
+	return json.MarshalIndent(converter.ToExternal(manifest, true), "", "    ")
 }

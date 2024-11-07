@@ -94,5 +94,5 @@ func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Req
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	return json.MarshalIndent(converter.ToExternal(savedDoc), "", "    ")
+	return json.MarshalIndent(converter.ToExternal(savedDoc, true), "", "    ")
 }

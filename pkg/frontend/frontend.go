@@ -289,6 +289,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		})
 		r.Get("/supportedvmsizes", f.supportedvmsizes)
 
+		r.Route("/maintenancemanifests", func(r chi.Router) {
+			r.Get("/queued", f.getAdminQueuedMaintManifests)
+		})
+
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
 			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
 				// Etcd recovery

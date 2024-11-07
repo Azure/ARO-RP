@@ -75,5 +75,5 @@ func (f *frontend) _postAdminMaintManifestCancel(ctx context.Context, r *http.Re
 		}
 	}
 
-	return json.MarshalIndent(converter.ToExternal(modifiedDoc), "", "    ")
+	return json.MarshalIndent(converter.ToExternal(modifiedDoc, true), "", "    ")
 }
