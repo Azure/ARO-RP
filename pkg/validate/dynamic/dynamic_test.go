@@ -1573,7 +1573,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 		platformIdentityMap map[string][]string
 		checkAccessMocks    func(context.CancelFunc, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, *mock_env.MockInterface)
 		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
-		wantErr             string
+		wantErrs            []string
 	}{
 		{
 			name: "pass: skip when preconfiguredNSG is not enabled",
@@ -1616,7 +1616,10 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					},
 					).AnyTimes()
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+			wantErrs: []string{
+				"400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+				"400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+			},
 		},
 		{
 			name: "Fail - MIWI Cluster - permissions don't exist on all nsg",
@@ -1657,7 +1660,10 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
 			},
-			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+			wantErrs: []string{
+				"400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+				"400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+			},
 		},
 		{
 			name: "pass: sp has the required permission on the NSG",
@@ -1827,7 +1833,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			}
 
 			err := dv.ValidatePreConfiguredNSGs(ctx, oc, subnets)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			utilerror.AssertOneOfErrorMessages(t, err, tt.wantErrs)
 		})
 	}
 }
