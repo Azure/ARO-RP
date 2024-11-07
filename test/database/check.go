@@ -42,8 +42,9 @@ func (f *Checker) Clear() {
 	f.portalDocuments = []*api.PortalDocument{}
 	f.gatewayDocuments = []*api.GatewayDocument{}
 	f.openShiftVersionDocuments = []*api.OpenShiftVersionDocument{}
-	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
+	f.platformWorkloadIdentityRoleSetDocuments = []*api.PlatformWorkloadIdentityRoleSetDocument{}
 	f.validationResult = []*api.ValidationResult{}
+	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
 }
 
 func (f *Checker) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {

@@ -51,6 +51,7 @@ func (f *Fixture) Clear() {
 	f.gatewayDocuments = []*api.GatewayDocument{}
 	f.openShiftVersionDocuments = []*api.OpenShiftVersionDocument{}
 	f.clusterManagerConfigurationDocuments = []*api.ClusterManagerConfigurationDocument{}
+	f.platformWorkloadIdentityRoleSetDocuments = []*api.PlatformWorkloadIdentityRoleSetDocument{}
 	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
 }
 
