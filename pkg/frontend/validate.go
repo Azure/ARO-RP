@@ -73,7 +73,21 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 		return err
 	}
 	if docs.Count != 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", "The provided client ID '%s' is already in use by a cluster.", doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
+		clientIdOrMsi := ""
+		value := ""
+		if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+			clusterMsiResourceId, err := doc.OpenShiftCluster.ClusterMsiResourceId()
+			if err != nil {
+				return err
+			}
+
+			clientIdOrMsi = "user assigned identity"
+			value = clusterMsiResourceId.String()
+		} else {
+			clientIdOrMsi = "service principal with client ID"
+			value = doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID
+		}
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", "The provided %s '%s' is already in use by a cluster.", clientIdOrMsi, value)
 	}
 	docs, err = dbOpenShiftClusters.GetByClusterResourceGroupID(ctx, doc.PartitionKey, doc.ClusterResourceGroupIDKey)
 	if err != nil {

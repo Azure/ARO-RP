@@ -251,7 +251,23 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 
-		if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+		// doc.ClientIDKey is used as part of the Cosmos DB instance's unique key policy. Because we have
+		// one Cosmos DB instance per region, this value must be unique within the region.
+		//
+		// This effectively enforces:
+		//   - Among all service principal clusters within a region, the service principal must be unique
+		//   - Among all workload identity clusters within a region, the cluster MSI must be unique
+		//
+		// The name "clientIdKey" is an artifact of the world before workload identity where there were
+		// only service principal clusters.
+		if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+			clusterMsiResourceId, err := doc.OpenShiftCluster.ClusterMsiResourceId()
+			if err != nil {
+				return nil, err
+			}
+
+			doc.ClientIDKey = strings.ToLower(clusterMsiResourceId.String())
+		} else {
 			doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 		}
 
