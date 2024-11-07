@@ -27,3 +27,18 @@ func EmitOpenShiftClustersMetrics(ctx context.Context, log *logrus.Entry, dbOpen
 		}
 	}
 }
+
+func EmitMIMOMetrics(ctx context.Context, log *logrus.Entry, dbMaintenanceManifests MaintenanceManifests, m metrics.Emitter) {
+	defer recover.Panic(log)
+	t := time.NewTicker(time.Minute)
+	defer t.Stop()
+
+	for range t.C {
+		i, err := dbMaintenanceManifests.QueueLength(ctx)
+		if err != nil {
+			log.Error(err)
+		} else {
+			m.EmitGauge("database.maintenancemanifests.queue.length", int64(i), nil)
+		}
+	}
+}

@@ -73,6 +73,8 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 		WithOpenShiftClusters(clusters).
 		WithMaintenanceManifests(manifests)
 
+	go database.EmitMIMOMetrics(ctx, log, manifests, m)
+
 	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
