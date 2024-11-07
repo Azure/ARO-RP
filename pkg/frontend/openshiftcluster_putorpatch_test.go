@@ -1986,7 +1986,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	}
 
 	mockGuid := "00000000-0000-0000-0000-000000000000"
-	mockMiResourceId := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/not-a-real-group/providers/Microsoft.ManagedIdentity/userAssignedIdentities/not-a-real-mi"
+	mockMiResourceId := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/not-a-real-group/providers/Microsoft.ManagedIdentity/userAssignedIdentities/not-a-real-mi"
 	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	type test struct {
@@ -3185,7 +3185,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:              fmt.Sprintf("400: DuplicateResourceGroup: : The provided resource group '/subscriptions/%s/resourcegroups/aro-vjb21wca' already contains a cluster.", mockGuid),
 		},
 		{
-			name: "creating cluster failing when provided client ID is not unique",
+			name: "creating service principal cluster fails when provided client ID is not unique",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
 				oc.Properties.ServicePrincipalProfile = &v20240812preview.ServicePrincipalProfile{
 					ClientID: mockGuid,
@@ -3231,6 +3231,92 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantAsync:              true,
 			wantStatusCode:         http.StatusBadRequest,
 			wantError:              fmt.Sprintf("400: DuplicateClientID: : The provided service principal with client ID '%s' is already in use by a cluster.", mockGuid),
+		},
+		{
+			name: "creating workload identity cluster fails when provided cluster MSI is not unique",
+			request: func(oc *v20240812preview.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = defaultVersion
+				oc.Identity = &v20240812preview.ManagedServiceIdentity{
+					Type: "UserAssigned",
+					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
+						mockMiResourceId: {},
+					},
+				}
+				oc.Properties.PlatformWorkloadIdentityProfile = &v20240812preview.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+						"AzureFilesStorageOperator": {
+							ResourceID: mockMiResourceId,
+						},
+						"CloudControllerManager": {
+							ResourceID: mockMiResourceId,
+						},
+						"ClusterIngressOperator": {
+							ResourceID: mockMiResourceId,
+						},
+						"ImageRegistryOperator": {
+							ResourceID: mockMiResourceId,
+						},
+						"MachineApiOperator": {
+							ResourceID: mockMiResourceId,
+						},
+						"NetworkOperator": {
+							ResourceID: mockMiResourceId,
+						},
+						"ServiceOperator": {
+							ResourceID: mockMiResourceId,
+						},
+						"StorageOperator": {
+							ResourceID: mockMiResourceId,
+						},
+					},
+				}
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockGuid,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key:         strings.ToLower(testdatabase.GetResourcePath(mockGuid, "otherResourceName")),
+					ClientIDKey: strings.ToLower(mockMiResourceId),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockGuid, "otherResourceName"),
+						Name: "otherResourceName",
+						Identity: &api.ManagedServiceIdentity{
+							Type: "UserAssigned",
+							UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+								mockMiResourceId: {},
+							},
+						},
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateCreating,
+							ClusterProfile: api.ClusterProfile{
+								Version:              defaultVersion,
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+							OperatorFlags: api.OperatorFlags{},
+						},
+					},
+				})
+			},
+			changeFeed:             ocpVersionsChangeFeed,
+			wantSystemDataEnriched: true,
+			wantAsync:              true,
+			wantStatusCode:         http.StatusBadRequest,
+			wantError:              fmt.Sprintf("400: DuplicateClientID: : The provided user assigned identity '%s' is already in use by a cluster.", mockMiResourceId),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
