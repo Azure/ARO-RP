@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"math/big"
@@ -61,6 +62,19 @@ func (m *manager) generateWorkloadIdentityResources() (map[string]kruntime.Objec
 	}
 
 	return resources, nil
+}
+
+func (m *manager) deployPlatformWorkloadIdentitySecrets(ctx context.Context) error {
+	secrets, err := m.generatePlatformWorkloadIdentitySecrets()
+	if err != nil {
+		return err
+	}
+	resources := make([]kruntime.Object, len(secrets))
+	for i, secret := range secrets {
+		resources[i] = secret
+	}
+
+	return m.ch.Ensure(ctx, resources...)
 }
 
 func (m *manager) generatePlatformWorkloadIdentitySecrets() ([]*corev1.Secret, error) {
