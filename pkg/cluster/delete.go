@@ -378,7 +378,7 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 }
 
 func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return nil
 	}
 
