@@ -116,7 +116,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 				return nil
 			})
 			if err != nil {
-				a.log.Error(err)
+				a.log.Error(fmt.Sprintf("failed to patch manifest %s with state TimedOut; will still attempt to process other manifests: %s", doc.ID, err))
 			}
 		} else {
 			// not timed out, do something about it
