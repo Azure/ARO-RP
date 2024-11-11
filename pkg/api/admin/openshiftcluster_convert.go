@@ -196,13 +196,11 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		out.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make(map[string]PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
-		for k := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			if entry, ok := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k]; ok {
-				entry.ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ClientID
-				entry.ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ObjectID
-				entry.ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ResourceID
-
-				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = entry
+		for name, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = PlatformWorkloadIdentity{
+				ResourceID:  pwi.ResourceID,
+				ClientID:    pwi.ClientID,
+				PrincipalID: pwi.PrincipalID,
 			}
 		}
 	}
