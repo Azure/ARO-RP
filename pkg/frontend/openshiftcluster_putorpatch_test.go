@@ -2225,6 +2225,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
 						mockMiResourceId: {},
 					},
+					TenantID: mockGuid,
 				},
 				Properties: v20240812preview.OpenShiftClusterProperties{
 					ProvisioningState: v20240812preview.ProvisioningStateCreating,
