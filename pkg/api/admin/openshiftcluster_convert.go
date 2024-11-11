@@ -301,13 +301,16 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		out.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make(map[string]api.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
-		for k := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			if entry, ok := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k]; ok {
-				entry.ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ClientID
-				entry.ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ObjectID
-				entry.ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ResourceID
-
-				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = entry
+		for name, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if outPwi, exists := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name]; exists {
+				outPwi.ResourceID = pwi.ResourceID
+				out.PropertiesPlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = outPwi
+			} else {
+				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = api.PlatformWorkloadIdentity{
+					ResourceID:  pwi.ResourceID,
+					ClientID:    pwi.ClientID,
+					PrincipalID: pwi.PrincipalID,
+				}
 			}
 		}
 	}
