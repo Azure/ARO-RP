@@ -181,6 +181,8 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	if oc.Identity != nil {
 		out.Identity = &ManagedServiceIdentity{}
 		out.Identity.Type = ManagedServiceIdentityType(oc.Identity.Type)
+		out.Identity.PrincipalID = oc.Identity.PrincipalID
+		out.Identity.TenantID = oc.Identity.TenantID
 		out.Identity.UserAssignedIdentities = make(map[string]UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
 		for k := range oc.Identity.UserAssignedIdentities {
 			var temp UserAssignedIdentity
@@ -194,13 +196,11 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		out.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make(map[string]PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
-		for k := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			if entry, ok := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k]; ok {
-				entry.ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ClientID
-				entry.ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ObjectID
-				entry.ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ResourceID
-
-				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = entry
+		for name, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = PlatformWorkloadIdentity{
+				ResourceID: pwi.ResourceID,
+				ClientID:   pwi.ClientID,
+				ObjectID:   pwi.ObjectID,
 			}
 		}
 	}
@@ -260,6 +260,8 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	}
 	if oc.Identity != nil {
 		out.Identity.Type = api.ManagedServiceIdentityType(oc.Identity.Type)
+		out.Identity.PrincipalID = oc.Identity.PrincipalID
+		out.Identity.TenantID = oc.Identity.TenantID
 		out.Identity.UserAssignedIdentities = make(map[string]api.UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
 		for k := range oc.Identity.UserAssignedIdentities {
 			var temp api.UserAssignedIdentity
@@ -299,13 +301,16 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		out.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make(map[string]api.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
-		for k := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			if entry, ok := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k]; ok {
-				entry.ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ClientID
-				entry.ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ObjectID
-				entry.ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ResourceID
-
-				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = entry
+		for name, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if outPwi, exists := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name]; exists {
+				outPwi.ResourceID = pwi.ResourceID
+				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = outPwi
+			} else {
+				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = api.PlatformWorkloadIdentity{
+					ResourceID: pwi.ResourceID,
+					ClientID:   pwi.ClientID,
+					ObjectID:   pwi.ObjectID,
+				}
 			}
 		}
 	}
