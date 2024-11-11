@@ -198,9 +198,9 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 
 		for name, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = PlatformWorkloadIdentity{
-				ResourceID:  pwi.ResourceID,
-				ClientID:    pwi.ClientID,
-				PrincipalID: pwi.PrincipalID,
+				ResourceID: pwi.ResourceID,
+				ClientID:   pwi.ClientID,
+				ObjectID:   pwi.ObjectID,
 			}
 		}
 	}
@@ -304,12 +304,12 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		for name, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if outPwi, exists := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name]; exists {
 				outPwi.ResourceID = pwi.ResourceID
-				out.PropertiesPlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = outPwi
+				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = outPwi
 			} else {
 				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name] = api.PlatformWorkloadIdentity{
-					ResourceID:  pwi.ResourceID,
-					ClientID:    pwi.ClientID,
-					PrincipalID: pwi.PrincipalID,
+					ResourceID: pwi.ResourceID,
+					ClientID:   pwi.ClientID,
+					ObjectID:   pwi.ObjectID,
 				}
 			}
 		}
