@@ -477,6 +477,8 @@ type ManagedServiceIdentity struct {
 	// The TenantID provided by the MSI RP
 	TenantID string `json:"tenantId,omitempty" swagger:"readOnly"`
 
+	IdentityURL string `json:"identityURL,omitempty" mutable:"true"`
+
 	// A map of user assigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.
 	UserAssignedIdentities map[string]UserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
 }
