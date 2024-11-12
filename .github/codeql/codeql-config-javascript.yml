@@ -1,5 +1,4 @@
 paths:
   - portal/v2
-  - python
 paths-ignore:
   - portal/v2/node_modules
