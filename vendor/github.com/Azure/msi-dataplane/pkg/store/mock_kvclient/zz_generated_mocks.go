@@ -56,6 +56,21 @@ func (mr *MockKeyVaultClientMockRecorder) DeleteSecret(ctx, name, options any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockKeyVaultClient)(nil).DeleteSecret), ctx, name, options)
 }
 
+// GetDeletedSecret mocks base method.
+func (m *MockKeyVaultClient) GetDeletedSecret(ctx context.Context, name string, options *azsecrets.GetDeletedSecretOptions) (azsecrets.GetDeletedSecretResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeletedSecret", ctx, name, options)
+	ret0, _ := ret[0].(azsecrets.GetDeletedSecretResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeletedSecret indicates an expected call of GetDeletedSecret.
+func (mr *MockKeyVaultClientMockRecorder) GetDeletedSecret(ctx, name, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeletedSecret", reflect.TypeOf((*MockKeyVaultClient)(nil).GetDeletedSecret), ctx, name, options)
+}
+
 // GetSecret mocks base method.
 func (m *MockKeyVaultClient) GetSecret(ctx context.Context, name, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
 	m.ctrl.T.Helper()
