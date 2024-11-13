@@ -320,6 +320,13 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 			return nil, err
 		}
 
+		// TODO - remove this; just some extra logging for debugging
+		msiDataplaneClientOptions.Logging = policy.LogOptions{
+			IncludeBody:        true,
+			AllowedHeaders:     []string{"WWW-Authenticate", "authorization"},
+			AllowedQueryParams: []string{"tid", "oid", "aid"},
+		}
+
 		cloud, err := _env.Environment().CloudNameForMsiDataplane()
 		if err != nil {
 			return nil, err
