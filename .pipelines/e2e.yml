@@ -59,6 +59,20 @@ jobs:
         condition: in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI')
 
       - script: |
+          . secrets/env
+
+          # Retrieve the kubeconfig
+          hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
+
+          if [ -f aks.kubeconfig ]; then
+            echo "Kubeconfig retrieved successfully."
+          else
+            echo "Failed to retrieve Kubeconfig."
+            exit 1
+          fi
+        displayName: Get Kubeconfig for AKS Cluster
+
+      - script: |
           az account set -s $AZURE_SUBSCRIPTION_ID
           SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
           . secrets/env
@@ -66,12 +80,23 @@ jobs:
           export CI=true
           . ./hack/e2e/run-rp-and-e2e.sh
           deploy_e2e_db
+
+          . ./hack/devtools/local_dev_env.sh
+          # create RG so we can set up the permissions before launching the RP
+          az group create --location "$LOCATION" --resource-group "$CLUSTER"
+          create_miwi_env_file
         displayName: Setup (Azure)
 
       - script: |
           export CI=true
-          # Tell the E2E binary to run the MIMO tests
           export ARO_E2E_MIMO=true
+          export OS_CLUSTER_VERSION=4.15.35
+          export USE_WI=true
+          export ARO_INSTALL_VIA_HIVE="true"
+          export ARO_ADOPT_BY_HIVE="true"
+          export HIVE_KUBE_CONFIG_PATH="$(realpath ./aks.kubeconfig)"
+
+          . ./env
           . secrets/env
           . ./hack/e2e/run-rp-and-e2e.sh
 
@@ -86,6 +111,8 @@ jobs:
           run_selenium
           validate_selenium_running
 
+          update_role_sets
+
           run_mimo_actuator
           validate_mimo_actuator_running
 
@@ -94,6 +121,8 @@ jobs:
 
           register_sub
 
+          # cluster is cleaned up in a later step. Keep it around for now to enable must-gather collection on error
+          export E2E_DELETE_CLUSTER=false
           make test-e2e -o e2e.test
         displayName: Execute Tests
         target: container
