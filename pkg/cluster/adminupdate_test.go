@@ -32,11 +32,23 @@ func TestAdminUpdateSteps(t *testing.T) {
 		}
 	}
 
-	zerothSteps := []string{
+	zerothStepsServicePrincipal := []string{
 		"[Action initializeKubernetesClients]",
 		"[Action ensureBillingRecord]",
 		"[Action ensureDefaults]",
 		"[Action fixupClusterSPObjectID]",
+		"[Action fixInfraID]",
+	}
+
+	zerothStepsManagedIdentity := []string{
+		"[Action initializeKubernetesClients]",
+		"[Action ensureBillingRecord]",
+		"[Action ensureDefaults]",
+		"[Action fixupClusterMsiTenantID]",
+		"[Action ensureClusterMsiCertificate]",
+		"[Action initializeClusterMsiClients]",
+		"[AuthorizationRetryingAction clusterIdentityIDs]",
+		"[AuthorizationRetryingAction platformWorkloadIdentityIDs]",
 		"[Action fixInfraID]",
 	}
 
@@ -111,7 +123,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
 				return doc, true
 			},
-			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, operatorUpdateSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, operatorUpdateSteps),
 		},
 		{
 			name: "ARO Operator Update on <= 4.6 cluster does not update operator",
@@ -122,7 +134,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.6.62"
 				return doc, true
 			},
-			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal),
 		},
 		{
 			name: "ARO Operator Update on 4.7.0 cluster does update operator",
@@ -133,7 +145,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.7.0"
 				return doc, true
 			},
-			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, operatorUpdateSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, operatorUpdateSteps),
 		},
 		{
 			name: "Everything update and adopt Hive.",
@@ -144,7 +156,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				zerothStepsServicePrincipal, generalFixesSteps, certificateRenewalSteps,
 				operatorUpdateSteps, hiveSteps, updateProvisionedBySteps,
 			),
 		},
@@ -158,7 +170,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				zerothStepsServicePrincipal, generalFixesSteps, certificateRenewalSteps,
 				hiveSteps, updateProvisionedBySteps,
 			),
 		},
@@ -171,7 +183,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, false
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				zerothStepsServicePrincipal, generalFixesSteps, certificateRenewalSteps,
 				operatorUpdateSteps, updateProvisionedBySteps,
 			),
 		},
@@ -184,7 +196,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				zerothStepsServicePrincipal, generalFixesSteps, certificateRenewalSteps,
 				operatorUpdateSteps, hiveSteps, updateProvisionedBySteps,
 			),
 		},
@@ -196,7 +208,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskRenewCerts
 				return doc, true
 			},
-			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, certificateRenewalSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, certificateRenewalSteps),
 		},
 		{
 			name: "SyncClusterObject steps",
@@ -206,7 +218,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskSyncClusterObject
 				return doc, true
 			},
-			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, syncClusterObjectSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, syncClusterObjectSteps),
 		},
 		{
 			name: "adminUpdate() does not adopt Hive-created clusters",
@@ -219,7 +231,23 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				zerothStepsServicePrincipal, generalFixesSteps, certificateRenewalSteps,
+				operatorUpdateSteps, updateProvisionedBySteps,
+			),
+		},
+		{
+			name: "adminUpdate() on managed identity cluster skips steps that are specific to service principal clusters and includes steps that are specific to managed identity",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
+				doc.OpenShiftCluster.Properties.HiveProfile.Namespace = "aro-00000000-0000-0000-0000-000000000000"
+				doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = true
+				return doc, true
+			},
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
+				zerothStepsManagedIdentity, generalFixesSteps, certificateRenewalSteps,
 				operatorUpdateSteps, updateProvisionedBySteps,
 			),
 		},

@@ -215,6 +215,10 @@ delete_e2e_cluster() {
     fi
 }
 
+update_role_sets() {
+  ./aro update-role-sets
+}
+
 # TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
 

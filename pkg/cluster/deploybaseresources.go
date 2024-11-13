@@ -208,6 +208,12 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		}
 
 		resources = append(resources, r...)
+
+		storageBlobContributorRBAC, err := m.fpspStorageBlobContributorRBAC(clusterStorageAccountName, m.fpServicePrincipalID)
+		if err != nil {
+			return err
+		}
+		resources = append(resources, storageBlobContributorRBAC)
 	} else {
 		resources = append(resources, m.clusterServicePrincipalRBAC())
 	}
@@ -230,22 +236,14 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		)
 	}
 
+	if !m.env.FeatureIsSet(env.FeatureDisableDenyAssignments) {
+		resources = append(resources, m.denyAssignment())
+	}
+
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources:      resources,
-	}
-
-	if !m.env.FeatureIsSet(env.FeatureDisableDenyAssignments) {
-		t.Resources = append(t.Resources, m.denyAssignment())
-	}
-
-	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		storageBlobContributorRBAC, err := m.fpspStorageBlobContributorRBAC(clusterStorageAccountName, m.fpServicePrincipalID)
-		if err != nil {
-			return err
-		}
-		t.Resources = append(t.Resources, storageBlobContributorRBAC)
 	}
 
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
