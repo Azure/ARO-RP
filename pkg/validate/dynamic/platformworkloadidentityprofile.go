@@ -55,7 +55,7 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 			}
 		}
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePlatformWorkloadIdentityMismatch,
-			"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '%v'", v, requiredOperatorIdentities)
+			"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '%v' but got %v, %v", v, requiredOperatorIdentities, dv.platformIdentities, oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities)
 	}
 
 	err := dv.validateClusterMSI(ctx, oc, roleDefinitions)

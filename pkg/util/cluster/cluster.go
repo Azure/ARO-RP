@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -65,6 +66,7 @@ type Cluster struct {
 	peerings             armnetwork.VirtualNetworkPeeringsClient
 	ciParentVnetPeerings armnetwork.VirtualNetworkPeeringsClient
 	vaultsClient         armkeyvault.VaultsClient
+	msiClient            armmsi.UserAssignedIdentitiesClient
 }
 
 const GenerateSubnetMaxTries = 100
@@ -135,6 +137,11 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
+	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Cluster{
 		log: log,
 		env: environment,
@@ -150,6 +157,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		roleassignments:   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:          virtualNetworkPeeringsClient,
 		vaultsClient:      vaultClient,
+		msiClient:         *msiClient,
 	}
 
 	if ci && env.IsLocalDevelopmentMode() {
@@ -461,7 +469,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 		masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
 		workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
 
-		masterSubnetOverlaps, err := ipRangesContainCIDR(ipRanges, workerSubnet)
+		masterSubnetOverlaps, err := ipRangesContainCIDR(ipRanges, masterSubnet)
 		if err != nil || masterSubnetOverlaps {
 			continue
 		}
@@ -471,6 +479,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 			continue
 		}
 
+		c.log.Infof("Generated subnets: vnet: %s, master: %s, worker: %s\n", vnetPrefix, masterSubnet, workerSubnet)
 		return vnetPrefix, masterSubnet, workerSubnet, nil
 	}
 
@@ -562,12 +571,49 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		Location: c.env.Location(),
 	}
 
-	if clientID != "" && clientSecret != "" {
-		oc.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{
-			ClientID:     clientID,
-			ClientSecret: api.SecureString(clientSecret),
-		}
+	oc.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{
+		PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+			"file-csi-driver": {
+				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-file-csi-driver"),
+			},
+			"cloud-controller-manager": {
+				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-cloud-controller-manager"),
+			},
+			"ingress": {
+				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-ingress"),
+			},
+			"image-registry": {
+				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-image-registry"),
+			},
+			"machine-api": {
+				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-machine-api"),
+			},
+			"cloud-network-config": {
+				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-cloud-network-config"),
+			},
+			"aro-operator": {
+				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-aro-operator"),
+			},
+			"disk-csi-driver": {
+				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-disk-csi-driver"),
+			},
+		},
 	}
+
+	oc.Identity = &api.ManagedServiceIdentity{
+		Type:     api.ManagedServiceIdentityUserAssigned,
+		TenantID: c.env.TenantID(),
+		UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+			fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-Cluster"): {},
+		},
+	}
+
+	//if clientID != "" && clientSecret != "" {
+	//	oc.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{
+	//		ClientID:     clientID,
+	//		ClientSecret: api.SecureString(clientSecret),
+	//	}
+	//}
 
 	if c.env.IsLocalDevelopmentMode() {
 		err := c.registerSubscription()
@@ -734,6 +780,10 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 	if err != nil {
 		return fmt.Errorf("error getting cluster document: %w", err)
+	}
+
+	if oc.Properties.ServicePrincipalProfile == nil {
+		return nil
 	}
 	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, oc.Properties.ServicePrincipalProfile.ClientID)
 	if err != nil {

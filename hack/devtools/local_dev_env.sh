@@ -1,5 +1,4 @@
 #!/bin/bash
-set -o nounset
 set -o pipefail
 
 # Local development environment script.
@@ -254,17 +253,13 @@ create_miwi_env_file() {
     setup_platform_identity
     cluster_msi_role_assignment "${mockClientID}"
 
-    cat >env <<EOF
-export LOCATION=eastus
-export ARO_IMAGE=arointsvc.azurecr.io/aro:latest
-export RP_MODE=development # to use a development RP running at https://localhost:8443/
+    cat >> env <<EOF
 export MOCK_MSI_CLIENT_ID="$mockClientID"
 export MOCK_MSI_OBJECT_ID="$mockObjectID"
 export MOCK_MSI_TENANT_ID="$mockTenantID"
 export MOCK_MSI_CERT="$mockCert"
 export PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS'
 
-source secrets/env
 EOF
 }
 
@@ -339,6 +334,3 @@ main() {
     run_the_RP
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main
-fi
