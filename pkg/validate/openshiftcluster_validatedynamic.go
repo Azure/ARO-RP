@@ -190,7 +190,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			dv.clusterMSICredential,
 			pdpClient,
 		)
-		err = cmsiDynamic.ValidateClusterUserAssignedIdentity(ctx, dv.oc, dv.roleDefinitions)
+		err = cmsiDynamic.ValidateClusterUserAssignedIdentity(ctx, dv.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities, dv.roleDefinitions)
 		if err != nil {
 			return err
 		}

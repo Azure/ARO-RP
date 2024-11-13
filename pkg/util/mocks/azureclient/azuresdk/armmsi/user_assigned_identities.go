@@ -15,6 +15,8 @@ import (
 
 	armmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	gomock "go.uber.org/mock/gomock"
+
+	azcore "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 )
 
 // MockUserAssignedIdentitiesClient is a mock of UserAssignedIdentitiesClient interface.
@@ -53,4 +55,18 @@ func (m *MockUserAssignedIdentitiesClient) Get(ctx context.Context, resourceGrou
 func (mr *MockUserAssignedIdentitiesClientMockRecorder) Get(ctx, resourceGroupName, resourceName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).Get), ctx, resourceGroupName, resourceName, options)
+}
+
+// GetClusterMSICredential mocks base method.
+func (m *MockUserAssignedIdentitiesClient) GetClusterMSICredential() azcore.TokenCredential {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClusterMSICredential")
+	ret0, _ := ret[0].(azcore.TokenCredential)
+	return ret0
+}
+
+// GetClusterMSICredential indicates an expected call of GetClusterMSICredential.
+func (mr *MockUserAssignedIdentitiesClientMockRecorder) GetClusterMSICredential() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterMSICredential", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).GetClusterMSICredential))
 }

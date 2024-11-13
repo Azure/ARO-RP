@@ -71,22 +71,10 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 	return nil
 }
 
-func (dv *dynamic) ValidateClusterUserAssignedIdentity(ctx context.Context, oc *api.OpenShiftCluster, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+// Validate that the cluster MSI has all permissions specified in AzureRedHatOpenShiftFederatedCredentialRole over each platform managed identity
+func (dv *dynamic) ValidateClusterUserAssignedIdentity(ctx context.Context, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
 	dv.log.Print("ValidateClusterUserAssignedIdentity")
 
-	for resourceID := range oc.Identity.UserAssignedIdentities {
-		_, err := azure.ParseResourceID(resourceID)
-		if err != nil {
-			return err
-		}
-		return dv.validateClusterMSIPermissions(ctx, oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities, roleDefinitions)
-	}
-
-	return nil
-}
-
-// Validate that the cluster MSI has all permissions specified in AzureRedHatOpenShiftFederatedCredentialRole over each platform managed identity
-func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
 	actions, err := getActionsForRoleDefinition(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, roleDefinitions)
 	if err != nil {
 		return err

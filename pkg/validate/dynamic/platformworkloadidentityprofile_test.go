@@ -27,8 +27,20 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-var (
-	msiAllowedActions = client.AuthorizationDecisionResponse{
+func TestValidateClusterUserAssignedIdentity(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	platformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
+		"Dummy1": {
+			ResourceID: platformIdentity1,
+		},
+		"Dummy2": {
+			ResourceID: platformIdentity1,
+		},
+	}
+
+	msiAllowedActions := client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "FakeMSIAction1",
@@ -49,7 +61,7 @@ var (
 		},
 	}
 
-	msiNotAllowedActions = client.AuthorizationDecisionResponse{
+	msiNotAllowedActions := client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "FakeMSIAction1",
@@ -70,7 +82,7 @@ var (
 		},
 	}
 
-	msiActionMissing = client.AuthorizationDecisionResponse{
+	msiActionMissing := client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "FakeMSIAction1",
@@ -87,7 +99,7 @@ var (
 		},
 	}
 
-	msiRequiredPermissions = sdkauthorization.RoleDefinitionsClientGetByIDResponse{
+	msiRequiredPermissions := sdkauthorization.RoleDefinitionsClientGetByIDResponse{
 		RoleDefinition: sdkauthorization.RoleDefinition{
 			Properties: &sdkauthorization.RoleDefinitionProperties{
 				Permissions: []*sdkauthorization.Permission{
@@ -105,9 +117,8 @@ var (
 			},
 		},
 	}
-	msiRequiredPermissionsList = []string{"FakeMSIAction1", "FakeMSIAction2", "FakeMSIDataAction1", "FakeMSIDataAction2"}
-
-	msiAuthZRequest = client.AuthorizationRequest{
+	msiRequiredPermissionsList := []string{"FakeMSIAction1", "FakeMSIAction2", "FakeMSIDataAction1", "FakeMSIDataAction2"}
+	msiAuthZRequest := client.AuthorizationRequest{
 		Subject: client.SubjectInfo{
 			Attributes: client.SubjectAttributes{
 				ObjectId:  dummyObjectId,
@@ -118,27 +129,126 @@ var (
 		Resource: client.ResourceInfo{Id: platformIdentity1},
 	}
 
-	platformIdentityRequiredPermissions = sdkauthorization.RoleDefinitionsClientGetByIDResponse{
-		RoleDefinition: sdkauthorization.RoleDefinition{
-			Properties: &sdkauthorization.RoleDefinitionProperties{
-				Permissions: []*sdkauthorization.Permission{
-					{
-						Actions: []*string{
-							pointerutils.ToPtr("FakeAction1"),
-							pointerutils.ToPtr("FakeAction2"),
-						},
-						DataActions: []*string{
-							pointerutils.ToPtr("FakeDataAction1"),
-							pointerutils.ToPtr("FakeDataAction2"),
-						},
-					},
-				},
+	for _, tt := range []struct {
+		name               string
+		platformIdentities map[string]api.PlatformWorkloadIdentity
+		mocks              func(*mock_armauthorization.MockRoleDefinitionsClient)
+		checkAccessMocks   func(context.CancelFunc, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, *mock_env.MockInterface)
+		wantErr            string
+	}{
+		{
+			name:               "Pass - All Cluster MSI has required permissions on platform workload identity",
+			platformIdentities: platformWorkloadIdentities,
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+					cancel()
+				}).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 		},
-	}
+		{
+			name:               "Fail - Get permission definition failed with generic error",
+			platformIdentities: platformWorkloadIdentities,
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, errors.New("Generic Error"))
+			},
+			wantErr: "Generic Error",
+		},
+		{
+			name: "Fail - Invalid Platform identity Resource ID",
+			platformIdentities: map[string]api.PlatformWorkloadIdentity{
+				"Dummy2": {
+					ResourceID: "Invalid UUID",
+				},
+				"Dummy1": {
+					ResourceID: "Invalid UUID",
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+			},
+			wantErr: "parsing failed for Invalid UUID. Invalid resource Id format",
+		},
+		{
+			name:               "Fail - An action is denied for a platform identity",
+			platformIdentities: platformWorkloadIdentities,
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+					cancel()
+				}).Return(&msiNotAllowedActions, nil).AnyTimes()
+			},
+			wantErr: "timed out waiting for the condition",
+		},
+		{
+			name:               "Fail - An action is missing for a platform identity",
+			platformIdentities: platformWorkloadIdentities,
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					platformIdentity1,
+					msiRequiredPermissionsList,
+					validTestToken,
+				).AnyTimes().Return(&msiAuthZRequest, nil)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+					cancel()
+				}).Return(&msiActionMissing, nil).AnyTimes()
+			},
+			wantErr: "timed out waiting for the condition",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
 
-	platformIdentityRequiredPermissionsList = []string{"FakeAction1", "FakeAction2", "FakeDataAction1", "FakeDataAction2"}
-)
+			_env := mock_env.NewMockInterface(controller)
+			roleDefinitions := mock_armauthorization.NewMockRoleDefinitionsClient(controller)
+			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
+			tokenCred := mock_azcore.NewMockTokenCredential(controller)
+
+			dv := &dynamic{
+				env:                        _env,
+				authorizerType:             AuthorizerClusterUserAssignedIdentity,
+				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				pdpClient:                  pdpClient,
+				checkAccessSubjectInfoCred: tokenCred,
+			}
+
+			if tt.checkAccessMocks != nil {
+				tt.checkAccessMocks(cancel, pdpClient, tokenCred, _env)
+			}
+
+			if tt.mocks != nil {
+				tt.mocks(roleDefinitions)
+			}
+
+			err := dv.ValidateClusterUserAssignedIdentity(ctx, tt.platformIdentities, roleDefinitions)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
 
 func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -174,6 +284,26 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 	}
 	openShiftVersion := "4.14.40"
+	platformIdentityRequiredPermissions := sdkauthorization.RoleDefinitionsClientGetByIDResponse{
+		RoleDefinition: sdkauthorization.RoleDefinition{
+			Properties: &sdkauthorization.RoleDefinitionProperties{
+				Permissions: []*sdkauthorization.Permission{
+					{
+						Actions: []*string{
+							pointerutils.ToPtr("FakeAction1"),
+							pointerutils.ToPtr("FakeAction2"),
+						},
+						DataActions: []*string{
+							pointerutils.ToPtr("FakeDataAction1"),
+							pointerutils.ToPtr("FakeDataAction2"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	platformIdentityRequiredPermissionsList := []string{"FakeAction1", "FakeAction2", "FakeDataAction1", "FakeDataAction2"}
 
 	for _, tt := range []struct {
 		name                             string
@@ -182,7 +312,6 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient)
 		wantPlatformIdentities           map[string]api.PlatformWorkloadIdentity
 		wantPlatformIdentitiesActionsMap map[string][]string
-		checkAccessMocks                 func(context.CancelFunc, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, *mock_env.MockInterface)
 		wantErr                          string
 	}{
 		{
@@ -206,18 +335,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
-			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
-				mockTokenCredential(tokenCred)
-				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-				pdpClient.EXPECT().CreateAuthorizationRequest(
-					platformIdentity1,
-					msiRequiredPermissionsList,
-					validTestToken,
-				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -242,18 +360,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
-			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
-				mockTokenCredential(tokenCred)
-				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-				pdpClient.EXPECT().CreateAuthorizationRequest(
-					platformIdentity1,
-					msiRequiredPermissionsList,
-					validTestToken,
-				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: map[string]api.PlatformWorkloadIdentity{
 				"Dummy1": {
@@ -281,18 +388,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
-			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
-				mockTokenCredential(tokenCred)
-				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-				pdpClient.EXPECT().CreateAuthorizationRequest(
-					platformIdentity1,
-					msiRequiredPermissionsList,
-					validTestToken,
-				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, nil).AnyTimes()
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -412,26 +508,6 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
-			name:                  "Fail - MSI Resource ID is invalid",
-			platformIdentityRoles: validRolesForVersion,
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: platformWorkloadIdentities,
-					},
-					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
-					},
-				},
-				Identity: &api.ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-						"invalidUUID": {},
-					},
-				},
-			},
-			wantErr: "parsing failed for invalidUUID. Invalid resource Id format",
-		},
-		{
 			name:                  "Fail - Getting role definition failed",
 			platformIdentityRoles: validRolesForVersion,
 			oc: &api.OpenShiftCluster{
@@ -448,102 +524,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, errors.New("Generic Error"))
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, errors.New("Generic Error"))
 			},
 			wantErr: "Generic Error",
-		},
-		{
-			name:                  "Fail - Invalid Platform identity Resource ID",
-			platformIdentityRoles: validRolesForVersion,
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
-							"Dummy2": {
-								ResourceID: "Invalid UUID",
-							},
-							"Dummy1": {
-								ResourceID: "Invalid UUID",
-							},
-						},
-					},
-				},
-				Identity: &api.ManagedServiceIdentity{
-					UserAssignedIdentities: clusterMSI,
-				},
-			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
-			},
-			wantErr: "parsing failed for Invalid UUID. Invalid resource Id format",
-		},
-		{
-			name:                  "Fail - An action is denied for a platform identity",
-			platformIdentityRoles: validRolesForVersion,
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: platformWorkloadIdentities,
-					},
-					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
-					},
-				},
-				Identity: &api.ManagedServiceIdentity{
-					UserAssignedIdentities: clusterMSI,
-				},
-			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
-				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
-			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
-				mockTokenCredential(tokenCred)
-				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-				pdpClient.EXPECT().CreateAuthorizationRequest(
-					platformIdentity1,
-					msiRequiredPermissionsList,
-					validTestToken,
-				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
-					cancel()
-				}).Return(&msiNotAllowedActions, nil).AnyTimes()
-			},
-			wantErr: "timed out waiting for the condition",
-		},
-		{
-			name:                  "Fail - An action is missing for a platform identity",
-			platformIdentityRoles: validRolesForVersion,
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						PlatformWorkloadIdentities: platformWorkloadIdentities,
-					},
-					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
-					},
-				},
-				Identity: &api.ManagedServiceIdentity{
-					UserAssignedIdentities: clusterMSI,
-				},
-			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
-				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
-			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
-				mockTokenCredential(tokenCred)
-				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-				pdpClient.EXPECT().CreateAuthorizationRequest(
-					platformIdentity1,
-					msiRequiredPermissionsList,
-					validTestToken,
-				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
-					cancel()
-				}).Return(&msiActionMissing, nil).AnyTimes()
-			},
-			wantErr: "timed out waiting for the condition",
 		},
 		{
 			name:                  "Fail - Getting Role Definition for Platform Identity Role returns error",
@@ -562,18 +545,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
-				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, errors.New("Generic Error"))
-			},
-			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
-				mockTokenCredential(tokenCred)
-				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-				pdpClient.EXPECT().CreateAuthorizationRequest(
-					platformIdentity1,
-					msiRequiredPermissionsList,
-					validTestToken,
-				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Return(&msiAllowedActions, errors.New("Generic Error")).AnyTimes()
 			},
 			wantErr: "Generic Error",
 		},
@@ -584,19 +556,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 
 			_env := mock_env.NewMockInterface(controller)
 			roleDefinitions := mock_armauthorization.NewMockRoleDefinitionsClient(controller)
-			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
-			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 
 			dv := &dynamic{
-				env:                        _env,
-				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
-				pdpClient:                  pdpClient,
-				checkAccessSubjectInfoCred: tokenCred,
-			}
-
-			if tt.checkAccessMocks != nil {
-				tt.checkAccessMocks(cancel, pdpClient, tokenCred, _env)
+				env:            _env,
+				authorizerType: AuthorizerWorkloadIdentity,
+				log:            logrus.NewEntry(logrus.StandardLogger()),
 			}
 
 			if tt.mocks != nil {
