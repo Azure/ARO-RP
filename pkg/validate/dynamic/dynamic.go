@@ -493,6 +493,9 @@ func (c *closure) checkAccessAuthReqToken() error {
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
 func (c closure) usingCheckAccessV2() (result bool, err error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
+	if c.dv.checkAccessSubjectInfoCred == nil {
+		return true, nil
+	}
 
 	var authReq *client.AuthorizationRequest
 	//ensure token and oid is available during retries

@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	mgmtredhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
+	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -39,7 +39,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20231122.OpenShiftClusterUpdate{})
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the CredentialsRequest has been recreated")
@@ -49,6 +49,9 @@ var _ = Describe("Update clusters", func() {
 	})
 
 	It("must restart the aro-operator-master Deployment", func(ctx context.Context) {
+		if isMiwi {
+			Skip("This test is not relevant for miwi clusters")
+		}
 		By("saving the current revision of the aro-operator-master Deployment")
 		getFunc := clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get
 		deployment := GetK8sObjectWithRetry(ctx, getFunc, "aro-operator-master", metav1.GetOptions{})
@@ -59,7 +62,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20231122.OpenShiftClusterUpdate{})
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the aro-operator-master Deployment was restarted")
@@ -169,12 +172,12 @@ func getInfraID(ctx context.Context) (string, error) {
 	return co.Spec.InfraID, err
 }
 
-func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopenshift20231122.OpenShiftClusterUpdate {
-	return mgmtredhatopenshift20231122.OpenShiftClusterUpdate{
-		OpenShiftClusterProperties: &mgmtredhatopenshift20231122.OpenShiftClusterProperties{
-			NetworkProfile: &mgmtredhatopenshift20231122.NetworkProfile{
-				LoadBalancerProfile: &mgmtredhatopenshift20231122.LoadBalancerProfile{
-					ManagedOutboundIps: &mgmtredhatopenshift20231122.ManagedOutboundIPs{
+func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate {
+	return mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate{
+		OpenShiftClusterProperties: &mgmtredhatopenshift20240812preview.OpenShiftClusterProperties{
+			NetworkProfile: &mgmtredhatopenshift20240812preview.NetworkProfile{
+				LoadBalancerProfile: &mgmtredhatopenshift20240812preview.LoadBalancerProfile{
+					ManagedOutboundIps: &mgmtredhatopenshift20240812preview.ManagedOutboundIPs{
 						Count: to.Int32Ptr(managedOutboundIPCount),
 					},
 				},

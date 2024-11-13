@@ -1,5 +1,4 @@
 #!/bin/bash
-set -o nounset
 set -o pipefail
 
 # Local development environment script.
@@ -11,7 +10,7 @@ set -o pipefail
 
 PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='[
     {
-        "openShiftVersion": "4.14",
+        "openShiftVersion": "4.15",
         "platformWorkloadIdentityRoles": [
             {
                 "operatorName": "cloud-controller-manager",
@@ -159,6 +158,13 @@ get_platform_workloadIdentity_role_sets() {
 assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
+    
+    # if CLUSTER_RESOURCEGROUP is unset, it should probably be set to the cluster name
+    if [[ "${CLUSTER_RESOURCEGROUP}" == "" ]]; then
+      echo "INFO: '\$CLUSTER_RESOURCEGROUP' is unset. Using '\$CLUSTER' instead."
+      export CLUSTER_RESOURCEGROUP="$CLUSTER"
+    fi
+
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${CLUSTER_RESOURCEGROUP}"
     local roles
 
@@ -251,20 +257,15 @@ create_miwi_env_file() {
     mockCert=$(get_mock_msi_cert "$mockMSI")
     mockObjectID=$(get_mock_msi_objectID "$mockClientID")
 
-    setup_platform_identity
     cluster_msi_role_assignment "${mockClientID}"
 
-    cat >env <<EOF
-export LOCATION=eastus
-export ARO_IMAGE=arointsvc.azurecr.io/aro:latest
-export RP_MODE=development # to use a development RP running at https://localhost:8443/
+    cat >> env <<EOF
 export MOCK_MSI_CLIENT_ID="$mockClientID"
 export MOCK_MSI_OBJECT_ID="$mockObjectID"
 export MOCK_MSI_TENANT_ID="$mockTenantID"
 export MOCK_MSI_CERT="$mockCert"
 export PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS'
 
-source secrets/env
 EOF
 }
 
@@ -339,6 +340,3 @@ main() {
     run_the_RP
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main
-fi
