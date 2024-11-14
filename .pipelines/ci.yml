@@ -179,6 +179,7 @@ stages:
               register_sub
               docker compose up e2e
               # Check if the E2E tests failed
+              E2E_EXIT_CODE=$?
               if [ $E2E_EXIT_CODE -ne 0 ]; then
                 echo "##vso[task.logissue type=error] E2E tests failed. Check the logs for more details."
                 exit 1
