@@ -25,7 +25,6 @@ import (
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
@@ -44,7 +43,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
-	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -54,6 +52,7 @@ type Cluster struct {
 	env          env.Core
 	ci           bool
 	ciParentVnet string
+	wis          map[string]api.PlatformWorkloadIdentity
 
 	spGraphClient        *utilgraph.GraphServiceClient
 	deployments          features.DeploymentsClient
@@ -146,6 +145,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		log: log,
 		env: environment,
 		ci:  ci,
+		wis: make(map[string]api.PlatformWorkloadIdentity),
 
 		spGraphClient:     spGraphClient,
 		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -327,47 +327,37 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		generator.SharedDiskEncryptionSetNameSuffix,
 	)
 
-	c.log.Info("creating role assignments")
-	for _, scope := range []struct{ resource, role string }{
-		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/dev-vnet", rbac.RoleNetworkContributor},
-		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt", rbac.RoleNetworkContributor},
-		{diskEncryptionSetID, rbac.RoleReader},
-	} {
-		for _, principalID := range []string{appDetails.SPId, fpSPId} {
-			for i := 0; i < 5; i++ {
-				_, err = c.roleassignments.Create(
-					ctx,
-					scope.resource,
-					uuid.DefaultGenerator.Generate(),
-					mgmtauthorization.RoleAssignmentCreateParameters{
-						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
-							PrincipalID:      &principalID,
-							PrincipalType:    mgmtauthorization.ServicePrincipal,
-						},
-					},
-				)
-
-				// Ignore if the role assignment already exists
-				if detailedError, ok := err.(autorest.DetailedError); ok {
-					if detailedError.StatusCode == http.StatusConflict {
-						err = nil
-					}
-				}
-
-				// TODO: tighten this error check
-				if err != nil && i < 4 {
-					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
-					// Retry a few times.
-					c.log.Print(err)
-					continue
-				}
-				if err != nil {
-					return err
-				}
-
-				break
-			}
+	c.log.Info("creating WIs")
+	jsonData := []byte(os.Getenv("PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"))
+	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
+	if err = json.Unmarshal(jsonData, &wiRoleSets); err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
+	}
+	for _, wi := range wiRoleSets[0].PlatformWorkloadIdentityRoles {
+		c.log.Infof("creating WI: %s", wi.OperatorName)
+		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
+			Location: to.StringPtr(c.env.Location()),
+		}, nil)
+		if err != nil {
+			return err
+		}
+		_, err = c.roleassignments.Create(
+			ctx,
+			fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), vnetResourceGroup),
+			uuid.DefaultGenerator.Generate(),
+			mgmtauthorization.RoleAssignmentCreateParameters{
+				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+					RoleDefinitionID: &wi.RoleDefinitionID,
+					PrincipalID:      resp.Properties.PrincipalID,
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			},
+		)
+		if err != nil {
+			return err
+		}
+		c.wis[wi.OperatorName] = api.PlatformWorkloadIdentity{
+			ResourceID: *resp.ID,
 		}
 	}
 
@@ -513,6 +503,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		errs = append(errs,
 			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
+			c.deleteWI(ctx, vnetResourceGroup),
 			c.deleteDeployment(ctx, vnetResourceGroup, clusterName), // Deleting the deployment does not clean up the associated resources
 			c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName),
 		)
@@ -520,6 +511,23 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 
 	c.log.Info("done")
 	return errors.Join(errs...)
+}
+
+func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
+	c.log.Info("creating WIs")
+	jsonData := []byte(os.Getenv("PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"))
+	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
+	if err := json.Unmarshal(jsonData, &wiRoleSets); err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
+	}
+	for _, wi := range wiRoleSets[0].PlatformWorkloadIdentityRoles {
+		c.log.Infof("creating WI: %s", wi.OperatorName)
+		_, err := c.msiClient.Delete(ctx, resourceGroup, wi.OperatorName, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // createCluster created new clusters, based on where it is running.
@@ -572,32 +580,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	}
 
 	oc.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{
-		PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
-			"file-csi-driver": {
-				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-file-csi-driver"),
-			},
-			"cloud-controller-manager": {
-				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-cloud-controller-manager"),
-			},
-			"ingress": {
-				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-ingress"),
-			},
-			"image-registry": {
-				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-image-registry"),
-			},
-			"machine-api": {
-				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-machine-api"),
-			},
-			"cloud-network-config": {
-				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-cloud-network-config"),
-			},
-			"aro-operator": {
-				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-aro-operator"),
-			},
-			"disk-csi-driver": {
-				ResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.env.SubscriptionID(), vnetResourceGroup, "aro-disk-csi-driver"),
-			},
-		},
+		PlatformWorkloadIdentities: c.wis,
 	}
 
 	oc.Identity = &api.ManagedServiceIdentity{
@@ -782,36 +765,26 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 		return fmt.Errorf("error getting cluster document: %w", err)
 	}
 
-	if oc.Properties.ServicePrincipalProfile == nil {
-		return nil
-	}
-	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, oc.Properties.ServicePrincipalProfile.ClientID)
-	if err != nil {
-		return fmt.Errorf("error getting service principal for cluster: %w", err)
-	}
-	if spObjID == nil {
-		return nil
-	}
+	for _, wi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", wi.ObjectID))
+		if err != nil {
+			return fmt.Errorf("error listing role assignments for service principal: %w", err)
+		}
 
-	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *spObjID))
-	if err != nil {
-		return fmt.Errorf("error listing role assignments for service principal: %w", err)
-	}
-
-	for _, roleAssignment := range roleAssignments {
-		if strings.HasPrefix(
-			strings.ToLower(*roleAssignment.Scope),
-			strings.ToLower("/subscriptions/"+c.env.SubscriptionID()+"/resourceGroups/"+vnetResourceGroup),
-		) {
-			// Don't delete inherited role assignments, only those resource group level or below
-			c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
-			_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
-			if err != nil {
-				return fmt.Errorf("error deleting role assignment %s: %w", *roleAssignment.Name, err)
+		for _, roleAssignment := range roleAssignments {
+			if strings.HasPrefix(
+				strings.ToLower(*roleAssignment.Scope),
+				strings.ToLower("/subscriptions/"+c.env.SubscriptionID()+"/resourceGroups/"+vnetResourceGroup),
+			) {
+				// Don't delete inherited role assignments, only those resource group level or below
+				c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
+				_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
+				if err != nil {
+					return fmt.Errorf("error deleting role assignment %s: %w", *roleAssignment.Name, err)
+				}
 			}
 		}
 	}
-
 	return nil
 }
 
