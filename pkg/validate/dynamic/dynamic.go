@@ -430,7 +430,9 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 	return err
 }
 
-// validateActionsByOID creates a closure with oid(nil in case of Non-MIWI) to call usingCheckAccessV2 for checking SP/MI has actions allowed on a resource
+// validateActionsByOID creates a closure with oid to call usingCheckAccessV2 for checking SP/MI has actions allowed on a resource
+// oid is nil(fetched from access token) when validating FPSP, Non-MIWI Cluster Service Principal and MIWI Cluster User Assigned Managed Identity
+// oid is passed only for validating MIWI Cluster Platform Managed Identity
 func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, actions []string, oid *string) error {
 	// ARM has a 5 minute cache around role assignment creation, so wait one minute longer
 	timeoutCtx, cancel := context.WithTimeout(ctx, 6*time.Minute)
