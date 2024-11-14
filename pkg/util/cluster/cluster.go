@@ -333,7 +333,11 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if err = json.Unmarshal(jsonData, &wiRoleSets); err != nil {
 		return fmt.Errorf("failed to parse JSON: %w", err)
 	}
-	for _, wi := range wiRoleSets[0].PlatformWorkloadIdentityRoles {
+	platformWorkloadIdentityRoles := append(wiRoleSets[0].PlatformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
+		OperatorName:     "aro-Cluster",
+		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
+	})
+	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
 		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
 			Location: to.StringPtr(c.env.Location()),
@@ -520,7 +524,11 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 	if err := json.Unmarshal(jsonData, &wiRoleSets); err != nil {
 		return fmt.Errorf("failed to parse JSON: %w", err)
 	}
-	for _, wi := range wiRoleSets[0].PlatformWorkloadIdentityRoles {
+	platformWorkloadIdentityRoles := append(wiRoleSets[0].PlatformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
+		OperatorName:     "aro-Cluster",
+		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
+	})
+	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("deleting WI: %s", wi.OperatorName)
 		_, err := c.msiClient.Delete(ctx, resourceGroup, wi.OperatorName, nil)
 		if err != nil {
@@ -765,7 +773,11 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	if err := json.Unmarshal(jsonData, &wiRoleSets); err != nil {
 		return fmt.Errorf("failed to parse JSON: %w", err)
 	}
-	for _, wi := range wiRoleSets[0].PlatformWorkloadIdentityRoles {
+	platformWorkloadIdentityRoles := append(wiRoleSets[0].PlatformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
+		OperatorName:     "aro-Cluster",
+		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
+	})
+	for _, wi := range platformWorkloadIdentityRoles {
 		resp, err := c.msiClient.Get(ctx, vnetResourceGroup, wi.OperatorName, nil)
 		if err != nil {
 			return err
