@@ -11,6 +11,11 @@ trigger:
     include:
       - v2*
 
+pr:
+  branches:
+    include:
+      - '*'
+
 variables:
   - template: vars.yml
   - name: CI
@@ -25,8 +30,6 @@ variables:
     value: arosvcdev.azurecr.io/vpn
   - name: LOCAL_E2E_IMAGE
     value: arosvcdev.azurecr.io/e2e
-  - name: TAG
-    value: $(Build.BuildId)
   - name: VERSION
     value: $(Build.BuildId)
   - name: ARO_IMAGE
@@ -39,7 +42,28 @@ variables:
     value: aks.kubeconfig
 
 stages:
+  - stage: Set_Tag_Variable
+    jobs:
+      - job: Set_Tag
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - script: |
+              echo "Build Reason: $(Build.Reason)"
+              echo "Pull Request ID: ${{ variables['System.PullRequest.PullRequestId'] }}"
+              if [ "$(Build.Reason)" == "PullRequest" ]; then
+                TAG="pr-${{ variables['System.PullRequest.PullRequestId'] }}"
+              else
+                TAG="$(Build.BuildId)"
+              fi
+              echo "Setting TAG to $TAG"
+              echo "##vso[task.setvariable variable=TAG;isOutput=true]$TAG"
+            displayName: "Set TAG Variable Globally"
+
   - stage: Containerized_CI
+    dependsOn: Set_Tag_Variable
+    variables:
+      TAG: $[ dependencies.Set_Tag_Variable.outputs['Set_Tag.TAG'] ]
     jobs:
       - job: Build_Test_And_Push_Az_ARO_Extension
         pool:
@@ -50,7 +74,7 @@ stages:
           # Build and test the Az ARO Extension
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(VERSION)
+              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=${TAG:-latest}
             displayName: 🛠 Build & Test Az ARO Extension
 
           # Push the image to ACR
@@ -69,7 +93,7 @@ stages:
           # Build and test RP and Portal
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(VERSION)
+              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=${TAG:-latest}
             displayName: 🛠 Build & Test RP and Portal
 
           # Publish test results
@@ -104,7 +128,7 @@ stages:
           # Build the E2E image
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make aro-e2e VERSION=$(VERSION)
+              DOCKER_BUILD_CI_ARGS="--load" make aro-e2e VERSION=${TAG:-latest}
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR

@@ -48,9 +48,10 @@ steps:
         echo "Listing Docker images..."
         docker images
 
-        # Define both the full repository image name and the local name
-        IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:$(VERSION)"
-        LOCAL_IMAGE="${{ parameters.repository }}:$(VERSION)"
+        # Define both the full repository image name and the local name, with a fallback for TAG if empty
+        TAG="${TAG:-latest}"
+        IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:$TAG"
+        LOCAL_IMAGE="${{ parameters.repository }}:$TAG"
 
         # Check if the image exists locally with the full repository tag
         echo "Checking for image $IMAGE_NAME..."
@@ -80,8 +81,8 @@ steps:
           SKIP_LATEST=false
         fi
 
-        # Push the Docker image to ACR with the build ID
-        echo "Pushing image with build ID to ACR..."
+        # Push the Docker image to ACR with the TAG
+        echo "Pushing image with TAG to ACR..."
         docker push $IMAGE_NAME
 
         # Optionally push the image as 'latest'
