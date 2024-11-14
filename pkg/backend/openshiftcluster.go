@@ -311,7 +311,7 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 			return err
 		}
 		ocb.asyncOperationResultLog(log, initialProvisioningState, backendErr)
-		ocb.emitMetrics(log, doc, operationType, provisioningState, nil)
+		ocb.emitMetrics(log, doc, operationType, provisioningState, backendErr)
 		ocb.emitProvisioningMetrics(doc, provisioningState)
 	}
 
@@ -330,7 +330,7 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		stop()
 	}
 
-	ocb.emitMetrics(log, doc, operationType, provisioningState, nil)
+	ocb.emitMetrics(log, doc, operationType, provisioningState, backendErr)
 	return err
 }
 
