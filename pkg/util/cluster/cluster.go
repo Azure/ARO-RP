@@ -514,14 +514,14 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 }
 
 func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
-	c.log.Info("creating WIs")
+	c.log.Info("deleting WIs")
 	jsonData := []byte(os.Getenv("PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"))
 	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
 	if err := json.Unmarshal(jsonData, &wiRoleSets); err != nil {
 		return fmt.Errorf("failed to parse JSON: %w", err)
 	}
 	for _, wi := range wiRoleSets[0].PlatformWorkloadIdentityRoles {
-		c.log.Infof("creating WI: %s", wi.OperatorName)
+		c.log.Infof("deleting WI: %s", wi.OperatorName)
 		_, err := c.msiClient.Delete(ctx, resourceGroup, wi.OperatorName, nil)
 		if err != nil {
 			return err
@@ -760,17 +760,20 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, clusterName string) error {
 	c.log.Print("deleting role assignments")
-	oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
-	if err != nil {
-		return fmt.Errorf("error getting cluster document: %w", err)
+	jsonData := []byte(os.Getenv("PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"))
+	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
+	if err := json.Unmarshal(jsonData, &wiRoleSets); err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
 	}
-
-	for _, wi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", wi.ObjectID))
+	for _, wi := range wiRoleSets[0].PlatformWorkloadIdentityRoles {
+		resp, err := c.msiClient.Get(ctx, vnetResourceGroup, wi.OperatorName, nil)
+		if err != nil {
+			return err
+		}
+		roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *resp.Properties.PrincipalID))
 		if err != nil {
 			return fmt.Errorf("error listing role assignments for service principal: %w", err)
 		}
-
 		for _, roleAssignment := range roleAssignments {
 			if strings.HasPrefix(
 				strings.ToLower(*roleAssignment.Scope),
