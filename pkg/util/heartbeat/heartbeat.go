@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // EmitHeartbeat sends a heartbeat metric (if healthy), starting immediately and
@@ -22,9 +23,13 @@ func EmitHeartbeat(log *logrus.Entry, m metrics.Emitter, metricName string, stop
 
 	log.Print("starting heartbeat")
 
+	dimensions := map[string]string{
+		"version": version.GitCommit,
+	}
+
 	for {
 		if checkFunc() {
-			m.EmitGauge(metricName, 1, nil)
+			m.EmitGauge(metricName, 1, dimensions)
 		}
 
 		select {
