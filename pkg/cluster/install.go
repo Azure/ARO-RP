@@ -210,16 +210,19 @@ func (m *manager) clusterWasCreatedByHive() bool {
 }
 
 func (m *manager) Update(ctx context.Context) error {
-	s := []steps.Step{
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
-		steps.Action(m.initializeKubernetesClients), // All init steps are first
-		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
-	}
+	s := []steps.Step{}
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
+		)
+	}
+
+	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
 			steps.Action(m.federateIdentityCredentials),
@@ -236,6 +239,8 @@ func (m *manager) Update(ctx context.Context) error {
 	}
 
 	s = append(s,
+		steps.Action(m.initializeKubernetesClients),
+		steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
