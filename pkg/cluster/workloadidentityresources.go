@@ -5,9 +5,7 @@ package cluster
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -18,6 +16,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 )
 
 const (
@@ -28,10 +27,6 @@ const (
 	ccoSecretFilename            = "azure-ad-pod-identity-webhook-config.yaml"
 	authenticationConfigName     = "cluster"
 	authenticationConfigFilename = "cluster-authentication-02-config.yaml"
-
-	base36Encoding             = 36
-	maxFederatedCredNameLength = 120
-	numberOfDelimiters         = 1
 )
 
 func (m *manager) generateWorkloadIdentityResources() (map[string]kruntime.Object, error) {
@@ -177,16 +172,5 @@ func (m *manager) getPlatformWorkloadIdentityFederatedCredName(sa string, identi
 		return "", err
 	}
 
-	clusterResourceKey := fmt.Sprintf("%s-%s-%s", clusterResourceId.SubscriptionID, clusterResourceId.ResourceGroup, clusterResourceId.ResourceName)
-	name := fmt.Sprintf("%s-%s-%s", clusterResourceKey, sa, identityResourceId.ResourceName)
-	// the base-36 encoded string of a SHA-224 hash will typically be around 43 to 44 characters long.
-	hash := sha256.Sum224([]byte(name))
-	encodedName := (&big.Int{}).SetBytes(hash[:]).Text(base36Encoding)
-	remainingChars := maxFederatedCredNameLength - len(encodedName) - numberOfDelimiters
-
-	if remainingChars < len(clusterResourceKey) {
-		return fmt.Sprintf("%s-%s", clusterResourceKey[:remainingChars], encodedName), nil
-	}
-
-	return fmt.Sprintf("%s-%s", clusterResourceKey, encodedName), nil
+	return platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId, sa), nil
 }
