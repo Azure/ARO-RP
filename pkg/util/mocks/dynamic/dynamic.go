@@ -81,6 +81,20 @@ func (m *MockDynamic) EXPECT() *MockDynamicMockRecorder {
 	return m.recorder
 }
 
+// ValidateClusterUserAssignedIdentity mocks base method.
+func (m *MockDynamic) ValidateClusterUserAssignedIdentity(ctx context.Context, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateClusterUserAssignedIdentity", ctx, platformIdentities, roleDefinitions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateClusterUserAssignedIdentity indicates an expected call of ValidateClusterUserAssignedIdentity.
+func (mr *MockDynamicMockRecorder) ValidateClusterUserAssignedIdentity(ctx, platformIdentities, roleDefinitions any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateClusterUserAssignedIdentity", reflect.TypeOf((*MockDynamic)(nil).ValidateClusterUserAssignedIdentity), ctx, platformIdentities, roleDefinitions)
+}
+
 // ValidateDiskEncryptionSets mocks base method.
 func (m *MockDynamic) ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error {
 	m.ctrl.T.Helper()

@@ -79,6 +79,7 @@ type Dynamic interface {
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
+	ValidateClusterUserAssignedIdentity(ctx context.Context, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error
 	ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error
 }
 
@@ -104,9 +105,10 @@ type dynamic struct {
 type AuthorizerType string
 
 const (
-	AuthorizerFirstParty              AuthorizerType = "resource provider"
-	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
-	AuthorizerWorkloadIdentity        AuthorizerType = "workload identity"
+	AuthorizerFirstParty                  AuthorizerType = "resource provider"
+	AuthorizerClusterServicePrincipal     AuthorizerType = "cluster"
+	AuthorizerClusterUserAssignedIdentity AuthorizerType = "cluster user assigned identity"
+	AuthorizerWorkloadIdentity            AuthorizerType = "platform workload identity"
 )
 
 func NewValidator(
@@ -428,7 +430,9 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 	return err
 }
 
-// validateActionsByOID creates a closure with oid(nil in case of Non-MIWI) to call usingCheckAccessV2 for checking SP/MI has actions allowed on a resource
+// validateActionsByOID creates a closure with oid to call usingCheckAccessV2 for checking SP/MI has actions allowed on a resource
+// oid is nil(fetched from access token) when validating FPSP, Non-MIWI Cluster Service Principal and MIWI Cluster User Assigned Managed Identity
+// oid is passed only for validating MIWI Cluster Platform Managed Identity
 func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, actions []string, oid *string) error {
 	// ARM has a 5 minute cache around role assignment creation, so wait one minute longer
 	timeoutCtx, cancel := context.WithTimeout(ctx, 6*time.Minute)
@@ -468,20 +472,24 @@ func (c *closure) checkAccessAuthReqToken() error {
 }
 
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
-func (c closure) usingCheckAccessV2() (bool, error) {
+func (c closure) usingCheckAccessV2() (result bool, err error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
+	var authReq *client.AuthorizationRequest
 	//ensure token and oid is available during retries
-	if c.jwtToken == nil || c.oid == nil {
-		if err := c.checkAccessAuthReqToken(); err != nil {
+	if c.dv.authorizerType != AuthorizerWorkloadIdentity {
+		if c.jwtToken == nil || c.oid == nil {
+			if err = c.checkAccessAuthReqToken(); err != nil {
+				return false, err
+			}
+		}
+		authReq, err = c.dv.pdpClient.CreateAuthorizationRequest(c.resource.String(), c.actions, *c.jwtToken)
+		if err != nil {
+			c.dv.log.Error("Unexpected error when creating CheckAccessV2 AuthorizationRequest: ", err)
 			return false, err
 		}
-	}
-
-	authReq, err := c.dv.pdpClient.CreateAuthorizationRequest(c.resource.String(), c.actions, *c.jwtToken)
-	if err != nil {
-		c.dv.log.Error("Unexpected error when creating CheckAccessV2 AuthorizationRequest: ", err)
-		return false, err
+	} else {
+		authReq = createAuthorizationRequestForPlatformWorkloadIdentity(*c.oid, c.resource.String(), c.actions...)
 	}
 
 	results, err := c.dv.pdpClient.CheckAccess(c.ctx, *authReq)
@@ -939,4 +947,23 @@ func uniqueSubnetSlice(slice []Subnet) []Subnet {
 		}
 	}
 	return list
+}
+
+func createAuthorizationRequestForPlatformWorkloadIdentity(subject, resourceId string, actions ...string) *client.AuthorizationRequest {
+	actionInfos := []client.ActionInfo{}
+	for _, action := range actions {
+		actionInfos = append(actionInfos, client.ActionInfo{Id: action})
+	}
+
+	return &client.AuthorizationRequest{
+		Subject: client.SubjectInfo{
+			Attributes: client.SubjectAttributes{
+				ObjectId: subject,
+			},
+		},
+		Actions: actionInfos,
+		Resource: client.ResourceInfo{
+			Id: resourceId,
+		},
+	}
 }

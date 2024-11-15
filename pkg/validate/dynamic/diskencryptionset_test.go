@@ -52,7 +52,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 				actionInfos         []client.ActionInfo
 				platformIdentities  map[string]api.PlatformWorkloadIdentity
 				platformIdentityMap map[string][]string
-				mocks               func(*mock_env.MockInterface, *mock_compute.MockDiskEncryptionSetsClient, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc)
+				mocks               func(*mock_env.MockInterface, *mock_compute.MockDiskEncryptionSetsClient, *mock_checkaccess.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc, AuthorizerType)
 				wantErr             string
 				wantFPSPErr         string
 			}{
@@ -73,7 +73,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 						pdpClient.EXPECT().CreateAuthorizationRequest(
@@ -99,11 +99,13 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
-						mockTokenCredential(tokenCred)
-						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-						pdpClient.EXPECT().CreateAuthorizationRequest(
-							gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
+						if authorizerType != AuthorizerWorkloadIdentity {
+							mockTokenCredential(tokenCred)
+							env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+							pdpClient.EXPECT().CreateAuthorizationRequest(
+								gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+						}
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(validDiskEncryptionAuthorizationDecision, nil)
@@ -129,7 +131,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
@@ -153,7 +155,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 						pdpClient.EXPECT().CreateAuthorizationRequest(
@@ -179,7 +181,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 						pdpClient.EXPECT().CreateAuthorizationRequest(
@@ -220,7 +222,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 						pdpClient.EXPECT().CreateAuthorizationRequest(
@@ -247,7 +249,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 						pdpClient.EXPECT().CreateAuthorizationRequest(
@@ -271,7 +273,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 						pdpClient.EXPECT().CreateAuthorizationRequest(
@@ -298,7 +300,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 						pdpClient.EXPECT().CreateAuthorizationRequest(
@@ -324,11 +326,13 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
-						mockTokenCredential(tokenCred)
-						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-						pdpClient.EXPECT().CreateAuthorizationRequest(
-							gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
+						if authorizerType != AuthorizerWorkloadIdentity {
+							mockTokenCredential(tokenCred)
+							env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+							pdpClient.EXPECT().CreateAuthorizationRequest(
+								gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+						}
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Do(func(arg0, arg1 interface{}) {
@@ -355,7 +359,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 						pdpClient.EXPECT().CreateAuthorizationRequest(
@@ -398,11 +402,13 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+					mocks: func(env *mock_env.MockInterface, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc, authorizerType AuthorizerType) {
 						mockTokenCredential(tokenCred)
 						env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-						pdpClient.EXPECT().CreateAuthorizationRequest(
-							gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+						if authorizerType != AuthorizerWorkloadIdentity {
+							pdpClient.EXPECT().CreateAuthorizationRequest(
+								gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+						}
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(validDiskEncryptionAuthorizationDecision, nil)
@@ -425,10 +431,6 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					tokenCred := mock_azcore.NewMockTokenCredential(controller)
 					remotePDPClient := mock_checkaccess.NewMockRemotePDPClient(controller)
 
-					if tt.mocks != nil {
-						tt.mocks(_env, diskEncryptionSetsClient, remotePDPClient, tokenCred, cancel)
-					}
-
 					dv := &dynamic{
 						appID:                      to.StringPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 						env:                        _env,
@@ -447,6 +449,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 						} else {
 							tt.wantErr = tt.wantFPSPErr
 						}
+					}
+
+					if tt.mocks != nil {
+						tt.mocks(_env, diskEncryptionSetsClient, remotePDPClient, tokenCred, cancel, dv.authorizerType)
 					}
 
 					err := dv.ValidateDiskEncryptionSets(ctx, tt.oc)
