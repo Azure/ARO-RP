@@ -325,7 +325,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 			return nil, err
 		}
 
-		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpCredRPTenant, _env.MsiRpEndpoint())
+		// MSI dataplane client receives tenant from the bearer challenge, so we can't limit the allowed tenants in the credential
+		fpMSICred, err := _env.FPNewClientCertificateCredential(_env.TenantID(), []string{"*"})
+		if err != nil {
+			return nil, err
+		}
+		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpMSICred, _env.MsiRpEndpoint())
 		msiDataplane, err := dataplane.NewClient(cloud, authenticatorPolicy, msiDataplaneClientOptions)
 		if err != nil {
 			return nil, err
