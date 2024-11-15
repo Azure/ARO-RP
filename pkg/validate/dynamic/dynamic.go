@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -80,7 +81,13 @@ type Dynamic interface {
 	ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateClusterUserAssignedIdentity(ctx context.Context, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error
-	ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error
+	ValidatePlatformWorkloadIdentityProfile(
+		ctx context.Context,
+		oc *api.OpenShiftCluster,
+		platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole,
+		roleDefinitions armauthorization.RoleDefinitionsClient,
+		clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
+	) error
 }
 
 type dynamic struct {

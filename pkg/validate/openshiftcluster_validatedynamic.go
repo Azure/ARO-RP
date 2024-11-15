@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
@@ -38,6 +39,7 @@ func NewOpenShiftClusterDynamicValidator(
 	subscriptionDoc *api.SubscriptionDocument,
 	fpAuthorizer autorest.Authorizer,
 	roleDefinitions armauthorization.RoleDefinitionsClient,
+	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion,
 	clusterMSICredential azcore.TokenCredential,
 ) OpenShiftClusterDynamicValidator {
@@ -49,6 +51,7 @@ func NewOpenShiftClusterDynamicValidator(
 		subscriptionDoc:                        subscriptionDoc,
 		fpAuthorizer:                           fpAuthorizer,
 		roleDefinitions:                        roleDefinitions,
+		clusterMsiFederatedIdentityCredentials: clusterMsiFederatedIdentityCredentials,
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 		clusterMSICredential:                   clusterMSICredential,
 	}
@@ -62,6 +65,7 @@ type openShiftClusterDynamicValidator struct {
 	subscriptionDoc                        *api.SubscriptionDocument
 	fpAuthorizer                           autorest.Authorizer
 	roleDefinitions                        armauthorization.RoleDefinitionsClient
+	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion
 	clusterMSICredential                   azcore.TokenCredential
 }
@@ -207,7 +211,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			nil,
 			pdpClient,
 		)
-		err = spDynamic.ValidatePlatformWorkloadIdentityProfile(ctx, dv.oc, dv.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName(), dv.roleDefinitions)
+		err = spDynamic.ValidatePlatformWorkloadIdentityProfile(ctx, dv.oc, dv.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName(), dv.roleDefinitions, dv.clusterMsiFederatedIdentityCredentials)
 		if err != nil {
 			return err
 		}

@@ -6,10 +6,13 @@ import (
 	"net/http"
 
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
+	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -18,17 +21,60 @@ import (
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
+	ctx context.Context,
+	oc *api.OpenShiftCluster,
+	platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole,
+	roleDefinitions armauthorization.RoleDefinitionsClient,
+	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
+) error {
 	dv.log.Print("ValidatePlatformWorkloadIdentityProfile")
 
 	dv.platformIdentitiesActionsMap = map[string][]string{}
 	dv.platformIdentities = map[string]api.PlatformWorkloadIdentity{}
 
+	clusterResourceId, err := azure.ParseResourceID(oc.ID)
+	if err != nil {
+		return err
+	}
+
 	for k, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		_, ok := platformWorkloadIdentityRolesByRoleName[k]
+		role, ok := platformWorkloadIdentityRolesByRoleName[k]
 		if ok {
 			dv.platformIdentitiesActionsMap[k] = nil
 			dv.platformIdentities[k] = pwi
+
+			identityResourceId, err := azure.ParseResourceID(pwi.ResourceID)
+			if err != nil {
+				return err
+			}
+
+			expectedNames := map[string]struct{}{}
+
+			for _, sa := range role.ServiceAccounts {
+				expectedName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId, sa)
+				expectedNames[expectedName] = struct{}{}
+			}
+
+			// validate federated identity credentials
+			federatedCredentials, err := clusterMsiFederatedIdentityCredentials.List(ctx, identityResourceId.ResourceGroup, identityResourceId.ResourceName, &sdkmsi.FederatedIdentityCredentialsClientListOptions{})
+			if err != nil {
+				return err
+			}
+
+			for _, federatedCredential := range federatedCredentials {
+				if _, ok := expectedNames[*federatedCredential.Name]; !ok {
+					return api.NewCloudError(
+						http.StatusBadRequest,
+						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+						fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId", k),
+						"Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
+						*federatedCredential.Name,
+						pwi.ResourceID,
+						k,
+					)
+				}
+			}
 		}
 	}
 
