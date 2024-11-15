@@ -4,10 +4,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	azcloud "github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
@@ -17,6 +17,7 @@ var (
 	// Errors returned when processing idenities
 	errDecodeClientSecret = errors.New("failed to decode client secret")
 	errParseCertificate   = errors.New("failed to parse certificate")
+	errParseResourceID    = errors.New("failed to parse resource ID")
 	errNilField           = errors.New("expected non nil field in identity")
 	errNoUserAssignedMSIs = errors.New("credentials object does not contain user-assigned managed identities")
 	errResourceIDNotFound = errors.New("resource ID not found in user-assigned managed identity")
@@ -49,16 +50,35 @@ func (c CredentialsObject) IsUserAssigned() bool {
 
 // Get an AzIdentity credential for the given user-assigned identity resource ID
 // Clients can use the credential to get a token for the user-assigned identity
-func (u UserAssignedIdentities) GetCredential(resourceID string) (*azidentity.ClientCertificateCredential, error) {
+func (u UserAssignedIdentities) GetCredential(requestedResourceID string) (*azidentity.ClientCertificateCredential, error) {
+	requestedARMResourceID, err := arm.ParseResourceID(requestedResourceID)
+	if err != nil {
+		return nil, fmt.Errorf("%w for requested resource ID %s: %w", errParseResourceID, requestedResourceID, err)
+	}
+	requestedResourceID = requestedARMResourceID.String()
+
 	for _, id := range u.ExplicitIdentities {
 		if id != nil && id.ResourceID != nil {
-			if *id.ResourceID == resourceID {
+			idARMResourceID, err := arm.ParseResourceID(*id.ResourceID)
+			if err != nil {
+				return nil, fmt.Errorf("%w for identity resource ID %s: %w", errParseResourceID, *id.ResourceID, err)
+			}
+			if requestedResourceID == idARMResourceID.String() {
 				return getClientCertificateCredential(*id, u.cloud)
 			}
 		}
 	}
 
 	return nil, errResourceIDNotFound
+}
+
+func getAzCoreCloud(cloud string) azcloud.Configuration {
+	switch cloud {
+	case AzureUSGovCloud:
+		return azcloud.AzureGovernment
+	default:
+		return azcloud.AzurePublic
+	}
 }
 
 func getClientCertificateCredential(identity swagger.NestedCredentialsObject, cloud string) (*azidentity.ClientCertificateCredential, error) {
@@ -86,6 +106,10 @@ func getClientCertificateCredential(identity swagger.NestedCredentialsObject, cl
 
 		// x5c header required: https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingrequestingatoken
 		SendCertificateChain: true,
+
+		// Disable instance discovery because MSI credential may have regional AAD endpoint that instance discovery endpoint doesn't support
+		// e.g. when MSI credential has westus2.login.microsoft.com, it will cause instance discovery to fail with HTTP 400
+		DisableInstanceDiscovery: true,
 	}
 
 	// Set the regional AAD endpoint
@@ -116,30 +140,26 @@ func validateUserAssignedMSIs(identities []*swagger.NestedCredentialsObject, res
 		if identity == nil {
 			return errNilMSI
 		}
-
-		v := reflect.ValueOf(*identity)
-		for i := 0; i < v.NumField(); i++ {
-			if v.Field(i).IsNil() {
-				return fmt.Errorf("%w, field %s", errNilField, v.Type().Field(i).Name)
-			}
+		if identity.ResourceID == nil {
+			return fmt.Errorf("%w, resource ID", errNilField)
 		}
-		resourceIDMap[*identity.ResourceID] = true
+		armResourceID, err := arm.ParseResourceID(*identity.ResourceID)
+		if err != nil {
+			return fmt.Errorf("%w for received resource ID %s: %w", errParseResourceID, *identity.ResourceID, err)
+		}
+
+		resourceIDMap[armResourceID.String()] = true
 	}
 
 	for _, resourceID := range resourceIDs {
-		if _, ok := resourceIDMap[resourceID]; !ok {
+		armResourceID, err := arm.ParseResourceID(resourceID)
+		if err != nil {
+			return fmt.Errorf("%w for requested resource ID %s: %w", errParseResourceID, resourceID, err)
+		}
+		if _, ok := resourceIDMap[armResourceID.String()]; !ok {
 			return fmt.Errorf("%w, resource ID %s", errResourceIDNotFound, resourceID)
 		}
 	}
 
 	return nil
-}
-
-func getAzCoreCloud(cloud string) azcloud.Configuration {
-	switch cloud {
-	case AzureUSGovCloud:
-		return azcloud.AzureGovernment
-	default:
-		return azcloud.AzurePublic
-	}
 }
