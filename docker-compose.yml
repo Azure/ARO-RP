@@ -16,7 +16,7 @@ services:
     ports:
       - "443:443"
     healthcheck:
-      test: ["CMD", "curl", "-sS", "-f", "https://localhost:443"]
+      test: ["CMD", "pidof", "openvpn"]
       start_period: 20s
       interval: 20s
       timeout: 3s
@@ -118,7 +118,7 @@ services:
     network_mode: host
     depends_on:
       rp:
-        condition: service_started
+        condition: service_healthy
     environment:
       - RP_MODE
       - AZURE_SUBSCRIPTION_ID
