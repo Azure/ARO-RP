@@ -149,7 +149,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerScope)
+	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), nil, _env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	fpCredClusterTenant, err := _env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID)
+	fpCredClusterTenant, err := _env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 	fpspID := tokenClaims.ObjectId
 
-	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID())
+	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID(), nil)
 	if err != nil {
 		return nil, err
 	}

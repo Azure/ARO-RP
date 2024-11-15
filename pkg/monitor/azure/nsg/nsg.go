@@ -68,7 +68,7 @@ func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, su
 		return &monitoring.NoOpMonitor{Wg: wg}
 	}
 
-	token, err := e.FPNewClientCertificateCredential(tenantID)
+	token, err := e.FPNewClientCertificateCredential(tenantID, nil)
 	if err != nil {
 		log.Error("Unable to create FP Authorizer for NSG monitoring.", err)
 		emitter.EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
