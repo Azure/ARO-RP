@@ -121,6 +121,8 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 
 1. To create a cluster, use one of the following methods:
 
+   **NOTE:** clusters created by a local dev RP will not be represented by Azure resources in ARM
+
    1. Manually create the cluster using the public documentation.
 
       Before following the instructions in [Create, access, and manage an Azure Red
