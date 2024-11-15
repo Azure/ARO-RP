@@ -114,6 +114,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	err = r.Client.Update(ctx, instance)
+	if err == nil {
+		r.ClearConditions(ctx)
+	} else {
+		r.SetDegraded(ctx, err)
+	}
 	return reconcile.Result{}, err
 }
 
