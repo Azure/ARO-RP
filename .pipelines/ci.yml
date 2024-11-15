@@ -35,8 +35,7 @@ variables:
     value: localhost
   - name: E2E_LABEL
     value: "!smoke&&!regressiontest"
-  - name: KUBECONFIG
-    value: aks.kubeconfig
+
 
 stages:
   - stage: Containerized_CI
