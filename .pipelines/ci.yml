@@ -36,7 +36,6 @@ variables:
   - name: E2E_LABEL
     value: "!smoke&&!regressiontest"
 
-
 stages:
   - stage: Containerized_CI
     jobs:
@@ -153,20 +152,6 @@ stages:
               fi
             displayName: Get Kubeconfig for AKS Cluster
 
-          # Deploy Hive Operator
-          - bash: |
-              az account set -s $AZURE_SUBSCRIPTION_ID
-              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
-              . secrets/env
-              docker compose -f docker-compose.yml up -d vpn
-              while [ "$(docker inspect --format '{{.State.Health.Status}}' vpn)" != "healthy" ]; do
-                echo "Waiting for VPN to be healthy..."
-                sleep 10
-              done
-              docker ps
-              kubectl get nodes
-              ./hack/hive/hive-dev-install.sh
-            displayName: Deploy Hive Operator
 
           # Run the E2E test suite
           - bash: |
@@ -222,13 +207,6 @@ stages:
           - bash: |
               az cosmosdb sql database delete --name "$DATABASE_NAME" --yes --account-name "$DATABASE_ACCOUNT_NAME" --resource-group "$RESOURCEGROUP"
             displayName: Clean Up Database
-            condition: always()
-
-          # Cleanup Hive Operator
-          - bash: |
-              echo "Cleaning up Hive Operator..."
-              kubectl delete namespace hive || echo "Namespace already deleted or does not exist."
-            displayName: Cleanup Hive Operator
             condition: always()
 
           # AZ CLI Logout
