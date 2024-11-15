@@ -250,7 +250,6 @@ create_miwi_env_file() {
     mockCert=$(get_mock_msi_cert "$mockMSI")
     mockObjectID=$(get_mock_msi_objectID "$mockClientID")
 
-    setup_platform_identity
     cluster_msi_role_assignment "${mockClientID}"
 
     cat >> env <<EOF

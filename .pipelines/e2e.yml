@@ -66,10 +66,15 @@ jobs:
           export CI=true
           . ./hack/e2e/run-rp-and-e2e.sh
           deploy_e2e_db
+          
+          . ./hack/devtools/local_dev_env.sh
+          create_miwi_env_file
         displayName: Setup (Azure)
 
       - script: |
           export CI=true
+          
+          . ./env
           . secrets/env
           . ./hack/e2e/run-rp-and-e2e.sh
 
