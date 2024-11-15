@@ -16,11 +16,6 @@ import (
 	net "net"
 	reflect "reflect"
 
-	env "github.com/Azure/ARO-RP/pkg/env"
-	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
-	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
-	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -29,13 +24,18 @@ import (
 	autorest "github.com/Azure/go-autorest/autorest"
 	logrus "github.com/sirupsen/logrus"
 	gomock "go.uber.org/mock/gomock"
+
+	env "github.com/Azure/ARO-RP/pkg/env"
+	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
+	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 // MockInterface is a mock of Interface interface.
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
-	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
