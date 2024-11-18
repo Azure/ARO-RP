@@ -72,6 +72,7 @@ install_docker_dependencies() {
     CONTAINERD_IO_VERSION="1.6.22-1"
     DOCKER_BUILDX_VERSION="0.10.3-1~ubuntu-$(lsb_release -cs)"
     DOCKER_COMPOSE_VERSION="2.17.3~ubuntu-$(lsb_release -cs)"
+
     sudo apt-get install -y \
         docker-ce=${DOCKER_CE_VERSION} \
         docker-ce-cli=${DOCKER_CE_CLI_VERSION} \
@@ -79,7 +80,6 @@ install_docker_dependencies() {
         docker-buildx-plugin=${DOCKER_BUILDX_VERSION} \
         docker-compose-plugin=${DOCKER_COMPOSE_VERSION} \
         make
-
     sudo systemctl start docker
     sudo systemctl enable docker
     docker compose version
