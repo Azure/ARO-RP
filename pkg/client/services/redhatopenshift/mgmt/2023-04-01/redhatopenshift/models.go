@@ -374,8 +374,6 @@ type MachinePoolProperties struct {
 type MachinePoolUpdate struct {
 	// MachinePoolProperties - The MachinePool Properties
 	*MachinePoolProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for MachinePoolUpdate.
@@ -404,15 +402,6 @@ func (mpu *MachinePoolUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				mpu.MachinePoolProperties = &machinePoolProperties
-			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				mpu.SystemData = &systemData
 			}
 		}
 	}
@@ -881,8 +870,6 @@ type OpenShiftClusterUpdate struct {
 	Tags map[string]*string `json:"tags"`
 	// OpenShiftClusterProperties - The cluster properties.
 	*OpenShiftClusterProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for OpenShiftClusterUpdate.
@@ -923,15 +910,6 @@ func (oscu *OpenShiftClusterUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				oscu.OpenShiftClusterProperties = &openShiftClusterProperties
-			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				oscu.SystemData = &systemData
 			}
 		}
 	}
@@ -1646,8 +1624,6 @@ type SecretProperties struct {
 type SecretUpdate struct {
 	// SecretProperties - The Secret Properties
 	*SecretProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for SecretUpdate.
@@ -1676,15 +1652,6 @@ func (su *SecretUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				su.SecretProperties = &secretProperties
-			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				su.SystemData = &systemData
 			}
 		}
 	}
@@ -1952,8 +1919,6 @@ type SyncIdentityProviderProperties struct {
 type SyncIdentityProviderUpdate struct {
 	// SyncIdentityProviderProperties - The SyncIdentityProvider Properties
 	*SyncIdentityProviderProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for SyncIdentityProviderUpdate.
@@ -1982,15 +1947,6 @@ func (sipu *SyncIdentityProviderUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				sipu.SyncIdentityProviderProperties = &syncIdentityProviderProperties
-			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				sipu.SystemData = &systemData
 			}
 		}
 	}
@@ -2251,8 +2207,6 @@ type SyncSetProperties struct {
 type SyncSetUpdate struct {
 	// SyncSetProperties - The Syncsets properties
 	*SyncSetProperties `json:"properties,omitempty"`
-	// SystemData - READ-ONLY; The system meta data relating to this resource.
-	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for SyncSetUpdate.
@@ -2281,15 +2235,6 @@ func (ssu *SyncSetUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				ssu.SyncSetProperties = &syncSetProperties
-			}
-		case "systemData":
-			if v != nil {
-				var systemData SystemData
-				err = json.Unmarshal(*v, &systemData)
-				if err != nil {
-					return err
-				}
-				ssu.SystemData = &systemData
 			}
 		}
 	}

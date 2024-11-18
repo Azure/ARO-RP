@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // SyncSetsClient is the rest API for Azure Red Hat OpenShift 4
@@ -33,13 +34,13 @@ type SyncSetsClient struct {
 }
 
 // NewSyncSetsClient creates an instance of the SyncSetsClient client.
-func NewSyncSetsClient(subscriptionID string) SyncSetsClient {
+func NewSyncSetsClient(subscriptionID uuid.UUID) SyncSetsClient {
 	return NewSyncSetsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
 // NewSyncSetsClientWithBaseURI creates an instance of the SyncSetsClient client using a custom endpoint.  Use this
 // when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
-func NewSyncSetsClientWithBaseURI(baseURI string, subscriptionID string) SyncSetsClient {
+func NewSyncSetsClientWithBaseURI(baseURI string, subscriptionID uuid.UUID) SyncSetsClient {
 	return SyncSetsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
@@ -61,8 +62,6 @@ func (client SyncSetsClient) CreateOrUpdate(ctx context.Context, resourceGroupNa
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -158,8 +157,6 @@ func (client SyncSetsClient) Delete(ctx context.Context, resourceGroupName strin
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -252,8 +249,6 @@ func (client SyncSetsClient) Get(ctx context.Context, resourceGroupName string, 
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -346,8 +341,6 @@ func (client SyncSetsClient) List(ctx context.Context, resourceGroupName string,
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -479,8 +472,6 @@ func (client SyncSetsClient) Update(ctx context.Context, resourceGroupName strin
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: client.SubscriptionID,
-			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
@@ -531,7 +522,6 @@ func (client SyncSetsClient) UpdatePreparer(ctx context.Context, resourceGroupNa
 		"api-version": APIVersion,
 	}
 
-	parameters.SystemData = nil
 	preparer := autorest.CreatePreparer(
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),

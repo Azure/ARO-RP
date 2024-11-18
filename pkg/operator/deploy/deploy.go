@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -111,6 +112,7 @@ type deploymentData struct {
 	SupportsPodSecurityAdmission bool
 	UsesWorkloadIdentity         bool
 	TokenVolumeMountPath         string
+	FederatedTokenFilePath       string
 }
 
 func (o *operator) SetForceReconcile(ctx context.Context, enable bool) error {
@@ -191,6 +193,7 @@ func (o *operator) createDeploymentData(ctx context.Context) (deploymentData, er
 	if o.oc.UsesWorkloadIdentity() {
 		data.UsesWorkloadIdentity = o.oc.UsesWorkloadIdentity()
 		data.TokenVolumeMountPath = filepath.Dir(pkgoperator.OperatorTokenFile)
+		data.FederatedTokenFilePath = pkgoperator.OperatorTokenFile
 	}
 
 	return data, nil
@@ -270,8 +273,8 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 
 func (o *operator) generateOperatorIdentitySecret() (*corev1.Secret, error) {
 	var operatorIdentity *api.PlatformWorkloadIdentity // use a pointer to make it easy to check if we found an identity below
-	for _, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		if i.OperatorName == pkgoperator.OperatorIdentityName {
+	for k, i := range o.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		if k == pkgoperator.OperatorIdentityName {
 			operatorIdentity = &i
 			break
 		}
@@ -542,18 +545,20 @@ func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 	upgradeableTo := string(*o.oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
 	upgradeableAnnotation := "cloudcredential.openshift.io/upgradeable-to"
 
-	cloudcredentialobject, err := o.operatorcli.OperatorV1().CloudCredentials().Get(ctx, "cluster", metav1.GetOptions{})
+	patch := &metav1.PartialObjectMetadata{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				upgradeableAnnotation: upgradeableTo,
+			},
+		},
+	}
+
+	patchBytes, err := json.Marshal(patch)
 	if err != nil {
 		return err
 	}
 
-	if cloudcredentialobject.Annotations == nil {
-		cloudcredentialobject.Annotations = map[string]string{}
-	}
-
-	cloudcredentialobject.Annotations[upgradeableAnnotation] = upgradeableTo
-
-	_, err = o.operatorcli.OperatorV1().CloudCredentials().Update(ctx, cloudcredentialobject, metav1.UpdateOptions{})
+	_, err = o.operatorcli.OperatorV1().CloudCredentials().Patch(ctx, "cluster", types.MergePatchType, patchBytes, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}

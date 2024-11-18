@@ -10,7 +10,7 @@ const (
 	Namespace  = "openshift-azure-operator"
 	SecretName = "cluster"
 
-	OperatorIdentityName       = "ServiceOperator"
+	OperatorIdentityName       = "aro-operator"
 	OperatorIdentitySecretName = "azure-cloud-credentials"
 	OperatorTokenFile          = "/var/run/secrets/openshift/serviceaccount/token"
 )

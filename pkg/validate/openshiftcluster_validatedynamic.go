@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/form3tech-oss/jwt-go"
@@ -18,7 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
@@ -38,6 +39,7 @@ func NewOpenShiftClusterDynamicValidator(
 	fpAuthorizer autorest.Authorizer,
 	roleDefinitions armauthorization.RoleDefinitionsClient,
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion,
+	clusterMSICredential azcore.TokenCredential,
 ) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
 		log: log,
@@ -48,6 +50,7 @@ func NewOpenShiftClusterDynamicValidator(
 		fpAuthorizer:                           fpAuthorizer,
 		roleDefinitions:                        roleDefinitions,
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
+		clusterMSICredential:                   clusterMSICredential,
 	}
 }
 
@@ -60,6 +63,7 @@ type openShiftClusterDynamicValidator struct {
 	fpAuthorizer                           autorest.Authorizer
 	roleDefinitions                        armauthorization.RoleDefinitionsClient
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion
+	clusterMSICredential                   azcore.TokenCredential
 }
 
 // ensureAccessTokenClaims can detect an error when the service principal (fp, cluster sp) has accidentally deleted from
@@ -127,11 +131,20 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	aroEnv := dv.env.Environment()
-	pdpClient := remotepdp.NewRemotePDPClient(
+	clientOptions := &azcore.ClientOptions{
+		Transport: &http.Client{
+			Transport: azureclient.NewCustomRoundTripper(http.DefaultTransport),
+		},
+	}
+	pdpClient, err := client.NewRemotePDPClient(
 		fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),
 		aroEnv.OAuthScope,
 		fpClientCred,
+		clientOptions,
 	)
+	if err != nil {
+		return err
+	}
 
 	scopes := []string{dv.env.Environment().ResourceManagerScope}
 	var spDynamic dynamic.Dynamic
@@ -165,7 +178,24 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			return err
 		}
 	} else {
-		// PlatformWorkloadIdentity and ClusterMSIIdentity Validation
+		//ClusterMSI Validation
+		cmsiDynamic := dynamic.NewValidator(
+			dv.log,
+			dv.env,
+			dv.env.Environment(),
+			dv.subscriptionDoc.ID,
+			dv.fpAuthorizer,
+			nil,
+			dynamic.AuthorizerClusterUserAssignedIdentity,
+			dv.clusterMSICredential,
+			pdpClient,
+		)
+		err = cmsiDynamic.ValidateClusterUserAssignedIdentity(ctx, dv.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities, dv.roleDefinitions)
+		if err != nil {
+			return err
+		}
+
+		// PlatformWorkloadIdentity Validation
 		spDynamic = dynamic.NewValidator(
 			dv.log,
 			dv.env,

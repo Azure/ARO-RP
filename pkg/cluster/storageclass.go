@@ -24,6 +24,7 @@ const (
 	csiStorageClassName              = "managed-csi"
 	csiEncryptedStorageClassName     = "managed-csi-encrypted-cmk"
 	csiProvisioner                   = "disk.csi.azure.com"
+	fileCSIProvisioner               = "file.csi.azure.com"
 )
 
 // configureDefaultStorageClass replaces default storage class provided by OCP with
@@ -74,6 +75,27 @@ func (m *manager) configureDefaultStorageClass(ctx context.Context) error {
 		}
 
 		return nil
+	})
+}
+
+// For Workload Identity clusters, the default azurefile-csi storage class must be removed
+// By default the azurefile-csi storage class can choose Cluster Storage Account for file share creation
+// Since Cluster Storage Account will have shared key disabled, file share will not be supported in this scenario.
+func (m *manager) removeAzureFileCSIStorageClass(ctx context.Context) error {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil
+	}
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		csiDriver, err := m.operatorcli.OperatorV1().ClusterCSIDrivers().Get(ctx, fileCSIProvisioner, metav1.GetOptions{})
+		if err != nil {
+			if kerrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		csiDriver.Spec.StorageClassState = "Removed"
+		_, err = m.operatorcli.OperatorV1().ClusterCSIDrivers().Update(ctx, csiDriver, metav1.UpdateOptions{})
+		return err
 	})
 }
 

@@ -14,10 +14,12 @@ import (
 
 type UserAssignedIdentitiesClient interface {
 	Get(ctx context.Context, resourceGroupName string, resourceName string, options *armmsi.UserAssignedIdentitiesClientGetOptions) (armmsi.UserAssignedIdentitiesClientGetResponse, error)
+	GetClusterMSICredential() azcore.TokenCredential
 }
 
 type ArmUserAssignedIdentitiesClient struct {
 	*armmsi.UserAssignedIdentitiesClient
+	cred azcore.TokenCredential
 }
 
 var _ UserAssignedIdentitiesClient = &ArmUserAssignedIdentitiesClient{}
@@ -30,5 +32,10 @@ func NewUserAssignedIdentitiesClient(subscriptionID string, credential azcore.To
 	}
 	return &ArmUserAssignedIdentitiesClient{
 		UserAssignedIdentitiesClient: clientFactory.NewUserAssignedIdentitiesClient(),
+		cred:                         credential,
 	}, nil
+}
+
+func (c *ArmUserAssignedIdentitiesClient) GetClusterMSICredential() azcore.TokenCredential {
+	return c.cred
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
@@ -24,7 +25,6 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -79,6 +79,7 @@ type Dynamic interface {
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
+	ValidateClusterUserAssignedIdentity(ctx context.Context, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error
 	ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error
 }
 
@@ -90,7 +91,7 @@ type dynamic struct {
 	checkAccessSubjectInfoCred   azcore.TokenCredential
 	env                          env.Interface
 	azEnv                        *azureclient.AROEnvironment
-	platformIdentities           []api.PlatformWorkloadIdentity
+	platformIdentities           map[string]api.PlatformWorkloadIdentity
 	platformIdentitiesActionsMap map[string][]string
 
 	virtualNetworks                       virtualNetworksGetClient
@@ -98,15 +99,16 @@ type dynamic struct {
 	resourceSkusClient                    compute.ResourceSkusClient
 	spNetworkUsage                        network.UsageClient
 	loadBalancerBackendAddressPoolsClient network.LoadBalancerBackendAddressPoolsClient
-	pdpClient                             remotepdp.RemotePDPClient
+	pdpClient                             client.RemotePDPClient
 }
 
 type AuthorizerType string
 
 const (
-	AuthorizerFirstParty              AuthorizerType = "resource provider"
-	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
-	AuthorizerWorkloadIdentity        AuthorizerType = "workload identity"
+	AuthorizerFirstParty                  AuthorizerType = "resource provider"
+	AuthorizerClusterServicePrincipal     AuthorizerType = "cluster"
+	AuthorizerClusterUserAssignedIdentity AuthorizerType = "cluster user assigned identity"
+	AuthorizerWorkloadIdentity            AuthorizerType = "platform workload identity"
 )
 
 func NewValidator(
@@ -118,7 +120,7 @@ func NewValidator(
 	appID *string,
 	authorizerType AuthorizerType,
 	cred azcore.TokenCredential,
-	pdpClient remotepdp.RemotePDPClient,
+	pdpClient client.RemotePDPClient,
 ) Dynamic {
 	return &dynamic{
 		log:                        log,
@@ -428,7 +430,9 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 	return err
 }
 
-// validateActionsByOID creates a closure with oid(nil in case of Non-MIWI) to call usingCheckAccessV2 for checking SP/MI has actions allowed on a resource
+// validateActionsByOID creates a closure with oid to call usingCheckAccessV2 for checking SP/MI has actions allowed on a resource
+// oid is nil(fetched from access token) when validating FPSP, Non-MIWI Cluster Service Principal and MIWI Cluster User Assigned Managed Identity
+// oid is passed only for validating MIWI Cluster Platform Managed Identity
 func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, actions []string, oid *string) error {
 	// ARM has a 5 minute cache around role assignment creation, so wait one minute longer
 	timeoutCtx, cancel := context.WithTimeout(ctx, 6*time.Minute)
@@ -446,31 +450,49 @@ type closure struct {
 	resource *azure.Resource
 	actions  []string
 	oid      *string
+	jwtToken *string
+}
+
+func (c *closure) checkAccessAuthReqToken() error {
+	scope := c.dv.env.Environment().ResourceManagerEndpoint + "/.default"
+	t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
+	if err != nil {
+		c.dv.log.Error("Unable to get the token from AAD: ", err)
+		return err
+	}
+	claims, err := token.ExtractClaims(t.Token)
+	if err != nil {
+		c.dv.log.Error("Unable to get the oid from token: ", err)
+		return err
+	}
+
+	c.oid = &claims.ObjectId
+	c.jwtToken = &t.Token
+	return nil
 }
 
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
-func (c closure) usingCheckAccessV2() (bool, error) {
+func (c closure) usingCheckAccessV2() (result bool, err error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
-	// reusing oid during retries
-	if c.oid == nil {
-		scope := c.dv.azEnv.ResourceManagerEndpoint + "/.default"
-		t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
+	var authReq *client.AuthorizationRequest
+	//ensure token and oid is available during retries
+	if c.dv.authorizerType != AuthorizerWorkloadIdentity {
+		if c.jwtToken == nil || c.oid == nil {
+			if err = c.checkAccessAuthReqToken(); err != nil {
+				return false, err
+			}
+		}
+		authReq, err = c.dv.pdpClient.CreateAuthorizationRequest(c.resource.String(), c.actions, *c.jwtToken)
 		if err != nil {
-			c.dv.log.Error("Unable to get the token from AAD: ", err)
+			c.dv.log.Error("Unexpected error when creating CheckAccessV2 AuthorizationRequest: ", err)
 			return false, err
 		}
-
-		oid, err := token.GetObjectId(t.Token)
-		if err != nil {
-			c.dv.log.Error("Unable to parse the token oid claim: ", err)
-			return false, err
-		}
-		c.oid = &oid
+	} else {
+		authReq = createAuthorizationRequestForPlatformWorkloadIdentity(*c.oid, c.resource.String(), c.actions...)
 	}
 
-	authReq := createAuthorizationRequest(*c.oid, c.resource.String(), c.actions...)
-	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
+	results, err := c.dv.pdpClient.CheckAccess(c.ctx, *authReq)
 	if err != nil {
 		c.dv.log.Error("Unexpected error when calling CheckAccessV2: ", err)
 		return false, err
@@ -489,7 +511,7 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 		_, ok := actionsToFind[result.ActionId]
 		if ok {
 			delete(actionsToFind, result.ActionId)
-			if result.AccessDecision != remotepdp.Allowed {
+			if result.AccessDecision != client.Allowed {
 				return false, nil
 			}
 		}
@@ -500,26 +522,6 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 	}
 
 	return true, nil
-}
-
-func createAuthorizationRequest(subject, resourceId string, actions ...string) remotepdp.AuthorizationRequest {
-	actionInfos := []remotepdp.ActionInfo{}
-	for _, action := range actions {
-		actionInfos = append(actionInfos, remotepdp.ActionInfo{Id: action})
-	}
-
-	return remotepdp.AuthorizationRequest{
-		Subject: remotepdp.SubjectInfo{
-			Attributes: remotepdp.SubjectAttributes{
-				ObjectId:  subject,
-				ClaimName: remotepdp.GroupExpansion, // always do group expansion
-			},
-		},
-		Actions: actionInfos,
-		Resource: remotepdp.ResourceInfo{
-			Id: resourceId,
-		},
-	}
 }
 
 func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, additionalCIDRs ...string) error {
@@ -828,11 +830,11 @@ func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenSh
 // validateActions calls validateActionsByOID with object ID in case of MIWI cluster otherwise without object ID
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) (*string, error) {
 	if dv.platformIdentities != nil {
-		for _, platformIdentity := range dv.platformIdentities {
-			actionsToValidate := stringutils.GroupsIntersect(actions, dv.platformIdentitiesActionsMap[platformIdentity.OperatorName])
+		for name, platformIdentity := range dv.platformIdentities {
+			actionsToValidate := stringutils.GroupsIntersect(actions, dv.platformIdentitiesActionsMap[name])
 			if len(actionsToValidate) > 0 {
 				if err := dv.validateActionsByOID(ctx, r, actionsToValidate, &platformIdentity.ObjectID); err != nil {
-					return &platformIdentity.OperatorName, err
+					return &name, err
 				}
 			}
 		}
@@ -945,4 +947,23 @@ func uniqueSubnetSlice(slice []Subnet) []Subnet {
 		}
 	}
 	return list
+}
+
+func createAuthorizationRequestForPlatformWorkloadIdentity(subject, resourceId string, actions ...string) *client.AuthorizationRequest {
+	actionInfos := []client.ActionInfo{}
+	for _, action := range actions {
+		actionInfos = append(actionInfos, client.ActionInfo{Id: action})
+	}
+
+	return &client.AuthorizationRequest{
+		Subject: client.SubjectInfo{
+			Attributes: client.SubjectAttributes{
+				ObjectId: subject,
+			},
+		},
+		Actions: actionInfos,
+		Resource: client.ResourceInfo{
+			Id: resourceId,
+		},
+	}
 }

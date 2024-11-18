@@ -91,9 +91,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 		kubernetescli *fake.Clientset
 		configcli     *configfake.Clientset
 		operatorcli   *operatorfake.Clientset
+		runType       string
 	}{
 		{
-			name: "Failed step run will log cluster version, cluster operator status, and ingress information if available",
+			name: "Failed install step run will log cluster version, cluster operator status, VM serial logs, and ingress information if available",
 			steps: []steps.Step{
 				steps.Action(failingFunc),
 			},
@@ -131,9 +132,47 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			kubernetescli: fake.NewSimpleClientset(node),
 			configcli:     configfake.NewSimpleClientset(clusterVersion, clusterOperator),
 			operatorcli:   operatorfake.NewSimpleClientset(ingressController),
+			runType:       "install",
 		},
 		{
-			name: "Failed step run will not crash if it cannot get the clusterversions, clusteroperators, ingresscontrollers",
+			name: "Failed update step run will log cluster version, cluster operator status, and ingress information if available",
+			steps: []steps.Step{
+				steps.Action(failingFunc),
+			},
+			wantErr: "oh no!",
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`running step [Action pkg/cluster.failingFunc]`),
+				},
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("step [Action pkg/cluster.failingFunc] encountered error: oh no!"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterVersion:.*"name": "version"`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes:.*"name": "node"`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators:.*"name": "operator"`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers:.*"name": "ingress-controller"`),
+				},
+			},
+			kubernetescli: fake.NewSimpleClientset(node),
+			configcli:     configfake.NewSimpleClientset(clusterVersion, clusterOperator),
+			operatorcli:   operatorfake.NewSimpleClientset(ingressController),
+			runType:       "update",
+		},
+		{
+			name: "Failed install step run will not crash if it cannot get the clusterversions, clusteroperators, ingresscontrollers",
 			steps: []steps.Step{
 				steps.Action(failingFunc),
 			},
@@ -171,6 +210,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			kubernetescli: fake.NewSimpleClientset(),
 			configcli:     configfake.NewSimpleClientset(),
 			operatorcli:   operatorfake.NewSimpleClientset(),
+			runType:       "install",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -186,7 +226,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				now:           func() time.Time { return time.Now() },
 			}
 
-			err := m.runSteps(ctx, tt.steps, "")
+			err := m.runSteps(ctx, tt.steps, tt.runType)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)

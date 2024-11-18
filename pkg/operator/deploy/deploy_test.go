@@ -219,10 +219,11 @@ func TestCreateDeploymentData(t *testing.T) {
 			},
 			clusterVersion: "4.10.0",
 			expected: deploymentData{
-				Image:                operatorImageWithTag,
-				Version:              operatorImageTag,
-				UsesWorkloadIdentity: true,
-				TokenVolumeMountPath: filepath.Dir(pkgoperator.OperatorTokenFile),
+				Image:                  operatorImageWithTag,
+				Version:                operatorImageTag,
+				UsesWorkloadIdentity:   true,
+				TokenVolumeMountPath:   filepath.Dir(pkgoperator.OperatorTokenFile),
+				FederatedTokenFilePath: pkgoperator.OperatorTokenFile,
 			},
 		},
 		{
@@ -635,10 +636,9 @@ func TestGenerateOperatorIdentitySecret(t *testing.T) {
 					Location: "eastus1",
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
-								{
-									OperatorName: pkgoperator.OperatorIdentityName,
-									ClientID:     "11111111-1111-1111-1111-111111111111",
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								pkgoperator.OperatorIdentityName: {
+									ClientID: "11111111-1111-1111-1111-111111111111",
 								},
 							},
 						},

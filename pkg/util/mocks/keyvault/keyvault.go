@@ -102,6 +102,36 @@ func (mr *MockManagerMockRecorder) GetBase64Secrets(arg0, arg1 any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBase64Secrets", reflect.TypeOf((*MockManager)(nil).GetBase64Secrets), arg0, arg1)
 }
 
+// GetCertificate mocks base method.
+func (m *MockManager) GetCertificate(arg0 context.Context, arg1 string) (keyvault0.CertificateBundle, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCertificate", arg0, arg1)
+	ret0, _ := ret[0].(keyvault0.CertificateBundle)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCertificate indicates an expected call of GetCertificate.
+func (mr *MockManagerMockRecorder) GetCertificate(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificate", reflect.TypeOf((*MockManager)(nil).GetCertificate), arg0, arg1)
+}
+
+// GetCertificatePolicy mocks base method.
+func (m *MockManager) GetCertificatePolicy(arg0 context.Context, arg1 string) (keyvault0.CertificatePolicy, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCertificatePolicy", arg0, arg1)
+	ret0, _ := ret[0].(keyvault0.CertificatePolicy)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCertificatePolicy indicates an expected call of GetCertificatePolicy.
+func (mr *MockManagerMockRecorder) GetCertificatePolicy(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificatePolicy", reflect.TypeOf((*MockManager)(nil).GetCertificatePolicy), arg0, arg1)
+}
+
 // GetCertificateSecret mocks base method.
 func (m *MockManager) GetCertificateSecret(arg0 context.Context, arg1 string) (*rsa.PrivateKey, []*x509.Certificate, error) {
 	m.ctrl.T.Helper()
@@ -175,6 +205,20 @@ func (m *MockManager) SetSecret(arg0 context.Context, arg1 string, arg2 keyvault
 func (mr *MockManagerMockRecorder) SetSecret(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecret", reflect.TypeOf((*MockManager)(nil).SetSecret), arg0, arg1, arg2)
+}
+
+// UpdateCertificatePolicy mocks base method.
+func (m *MockManager) UpdateCertificatePolicy(arg0 context.Context, arg1 string, arg2 keyvault0.CertificatePolicy) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCertificatePolicy", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateCertificatePolicy indicates an expected call of UpdateCertificatePolicy.
+func (mr *MockManagerMockRecorder) UpdateCertificatePolicy(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCertificatePolicy", reflect.TypeOf((*MockManager)(nil).UpdateCertificatePolicy), arg0, arg1, arg2)
 }
 
 // WaitForCertificateOperation mocks base method.

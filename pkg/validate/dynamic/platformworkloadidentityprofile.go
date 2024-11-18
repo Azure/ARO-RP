@@ -22,13 +22,13 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 	dv.log.Print("ValidatePlatformWorkloadIdentityProfile")
 
 	dv.platformIdentitiesActionsMap = map[string][]string{}
-	dv.platformIdentities = []api.PlatformWorkloadIdentity{}
+	dv.platformIdentities = map[string]api.PlatformWorkloadIdentity{}
 
-	for _, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		_, ok := platformWorkloadIdentityRolesByRoleName[pwi.OperatorName]
+	for k, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		_, ok := platformWorkloadIdentityRolesByRoleName[k]
 		if ok {
-			dv.platformIdentitiesActionsMap[pwi.OperatorName] = nil
-			dv.platformIdentities = append(dv.platformIdentities, pwi)
+			dv.platformIdentitiesActionsMap[k] = nil
+			dv.platformIdentities[k] = pwi
 		}
 	}
 
@@ -58,11 +58,6 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 			"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '%v'", v, requiredOperatorIdentities)
 	}
 
-	err := dv.validateClusterMSI(ctx, oc, roleDefinitions)
-	if err != nil {
-		return err
-	}
-
 	for _, role := range platformWorkloadIdentityRolesByRoleName {
 		roleDefinitionID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
 		actions, err := getActionsForRoleDefinition(ctx, roleDefinitionID, roleDefinitions)
@@ -76,34 +71,23 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 	return nil
 }
 
-func (dv *dynamic) validateClusterMSI(ctx context.Context, oc *api.OpenShiftCluster, roleDefinitions armauthorization.RoleDefinitionsClient) error {
-	for resourceID, identity := range oc.Identity.UserAssignedIdentities {
-		_, err := azure.ParseResourceID(resourceID)
-		if err != nil {
-			return err
-		}
-
-		return dv.validateClusterMSIPermissions(ctx, identity.PrincipalID, oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities, roleDefinitions)
-	}
-
-	return nil
-}
-
 // Validate that the cluster MSI has all permissions specified in AzureRedHatOpenShiftFederatedCredentialRole over each platform managed identity
-func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, oid string, platformIdentities []api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+func (dv *dynamic) ValidateClusterUserAssignedIdentity(ctx context.Context, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+	dv.log.Print("ValidateClusterUserAssignedIdentity")
+
 	actions, err := getActionsForRoleDefinition(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, roleDefinitions)
 	if err != nil {
 		return err
 	}
 
-	for _, platformIdentity := range platformIdentities {
-		dv.log.Printf("validateClusterMSIPermissions for %s", platformIdentity.OperatorName)
+	for name, platformIdentity := range platformIdentities {
+		dv.log.Printf("validateClusterMSIPermissions for %s", name)
 		pid, err := azure.ParseResourceID(platformIdentity.ResourceID)
 		if err != nil {
 			return err
 		}
 
-		err = dv.validateActionsByOID(ctx, &pid, actions, &oid)
+		err = dv.validateActionsByOID(ctx, &pid, actions, nil)
 		if err != nil {
 			return err
 		}

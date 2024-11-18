@@ -194,7 +194,11 @@ questions or comments.
 
 ## Useful links
 
-* https://github.com/Azure/azure-resource-manager-rpc
+* https://github.com/AzureExpert/azure-resource-manager-rpc/tree/master
+
+* https://github.com/MicrosoftDocs/azure-docs/blob/main/articles/azure-resource-manager/management/overview.md
+
+* https://github.com/cloud-and-ai-microsoft/resource-provider-contract
 
 * https://github.com/microsoft/api-guidelines
 

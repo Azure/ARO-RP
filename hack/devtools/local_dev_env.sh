@@ -1,5 +1,4 @@
 #!/bin/bash
-set -o errexit
 set -o nounset
 set -o pipefail
 
@@ -130,7 +129,7 @@ get_mock_msi_tenantID() {
 }
 
 get_mock_msi_objectID() {
-    az ad sp list --all --filter "appId eq '$1'" | jq -r ".[] | .id"
+    az ad sp list --all --filter "appId eq '$1'" --output json | jq -r ".[] | .id"
 }
 
 get_mock_msi_cert() {
@@ -168,7 +167,7 @@ assign_role_to_identity() {
         echo "INFO: Unable to list role assignments for identity: ${objectId}"
     fi
 
-    if [ "$roles" == "" ] || [ "$roles" == "[]" ] ; then
+    if [[ "$roles" == "" ]] || [[ "$roles" == "[]" ]] ; then
         echo "INFO: Assigning role to identity: ${objectId}"
         az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
         echo ""
@@ -237,7 +236,7 @@ cluster_msi_role_assignment() {
     local FEDERATED_CREDENTIAL_ROLE_ID="ef318e2a-8334-4a05-9e4a-295a196c6a6e"
     local clusterMSIObjectID
 
-    clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' | jq -r .objectId)
+    clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' --output json | jq -r .objectId)
 
     echo "INFO: Assigning role to cluster MSI: ${clusterMSIAppID}"
     assign_role_to_identity "${clusterMSIObjectID}" "${FEDERATED_CREDENTIAL_ROLE_ID}"
@@ -263,7 +262,7 @@ export MOCK_MSI_CLIENT_ID="$mockClientID"
 export MOCK_MSI_OBJECT_ID="$mockObjectID"
 export MOCK_MSI_TENANT_ID="$mockTenantID"
 export MOCK_MSI_CERT="$mockCert"
-export PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"
+export PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS='$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS'
 
 source secrets/env
 EOF
@@ -300,7 +299,7 @@ ask_to_create_Azure_deployment() {
 
 list_Azure_deployment_names() {
     echo "INFO: Existing deployment names in the current subscription ($AZURE_SUBSCRIPTION_ID):"
-    az deployment group list --resource-group "$RESOURCEGROUP" | jq '[ .[] | {deployment_name: ( .id ) | split("/deployments/")[1] } | .deployment_name ]'
+    az deployment group list --resource-group "$RESOURCEGROUP" --output json | jq '[ .[] | {deployment_name: ( .id ) | split("/deployments/")[1] } | .deployment_name ]'
 }
 
 create_Azure_deployment() {

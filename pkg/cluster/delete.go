@@ -378,7 +378,7 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 }
 
 func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		return nil
 	}
 
@@ -394,8 +394,8 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 
-	for _, identity := range platformWorkloadIdentities {
-		_, exists := platformWIRolesByRoleName[identity.OperatorName]
+	for name, identity := range platformWorkloadIdentities {
+		_, exists := platformWIRolesByRoleName[name]
 		if !exists {
 			continue
 		}
@@ -405,7 +405,7 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 			return err
 		}
 
-		platformWIRole, exists := platformWIRolesByRoleName[identity.OperatorName]
+		platformWIRole, exists := platformWIRolesByRoleName[name]
 		if !exists {
 			continue
 		}
@@ -566,13 +566,13 @@ func (m *manager) Delete(ctx context.Context) error {
 
 		if managedDomain != "" {
 			m.log.Print("deleting signed apiserver certificate")
-			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.doc.ID+"-apiserver")
+			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.APICertName())
 			if err != nil {
 				return err
 			}
 
 			m.log.Print("deleting signed ingress certificate")
-			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.doc.ID+"-ingress")
+			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.IngressCertName())
 			if err != nil {
 				return err
 			}

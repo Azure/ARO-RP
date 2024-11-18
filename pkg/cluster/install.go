@@ -138,6 +138,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 func (m *manager) getCertificateRenewalSteps() []steps.Step {
 	steps := []steps.Step{
 		steps.Action(m.populateDatabaseIntIP),
+		steps.Action(m.correctCertificateIssuer),
 		steps.Action(m.fixMCSCert),
 		steps.Action(m.fixMCSUserData),
 		steps.Action(m.configureAPIServerCertificate),
@@ -209,31 +210,63 @@ func (m *manager) clusterWasCreatedByHive() bool {
 }
 
 func (m *manager) Update(ctx context.Context) error {
-	s := []steps.Step{
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
-		steps.Action(m.initializeKubernetesClients), // All init steps are first
-		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
-		// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
-		// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+	s := []steps.Step{}
 
-		// credentials rotation flow steps
-		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.ensureClusterMsiCertificate),
+			steps.Action(m.initializeClusterMsiClients),
+		)
+	}
+
+	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.Action(m.federateIdentityCredentials),
+		)
+	} else {
+		s = append(s,
+			// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
+			// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+
+			// CSP credentials rotation flow steps
+			steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
+		)
+	}
+
+	s = append(s,
+		steps.Action(m.initializeKubernetesClients),
+		steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 		steps.Action(m.rotateACRTokenPassword),
+		steps.Action(m.correctCertificateIssuer),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.renewMDSDCertificate),
-		steps.Action(m.ensureCredentialsRequest),
-		steps.Action(m.updateOpenShiftSecret),
-		steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
-		steps.Action(m.updateAROSecret),
-		steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
-		steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
-		steps.Action(m.ensureUpgradeAnnotation),
+		steps.Action(m.fixUserAdminKubeconfig),
 		steps.Action(m.reconcileLoadBalancerProfile),
+	)
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.ensureUpgradeAnnotation),
+			steps.Action(m.deployPlatformWorkloadIdentitySecrets),
+		)
+	} else {
+		s = append(s,
+			steps.Action(m.ensureCredentialsRequest),
+			steps.Action(m.updateOpenShiftSecret),
+			steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
+			steps.Action(m.updateAROSecret),
+			steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
+			steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
+		)
 	}
 
 	if m.adoptViaHive {
@@ -426,6 +459,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
+			steps.Action(m.removeAzureFileCSIStorageClass),
 			steps.Action(m.disableOperatorReconciliation),
 			steps.Action(m.finishInstallation),
 		},
@@ -463,7 +497,7 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic str
 		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
 	}
 	if err != nil {
-		m.gatherFailureLogs(ctx)
+		m.gatherFailureLogs(ctx, metricsTopic)
 	}
 	return err
 }

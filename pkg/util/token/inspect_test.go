@@ -3,40 +3,61 @@ package token
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import "testing"
+import (
+	"testing"
 
-func TestGetObjectId(t *testing.T) {
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/test/util/token"
+)
+
+func TestExtractClaims(t *testing.T) {
+	dummyObjectId := "1234567890"
+	validTestToken, err := token.CreateTestToken(dummyObjectId, nil)
+	if err != nil {
+		t.Errorf("Error creating test token: %v", err)
+	}
+
 	tests := []struct {
-		name    string
-		token   string
-		want    string
-		wantErr bool
+		name       string
+		token      string
+		wantOid    string
+		wantClaims map[string]interface{}
+		wantErr    bool
 	}{
 		{
-			name:    "Can extract oid from a valid token",
-			token:   "eyJhbGciOiJIUzI1NiJ9.eyJJc3N1ZXIiOiJJc3N1ZXIiLCJvaWQiOiJub3dheXRoaXNpc2FyZWFsYXBwIiwiZXhwIjoxNjgwODQ2MDI2LCJpYXQiOjE2ODA4NDYwMjZ9.GQxPJbMJYhrXK1YlWUXR_5IpBlvkv9kEdX_Z_vJRxsU",
-			want:    "nowaythisisarealapp",
-			wantErr: false,
+			name:       "Can extract oid from a valid token",
+			token:      validTestToken,
+			wantOid:    dummyObjectId,
+			wantClaims: map[string]interface{}{"example_claim": "example_value"},
+			wantErr:    false,
 		},
 		{
-			name:    "Return an error when given an invalid jwt",
-			token:   "invalid",
-			want:    "",
-			wantErr: true,
+			name:       "Return an error when given an invalid jwt",
+			token:      "invalid",
+			wantOid:    "",
+			wantClaims: nil,
+			wantErr:    true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetObjectId(tt.token)
+			got, err := ExtractClaims(tt.token)
 			t.Log(got, err)
-			if got != tt.want {
-				t.Errorf("Got oid: %q, want %q", got, tt.want)
-			}
-			if tt.wantErr && err == nil {
-				t.Errorf("Expect an error but got nothing")
-			}
-			if !tt.wantErr && err != nil {
-				t.Errorf("Expect no error but got one")
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Expect an error but got nothing")
+				}
+			} else {
+				if got.ObjectId != tt.wantOid {
+					t.Errorf("Got oid: %q, want %q", got.ObjectId, tt.wantOid)
+				}
+				if diff := cmp.Diff(got.ClaimNames, tt.wantClaims); diff != "" {
+					t.Errorf("Got claimNames: %q, want %q", got.ClaimNames, tt.wantClaims)
+				}
+				if err != nil {
+					t.Errorf("Expect no error but got one")
+				}
 			}
 		})
 	}
