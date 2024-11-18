@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
+	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
@@ -75,12 +75,15 @@ func (c *core) Logger() *logrus.Entry {
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
-	msiAuthorizer, err := c.NewMSIAuthorizer(c.Environment().ResourceManagerScope)
+	credential, err := c.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
 
-	mcc := containerservice.NewManagedClustersClient(c.Environment(), c.SubscriptionID(), msiAuthorizer)
+	mcc, err := utilcontainerservice.NewDefaultManagedClustersClient(c.Environment(), c.SubscriptionID(), credential)
+	if err != nil {
+		return nil, err
+	}
 
 	if c.isLocalDevelopmentMode {
 		return liveconfig.NewDev(c.Location(), mcc), nil
