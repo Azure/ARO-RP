@@ -64,7 +64,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
-	credential, err := env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID)
+	credential, err := env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
 	if err != nil {
 		return nil, err
 	}
