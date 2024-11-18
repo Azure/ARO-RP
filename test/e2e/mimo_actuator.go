@@ -34,6 +34,12 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 				json.RawMessage("{\"operatorFlagsMergeStrategy\": \"reset\", \"properties\": {\"maintenanceTask\": \"SyncClusterObject\"}}"), oc)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			// Wait for the flag reset to finish applying
+			Eventually(func(g Gomega, ctx context.Context) {
+				oc = adminGetCluster(g, ctx, clusterResourceID)
+				g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		})
 	})
 
