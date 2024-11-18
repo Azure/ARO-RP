@@ -53,15 +53,6 @@ kill_podman() {
     fi
 }
 
-setup_environment() {
-    echo "########## 🌐 Setting up Azure account and secrets ##########"
-    az account set -s "$AZURE_SUBSCRIPTION_ID"
-    SECRET_SA_ACCOUNT_NAME="$SECRET_SA_ACCOUNT_NAME" make secrets
-    . secrets/env
-    export CI=true
-    echo "Environment setup complete."
-}
-
 install_docker_dependencies() {
     echo "########## 🐳 Installing Docker and Docker Compose Plugin ##########"
     sudo apt-get update
@@ -74,9 +65,23 @@ install_docker_dependencies() {
     $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | \
     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin make
+
+    # Pinning Docker versions to ensure pipeline stability
+    DOCKER_CE_VERSION="5:20.10.25~3-0~ubuntu-$(lsb_release -cs)"
+    DOCKER_CE_CLI_VERSION="5:20.10.25~3-0~ubuntu-$(lsb_release -cs)"
+    CONTAINERD_IO_VERSION="1.6.22-1"
+    DOCKER_BUILDX_VERSION="0.10.3-1~ubuntu-$(lsb_release -cs)"
+    DOCKER_COMPOSE_VERSION="2.17.3~ubuntu-$(lsb_release -cs)"
+    sudo apt-get install -y \
+        docker-ce=${DOCKER_CE_VERSION} \
+        docker-ce-cli=${DOCKER_CE_CLI_VERSION} \
+        containerd.io=${CONTAINERD_IO_VERSION} \
+        docker-buildx-plugin=${DOCKER_BUILDX_VERSION} \
+        docker-compose-plugin=${DOCKER_COMPOSE_VERSION} \
+        make
+
     sudo systemctl start docker
     sudo systemctl enable docker
     docker compose version
-    echo "Docker and dependencies installed successfully."
+    echo "Docker and dependencies installed successfully with pinned versions."
 }
