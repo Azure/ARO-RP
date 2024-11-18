@@ -260,6 +260,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	msiResourceID := resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-msi-resource"
 	clusterResourceId, _ := azure.ParseResourceID(clusterID)
 	platformIdentity1ResourceId, _ := azure.ParseResourceID(platformIdentity1)
+	expectedPlatformIdentity1FederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, platformIdentity1SAName)
 	platformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
 		"Dummy2": {
 			ResourceID: platformIdentity1,
@@ -472,6 +473,43 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
 				"Dummy1",
 				"something-else",
+				platformIdentity1,
+				"Dummy1",
+			),
+		},
+		{
+			name:                  "Fail - A Federated Identity Credential found on platform workload identity during creation",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState: api.ProvisioningStateCreating,
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version: openShiftVersion,
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
+
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{{Name: &expectedPlatformIdentity1FederatedCredName}}, nil)
+			},
+			wantErr: fmt.Sprintf(
+				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure this identity is only used for this cluster and does not have any existing federated identity credentials.",
+				api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+				"Dummy1",
+				expectedPlatformIdentity1FederatedCredName,
 				platformIdentity1,
 				"Dummy1",
 			),

@@ -63,6 +63,18 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 			}
 
 			for _, federatedCredential := range federatedCredentials {
+				if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
+					return api.NewCloudError(
+						http.StatusBadRequest,
+						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+						fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId", k),
+						"Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure this identity is only used for this cluster and does not have any existing federated identity credentials.",
+						*federatedCredential.Name,
+						pwi.ResourceID,
+						k,
+					)
+				}
+
 				if _, ok := expectedNames[*federatedCredential.Name]; !ok {
 					return api.NewCloudError(
 						http.StatusBadRequest,
