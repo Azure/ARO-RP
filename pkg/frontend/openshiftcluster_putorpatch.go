@@ -413,6 +413,11 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 		return err
 	}
 
+	err = f.encryptionathostValidator.ValidateEncryptionAtHost(ctx, f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
