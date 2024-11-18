@@ -79,7 +79,7 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		return nil, err
 	}
 
-	options := env.Environment().ClientCertificateCredentialOptions()
+	options := env.Environment().ClientCertificateCredentialOptions(nil)
 	armHelperTokenCredential, err := azidentity.NewClientCertificateCredential(env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 	armHelperAuthorizer := azidext.NewTokenCredentialAdapter(armHelperTokenCredential, scopes)
 
 	// Graph service client uses the first party service principal.
-	fpTokenCredential, err := env.FPNewClientCertificateCredential(env.TenantID())
+	fpTokenCredential, err := env.FPNewClientCertificateCredential(env.TenantID(), nil)
 	if err != nil {
 		return nil, err
 	}

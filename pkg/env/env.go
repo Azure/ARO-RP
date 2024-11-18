@@ -89,8 +89,8 @@ type Interface interface {
 	Domain() string
 	FeatureIsSet(Feature) bool
 	// TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
-	FPAuthorizer(string, ...string) (autorest.Authorizer, error)
-	FPNewClientCertificateCredential(string) (*azidentity.ClientCertificateCredential, error)
+	FPAuthorizer(string, []string, ...string) (autorest.Authorizer, error)
+	FPNewClientCertificateCredential(string, []string) (*azidentity.ClientCertificateCredential, error)
 	FPClientID() string
 	Listen() (net.Listener, error)
 	GatewayDomains() []string

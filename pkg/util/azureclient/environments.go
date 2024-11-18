@@ -121,8 +121,9 @@ func (e *AROEnvironment) ArmClientOptions() *arm.ClientOptions {
 	}
 }
 
-func (e *AROEnvironment) ClientCertificateCredentialOptions() *azidentity.ClientCertificateCredentialOptions {
+func (e *AROEnvironment) ClientCertificateCredentialOptions(additionalTenants []string) *azidentity.ClientCertificateCredentialOptions {
 	return &azidentity.ClientCertificateCredentialOptions{
+		AdditionallyAllowedTenants: additionalTenants,
 		ClientOptions: azcore.ClientOptions{
 			Cloud: e.Cloud,
 		},

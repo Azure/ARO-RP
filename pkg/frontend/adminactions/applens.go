@@ -29,7 +29,7 @@ type appLensActions struct {
 
 func NewAppLensActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument) (AppLensActions, error) {
-	fpClientCertCred, err := env.FPNewClientCertificateCredential(env.Environment().AppLensTenantID)
+	fpClientCertCred, err := env.FPNewClientCertificateCredential(env.Environment().AppLensTenantID, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -14,6 +14,17 @@ var (
 	errNilSecretValue = errors.New("secret value is nil")
 )
 
+type DeletedSecretProperties struct {
+	Name          string
+	RecoveryLevel string
+	DeletedDate   time.Time
+}
+
+type DeletedSecretResponse struct {
+	CredentialsObject dataplane.CredentialsObject
+	Properties        DeletedSecretProperties
+}
+
 type MsiKeyVaultStore struct {
 	kvClient KeyVaultClient
 }
@@ -83,6 +94,42 @@ func (s *MsiKeyVaultStore) GetCredentialsObject(ctx context.Context, secretName 
 	}
 
 	return &SecretResponse{CredentialsObject: credentialsObject, Properties: secretProperties}, nil
+}
+
+// Get a deleted credentials object from the key vault using the specified secret name.
+func (s *MsiKeyVaultStore) GetDeletedCredentialsObject(ctx context.Context, secretName string) (*DeletedSecretResponse, error) {
+	response, err := s.kvClient.GetDeletedSecret(ctx, secretName, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Value == nil {
+		return nil, errNilSecretValue
+	}
+
+	var credentialsObject dataplane.CredentialsObject
+	if err := credentialsObject.UnmarshalJSON([]byte(*response.Value)); err != nil {
+		return nil, err
+	}
+
+	deletedSecretProperties := DeletedSecretProperties{
+		Name:          secretName,
+		RecoveryLevel: "",
+		DeletedDate:   time.Time{},
+	}
+
+	if response.DeletedDate != nil {
+		deletedSecretProperties.DeletedDate = *response.DeletedDate
+	}
+
+	if response.Attributes != nil {
+		// Override defaults if values are present
+		if response.Attributes.RecoveryLevel != nil {
+			deletedSecretProperties.RecoveryLevel = *response.Attributes.RecoveryLevel
+		}
+	}
+
+	return &DeletedSecretResponse{CredentialsObject: credentialsObject, Properties: deletedSecretProperties}, nil
 }
 
 // Get a pager for listing credentials objects from the key vault.

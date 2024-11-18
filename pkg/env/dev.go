@@ -81,8 +81,8 @@ func (d *dev) Listen() (net.Listener, error) {
 }
 
 // TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
-func (d *dev) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authorizer, error) {
-	fpTokenCredential, err := d.FPNewClientCertificateCredential(tenantID)
+func (d *dev) FPAuthorizer(tenantID string, additionalTenants []string, scopes ...string) (autorest.Authorizer, error) {
+	fpTokenCredential, err := d.FPNewClientCertificateCredential(tenantID, additionalTenants)
 	if err != nil {
 		return nil, err
 	}
@@ -90,10 +90,10 @@ func (d *dev) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authoriz
 	return azidext.NewTokenCredentialAdapter(fpTokenCredential, scopes), nil
 }
 
-func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.ClientCertificateCredential, error) {
+func (d *dev) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (*azidentity.ClientCertificateCredential, error) {
 	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
 
-	options := d.Environment().ClientCertificateCredentialOptions()
+	options := d.Environment().ClientCertificateCredentialOptions(additionalTenants)
 	credential, err := azidentity.NewClientCertificateCredential(tenantID, d.fpClientID, fpCertificates, fpPrivateKey, options)
 	if err != nil {
 		return nil, err

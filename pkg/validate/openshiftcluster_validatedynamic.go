@@ -125,7 +125,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
-	fpClientCred, err := dv.env.FPNewClientCertificateCredential(tenantID)
+	fpClientCred, err := dv.env.FPNewClientCertificateCredential(tenantID, nil)
 	if err != nil {
 		return err
 	}

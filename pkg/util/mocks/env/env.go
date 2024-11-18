@@ -296,10 +296,10 @@ func (mr *MockInterfaceMockRecorder) Environment() *gomock.Call {
 }
 
 // FPAuthorizer mocks base method.
-func (m *MockInterface) FPAuthorizer(arg0 string, arg1 ...string) (autorest.Authorizer, error) {
+func (m *MockInterface) FPAuthorizer(arg0 string, arg1 []string, arg2 ...string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0}
-	for _, a := range arg1 {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "FPAuthorizer", varargs...)
@@ -309,9 +309,9 @@ func (m *MockInterface) FPAuthorizer(arg0 string, arg1 ...string) (autorest.Auth
 }
 
 // FPAuthorizer indicates an expected call of FPAuthorizer.
-func (mr *MockInterfaceMockRecorder) FPAuthorizer(arg0 any, arg1 ...any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) FPAuthorizer(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0}, arg1...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPAuthorizer", reflect.TypeOf((*MockInterface)(nil).FPAuthorizer), varargs...)
 }
 
@@ -330,18 +330,18 @@ func (mr *MockInterfaceMockRecorder) FPClientID() *gomock.Call {
 }
 
 // FPNewClientCertificateCredential mocks base method.
-func (m *MockInterface) FPNewClientCertificateCredential(arg0 string) (*azidentity.ClientCertificateCredential, error) {
+func (m *MockInterface) FPNewClientCertificateCredential(arg0 string, arg1 []string) (*azidentity.ClientCertificateCredential, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FPNewClientCertificateCredential", arg0)
+	ret := m.ctrl.Call(m, "FPNewClientCertificateCredential", arg0, arg1)
 	ret0, _ := ret[0].(*azidentity.ClientCertificateCredential)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FPNewClientCertificateCredential indicates an expected call of FPNewClientCertificateCredential.
-func (mr *MockInterfaceMockRecorder) FPNewClientCertificateCredential(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) FPNewClientCertificateCredential(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPNewClientCertificateCredential", reflect.TypeOf((*MockInterface)(nil).FPNewClientCertificateCredential), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPNewClientCertificateCredential", reflect.TypeOf((*MockInterface)(nil).FPNewClientCertificateCredential), arg0, arg1)
 }
 
 // FeatureIsSet mocks base method.

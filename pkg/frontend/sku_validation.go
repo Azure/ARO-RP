@@ -24,7 +24,7 @@ type SkuValidator interface {
 type skuValidator struct{}
 
 func (s skuValidator) ValidateVMSku(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
-	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerScope)
+	fpAuthorizer, err := environment.FPAuthorizer(tenantID, nil, environment.Environment().ResourceManagerScope)
 	if err != nil {
 		return err
 	}

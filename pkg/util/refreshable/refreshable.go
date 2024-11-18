@@ -21,7 +21,7 @@ type authorizer struct {
 }
 
 func (a *authorizer) Rebuild() error {
-	auth, err := a.env.FPAuthorizer(a.tenantID, a.env.Environment().ResourceManagerScope)
+	auth, err := a.env.FPAuthorizer(a.tenantID, nil, a.env.Environment().ResourceManagerScope)
 	if err != nil {
 		return err
 	}

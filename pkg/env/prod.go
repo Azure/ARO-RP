@@ -160,7 +160,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), p.Environment().KeyVaultScope)
+	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), nil, p.Environment().KeyVaultScope)
 	if err != nil {
 		return nil, err
 	}
@@ -338,8 +338,8 @@ func (p *prod) FeatureIsSet(f Feature) bool {
 }
 
 // TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
-func (p *prod) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authorizer, error) {
-	fpTokenCredential, err := p.FPNewClientCertificateCredential(tenantID)
+func (p *prod) FPAuthorizer(tenantID string, additionalTenants []string, scopes ...string) (autorest.Authorizer, error) {
+	fpTokenCredential, err := p.FPNewClientCertificateCredential(tenantID, additionalTenants)
 	if err != nil {
 		return nil, err
 	}
@@ -383,10 +383,10 @@ func (p *prod) LiveConfig() liveconfig.Manager {
 	return p.liveConfig
 }
 
-func (p *prod) FPNewClientCertificateCredential(tenantID string) (*azidentity.ClientCertificateCredential, error) {
+func (p *prod) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (*azidentity.ClientCertificateCredential, error) {
 	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
 
-	options := p.Environment().ClientCertificateCredentialOptions()
+	options := p.Environment().ClientCertificateCredentialOptions(additionalTenants)
 	credential, err := azidentity.NewClientCertificateCredential(tenantID, p.fpClientID, fpCertificates, fpPrivateKey, options)
 	if err != nil {
 		return nil, err
