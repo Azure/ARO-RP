@@ -75,12 +75,12 @@ func (c *core) Logger() *logrus.Entry {
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
-	tokenizer, err := c.NewMSITokenCredential()
+	credential, err := c.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
 
-	mcc, err := utilcontainerservice.NewDefaultManagedClustersClient(c.Environment(), c.SubscriptionID(), tokenizer)
+	mcc, err := utilcontainerservice.NewDefaultManagedClustersClient(c.Environment(), c.SubscriptionID(), credential)
 	if err != nil {
 		return nil, err
 	}

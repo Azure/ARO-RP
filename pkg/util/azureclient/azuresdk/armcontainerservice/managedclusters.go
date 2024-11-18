@@ -24,19 +24,19 @@ type managedClustersClient struct {
 var _ ManagedClustersClient = &managedClustersClient{}
 
 // NewDefaultManagedClustersClient creates a new ManagedClustersClient with default options
-func NewDefaultManagedClustersClient(environment *azureclient.AROEnvironment, subscriptionId string, tokenizer azcore.TokenCredential) (ManagedClustersClient, error) {
+func NewDefaultManagedClustersClient(environment *azureclient.AROEnvironment, subscriptionId string, credential azcore.TokenCredential) (ManagedClustersClient, error) {
 	options := arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: environment.Cloud,
 		},
 	}
 
-	return NewManagedClustersClient(subscriptionId, tokenizer, options)
+	return NewManagedClustersClient(subscriptionId, credential, options)
 }
 
 // NewManagedClustersClient creates a new ManagedClustersClient
-func NewManagedClustersClient(subscriptionId string, tokenizer azcore.TokenCredential, options arm.ClientOptions) (ManagedClustersClient, error) {
-	clientFactory, err := armcontainerservice.NewClientFactory(subscriptionId, tokenizer, &options)
+func NewManagedClustersClient(subscriptionId string, credential azcore.TokenCredential, options arm.ClientOptions) (ManagedClustersClient, error) {
+	clientFactory, err := armcontainerservice.NewClientFactory(subscriptionId, credential, &options)
 	if err != nil {
 		return nil, err
 	}
