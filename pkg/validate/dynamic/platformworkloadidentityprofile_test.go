@@ -261,6 +261,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	clusterResourceId, _ := azure.ParseResourceID(clusterID)
 	platformIdentity1ResourceId, _ := azure.ParseResourceID(platformIdentity1)
 	expectedPlatformIdentity1FederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, platformIdentity1SAName)
+	expectedOIDCIssuer := "https://fakeissuer.fakedomain/fakecluster"
 	platformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
 		"Dummy2": {
 			ResourceID: platformIdentity1,
@@ -336,7 +337,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						},
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -366,7 +368,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						},
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -379,7 +382,69 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				expectedPlatformIdentity1FederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, platformIdentity1SAName)
 
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
-					Return([]*sdkmsi.FederatedIdentityCredential{{Name: &expectedPlatformIdentity1FederatedCredName}}, nil)
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: &expectedPlatformIdentity1FederatedCredName,
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    &expectedOIDCIssuer,
+								Subject:   &platformIdentity1SAName,
+							},
+						},
+					}, nil)
+			},
+			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
+			wantPlatformIdentitiesActionsMap: map[string][]string{
+				"Dummy1": platformIdentityRequiredPermissionsList,
+			},
+		},
+		{
+			name:                  "Success - Existing Federated Identity Credentials are for this cluster but for an unknown service account",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
+
+				expectedPlatformIdentity1FederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, platformIdentity1SAName)
+				expectedPlatformIdentity1ExtraFederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, "something else")
+
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: &expectedPlatformIdentity1FederatedCredName,
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    &expectedOIDCIssuer,
+								Subject:   &platformIdentity1SAName,
+							},
+						},
+						{
+							Name: &expectedPlatformIdentity1ExtraFederatedCredName,
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    &expectedOIDCIssuer,
+								Subject:   pointerutils.ToPtr("something else"),
+							},
+						},
+					}, nil)
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -397,7 +462,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -444,7 +510,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			},
 		},
 		{
-			name:                  "Fail - Unexpected Federated Identity Credential found on platform workload identity",
+			name:                  "Fail - Unexpected Federated Identity Credential (wrong audience) found on platform workload identity",
 			platformIdentityRoles: validRolesForVersion,
 			oc: &api.OpenShiftCluster{
 				ID: clusterID,
@@ -457,7 +523,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						},
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -466,7 +533,60 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
-					Return([]*sdkmsi.FederatedIdentityCredential{{Name: pointerutils.ToPtr("something-else")}}, nil)
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: pointerutils.ToPtr("something-else"),
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("something else")},
+								Issuer:    &expectedOIDCIssuer,
+								Subject:   &platformIdentity1SAName,
+							},
+						},
+					}, nil)
+			},
+			wantErr: fmt.Sprintf(
+				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
+				api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+				"Dummy1",
+				"something-else",
+				platformIdentity1,
+				"Dummy1",
+			),
+		},
+		{
+			name:                  "Fail - Unexpected Federated Identity Credential (wrong issuer) found on platform workload identity",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: pointerutils.ToPtr("something-else"),
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    pointerutils.ToPtr("something else"),
+								Subject:   &platformIdentity1SAName,
+							},
+						},
+					}, nil)
 			},
 			wantErr: fmt.Sprintf(
 				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
@@ -492,7 +612,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						},
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -529,7 +650,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -553,7 +675,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.14.60")),
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -577,7 +700,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.13.60")),
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -596,7 +720,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -622,7 +747,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						},
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -641,7 +767,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{
@@ -687,7 +814,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
 					},
 					ClusterProfile: api.ClusterProfile{
-						Version: openShiftVersion,
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
 					},
 				},
 				Identity: &api.ManagedServiceIdentity{

@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
-	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -20,6 +19,10 @@ import (
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+
+const (
+	expectedAudience = "openshift"
+)
 
 func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 	ctx context.Context,
@@ -33,13 +36,8 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 	dv.platformIdentitiesActionsMap = map[string][]string{}
 	dv.platformIdentities = map[string]api.PlatformWorkloadIdentity{}
 
-	clusterResourceId, err := azure.ParseResourceID(oc.ID)
-	if err != nil {
-		return err
-	}
-
 	for k, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		role, ok := platformWorkloadIdentityRolesByRoleName[k]
+		_, ok := platformWorkloadIdentityRolesByRoleName[k]
 		if ok {
 			dv.platformIdentitiesActionsMap[k] = nil
 			dv.platformIdentities[k] = pwi
@@ -47,13 +45,6 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 			identityResourceId, err := azure.ParseResourceID(pwi.ResourceID)
 			if err != nil {
 				return err
-			}
-
-			expectedNames := map[string]struct{}{}
-
-			for _, sa := range role.ServiceAccounts {
-				expectedName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId, sa)
-				expectedNames[expectedName] = struct{}{}
 			}
 
 			// validate federated identity credentials
@@ -75,7 +66,9 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 					)
 				}
 
-				if _, ok := expectedNames[*federatedCredential.Name]; !ok {
+				if len(federatedCredential.Properties.Audiences) != 1 ||
+					*federatedCredential.Properties.Audiences[0] != expectedAudience ||
+					*federatedCredential.Properties.Issuer != string(*oc.Properties.ClusterProfile.OIDCIssuer) {
 					return api.NewCloudError(
 						http.StatusBadRequest,
 						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
