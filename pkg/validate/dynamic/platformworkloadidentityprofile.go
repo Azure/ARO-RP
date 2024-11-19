@@ -54,13 +54,12 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 			}
 
 			for _, federatedCredential := range federatedCredentials {
-				if federatedCredential == nil ||
-					federatedCredential.Name == nil ||
-					federatedCredential.Properties == nil {
+				switch {
+				case federatedCredential == nil,
+					federatedCredential.Name == nil,
+					federatedCredential.Properties == nil:
 					return fmt.Errorf("received invalid federated credential")
-				}
-
-				if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
+				case oc.Properties.ProvisioningState == api.ProvisioningStateCreating:
 					return api.NewCloudError(
 						http.StatusBadRequest,
 						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
@@ -70,12 +69,10 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 						pwi.ResourceID,
 						k,
 					)
-				}
-
-				if len(federatedCredential.Properties.Audiences) != 1 ||
-					*federatedCredential.Properties.Audiences[0] != expectedAudience ||
-					federatedCredential.Properties.Issuer == nil ||
-					*federatedCredential.Properties.Issuer != string(*oc.Properties.ClusterProfile.OIDCIssuer) {
+				case len(federatedCredential.Properties.Audiences) != 1,
+					*federatedCredential.Properties.Audiences[0] != expectedAudience,
+					federatedCredential.Properties.Issuer == nil,
+					*federatedCredential.Properties.Issuer != string(*oc.Properties.ClusterProfile.OIDCIssuer):
 					return api.NewCloudError(
 						http.StatusBadRequest,
 						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,

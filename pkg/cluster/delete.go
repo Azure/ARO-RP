@@ -416,29 +416,30 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 		}
 
 		for _, federatedCredential := range federatedCredentials {
-			if federatedCredential == nil ||
-				federatedCredential.Name == nil ||
-				federatedCredential.Properties == nil ||
-				len(federatedCredential.Properties.Audiences) != 1 ||
-				*federatedCredential.Properties.Audiences[0] != "openshift" ||
-				federatedCredential.Properties.Issuer == nil ||
-				*federatedCredential.Properties.Issuer != string(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer) {
+			switch {
+			case federatedCredential == nil,
+				federatedCredential.Name == nil,
+				federatedCredential.Properties == nil,
+				len(federatedCredential.Properties.Audiences) != 1,
+				*federatedCredential.Properties.Audiences[0] != "openshift",
+				federatedCredential.Properties.Issuer == nil,
+				*federatedCredential.Properties.Issuer != string(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer):
 				continue
-			}
-
-			_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
-				ctx,
-				identityResourceId.ResourceGroup,
-				identityResourceId.ResourceName,
-				*federatedCredential.Name,
-				&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
-			)
-			if err != nil {
-				if azuresdkerrors.IsNotFoundError(err) {
-					m.log.Errorf("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
-					continue
-				} else {
-					m.log.Infof("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
+			default:
+				_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
+					ctx,
+					identityResourceId.ResourceGroup,
+					identityResourceId.ResourceName,
+					*federatedCredential.Name,
+					&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
+				)
+				if err != nil {
+					if azuresdkerrors.IsNotFoundError(err) {
+						m.log.Errorf("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
+						continue
+					} else {
+						m.log.Infof("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
+					}
 				}
 			}
 		}
