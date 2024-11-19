@@ -15,7 +15,7 @@ import (
 )
 
 // UpdateClusterOperatorFlags updates the OperatorFlags object in the ARO
-// Cluster document.
+// Cluster custom resource.
 func UpdateClusterOperatorFlags(ctx context.Context) error {
 	th, err := mimo.GetTaskContext(ctx)
 	if err != nil {
