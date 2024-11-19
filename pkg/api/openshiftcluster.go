@@ -786,10 +786,11 @@ type IngressProfile struct {
 type RegistryProfile struct {
 	MissingFields
 
-	Name      string       `json:"name,omitempty"`
-	Username  string       `json:"username,omitempty"`
-	Password  SecureString `json:"password,omitempty"`
-	IssueDate *date.Time   `json:"issueDate,omitempty"`
+	Name     string       `json:"name,omitempty"`
+	Username string       `json:"username,omitempty"`
+	Password SecureString `json:"password,omitempty"`
+	// IssueDate is when the username/password for the registry was last updated.
+	IssueDate *date.Time `json:"issueDate,omitempty"`
 }
 
 // Install represents an install process

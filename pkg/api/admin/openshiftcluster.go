@@ -500,8 +500,9 @@ const (
 
 // RegistryProfile represents a registry profile
 type RegistryProfile struct {
-	Name      string     `json:"name,omitempty"`
-	Username  string     `json:"username,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Username string `json:"username,omitempty"`
+	// IssueDate is when the username/password for the registry was last updated.
 	IssueDate *date.Time `json:"issueDate,omitempty"`
 }
 

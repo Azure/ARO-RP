@@ -210,6 +210,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		for i, v := range oc.Properties.RegistryProfiles {
 			out.Properties.RegistryProfiles[i].Name = v.Name
 			out.Properties.RegistryProfiles[i].Username = v.Username
+			out.Properties.RegistryProfiles[i].IssueDate = v.IssueDate
 		}
 	}
 
