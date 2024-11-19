@@ -116,7 +116,7 @@ func TestProdHiveAdmin(t *testing.T) {
 		t.Fatal(errors.New("expected name of first managed clusters list to match first page results"))
 	}
 
-	adminCredsResult, err := mcc.ListClusterAdminCredentials(ctx, "rp-eastus", "aro-ak-cluster-001")
+	adminCredsResult, err := mcc.ListClusterAdminCredentials(ctx, "rp-eastus", "aro-ak-cluster-001", "public")
 	if err != nil {
 		t.Fatal(err)
 	}
