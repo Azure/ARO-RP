@@ -130,7 +130,7 @@ func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 
 // localFpAuthorizer implements mimo.TaskContext.
 func (t *th) LocalFpAuthorizer() (autorest.Authorizer, error) {
-	localFPAuthorizer, err := t.env.FPAuthorizer(t.env.TenantID(), t.env.Environment().ResourceManagerScope)
+	localFPAuthorizer, err := t.env.FPAuthorizer(t.env.TenantID(), nil, t.env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
