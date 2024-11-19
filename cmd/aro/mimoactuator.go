@@ -18,7 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/service"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
 func mimoActuator(ctx context.Context, log *logrus.Entry) error {
@@ -49,12 +49,17 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 	}
 	go g.Run()
 
-	dbc, err := service.NewDatabase(ctx, _env, log, m, true)
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, aead)
+	if err != nil {
+		return err
+	}
+
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return err
 	}
