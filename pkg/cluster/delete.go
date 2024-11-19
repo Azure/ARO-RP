@@ -405,22 +405,32 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 			return err
 		}
 
-		platformWIRole, exists := platformWIRolesByRoleName[name]
-		if !exists {
-			continue
+		federatedCredentials, err := m.clusterMsiFederatedIdentityCredentials.List(
+			ctx,
+			identityResourceId.ResourceGroup,
+			identityResourceId.ResourceName,
+			&armmsi.FederatedIdentityCredentialsClientListOptions{},
+		)
+		if err != nil {
+			return err
 		}
 
-		for _, sa := range platformWIRole.ServiceAccounts {
-			federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
-			if err != nil {
-				return fmt.Errorf("failed to get federated identity credential name for %s: %v", identity.ResourceID, err)
+		for _, federatedCredential := range federatedCredentials {
+			if federatedCredential == nil ||
+				federatedCredential.Name == nil ||
+				federatedCredential.Properties == nil ||
+				len(federatedCredential.Properties.Audiences) != 1 ||
+				*federatedCredential.Properties.Audiences[0] != "openshift" ||
+				federatedCredential.Properties.Issuer == nil ||
+				*federatedCredential.Properties.Issuer != string(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer) {
+				continue
 			}
 
 			_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
 				ctx,
 				identityResourceId.ResourceGroup,
 				identityResourceId.ResourceName,
-				federatedIdentityCredentialResourceName,
+				*federatedCredential.Name,
 				&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
 			)
 			if err != nil {

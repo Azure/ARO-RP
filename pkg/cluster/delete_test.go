@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"testing"
 
+	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -32,6 +33,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -500,6 +502,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	clusterRGName := "aro-cluster"
 	identityIDPrefix := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/", mockGuid, clusterRGName)
 
+	oidcIssuer := "https://fakeissuer.fakedomain/fakecluster"
+
 	ccmServiceAccountName := "system:serviceaccount:openshift-cloud-controller-manager:cloud-controller-manager"
 	ccmIdentityResourceId, _ := azure.ParseResourceID(fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"))
 	ingressServiceAccountName := "system:serviceaccount:openshift-ingress-operator:ingress-operator"
@@ -518,7 +522,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{
-							Version: "4.14.40",
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
@@ -526,7 +531,6 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "",
 		},
 		{
 			name: "success - cluster doc has non-nil but empty PlatformWorkloadIdentities",
@@ -535,7 +539,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{
-							Version: "4.14.40",
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
@@ -544,7 +549,35 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "",
+		},
+		{
+			name: "success - identities have no federated credentials",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
+								},
+								"ClusterIngressOperator": {
+									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "cio"),
+								},
+							},
+						},
+					},
+				},
+			},
+			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+			},
 		},
 		{
 			name: "success - successfully delete federated credentials",
@@ -554,7 +587,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 					ID: clusterID,
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{
-							Version: "4.14.40",
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
@@ -572,38 +606,92 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			},
 			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 				ccmFedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, ccmIdentityResourceId, ccmServiceAccountName)
-				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq(ccmFedCredName), gomock.Any())
-
 				ingressFedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, ingressIdentityResourceId, ingressServiceAccountName)
+
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: &ccmFedCredName,
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    &oidcIssuer,
+								Subject:   &ccmServiceAccountName,
+							},
+						},
+					}, nil)
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(ingressIdentityResourceId.ResourceGroup), gomock.Eq(ingressIdentityResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: &ingressFedCredName,
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    &oidcIssuer,
+								Subject:   &ccmServiceAccountName,
+							},
+						},
+					}, nil)
+
+				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq(ccmFedCredName), gomock.Any())
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ingressIdentityResourceId.ResourceGroup), gomock.Eq(ingressIdentityResourceId.ResourceName), gomock.Eq(ingressFedCredName), gomock.Any())
 			},
-			wantErr: "",
 		},
 		{
-			name: "success - skip federated credential deletion because platform workload identities are missing the OperatorName field",
+			name: "success - does not delete federated credentials that do not belong to the cluster",
 			doc: &api.OpenShiftClusterDocument{
 				ID: docID,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: clusterID,
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{
-							Version: "4.14.40",
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
-								"foo": {
+								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
-								},
-								"bar": {
-									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "cio"),
 								},
 							},
 						},
 					},
 				},
 			},
-			wantErr: "",
+			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				ccmFedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, ccmIdentityResourceId, ccmServiceAccountName)
+
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: &ccmFedCredName,
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    &oidcIssuer,
+								Subject:   &ccmServiceAccountName,
+							},
+						},
+						{
+							Name: pointerutils.ToPtr("fedCredWithWrongAudience"),
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("something-else")},
+								Issuer:    &oidcIssuer,
+								Subject:   &ccmServiceAccountName,
+							},
+						},
+						{
+							Name: pointerutils.ToPtr("fedCredWithWrongIssuer"),
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    pointerutils.ToPtr("someOtherIssuer"),
+								Subject:   &ccmServiceAccountName,
+							},
+						},
+					}, nil)
+
+				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq(ccmFedCredName), gomock.Any())
+				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq("fedCredWithWrongAudience"), gomock.Any()).Times(0)
+				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq("fedCredWithWrongIssuer"), gomock.Any()).Times(0)
+			},
 		},
 		{
 			name: "error - encounter blocking error deleting a federated credential",
@@ -613,7 +701,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 					ID: clusterID,
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{
-							Version: "4.14.40",
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
