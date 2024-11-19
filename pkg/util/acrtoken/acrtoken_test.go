@@ -12,16 +12,20 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/go-test/deep"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_containerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerregistry"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 )
 
 const (
 	tokenName          = "token-12345"
 	registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
+	registryDomain     = "arointsvc.example.com"
 )
 
 func TestEnsureTokenAndPassword(t *testing.T) {
@@ -178,12 +182,17 @@ func toDate(t time.Time) *date.Time {
 func setupManager(controller *gomock.Controller, tc *mock_containerregistry.MockTokensClient, rc *mock_containerregistry.MockRegistriesClient) *manager {
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().ACRResourceID().AnyTimes().Return(registryResourceID)
+	env.EXPECT().ACRDomain().AnyTimes().Return(registryDomain)
 	r, _ := azure.ParseResourceID(registryResourceID)
+	u := deterministicuuid.NewTestUUIDGenerator(0x22)
+	now := func() time.Time { return time.UnixMilli(1000) }
 	return &manager{
 		env:        env,
 		r:          r,
 		tokens:     tc,
 		registries: rc,
+		uuid:       u,
+		now:        now,
 	}
 }
 
@@ -214,5 +223,117 @@ func generateCredentialsParameters(tpn mgmtcontainerregistry.TokenPasswordName) 
 	return mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: to.StringPtr(registryResourceID + "/tokens/" + tokenName),
 		Name:    tpn,
+	}
+}
+
+func TestGetRegistryProfiles(t *testing.T) {
+	a := assert.New(t)
+	controller := gomock.NewController(t)
+	mgr := setupManager(controller, nil, nil)
+
+	ocWithProfile := &api.OpenShiftCluster{
+		Properties: api.OpenShiftClusterProperties{
+			RegistryProfiles: []*api.RegistryProfile{
+				{
+					Name:     "notwanted.example.com",
+					Username: "other",
+				},
+				{
+					Name:     "arointsvc.example.com",
+					Username: "foo",
+				},
+			},
+		},
+	}
+	ocWithoutProfile := &api.OpenShiftCluster{
+		Properties: api.OpenShiftClusterProperties{
+			RegistryProfiles: []*api.RegistryProfile{
+				{
+					Name:     "notwanted.example.com",
+					Username: "other",
+				},
+			},
+		},
+	}
+
+	// GetRegistryProfile finds it successfully
+	r := mgr.GetRegistryProfile(ocWithProfile)
+	a.NotNil(r)
+	a.Equal("arointsvc.example.com", r.Name)
+	a.Equal("foo", r.Username)
+
+	// GetRegistryProfile can't find it as it doesn't exist
+	r = mgr.GetRegistryProfile(ocWithoutProfile)
+	a.Nil(r)
+
+	// GetRegistryProfileFromSlice finds it successfully
+	r = mgr.GetRegistryProfileFromSlice(ocWithProfile.Properties.RegistryProfiles)
+	a.NotNil(r)
+	a.Equal("arointsvc.example.com", r.Name)
+	a.Equal("foo", r.Username)
+
+	// GetRegistryProfileFromSlice can't find it as it doesn't exist
+	r = mgr.GetRegistryProfileFromSlice(ocWithoutProfile.Properties.RegistryProfiles)
+	a.Nil(r)
+}
+
+func TestNewAndPutRegistryProfile(t *testing.T) {
+	a := assert.New(t)
+	controller := gomock.NewController(t)
+	mgr := setupManager(controller, nil, nil)
+
+	newProfile := mgr.NewRegistryProfile()
+	a.NotNil(newProfile)
+	a.Equal("token-22222222-2222-2222-2222-222222220001", newProfile.Username)
+	a.Equal("1970-01-01T00:00:01Z", newProfile.IssueDate.Format(time.RFC3339))
+
+	ocWithProfile := &api.OpenShiftCluster{
+		Properties: api.OpenShiftClusterProperties{
+			RegistryProfiles: []*api.RegistryProfile{
+				{
+					Name:     "arointsvc.example.com",
+					Username: "foo",
+				},
+				{
+					Name:     "notwanted.example.com",
+					Username: "other",
+				},
+			},
+		},
+	}
+	ocWithoutProfile := &api.OpenShiftCluster{
+		Properties: api.OpenShiftClusterProperties{
+			RegistryProfiles: []*api.RegistryProfile{
+				{
+					Name:     "notwanted.example.com",
+					Username: "other",
+				},
+			},
+		},
+	}
+
+	// If it doesn't exist, it appends it
+	mgr.PutRegistryProfile(ocWithoutProfile, newProfile)
+	a.Len(ocWithoutProfile.Properties.RegistryProfiles, 2)
+
+	// If it does exist, it replaces it
+	mgr.PutRegistryProfile(ocWithProfile, newProfile)
+	a.Len(ocWithProfile.Properties.RegistryProfiles, 2)
+
+	// Check that it has been replaced
+	for _, err := range deep.Equal(
+		ocWithProfile.Properties.RegistryProfiles,
+		[]*api.RegistryProfile{
+			{
+				Name:      "arointsvc.example.com",
+				Username:  "token-22222222-2222-2222-2222-222222220001",
+				IssueDate: &date.Time{Time: time.UnixMilli(1000)},
+			},
+			{
+				Name:     "notwanted.example.com",
+				Username: "other",
+			},
+		}) {
+		t.Error(err)
 	}
 }

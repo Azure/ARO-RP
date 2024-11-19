@@ -5,7 +5,6 @@ package acrtoken
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -24,7 +23,7 @@ import (
 type Manager interface {
 	GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
 	GetRegistryProfileFromSlice(oc []*api.RegistryProfile) *api.RegistryProfile
-	NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
+	NewRegistryProfile() *api.RegistryProfile
 	PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryProfile)
 	EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error)
 	RotateTokenPassword(ctx context.Context, rp *api.RegistryProfile) error
@@ -37,12 +36,10 @@ type manager struct {
 
 	tokens     containerregistry.TokensClient
 	registries containerregistry.RegistriesClient
-}
 
-const (
-	HoursInADay        = 24
-	ACRTokenLifeInDays = 90
-)
+	uuid uuid.Generator
+	now  func() time.Time
+}
 
 func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
 	r, err := azure.ParseResourceID(env.ACRResourceID())
@@ -56,6 +53,8 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manag
 
 		tokens:     containerregistry.NewTokensClient(env.Environment(), r.SubscriptionID, localFPAuthorizer),
 		registries: containerregistry.NewRegistriesClient(env.Environment(), r.SubscriptionID, localFPAuthorizer),
+		uuid:       uuid.DefaultGenerator,
+		now:        time.Now,
 	}
 
 	return m, nil
@@ -63,7 +62,7 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manag
 
 func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
 	for i, rp := range oc.Properties.RegistryProfiles {
-		if rp.Name == fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix) {
+		if rp.Name == m.env.ACRDomain() {
 			return oc.Properties.RegistryProfiles[i]
 		}
 	}
@@ -73,7 +72,7 @@ func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProf
 
 func (m *manager) GetRegistryProfileFromSlice(registryProfiles []*api.RegistryProfile) *api.RegistryProfile {
 	for _, rp := range registryProfiles {
-		if rp.Name == fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix) {
+		if rp.Name == m.env.ACRDomain() {
 			return rp
 		}
 	}
@@ -81,11 +80,11 @@ func (m *manager) GetRegistryProfileFromSlice(registryProfiles []*api.RegistryPr
 	return nil
 }
 
-func (m *manager) NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
+func (m *manager) NewRegistryProfile() *api.RegistryProfile {
 	return &api.RegistryProfile{
-		Name:      fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix),
-		Username:  "token-" + uuid.DefaultGenerator.Generate(),
-		IssueDate: &date.Time{Time: time.Now().UTC()},
+		Name:      m.env.ACRDomain(),
+		Username:  "token-" + m.uuid.Generate(),
+		IssueDate: &date.Time{Time: m.now().UTC()},
 	}
 }
 

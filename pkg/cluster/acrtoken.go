@@ -38,7 +38,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 	if rp == nil {
 		// 1. choose a name and establish the intent to create a token with
 		// that name
-		rp = token.NewRegistryProfile(m.doc.OpenShiftCluster)
+		rp = token.NewRegistryProfile()
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			token.PutRegistryProfile(doc.OpenShiftCluster, rp)
