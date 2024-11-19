@@ -554,6 +554,50 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			),
 		},
 		{
+			name:                  "Fail - Unexpected Federated Identity Credential (missing audience) found on platform workload identity",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: pointerutils.ToPtr("something-else"),
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: nil,
+								Issuer:    &expectedOIDCIssuer,
+								Subject:   &platformIdentity1SAName,
+							},
+						},
+					}, nil)
+			},
+			wantErr: fmt.Sprintf(
+				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
+				api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+				"Dummy1",
+				"something-else",
+				platformIdentity1,
+				"Dummy1",
+			),
+		},
+		{
 			name:                  "Fail - Unexpected Federated Identity Credential (wrong issuer) found on platform workload identity",
 			platformIdentityRoles: validRolesForVersion,
 			oc: &api.OpenShiftCluster{
@@ -598,6 +642,50 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			),
 		},
 		{
+			name:                  "Fail - Unexpected Federated Identity Credential (missing issuer) found on platform workload identity",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: pointerutils.ToPtr("something-else"),
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    nil,
+								Subject:   &platformIdentity1SAName,
+							},
+						},
+					}, nil)
+			},
+			wantErr: fmt.Sprintf(
+				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
+				api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+				"Dummy1",
+				"something-else",
+				platformIdentity1,
+				"Dummy1",
+			),
+		},
+		{
 			name:                  "Fail - A Federated Identity Credential found on platform workload identity during creation",
 			platformIdentityRoles: validRolesForVersion,
 			oc: &api.OpenShiftCluster{
@@ -624,7 +712,16 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
-					Return([]*sdkmsi.FederatedIdentityCredential{{Name: &expectedPlatformIdentity1FederatedCredName}}, nil)
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: &expectedPlatformIdentity1FederatedCredName,
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    &expectedOIDCIssuer,
+								Subject:   &platformIdentity1SAName,
+							},
+						},
+					}, nil)
 			},
 			wantErr: fmt.Sprintf(
 				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure this identity is only used for this cluster and does not have any existing federated identity credentials.",
@@ -634,6 +731,105 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				platformIdentity1,
 				"Dummy1",
 			),
+		},
+		{
+			name:                  "Fail - Federated Identity Credential client returns nil credential",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
+
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{nil}, nil)
+			},
+			wantErr: "received invalid federated credential",
+		},
+		{
+			name:                  "Fail - Federated Identity Credential client returns credential with nil name",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
+
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{
+						{
+							Name: nil,
+							Properties: &sdkmsi.FederatedIdentityCredentialProperties{
+								Audiences: []*string{pointerutils.ToPtr("openshift")},
+								Issuer:    &expectedOIDCIssuer,
+								Subject:   &platformIdentity1SAName,
+							},
+						},
+					}, nil)
+			},
+			wantErr: "received invalid federated credential",
+		},
+		{
+			name:                  "Fail - Federated Identity Credential client returns credential with nil properties",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
+
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return([]*sdkmsi.FederatedIdentityCredential{{Name: &expectedPlatformIdentity1FederatedCredName}}, nil)
+			},
+			wantErr: "received invalid federated credential",
 		},
 		{
 			name: "Fail - UpgradeableTo is provided, but desired identities are not fulfilled",
