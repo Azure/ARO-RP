@@ -6,9 +6,10 @@ package containerservice
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // ManagedClustersAddons is a minimal interface for azure ManagedClustersAddons
