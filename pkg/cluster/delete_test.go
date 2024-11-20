@@ -551,6 +551,31 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			},
 		},
 		{
+			name: "success - cluster doc has no oidc issuer so no actions performed",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version:    "4.14.40",
+							OIDCIssuer: nil,
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
+								},
+								"ClusterIngressOperator": {
+									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "cio"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "success - identities have no federated credentials",
 			doc: &api.OpenShiftClusterDocument{
 				ID: docID,
