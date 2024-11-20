@@ -510,6 +510,34 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			},
 		},
 		{
+			name:                  "Fail - Error when listing federated identity credentials",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
+					Return(nil, fmt.Errorf("something unexpected occurred"))
+			},
+			wantErr: "something unexpected occurred",
+		},
+		{
 			name:                  "Fail - Unexpected Federated Identity Credential (wrong audience) found on platform workload identity",
 			platformIdentityRoles: validRolesForVersion,
 			oc: &api.OpenShiftCluster{
