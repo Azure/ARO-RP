@@ -1427,6 +1427,9 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+						"FAKE-OPERATOR": platformIdentity1,
+					},
 					UpgradeableTo: &validUpgradeableToValue,
 				}
 			},
@@ -1441,10 +1444,44 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+						"FAKE-OPERATOR": platformIdentity1,
+					},
 					UpgradeableTo: &invalidUpgradeableToValue,
 				}
 			},
 			wantErr: `400: InvalidParameter: properties.platformWorkloadIdentityProfile.UpgradeableTo[16.107.invalid]: UpgradeableTo must be a valid OpenShift version in the format 'x.y.z'.`,
+		},
+		{
+			name: "No platform identities provided in PlatformWorkloadIdentityProfile - nil",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Identity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						"Dummy": {},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					UpgradeableTo: &invalidUpgradeableToValue,
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile: Platform workload identity profile cannot be empty.",
+		},
+		{
+			name: "No platform identities provided in PlatformWorkloadIdentityProfile - empty map",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Identity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						"Dummy": {},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{},
+					UpgradeableTo:              &invalidUpgradeableToValue,
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile: Platform workload identity profile cannot be empty.",
 		},
 	}
 
@@ -1579,6 +1616,46 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				}
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity cannot be removed or have its name changed.",
+		},
+		{
+			name: "No platform identities provided in PlatformWorkloadIdentityProfile - empty map",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+						"operator1": platformIdentity1,
+					},
+				}
+				oc.Identity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = map[string]PlatformWorkloadIdentity{}
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile: Platform workload identity profile cannot be empty.",
+		},
+		{
+			name: "No platform identities provided in PlatformWorkloadIdentityProfile - nil",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+						"operator1": platformIdentity1,
+					},
+				}
+				oc.Identity = &ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]UserAssignedIdentity{
+						"first": clusterIdentity1,
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = nil
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile: Platform workload identity profile cannot be empty.",
 		},
 	}
 
