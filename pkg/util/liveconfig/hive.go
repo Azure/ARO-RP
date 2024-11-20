@@ -48,7 +48,7 @@ func getAksShardKubeconfig(ctx context.Context, managedClustersClient utilcontai
 
 	aksResourceGroup := strings.Replace(*aksCluster.Properties.NodeResourceGroup, fmt.Sprintf("-aks%d", shard), "", 1)
 
-	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName)
+	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName, "public")
 	if err != nil {
 		return nil, err
 	}
