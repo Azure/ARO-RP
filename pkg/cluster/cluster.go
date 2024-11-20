@@ -303,9 +303,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		err = m.platformWorkloadIdentityRolesByVersion.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
-		if err != nil {
-			return nil, err
+		if m.doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateDeleting {
+			err = m.platformWorkloadIdentityRolesByVersion.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		msiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()

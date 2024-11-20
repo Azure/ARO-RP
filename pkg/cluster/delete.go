@@ -391,15 +391,7 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 		}
 	}
 
-	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
-	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
-
-	for name, identity := range platformWorkloadIdentities {
-		_, exists := platformWIRolesByRoleName[name]
-		if !exists {
-			continue
-		}
-
+	for _, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 		identityResourceId, err := azure.ParseResourceID(identity.ResourceID)
 		if err != nil {
 			return err
