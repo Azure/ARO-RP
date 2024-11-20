@@ -542,6 +542,10 @@ func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 		return nil
 	}
 
+	if o.oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo == nil {
+		return nil
+	}
+
 	upgradeableTo := string(*o.oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
 	upgradeableAnnotation := "cloudcredential.openshift.io/upgradeable-to"
 

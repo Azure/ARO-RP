@@ -20,6 +20,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
@@ -192,7 +193,7 @@ func TestResourcesList(t *testing.T) {
 			if tt.wantError == "" {
 				if tt.wantResponse != nil {
 					if !bytes.Equal(b, tt.wantResponse) {
-						t.Errorf("wanted %s got %s", string(tt.wantResponse), string(b))
+						t.Errorf("got unexpected response, diff: %s", cmp.Diff(string(b), string(tt.wantResponse)))
 					}
 				}
 			} else {

@@ -504,7 +504,7 @@ func TestCheckPodImageVersion(t *testing.T) {
 	}
 }
 
-func TestTestEnsureUpgradeAnnotation(t *testing.T) {
+func TestEnsureUpgradeAnnotation(t *testing.T) {
 	UpgradeableTo1 := api.UpgradeableTo("4.14.59")
 
 	for _, tt := range []struct {
@@ -526,6 +526,14 @@ func TestTestEnsureUpgradeAnnotation(t *testing.T) {
 					ClientSecret: "",
 				},
 				PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+			},
+		},
+		{
+			name: "upgradeableto not set",
+			cluster: api.OpenShiftClusterProperties{
+				PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+					UpgradeableTo: nil,
+				},
 			},
 		},
 		{

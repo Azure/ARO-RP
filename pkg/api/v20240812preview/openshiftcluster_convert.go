@@ -385,6 +385,8 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 		}
 	}
 	if oc.Identity != nil {
+		oc.Identity.PrincipalID = ""
+		oc.Identity.TenantID = ""
 		for i := range oc.Identity.UserAssignedIdentities {
 			if entry, ok := oc.Identity.UserAssignedIdentities[i]; ok {
 				entry.ClientID = ""

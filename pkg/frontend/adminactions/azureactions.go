@@ -58,13 +58,13 @@ type azureActions struct {
 // NewAzureActions returns an azureActions
 func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument) (AzureActions, error) {
-	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
+	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, nil,
 		env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
 
-	credential, err := env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID)
+	credential, err := env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
 	if err != nil {
 		return nil, err
 	}

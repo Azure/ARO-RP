@@ -149,7 +149,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerScope)
+	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), nil, _env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	fpCredClusterTenant, err := _env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID)
+	fpCredClusterTenant, err := _env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 	fpspID := tokenClaims.ObjectId
 
-	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID())
+	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +325,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 			return nil, err
 		}
 
-		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpCredRPTenant, _env.MsiRpEndpoint())
+		// MSI dataplane client receives tenant from the bearer challenge, so we can't limit the allowed tenants in the credential
+		fpMSICred, err := _env.FPNewClientCertificateCredential(_env.TenantID(), []string{"*"})
+		if err != nil {
+			return nil, err
+		}
+		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpMSICred, _env.MsiRpEndpoint())
 		msiDataplane, err := dataplane.NewClient(cloud, authenticatorPolicy, msiDataplaneClientOptions)
 		if err != nil {
 			return nil, err

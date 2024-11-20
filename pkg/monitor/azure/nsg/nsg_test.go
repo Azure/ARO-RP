@@ -613,7 +613,7 @@ func TestNewMonitor(t *testing.T) {
 				emitter.EXPECT().EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
 			},
 			mockInterface: func(mi *mock_env.MockInterface) {
-				mi.EXPECT().FPNewClientCertificateCredential(gomock.Any()).Return(nil, errors.New("Unknown Error"))
+				mi.EXPECT().FPNewClientCertificateCredential(gomock.Any(), gomock.Any()).Return(nil, errors.New("Unknown Error"))
 			},
 			tick:  true,
 			valid: isOfType[*monitoring.NoOpMonitor],
@@ -627,7 +627,7 @@ func TestNewMonitor(t *testing.T) {
 				emitter.EXPECT().EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
 			},
 			mockInterface: func(mi *mock_env.MockInterface) {
-				mi.EXPECT().FPNewClientCertificateCredential(gomock.Any()).Return(&azidentity.ClientCertificateCredential{}, nil)
+				mi.EXPECT().FPNewClientCertificateCredential(gomock.Any(), gomock.Any()).Return(&azidentity.ClientCertificateCredential{}, nil)
 				mi.EXPECT().Environment().Return(&azureclient.AROEnvironment{})
 			},
 			tick:  true,
