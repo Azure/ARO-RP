@@ -23,7 +23,6 @@ type flowLogsClient struct {
 	*armnetwork.FlowLogsClient
 }
 
-// NewFlowLogsClient creates a new FlowLogsClient
 func NewFlowLogsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (FlowLogsClient, error) {
 	client, err := armnetwork.NewFlowLogsClient(subscriptionID, credential, options)
 	return &flowLogsClient{client}, err
