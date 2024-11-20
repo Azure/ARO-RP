@@ -435,10 +435,10 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 				)
 				if err != nil {
 					if azuresdkerrors.IsNotFoundError(err) {
-						m.log.Errorf("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
+						m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
 						continue
 					} else {
-						m.log.Infof("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
+						m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
 					}
 				}
 			}
