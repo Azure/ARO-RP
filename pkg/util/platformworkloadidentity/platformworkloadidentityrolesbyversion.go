@@ -85,3 +85,28 @@ func (service *PlatformWorkloadIdentityRolesByVersionService) GetPlatformWorkloa
 	}
 	return platformWorkloadIdentityRolesByRoleName
 }
+
+func GetPlatformWorkloadIdentityMismatchError(oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole) error {
+	requiredOperatorIdentities := []string{}
+	for _, role := range platformWorkloadIdentityRolesByRoleName {
+		requiredOperatorIdentities = append(requiredOperatorIdentities, role.OperatorName)
+	}
+	currentOpenShiftVersion, err := version.ParseVersion(oc.Properties.ClusterProfile.Version)
+	if err != nil {
+		return err
+	}
+	currentMinorVersion := currentOpenShiftVersion.MinorVersion()
+	v := currentMinorVersion
+	if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
+		upgradeableVersion, err := version.ParseVersion(string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo))
+		if err != nil {
+			return err
+		}
+		upgradeableMinorVersion := upgradeableVersion.MinorVersion()
+		if currentMinorVersion != upgradeableMinorVersion && currentOpenShiftVersion.Lt(upgradeableVersion) {
+			v = fmt.Sprintf("%s or %s", v, upgradeableMinorVersion)
+		}
+	}
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePlatformWorkloadIdentityMismatch,
+		"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '%v'", v, requiredOperatorIdentities)
+}

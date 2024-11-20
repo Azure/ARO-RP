@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -110,7 +111,7 @@ func (m *manager) platformWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 	for name, identity := range platformWorkloadIdentities {
 		role, exists := platformWIRolesByRoleName[name]
 		if !exists {
-			continue
+			return nil, platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(m.doc.OpenShiftCluster, platformWIRolesByRoleName)
 		}
 
 		if strings.TrimSpace(identity.ObjectID) == "" {

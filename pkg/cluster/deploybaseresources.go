@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -485,7 +486,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 
 		platformWIRole, exists := platformWIRolesByRoleName[name]
 		if !exists {
-			continue
+			return platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(m.doc.OpenShiftCluster, platformWIRolesByRoleName)
 		}
 
 		for _, sa := range platformWIRole.ServiceAccounts {
