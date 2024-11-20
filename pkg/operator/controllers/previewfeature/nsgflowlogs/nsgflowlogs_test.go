@@ -11,11 +11,11 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -60,20 +60,20 @@ func getValidPreviewFeatureInstance() *aropreviewv1alpha1.PreviewFeature {
 func getValidFlowLogFeature() *armnetwork.FlowLog {
 	return &armnetwork.FlowLog{
 		Properties: &armnetwork.FlowLogPropertiesFormat{
-			TargetResourceID: ptr.To(""),
-			Enabled:          ptr.To(true),
-			StorageID:        ptr.To(""),
+			TargetResourceID: pointerutils.ToPtr(""),
+			Enabled:          pointerutils.ToPtr(true),
+			StorageID:        pointerutils.ToPtr(""),
 			RetentionPolicy: &armnetwork.RetentionPolicyParameters{
-				Days: ptr.To(int32(0)),
+				Days: pointerutils.ToPtr(int32(0)),
 			},
 			Format: &armnetwork.FlowLogFormatParameters{
-				Type:    ptr.To(armnetwork.FlowLogFormatTypeJSON),
-				Version: ptr.To(int32(0)),
+				Type:    pointerutils.ToPtr(armnetwork.FlowLogFormatTypeJSON),
+				Version: pointerutils.ToPtr(int32(0)),
 			},
 			FlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsProperties{
 				NetworkWatcherFlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsConfigurationProperties{
-					TrafficAnalyticsInterval: ptr.To(int32(0)),
-					WorkspaceID:              ptr.To(""),
+					TrafficAnalyticsInterval: pointerutils.ToPtr(int32(0)),
+					WorkspaceID:              pointerutils.ToPtr(""),
 				},
 			},
 		},

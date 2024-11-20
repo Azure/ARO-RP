@@ -10,10 +10,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"k8s.io/utils/ptr"
 
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -82,10 +82,10 @@ func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeat
 		Location: &n.location,
 		Properties: &sdknetwork.FlowLogPropertiesFormat{
 			TargetResourceID: &nsgID,
-			Enabled:          ptr.To(true),
+			Enabled:          pointerutils.ToPtr(true),
 			Format: &sdknetwork.FlowLogFormatParameters{
-				Type:    ptr.To(sdknetwork.FlowLogFormatTypeJSON),
-				Version: ptr.To(int32(instance.Spec.NSGFlowLogs.Version)),
+				Type:    pointerutils.ToPtr(sdknetwork.FlowLogFormatTypeJSON),
+				Version: pointerutils.ToPtr(int32(instance.Spec.NSGFlowLogs.Version)),
 			},
 			RetentionPolicy: &sdknetwork.RetentionPolicyParameters{
 				Days: &instance.Spec.NSGFlowLogs.RetentionDays,
@@ -94,7 +94,7 @@ func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeat
 			FlowAnalyticsConfiguration: &sdknetwork.TrafficAnalyticsProperties{
 				NetworkWatcherFlowAnalyticsConfiguration: &sdknetwork.TrafficAnalyticsConfigurationProperties{
 					WorkspaceID:              &instance.Spec.NSGFlowLogs.TrafficAnalyticsLogAnalyticsWorkspaceID,
-					TrafficAnalyticsInterval: ptr.To(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
+					TrafficAnalyticsInterval: pointerutils.ToPtr(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
 				},
 			},
 		},
