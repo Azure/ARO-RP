@@ -412,7 +412,12 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 			&armmsi.FederatedIdentityCredentialsClientListOptions{},
 		)
 		if err != nil {
-			return err
+			if azuresdkerrors.IsNotFoundError(err) {
+				m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
+			} else {
+				m.log.Errorf("failed to list federated identity credentials for %s: %v", identity.ResourceID, err.Error())
+			}
+			continue
 		}
 
 		for _, federatedCredential := range federatedCredentials {
@@ -436,7 +441,6 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 				if err != nil {
 					if azuresdkerrors.IsNotFoundError(err) {
 						m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
-						continue
 					} else {
 						m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
 					}

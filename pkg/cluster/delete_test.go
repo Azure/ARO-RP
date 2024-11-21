@@ -743,7 +743,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			wantErr: "parsing failed for /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster. Invalid resource Id format",
 		},
 		{
-			name: "error - federated identity credentials client returns error when listing credentials",
+			name: "success - federated identity credentials client returns error when listing credentials but deletion continues",
 			doc: &api.OpenShiftClusterDocument{
 				ID: docID,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -767,10 +767,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Any()).
 					Return(nil, fmt.Errorf("something unexpected occurred"))
-
-				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantErr: "something unexpected occurred",
 		},
 		{
 			name: "success - federated identity credentials client returns error when deleting credentials but deletion continues",
