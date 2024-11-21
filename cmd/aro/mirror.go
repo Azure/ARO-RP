@@ -81,6 +81,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 		// https://mcr.microsoft.com/en-us/product/azure-cli/about
 		"mcr.microsoft.com/azure-cli:cbl-mariner2.0",
+		"mcr.microsoft.com/azure-cli:azurelinux3.0",
 
 		// https://catalog.redhat.com/software/containers/rhel8/support-tools/5ba3eaf9bed8bd6ee819b78b
 		// https://catalog.redhat.com/software/containers/rhel9/support-tools/615be213075b022acc111bf9
@@ -88,12 +89,15 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/rhel9/support-tools:latest",
 
 		// https://catalog.redhat.com/software/containers/openshift4/ose-tools-rhel8/5f748d3399cc5b9e7c1a8747
-		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.11",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.12",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.13",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.14",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.15",
-		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
+
+		// https://catalog.redhat.com/software/containers/openshift4/ose-cli-rhel9/6528096620ebdcf82af4cbf9
+		"registry.redhat.io/openshift4/ose-cli-rhel9:4.16",
+		"registry.redhat.io/openshift4/ose-cli-rhel9:4.17",
+		"registry.redhat.io/openshift4/ose-cli-rhel9:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/ubi-minimal/5c359a62bed8bd75a2c3fba8
 		// https://catalog.redhat.com/software/containers/ubi9/ubi-minimal/615bd9b4075b022acc111bf5
@@ -104,7 +108,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
-		"registry.access.redhat.com/ubi8/go-toolset:1.21.13-1",
+		"registry.access.redhat.com/ubi8/go-toolset:1.22",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
