@@ -56,6 +56,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action rotateACRTokenPassword]",
 		"[Action populateRegistryStorageAccountName]",
 		"[Action ensureMTUSize]",
+		"[Action reconcileSoftwareDefinedNetwork]",
 	}
 
 	certificateRenewalSteps := []string{

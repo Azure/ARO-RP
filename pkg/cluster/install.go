@@ -127,6 +127,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 
 		steps.Action(m.populateRegistryStorageAccountName),
 		steps.Action(m.ensureMTUSize),
+		steps.Action(m.reconcileSoftwareDefinedNetwork),
 	}
 	return utilgenerics.ConcatMultipleSlices(
 		stepsThatDontNeedAPIServer,
@@ -251,6 +252,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.renewMDSDCertificate),
 		steps.Action(m.fixUserAdminKubeconfig),
 		steps.Action(m.reconcileLoadBalancerProfile),
+		steps.Action(m.reconcileSoftwareDefinedNetwork),
 	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
