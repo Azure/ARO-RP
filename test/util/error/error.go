@@ -1,21 +1,47 @@
 package error
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
+	"regexp"
 	"slices"
 	"testing"
 )
 
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
+type assertOptions int
+
+const trimWhitespace assertOptions = 1
+
+func TrimWhitespace() assertOptions {
+	return trimWhitespace
+}
 
 // AssertErrorMessage asserts that err.Error() is equal to wantMsg.
-func AssertErrorMessage(t *testing.T, err error, wantMsg string) {
+func AssertErrorMessage(t *testing.T, err error, wantMsg string, opts ...assertOptions) {
 	t.Helper()
 	if err == nil && wantMsg != "" {
 		t.Errorf("did not get an error, but wanted error '%v'", wantMsg)
 	}
 
-	if err != nil && err.Error() != wantMsg {
+	var gotErr string
+	wantedErr := wantMsg
+
+	if err != nil {
+		gotErr = err.Error()
+	}
+
+	for _, i := range opts {
+		// trim trailing whitespace in the error message
+		if i == trimWhitespace {
+			r := regexp.MustCompile(`(?m)[ \t]+(\r?$)`)
+
+			gotErr = r.ReplaceAllString(gotErr, "")
+			wantedErr = r.ReplaceAllString(wantedErr, "")
+		}
+	}
+
+	if err != nil && gotErr != wantedErr {
 		t.Errorf("got error '%v', but wanted error '%v'", err, wantMsg)
 	}
 }
