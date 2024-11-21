@@ -98,10 +98,17 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 		return
 	}
 
-	errors := make(chan error, len(p.enrichers))
+	numEnrichers := len(p.enrichers)
+
+	// We skip the service principal enricher for workload identity clusters
+	if oc.UsesWorkloadIdentity() {
+		numEnrichers = numEnrichers - 1
+	}
+
+	errors := make(chan error, numEnrichers)
 	expectedResults := 0
 	for name, enricher := range p.enrichers {
-		if unsuccessfulEnrichers[name] || enricher == nil {
+		if unsuccessfulEnrichers[name] || enricher == nil || (name == servicePrincipal && oc.UsesWorkloadIdentity()) {
 			continue
 		}
 		p.emitter.EmitGauge("enricher.tasks.count", 1, nil)

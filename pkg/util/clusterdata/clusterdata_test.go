@@ -23,52 +23,69 @@ func TestEnrichOne(t *testing.T) {
 	enricherName := "enricherName"
 
 	for _, tt := range []struct {
-		name                string
-		failedEnrichers     map[string]bool
-		taskCount           int
-		taskDuration        int
-		timeoutCount        int
-		errorCount          int
-		enricherCallCount   int
-		enricherReturnValue error
-		enricherIsNil       bool
+		name                 string
+		failedEnrichers      map[string]bool
+		taskCount            int
+		taskDuration         int
+		timeoutCount         int
+		errorCount           int
+		enricherCallCount    int
+		enricherReturnValue  error
+		enricherIsNil        bool
+		usesWorkloadIdentity bool
 	}{
 		{
-			name:                "enricher called",
+			name:                "all enrichers called for service principal cluster",
+			enricherCallCount:   2,
+			enricherReturnValue: nil,
+			taskCount:           2,
+			taskDuration:        2,
+			failedEnrichers:     map[string]bool{enricherName: false},
+		},
+		{
+			name:                 "service principal enricher skipped for workload identity cluster",
+			enricherCallCount:    1,
+			enricherReturnValue:  nil,
+			taskCount:            1,
+			taskDuration:         1,
+			failedEnrichers:      map[string]bool{enricherName: false},
+			usesWorkloadIdentity: true,
+		},
+		{
+			name:                "enricher not called because failed",
+			enricherCallCount:   1,
+			enricherReturnValue: nil,
+			taskCount:           1,
+			taskDuration:        1,
+			failedEnrichers:     map[string]bool{enricherName: true},
+		},
+		{
+			//should just not panic
+			name:                "enricher not called because nil",
 			enricherCallCount:   1,
 			enricherReturnValue: nil,
 			taskCount:           1,
 			taskDuration:        1,
 			failedEnrichers:     map[string]bool{enricherName: false},
-		},
-		{
-			name:              "enricher not called because failed",
-			enricherCallCount: 0,
-			failedEnrichers:   map[string]bool{enricherName: true},
-		},
-		{
-			//should just not panic
-			name:            "enricher not called because nil",
-			failedEnrichers: map[string]bool{enricherName: false},
-			enricherIsNil:   true,
+			enricherIsNil:       true,
 		},
 		{
 			name:                "enricher timeout",
-			enricherCallCount:   1,
+			enricherCallCount:   2,
 			enricherReturnValue: context.DeadlineExceeded,
 			failedEnrichers:     map[string]bool{enricherName: false},
-			taskCount:           1,
-			taskDuration:        1,
+			taskCount:           2,
+			taskDuration:        2,
 			timeoutCount:        1,
 		},
 		{
 			name:                "enricher error",
-			enricherCallCount:   1,
+			enricherCallCount:   2,
 			enricherReturnValue: errors.New("some error"),
 			failedEnrichers:     map[string]bool{enricherName: false},
-			taskCount:           1,
-			taskDuration:        1,
-			errorCount:          1,
+			taskCount:           2,
+			taskDuration:        2,
+			errorCount:          2,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -89,7 +106,8 @@ func TestEnrichOne(t *testing.T) {
 			e := ParallelEnricher{
 				emitter: metricsMock,
 				enrichers: map[string]ClusterEnricher{
-					enricherName: enricherMock,
+					enricherName:     enricherMock,
+					servicePrincipal: enricherMock,
 				},
 				metricsWG: &sync.WaitGroup{},
 			}
@@ -97,8 +115,15 @@ func TestEnrichOne(t *testing.T) {
 				e.enrichers[enricherName] = nil
 			}
 
+			oc := &api.OpenShiftCluster{}
+			if tt.usesWorkloadIdentity {
+				oc.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
+			} else {
+				oc.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{}
+			}
+
 			ctx := context.Background()
-			e.enrichOne(ctx, log, &api.OpenShiftCluster{}, clients{}, tt.failedEnrichers)
+			e.enrichOne(ctx, log, oc, clients{}, tt.failedEnrichers)
 
 			e.metricsWG.Wait()
 		})
