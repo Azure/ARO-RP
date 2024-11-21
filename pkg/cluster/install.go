@@ -215,6 +215,9 @@ func (m *manager) Update(ctx context.Context) error {
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
+			// Since API converters rebuild the struct during PUT/PATCH, we need to repopulate the tenant ID
+			// in the cluster doc for MSI stuff to work.
+			steps.Action(m.fixupClusterMsiTenantID),
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
 		)

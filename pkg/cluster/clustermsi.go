@@ -216,3 +216,16 @@ func getSingleExplicitIdentity(msiCredObj *dataplane.UserAssignedIdentities) (*s
 
 	return msiCredObj.ExplicitIdentities[0], nil
 }
+
+// fixupClusterMsiTenantID repopulates the cluster MSI's tenant ID in the cluster doc by
+// getting it from the subscription doc. Note that we are assuming that the MSI is in the
+// same tenant as the cluster.
+func (m *manager) fixupClusterMsiTenantID(ctx context.Context) error {
+	var err error
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Identity.TenantID = m.subscriptionDoc.Subscription.Properties.TenantID
+		return nil
+	})
+
+	return err
+}
