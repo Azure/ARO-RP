@@ -276,7 +276,7 @@ Generic Error
 			}
 
 			err := DeleteOidcFolder(ctx, directoryName, blobsClient)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr, utilerror.TrimWhitespace())
 		})
 	}
 }
