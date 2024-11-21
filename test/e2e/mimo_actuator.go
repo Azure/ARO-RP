@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,6 +35,9 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 				json.RawMessage("{\"operatorFlagsMergeStrategy\": \"reset\", \"properties\": {\"maintenanceTask\": \"SyncClusterObject\"}}"), oc)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			// Wait for it to settle
+			time.Sleep(5 * time.Second)
 
 			// Wait for the flag reset to finish applying
 			Eventually(func(g Gomega, ctx context.Context) {
