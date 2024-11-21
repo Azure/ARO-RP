@@ -9,7 +9,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/form3tech-oss/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v4"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
@@ -26,7 +26,7 @@ func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, spTokenCredenti
 		return err
 	}
 
-	p := &jwt.Parser{}
+	p := jwt.NewParser()
 	c := &azureclaim.AzureClaim{}
 	_, _, err = p.ParseUnverified(token.Token, c)
 	if err != nil {

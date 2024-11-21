@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/form3tech-oss/jwt-go"
 	"github.com/go-test/deep"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"go.uber.org/mock/gomock"
@@ -872,7 +872,7 @@ func TestClientAssertion(t *testing.T) {
 		t.Error(req.Form.Get("client_assertion_type"))
 	}
 
-	p := &jwt.Parser{}
+	p := jwt.NewParser()
 	_, err = p.Parse(req.Form.Get("client_assertion"), func(*jwt.Token) (interface{}, error) {
 		return &clientkey.PublicKey, nil
 	})

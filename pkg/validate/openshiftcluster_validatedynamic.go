@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/form3tech-oss/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -85,7 +85,7 @@ func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.Token
 	}
 
 	var claims jwt.MapClaims
-	parser := &jwt.Parser{UseJSONNumber: true}
+	parser := jwt.NewParser(jwt.WithJSONNumber())
 	_, _, err = parser.ParseUnverified(token.Token, &claims)
 	if err != nil {
 		return api.NewCloudError(
