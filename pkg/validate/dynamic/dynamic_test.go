@@ -30,24 +30,27 @@ import (
 )
 
 var (
-	resourceGroupName = "testGroup"
-	subscriptionID    = "0000000-0000-0000-0000-000000000000"
-	resourceGroupID   = "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroupName
-	vnetName          = "testVnet"
-	vnetID            = resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
-	masterSubnet      = vnetID + "/subnet/masterSubnet"
-	workerSubnet      = vnetID + "/subnet/workerSubnet"
-	masterSubnetPath  = "properties.masterProfile.subnetId"
-	workerSubnetPath  = "properties.workerProfile.subnetId"
-	masterRtID        = resourceGroupID + "/providers/Microsoft.Network/routeTables/masterRt"
-	workerRtID        = resourceGroupID + "/providers/Microsoft.Network/routeTables/workerRt"
-	masterNgID        = resourceGroupID + "/providers/Microsoft.Network/natGateways/masterNg"
-	workerNgID        = resourceGroupID + "/providers/Microsoft.Network/natGateways/workerNg"
-	masterNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
-	workerNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
-	platformIdentity1 = resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-platform-identity"
-	dummyClientId     = uuid.DefaultGenerator.Generate()
-	dummyObjectId     = uuid.DefaultGenerator.Generate()
+	resourceGroupName       = "testGroup"
+	subscriptionID          = "0000000-0000-0000-0000-000000000000"
+	resourceGroupID         = "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroupName
+	clusterName             = "cluster"
+	clusterID               = resourceGroupID + "/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + clusterName
+	vnetName                = "testVnet"
+	vnetID                  = resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
+	masterSubnet            = vnetID + "/subnet/masterSubnet"
+	workerSubnet            = vnetID + "/subnet/workerSubnet"
+	masterSubnetPath        = "properties.masterProfile.subnetId"
+	workerSubnetPath        = "properties.workerProfile.subnetId"
+	masterRtID              = resourceGroupID + "/providers/Microsoft.Network/routeTables/masterRt"
+	workerRtID              = resourceGroupID + "/providers/Microsoft.Network/routeTables/workerRt"
+	masterNgID              = resourceGroupID + "/providers/Microsoft.Network/natGateways/masterNg"
+	workerNgID              = resourceGroupID + "/providers/Microsoft.Network/natGateways/workerNg"
+	masterNSGv1             = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
+	workerNSGv1             = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
+	platformIdentity1       = resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-platform-identity"
+	platformIdentity1SAName = "system:serviceaccount:dummy:dummy1"
+	dummyClientId           = uuid.DefaultGenerator.Generate()
+	dummyObjectId           = uuid.DefaultGenerator.Generate()
 )
 
 func TestGetRouteTableID(t *testing.T) {

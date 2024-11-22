@@ -19,6 +19,7 @@ type FederatedIdentityCredentialsClient interface {
 	Delete(ctx context.Context, resourceGroupName string, resourceName string, federatedIdentityCredentialResourceName string, options *armmsi.FederatedIdentityCredentialsClientDeleteOptions) (armmsi.FederatedIdentityCredentialsClientDeleteResponse, error)
 	Get(ctx context.Context, resourceGroupName string, resourceName string, federatedIdentityCredentialResourceName string, options *armmsi.FederatedIdentityCredentialsClientGetOptions) (armmsi.FederatedIdentityCredentialsClientGetResponse, error)
 	NewListPager(resourceGroupName string, resourceName string, options *armmsi.FederatedIdentityCredentialsClientListOptions) *runtime.Pager[armmsi.FederatedIdentityCredentialsClientListResponse]
+	List(ctx context.Context, resourceGroupName string, resourceName string, options *armmsi.FederatedIdentityCredentialsClientListOptions) ([]*armmsi.FederatedIdentityCredential, error)
 }
 
 type ArmFederatedIdentityCredentialsClient struct {
@@ -34,4 +35,18 @@ func NewFederatedIdentityCredentialsClient(subscriptionID string, credential azc
 		return nil, err
 	}
 	return &ArmFederatedIdentityCredentialsClient{FederatedIdentityCredentialsClient: clientFactory.NewFederatedIdentityCredentialsClient()}, nil
+}
+
+func (c *ArmFederatedIdentityCredentialsClient) List(ctx context.Context, resourceGroupName string, resourceName string, options *armmsi.FederatedIdentityCredentialsClientListOptions) (result []*armmsi.FederatedIdentityCredential, err error) {
+	pager := c.FederatedIdentityCredentialsClient.NewListPager(resourceGroupName, resourceName, options)
+
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, page.Value...)
+	}
+	return result, nil
 }

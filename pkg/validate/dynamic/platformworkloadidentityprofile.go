@@ -6,10 +6,12 @@ import (
 	"net/http"
 
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
+	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -18,7 +20,17 @@ import (
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+const (
+	expectedAudience = "openshift"
+)
+
+func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
+	ctx context.Context,
+	oc *api.OpenShiftCluster,
+	platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole,
+	roleDefinitions armauthorization.RoleDefinitionsClient,
+	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
+) error {
 	dv.log.Print("ValidatePlatformWorkloadIdentityProfile")
 
 	dv.platformIdentitiesActionsMap = map[string][]string{}
@@ -29,6 +41,49 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 		if ok {
 			dv.platformIdentitiesActionsMap[k] = nil
 			dv.platformIdentities[k] = pwi
+
+			identityResourceId, err := azure.ParseResourceID(pwi.ResourceID)
+			if err != nil {
+				return err
+			}
+
+			// validate federated identity credentials
+			federatedCredentials, err := clusterMsiFederatedIdentityCredentials.List(ctx, identityResourceId.ResourceGroup, identityResourceId.ResourceName, &sdkmsi.FederatedIdentityCredentialsClientListOptions{})
+			if err != nil {
+				return err
+			}
+
+			for _, federatedCredential := range federatedCredentials {
+				switch {
+				case federatedCredential == nil,
+					federatedCredential.Name == nil,
+					federatedCredential.Properties == nil:
+					return fmt.Errorf("received invalid federated credential")
+				case oc.Properties.ProvisioningState == api.ProvisioningStateCreating:
+					return api.NewCloudError(
+						http.StatusBadRequest,
+						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+						fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId", k),
+						"Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure this identity is only used for this cluster and does not have any existing federated identity credentials.",
+						*federatedCredential.Name,
+						pwi.ResourceID,
+						k,
+					)
+				case len(federatedCredential.Properties.Audiences) != 1,
+					*federatedCredential.Properties.Audiences[0] != expectedAudience,
+					federatedCredential.Properties.Issuer == nil,
+					*federatedCredential.Properties.Issuer != string(*oc.Properties.ClusterProfile.OIDCIssuer):
+					return api.NewCloudError(
+						http.StatusBadRequest,
+						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+						fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId", k),
+						"Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
+						*federatedCredential.Name,
+						pwi.ResourceID,
+						k,
+					)
+				}
+			}
 		}
 	}
 

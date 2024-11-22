@@ -378,7 +378,7 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 }
 
 func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() || m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil {
 		return nil
 	}
 
@@ -405,30 +405,45 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 			return err
 		}
 
-		platformWIRole, exists := platformWIRolesByRoleName[name]
-		if !exists {
+		federatedCredentials, err := m.clusterMsiFederatedIdentityCredentials.List(
+			ctx,
+			identityResourceId.ResourceGroup,
+			identityResourceId.ResourceName,
+			&armmsi.FederatedIdentityCredentialsClientListOptions{},
+		)
+		if err != nil {
+			if azuresdkerrors.IsNotFoundError(err) {
+				m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
+			} else {
+				m.log.Errorf("failed to list federated identity credentials for %s: %v", identity.ResourceID, err.Error())
+			}
 			continue
 		}
 
-		for _, sa := range platformWIRole.ServiceAccounts {
-			federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
-			if err != nil {
-				return fmt.Errorf("failed to get federated identity credential name for %s: %v", identity.ResourceID, err)
-			}
-
-			_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
-				ctx,
-				identityResourceId.ResourceGroup,
-				identityResourceId.ResourceName,
-				federatedIdentityCredentialResourceName,
-				&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
-			)
-			if err != nil {
-				if azuresdkerrors.IsNotFoundError(err) {
-					m.log.Errorf("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
-					continue
-				} else {
-					m.log.Infof("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
+		for _, federatedCredential := range federatedCredentials {
+			switch {
+			case federatedCredential == nil,
+				federatedCredential.Name == nil,
+				federatedCredential.Properties == nil,
+				len(federatedCredential.Properties.Audiences) != 1,
+				*federatedCredential.Properties.Audiences[0] != "openshift",
+				federatedCredential.Properties.Issuer == nil,
+				*federatedCredential.Properties.Issuer != string(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer):
+				continue
+			default:
+				_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
+					ctx,
+					identityResourceId.ResourceGroup,
+					identityResourceId.ResourceName,
+					*federatedCredential.Name,
+					&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
+				)
+				if err != nil {
+					if azuresdkerrors.IsNotFoundError(err) {
+						m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
+					} else {
+						m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
+					}
 				}
 			}
 		}

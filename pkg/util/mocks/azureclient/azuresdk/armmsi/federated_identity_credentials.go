@@ -86,6 +86,21 @@ func (mr *MockFederatedIdentityCredentialsClientMockRecorder) Get(ctx, resourceG
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockFederatedIdentityCredentialsClient)(nil).Get), ctx, resourceGroupName, resourceName, federatedIdentityCredentialResourceName, options)
 }
 
+// List mocks base method.
+func (m *MockFederatedIdentityCredentialsClient) List(ctx context.Context, resourceGroupName, resourceName string, options *armmsi.FederatedIdentityCredentialsClientListOptions) ([]*armmsi.FederatedIdentityCredential, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, resourceName, options)
+	ret0, _ := ret[0].([]*armmsi.FederatedIdentityCredential)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockFederatedIdentityCredentialsClientMockRecorder) List(ctx, resourceGroupName, resourceName, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockFederatedIdentityCredentialsClient)(nil).List), ctx, resourceGroupName, resourceName, options)
+}
+
 // NewListPager mocks base method.
 func (m *MockFederatedIdentityCredentialsClient) NewListPager(resourceGroupName, resourceName string, options *armmsi.FederatedIdentityCredentialsClientListOptions) *runtime.Pager[armmsi.FederatedIdentityCredentialsClientListResponse] {
 	m.ctrl.T.Helper()
