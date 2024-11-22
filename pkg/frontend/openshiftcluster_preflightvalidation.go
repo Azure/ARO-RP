@@ -148,6 +148,19 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			}
 		}
 	}
+
+	if oc.UsesWorkloadIdentity() {
+		if err := f.validatePlatformWorkloadIdentities(oc); err != nil {
+			return api.ValidationResult{
+				Status: api.ValidationStatusFailed,
+				Error: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInvalidParameter,
+					Message: err.Error(),
+				},
+			}
+		}
+	}
+
 	return validationSuccess
 }
 

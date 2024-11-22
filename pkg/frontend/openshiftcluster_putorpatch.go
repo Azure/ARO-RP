@@ -239,6 +239,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// is not provided in the header must be preserved
 	f.systemDataClusterDocEnricher(doc, putOrPatchClusterParameters.systemData)
 
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		if err := f.validatePlatformWorkloadIdentities(doc.OpenShiftCluster); err != nil {
+			return nil, err
+		}
+	}
+
 	if isCreate {
 		err = f.validateInstallVersion(ctx, doc.OpenShiftCluster)
 		if err != nil {
