@@ -18,6 +18,8 @@ import (
 type PlatformWorkloadIdentityRolesByVersion interface {
 	GetPlatformWorkloadIdentityRolesByRoleName() map[string]api.PlatformWorkloadIdentityRole
 	PopulatePlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets) error
+	PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets(oc *api.OpenShiftCluster, platformWorkloadIdentityRoleSets []*api.PlatformWorkloadIdentityRoleSet) error
+	MatchesPlatformWorkloadIdentityRoles(oc *api.OpenShiftCluster) bool
 }
 
 // platformWorkloadIdentityRolesByVersionService is the default implementation of the PlatformWorkloadIdentityRolesByVersion interface.
@@ -38,17 +40,34 @@ func (service *PlatformWorkloadIdentityRolesByVersionService) PopulatePlatformWo
 	if !oc.UsesWorkloadIdentity() {
 		return fmt.Errorf("PopulatePlatformWorkloadIdentityRolesByVersion called for a Cluster Service Principal cluster")
 	}
+
+	docs, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
+	if err != nil {
+		return err
+	}
+
+	platformWorkloadIdentityRoleSets := []*api.PlatformWorkloadIdentityRoleSet{}
+
+	for _, doc := range docs.PlatformWorkloadIdentityRoleSetDocuments {
+		platformWorkloadIdentityRoleSets = append(platformWorkloadIdentityRoleSets, doc.PlatformWorkloadIdentityRoleSet)
+	}
+
+	return service.PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets(oc, platformWorkloadIdentityRoleSets)
+}
+
+// PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets aims to populate platformWorkloadIdentityRoles for current OpenShift minor version and also for UpgradeableTo minor version if provided and is greater than the current version
+// Rather than listing platformWorkloadIdentityRoleSets from db it takes platformWorkloadIdentityRoleSets as an argument
+func (service *PlatformWorkloadIdentityRolesByVersionService) PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets(oc *api.OpenShiftCluster, platformWorkloadIdentityRoleSets []*api.PlatformWorkloadIdentityRoleSet) error {
+	if !oc.UsesWorkloadIdentity() {
+		return fmt.Errorf("PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets called for a Cluster Service Principal cluster")
+	}
+
 	currentOpenShiftVersion, err := version.ParseVersion(oc.Properties.ClusterProfile.Version)
 	if err != nil {
 		return err
 	}
 	currentMinorVersion := currentOpenShiftVersion.MinorVersion()
 	requiredMinorVersions := map[string]bool{currentMinorVersion: false}
-
-	docs, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
-	if err != nil {
-		return err
-	}
 
 	if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
 		upgradeableVersion, err := version.ParseVersion(string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo))
@@ -61,10 +80,10 @@ func (service *PlatformWorkloadIdentityRolesByVersionService) PopulatePlatformWo
 		}
 	}
 
-	for _, doc := range docs.PlatformWorkloadIdentityRoleSetDocuments {
+	for _, platformWorkloadIdentityRoleSet := range platformWorkloadIdentityRoleSets {
 		for version := range requiredMinorVersions {
-			if version == doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion {
-				service.platformWorkloadIdentityRoles = append(service.platformWorkloadIdentityRoles, doc.PlatformWorkloadIdentityRoleSet.Properties.PlatformWorkloadIdentityRoles...)
+			if version == platformWorkloadIdentityRoleSet.Properties.OpenShiftVersion {
+				service.platformWorkloadIdentityRoles = append(service.platformWorkloadIdentityRoles, platformWorkloadIdentityRoleSet.Properties.PlatformWorkloadIdentityRoles...)
 				requiredMinorVersions[version] = true
 			}
 		}
@@ -85,6 +104,24 @@ func (service *PlatformWorkloadIdentityRolesByVersionService) GetPlatformWorkloa
 		platformWorkloadIdentityRolesByRoleName[role.OperatorName] = role
 	}
 	return platformWorkloadIdentityRolesByRoleName
+}
+
+// Check if any required platform identity is missing
+func (service *PlatformWorkloadIdentityRolesByVersionService) MatchesPlatformWorkloadIdentityRoles(oc *api.OpenShiftCluster) bool {
+	platformWorkloadIdentityRolesByRoleName := service.GetPlatformWorkloadIdentityRolesByRoleName()
+	platformIdentities := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+	if len(platformIdentities) != len(platformWorkloadIdentityRolesByRoleName) {
+		return false
+	}
+
+	for k := range platformIdentities {
+		_, exists := platformWorkloadIdentityRolesByRoleName[k]
+		if !exists {
+			return false
+		}
+	}
+
+	return true
 }
 
 func GetPlatformWorkloadIdentityMismatchError(oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole) error {
