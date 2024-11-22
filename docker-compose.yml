@@ -30,7 +30,7 @@ services:
       - "4444:4444"
     healthcheck:
       test: ["CMD", "curl", "-sS", "-f", "http://localhost:4444"]
-      interval: 60s
+      interval: 20s
       timeout: 20s
       retries: 3
 
@@ -109,7 +109,7 @@ services:
       test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8443/healthz/ready"]
       interval: 90s
       timeout: 30s
-      retries: 5
+      retries: 3
     restart: on-failure:3
 
   portal:
