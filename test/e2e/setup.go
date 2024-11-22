@@ -228,9 +228,13 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	}
 
 	if err := wd.Get(host + "/healthz/ready"); err != nil {
-		log.Infof("Could not get to %s. With error : %s", host, err.Error())
+		log.Infof("Could not get to %s. With error : %s", host+"/healthz/ready", err.Error())
 	}
 
+	mainPortalPath := host + "/portal"
+	if err := wd.Get(mainPortalPath); err != nil {
+		log.Infof("Failed to reach main portal path at %s. Error: %s", mainPortalPath, err.Error())
+	}
 	var portalAuthCmd string
 	var portalAuthArgs = make([]string, 0)
 	if os.Getenv("CI") != "" {

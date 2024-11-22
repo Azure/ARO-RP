@@ -380,9 +380,8 @@ DOCKER_BUILD_CI_ARGS ?=
 # Image names that will be found in the local podman image registry after build
 # (tags are always VERSION).
 LOCAL_ARO_RP_IMAGE ?= aro
-LOCAL_ARO_PORTAL_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-portal-build
-LOCAL_ARO_RP_BUILD_IMAGE ?= $(LOCAL_ARO_RP_IMAGE)-build
-LOCAL_AZ_EXT_ARO_IMAGE ?= azext-aro
+LOCAL_E2E_IMAGE ?= e2e
+LOCAL_ARO_AZEXT_IMAGE ?= azext-aro
 LOCAL_TUNNEL_IMAGE ?= aro-tunnel
 
 ###############################################################################
@@ -394,7 +393,7 @@ ci-azext-aro:
 		-f Dockerfile.ci-azext-aro \
 		--platform=linux/amd64 \
 		--no-cache=$(NO_CACHE) \
-		-t $(LOCAL_AZ_EXT_ARO_IMAGE):$(VERSION)
+		-t $(LOCAL_ARO_AZEXT_IMAGE):$(VERSION)
 
 .PHONY: ci-clean
 ci-clean:
@@ -410,16 +409,23 @@ ci-rp: fix-macos-vendor
 		--build-arg REGISTRY=${REGISTRY} \
 		--build-arg ARO_VERSION=${VERSION} \
 		--no-cache=${NO_CACHE} \
-		--target=builder \
-		-t ${LOCAL_ARO_RP_BUILD_IMAGE}:${VERSION}
-
-	docker compose build rp
+		-t ${LOCAL_ARO_RP_IMAGE}:${VERSION}
 
 	# Extract test coverage files from build to local filesystem
-	docker create --name extract_cover_out ${LOCAL_ARO_RP_BUILD_IMAGE}:${VERSION}; \
+	docker create --name extract_cover_out ${LOCAL_ARO_RP_IMAGE}:${VERSION}; \
 	docker cp extract_cover_out:/app/report.xml ./report.xml; \
 	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
 	docker rm extract_cover_out;
+
+.PHONY: aro-e2e
+aro-e2e: fix-macos-vendor
+	docker build . ${DOCKER_BUILD_CI_ARGS} \
+		-f Dockerfile.aro-e2e \
+		--ulimit=nofile=4096:4096 \
+		--build-arg REGISTRY=${REGISTRY} \
+		--build-arg ARO_VERSION=${VERSION} \
+		--no-cache=${NO_CACHE} \
+		-t ${LOCAL_E2E_IMAGE}:${VERSION}
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor
