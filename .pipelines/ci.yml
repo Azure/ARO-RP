@@ -25,12 +25,12 @@ variables:
     value: arosvcdev.azurecr.io/vpn
   - name: LOCAL_E2E_IMAGE
     value: arosvcdev.azurecr.io/e2e
-  - name: TAG
-    value: $(Build.BuildId)
   - name: VERSION
-    value: $(Build.BuildId)
+    value: $(TAG)
+  - name: TAG
+    value: pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId)
   - name: ARO_IMAGE
-    value: arosvcdev.azurecr.io/aro:$(Build.BuildId)
+    value: arosvcdev.azurecr.io/aro:$(TAG)
   - name: ARO_SELENIUM_HOSTNAME
     value: localhost
   - name: E2E_LABEL
@@ -48,7 +48,7 @@ stages:
           # Build and test the Az ARO Extension
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(VERSION)
+              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(TAG)
             displayName: 🛠 Build & Test Az ARO Extension
 
           # Push the image to ACR
@@ -56,6 +56,7 @@ stages:
             parameters:
               acrFQDN: 'arosvcdev.azurecr.io'
               repository: 'azext-aro'
+              tag: $(TAG)
               pushLatest: true
 
       - job: Build_And_Test_RP_And_Portal
@@ -67,7 +68,7 @@ stages:
           # Build and test RP and Portal
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(VERSION)
+              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(TAG)
             displayName: 🛠 Build & Test RP and Portal
 
           # Publish test results
@@ -91,6 +92,7 @@ stages:
             parameters:
               acrFQDN: 'arosvcdev.azurecr.io'
               repository: 'aro'
+              tag: $(TAG)
               pushLatest: true
 
       - job: Build_And_Push_E2E_Image
@@ -102,7 +104,7 @@ stages:
           # Build the E2E image
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make aro-e2e VERSION=$(VERSION)
+              DOCKER_BUILD_CI_ARGS="--load" make aro-e2e VERSION=$(TAG)
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR
@@ -110,6 +112,7 @@ stages:
             parameters:
               acrFQDN: 'arosvcdev.azurecr.io'
               repository: 'e2e'
+              tag: $(TAG)
               pushLatest: true
 
   - stage: E2E  # E2E Stage using Docker Compose
