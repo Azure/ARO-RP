@@ -56,6 +56,20 @@ func (mr *MockPlatformWorkloadIdentityRolesByVersionMockRecorder) GetPlatformWor
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformWorkloadIdentityRolesByRoleName", reflect.TypeOf((*MockPlatformWorkloadIdentityRolesByVersion)(nil).GetPlatformWorkloadIdentityRolesByRoleName))
 }
 
+// MatchesPlatformWorkloadIdentityRoles mocks base method.
+func (m *MockPlatformWorkloadIdentityRolesByVersion) MatchesPlatformWorkloadIdentityRoles(arg0 *api.OpenShiftCluster) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MatchesPlatformWorkloadIdentityRoles", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// MatchesPlatformWorkloadIdentityRoles indicates an expected call of MatchesPlatformWorkloadIdentityRoles.
+func (mr *MockPlatformWorkloadIdentityRolesByVersionMockRecorder) MatchesPlatformWorkloadIdentityRoles(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MatchesPlatformWorkloadIdentityRoles", reflect.TypeOf((*MockPlatformWorkloadIdentityRolesByVersion)(nil).MatchesPlatformWorkloadIdentityRoles), arg0)
+}
+
 // PopulatePlatformWorkloadIdentityRolesByVersion mocks base method.
 func (m *MockPlatformWorkloadIdentityRolesByVersion) PopulatePlatformWorkloadIdentityRolesByVersion(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 database.PlatformWorkloadIdentityRoleSets) error {
 	m.ctrl.T.Helper()
@@ -68,4 +82,18 @@ func (m *MockPlatformWorkloadIdentityRolesByVersion) PopulatePlatformWorkloadIde
 func (mr *MockPlatformWorkloadIdentityRolesByVersionMockRecorder) PopulatePlatformWorkloadIdentityRolesByVersion(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopulatePlatformWorkloadIdentityRolesByVersion", reflect.TypeOf((*MockPlatformWorkloadIdentityRolesByVersion)(nil).PopulatePlatformWorkloadIdentityRolesByVersion), arg0, arg1, arg2)
+}
+
+// PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets mocks base method.
+func (m *MockPlatformWorkloadIdentityRolesByVersion) PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets(arg0 *api.OpenShiftCluster, arg1 []*api.PlatformWorkloadIdentityRoleSet) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets indicates an expected call of PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets.
+func (mr *MockPlatformWorkloadIdentityRolesByVersionMockRecorder) PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets", reflect.TypeOf((*MockPlatformWorkloadIdentityRolesByVersion)(nil).PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets), arg0, arg1)
 }
