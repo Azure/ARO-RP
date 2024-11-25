@@ -4,7 +4,6 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -25,14 +24,14 @@ func (f *frontend) listPlatformWorkloadIdentityRoleSets(w http.ResponseWriter, r
 		return
 	}
 
-	roleSets := f.getAvailablePlatformWorkloadIdentityRoleSets(ctx)
+	roleSets := f.getAvailablePlatformWorkloadIdentityRoleSets()
 	converter := f.apis[apiVersion].PlatformWorkloadIdentityRoleSetConverter
 
 	b, err := json.MarshalIndent(converter.ToExternalList(roleSets), "", "    ")
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) getAvailablePlatformWorkloadIdentityRoleSets(ctx context.Context) []*api.PlatformWorkloadIdentityRoleSet {
+func (f *frontend) getAvailablePlatformWorkloadIdentityRoleSets() []*api.PlatformWorkloadIdentityRoleSet {
 	roleSets := make([]*api.PlatformWorkloadIdentityRoleSet, 0)
 
 	f.platformWorkloadIdentityRoleSetsMu.RLock()

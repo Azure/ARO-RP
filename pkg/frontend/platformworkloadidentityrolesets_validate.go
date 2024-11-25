@@ -10,18 +10,11 @@ import (
 
 // validatePlatformWorkloadIdentities validates that customer provided platform workload identities are expected
 func (f *frontend) validatePlatformWorkloadIdentities(oc *api.OpenShiftCluster) error {
-	roleSets := make([]*api.PlatformWorkloadIdentityRoleSet, 0)
-
-	f.platformWorkloadIdentityRoleSetsMu.RLock()
-	for _, pwirs := range f.availablePlatformWorkloadIdentityRoleSets {
-		roleSets = append(roleSets, pwirs)
-	}
+	roleSets := f.getAvailablePlatformWorkloadIdentityRoleSets()
 
 	platformWorkloadIdentityRolesByVersionService := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
 	platformWorkloadIdentityRolesByVersionService.PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets(oc, roleSets)
 	matches := platformWorkloadIdentityRolesByVersionService.MatchesPlatformWorkloadIdentityRoles(oc)
-
-	f.platformWorkloadIdentityRoleSetsMu.RUnlock()
 
 	if !matches {
 		return platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(oc, platformWorkloadIdentityRolesByVersionService.GetPlatformWorkloadIdentityRolesByRoleName())
