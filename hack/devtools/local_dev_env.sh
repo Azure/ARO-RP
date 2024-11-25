@@ -166,7 +166,7 @@ assign_role_to_identity() {
         echo "INFO: Unable to list role assignments for identity: ${objectId}"
     fi
 
-    if [ "$roles" == "" ] || [ "$roles" == "[]" ] ; then
+    if [[ "$roles" == "" ]] || [[ "$roles" == "[]" ]] ; then
         echo "INFO: Assigning role to identity: ${objectId}"
         az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
         echo ""

@@ -55,7 +55,6 @@ import (
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/dynamic"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
@@ -475,25 +474,15 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	vnetResourceGroup = os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
-	if os.Getenv("CI") != "" {
-		vnetResourceGroup = os.Getenv("CLUSTER")
-	}
-	clusterName = os.Getenv("CLUSTER")
+	conf, err := cluster.NewClusterConfigFromEnv()
 
-	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
-
-	if os.Getenv("CI") != "" { // always create cluster in CI
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+	if conf.IsCI { // always create cluster in CI
+		cluster, err := cluster.New(log, conf)
 		if err != nil {
 			return err
 		}
 
-		if osClusterVersion == "" {
-			osClusterVersion = version.DefaultInstallStream.Version.String()
-		}
-
-		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
+		err = cluster.Create(ctx)
 		if err != nil {
 			return err
 		}
@@ -511,8 +500,13 @@ func setup(ctx context.Context) error {
 
 func done(ctx context.Context) error {
 	// terminate early if delete flag is set to false
-	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+	conf, err := cluster.NewClusterConfigFromEnv()
+	if err != nil {
+		return err
+	}
+
+	if conf.IsCI && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
+		cluster, err := cluster.New(log, conf)
 		if err != nil {
 			return err
 		}
