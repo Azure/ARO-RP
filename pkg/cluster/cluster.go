@@ -82,7 +82,6 @@ type manager struct {
 	virtualMachines          compute.VirtualMachinesClient
 	interfaces               network.InterfacesClient // TODO: use armInterfaces instead. https://issues.redhat.com/browse/ARO-4665
 	armInterfaces            armnetwork.InterfacesClient
-	publicIPAddresses        network.PublicIPAddressesClient // TODO: use armPublicIPAddresses instead. https://issues.redhat.com/browse/ARO-4665
 	armPublicIPAddresses     armnetwork.PublicIPAddressesClient
 	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead. https://issues.redhat.com/browse/ARO-4665
 	armLoadBalancers         armnetwork.LoadBalancersClient
@@ -270,7 +269,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		virtualMachines:          compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		interfaces:               network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armInterfaces:            armInterfacesClient,
-		publicIPAddresses:        network.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armPublicIPAddresses:     armPublicIPAddressesClient,
 		loadBalancers:            network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armLoadBalancers:         armLoadBalancersClient,
