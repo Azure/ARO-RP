@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -87,10 +88,14 @@ func (service *PlatformWorkloadIdentityRolesByVersionService) GetPlatformWorkloa
 }
 
 func GetPlatformWorkloadIdentityMismatchError(oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole) error {
+	if !oc.UsesWorkloadIdentity() {
+		return fmt.Errorf("GetPlatformWorkloadIdentityMismatchError called for a Cluster Service Principal cluster")
+	}
 	requiredOperatorIdentities := []string{}
 	for _, role := range platformWorkloadIdentityRolesByRoleName {
 		requiredOperatorIdentities = append(requiredOperatorIdentities, role.OperatorName)
 	}
+	sort.Strings(requiredOperatorIdentities)
 	currentOpenShiftVersion, err := version.ParseVersion(oc.Properties.ClusterProfile.Version)
 	if err != nil {
 		return err

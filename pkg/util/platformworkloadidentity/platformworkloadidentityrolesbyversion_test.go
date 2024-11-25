@@ -5,6 +5,7 @@ package platformworkloadidentity
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"k8s.io/utils/ptr"
@@ -287,6 +288,121 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 						t.Fatalf("Incorrect platformWorkloadIdentityRolesByRoleName created, %s does not exist. %s", operatorName, platformWorkloadIdentityRolesByRoleName)
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestGetPlatformWorkloadIdentityMismatchError(t *testing.T) {
+	invalidVersion := "4.1450"
+	for _, tt := range []struct {
+		name             string
+		oc               *api.OpenShiftCluster
+		wantErr          string
+		checkConsistency bool
+	}{
+		{
+			name: "Exit the func for non MIWI clusters that has ServicePrincipalProfile",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
+						SPObjectID: "00000000-0000-0000-0000-000000000000",
+					},
+				},
+			},
+			wantErr: "GetPlatformWorkloadIdentityMismatchError called for a Cluster Service Principal cluster",
+		},
+		{
+			name: "Exit the func for non MIWI clusters that has no PlatformWorkloadIdentityProfile or ServicePrincipalProfile",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{},
+			},
+			wantErr: "GetPlatformWorkloadIdentityMismatchError called for a Cluster Service Principal cluster",
+		},
+		{
+			name: "Invalid Cluster version",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: invalidVersion,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+					},
+				},
+			},
+			wantErr: fmt.Sprintf(`could not parse version "%s"`, invalidVersion),
+		},
+		{
+			name: "Invalid UpgradeableTo version",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.40",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo(invalidVersion)),
+					},
+				},
+			},
+			wantErr: fmt.Sprintf(`could not parse version "%s"`, invalidVersion),
+		},
+		{
+			name: "Unexpected Identites in the doc",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.40",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+				},
+			},
+			wantErr:          fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[bar foo]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
+			checkConsistency: true,
+		},
+		{
+			name: "Unexpected Identites in the doc with UpgradeableTo",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.40",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+					},
+				},
+			},
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s or %s'. The required platform workload identities are '[bar foo]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14", "4.15"),
+		},
+		{
+			name: "Unexpected Identites in the doc with UpgradeableTo lower than cluster version",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.14.40",
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: ptr.To(api.UpgradeableTo("4.13.40")),
+					},
+				},
+			},
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[bar foo]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			pir := &PlatformWorkloadIdentityRolesByVersionService{
+				platformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+					{OperatorName: "foo"},
+					{OperatorName: "bar"},
+				},
+			}
+			iteration := 1
+			if tt.checkConsistency {
+				iteration = 5
+			}
+			for i := 0; i < iteration; i++ {
+				err := GetPlatformWorkloadIdentityMismatchError(tt.oc, pir.GetPlatformWorkloadIdentityRolesByRoleName())
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			}
 		})
 	}
