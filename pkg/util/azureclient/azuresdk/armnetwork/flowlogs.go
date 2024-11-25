@@ -12,18 +12,18 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 )
 
-// FlowLogsClient is a minimal interface for azure FlowLogsClient
-type FlowLogsClient interface {
+// FlowLogsClientInterface is a minimal interface for azure FlowLogsClientInterface
+type FlowLogsClientInterface interface {
 	Get(ctx context.Context, resourceGroupName string, networkWatcherName string, flowLogName string, options *armnetwork.FlowLogsClientGetOptions) (result armnetwork.FlowLogsClientGetResponse, err error)
 
 	FlowLogsClientAddons
 }
 
-type flowLogsClient struct {
+type FlowLogsClient struct {
 	*armnetwork.FlowLogsClient
 }
 
-func NewFlowLogsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (FlowLogsClient, error) {
+func NewFlowLogsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (*FlowLogsClient, error) {
 	client, err := armnetwork.NewFlowLogsClient(subscriptionID, credential, options)
-	return &flowLogsClient{client}, err
+	return &FlowLogsClient{client}, err
 }

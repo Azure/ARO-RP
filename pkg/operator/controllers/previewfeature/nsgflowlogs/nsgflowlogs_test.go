@@ -86,7 +86,7 @@ func TestReconcileManager(t *testing.T) {
 		name              string
 		subnetMock        func(*mock_armnetwork.MockSubnetsClient, *mock_subnet.MockKubeManager)
 		instance          func(*aropreviewv1alpha1.PreviewFeature)
-		flowLogClientMock func(*mock_armnetwork.MockFlowLogsClient)
+		flowLogClientMock func(*mock_armnetwork.MockFlowLogsClientInterface)
 		wantErr           string
 	}{
 		{
@@ -166,7 +166,7 @@ func TestReconcileManager(t *testing.T) {
 					},
 				}, nil)
 			},
-			flowLogClientMock: func(client *mock_armnetwork.MockFlowLogsClient) {
+			flowLogClientMock: func(client *mock_armnetwork.MockFlowLogsClientInterface) {
 				flowLogMaster := getValidFlowLogFeature()
 				flowLogMaster.Properties.TargetResourceID = &subnetNameMasterNSGID
 
@@ -224,7 +224,7 @@ func TestReconcileManager(t *testing.T) {
 					},
 				}, nil)
 			},
-			flowLogClientMock: func(client *mock_armnetwork.MockFlowLogsClient) {
+			flowLogClientMock: func(client *mock_armnetwork.MockFlowLogsClientInterface) {
 				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName, nil)
 				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName, nil)
 			},
@@ -250,7 +250,7 @@ func TestReconcileManager(t *testing.T) {
 				tt.instance(instance)
 			}
 
-			flowLogsClient := mock_armnetwork.NewMockFlowLogsClient(controller)
+			flowLogsClient := mock_armnetwork.NewMockFlowLogsClientInterface(controller)
 			if tt.flowLogClientMock != nil {
 				tt.flowLogClientMock(flowLogsClient)
 			}

@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func NewFeature(flowLogsClient armnetwork.FlowLogsClient, kubeSubnets subnet.KubeManager, subnets armnetwork.SubnetsClient, location string) *nsgFlowLogsFeature {
+func NewFeature(flowLogsClient armnetwork.FlowLogsClientInterface, kubeSubnets subnet.KubeManager, subnets armnetwork.SubnetsClient, location string) *nsgFlowLogsFeature {
 	return &nsgFlowLogsFeature{
 		kubeSubnets:    kubeSubnets,
 		flowLogsClient: flowLogsClient,
@@ -29,7 +29,7 @@ func NewFeature(flowLogsClient armnetwork.FlowLogsClient, kubeSubnets subnet.Kub
 type nsgFlowLogsFeature struct {
 	kubeSubnets    subnet.KubeManager
 	subnets        armnetwork.SubnetsClient
-	flowLogsClient armnetwork.FlowLogsClient
+	flowLogsClient armnetwork.FlowLogsClientInterface
 	location       string
 }
 
