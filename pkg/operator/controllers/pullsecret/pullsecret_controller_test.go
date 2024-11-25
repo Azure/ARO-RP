@@ -358,8 +358,8 @@ func TestPullSecretReconciler(t *testing.T) {
 			if err != nil {
 				t.Fatal("Error found")
 			} else {
-				assert.Equal(t, cluster.TypeMeta.Kind, "Cluster")
-				assert.Equal(t, cluster.TypeMeta.APIVersion, "aro.openshift.io/v1alpha1")
+				assert.Equal(t, "Cluster", cluster.TypeMeta.Kind)
+				assert.Equal(t, "aro.openshift.io/v1alpha1", cluster.TypeMeta.APIVersion)
 			}
 
 			statusBytes, err := json.Marshal(&cluster.Status)
@@ -826,16 +826,14 @@ func pullSecretReconcilerTestHelper(
 	r *Reconciler,
 	ctx context.Context,
 	s *corev1.Secret,
-	key types.NamespacedName,
-	is_valid_key bool) {
-
+	key types.NamespacedName, is_valid_key bool) {
 	err := r.Client.Get(ctx, key, s)
 
 	if is_valid_key {
 		// Client getter is expected to succeed for valid key and return initialized Secret object
 		if err == nil {
 			logrus.Infof("Check handling of valid NamespacedName input : %s", key)
-			assert.Equal(t, s.TypeMeta.Kind, "Secret")
+			assert.Equal(t, "Secret", s.TypeMeta.Kind)
 			assert.NotEmpty(t, s.TypeMeta.APIVersion)
 			assert.NotEmpty(t, s.Type)
 			assert.NotEmpty(t, s.ObjectMeta.ResourceVersion)
