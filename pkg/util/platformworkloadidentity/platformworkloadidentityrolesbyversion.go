@@ -106,7 +106,10 @@ func (service *PlatformWorkloadIdentityRolesByVersionService) GetPlatformWorkloa
 	return platformWorkloadIdentityRolesByRoleName
 }
 
-// Check if any required platform identity is missing
+// Check if required platform identity are provided in cluster doc by assessing
+// Condition 1: Platform Workload Identities and Platform Workload Identity Roles should be equal in length
+// Condition 2: All the keys in Platform Workload Identities map should be present in Platform Workload Identity Roles
+// These conditions also assures if Platform Workload Identities contains all the keys present in Platform Workload Identity Roles
 func (service *PlatformWorkloadIdentityRolesByVersionService) MatchesPlatformWorkloadIdentityRoles(oc *api.OpenShiftCluster) bool {
 	platformWorkloadIdentityRolesByRoleName := service.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformIdentities := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
