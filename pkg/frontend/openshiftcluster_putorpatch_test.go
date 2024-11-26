@@ -32,6 +32,14 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
+const mockGuid = "00000000-0000-0000-0000-000000000000"
+
+var (
+	defaultVersion                    = version.DefaultInstallStream.Version.String()
+	defaultMinorVersion               = version.DefaultInstallStream.Version.MinorVersion()
+	unexpectedWorkloadIdentitiesError = fmt.Sprintf(`400: PlatformWorkloadIdentityMismatch: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[aro-operator cloud-controller-manager cloud-network-config disk-csi-driver file-csi-driver image-registry ingress machine-api]'`, defaultMinorVersion)
+)
+
 type dummyOpenShiftClusterValidator struct{}
 
 func (*dummyOpenShiftClusterValidator) Static(interface{}, *api.OpenShiftCluster, string, string, bool, string) error {
@@ -1959,8 +1967,6 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	ctx := context.Background()
 
-	defaultVersion := "4.10.0"
-
 	apis := map[string]*api.Version{
 		"2024-08-12-preview": {
 			OpenShiftClusterConverter:            api.APIs["2024-08-12-preview"].OpenShiftClusterConverter,
@@ -1969,93 +1975,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 	}
 
-	ocpVersionsChangeFeed := map[string]*api.OpenShiftVersion{
-		defaultVersion: {
-			Properties: api.OpenShiftVersionProperties{
-				Version: defaultVersion,
-				Enabled: true,
-				Default: true,
-			},
-		},
-		"4.14.16": {
-			Properties: api.OpenShiftVersionProperties{
-				Version: "4.14.16",
-				Enabled: true,
-				Default: false,
-			},
-		},
-	}
-
-	platformWorkloadIdentityRolesChangeFeed := map[string]*api.PlatformWorkloadIdentityRoleSet{
-		"4.10": {
-			Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-				OpenShiftVersion: "4.10",
-				PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-					{
-						OperatorName: "cloud-controller-manager",
-					},
-					{
-						OperatorName: "ingress",
-					},
-					{
-						OperatorName: "machine-api",
-					},
-					{
-						OperatorName: "disk-csi-driver",
-					},
-					{
-						OperatorName: "cloud-network-config",
-					},
-					{
-						OperatorName: "image-registry",
-					},
-					{
-						OperatorName: "file-csi-driver",
-					},
-					{
-						OperatorName: "aro-operator",
-					},
-				},
-			},
-		},
-		"4.14": {
-			Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-				OpenShiftVersion: "4.14",
-				PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-					{
-						OperatorName: "cloud-controller-manager",
-					},
-					{
-						OperatorName: "ingress",
-					},
-					{
-						OperatorName: "machine-api",
-					},
-					{
-						OperatorName: "disk-csi-driver",
-					},
-					{
-						OperatorName: "cloud-network-config",
-					},
-					{
-						OperatorName: "image-registry",
-					},
-					{
-						OperatorName: "file-csi-driver",
-					},
-					{
-						OperatorName: "aro-operator",
-					},
-					{
-						OperatorName: "extra-new-operator",
-					},
-				},
-			},
-		},
-	}
-	unexpectedWorkloadIdentitiesError := "400: PlatformWorkloadIdentityMismatch: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '4.10'. The required platform workload identities are '[aro-operator cloud-controller-manager cloud-network-config disk-csi-driver file-csi-driver image-registry ingress machine-api]'"
-
-	mockGuid := "00000000-0000-0000-0000-000000000000"
 	mockMiResourceId := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/not-a-real-group/providers/Microsoft.ManagedIdentity/userAssignedIdentities/not-a-real-mi"
 	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -2097,7 +2016,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:  ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:  getOCPVersionsChangeFeed(),
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
@@ -2214,7 +2133,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:  ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:  getOCPVersionsChangeFeed(),
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
@@ -2364,7 +2283,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:  ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:  getOCPVersionsChangeFeed(),
 			wantSystemDataEnriched: true,
 			wantEnriched:           []string{},
 			wantStatusCode:         http.StatusBadRequest,
@@ -2403,7 +2322,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:  ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:  getOCPVersionsChangeFeed(),
 			wantSystemDataEnriched: true,
 			wantEnriched:           []string{},
 			wantStatusCode:         http.StatusBadRequest,
@@ -2444,7 +2363,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:  ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:  getOCPVersionsChangeFeed(),
 			wantSystemDataEnriched: true,
 			wantEnriched:           []string{},
 			wantStatusCode:         http.StatusBadRequest,
@@ -2453,7 +2372,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster vm not supported",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2466,7 +2385,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed: ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed: getOCPVersionsChangeFeed(),
 			quotaValidatorError:   api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided VM SKU %s is not supported.", "something"),
 			wantEnriched:          []string{},
 			wantStatusCode:        http.StatusBadRequest,
@@ -2475,7 +2394,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster quota fails",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2488,7 +2407,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed: ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed: getOCPVersionsChangeFeed(),
 			quotaValidatorError:   api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, "", "Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1."),
 			wantEnriched:          []string{},
 			wantStatusCode:        http.StatusBadRequest,
@@ -2497,7 +2416,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster sku unavailable",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2510,7 +2429,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed: ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed: getOCPVersionsChangeFeed(),
 			skuValidatorError:     api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is unavailable in region '%v'", "Standard_Sku", "somewhere"),
 			wantEnriched:          []string{},
 			wantStatusCode:        http.StatusBadRequest,
@@ -2519,7 +2438,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster sku restricted",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2532,7 +2451,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed: ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed: getOCPVersionsChangeFeed(),
 			skuValidatorError:     api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is restricted in region '%v' for selected subscription", "Standard_Sku", "somewhere"),
 			wantEnriched:          []string{},
 			wantStatusCode:        http.StatusBadRequest,
@@ -2542,7 +2461,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster Microsoft.Authorization provider not registered",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2555,7 +2474,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:   ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:   getOCPVersionsChangeFeed(),
 			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Authorization"),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
@@ -2564,7 +2483,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster Microsoft.Compute provider not registered",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2577,7 +2496,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:   ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:   getOCPVersionsChangeFeed(),
 			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Compute"),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
@@ -2586,7 +2505,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster Microsoft.Network provider not registered",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2599,7 +2518,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:   ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:   getOCPVersionsChangeFeed(),
 			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Network"),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
@@ -2608,7 +2527,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster Microsoft.Storage provider not registered",
 			request: func(oc *v20240812preview.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2621,7 +2540,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:   ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:   getOCPVersionsChangeFeed(),
 			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Storage"),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
@@ -3071,7 +2990,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						"disk-csi-driver":          {ResourceID: mockMiResourceId},
 						"extra-new-operator":       {ResourceID: mockMiResourceId},
 					},
-					UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo("4.14.40")),
+					UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 				}
 			},
 			isPatch: true,
@@ -3250,7 +3169,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 										ResourceID: mockMiResourceId,
 									},
 								},
-								UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.14.40")),
+								UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 							},
 						},
 					},
@@ -3337,7 +3256,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								ResourceID: mockMiResourceId,
 							},
 						},
-						UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo("4.14.40")),
+						UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 					},
 				},
 			},
@@ -3357,7 +3276,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						"disk-csi-driver":          {ResourceID: mockMiResourceId},
 						"unexpected-operator":      {ResourceID: mockMiResourceId},
 					},
-					UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo("4.14.40")),
+					UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 				}
 			},
 			isPatch: true,
@@ -3448,7 +3367,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 			wantSystemDataEnriched: true,
 			wantStatusCode:         http.StatusBadRequest,
-			wantError:              "400: PlatformWorkloadIdentityMismatch: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '4.10 or 4.14'. The required platform workload identities are '[aro-operator cloud-controller-manager cloud-network-config disk-csi-driver extra-new-operator file-csi-driver image-registry ingress machine-api]'",
+			wantError:              fmt.Sprintf(`400: PlatformWorkloadIdentityMismatch: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s or %s'. The required platform workload identities are '[aro-operator cloud-controller-manager cloud-network-config disk-csi-driver extra-new-operator file-csi-driver image-registry ingress machine-api]'`, defaultMinorVersion, getMIWIUpgradeableToVersion().MinorVersion()),
 		},
 		{
 			name: "patch a cluster from failed during update",
@@ -3714,7 +3633,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:  ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:  getOCPVersionsChangeFeed(),
 			wantSystemDataEnriched: true,
 			wantAsync:              true,
 			wantStatusCode:         http.StatusBadRequest,
@@ -3762,7 +3681,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:  ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:  getOCPVersionsChangeFeed(),
 			wantSystemDataEnriched: true,
 			wantAsync:              true,
 			wantStatusCode:         http.StatusBadRequest,
@@ -3832,7 +3751,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			ocpVersionsChangeFeed:  ocpVersionsChangeFeed,
+			ocpVersionsChangeFeed:  getOCPVersionsChangeFeed(),
 			wantSystemDataEnriched: true,
 			wantAsync:              true,
 			wantStatusCode:         http.StatusBadRequest,
@@ -3891,7 +3810,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			f.ocpVersionsMu.Unlock()
 
 			f.platformWorkloadIdentityRoleSetsMu.Lock()
-			f.availablePlatformWorkloadIdentityRoleSets = platformWorkloadIdentityRolesChangeFeed
+			f.availablePlatformWorkloadIdentityRoleSets = getPlatformWorkloadIdentityRolesChangeFeed()
 			f.platformWorkloadIdentityRoleSetsMu.Unlock()
 
 			oc := &v20240812preview.OpenShiftCluster{}
@@ -4464,5 +4383,99 @@ func TestValidateIdentityTenantID(t *testing.T) {
 				t.Error(cmp.Diff(tt.cluster, tt.expected))
 			}
 		})
+	}
+}
+
+func getMIWIUpgradeableToVersion() *version.Version {
+	ver := version.DefaultInstallStream.Version.V
+	return version.NewVersion(ver[0], ver[1]+1, ver[2])
+}
+
+func getOCPVersionsChangeFeed() map[string]*api.OpenShiftVersion {
+	return map[string]*api.OpenShiftVersion{
+		defaultVersion: {
+			Properties: api.OpenShiftVersionProperties{
+				Version: defaultVersion,
+				Enabled: true,
+				Default: true,
+			},
+		},
+		getMIWIUpgradeableToVersion().String(): {
+			Properties: api.OpenShiftVersionProperties{
+				Version: getMIWIUpgradeableToVersion().String(),
+				Enabled: true,
+				Default: false,
+			},
+		},
+	}
+}
+
+func getPlatformWorkloadIdentityRolesChangeFeed() map[string]*api.PlatformWorkloadIdentityRoleSet {
+	return map[string]*api.PlatformWorkloadIdentityRoleSet{
+		defaultMinorVersion: {
+			Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+				OpenShiftVersion: defaultMinorVersion,
+				PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+					{
+						OperatorName: "cloud-controller-manager",
+					},
+					{
+						OperatorName: "ingress",
+					},
+					{
+						OperatorName: "machine-api",
+					},
+					{
+						OperatorName: "disk-csi-driver",
+					},
+					{
+						OperatorName: "cloud-network-config",
+					},
+					{
+						OperatorName: "image-registry",
+					},
+					{
+						OperatorName: "file-csi-driver",
+					},
+					{
+						OperatorName: "aro-operator",
+					},
+				},
+			},
+		},
+		getMIWIUpgradeableToVersion().MinorVersion(): {
+			Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+				OpenShiftVersion: getMIWIUpgradeableToVersion().MinorVersion(),
+				PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+					{
+						OperatorName: "cloud-controller-manager",
+					},
+					{
+						OperatorName: "ingress",
+					},
+					{
+						OperatorName: "machine-api",
+					},
+					{
+						OperatorName: "disk-csi-driver",
+					},
+					{
+						OperatorName: "cloud-network-config",
+					},
+					{
+						OperatorName: "image-registry",
+					},
+					{
+						OperatorName: "file-csi-driver",
+					},
+					{
+						OperatorName: "aro-operator",
+					},
+					{
+						OperatorName: "extra-new-operator",
+					},
+				},
+			},
+		},
 	}
 }
