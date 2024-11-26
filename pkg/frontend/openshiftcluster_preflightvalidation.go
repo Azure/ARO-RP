@@ -110,6 +110,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 	converter := f.apis[apiVersion].OpenShiftClusterConverter
 	staticValidator := f.apis[apiVersion].OpenShiftClusterStaticValidator
 	ext := converter.ToExternal(oc)
+	converter.ExternalNoReadOnly(ext)
 	if err = json.Unmarshal(raw, &ext); err != nil {
 		log.Warning(err.Error())
 		return api.ValidationResult{
@@ -148,7 +149,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			}
 		}
 	}
-
+	converter.ToInternal(ext, oc)
 	if oc.UsesWorkloadIdentity() {
 		if err := f.validatePlatformWorkloadIdentities(oc); err != nil {
 			return api.ValidationResult{
