@@ -5,6 +5,7 @@ package steps
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -62,18 +63,24 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 			if azureerrors.IsUnauthorizedClientError(err) ||
 				azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.IsInvalidSecretError(err) {
-				err = api.NewCloudError(http.StatusBadRequest, step.String(),
+				err = api.NewCloudError(http.StatusBadRequest,
+					api.CloudErrorCodeInvalidServicePrincipalCredentials,
 					"encountered error",
 					err.Error())
-				log.Error(err)
-			} else {
-				log.Errorf("step %s encountered error: %s", step, err.Error())
+			} else if oDataError := (&msgraph_errors.ODataError{}); errors.As(err, &oDataError) {
+				if *oDataError.GetErrorEscaped().GetCode() == "Authorization_IdentityNotFound" {
+					err = api.NewCloudError(
+						http.StatusBadRequest,
+						api.CloudErrorCodeInvalidServicePrincipalCredentials,
+						"encountered error",
+						"%s: %s",
+						*oDataError.GetErrorEscaped().GetCode(),
+						*oDataError.GetErrorEscaped().GetMessage())
+				} else {
+					spew.Fdump(log.Writer(), oDataError.GetErrorEscaped())
+				}
 			}
-
-			if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
-				spew.Fdump(log.Writer(), oDataError.GetErrorEscaped())
-			}
-
+			log.Errorf("step %s encountered error: %s", step, err.Error())
 			return nil, err
 		}
 
