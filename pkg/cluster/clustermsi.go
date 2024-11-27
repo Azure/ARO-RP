@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,9 +13,14 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	sdkarmmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/Azure/msi-dataplane/pkg/store"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -141,7 +147,74 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 
 	m.clusterMsiFederatedIdentityCredentials = clusterMsiFederatedIdentityCredentials
 	m.userAssignedIdentities = userAssignedIdentities
+
+	// Testing not setting the aad auth endpoint and instance discovery
+	identities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+	if len(uaIdentities.ExplicitIdentities) < 1 || uaIdentities.ExplicitIdentities[0] == nil {
+		return fmt.Errorf("no identities attached to cluster")
+	}
+	cred, err := getClientCertificateCredential(*uaIdentities.ExplicitIdentities[0], m.env.Environment().Cloud)
+	if err != nil {
+		return err
+	}
+
+	uaIdentityClient, err := armmsi.NewUserAssignedIdentitiesClient(subId, cred, clientOptions)
+	if err != nil {
+		return err
+	}
+	for _, identity := range identities {
+		res, err := arm.ParseResourceID(identity.ResourceID)
+		if err != nil {
+			return err
+		}
+		id, err := uaIdentityClient.Get(ctx, res.ResourceGroupName, res.Name, &sdkarmmsi.UserAssignedIdentitiesClientGetOptions{})
+		if err != nil {
+			return err
+		}
+		spew.Dump(id)
+	}
+
 	return nil
+}
+
+func getClientCertificateCredential(identity swagger.NestedCredentialsObject, cloud cloud.Configuration) (*azidentity.ClientCertificateCredential, error) {
+	// Double check nil pointers so we don't panic
+	fieldsToCheck := map[string]*string{
+		"clientID":     identity.ClientID,
+		"tenantID":     identity.TenantID,
+		"clientSecret": identity.ClientSecret,
+	}
+	missing := make([]string, 0)
+	for field, val := range fieldsToCheck {
+		if val == nil {
+			missing = append(missing, field)
+		}
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("%s: %s", "nil field", strings.Join(missing, ","))
+	}
+
+	opts := &azidentity.ClientCertificateCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: cloud,
+		},
+
+		// x5c header required: https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingrequestingatoken
+		SendCertificateChain: true,
+	}
+
+	// Parse the certificate and private key from the base64 encoded secret
+	decodedSecret, err := base64.StdEncoding.DecodeString(*identity.ClientSecret)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", "failed to decode certificate", err)
+	}
+	// Note - ParseCertificates does not currently support pkcs12 SHA256 MAC certs, so if
+	// managed identity team changes the cert format, double check this code
+	crt, key, err := azidentity.ParseCertificates(decodedSecret, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", "failed to parse certificate", err)
+	}
+	return azidentity.NewClientCertificateCredential(*identity.TenantID, *identity.ClientID, crt, key, opts)
 }
 
 // clusterMsiSecretName returns the name to store the cluster MSI certificate under in
