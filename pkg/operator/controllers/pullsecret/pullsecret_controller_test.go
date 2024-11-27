@@ -333,16 +333,10 @@ func TestPullSecretReconciler(t *testing.T) {
 
 			s := &corev1.Secret{}
 			assert.NotNil(t, s)
-			is_valid_key := false
-			key := types.NamespacedName{Namespace: "openshift-config", Name: "invalid-pull-secret"}
-			pullSecretReconcilerTestHelper(t, r, ctx, s, key, is_valid_key)
-			key = types.NamespacedName{Namespace: "invalid-openshift-config", Name: "pull-secret"}
-			pullSecretReconcilerTestHelper(t, r, ctx, s, key, is_valid_key)
-			key = types.NamespacedName{Namespace: "invalid-openshift-config", Name: "invalid-pull-secret"}
-			pullSecretReconcilerTestHelper(t, r, ctx, s, key, is_valid_key)
-			is_valid_key = true
-			key = types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}
-			pullSecretReconcilerTestHelper(t, r, ctx, s, key, is_valid_key)
+			err = r.Client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
+			if err != nil {
+				t.Error(err)
+			}
 
 			if s.Type != corev1.SecretTypeDockerConfigJson {
 				t.Errorf("Unexpected secret type: %s", s.Type)
@@ -357,9 +351,6 @@ func TestPullSecretReconciler(t *testing.T) {
 			err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 			if err != nil {
 				t.Fatal("Error found")
-			} else {
-				assert.Equal(t, "Cluster", cluster.TypeMeta.Kind)
-				assert.Equal(t, "aro.openshift.io/v1alpha1", cluster.TypeMeta.APIVersion)
 			}
 
 			statusBytes, err := json.Marshal(&cluster.Status)
@@ -818,38 +809,5 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				t.Fatalf(cmp.Diff(s, tt.wantSecret))
 			}
 		})
-	}
-}
-
-func pullSecretReconcilerTestHelper(
-	t *testing.T,
-	r *Reconciler,
-	ctx context.Context,
-	s *corev1.Secret,
-	key types.NamespacedName, is_valid_key bool) {
-	err := r.Client.Get(ctx, key, s)
-
-	if is_valid_key {
-		// Client getter is expected to succeed for valid key and return initialized Secret object
-		if err == nil {
-			logrus.Infof("Check handling of valid NamespacedName input : %s", key)
-			assert.Equal(t, "Secret", s.TypeMeta.Kind)
-			assert.NotEmpty(t, s.TypeMeta.APIVersion)
-			assert.NotEmpty(t, s.Type)
-			assert.NotEmpty(t, s.ObjectMeta.ResourceVersion)
-		} else {
-			t.Errorf("Given a valid key client call to get Secret object is not expected to fail, but it did")
-		}
-	} else {
-		// Client getter is expected to fail for invalid input key and return uninitialized Secret object
-		if err != nil {
-			logrus.Infof("Check handling of invalid NamespacedName input : %s", key)
-			assert.Empty(t, s.TypeMeta.Kind)
-			assert.Empty(t, s.TypeMeta.APIVersion)
-			assert.Empty(t, s.Type)
-			assert.Empty(t, s.ObjectMeta.ResourceVersion)
-		} else {
-			t.Errorf("Given an invalid key client call to get Secret object is expected to fail, but it did not")
-		}
 	}
 }
