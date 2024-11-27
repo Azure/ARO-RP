@@ -60,7 +60,7 @@ def load_arguments(self, _):
 
         c.argument('client_id',
                    help='Client ID of cluster service principal.',
-                   validator=validate_client_id)
+                   validator=validate_client_id(isCreate=True))
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
                    validator=validate_client_secret(isCreate=True))
@@ -148,6 +148,9 @@ def load_arguments(self, _):
                    validator=validate_cluster_identity)
 
     with self.argument_context('aro update') as c:
+        c.argument('client_id',
+                   help='Client ID of cluster service principal.',
+                   validator=validate_client_id(isCreate=False))
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
                    validator=validate_client_secret(isCreate=False))

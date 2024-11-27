@@ -38,22 +38,24 @@ def validate_cidr(key):
     return _validate_cidr
 
 
-def validate_client_id(namespace):
-    if namespace.client_id is None:
-        return
-    if namespace.enable_managed_identity is True:
-        raise MutuallyExclusiveArgumentError('Must not specify --client-id when --enable-managed-identity is True')  # pylint: disable=line-too-long
-    if namespace.platform_workload_identities is not None:
-        raise MutuallyExclusiveArgumentError('Must not specify --client-id when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
-    try:
-        uuid.UUID(namespace.client_id)
-    except ValueError as e:
-        raise InvalidArgumentValueError(f"Invalid --client-id '{namespace.client_id}'.") from e  # pylint: disable=line-too-long
+def validate_client_id(isCreate):
+    def _validate_client_id(namespace):
+        if namespace.client_id is None:
+            return
+        if namespace.enable_managed_identity is True:
+            raise MutuallyExclusiveArgumentError('Must not specify --client-id when --enable-managed-identity is True')  # pylint: disable=line-too-long
+        if namespace.platform_workload_identities is not None:
+            raise MutuallyExclusiveArgumentError('Must not specify --client-id when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
+        try:
+            uuid.UUID(namespace.client_id)
+        except ValueError as e:
+            raise InvalidArgumentValueError(f"Invalid --client-id '{namespace.client_id}'.") from e  # pylint: disable=line-too-long
 
-    if namespace.client_secret is None or not str(namespace.client_secret):
-        raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')  # pylint: disable=line-too-long
-    if namespace.upgradeable_to is not None:
-        raise MutuallyExclusiveArgumentError('Must not specify --client-id when --upgradeable-to is used.')  # pylint: disable=line-too-long
+        if namespace.client_secret is None or not str(namespace.client_secret):
+            raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')  # pylint: disable=line-too-long
+        if not isCreate and namespace.upgradeable_to is not None:
+            raise MutuallyExclusiveArgumentError('Must not specify --client-id when --upgradeable-to is used.')  # pylint: disable=line-too-long
+    return _validate_client_id
 
 
 def validate_client_secret(isCreate):
@@ -66,7 +68,7 @@ def validate_client_secret(isCreate):
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
         if isCreate and (namespace.client_id is None or not str(namespace.client_id)):
             raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
-        if namespace.upgradeable_to is not None:
+        if not isCreate and namespace.upgradeable_to is not None:
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --upgradeable-to is used.')  # pylint: disable=line-too-long
 
     return _validate_client_secret
