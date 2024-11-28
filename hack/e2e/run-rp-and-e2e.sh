@@ -2,6 +2,7 @@
 ######## Helper file to run E2e either locally or using Azure DevOps Pipelines ########
 
 if [[ $CI ]]; then
+    echo "########## CI mode enabled ##########"
     set -o pipefail
 
     . secrets/env
@@ -198,11 +199,13 @@ echo
 echo "LOCATION=$LOCATION"
 echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
 echo
+echo "CI=$CI"
 echo "RP_MODE=$RP_MODE"
 echo
 echo "DATABASE_ACCOUNT_NAME=$DATABASE_ACCOUNT_NAME"
 echo "DATABASE_NAME=$DATABASE_NAME"
 echo "RESOURCEGROUP=$RESOURCEGROUP"
+echo "KEYVAULT_PREFIX=$KEYVAULT_PREFIX"
 echo
 echo "CLUSTER=$CLUSTER"
 echo
