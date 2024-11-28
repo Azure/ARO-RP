@@ -13,7 +13,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/form3tech-oss/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v4"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -58,7 +58,7 @@ func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 		return err
 	}
 
-	parser := &jwt.Parser{}
+	parser := jwt.NewParser()
 	c := &azureclaim.AzureClaim{}
 	_, _, err = parser.ParseUnverified(token.Token, c)
 	if err != nil {
