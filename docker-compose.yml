@@ -32,7 +32,6 @@ x-aro-common-env: &common-env
     - PULL_SECRET
     - RESOURCEGROUP
     - RP_MODE
-    - SECRET_SA_ACCOUNT_NAME
     - STORAGE_ACCOUNT_DOMAIN
     - USER_PULL_SECRET
 
