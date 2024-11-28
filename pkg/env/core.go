@@ -101,7 +101,7 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		log.Info("running in local development mode")
 	}
 
-	im, err := instancemetadata.New(ctx, log, isLocalDevelopmentMode)
+	im, err := instancemetadata.New(ctx, log, true)
 	if err != nil {
 		return nil, err
 	}

@@ -20,31 +20,21 @@ import (
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/deploy/assets"
-	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
-	"github.com/Azure/ARO-RP/pkg/util/rbac"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -195,177 +185,16 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
-	clusterGet, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
-	if err == nil {
-		if clusterGet.Properties.ProvisioningState == api.ProvisioningStateFailed {
-			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
-		}
-		c.log.Print("cluster already exists, skipping create")
-		return nil
-	}
-
-	fpSPId := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
-	if fpSPId == "" {
-		return fmt.Errorf("fp service principal id is not found")
-	}
-
-	appDetails, err := c.createApp(ctx, clusterName)
-	if err != nil {
-		return err
-	}
-
-	visibility := api.VisibilityPublic
-
-	if os.Getenv("PRIVATE_CLUSTER") != "" || os.Getenv("NO_INTERNET") != "" {
-		visibility = api.VisibilityPrivate
-	}
-
-	if c.ci {
-		c.log.Infof("creating resource group")
-		_, err = c.groups.CreateOrUpdate(ctx, vnetResourceGroup, mgmtfeatures.ResourceGroup{
-			Location: to.StringPtr(c.env.Location()),
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileClusterPredeploy)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(asset, &template)
-	if err != nil {
-		return err
-	}
-
-	addressPrefix, masterSubnet, workerSubnet, err := c.generateSubnets()
-
-	if err != nil {
-		return err
-	}
-
-	var kvName string
-	if len(vnetResourceGroup) > 10 {
-		// keyvault names need to have a maximum length of 24,
-		// so we need to cut off some chars if the resource group name is too long
-		kvName = vnetResourceGroup[:10] + generator.SharedDiskEncryptionKeyVaultNameSuffix
-	} else {
-		kvName = vnetResourceGroup + generator.SharedDiskEncryptionKeyVaultNameSuffix
-	}
-
-	if c.ci {
-		// name is limited to 24 characters, but must be globally unique, so we generate one and try if it is available
-		kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
-
-		result, err := c.vaultsClient.CheckNameAvailability(ctx, sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")}, nil)
-		if err != nil {
-			return err
-		}
-
-		if result.NameAvailable != nil && !*result.NameAvailable {
-			return fmt.Errorf("could not generate unique key vault name: %v", result.Reason)
-		}
-	}
-
-	parameters := map[string]*arm.ParametersParameter{
-		"clusterName":               {Value: clusterName},
-		"ci":                        {Value: c.ci},
-		"clusterServicePrincipalId": {Value: appDetails.SPId},
-		"fpServicePrincipalId":      {Value: fpSPId},
-		"vnetAddressPrefix":         {Value: addressPrefix},
-		"masterAddressPrefix":       {Value: masterSubnet},
-		"workerAddressPrefix":       {Value: workerSubnet},
-		"kvName":                    {Value: kvName},
-	}
-
-	// TODO: ick
-	if os.Getenv("NO_INTERNET") != "" {
-		parameters["routes"] = &arm.ParametersParameter{
-			Value: []sdknetwork.Route{
-				{
-					Properties: &sdknetwork.RoutePropertiesFormat{
-						AddressPrefix: ptr.To("0.0.0.0/0"),
-						NextHopType:   ptr.To(sdknetwork.RouteNextHopTypeNone),
-					},
-					Name: ptr.To("blackhole"),
-				},
-			},
-		}
-	}
-
-	armctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-	defer cancel()
-
-	c.log.Info("predeploying ARM template")
-	err = c.deployments.CreateOrUpdateAndWait(armctx, vnetResourceGroup, clusterName, mgmtfeatures.Deployment{
-		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   template,
-			Parameters: parameters,
-			Mode:       mgmtfeatures.Incremental,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	diskEncryptionSetID := fmt.Sprintf(
-		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s%s",
-		c.env.SubscriptionID(),
-		vnetResourceGroup,
-		vnetResourceGroup,
-		generator.SharedDiskEncryptionSetNameSuffix,
-	)
-
-	c.log.Info("creating role assignments")
-	for _, scope := range []struct{ resource, role string }{
-		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/dev-vnet", rbac.RoleNetworkContributor},
-		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt", rbac.RoleNetworkContributor},
-		{diskEncryptionSetID, rbac.RoleReader},
-	} {
-		for _, principalID := range []string{appDetails.SPId, fpSPId} {
-			for i := 0; i < 5; i++ {
-				_, err = c.roleassignments.Create(
-					ctx,
-					scope.resource,
-					uuid.DefaultGenerator.Generate(),
-					mgmtauthorization.RoleAssignmentCreateParameters{
-						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
-							PrincipalID:      &principalID,
-							PrincipalType:    mgmtauthorization.ServicePrincipal,
-						},
-					},
-				)
-
-				// Ignore if the role assignment already exists
-				if detailedError, ok := err.(autorest.DetailedError); ok {
-					if detailedError.StatusCode == http.StatusConflict {
-						err = nil
-					}
-				}
-
-				// TODO: tighten this error check
-				if err != nil && i < 4 {
-					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
-					// Retry a few times.
-					c.log.Print(err)
-					continue
-				}
-				if err != nil {
-					return err
-				}
-
-				break
-			}
-		}
-	}
-
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, osClusterVersion)
-
+	appDetails, err := c.createApp(ctx, "atokubi")
+	if err != nil {
+		return err
+	}
+	err = c.deleteApplication(ctx, appDetails.applicationId)
+	if err != nil {
+		return err
+	}
+	err = c.createCluster(ctx, "atokubi", "atokubi", appDetails.applicationId, appDetails.applicationSecret, api.VisibilityPublic, "4.15.27")
 	if err != nil {
 		return err
 	}
@@ -502,10 +331,10 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		}
 	} else {
 		errs = append(errs,
-			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
+			//c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteDeployment(ctx, vnetResourceGroup, clusterName), // Deleting the deployment does not clean up the associated resources
-			c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName),
+			//c.deleteDeployment(ctx, vnetResourceGroup, clusterName), // Deleting the deployment does not clean up the associated resources
+			//c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName),
 		)
 	}
 
@@ -516,7 +345,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret string, visibility api.Visibility, osClusterVersion string) error {
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -533,20 +362,18 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 			},
 			MasterProfile: api.MasterProfile{
-				VMSize:              api.VMSizeStandardD8sV3,
-				SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
-				EncryptionAtHost:    api.EncryptionAtHostEnabled,
-				DiskEncryptionSetID: diskEncryptionSetID,
+				VMSize:           api.VMSizeStandardD8sV3,
+				SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aro-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+				EncryptionAtHost: api.EncryptionAtHostEnabled,
 			},
 			WorkerProfiles: []api.WorkerProfile{
 				{
-					Name:                "worker",
-					VMSize:              api.VMSizeStandardD4sV3,
-					DiskSizeGB:          128,
-					SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
-					Count:               3,
-					EncryptionAtHost:    api.EncryptionAtHostEnabled,
-					DiskEncryptionSetID: diskEncryptionSetID,
+					Name:             "worker",
+					VMSize:           api.VMSizeStandardD4sV3,
+					DiskSizeGB:       128,
+					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aro-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+					Count:            3,
+					EncryptionAtHost: api.EncryptionAtHostEnabled,
 				},
 			},
 			APIServerProfile: api.APIServerProfile{
