@@ -1,39 +1,39 @@
 # These environment variables are used by ARO components. Supplying unused
 # environment variables to components is harmless, so keep the reasonably common
 # ones here to reduce duplication.
-x-aro-common-env: &common-env
-  environment:
-    - ARO_ADOPT_BY_HIVE=true
-    - ARO_IMAGE
-    - ARO_INSTALL_VIA_HIVE=true
-    - AZURE_ARM_CLIENT_ID
-    - AZURE_CLIENT_ID
-    - AZURE_CLIENT_SECRET
-    - AZURE_ENVIRONMENT
-    - AZURE_FP_CLIENT_ID
-    - AZURE_FP_SERVICE_PRINCIPAL_ID
-    - AZURE_PORTAL_ACCESS_GROUP_IDS
-    - AZURE_PORTAL_CLIENT_ID
-    - AZURE_PORTAL_ELEVATED_GROUP_IDS
-    - AZURE_RP_CLIENT_ID
-    - AZURE_RP_CLIENT_SECRET
-    - AZURE_SERVICE_PRINCIPAL_ID
-    - AZURE_SUBSCRIPTION_ID
-    - AZURE_TENANT_ID
-    - CI
-    - DATABASE_ACCOUNT_NAME
-    - DATABASE_NAME
-    - DOMAIN_NAME
-    - KEYVAULT_PREFIX
-    - LOCATION
-    - PARENT_DOMAIN_NAME
-    - PARENT_DOMAIN_RESOURCEGROUP
-    - PROXY_HOSTNAME
-    - PULL_SECRET
-    - RESOURCEGROUP
-    - RP_MODE
-    - STORAGE_ACCOUNT_DOMAIN
-    - USER_PULL_SECRET
+x-aro-common-env:
+  environment: &common-env
+    ARO_ADOPT_BY_HIVE: "true"
+    ARO_IMAGE:
+    ARO_INSTALL_VIA_HIVE: "true"
+    AZURE_ARM_CLIENT_ID:
+    AZURE_CLIENT_ID:
+    AZURE_CLIENT_SECRET:
+    AZURE_ENVIRONMENT:
+    AZURE_FP_CLIENT_ID:
+    AZURE_FP_SERVICE_PRINCIPAL_ID:
+    AZURE_PORTAL_ACCESS_GROUP_IDS:
+    AZURE_PORTAL_CLIENT_ID:
+    AZURE_PORTAL_ELEVATED_GROUP_IDS:
+    AZURE_RP_CLIENT_ID:
+    AZURE_RP_CLIENT_SECRET:
+    AZURE_SERVICE_PRINCIPAL_ID:
+    AZURE_SUBSCRIPTION_ID:
+    AZURE_TENANT_ID:
+    CI:
+    DATABASE_ACCOUNT_NAME:
+    DATABASE_NAME:
+    DOMAIN_NAME:
+    KEYVAULT_PREFIX:
+    LOCATION:
+    PARENT_DOMAIN_NAME:
+    PARENT_DOMAIN_RESOURCEGROUP:
+    PROXY_HOSTNAME:
+    PULL_SECRET:
+    RESOURCEGROUP:
+    RP_MODE:
+    STORAGE_ACCOUNT_DOMAIN:
+    USER_PULL_SECRET:
 
 services:
   vpn:
@@ -98,20 +98,20 @@ services:
         target: /app/secrets/proxy.crt
       - source: hive-kubeconfig
         target: /app/secrets/aks.kubeconfig
-    <<: *common-env
     environment:
-      - ADMIN_OBJECT_ID
-      - ARO_CHECKOUT_PATH=/app
-      - AZURE_GATEWAY_CLIENT_ID
-      - AZURE_GATEWAY_CLIENT_SECRET
-      - AZURE_GATEWAY_SERVICE_PRINCIPAL_ID
-      - HIVE_KUBE_CONFIG_PATH=/app/secrets/aks.kubeconfig
-      - KUBECONFIG=/app/secrets/aks.kubeconfig
-      - MOCK_MSI_CERT
-      - MOCK_MSI_CLIENT_ID
-      - MOCK_MSI_OBJECT_ID
-      - MOCK_MSI_TENANT_ID
-      - OIDC_STORAGE_ACCOUNT_NAME
+      <<: *common-env
+      ADMIN_OBJECT_ID:
+      ARO_CHECKOUT_PATH: /app
+      AZURE_GATEWAY_CLIENT_ID:
+      AZURE_GATEWAY_CLIENT_SECRET:
+      AZURE_GATEWAY_SERVICE_PRINCIPAL_ID:
+      HIVE_KUBE_CONFIG_PATH: /app/secrets/aks.kubeconfig
+      KUBECONFIG: /app/secrets/aks.kubeconfig
+      MOCK_MSI_CERT:
+      MOCK_MSI_CLIENT_ID:
+      MOCK_MSI_OBJECT_ID:
+      MOCK_MSI_TENANT_ID:
+      OIDC_STORAGE_ACCOUNT_NAME:
     ports:
       - "8443:8443"
     healthcheck:
@@ -128,9 +128,9 @@ services:
     depends_on:
       rp:
         condition: service_healthy
-    <<: *common-env
     environment:
-      - NO_NPM=1
+      <<: *common-env
+      NO_NPM: 1
     ports:
       - "8444:8444"
       - "2222:2222"
@@ -173,15 +173,15 @@ services:
         condition: service_healthy
       selenium:
         condition: service_healthy
-    <<: *common-env
     environment:
-      - ARO_SELENIUM_HOSTNAME
-      - CLUSTER
-      - E2E_DELETE_CLUSTER
-      - E2E_LABEL
-      - OS_CLUSTER_VERSION
-      - PORTAL_HOSTNAME=https://localhost:8444
-      - RP_BASE_URL=https://localhost:8443
+      <<: *common-env
+      ARO_SELENIUM_HOSTNAME:
+      CLUSTER:
+      E2E_DELETE_CLUSTER:
+      E2E_LABEL:
+      OS_CLUSTER_VERSION:
+      PORTAL_HOSTNAME: "https://localhost:8444"
+      RP_BASE_URL: "https://localhost:8443"
     entrypoint: "/usr/local/bin/e2e.test"
     command:
       [
