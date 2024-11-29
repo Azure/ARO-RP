@@ -13,8 +13,8 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/pkg/errors"
-	"gopkg.in/go-jose/go-jose.v2"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 )

@@ -1,5 +1,8 @@
 package oidcbuilder
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"crypto/rand"
 	"crypto/rsa"
@@ -9,9 +12,6 @@ import (
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
 
 func TestKeyIDFromPublicKey(t *testing.T) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 256)
