@@ -145,7 +145,7 @@ stages:
 
           # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
           # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
-          - script: |
+          - bash: |
               echo "##vso[task.setvariable variable=E2E_LABEL]!smoke"
             displayName: Enable regression tests in CI
             condition: in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI')
@@ -165,10 +165,15 @@ stages:
               fi
             displayName: Get Kubeconfig for AKS Cluster
 
+          - bash: |
+              az acr login --name arosvcdev
+              docker-compose build vpn
+              docker-compose pull
+            displayName: ":whale: Build VPN Container & Pull Images"
+
           # Run the E2E test suite
           - bash: |
               . ./hack/e2e/run-rp-and-e2e.sh
-              az acr login --name arosvcdev
 
               deploy_e2e_db
               register_sub
