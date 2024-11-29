@@ -153,7 +153,6 @@ stages:
           # Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
           - bash: |
               . secrets/env
-              export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
 
               # Retrieve the kubeconfig
               hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
