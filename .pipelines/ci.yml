@@ -168,11 +168,9 @@ stages:
 
           # Run the E2E test suite
           - bash: |
-              . secrets/env
-              export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
-
-              az acr login --name arosvcdev
               . ./hack/e2e/run-rp-and-e2e.sh
+              az acr login --name arosvcdev
+
               deploy_e2e_db
               register_sub
               docker compose up e2e
