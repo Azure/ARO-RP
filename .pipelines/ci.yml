@@ -167,9 +167,9 @@ stages:
 
           - bash: |
               az acr login --name arosvcdev
-              docker-compose build vpn
-              docker-compose pull
-            displayName: ":whale: Build VPN Container & Pull Images"
+              docker compose build vpn
+              docker compose pull
+            displayName: "🐳  Build VPN Container & Pull Images"
 
           # Run the E2E test suite
           - bash: |
