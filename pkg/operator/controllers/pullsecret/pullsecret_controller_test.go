@@ -6,8 +6,10 @@ package pullsecret
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
@@ -27,10 +29,33 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
+type possiblyErroringFakeCtrlRuntimeClient struct {
+	client.Client
+	shouldError bool
+}
+
+func (p possiblyErroringFakeCtrlRuntimeClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	// Only error on attempts to update the ARO cluster object; this avoids
+	// erroring out whilte attempting to update the controller status
+	// conditions.
+	if p.shouldError && obj.GetName() == "cluster" {
+		return fmt.Errorf("uh-oh, an error!")
+	}
+	return p.Client.Update(ctx, obj)
+}
+
 func TestPullSecretReconciler(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
+
 	baseCluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-		Status:     arov1alpha1.ClusterStatus{},
+		Status: arov1alpha1.ClusterStatus{
+			Conditions: defaultConditions,
+		},
 		Spec: arov1alpha1.ClusterSpec{
 			OperatorFlags: arov1alpha1.OperatorFlags{
 				operator.PullSecretEnabled: operator.FlagTrue,
@@ -39,21 +64,17 @@ func TestPullSecretReconciler(t *testing.T) {
 		},
 	}
 
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
-	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
-
 	tests := []struct {
-		name           string
-		request        ctrl.Request
-		secrets        []client.Object
-		instance       *arov1alpha1.Cluster
-		wantKeys       []string
-		wantErr        bool
-		want           string
-		wantErrMsg     string
-		wantConditions []operatorv1.OperatorCondition
+		name                            string
+		request                         ctrl.Request
+		secrets                         []client.Object
+		instance                        *arov1alpha1.Cluster
+		wantKeys                        []string
+		wantErr                         bool
+		want                            string
+		wantErrMsg                      string
+		wantConditions                  []operatorv1.OperatorCondition
+		clientClientShouldErrorOnUpdate bool
 	}{
 		{
 			name: "deleted pull secret",
@@ -125,6 +146,43 @@ func TestPullSecretReconciler(t *testing.T) {
 			wantKeys:       nil,
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
+		},
+		{
+			name: "attempt to fix arosvc pull secret but fail on client.Client Update method",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pull-secret",
+						Namespace: "openshift-config",
+					},
+					Type: corev1.SecretTypeDockerConfigJson,
+					Data: map[string][]byte{
+						corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":""}}}`),
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      operator.SecretName,
+						Namespace: operator.Namespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
+				},
+			},
+			instance:   baseCluster,
+			want:       `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:   nil,
+			wantErr:    true,
+			wantErrMsg: "uh-oh, an error!",
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               ControllerName + "ControllerDegraded",
+					Status:             "True",
+					Message:            "uh-oh, an error!",
+					LastTransitionTime: transitionTime,
+				},
+			},
+			clientClientShouldErrorOnUpdate: true,
 		},
 		{
 			name: "unparseable secret",
@@ -315,7 +373,12 @@ func TestPullSecretReconciler(t *testing.T) {
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
 			assert.NotNil(t, clientFake)
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			clientFakeWrapper := possiblyErroringFakeCtrlRuntimeClient{
+				Client:      clientFake,
+				shouldError: tt.clientClientShouldErrorOnUpdate,
+			}
+
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFakeWrapper)
 			assert.NotNil(t, r)
 
 			if tt.request.Name == "" {
@@ -329,7 +392,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
-			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
+			utilconditions.AssertControllerConditions(t, ctx, clientFakeWrapper, tt.wantConditions)
 
 			s := &corev1.Secret{}
 			assert.NotNil(t, s)
