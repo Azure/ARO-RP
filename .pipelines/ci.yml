@@ -172,12 +172,12 @@ stages:
 
               deploy_e2e_db
               register_sub
-              docker compose up --quiet-pull e2e
+              docker compose up --quiet-pull --exit-code-from e2e e2e
               # Check if the E2E tests failed
               E2E_EXIT_CODE=$?
               if [ $E2E_EXIT_CODE -ne 0 ]; then
                 echo "##vso[task.logissue type=error] E2E tests failed. Check the logs for more details."
-                exit 1
+                exit $E2E_EXIT_CODE
               else
                 echo "E2E tests passed."
               fi

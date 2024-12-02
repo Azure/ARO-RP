@@ -23,7 +23,8 @@ import (
 
 func TestDenyAssignment(t *testing.T) {
 	m := &manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log:                  logrus.NewEntry(logrus.StandardLogger()),
+		fpServicePrincipalID: "77777777-7777-7777-7777-777777777777",
 	}
 
 	tests := []struct {
@@ -67,6 +68,11 @@ func TestDenyAssignment(t *testing.T) {
 									ClientID:   "11111111-1111-1111-1111-111111111111",
 									ResourceID: "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name",
 								},
+								"something other than anything": {
+									ObjectID:   "88888888-8888-8888-8888-888888888888",
+									ClientID:   "99999999-9999-9999-9999-999999999999",
+									ResourceID: "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name",
+								},
 							},
 						},
 					},
@@ -75,6 +81,14 @@ func TestDenyAssignment(t *testing.T) {
 			ExpectedExcludePrincipals: &[]mgmtauthorization.Principal{
 				{
 					ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
+					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+				},
+				{
+					ID:   to.StringPtr("88888888-8888-8888-8888-888888888888"),
+					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+				},
+				{
+					ID:   to.StringPtr("77777777-7777-7777-7777-777777777777"),
 					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 			},

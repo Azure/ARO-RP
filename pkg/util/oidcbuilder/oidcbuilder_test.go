@@ -1,5 +1,8 @@
 package oidcbuilder
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"bytes"
 	"context"
@@ -27,9 +30,6 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
 
 func TestEnsureOIDCDocs(t *testing.T) {
 	ctx := context.Background()
@@ -222,7 +222,7 @@ func TestDeleteOidcFolder(t *testing.T) {
 	}
 	genericErrorMessage := `FAKE ://
 --------------------------------------------------------------------------------
-RESPONSE 0: 
+RESPONSE 0:
 ERROR CODE: Generic Error
 --------------------------------------------------------------------------------
 Generic Error
@@ -276,7 +276,7 @@ Generic Error
 			}
 
 			err := DeleteOidcFolder(ctx, directoryName, blobsClient)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr, utilerror.TrimWhitespace())
 		})
 	}
 }

@@ -7,16 +7,17 @@ import (
 	"context"
 	"time"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func NewFeature(flowLogsClient network.FlowLogsClient, kubeSubnets subnet.KubeManager, subnets subnet.Manager, location string) *nsgFlowLogsFeature {
+func NewFeature(flowLogsClient armnetwork.FlowLogsClientInterface, kubeSubnets subnet.KubeManager, subnets armnetwork.SubnetsClient, location string) *nsgFlowLogsFeature {
 	return &nsgFlowLogsFeature{
 		kubeSubnets:    kubeSubnets,
 		flowLogsClient: flowLogsClient,
@@ -27,8 +28,8 @@ func NewFeature(flowLogsClient network.FlowLogsClient, kubeSubnets subnet.KubeMa
 
 type nsgFlowLogsFeature struct {
 	kubeSubnets    subnet.KubeManager
-	subnets        subnet.Manager
-	flowLogsClient network.FlowLogsClient
+	subnets        armnetwork.SubnetsClient
+	flowLogsClient armnetwork.FlowLogsClientInterface
 	location       string
 }
 
@@ -66,7 +67,7 @@ func (n *nsgFlowLogsFeature) Enable(ctx context.Context, instance *aropreviewv1a
 		if err != nil {
 			return err
 		}
-		err = n.flowLogsClient.CreateOrUpdateAndWait(ctx, networkWatcherResource.ResourceGroup, networkWatcherResource.ResourceName, res.ResourceName, *flowLog)
+		err = n.flowLogsClient.CreateOrUpdateAndWait(ctx, networkWatcherResource.ResourceGroup, networkWatcherResource.ResourceName, res.ResourceName, *flowLog, nil)
 		if err != nil {
 			return err
 		}
@@ -75,25 +76,25 @@ func (n *nsgFlowLogsFeature) Enable(ctx context.Context, instance *aropreviewv1a
 	return nil
 }
 
-func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeature, nsgID string) *mgmtnetwork.FlowLog {
+func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeature, nsgID string) *sdknetwork.FlowLog {
 	// build a request as described here https://docs.microsoft.com/en-us/azure/network-watcher/network-watcher-nsg-flow-logging-rest#enable-network-security-group-flow-logs
-	return &mgmtnetwork.FlowLog{
+	return &sdknetwork.FlowLog{
 		Location: &n.location,
-		FlowLogPropertiesFormat: &mgmtnetwork.FlowLogPropertiesFormat{
+		Properties: &sdknetwork.FlowLogPropertiesFormat{
 			TargetResourceID: &nsgID,
-			Enabled:          to.BoolPtr(true),
-			Format: &mgmtnetwork.FlowLogFormatParameters{
-				Type:    mgmtnetwork.JSON,
-				Version: to.Int32Ptr(int32(instance.Spec.NSGFlowLogs.Version)),
+			Enabled:          pointerutils.ToPtr(true),
+			Format: &sdknetwork.FlowLogFormatParameters{
+				Type:    pointerutils.ToPtr(sdknetwork.FlowLogFormatTypeJSON),
+				Version: pointerutils.ToPtr(int32(instance.Spec.NSGFlowLogs.Version)),
 			},
-			RetentionPolicy: &mgmtnetwork.RetentionPolicyParameters{
+			RetentionPolicy: &sdknetwork.RetentionPolicyParameters{
 				Days: &instance.Spec.NSGFlowLogs.RetentionDays,
 			},
 			StorageID: &instance.Spec.NSGFlowLogs.StorageAccountResourceID,
-			FlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsProperties{
-				NetworkWatcherFlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsConfigurationProperties{
+			FlowAnalyticsConfiguration: &sdknetwork.TrafficAnalyticsProperties{
+				NetworkWatcherFlowAnalyticsConfiguration: &sdknetwork.TrafficAnalyticsConfigurationProperties{
 					WorkspaceID:              &instance.Spec.NSGFlowLogs.TrafficAnalyticsLogAnalyticsWorkspaceID,
-					TrafficAnalyticsInterval: to.Int32Ptr(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
+					TrafficAnalyticsInterval: pointerutils.ToPtr(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
 				},
 			},
 		},
@@ -117,7 +118,7 @@ func (n *nsgFlowLogsFeature) Disable(ctx context.Context, instance *aropreviewv1
 			return err
 		}
 
-		err = n.flowLogsClient.DeleteAndWait(ctx, networkWatcherResource.ResourceGroup, networkWatcherResource.ResourceName, res.ResourceName)
+		err = n.flowLogsClient.DeleteAndWait(ctx, networkWatcherResource.ResourceGroup, networkWatcherResource.ResourceName, res.ResourceName, nil)
 		if err != nil {
 			return err
 		}
@@ -135,11 +136,15 @@ func (n *nsgFlowLogsFeature) getNSGs(ctx context.Context) (map[string]struct{}, 
 
 	nsgs := map[string]struct{}{}
 	for _, kubeSubnet := range subnets {
-		net, err := n.subnets.Get(ctx, kubeSubnet.ResourceID)
+		r, err := arm.ParseResourceID(kubeSubnet.ResourceID)
 		if err != nil {
 			return nil, err
 		}
-		nsgs[*net.NetworkSecurityGroup.ID] = struct{}{}
+		net, err := n.subnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+		if err != nil {
+			return nil, err
+		}
+		nsgs[*net.Properties.NetworkSecurityGroup.ID] = struct{}{}
 	}
 	return nsgs, nil
 }
