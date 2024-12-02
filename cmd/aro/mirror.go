@@ -95,8 +95,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.15",
 
 		// https://catalog.redhat.com/software/containers/openshift4/ose-cli-rhel9/6528096620ebdcf82af4cbf9
-		"registry.redhat.io/openshift4/ose-cli-rhel9:4.16",
-		"registry.redhat.io/openshift4/ose-cli-rhel9:4.17",
+		"registry.redhat.io/openshift4/ose-cli-rhel9:v4.16",
+		"registry.redhat.io/openshift4/ose-cli-rhel9:v4.17",
 		"registry.redhat.io/openshift4/ose-cli-rhel9:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/ubi-minimal/5c359a62bed8bd75a2c3fba8
