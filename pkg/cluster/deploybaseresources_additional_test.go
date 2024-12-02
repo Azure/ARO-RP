@@ -23,7 +23,8 @@ import (
 
 func TestDenyAssignment(t *testing.T) {
 	m := &manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log:                  logrus.NewEntry(logrus.StandardLogger()),
+		fpServicePrincipalID: "77777777-7777-7777-7777-777777777777",
 	}
 
 	tests := []struct {
@@ -84,6 +85,10 @@ func TestDenyAssignment(t *testing.T) {
 				},
 				{
 					ID:   to.StringPtr("88888888-8888-8888-8888-888888888888"),
+					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+				},
+				{
+					ID:   to.StringPtr("77777777-7777-7777-7777-777777777777"),
 					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 			},
