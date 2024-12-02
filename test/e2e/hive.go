@@ -20,8 +20,9 @@ import (
 )
 
 var (
-	clusterPlatformLabelKey string = "hive.openshift.io/cluster-platform"
-	clusterRegionLabelKey   string = "hive.openshift.io/cluster-region"
+	clusterPlatformLabelKey    string = "hive.openshift.io/cluster-platform"
+	clusterRegionLabelKey      string = "hive.openshift.io/cluster-region"
+	infraDisabledAnnotationKey string = "hive.openshift.io/infra-disabled"
 
 	controlPlaneAPIURLOverride = func(clusterDomain string, clusterLocation string) string {
 		if !strings.ContainsRune(clusterDomain, '.') {
@@ -52,13 +53,14 @@ var _ = Describe("Hive-managed ARO cluster", func() {
 		}, cd)
 		Expect(err).NotTo(HaveOccurred())
 
-		By("verifying that the ClusterDeployment object has the expected name and labels")
+		By("verifying that the ClusterDeployment object has the expected name, labels, and annotations")
 		Expect(cd.ObjectMeta).NotTo(BeNil())
 		Expect(cd.ObjectMeta.Name).To(Equal(hive.ClusterDeploymentName))
 		Expect(cd.ObjectMeta.Labels).Should(HaveKey(clusterPlatformLabelKey))
 		Expect(cd.ObjectMeta.Labels[clusterPlatformLabelKey]).To(Equal("azure"))
 		Expect(cd.ObjectMeta.Labels).Should(HaveKey(clusterRegionLabelKey))
 		Expect(cd.ObjectMeta.Labels[clusterRegionLabelKey]).To(Equal(adminAPICluster.Location))
+		Expect(cd.ObjectMeta.Annotations[infraDisabledAnnotationKey]).To(Equal("true"))
 
 		By("verifying that the ClusterDeployment object spec correctly includes the ARO cluster's Azure region and RG name")
 		Expect(cd.Spec).NotTo(BeNil())

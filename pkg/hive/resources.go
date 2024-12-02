@@ -203,6 +203,11 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, resour
 				"hive.openshift.io/cluster-platform": "azure",
 				"hive.openshift.io/cluster-region":   location,
 			},
+			Annotations: map[string]string{
+				// https://github.com/openshift/hive/pull/2501
+				// Disable hibernation controller
+				"hive.openshift.io/infra-disabled": "true",
+			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
 			BaseDomain:  "",

@@ -214,6 +214,10 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 
 				// TODO: remove until we use a version of hive at minimal install
 				"hive.openshift.io/cli-domain-from-installer-image": "true",
+
+				// https://github.com/openshift/hive/pull/2501
+				// Disable hibernation controller
+				"hive.openshift.io/infra-disabled": "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
