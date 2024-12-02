@@ -7,14 +7,15 @@ import (
 	"context"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -56,26 +57,25 @@ func getValidPreviewFeatureInstance() *aropreviewv1alpha1.PreviewFeature {
 	}
 }
 
-func getValidFlowLogFeature() *mgmtnetwork.FlowLog {
-	return &mgmtnetwork.FlowLog{
-		FlowLogPropertiesFormat: &mgmtnetwork.FlowLogPropertiesFormat{
-			TargetResourceID: to.StringPtr(""),
-			Enabled:          to.BoolPtr(true),
-			StorageID:        to.StringPtr(""),
-			RetentionPolicy: &mgmtnetwork.RetentionPolicyParameters{
-				Days: to.Int32Ptr(0),
+func getValidFlowLogFeature() *armnetwork.FlowLog {
+	return &armnetwork.FlowLog{
+		Properties: &armnetwork.FlowLogPropertiesFormat{
+			TargetResourceID: pointerutils.ToPtr(""),
+			Enabled:          pointerutils.ToPtr(true),
+			StorageID:        pointerutils.ToPtr(""),
+			RetentionPolicy: &armnetwork.RetentionPolicyParameters{
+				Days: pointerutils.ToPtr(int32(0)),
 			},
-			Format: &mgmtnetwork.FlowLogFormatParameters{
-				Type:    mgmtnetwork.JSON,
-				Version: to.Int32Ptr(0),
+			Format: &armnetwork.FlowLogFormatParameters{
+				Type:    pointerutils.ToPtr(armnetwork.FlowLogFormatTypeJSON),
+				Version: pointerutils.ToPtr(int32(0)),
 			},
-			FlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsProperties{
-				NetworkWatcherFlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsConfigurationProperties{
-					TrafficAnalyticsInterval: to.Int32Ptr(0),
-					WorkspaceID:              to.StringPtr(""),
+			FlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsProperties{
+				NetworkWatcherFlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsConfigurationProperties{
+					TrafficAnalyticsInterval: pointerutils.ToPtr(int32(0)),
+					WorkspaceID:              pointerutils.ToPtr(""),
 				},
 			},
-			ProvisioningState: "",
 		},
 		Location: to.StringPtr(location),
 	}
@@ -84,14 +84,14 @@ func getValidFlowLogFeature() *mgmtnetwork.FlowLog {
 func TestReconcileManager(t *testing.T) {
 	for _, tt := range []struct {
 		name              string
-		subnetMock        func(*mock_subnet.MockManager, *mock_subnet.MockKubeManager)
+		subnetMock        func(*mock_armnetwork.MockSubnetsClient, *mock_subnet.MockKubeManager)
 		instance          func(*aropreviewv1alpha1.PreviewFeature)
-		flowLogClientMock func(*mock_network.MockFlowLogsClient)
+		flowLogClientMock func(*mock_armnetwork.MockFlowLogsClientInterface)
 		wantErr           string
 	}{
 		{
 			name: "do not enable flow log if parameters are missing/wrong",
-			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+			subnetMock: func(mock *mock_armnetwork.MockSubnetsClient, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
@@ -100,17 +100,21 @@ func TestReconcileManager(t *testing.T) {
 						ResourceID: resourceIdWorker,
 					},
 				}, nil)
-				mock.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: &subnetNameMasterNSGID,
+				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: &subnetNameMasterNSGID,
+							},
 						},
 					},
 				}, nil)
-				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: &subnetNameWorkerNSGID,
+				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: &subnetNameWorkerNSGID,
+							},
 						},
 					},
 				}, nil)
@@ -122,7 +126,7 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "enable flow log",
-			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+			subnetMock: func(mock *mock_armnetwork.MockSubnetsClient, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
@@ -134,37 +138,43 @@ func TestReconcileManager(t *testing.T) {
 						ResourceID: resourceIdWorker2,
 					},
 				}, nil)
-				mock.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: &subnetNameMasterNSGID,
+				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: &subnetNameMasterNSGID,
+							},
 						},
 					},
 				}, nil)
-				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: &subnetNameMasterNSGID, // same NSG as the master subnet
+				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: &subnetNameMasterNSGID, // same NSG as the master subnet
+							},
 						},
 					},
 				}, nil)
-				mock.EXPECT().Get(gomock.Any(), resourceIdWorker2).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: &subnetNameWorkerNSGID, // different NSG ID. expect another one call to create
+				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker2, nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: &subnetNameWorkerNSGID, // different NSG ID. expect another one call to create
+							},
 						},
 					},
 				}, nil)
 			},
-			flowLogClientMock: func(client *mock_network.MockFlowLogsClient) {
+			flowLogClientMock: func(client *mock_armnetwork.MockFlowLogsClientInterface) {
 				flowLogMaster := getValidFlowLogFeature()
-				flowLogMaster.FlowLogPropertiesFormat.TargetResourceID = &subnetNameMasterNSGID
+				flowLogMaster.Properties.TargetResourceID = &subnetNameMasterNSGID
 
 				flowLogWorker := getValidFlowLogFeature()
-				flowLogWorker.FlowLogPropertiesFormat.TargetResourceID = &subnetNameWorkerNSGID
+				flowLogWorker.Properties.TargetResourceID = &subnetNameWorkerNSGID
 				// enable once per NSG
-				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName, *flowLogMaster)
-				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName, *flowLogWorker)
+				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName, *flowLogMaster, nil)
+				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName, *flowLogWorker, nil)
 			},
 			instance: func(feature *aropreviewv1alpha1.PreviewFeature) {
 				feature.Spec.NSGFlowLogs.Enabled = true
@@ -174,7 +184,7 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "disable flow log",
-			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+			subnetMock: func(mock *mock_armnetwork.MockSubnetsClient, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
@@ -186,31 +196,37 @@ func TestReconcileManager(t *testing.T) {
 						ResourceID: resourceIdWorker2,
 					},
 				}, nil)
-				mock.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: &subnetNameMasterNSGID,
+				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: &subnetNameMasterNSGID,
+							},
 						},
 					},
 				}, nil)
-				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: &subnetNameMasterNSGID, // same NSG as the master subnet
+				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: &subnetNameMasterNSGID, // same NSG as the master subnet
+							},
 						},
 					},
 				}, nil)
-				mock.EXPECT().Get(gomock.Any(), resourceIdWorker2).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: &subnetNameWorkerNSGID, // in order to test calls to disable once per NSG
+				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker2, nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: &subnetNameWorkerNSGID, // in order to test calls to disable once per NSG
+							},
 						},
 					},
 				}, nil)
 			},
-			flowLogClientMock: func(client *mock_network.MockFlowLogsClient) {
-				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName)
-				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName)
+			flowLogClientMock: func(client *mock_armnetwork.MockFlowLogsClientInterface) {
+				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameMasterNSGName, nil)
+				client.EXPECT().DeleteAndWait(gomock.Any(), networkWatcherResourceGroupName, networkWatcherName, subnetNameWorkerNSGName, nil)
 			},
 			instance: func(feature *aropreviewv1alpha1.PreviewFeature) {
 				feature.Spec.NSGFlowLogs.Enabled = false
@@ -223,7 +239,7 @@ func TestReconcileManager(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			subnets := mock_subnet.NewMockManager(controller)
+			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			kubeSubnets := mock_subnet.NewMockKubeManager(controller)
 			if tt.subnetMock != nil {
 				tt.subnetMock(subnets, kubeSubnets)
@@ -234,7 +250,7 @@ func TestReconcileManager(t *testing.T) {
 				tt.instance(instance)
 			}
 
-			flowLogsClient := mock_network.NewMockFlowLogsClient(controller)
+			flowLogsClient := mock_armnetwork.NewMockFlowLogsClientInterface(controller)
 			if tt.flowLogClientMock != nil {
 				tt.flowLogClientMock(flowLogsClient)
 			}
