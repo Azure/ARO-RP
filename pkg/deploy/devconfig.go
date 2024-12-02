@@ -109,10 +109,8 @@ func DevConfig(_env env.Core) (*Config, error) {
 				Configuration: &Configuration{
 					AzureCloudName:              &_env.Environment().ActualCloudName,
 					DatabaseAccountName:         ptr.To(azureUniquePrefix + "-aro-" + _env.Location()),
-					GatewayStorageAccountDomain: ptr.To(azureUniquePrefix + "gwy" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 					KeyvaultDNSSuffix:           &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:              &keyvaultPrefix,
-					StorageAccountDomain:        ptr.To(azureUniquePrefix + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 					OIDCStorageAccountName:      ptr.To(oidcStorageAccountName),
 				},
 			},

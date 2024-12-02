@@ -68,7 +68,6 @@ type Configuration struct {
 	GatewayDomains                     []string               `json:"gatewayDomains,omitempty"`
 	GatewayFeatures                    []string               `json:"gatewayFeatures,omitempty"`
 	GatewayMDSDConfigVersion           *string                `json:"gatewayMdsdConfigVersion,omitempty" value:"required"`
-	GatewayStorageAccountDomain        *string                `json:"gatewayStorageAccountDomain,omitempty" value:"required"`
 	GatewayVMSize                      *string                `json:"gatewayVmSize,omitempty"`
 	GatewayVMSSCapacity                *int                   `json:"gatewayVmssCapacity,omitempty"`
 	GlobalResourceGroupName            *string                `json:"globalResourceGroupName,omitempty" value:"required"`
@@ -93,7 +92,6 @@ type Configuration struct {
 	RPParentDomainName                 *string                `json:"rpParentDomainName,omitempty" value:"required"`
 	RPVMSSCapacity                     *int                   `json:"rpVmssCapacity,omitempty"`
 	SSHPublicKey                       *string                `json:"sshPublicKey,omitempty"`
-	StorageAccountDomain               *string                `json:"storageAccountDomain,omitempty" value:"required"`
 	SubscriptionResourceGroupName      *string                `json:"subscriptionResourceGroupName,omitempty" value:"required"`
 	SubscriptionResourceGroupLocation  *string                `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string                `json:"vmSize,omitempty" value:"required"`
