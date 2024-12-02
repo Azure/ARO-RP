@@ -161,7 +161,7 @@ stages:
               . ./hack/e2e/run-rp-and-e2e.sh
               deploy_e2e_db
               register_sub
-              docker compose up --exit-code-from run-e2e e2e
+              docker compose up --exit-code-from e2e e2e
               # Check if the E2E tests failed
               E2E_EXIT_CODE=$?
               if [ $E2E_EXIT_CODE -ne 0 ]; then
