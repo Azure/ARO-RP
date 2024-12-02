@@ -5,7 +5,10 @@ package cluster
 
 import (
 	"context"
+	"fmt"
+	"sync"
 
+	"github.com/Azure/go-autorest/logger"
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,10 +25,6 @@ const (
 )
 
 func (m *manager) createCertificates(ctx context.Context) error {
-	if m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
-		return nil
-	}
-
 	managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
@@ -50,20 +49,44 @@ func (m *manager) createCertificates(ctx context.Context) error {
 	}
 
 	for _, c := range certs {
-		m.log.Printf("creating certificate %s", c.certificateName)
-		err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, OneCertPublicIssuerName, c.certificateName, c.commonName, keyvault.EkuServerAuth)
-		if err != nil {
-			return err
+		wg := sync.WaitGroup{}
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, OneCertPublicIssuerName, c.certificateName, c.commonName, keyvault.EkuServerAuth)
+				if err != nil {
+					m.log.Errorf("error when creating certificate %s: %s", c.certificateName, err.Error())
+				}
+				wg.Done()
+			}()
 		}
+		wg.Wait()
+		m.log.Printf("creating certificate %s", c.certificateName)
 	}
+
+	logger.Instance = logger.NewFileLogger()
 
 	for _, c := range certs {
 		m.log.Printf("waiting for certificate %s", c.certificateName)
-		err = m.env.ClusterKeyvault().WaitForCertificateOperation(ctx, c.certificateName)
-		if err != nil {
-			m.log.Errorf("error when waiting for certificate %s: %s", c.certificateName, err.Error())
-			return err
+		// wait until all goroutines are done
+		wg := sync.WaitGroup{}
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				err = m.env.ClusterKeyvault().WaitForCertificateOperation(ctx, c.certificateName)
+				if err != nil {
+					m.log.Errorf("error when waiting for certificate %s: %s", c.certificateName, err.Error())
+				}
+				wg.Done()
+			}()
 		}
+		wg.Wait()
+		return fmt.Errorf("UNIMPLEMENTED")
+		//err = m.env.ClusterKeyvault().WaitForCertificateOperation(ctx, c.certificateName)
+		//if err != nil {
+		//	m.log.Errorf("error when waiting for certificate %s: %s", c.certificateName, err.Error())
+		//	return err
+		//}
 	}
 
 	return nil

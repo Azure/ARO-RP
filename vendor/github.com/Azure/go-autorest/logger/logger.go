@@ -223,7 +223,7 @@ func initDefaultLogger() {
 			fmt.Fprintf(os.Stderr, "go-autorest: failed to create log file, using stderr: %s\n", err.Error())
 		}
 	}
-	Instance = fileLogger{
+	Instance = FileLogger{
 		logLevel: logLevel,
 		mu:       &sync.Mutex{},
 		logFile:  dest,
@@ -242,17 +242,17 @@ func (nilLogger) WriteRequest(*http.Request, Filter) {}
 func (nilLogger) WriteResponse(*http.Response, Filter) {}
 
 // A File is used instead of a Logger so the stream can be flushed after every write.
-type fileLogger struct {
+type FileLogger struct {
 	logLevel LevelType
 	mu       *sync.Mutex // for synchronizing writes to logFile
 	logFile  *os.File
 }
 
-func (fl fileLogger) Writeln(level LevelType, message string) {
+func (fl FileLogger) Writeln(level LevelType, message string) {
 	fl.Writef(level, "%s\n", message)
 }
 
-func (fl fileLogger) Writef(level LevelType, format string, a ...interface{}) {
+func (fl FileLogger) Writef(level LevelType, format string, a ...interface{}) {
 	if fl.logLevel >= level {
 		fl.mu.Lock()
 		defer fl.mu.Unlock()
@@ -261,7 +261,7 @@ func (fl fileLogger) Writef(level LevelType, format string, a ...interface{}) {
 	}
 }
 
-func (fl fileLogger) WriteRequest(req *http.Request, filter Filter) {
+func (fl FileLogger) WriteRequest(req *http.Request, filter Filter) {
 	if req == nil || fl.logLevel < LogInfo {
 		return
 	}
@@ -295,7 +295,7 @@ func (fl fileLogger) WriteRequest(req *http.Request, filter Filter) {
 	fl.logFile.Sync()
 }
 
-func (fl fileLogger) WriteResponse(resp *http.Response, filter Filter) {
+func (fl FileLogger) WriteResponse(resp *http.Response, filter Filter) {
 	if resp == nil || fl.logLevel < LogInfo {
 		return
 	}
@@ -325,9 +325,17 @@ func (fl fileLogger) WriteResponse(resp *http.Response, filter Filter) {
 }
 
 // returns true if the provided body should be included in the log
-func (fl fileLogger) shouldLogBody(header http.Header, body io.ReadCloser) bool {
+func (fl FileLogger) shouldLogBody(header http.Header, body io.ReadCloser) bool {
 	ct := header.Get("Content-Type")
 	return fl.logLevel >= LogDebug && body != nil && !strings.Contains(ct, "application/octet-stream")
+}
+
+func NewFileLogger() FileLogger {
+	return FileLogger{
+		logLevel: LogDebug,
+		mu:       &sync.Mutex{},
+		logFile:  os.Stderr,
+	}
 }
 
 // creates standard header for log entries, it contains a timestamp and the log level

@@ -244,6 +244,18 @@ func (m *manager) WaitForCertificateOperation(ctx context.Context, certificateNa
 	return err
 }
 
+type Error struct {
+	AzErr *azkeyvault.Error
+}
+
+func (e *Error) Error() string {
+	return keyvaultError(e.AzErr)
+}
+
+func NewError(err *azkeyvault.Error) error {
+	return &Error{AzErr: err}
+}
+
 func keyvaultError(err *azkeyvault.Error) string {
 	if err == nil {
 		return ""
@@ -282,13 +294,9 @@ func checkOperation(op *azkeyvault.CertificateOperation) (bool, error) {
 		return true, nil
 
 	default:
-		err := keyvaultError(op.Error)
 		if op.StatusDetails != nil {
-			if err != "" {
-				err += ": "
-			}
-			err += *op.StatusDetails
+			return false, fmt.Errorf("certificateOperation %s: %w: %s", *op.Status, NewError(op.Error), *op.StatusDetails)
 		}
-		return false, fmt.Errorf("certificateOperation %s: %s", *op.Status, err)
+		return false, fmt.Errorf("certificateOperation %s: %w", *op.Status, NewError(op.Error))
 	}
 }
