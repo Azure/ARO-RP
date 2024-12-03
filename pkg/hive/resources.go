@@ -205,7 +205,7 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, resour
 			},
 			Annotations: map[string]string{
 				// https://github.com/openshift/hive/pull/2501
-				// Disable hibernation controller
+				// Disable hibernation controller as it is not used as part of ARO's Hive implementation 
 				"hive.openshift.io/infra-disabled": "true",
 			},
 		},
