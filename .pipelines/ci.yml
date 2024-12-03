@@ -134,12 +134,25 @@ stages:
             parameters:
               azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
-          # Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
           - bash: |
               az account set -s $AZURE_SUBSCRIPTION_ID
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+            displayName: Fetch secrets
+
+          - bash: |
+              echo "##vso[task.setvariable variable=CI]true"
+            displayName: Set CI=true
+
+          # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
+          # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
+          - bash: |
+              echo "##vso[task.setvariable variable=E2E_LABEL]!smoke"
+            displayName: Enable regression tests in CI
+            condition: in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI')
+
+          # Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
+          - bash: |
               . secrets/env
-              export KEYVAULT_PREFIX="e2e-classic-eastus-cls"
 
               # Retrieve the kubeconfig
               hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
@@ -152,16 +165,14 @@ stages:
               fi
             displayName: Get Kubeconfig for AKS Cluster
 
-
           # Run the E2E test suite
           - bash: |
-              az account set -s $AZURE_SUBSCRIPTION_ID
-              az acr login --name arosvcdev
-              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
               . ./hack/e2e/run-rp-and-e2e.sh
+              az acr login --name arosvcdev
+
               deploy_e2e_db
               register_sub
-              docker compose up --exit-code-from e2e e2e
+              docker compose up --quiet-pull --exit-code-from e2e e2e
               # Check if the E2E tests failed
               E2E_EXIT_CODE=$?
               if [ $E2E_EXIT_CODE -ne 0 ]; then
