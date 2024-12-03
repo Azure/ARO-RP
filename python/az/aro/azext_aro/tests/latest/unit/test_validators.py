@@ -83,36 +83,43 @@ def test_validate_cidr(test_description, dummyclass, attribute_to_get_from_objec
 test_validate_client_id_data = [
     (
         "should not raise any Exception when namespace.client_id is None",
+        True,
         Mock(client_id=None),
         None
     ),
     (
         "should raise MutuallyExclusiveArgumentError when enable_managed_identity is true",
+        True,
         Mock(client_id="12345678123456781234567812345678", enable_managed_identity=True),
         MutuallyExclusiveArgumentError
     ),
     (
         "should raise MutuallyExclusiveArgumentError when platform_workload_identities is present",
+        True,
         Mock(client_id="12345678123456781234567812345678", platform_workload_identities=[("foo", Mock(resource_id='Foo'))]),
         MutuallyExclusiveArgumentError
     ),
     (
         "should raise InvalidArgumentValueError when it can not create a UUID from namespace.client_id",
+        True,
         Mock(client_id="invalid_client_id", platform_workload_identities=None),
         InvalidArgumentValueError
     ),
     (
         "should raise RequiredArgumentMissingError when can not create a string representation from namespace.client_secret because is None",
+        True,
         Mock(client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret=None),
         RequiredArgumentMissingError
     ),
     (
         "should raise RequiredArgumentMissingError when can not create a string representation from namespace.client_secret because it is an empty string",
+        True,
         Mock(client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret=""),
         RequiredArgumentMissingError
     ),
     (
         "should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
+        False,
         Mock(upgradeable_to=None, client_id="12345678123456781234567812345678", platform_workload_identities=None, client_secret="12345"),
         None
     )
@@ -120,16 +127,17 @@ test_validate_client_id_data = [
 
 
 @pytest.mark.parametrize(
-    "test_description, namespace, expected_exception",
+    "test_description, isCreate, namespace, expected_exception",
     test_validate_client_id_data,
     ids=[i[0] for i in test_validate_client_id_data]
 )
-def test_validate_client_id(test_description, namespace, expected_exception):
+def test_validate_client_id(test_description, isCreate, namespace, expected_exception):
+    validate_client_id_fn = validate_client_id(isCreate)
     if expected_exception is None:
-        validate_client_id(namespace)
+        validate_client_id_fn(namespace)
     else:
         with pytest.raises(expected_exception):
-            validate_client_id(namespace)
+            validate_client_id_fn(namespace)
 
 
 test_validate_client_secret_data = [
@@ -180,12 +188,6 @@ test_validate_client_secret_data = [
         False,
         Mock(upgradeable_to=None, client_secret="123", platform_workload_identities=None),
         None
-    ),
-    (
-        "should raise MutuallyExclusiveArgumentError exception when isCreate is true and upgradeable_to, client_id and client_secret are present",
-        True,
-        Mock(upgradeable_to="4.14.2", client_id="12345678123456781234567812345678", client_secret="123", platform_workload_identities=None),
-        MutuallyExclusiveArgumentError
     ),
     (
         "should raise MutuallyExclusiveArgumentError exception when isCreate is false and upgradeable_to, client_id and client_secret are present",
