@@ -28,7 +28,7 @@ variables:
   - name: VERSION
     value: $(TAG)
   - name: TAG
-    value: pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId)
+    value: $[ coalesce('pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId)', 'master-$(Build.SourceVersion)') ]
   - name: ARO_IMAGE
     value: arosvcdev.azurecr.io/aro:$(TAG)
   - name: ARO_SELENIUM_HOSTNAME
