@@ -15,6 +15,8 @@ import (
 	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -23,6 +25,14 @@ func successfulFunc(context.Context) error { return nil }
 func failingFunc(context.Context) error    { return errors.New("oh no!") }
 func failingAzureError(context.Context) error {
 	return errors.New("Status=403 Code=\"AuthorizationFailed\"")
+}
+func failingODataError(context.Context) error {
+	mainError := odataerrors.NewMainError()
+	mainError.SetCode(pointerutils.ToPtr("Authorization_IdentityNotFound"))
+	mainError.SetMessage(pointerutils.ToPtr("The identity of the calling application could not be established."))
+	e := odataerrors.NewODataError()
+	e.SetErrorEscaped(mainError)
+	return e
 }
 func alwaysFalseCondition(context.Context) (bool, error) { return false, nil }
 func alwaysTrueCondition(context.Context) (bool, error)  { return true, nil }
@@ -93,6 +103,31 @@ func TestStepRunner(t *testing.T) {
 				},
 			},
 			wantErr: "Status=403 Code=\"AuthorizationFailed\"",
+		},
+		{
+			name: "An odata error will fail the run",
+			steps: func(controller *gomock.Controller) []Step {
+				return []Step{
+					Action(successfulFunc),
+					Action(failingODataError),
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.failingODataError]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Action pkg/util/steps.failingODataError] encountered error: 400: InvalidServicePrincipalCredentials: encountered error: Authorization_IdentityNotFound: The identity of the calling application could not be established."),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+			wantErr: "400: InvalidServicePrincipalCredentials: encountered error: Authorization_IdentityNotFound: The identity of the calling application could not be established.",
 		},
 		{
 			name: "A failing Action will fail the run",
