@@ -66,6 +66,7 @@ func (hr *clusterManager) resources(sub *api.SubscriptionDocument, doc *api.Open
 		doc.OpenShiftCluster.Name,
 		doc.ID,
 		doc.OpenShiftCluster.Properties.InfraID,
+		doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
 		doc.OpenShiftCluster.Location,
 		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 	)
@@ -188,7 +189,7 @@ func envSecret(namespace string, isDevelopment bool) *corev1.Secret {
 	}
 }
 
-func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, location, APIServerPrivateEndpointIP string) *hivev1.ClusterDeployment {
+func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, resourceGroupID, location, APIServerPrivateEndpointIP string) *hivev1.ClusterDeployment {
 	return &hivev1.ClusterDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ClusterDeploymentName,
@@ -207,7 +208,7 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, locati
 			},
 			Platform: hivev1.Platform{
 				Azure: &hivev1azure.Platform{
-					BaseDomainResourceGroupName: "",
+					BaseDomainResourceGroupName: resourceGroupID,
 					Region:                      location,
 					CredentialsSecretRef: corev1.LocalObjectReference{
 						Name: clusterServicePrincipalSecretName,
