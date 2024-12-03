@@ -6,6 +6,8 @@ package cluster
 import (
 	"fmt"
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
@@ -101,6 +103,13 @@ func TestDenyAssignment(t *testing.T) {
 
 			actualDenyAssignment := m.denyAssignment().Resource.(*mgmtauthorization.DenyAssignment)
 			actualExcludePrincipals := actualDenyAssignment.ExcludePrincipals
+
+			// Sort the principals coming back before we compare them
+			sortfunc := func(a mgmtauthorization.Principal, b mgmtauthorization.Principal) int {
+				return strings.Compare(*a.ID, *b.ID)
+			}
+			slices.SortFunc(*actualExcludePrincipals, sortfunc)
+			slices.SortFunc(*test.ExpectedExcludePrincipals, sortfunc)
 
 			if !reflect.DeepEqual(test.ExpectedExcludePrincipals, actualExcludePrincipals) {
 				t.Errorf("expected %+v, got %+v\n", test.ExpectedExcludePrincipals, actualExcludePrincipals)
