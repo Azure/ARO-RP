@@ -29,7 +29,7 @@ func (m *manager) removeBootstrap(ctx context.Context) error {
 	}
 
 	m.log.Print("removing bootstrap nic")
-	return m.interfaces.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap-nic")
+	return m.armInterfaces.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap-nic", nil)
 }
 
 func (m *manager) removeBootstrapIgnition(ctx context.Context) error {
