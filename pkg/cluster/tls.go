@@ -5,7 +5,7 @@ package cluster
 
 import (
 	"context"
-	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/Azure/go-autorest/logger"
@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -49,26 +50,17 @@ func (m *manager) createCertificates(ctx context.Context) error {
 	}
 
 	for _, c := range certs {
-		wg := sync.WaitGroup{}
-		for i := 0; i < 100; i++ {
-			wg.Add(1)
-			go func() {
-				err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, OneCertPublicIssuerName, c.certificateName, c.commonName, keyvault.EkuServerAuth)
-				if err != nil {
-					m.log.Errorf("error when creating certificate %s: %s", c.certificateName, err.Error())
-				}
-				wg.Done()
-			}()
-		}
-		wg.Wait()
 		m.log.Printf("creating certificate %s", c.certificateName)
+		err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, OneCertPublicIssuerName, c.certificateName, c.commonName, keyvault.EkuServerAuth)
+		if err != nil {
+			return err
+		}
 	}
 
 	logger.Instance = logger.NewFileLogger()
 
 	for _, c := range certs {
 		m.log.Printf("waiting for certificate %s", c.certificateName)
-		// wait until all goroutines are done
 		wg := sync.WaitGroup{}
 		for i := 0; i < 100; i++ {
 			wg.Add(1)
@@ -81,7 +73,12 @@ func (m *manager) createCertificates(ctx context.Context) error {
 			}()
 		}
 		wg.Wait()
-		return fmt.Errorf("UNIMPLEMENTED")
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			"unimplemented-test",
+			"target-test",
+			"test",
+		)
 		//err = m.env.ClusterKeyvault().WaitForCertificateOperation(ctx, c.certificateName)
 		//if err != nil {
 		//	m.log.Errorf("error when waiting for certificate %s: %s", c.certificateName, err.Error())
