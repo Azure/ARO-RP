@@ -29,6 +29,9 @@ const (
 	clusterManifestsSecretName              = "cluster-manifests-secret"
 	boundServiceAccountSigningKeySecretName = "bound-service-account-signing-key"
 	boundServiceAccountSigningKeySecretKey  = "bound-service-account-signing-key.key"
+	hiveClusterPlatformLabel                = "hive.openshift.io/cluster-platform"
+	hiveClusterRegionLabel                  = "hive.openshift.io/cluster-region"
+	hiveInfraDisabledAnnotation             = "hive.openshift.io/infra-disabled"
 )
 
 var (
@@ -200,13 +203,13 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, resour
 			Name:      ClusterDeploymentName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"hive.openshift.io/cluster-platform": "azure",
-				"hive.openshift.io/cluster-region":   location,
+				hiveClusterPlatformLabel: "azure",
+				hiveClusterRegionLabel:   location,
 			},
 			Annotations: map[string]string{
 				// https://github.com/openshift/hive/pull/2501
-				// Disable hibernation controller as it is not used as part of ARO's Hive implementation 
-				"hive.openshift.io/infra-disabled": "true",
+				// Disable hibernation controller as it is not used as part of ARO's Hive implementation
+				hiveInfraDisabledAnnotation: "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{

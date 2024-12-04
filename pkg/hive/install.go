@@ -203,9 +203,9 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			Name:      ClusterDeploymentName,
 			Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
 			Labels: map[string]string{
-				"hive.openshift.io/cluster-platform": "azure",
-				"hive.openshift.io/cluster-region":   doc.OpenShiftCluster.Location,
-				createdByHiveLabelKey:                "true",
+				hiveClusterPlatformLabel: "azure",
+				hiveClusterRegionLabel:   doc.OpenShiftCluster.Location,
+				createdByHiveLabelKey:    "true",
 			},
 			Annotations: map[string]string{
 				// https://github.com/openshift/hive/pull/2157
@@ -217,7 +217,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 
 				// https://github.com/openshift/hive/pull/2501
 				// Disable hibernation controller
-				"hive.openshift.io/infra-disabled": "true",
+				hiveInfraDisabledAnnotation: "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
