@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
@@ -244,32 +245,25 @@ func (m *manager) WaitForCertificateOperation(ctx context.Context, certificateNa
 	return err
 }
 
+type Error struct {
+	AzErr *azkeyvault.Error
+}
+
+func (e *Error) Error() string {
+	return keyvaultError(e.AzErr)
+}
+
+func NewError(err *azkeyvault.Error) error {
+	return &Error{AzErr: err}
+}
+
 func keyvaultError(err *azkeyvault.Error) string {
 	if err == nil {
 		return ""
 	}
 
 	var sb strings.Builder
-
-	if err.Code != nil {
-		sb.WriteString(*err.Code)
-	}
-
-	if err.Message != nil {
-		if sb.Len() > 0 {
-			sb.WriteString(": ")
-		}
-		sb.WriteString(*err.Message)
-	}
-
-	inner := keyvaultError(err.InnerError)
-	if inner != "" {
-		if sb.Len() > 0 {
-			sb.WriteString(": ")
-		}
-		sb.WriteString(inner)
-	}
-
+	spew.Fdump(&sb, err)
 	return sb.String()
 }
 
@@ -282,13 +276,9 @@ func checkOperation(op *azkeyvault.CertificateOperation) (bool, error) {
 		return true, nil
 
 	default:
-		err := keyvaultError(op.Error)
 		if op.StatusDetails != nil {
-			if err != "" {
-				err += ": "
-			}
-			err += *op.StatusDetails
+			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, NewError(op.Error))
 		}
-		return false, fmt.Errorf("certificateOperation %s: %s", *op.Status, err)
+		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, NewError(op.Error))
 	}
 }
