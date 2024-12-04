@@ -151,7 +151,8 @@ func (m *manager) createCertificates(ctx context.Context) error {
 			commonName:      "*.apps." + managedDomain,
 		},
 	}
-
+	w := logger.Instance
+	defer func() { logger.Instance = w }()
 	logger.Instance = writer{manager: m, logLevel: logger.LogInfo}
 
 	for _, c := range certs {
