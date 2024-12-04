@@ -525,7 +525,7 @@ func (sv openShiftClusterStaticValidator) validatePlatformIdentities(oc *OpenShi
 	}
 
 	if operatorRolePresent && len(pwip.PlatformWorkloadIdentities) == 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.platformWorkloadIdentityProfile", "Platform workload identity profile cannot be empty.")
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "The set of platform workload identities cannot be empty.")
 	}
 
 	return nil

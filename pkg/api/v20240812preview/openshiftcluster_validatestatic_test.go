@@ -1465,7 +1465,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 					UpgradeableTo: &invalidUpgradeableToValue,
 				}
 			},
-			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile: Platform workload identity profile cannot be empty.",
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: The set of platform workload identities cannot be empty.",
 		},
 		{
 			name: "No platform identities provided in PlatformWorkloadIdentityProfile - empty map",
@@ -1481,7 +1481,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 					UpgradeableTo:              &invalidUpgradeableToValue,
 				}
 			},
-			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile: Platform workload identity profile cannot be empty.",
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: The set of platform workload identities cannot be empty.",
 		},
 	}
 
@@ -1635,7 +1635,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = map[string]PlatformWorkloadIdentity{}
 			},
-			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile: Platform workload identity profile cannot be empty.",
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: The set of platform workload identities cannot be empty.",
 		},
 		{
 			name: "No platform identities provided in PlatformWorkloadIdentityProfile - nil",
@@ -1655,7 +1655,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = nil
 			},
-			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile: Platform workload identity profile cannot be empty.",
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: The set of platform workload identities cannot be empty.",
 		},
 	}
 
