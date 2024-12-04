@@ -28,7 +28,7 @@ variables:
   - name: VERSION
     value: $(TAG)
   - name: TAG
-    value: $[ coalesce('pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId)', 'master-$(Build.SourceVersion)') ]
+    value: ""  # Initialize TAG, will be dynamically set during runtime
   - name: ARO_IMAGE
     value: arosvcdev.azurecr.io/aro:$(TAG)
   - name: ARO_SELENIUM_HOSTNAME
@@ -37,7 +37,30 @@ variables:
     value: "!smoke&&!regressiontest"
 
 stages:
+  - stage: Set_Global_Variables
+    jobs:
+      - job: Set_TAG_Variable
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          # Dynamically set the TAG variable for global use
+          - script: |
+              if [ -n "$(System.PullRequest.PullRequestId)" ]; then
+                echo "##vso[task.setvariable variable=TAG;isOutput=true]pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId)"
+              else
+                if [ -n "$(Build.SourceVersion)" ]; then
+                  echo "##vso[task.setvariable variable=TAG;isOutput=true]master-$(Build.SourceVersion)"
+              else
+                echo "##vso[task.setvariable variable=TAG;isOutput=true]default-tag"
+                fi
+              fi
+              echo "Resolved TAG: pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId) or master-$(Build.SourceVersion)"
+            displayName: Set TAG Variable Globally
+
   - stage: Containerized_CI
+    dependsOn: Set_Global_Variables
+    variables:
+      TAG: $[ dependencies.Set_Global_Variables.outputs['Set_TAG_Variable.TAG'] ]
     jobs:
       - job: Build_Test_And_Push_Az_ARO_Extension
         pool:
