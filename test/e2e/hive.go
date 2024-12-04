@@ -44,7 +44,6 @@ var _ = Describe("Hive-managed ARO cluster", func() {
 	})
 
 	It("has been properly created/adopted by Hive", func(ctx context.Context) {
-		Skip("Hive test currently failed.")
 		By("verifying that a corresponding ClusterDeployment object exists in the expected namespace in the Hive cluster")
 		cd := &hivev1.ClusterDeployment{}
 		err := clients.Hive.Get(ctx, client.ObjectKey{

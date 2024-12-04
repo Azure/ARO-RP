@@ -6,6 +6,7 @@ package hive
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
@@ -66,8 +67,10 @@ func (hr *clusterManager) resources(sub *api.SubscriptionDocument, doc *api.Open
 		doc.OpenShiftCluster.Name,
 		doc.ID,
 		doc.OpenShiftCluster.Properties.InfraID,
+		doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
 		doc.OpenShiftCluster.Location,
 		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+		doc.OpenShiftCluster.Properties.ClusterProfile.Domain,
 	)
 	err := utillog.EnrichHiveWithCorrelationData(cd, doc.CorrelationData)
 	if err != nil {
@@ -188,11 +191,18 @@ func envSecret(namespace string, isDevelopment bool) *corev1.Secret {
 	}
 }
 
-func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, location, APIServerPrivateEndpointIP string) *hivev1.ClusterDeployment {
+func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, resourceGroupID, location, APIServerPrivateEndpointIP, clusterDomain string) *hivev1.ClusterDeployment {
+	if !strings.ContainsRune(clusterDomain, '.') {
+		clusterDomain += "." + os.Getenv("DOMAIN_NAME")
+	}
 	return &hivev1.ClusterDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ClusterDeploymentName,
 			Namespace: namespace,
+			Labels: map[string]string{
+				"hive.openshift.io/cluster-platform": "azure",
+				"hive.openshift.io/cluster-region":   location,
+			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
 			BaseDomain:  "",
@@ -207,7 +217,7 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, locati
 			},
 			Platform: hivev1.Platform{
 				Azure: &hivev1azure.Platform{
-					BaseDomainResourceGroupName: "",
+					BaseDomainResourceGroupName: resourceGroupID,
 					Region:                      location,
 					CredentialsSecretRef: corev1.LocalObjectReference{
 						Name: clusterServicePrincipalSecretName,
@@ -216,6 +226,7 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, locati
 			},
 			ControlPlaneConfig: hivev1.ControlPlaneConfigSpec{
 				APIServerIPOverride: APIServerPrivateEndpointIP,
+				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
 			PreserveOnDelete: true,
 			ManageDNS:        false,
