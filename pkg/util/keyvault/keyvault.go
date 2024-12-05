@@ -253,7 +253,7 @@ func (e *Error) Error() string {
 	return keyvaultError(e.AzErr)
 }
 
-func NewError(err *azkeyvault.Error) error {
+func newError(err *azkeyvault.Error) error {
 	return &Error{AzErr: err}
 }
 
@@ -277,8 +277,8 @@ func checkOperation(op *azkeyvault.CertificateOperation) (bool, error) {
 
 	default:
 		if op.StatusDetails != nil {
-			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, NewError(op.Error))
+			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, newError(op.Error))
 		}
-		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, NewError(op.Error))
+		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, newError(op.Error))
 	}
 }
