@@ -45,10 +45,11 @@ func TestShortCommonName(t *testing.T) {
 
 func TestCheckOperation(t *testing.T) {
 	tests := []struct {
-		name      string
-		operation *azkeyvault.CertificateOperation
-		wantBool  bool
-		wantError bool
+		name          string
+		operation     *azkeyvault.CertificateOperation
+		wantBool      bool
+		wantError     bool
+		errorContains []string
 	}{
 		{
 			name: "certificate operation is inProgress",
@@ -76,8 +77,27 @@ func TestCheckOperation(t *testing.T) {
 					Message: pointerutils.ToPtr("some message"),
 				},
 			},
-			wantBool:  false,
-			wantError: true,
+			wantBool:      false,
+			wantError:     true,
+			errorContains: []string{"some error", "some code", "some message"},
+		},
+		{
+			name: "certificate operation is failed",
+			operation: &azkeyvault.CertificateOperation{
+				Status:        pointerutils.ToPtr("failed"),
+				StatusDetails: pointerutils.ToPtr("some error"),
+				Error: &azkeyvault.Error{
+					Code:    pointerutils.ToPtr("some code"),
+					Message: pointerutils.ToPtr("some message"),
+					InnerError: &azkeyvault.Error{
+						Code:    pointerutils.ToPtr("some inner code"),
+						Message: pointerutils.ToPtr("some inner message"),
+					},
+				},
+			},
+			wantBool:      false,
+			wantError:     true,
+			errorContains: []string{"some error", "some code", "some message", "some inner code", "some inner message"},
 		},
 	}
 
@@ -86,6 +106,9 @@ func TestCheckOperation(t *testing.T) {
 			gotBool, err := checkOperation(test.operation)
 			if test.wantError {
 				require.Error(t, err)
+				for _, s := range test.errorContains {
+					require.Contains(t, err.Error(), s)
+				}
 			} else {
 				require.NoError(t, err)
 			}

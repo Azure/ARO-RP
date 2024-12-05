@@ -263,7 +263,7 @@ func keyvaultError(err *azkeyvault.Error) string {
 	}
 
 	var sb strings.Builder
-	spew.Fdump(&sb, err)
+	spew.Fprintf(&sb, "%#v", err)
 	return sb.String()
 }
 
