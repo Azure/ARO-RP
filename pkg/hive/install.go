@@ -203,9 +203,9 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			Name:      ClusterDeploymentName,
 			Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
 			Labels: map[string]string{
-				"hive.openshift.io/cluster-platform": "azure",
-				"hive.openshift.io/cluster-region":   doc.OpenShiftCluster.Location,
-				createdByHiveLabelKey:                "true",
+				hiveClusterPlatformLabel: "azure",
+				hiveClusterRegionLabel:   doc.OpenShiftCluster.Location,
+				createdByHiveLabelKey:    "true",
 			},
 			Annotations: map[string]string{
 				// https://github.com/openshift/hive/pull/2157
@@ -214,6 +214,10 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 
 				// TODO: remove until we use a version of hive at minimal install
 				"hive.openshift.io/cli-domain-from-installer-image": "true",
+
+				// https://github.com/openshift/hive/pull/2501
+				// Disable hibernation controller
+				hiveInfraDisabledAnnotation: "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
