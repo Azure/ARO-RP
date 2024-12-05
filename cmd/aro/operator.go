@@ -36,7 +36,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machinehealthcheck"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/node"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature"
@@ -127,11 +126,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", routefix.ControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", routefix.ControllerName, err)
-		}
-		if err = (monitoring.NewReconciler(
-			log.WithField("controller", monitoring.ControllerName),
-			client)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
 		}
 		if err = (rbac.NewReconciler(
 			log.WithField("controller", rbac.ControllerName),

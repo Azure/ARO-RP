@@ -22,20 +22,17 @@ import (
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/yaml"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	cpcController "github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -176,45 +173,6 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 			log.Error("final changes ", final)
 		}
 		Expect(len(final) - len(initial)).To(Equal(1))
-	})
-})
-
-var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
-	It("must not have persistent volume set", func(ctx context.Context) {
-		var cm *corev1.ConfigMap
-		getFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get
-
-		By("waiting for the ConfigMap to make sure it exists")
-		cm = GetK8sObjectWithRetry(ctx, getFunc, "cluster-monitoring-config", metav1.GetOptions{})
-
-		By("unmarshalling the config from the ConfigMap data")
-		var configData monitoring.Config
-		configDataJSON, err := yaml.YAMLToJSON([]byte(cm.Data["config.yaml"]))
-		Expect(err).NotTo(HaveOccurred())
-
-		err = codec.NewDecoderBytes(configDataJSON, &codec.JsonHandle{}).Decode(&configData)
-		if err != nil {
-			log.Warn(err)
-		}
-
-		By("checking config correctness")
-		Expect(configData.PrometheusK8s.Retention).To(BeEmpty())
-		Expect(configData.PrometheusK8s.VolumeClaimTemplate).To(BeNil())
-		Expect(configData.AlertManagerMain.VolumeClaimTemplate).To(BeNil())
-	})
-
-	It("must be restored if deleted", func(ctx context.Context) {
-		getFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get
-		deleteFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Delete
-
-		By("waiting for the ConfigMap to make sure it exists")
-		GetK8sObjectWithRetry(ctx, getFunc, "cluster-monitoring-config", metav1.GetOptions{})
-
-		By("deleting for the ConfigMap")
-		DeleteK8sObjectWithRetry(ctx, deleteFunc, "cluster-monitoring-config", metav1.DeleteOptions{})
-
-		By("waiting for the ConfigMap to make sure it was restored")
-		GetK8sObjectWithRetry(ctx, getFunc, "cluster-monitoring-config", metav1.GetOptions{})
 	})
 })
 
