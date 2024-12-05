@@ -13,7 +13,10 @@ func (f *frontend) validatePlatformWorkloadIdentities(oc *api.OpenShiftCluster) 
 	roleSets := f.getAvailablePlatformWorkloadIdentityRoleSets()
 
 	platformWorkloadIdentityRolesByVersionService := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
-	platformWorkloadIdentityRolesByVersionService.PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets(oc, roleSets)
+	err := platformWorkloadIdentityRolesByVersionService.PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets(oc, roleSets)
+	if err != nil {
+		return err
+	}
 	matches := platformWorkloadIdentityRolesByVersionService.MatchesPlatformWorkloadIdentityRoles(oc)
 
 	if !matches {

@@ -4416,30 +4416,14 @@ func getPlatformWorkloadIdentityRolesChangeFeed() map[string]*api.PlatformWorklo
 			Properties: api.PlatformWorkloadIdentityRoleSetProperties{
 				OpenShiftVersion: defaultMinorVersion,
 				PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-					{
-						OperatorName: "cloud-controller-manager",
-					},
-					{
-						OperatorName: "ingress",
-					},
-					{
-						OperatorName: "machine-api",
-					},
-					{
-						OperatorName: "disk-csi-driver",
-					},
-					{
-						OperatorName: "cloud-network-config",
-					},
-					{
-						OperatorName: "image-registry",
-					},
-					{
-						OperatorName: "file-csi-driver",
-					},
-					{
-						OperatorName: "aro-operator",
-					},
+					{OperatorName: "cloud-controller-manager"},
+					{OperatorName: "ingress"},
+					{OperatorName: "machine-api"},
+					{OperatorName: "disk-csi-driver"},
+					{OperatorName: "cloud-network-config"},
+					{OperatorName: "image-registry"},
+					{OperatorName: "file-csi-driver"},
+					{OperatorName: "aro-operator"},
 				},
 			},
 		},
@@ -4447,33 +4431,15 @@ func getPlatformWorkloadIdentityRolesChangeFeed() map[string]*api.PlatformWorklo
 			Properties: api.PlatformWorkloadIdentityRoleSetProperties{
 				OpenShiftVersion: getMIWIUpgradeableToVersion().MinorVersion(),
 				PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-					{
-						OperatorName: "cloud-controller-manager",
-					},
-					{
-						OperatorName: "ingress",
-					},
-					{
-						OperatorName: "machine-api",
-					},
-					{
-						OperatorName: "disk-csi-driver",
-					},
-					{
-						OperatorName: "cloud-network-config",
-					},
-					{
-						OperatorName: "image-registry",
-					},
-					{
-						OperatorName: "file-csi-driver",
-					},
-					{
-						OperatorName: "aro-operator",
-					},
-					{
-						OperatorName: "extra-new-operator",
-					},
+					{OperatorName: "cloud-controller-manager"},
+					{OperatorName: "ingress"},
+					{OperatorName: "machine-api"},
+					{OperatorName: "disk-csi-driver"},
+					{OperatorName: "cloud-network-config"},
+					{OperatorName: "image-registry"},
+					{OperatorName: "file-csi-driver"},
+					{OperatorName: "aro-operator"},
+					{OperatorName: "extra-new-operator"},
 				},
 			},
 		},
