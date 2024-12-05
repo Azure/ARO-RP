@@ -1811,7 +1811,7 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 			wantErr: "OIDCIssuer is nil",
 		},
 		{
-			name: "Fail - Operator name do not exists in PlatformWorkloadIdentityProfile",
+			name: "Fail - Operator name does not exist in PlatformWorkloadIdentityProfile",
 			oc: &api.OpenShiftClusterDocument{
 				ID: docID,
 				OpenShiftCluster: &api.OpenShiftCluster{
