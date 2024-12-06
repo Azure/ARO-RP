@@ -30,7 +30,7 @@ variables:
   - name: PR_TAG
     value: $[ coalesce(format('pr-{0}-{1}', variables['System.PullRequest.PullRequestId'], variables['System.PullRequest.SourceCommitId']), '') ]
   - name: MASTER_TAG
-    value: $[ coalesce(format('master-{0}', variables['Build.SourceVersion']), '') ]
+    value: $[ format('master-{0}', variables['Build.SourceVersion']) ]
   - name: TAG
     value: $[ coalesce(variables['PR_TAG'], variables['MASTER_TAG']) ]
   - name: ARO_IMAGE
