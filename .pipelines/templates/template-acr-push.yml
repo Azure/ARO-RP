@@ -6,6 +6,8 @@ parameters:
     type: string
   - name: repository  # This is both the ACR and local repository name
     type: string  # The local and ACR image repository name
+  - name: tag  # The tag for the image
+    type: string
   - name: pushLatest
     type: boolean
     default: false
@@ -48,44 +50,25 @@ steps:
         echo "Listing Docker images..."
         docker images
 
-        # Define both the full repository image name and the local name
-        IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:$(VERSION)"
-        LOCAL_IMAGE="${{ parameters.repository }}:$(VERSION)"
+        # Define the full repository image name
+        IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:${{ parameters.tag }}"
 
-        # Check if the image exists locally with the full repository tag
-        echo "Checking for image $IMAGE_NAME..."
+        # Check if the local image exists
+        echo "Checking for image ${IMAGE_NAME}..."
         if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
-          # If the full repository tagged image does not exist, check for the local image
-          echo "Full repository image not found. Checking for local image $LOCAL_IMAGE..."
-          if [[ "$(docker images -q $LOCAL_IMAGE 2> /dev/null)" == "" ]]; then
-            echo "Error: Neither $IMAGE_NAME nor $LOCAL_IMAGE found. Exiting."
-            exit 1
-          else
-            # Retag the local image with the full repository path
-            echo "Local image $LOCAL_IMAGE found. Retagging with full repository path..."
-            docker tag $LOCAL_IMAGE $IMAGE_NAME
-          fi
+          echo "Error: Image $IMAGE_NAME not found locally. Exiting."
+          exit 1
         else
-          echo "Image $IMAGE_NAME found. Proceeding to push..."
+          echo "Image $IMAGE_NAME found locally. Proceeding to push..."
         fi
 
-        # Ensure the image is available locally before tagging 'latest'
-        IMAGE_LATEST="${ACR_FQDN}/${{ parameters.repository }}:latest"
-        echo "Checking for image $IMAGE_LATEST..."
-        if [[ "$(docker images -q $IMAGE_LATEST 2> /dev/null)" == "" ]]; then
-          echo "Warning: Image $IMAGE_LATEST not found. Skipping 'latest' tag."
-          SKIP_LATEST=true
-        else
-          echo "Image $IMAGE_LATEST found. Proceeding with 'latest' tag."
-          SKIP_LATEST=false
-        fi
-
-        # Push the Docker image to ACR with the build ID
-        echo "Pushing image with build ID to ACR..."
+        # Push the Docker image to ACR with the specified tag
+        echo "Pushing image ${IMAGE_NAME} to ACR..."
         docker push $IMAGE_NAME
 
         # Optionally push the image as 'latest'
-        if [ "${{ parameters.pushLatest }}" == "true" ] && [ "$SKIP_LATEST" == "false" ]; then
+        if [ "${{ parameters.pushLatest }}" == "true" ]; then
+          IMAGE_LATEST="${ACR_FQDN}/${{ parameters.repository }}:latest"
           echo "Tagging image with 'latest' and pushing..."
           docker tag $IMAGE_NAME $IMAGE_LATEST
           docker push $IMAGE_LATEST
