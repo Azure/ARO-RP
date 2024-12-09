@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 type checkFn func(mgmtfeatures.ResourceGroup, *logrus.Entry) bool
@@ -34,7 +33,7 @@ type ResourceCleaner struct {
 	privatelinkservicescli armnetwork.PrivateLinkServicesClient
 	securitygroupscli      armnetwork.SecurityGroupsClient
 
-	subnet subnet.Manager
+	subnetcli armnetwork.SubnetsClient
 
 	shouldDelete checkFn
 }
@@ -71,6 +70,8 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		return nil, err
 	}
 
+	subnetClient, err := armnetwork.NewSubnetsClient(env.SubscriptionID(), spTokenCredential, clientOptions)
+
 	return &ResourceCleaner{
 		log:    log,
 		dryRun: dryRun,
@@ -79,7 +80,7 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		privatelinkservicescli: privateLinkServiceClient,
 		securitygroupscli:      securityGroupsClient,
 
-		subnet: subnet.NewManager(env.Environment(), env.SubscriptionID(), authorizer),
+		subnetcli: subnetClient,
 
 		// ShouldDelete decides whether the resource group gets deleted
 		shouldDelete: shouldDelete,
