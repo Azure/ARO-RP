@@ -72,6 +72,7 @@ func IsOpenShiftNamespace(ns string) bool {
 		"openshift-operator-lifecycle-manager":             {},
 		"openshift-operators":                              {},
 		"openshift-ovirt-infra":                            {},
+		"openshift-ovn-kubernetes":                         {},
 		"openshift-sdn":                                    {},
 		"openshift-service-ca":                             {},
 		"openshift-service-ca-operator":                    {},
