@@ -33,11 +33,7 @@ type ResourceCleaner struct {
 	privatelinkservicescli armnetwork.PrivateLinkServicesClient
 	securitygroupscli      armnetwork.SecurityGroupsClient
 
-<<<<<<< HEAD
-	subnetcli armnetwork.SubnetsClient
-=======
 	subnet armnetwork.SubnetsClient
->>>>>>> 334804109 (Updated from subnetcli to subnet)
 
 	shouldDelete checkFn
 }
@@ -84,11 +80,7 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		privatelinkservicescli: privateLinkServiceClient,
 		securitygroupscli:      securityGroupsClient,
 
-<<<<<<< HEAD
-		subnetcli: subnetClient,
-=======
 		subnet: subnetClient,
->>>>>>> 334804109 (Updated from subnetcli to subnet)
 
 		// ShouldDelete decides whether the resource group gets deleted
 		shouldDelete: shouldDelete,
