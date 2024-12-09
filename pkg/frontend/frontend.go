@@ -10,10 +10,12 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-chi/chi/v5"
 	chiMiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
@@ -48,6 +50,7 @@ type frontendDBs interface {
 	database.DatabaseGroupWithAsyncOperations
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithPlatformWorkloadIdentityRoleSets
+	database.DatabaseGroupWithMaintenanceManifests
 }
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
@@ -286,6 +289,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		})
 		r.Get("/supportedvmsizes", f.supportedvmsizes)
 
+		r.Route("/maintenancemanifests", func(r chi.Router) {
+			r.Get("/queued", f.getAdminQueuedMaintManifests)
+		})
+
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
 			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
 				// Etcd recovery
@@ -326,6 +333,17 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
+
+				// MIMO
+				r.Route("/maintenancemanifests", func(r chi.Router) {
+					r.Get("/", f.getAdminMaintManifests)
+					r.Put("/", f.putAdminMaintManifestCreate)
+					r.Route("/{manifestId}", func(r chi.Router) {
+						r.Get("/", f.getSingleAdminMaintManifest)
+						r.Delete("/", f.deleteAdminMaintManifest)
+						r.Post("/cancel", f.postAdminMaintManifestCancel)
+					})
+				})
 			})
 		})
 
@@ -492,4 +510,22 @@ func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
 
 	log = log.WithField("errorDetails", err.Error())
 	log.Info("front end operation failed")
+}
+
+// resourceIdFromURLParams returns an Azure Resource ID built out of the
+// individual parameters of the URL.
+func resourceIdFromURLParams(r *http.Request) string {
+	subID, resType, resProvider, resName, resGroupName := chi.URLParam(r, "subscriptionId"),
+		chi.URLParam(r, "resourceType"),
+		chi.URLParam(r, "resourceProviderNamespace"),
+		chi.URLParam(r, "resourceName"),
+		chi.URLParam(r, "resourceGroupName")
+
+	return strings.ToLower(azure.Resource{
+		SubscriptionID: subID,
+		ResourceGroup:  resGroupName,
+		ResourceType:   resType,
+		ResourceName:   resName,
+		Provider:       resProvider,
+	}.String())
 }

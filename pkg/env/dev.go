@@ -77,6 +77,9 @@ func (d *dev) AROOperatorImage() string {
 }
 
 func (d *dev) Listen() (net.Listener, error) {
+	if d.Component() == string(COMPONENT_MIMO_ACTUATOR) {
+		return net.Listen("tcp", ":8445")
+	}
 	return net.Listen("tcp", ":8443")
 }
 

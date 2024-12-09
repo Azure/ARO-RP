@@ -1026,6 +1026,34 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
+	mimo := &arm.Resource{
+		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+				Resource: &sdkcosmos.SQLContainerResource{
+					ID: to.StringPtr("MaintenanceManifests"),
+					PartitionKey: &sdkcosmos.ContainerPartitionKey{
+						Paths: []*string{
+							to.StringPtr("/clusterResourceID"),
+						},
+						Kind: &hashPartitionKey,
+					},
+					DefaultTTL: to.Int32Ptr(-1),
+				},
+				Options: &sdkcosmos.CreateUpdateOptions{
+					Throughput: to.Int32Ptr(cosmosDbGatewayProvisionedThroughputHack),
+				},
+			},
+			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/MaintenanceManifests')]"),
+			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+	}
+
 	if !g.production {
 		database.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{
 			AutoscaleSettings: &sdkcosmos.AutoscaleSettings{
@@ -1034,6 +1062,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		}
 		portal.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
 		gateway.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
+		mimo.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
 	}
 
 	rs := []*arm.Resource{
@@ -1270,6 +1299,15 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		// Monitors
 		g.rpCosmosDBTriggers(databaseName, "Monitors", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 	)
+
+	// Don't deploy the MIMO databases in production yet
+	if !g.production {
+		rs = append(rs,
+			mimo,
+			// MIMO DB triggers
+			g.rpCosmosDBTriggers(databaseName, "MaintenanceManifests", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		)
+	}
 
 	if addDependsOn {
 		for i := range rs {

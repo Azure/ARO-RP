@@ -14,11 +14,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
-var _ = Describe("[Admin API] Cluster admin update action", func() {
+var _ = Describe("[Admin API] Cluster admin update action", Serial, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must run cluster update operation on a cluster", func(ctx context.Context) {
 		var oc = &admin.OpenShiftCluster{}
+
+		// Wait for the cluster to be in a succeeded state before continuing
+		Eventually(func(g Gomega, ctx context.Context) {
+			oc = adminGetCluster(g, ctx, clusterResourceID)
+			g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("triggering the update via RP admin API")
 		resp, err := adminRequest(ctx, http.MethodPatch, clusterResourceID, nil, true, json.RawMessage("{}"), oc)

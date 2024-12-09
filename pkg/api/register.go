@@ -71,6 +71,16 @@ type SecretConverter interface {
 	ToInternal(interface{}, *Secret)
 }
 
+type MaintenanceManifestConverter interface {
+	ToExternal(doc *MaintenanceManifestDocument, clusterNamespaced bool) interface{}
+	ToExternalList(docs []*MaintenanceManifestDocument, nextLink string, clusterNamespaced bool) interface{}
+	ToInternal(interface{}, *MaintenanceManifestDocument)
+}
+
+type MaintenanceManifestStaticValidator interface {
+	Static(interface{}, *MaintenanceManifestDocument) error
+}
+
 // Version is a set of endpoints implemented by each API version
 type Version struct {
 	OpenShiftClusterConverter                      OpenShiftClusterConverter
@@ -87,6 +97,8 @@ type Version struct {
 	SyncIdentityProviderConverter                  SyncIdentityProviderConverter
 	SecretConverter                                SecretConverter
 	ClusterManagerStaticValidator                  ClusterManagerStaticValidator
+	MaintenanceManifestConverter                   MaintenanceManifestConverter
+	MaintenanceManifestStaticValidator             MaintenanceManifestStaticValidator
 }
 
 // APIs is the map of registered API versions

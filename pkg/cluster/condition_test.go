@@ -74,59 +74,6 @@ func TestOperatorConsoleExists(t *testing.T) {
 	}
 }
 
-func TestIsOperatorAvailable(t *testing.T) {
-	for _, tt := range []struct {
-		name                 string
-		availableCondition   configv1.ConditionStatus
-		progressingCondition configv1.ConditionStatus
-		want                 bool
-	}{
-		{
-			name:                 "Available && Progressing; not available",
-			availableCondition:   configv1.ConditionTrue,
-			progressingCondition: configv1.ConditionTrue,
-		},
-		{
-			name:                 "Available && !Progressing; available",
-			availableCondition:   configv1.ConditionTrue,
-			progressingCondition: configv1.ConditionFalse,
-			want:                 true,
-		},
-		{
-			name:                 "!Available && Progressing; not available",
-			availableCondition:   configv1.ConditionFalse,
-			progressingCondition: configv1.ConditionTrue,
-		},
-		{
-			name:                 "!Available && !Progressing; not available",
-			availableCondition:   configv1.ConditionFalse,
-			progressingCondition: configv1.ConditionFalse,
-		},
-	} {
-		operator := &configv1.ClusterOperator{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "name",
-			},
-			Status: configv1.ClusterOperatorStatus{
-				Conditions: []configv1.ClusterOperatorStatusCondition{
-					{
-						Type:   configv1.OperatorAvailable,
-						Status: tt.availableCondition,
-					},
-					{
-						Type:   configv1.OperatorProgressing,
-						Status: tt.progressingCondition,
-					},
-				},
-			},
-		}
-		available := isOperatorAvailable(operator)
-		if available != tt.want {
-			t.Error(available)
-		}
-	}
-}
-
 func TestMinimumWorkerNodesReady(t *testing.T) {
 	ctx := context.Background()
 	const phaseFailed = "Failed"

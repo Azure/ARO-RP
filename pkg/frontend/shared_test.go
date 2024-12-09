@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
@@ -83,6 +84,8 @@ type testInfra struct {
 	openShiftVersionsDatabase                database.OpenShiftVersions
 	platformWorkloadIdentityRoleSetsClient   *cosmosdb.FakePlatformWorkloadIdentityRoleSetDocumentClient
 	platformWorkloadIdentityRoleSetsDatabase database.PlatformWorkloadIdentityRoleSets
+	maintenanceManifestsClient               *cosmosdb.FakeMaintenanceManifestDocumentClient
+	maintenanceManifestsDatabase             database.MaintenanceManifests
 }
 
 func newTestInfra(t *testing.T) *testInfra {
@@ -204,6 +207,13 @@ func (ti *testInfra) WithClusterManagerConfigurations() *testInfra {
 	return ti
 }
 
+func (ti *testInfra) WithMaintenanceManifests(now func() time.Time) *testInfra {
+	ti.maintenanceManifestsDatabase, ti.maintenanceManifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
+	ti.fixture.WithMaintenanceManifests(ti.maintenanceManifestsDatabase)
+	ti.dbGroup.WithMaintenanceManifests(ti.maintenanceManifestsDatabase)
+	return ti
+}
+
 func (ti *testInfra) done() {
 	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
@@ -254,7 +264,7 @@ func (ti *testInfra) request(method, url string, header http.Header, in interfac
 
 func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse interface{}) error {
 	if resp.StatusCode != wantStatusCode {
-		return fmt.Errorf("unexpected status code %d, wanted %d", resp.StatusCode, wantStatusCode)
+		return fmt.Errorf("unexpected status code %d, wanted %d: %s", resp.StatusCode, wantStatusCode, string(b))
 	}
 
 	if wantError != "" {
@@ -264,8 +274,8 @@ func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantErr
 			return err
 		}
 
-		if cloudErr.Error() != wantError {
-			return fmt.Errorf("unexpected error %s, wanted %s", cloudErr.Error(), wantError)
+		if diff := deep.Equal(cloudErr.Error(), wantError); diff != nil {
+			return fmt.Errorf("unexpected error %s, wanted %s (%s)", cloudErr.Error(), wantError, diff)
 		}
 
 		return nil

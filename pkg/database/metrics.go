@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-func EmitMetrics(ctx context.Context, log *logrus.Entry, dbOpenShiftClusters OpenShiftClusters, m metrics.Emitter) {
+func EmitOpenShiftClustersMetrics(ctx context.Context, log *logrus.Entry, dbOpenShiftClusters OpenShiftClusters, m metrics.Emitter) {
 	defer recover.Panic(log)
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
@@ -24,6 +24,21 @@ func EmitMetrics(ctx context.Context, log *logrus.Entry, dbOpenShiftClusters Ope
 			log.Error(err)
 		} else {
 			m.EmitGauge("database.openshiftclusters.queue.length", int64(i), nil)
+		}
+	}
+}
+
+func EmitMIMOMetrics(ctx context.Context, log *logrus.Entry, dbMaintenanceManifests MaintenanceManifests, m metrics.Emitter) {
+	defer recover.Panic(log)
+	t := time.NewTicker(time.Minute)
+	defer t.Stop()
+
+	for range t.C {
+		i, err := dbMaintenanceManifests.QueueLength(ctx)
+		if err != nil {
+			log.Error(err)
+		} else {
+			m.EmitGauge("database.maintenancemanifests.queue.length", int64(i), nil)
 		}
 	}
 }

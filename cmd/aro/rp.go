@@ -154,7 +154,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	go database.EmitMetrics(ctx, log, dbOpenShiftClusters, metrics)
+	go database.EmitOpenShiftClustersMetrics(ctx, log, dbOpenShiftClusters, metrics)
 
 	feAead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.FrontendEncryptionSecretV2Name, env.FrontendEncryptionSecretName)
 	if err != nil {
@@ -171,6 +171,15 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		WithOpenShiftVersions(dbOpenShiftVersions).
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions)
+
+	// MIMO only activated in development for now
+	if _env.IsLocalDevelopmentMode() {
+		dbMaintenanceManifests, err := database.NewMaintenanceManifests(ctx, dbc, dbName)
+		if err != nil {
+			return err
+		}
+		dbg.WithMaintenanceManifests(dbMaintenanceManifests)
+	}
 
 	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {

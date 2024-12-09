@@ -131,6 +131,12 @@ func skipIfSeleniumNotEnabled() {
 	}
 }
 
+func skipIfMIMOActuatorNotEnabled() {
+	if os.Getenv("ARO_E2E_MIMO") == "" {
+		Skip("ARO_E2E_MIMO not set, skipping MIMO e2e")
+	}
+}
+
 func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
 	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
 		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")

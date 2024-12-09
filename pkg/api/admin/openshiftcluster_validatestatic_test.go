@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/date"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/validate"
@@ -624,16 +626,30 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisionedBy: Changing property 'properties.provisionedBy' is not allowed.",
 		},
 		{
-			name: "registryProfiles change is not allowed",
+			name: "registryProfiles username change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser"}},
+						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", IssueDate: toDate(time.Now())}},
 					},
 				}
 			},
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.RegistryProfiles[0].Username = "someothertestuser"
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
+		},
+		{
+			name: "registryProfiles expiry change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", IssueDate: toDate(time.Now())}},
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.RegistryProfiles[0].IssueDate = toDate(time.Now().UTC().Add(time.Hour * 24 * 30))
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
 		},
@@ -765,4 +781,8 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			}
 		})
 	}
+}
+
+func toDate(t time.Time) *date.Time {
+	return &date.Time{Time: t}
 }

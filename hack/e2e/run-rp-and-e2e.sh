@@ -92,6 +92,43 @@ kill_portal() {
     wait $rppid
 }
 
+run_mimo_actuator() {
+    echo "########## 🚀 Run MIMO Actuator in background ##########"
+    export AZURE_ENVIRONMENT=AzurePublicCloud
+    ./aro mimo-actuator &
+}
+
+kill_mimo_actuator() {
+    echo "########## Kill the MIMO Actuator running in background ##########"
+    rppid=$(lsof -t -i :8445)
+    kill $rppid
+    wait $rppid
+}
+
+validate_mimo_actuator_running() {
+    echo "########## ？Checking MIMO Actuator Status ##########"
+    ELAPSED=0
+    while true; do
+        sleep 5
+        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' http://localhost:8445/healthz/ready)
+        case $http_code in
+        "200")
+            echo "########## ✅ ARO MIMO Actuator Running ##########"
+            break
+            ;;
+        *)
+            echo "Attempt $ELAPSED - local MIMO Actuator is NOT up. Code : $http_code, waiting"
+            sleep 2
+            # after 40 secs return exit 1 to not block ci
+            ELAPSED=$((ELAPSED + 1))
+            if [ $ELAPSED -eq 20 ]; then
+                exit 1
+            fi
+            ;;
+        esac
+    done
+}
+
 run_vpn() {
     echo "########## 🚀 Run OpenVPN in background ##########"
     echo "Using Secret secrets/$VPN"
