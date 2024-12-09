@@ -29,7 +29,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 	})
 
 	t.Run("has expected key as prefix", func(t *testing.T) {
-		wantPrefix := fmt.Sprintf("%s-%s", saName, clusterName)
+		wantPrefix := fmt.Sprintf("%s_%s", saName, clusterName)
 		got := GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId, saName)
 
 		if !strings.HasPrefix(got, wantPrefix) {
