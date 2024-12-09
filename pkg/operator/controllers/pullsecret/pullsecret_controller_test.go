@@ -9,7 +9,9 @@ import (
 	"reflect"
 	"testing"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,6 +23,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -36,14 +39,21 @@ func TestPullSecretReconciler(t *testing.T) {
 		},
 	}
 
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
+
 	tests := []struct {
-		name     string
-		request  ctrl.Request
-		secrets  []client.Object
-		instance *arov1alpha1.Cluster
-		wantKeys []string
-		wantErr  bool
-		want     string
+		name           string
+		request        ctrl.Request
+		secrets        []client.Object
+		instance       *arov1alpha1.Cluster
+		wantKeys       []string
+		wantErr        bool
+		want           string
+		wantErrMsg     string
+		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
 			name: "deleted pull secret",
@@ -57,9 +67,11 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: nil,
+			instance:       baseCluster,
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       nil,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "missing arosvc pull secret",
@@ -80,9 +92,11 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: nil,
+			instance:       baseCluster,
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       nil,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "modified arosvc pull secret",
@@ -106,9 +120,11 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: nil,
+			instance:       baseCluster,
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       nil,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "unparseable secret",
@@ -130,9 +146,11 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: nil,
+			instance:       baseCluster,
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       nil,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "wrong secret type",
@@ -153,9 +171,11 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: nil,
+			instance:       baseCluster,
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       nil,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "no change",
@@ -177,9 +197,11 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: nil,
+			instance:       baseCluster,
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       nil,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "valid RH keys present",
@@ -205,9 +227,11 @@ func TestPullSecretReconciler(t *testing.T) {
 					},
 				},
 			},
-			instance: baseCluster,
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com"},
+			instance:       baseCluster,
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       []string{"registry.redhat.io", "cloud.openshift.com"},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "management disabled, valid RH key present",
@@ -243,8 +267,10 @@ func TestPullSecretReconciler(t *testing.T) {
 					},
 				},
 			},
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: []string{"registry.redhat.io"},
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       []string{"registry.redhat.io"},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "management disabled, valid RH key missing",
@@ -276,8 +302,10 @@ func TestPullSecretReconciler(t *testing.T) {
 					},
 				},
 			},
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: nil,
+			want:           `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:       nil,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 	}
 	for _, tt := range tests {
@@ -285,11 +313,11 @@ func TestPullSecretReconciler(t *testing.T) {
 			ctx := context.Background()
 
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
+			assert.NotNil(t, clientFake)
 
-			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: clientFake,
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			assert.NotNil(t, r)
+
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
 			}
@@ -300,8 +328,12 @@ func TestPullSecretReconciler(t *testing.T) {
 				return
 			}
 
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
+			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
+
 			s := &corev1.Secret{}
-			err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
+			assert.NotNil(t, s)
+			err = r.Client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
 			if err != nil {
 				t.Error(err)
 			}
@@ -315,6 +347,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			cluster := &arov1alpha1.Cluster{}
+			assert.NotNil(t, cluster)
 			err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 			if err != nil {
 				t.Fatal("Error found")
@@ -363,9 +396,8 @@ func TestParseRedHatKeys(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Reconciler{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), nil)
+			assert.NotNil(t, r)
 
 			out, err := r.parseRedHatKeys(tt.ps)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
@@ -760,16 +792,15 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			assert.NotNil(t, ctx)
 
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.initialSecret != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.initialSecret)
 			}
 
-			r := &Reconciler{
-				client: clientBuilder.Build(),
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientBuilder.Build())
+			assert.NotNil(t, r)
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
