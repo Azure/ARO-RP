@@ -27,12 +27,8 @@ variables:
     value: arosvcdev.azurecr.io/e2e
   - name: VERSION
     value: $(TAG)
-  - name: PR_TAG
-    value: ${{ variables['System.PullRequest.PullRequestId'] && variables['System.PullRequest.SourceCommitId'] && format('pr-{0}-{1}', variables['System.PullRequest.PullRequestId'], variables['System.PullRequest.SourceCommitId']) }}
-  - name: MASTER_TAG
-    value: ${{ variables['Build.SourceVersion'] && format('master-{0}', variables['Build.SourceVersion']) }}
   - name: TAG
-    value: ${{ coalesce(variables['PR_TAG'], variables['MASTER_TAG'], 'default-tag') }}
+    value: default-tag # Default fallback TAG
   - name: ARO_IMAGE
     value: arosvcdev.azurecr.io/aro:$(TAG)
   - name: ARO_SELENIUM_HOSTNAME
@@ -41,19 +37,56 @@ variables:
     value: "!smoke&&!regressiontest"
 
 stages:
-  - stage: Containerized_CI
+  - stage: Set_Tag_Stage
+    displayName: "Set Dynamic TAG Variables"
     jobs:
-      - job: Build_Test_And_Push_Az_ARO_Extension
+      - job: Set_Tag_Variables
+        displayName: "Set TAG Variables"
         pool:
           name: 1es-aro-ci-pool
         steps:
-          - template: ./templates/template-checkout.yml
+          - checkout: self
 
-          # Build and test the Az ARO Extension
+          - script: |
+              echo "Setting dynamic variables..."
+              if [ -n "$(System.PullRequest.PullRequestId)" ] && [ -n "$(System.PullRequest.SourceCommitId)" ]; then
+                PR_TAG="pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId)"
+                echo "##vso[task.setvariable variable=PR_TAG;isOutput=true]$PR_TAG"
+              fi
+              if [ -n "$(Build.SourceVersion)" ]; then
+                MASTER_TAG="master-$(Build.SourceVersion)"
+                echo "##vso[task.setvariable variable=MASTER_TAG;isOutput=true]$MASTER_TAG"
+              fi
+              if [ -n "$PR_TAG" ]; then
+                echo "##vso[task.setvariable variable=TAG;isOutput=true]$PR_TAG"
+              elif [ -n "$MASTER_TAG" ]; then
+                echo "##vso[task.setvariable variable=TAG;isOutput=true]$MASTER_TAG"
+              else
+                echo "##vso[task.setvariable variable=TAG;isOutput=true]default-tag"
+              fi
+            name: SetTagVars
+            displayName: "Set PR_TAG, MASTER_TAG, and TAG"
+
+  - stage: Containerized_CI
+    displayName: "Containerized CI"
+    dependsOn: Set_Tag_Stage
+    variables:
+      TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variables.outputs['SetTagVars.TAG'] ]
+
+    jobs:
+      - job: Build_Test_And_Push_Az_ARO_Extension
+        displayName: "Build and Push Az ARO Extension"
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          - checkout: self
+
+          # Build and Test Az ARO Extension
           - script: |
               set -xe
+              echo "Building with TAG: $(TAG)"
               DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(TAG)
-            displayName: 🛠 Build & Test Az ARO Extension
+            displayName: "🛠 Build & Test Az ARO Extension"
 
           # Push the image to ACR
           - template: ./templates/template-acr-push.yml
@@ -120,7 +153,9 @@ stages:
               pushLatest: true
 
   - stage: E2E  # E2E Stage using Docker Compose
-    dependsOn: Containerized_CI
+    dependsOn: [Set_Tag_Stage, Containerized_CI]
+    variables:
+      TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variables.outputs['SetTagVars.TAG'] ]  # Retrieve TAG dynamically
     jobs:
       - job: Run_E2E_Tests
         timeoutInMinutes: 0
