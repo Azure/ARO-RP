@@ -38,40 +38,34 @@ variables:
 
 stages:
   - stage: Set_Tag_Stage
-    displayName: "Set Dynamic TAG Variables"
+    displayName: "Set Dynamic TAG Variable"
     jobs:
-      - job: Set_Tag_Variables
-        displayName: "Set TAG Variables"
+      - job: Set_Tag_Variable
+        displayName: "Set TAG Variable"
         pool:
           name: 1es-aro-ci-pool
         steps:
           - checkout: self
 
           - script: |
-              echo "Setting dynamic variables..."
+              echo "Setting TAG variable..."
               if [ -n "$(System.PullRequest.PullRequestId)" ] && [ -n "$(System.PullRequest.SourceCommitId)" ]; then
-                PR_TAG="pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId)"
-                echo "##vso[task.setvariable variable=PR_TAG;isOutput=true]$PR_TAG"
-              fi
-              if [ -n "$(Build.SourceVersion)" ]; then
-                MASTER_TAG="master-$(Build.SourceVersion)"
-                echo "##vso[task.setvariable variable=MASTER_TAG;isOutput=true]$MASTER_TAG"
-              fi
-              if [ -n "$PR_TAG" ]; then
-                echo "##vso[task.setvariable variable=TAG;isOutput=true]$PR_TAG"
-              elif [ -n "$MASTER_TAG" ]; then
-                echo "##vso[task.setvariable variable=TAG;isOutput=true]$MASTER_TAG"
+                TAG="pr-$(System.PullRequest.PullRequestId)-$(System.PullRequest.SourceCommitId)"
+              elif [ -n "$(Build.SourceVersion)" ]; then
+                TAG="master-$(Build.SourceVersion)"
               else
-                echo "##vso[task.setvariable variable=TAG;isOutput=true]default-tag"
+                TAG="default-tag"
               fi
-            name: SetTagVars
-            displayName: "Set PR_TAG, MASTER_TAG, and TAG"
+              echo "##vso[task.setvariable variable=TAG;isOutput=true]$TAG"
+              echo "TAG set to: $TAG"
+            name: SetTag
+            displayName: "Set TAG Variable"
 
   - stage: Containerized_CI
     displayName: "Containerized CI"
     dependsOn: Set_Tag_Stage
     variables:
-      TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variables.outputs['SetTagVars.TAG'] ]
+      TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variable.outputs['SetTag.TAG'] ]
 
     jobs:
       - job: Build_Test_And_Push_Az_ARO_Extension
@@ -155,7 +149,7 @@ stages:
   - stage: E2E  # E2E Stage using Docker Compose
     dependsOn: [Set_Tag_Stage, Containerized_CI]
     variables:
-      TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variables.outputs['SetTagVars.TAG'] ]  # Retrieve TAG dynamically
+      TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variable.outputs['SetTag.TAG'] ]
     jobs:
       - job: Run_E2E_Tests
         timeoutInMinutes: 0
