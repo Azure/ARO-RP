@@ -28,11 +28,11 @@ variables:
   - name: VERSION
     value: $(TAG)
   - name: PR_TAG
-    value: $[ coalesce(format('pr-{0}-{1}', variables['System.PullRequest.PullRequestId'], variables['System.PullRequest.SourceCommitId']), '') ]
+    value: ${{ variables['System.PullRequest.PullRequestId'] && variables['System.PullRequest.SourceCommitId'] && format('pr-{0}-{1}', variables['System.PullRequest.PullRequestId'], variables['System.PullRequest.SourceCommitId']) }}
   - name: MASTER_TAG
-    value: $[ format('master-{0}', variables['Build.SourceVersion']) ]
+    value: ${{ variables['Build.SourceVersion'] && format('master-{0}', variables['Build.SourceVersion']) }}
   - name: TAG
-    value: $[ coalesce(variables['PR_TAG'], variables['MASTER_TAG']) ]
+    value: ${{ coalesce(variables['PR_TAG'], variables['MASTER_TAG'], 'default-tag') }}
   - name: ARO_IMAGE
     value: arosvcdev.azurecr.io/aro:$(TAG)
   - name: ARO_SELENIUM_HOSTNAME
