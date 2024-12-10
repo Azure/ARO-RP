@@ -71,6 +71,9 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 	}
 
 	subnetClient, err := armnetwork.NewSubnetsClient(env.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
 
 	return &ResourceCleaner{
 		log:    log,
