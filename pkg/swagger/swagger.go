@@ -134,13 +134,13 @@ func Run(api, outputDir string) error {
 	}
 
 	if g.roleSetList {
-		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityroleset"] = &PathItem{
+		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityrolesets"] = &PathItem{
 			Get: &Operation{
-				Tags:        []string{"PlatformWorkloadIdentityRoleSet"},
+				Tags:        []string{"PlatformWorkloadIdentityRoleSets"},
 				Summary:     "Lists a mapping of OpenShift versions to identity requirements, which include operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
-				Description: "This operation returns PlatformWorkloadIdentityRoleSet as a string",
-				OperationID: "PlatformWorkloadIdentityRoleSet_List",
-				Parameters:  g.populateParameters(6, "PlatformWorkloadIdentityRoleSetList", "Platform Workload Identity Role Set"),
+				Description: "This operation returns PlatformWorkloadIdentityRoleSets as a string",
+				OperationID: "PlatformWorkloadIdentityRoleSets_List",
+				Parameters:  g.populateParameters(6, "PlatformWorkloadIdentityRoleSetList", "Platform Workload Identity Role Sets"),
 				Responses:   g.populateResponses("PlatformWorkloadIdentityRoleSetList", false, http.StatusOK),
 				Pageable: &Pageable{
 					NextLinkName: "nextLink",
