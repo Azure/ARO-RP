@@ -166,7 +166,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			return err
 		}
 
-		spDynamic = dynamic.NewValidator(
+		spDynamic, err = dynamic.NewValidator(
 			dv.log,
 			dv.env,
 			dv.env.Environment(),
@@ -177,13 +177,16 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			spClientCred,
 			pdpClient,
 		)
+		if err != nil {
+			return err
+		}
 		err = spDynamic.ValidateServicePrincipal(ctx, spClientCred)
 		if err != nil {
 			return err
 		}
 	} else {
 		//ClusterMSI Validation
-		cmsiDynamic := dynamic.NewValidator(
+		cmsiDynamic, err := dynamic.NewValidator(
 			dv.log,
 			dv.env,
 			dv.env.Environment(),
@@ -194,13 +197,16 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			dv.clusterMSICredential,
 			pdpClient,
 		)
+		if err != nil {
+			return err
+		}
 		err = cmsiDynamic.ValidateClusterUserAssignedIdentity(ctx, dv.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities, dv.roleDefinitions)
 		if err != nil {
 			return err
 		}
 
 		// PlatformWorkloadIdentity Validation
-		spDynamic = dynamic.NewValidator(
+		spDynamic, err = dynamic.NewValidator(
 			dv.log,
 			dv.env,
 			dv.env.Environment(),
@@ -211,6 +217,9 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			nil,
 			pdpClient,
 		)
+		if err != nil {
+			return err
+		}
 		err = spDynamic.ValidatePlatformWorkloadIdentityProfile(ctx, dv.oc, dv.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName(), dv.roleDefinitions, dv.clusterMsiFederatedIdentityCredentials)
 		if err != nil {
 			return err
@@ -254,7 +263,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// FP validation
-	fpDynamic := dynamic.NewValidator(
+	fpDynamic, err := dynamic.NewValidator(
 		dv.log,
 		dv.env,
 		dv.env.Environment(),
@@ -265,6 +274,9 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		fpClientCred,
 		pdpClient,
 	)
+	if err != nil {
+		return err
+	}
 
 	err = fpDynamic.ValidateVnet(
 		ctx,

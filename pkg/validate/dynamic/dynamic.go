@@ -13,7 +13,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -104,7 +105,7 @@ type dynamic struct {
 	virtualNetworks                       virtualNetworksGetClient
 	diskEncryptionSets                    compute.DiskEncryptionSetsClient
 	resourceSkusClient                    compute.ResourceSkusClient
-	spNetworkUsage                        network.UsageClient
+	spNetworkUsage                        armnetwork.UsagesClient
 	loadBalancerBackendAddressPoolsClient network.LoadBalancerBackendAddressPoolsClient
 	pdpClient                             client.RemotePDPClient
 }
@@ -128,7 +129,19 @@ func NewValidator(
 	authorizerType AuthorizerType,
 	cred azcore.TokenCredential,
 	pdpClient client.RemotePDPClient,
-) Dynamic {
+) (Dynamic, error) {
+	options := azEnv.ArmClientOptions()
+
+	usagesClient, err := armnetwork.NewUsagesClient(subscriptionID, cred, options)
+	if err != nil {
+		return nil, err
+	}
+
+	virtualNetworksClient, err := armnetwork.NewVirtualNetworksClient(subscriptionID, cred, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &dynamic{
 		log:                        log,
 		appID:                      appID,
@@ -137,15 +150,13 @@ func NewValidator(
 		azEnv:                      azEnv,
 		checkAccessSubjectInfoCred: cred,
 
-		spNetworkUsage: network.NewUsageClient(azEnv, subscriptionID, authorizer),
-		virtualNetworks: newVirtualNetworksCache(
-			network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer),
-		),
+		spNetworkUsage:                        usagesClient,
+		virtualNetworks:                       newVirtualNetworksCache(virtualNetworksClient),
 		diskEncryptionSets:                    compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
 		resourceSkusClient:                    compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpClient:                             pdpClient,
 		loadBalancerBackendAddressPoolsClient: network.NewLoadBalancerBackendAddressPoolsClient(azEnv, subscriptionID, authorizer),
-	}
+	}, nil
 }
 
 func NewServicePrincipalValidator(
@@ -303,12 +314,12 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		return err
 	}
 
-	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, nil)
 	if err != nil {
 		return err
 	}
 
-	rtID, err := getRouteTableID(&vnet, s.ID)
+	rtID, err := getRouteTableID(&vnet.VirtualNetwork, s.ID)
 	if err != nil || rtID == "" { // error or no route table
 		return err
 	}
@@ -375,12 +386,12 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 		return err
 	}
 
-	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, nil)
 	if err != nil {
 		return err
 	}
 
-	ngID, err := getNatGatewayID(&vnet, s.ID)
+	ngID, err := getNatGatewayID(&vnet.VirtualNetwork, s.ID)
 	if err != nil {
 		return err
 	}
@@ -553,27 +564,27 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 			return err
 		}
 
-		vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+		vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, nil)
 		if err != nil {
 			return err
 		}
 
-		s, err := findSubnet(&vnet, s.ID)
+		s, err := findSubnet(&vnet.VirtualNetwork, s.ID)
 		if err != nil {
 			return err
 		}
 
 		// Validate the CIDR of AddressPrefix or AddressPrefixes, whichever is defined
-		if s.AddressPrefix == nil {
-			for _, address := range *s.AddressPrefixes {
-				_, net, err := net.ParseCIDR(address)
+		if s.Properties.AddressPrefix == nil {
+			for _, address := range s.Properties.AddressPrefixes {
+				_, net, err := net.ParseCIDR(*address)
 				if err != nil {
 					return err
 				}
 				CIDRArray = append(CIDRArray, net)
 			}
 		} else {
-			_, net, err := net.ParseCIDR(*s.AddressPrefix)
+			_, net, err := net.ParseCIDR(*s.Properties.AddressPrefix)
 			if err != nil {
 				return err
 			}
@@ -606,7 +617,7 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resource, location string) error {
 	dv.log.Print("validateVnetLocation")
 
-	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, nil)
 	if err != nil {
 		return err
 	}
@@ -625,11 +636,11 @@ func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resourc
 	return nil
 }
 
-func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (map[string]*mgmtnetwork.Subnet, error) {
+func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (map[string]*sdknetwork.Subnet, error) {
 	if len(subnets) == 0 {
 		return nil, fmt.Errorf("no subnets found")
 	}
-	subnetByID := make(map[string]*mgmtnetwork.Subnet)
+	subnetByID := make(map[string]*sdknetwork.Subnet)
 
 	for _, s := range subnets {
 		vnetID, _, err := apisubnet.Split(s.ID)
@@ -640,12 +651,12 @@ func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (m
 		if err != nil {
 			return nil, err
 		}
-		vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+		vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		ss, err := findSubnet(&vnet, s.ID)
+		ss, err := findSubnet(&vnet.VirtualNetwork, s.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -668,7 +679,7 @@ func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (m
 // checkPreconfiguredNSG checks whether all the subnets have an NSG attached.
 // when the PreconfigureNSG feature flag is on and not all subnets are attached,
 // it returns an error.
-func (dv *dynamic) checkPreconfiguredNSG(subnetByID map[string]*mgmtnetwork.Subnet) error {
+func (dv *dynamic) checkPreconfiguredNSG(subnetByID map[string]*sdknetwork.Subnet) error {
 	var attached int
 	for _, subnet := range subnetByID {
 		if subnetHasNSGAttached(subnet) {
@@ -718,7 +729,7 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 				if err != nil {
 					return err
 				}
-				if !isTheSameNSG(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, expectedNsgID) {
+				if !isTheSameNSG(*ss.Properties.NetworkSecurityGroup.ID, expectedNsgID) {
 					return api.NewCloudError(
 						http.StatusBadRequest,
 						api.CloudErrorCodeInvalidLinkedVNet,
@@ -732,7 +743,7 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 			}
 			if oc.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGDisabled {
 				if !subnetHasNSGAttached(ss) ||
-					!isTheSameNSG(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+					!isTheSameNSG(*ss.Properties.NetworkSecurityGroup.ID, nsgID) {
 					return api.NewCloudError(
 						http.StatusBadRequest,
 						api.CloudErrorCodeInvalidLinkedVNet,
@@ -755,8 +766,7 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 			}
 		}
 
-		if ss.SubnetPropertiesFormat == nil ||
-			ss.SubnetPropertiesFormat.ProvisioningState != mgmtnetwork.Succeeded {
+		if ss.Properties == nil || ss.Properties.ProvisioningState == nil || *ss.Properties.ProvisioningState != sdknetwork.ProvisioningStateSucceeded {
 			return api.NewCloudError(
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidLinkedVNet,
@@ -767,14 +777,14 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 		}
 
 		// Handle both addressPrefix & addressPrefixes
-		if ss.AddressPrefix == nil {
-			for _, address := range *ss.AddressPrefixes {
-				if err = validateSubnetSize(s, address); err != nil {
+		if ss.Properties.AddressPrefix == nil {
+			for _, address := range ss.Properties.AddressPrefixes {
+				if err = validateSubnetSize(s, *address); err != nil {
 					return err
 				}
 			}
 		} else {
-			if err = validateSubnetSize(s, *ss.AddressPrefix); err != nil {
+			if err = validateSubnetSize(s, *ss.Properties.AddressPrefix); err != nil {
 				return err
 			}
 		}
@@ -817,7 +827,7 @@ func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenSh
 	}
 
 	for _, s := range subnetByID {
-		nsgID := s.NetworkSecurityGroup.ID
+		nsgID := s.Properties.NetworkSecurityGroup.ID
 		if nsgID == nil || *nsgID == "" {
 			return api.NewCloudError(
 				http.StatusBadRequest,
@@ -895,41 +905,41 @@ func isTheSameNSG(found, inDB string) bool {
 	return strings.EqualFold(found, inDB)
 }
 
-func subnetHasNSGAttached(subnet *mgmtnetwork.Subnet) bool {
-	return subnet.NetworkSecurityGroup != nil && subnet.NetworkSecurityGroup.ID != nil
+func subnetHasNSGAttached(subnet *sdknetwork.Subnet) bool {
+	return subnet.Properties.NetworkSecurityGroup != nil && subnet.Properties.NetworkSecurityGroup.ID != nil
 }
 
-func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string, error) {
+func getRouteTableID(vnet *sdknetwork.VirtualNetwork, subnetID string) (string, error) {
 	s, err := findSubnet(vnet, subnetID)
 	if err != nil {
 		return "", err
 	}
 
-	if s == nil || s.RouteTable == nil {
+	if s == nil || s.Properties.RouteTable == nil {
 		return "", nil
 	}
 
-	return *s.RouteTable.ID, nil
+	return *s.Properties.RouteTable.ID, nil
 }
 
-func getNatGatewayID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string, error) {
+func getNatGatewayID(vnet *sdknetwork.VirtualNetwork, subnetID string) (string, error) {
 	s, err := findSubnet(vnet, subnetID)
 	if err != nil {
 		return "", err
 	}
 
-	if s == nil || s.NatGateway == nil {
+	if s == nil || s.Properties.NatGateway == nil {
 		return "", nil
 	}
 
-	return *s.NatGateway.ID, nil
+	return *s.Properties.NatGateway.ID, nil
 }
 
-func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (*mgmtnetwork.Subnet, error) {
-	if vnet.Subnets != nil {
-		for _, s := range *vnet.Subnets {
+func findSubnet(vnet *sdknetwork.VirtualNetwork, subnetID string) (*sdknetwork.Subnet, error) {
+	if vnet.Properties.Subnets != nil {
+		for _, s := range vnet.Properties.Subnets {
 			if strings.EqualFold(*s.ID, subnetID) {
-				return &s, nil
+				return s, nil
 			}
 		}
 	}
