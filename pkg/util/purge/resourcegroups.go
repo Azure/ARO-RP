@@ -74,18 +74,8 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			continue
 		}
 
-		vnetID, _, err := apisubnet.Split(*subnet.ID)
-		if err != nil {
-			return err
-		}
-
-		r, err := azure.ParseResourceID(vnetID)
-		if err != nil {
-			return err
-		}
-
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
-			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, r.ResourceName, *secGroupSubnet.Name, nil)
+			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, *secGroupSubnet.ID, *secGroupSubnet.Name, nil)
 			if err != nil {
 				return err
 			}
