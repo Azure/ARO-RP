@@ -7,7 +7,9 @@ import (
 	"context"
 	"sort"
 
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // CleanResourceGroups loop through the resourgroups in the subscription
@@ -87,7 +89,17 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 
 				subnet.Properties.NetworkSecurityGroup = nil
 
-				err = rc.subnet.CreateOrUpdateAndWait(ctx, *subnet.ID, *subnet.Name, *subnet.ID, subnet.Subnet, nil)
+				vnetID, _, err := apisubnet.Split(*subnet.ID)
+				if err != nil {
+					return err
+				}
+
+				r, err := azure.ParseResourceID(vnetID)
+				if err != nil {
+					return err
+				}
+				err = rc.subnet.CreateOrUpdateAndWait(ctx, *resourceGroup.Name, r.ResourceName, *subnet.Name, subnet.Subnet, nil)
+				rc.log.Debugf("Checking VNet name: %s - %s - %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
 				if err != nil {
 					return err
 				}
