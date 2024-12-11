@@ -4,14 +4,17 @@ package pullsecret
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type pullSecret struct {
@@ -163,4 +166,20 @@ func Build(oc *api.OpenShiftCluster, ps string) (string, error) {
 	}
 
 	return pullSecret, nil
+}
+
+type PossiblyErroringFakeCtrlRuntimeClient struct {
+	client.Client
+	ShouldError bool
+}
+
+func (p *PossiblyErroringFakeCtrlRuntimeClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	// Only error on attempts to update the ARO cluster object;
+	// this avoids erroring out while attempting to update the controller status conditions
+	if p.ShouldError && obj.GetName() == "cluster" {
+		// pretended failure
+		return fmt.Errorf("failure of the Clinet.Update method")
+	}
+	// natural failure if fails here
+	return p.Client.Update(ctx, obj)
 }

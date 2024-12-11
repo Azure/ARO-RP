@@ -6,8 +6,10 @@ package pullsecret
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
@@ -22,15 +24,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	utilpullsecret "github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestPullSecretReconciler(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
+
 	baseCluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-		Status:     arov1alpha1.ClusterStatus{},
+		Status: arov1alpha1.ClusterStatus{
+			Conditions: defaultConditions,
+		},
 		Spec: arov1alpha1.ClusterSpec{
 			OperatorFlags: arov1alpha1.OperatorFlags{
 				operator.PullSecretEnabled: operator.FlagTrue,
@@ -39,22 +50,55 @@ func TestPullSecretReconciler(t *testing.T) {
 		},
 	}
 
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
-	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
-
 	tests := []struct {
-		name           string
-		request        ctrl.Request
-		secrets        []client.Object
-		instance       *arov1alpha1.Cluster
-		wantKeys       []string
-		wantErr        bool
-		want           string
-		wantErrMsg     string
-		wantConditions []operatorv1.OperatorCondition
+		name                            string
+		request                         ctrl.Request
+		secrets                         []client.Object
+		instance                        *arov1alpha1.Cluster
+		wantKeys                        []string
+		wantErr                         bool
+		want                            string
+		wantErrMsg                      string
+		wantConditions                  []operatorv1.OperatorCondition
+		clientClientShouldErrorOnUpdate bool
 	}{
+		{
+			name: "attempt to fix arosvc pull secret but fail on client.Client Update method",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pull-secret",
+						Namespace: "openshift-config",
+					},
+					Type: corev1.SecretTypeDockerConfigJson,
+					Data: map[string][]byte{
+						corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":""}}}`),
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      operator.SecretName,
+						Namespace: operator.Namespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
+				},
+			},
+			instance:   baseCluster,
+			want:       `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys:   nil,
+			wantErr:    true,
+			wantErrMsg: "failure of the Clinet.Update method",
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               ControllerName + "ControllerDegraded",
+					Status:             "True",
+					Message:            "failure of the Clinet.Update method",
+					LastTransitionTime: transitionTime,
+				},
+			},
+			clientClientShouldErrorOnUpdate: true,
+		},
 		{
 			name: "deleted pull secret",
 			secrets: []client.Object{
@@ -315,7 +359,12 @@ func TestPullSecretReconciler(t *testing.T) {
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
 			assert.NotNil(t, clientFake)
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			clientFakeWrapper := utilpullsecret.PossiblyErroringFakeCtrlRuntimeClient{
+				Client:      clientFake,
+				ShouldError: tt.clientClientShouldErrorOnUpdate,
+			}
+
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), &clientFakeWrapper)
 			assert.NotNil(t, r)
 
 			if tt.request.Name == "" {
@@ -323,13 +372,19 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			_, err := r.Reconcile(ctx, tt.request)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("PullsecretReconciler.Reconcile() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err != nil {
+				if tt.wantErr {
+					// pretended to fail
+					fmt.Printf("pullsecret.Reconcile(): pretended %v", err)
+				} else {
+					// failed naturally
+					t.Errorf("pullsecret.Reconcile(): natural %v", err)
+					return
+				}
 			}
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
-			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
+			utilconditions.AssertControllerConditions(t, ctx, &clientFakeWrapper, tt.wantConditions)
 
 			s := &corev1.Secret{}
 			assert.NotNil(t, s)
