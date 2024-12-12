@@ -118,7 +118,7 @@ func Run(api, outputDir string) error {
 	}
 
 	if g.installVersionList {
-		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions"] = &PathItem{
+		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftVersions"] = &PathItem{
 			Get: &Operation{
 				Tags:        []string{"OpenShiftVersions"},
 				Summary:     "Lists all OpenShift versions available to install in the specified location.",
@@ -134,12 +134,12 @@ func Run(api, outputDir string) error {
 	}
 
 	if g.roleSetList {
-		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityroleset"] = &PathItem{
+		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets"] = &PathItem{
 			Get: &Operation{
-				Tags:        []string{"PlatformWorkloadIdentityRoleSet"},
+				Tags:        []string{"PlatformWorkloadIdentityRoleSets"},
 				Summary:     "Lists a mapping of OpenShift versions to identity requirements, which include operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
 				Description: "This operation returns PlatformWorkloadIdentityRoleSet as a string",
-				OperationID: "PlatformWorkloadIdentityRoleSet_List",
+				OperationID: "PlatformWorkloadIdentityRoleSets_List",
 				Parameters:  g.populateParameters(6, "PlatformWorkloadIdentityRoleSetList", "Platform Workload Identity Role Set"),
 				Responses:   g.populateResponses("PlatformWorkloadIdentityRoleSetList", false, http.StatusOK),
 				Pageable: &Pageable{
