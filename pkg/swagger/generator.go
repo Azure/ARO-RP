@@ -326,7 +326,6 @@ var apis = map[string]*generator{
 		commonTypesVersion:     "v6",
 		managedServiceIdentity: true,
 		systemData:             true,
-		clusterManager:         true,
 		installVersionList:     true,
 		kubeConfig:             true,
 		workerProfilesStatus:   true,
