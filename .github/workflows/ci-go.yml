@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  vendor-check:
+  dependency-check:
     runs-on: ubuntu-latest
     container:
       image: registry.access.redhat.com/ubi8/go-toolset:1.21.13-1
