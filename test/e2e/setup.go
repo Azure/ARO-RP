@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -29,6 +30,7 @@ import (
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
@@ -40,6 +42,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	internalapi "github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
@@ -54,6 +57,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/dynamic"
@@ -73,12 +77,14 @@ var staticResources embed.FS
 
 var (
 	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+	clusterProvisionPodRegex  = regexp.MustCompile(`cluster.*provision`)
 	DefaultEventuallyTimeout  = 5 * time.Minute
 )
 
 type clientSet struct {
 	Operations        redhatopenshift20231122.OperationsClient
 	OpenshiftClusters redhatopenshift20231122.OpenShiftClustersClient
+	InternalClient    cluster.InternalClient
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient
@@ -116,6 +122,7 @@ var (
 	clusterName       string
 	osClusterVersion  string
 	clusterResourceID string
+	clusterDoc        *internalapi.OpenShiftCluster
 	clients           *clientSet
 )
 
@@ -436,6 +443,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	return &clientSet{
 		Operations:        redhatopenshift20231122.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		OpenshiftClusters: redhatopenshift20231122.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		InternalClient:    cluster.NewInternalClient(log, _env, authorizer),
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -493,8 +501,8 @@ func setup(ctx context.Context) error {
 
 	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
 
-	if os.Getenv("CI") != "" { // always create cluster in CI
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+	if os.Getenv("CI") != "" { // always create utilCluster in CI
+		utilCluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}
@@ -503,7 +511,58 @@ func setup(ctx context.Context) error {
 			osClusterVersion = version.DefaultInstallStream.Version.String()
 		}
 
-		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
+		// Hack: initialize the Hive clients before cluster creation so that
+		// I can get Hive installer logs when cluster creation fails. Will
+		// neaten this up later once E2E is working.
+		options := _env.Environment().EnvironmentCredentialOptions()
+		tokenCredential, err := azidentity.NewEnvironmentCredential(options)
+		if err != nil {
+			return err
+		}
+
+		scopes := []string{_env.Environment().ResourceManagerScope}
+		authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+
+		var hiveRestConfig *rest.Config
+		var hiveClientSet client.Client
+		var hiveAKS *kubernetes.Clientset
+		var hiveCM hive.ClusterManager
+
+		liveCfg, err := _env.NewLiveConfigManager(ctx)
+		if err != nil {
+			return err
+		}
+
+		hiveShard := 1
+		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
+		if err != nil {
+			return err
+		}
+
+		hiveClientSet, err = client.New(hiveRestConfig, client.Options{})
+		if err != nil {
+			return err
+		}
+
+		hiveAKS, err = kubernetes.NewForConfig(hiveRestConfig)
+		if err != nil {
+			return err
+		}
+
+		hiveCM, err = hive.NewFromConfig(log, _env, hiveRestConfig)
+		if err != nil {
+			return err
+		}
+
+		clients = &clientSet{
+			InternalClient:     cluster.NewInternalClient(log, _env, authorizer),
+			HiveRestConfig:     hiveRestConfig,
+			Hive:               hiveClientSet,
+			HiveAKS:            hiveAKS,
+			HiveClusterManager: hiveCM,
+		}
+
+		err = utilCluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
 		if err != nil {
 			return err
 		}
@@ -516,10 +575,14 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	clusterDoc, err = clients.InternalClient.Get(ctx, vnetResourceGroup, clusterName)
+	return err
 }
 
 func done(ctx context.Context) error {
+	// Temp to avoid deleting cluster
+	return nil
+
 	// terminate early if delete flag is set to false
 	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
 		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
@@ -546,6 +609,16 @@ var _ = BeforeSuite(func() {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}
+
+		// If Hive installation timed out, print Hive logs
+		if strings.Contains(err.Error(), steps.TimeoutConditionErrors["hiveClusterDeploymentReady"]) || strings.Contains(err.Error(), steps.TimeoutConditionErrors["hiveClusterInstallationComplete"]) {
+			log.Warning("Hive installation timed out; attempting to fetch openshift installer logs...")
+			_err := printHiveInstallerLogs(context.Background())
+			if _err != nil {
+				log.Error(_err)
+			}
+		}
+
 		panic(err)
 	}
 })
@@ -560,3 +633,41 @@ var _ = AfterSuite(func() {
 		panic(err)
 	}
 })
+
+// printHiveInstallerLogs prints the cluster's installer Pod logs if it can
+// and returns an error if it can't.
+func printHiveInstallerLogs(ctx context.Context) error {
+	// This doesn't work because the "InternalClient" gets the cluster doc using an external client
+	// and then converts it to internal; the HiveProfile won't be populated.
+	clusterDoc, err := clients.InternalClient.Get(ctx, vnetResourceGroup, clusterName)
+	if err != nil {
+		return err
+	} else if clusterDoc.Properties.HiveProfile.Namespace == "" {
+		return fmt.Errorf("unable to get Hive installer logs because Hive namespace is empty in cluster doc")
+	}
+
+	cd := &hivev1.ClusterDeployment{}
+	err = clients.Hive.Get(ctx, client.ObjectKey{
+		Namespace: clusterDoc.Properties.HiveProfile.Namespace,
+		Name:      hive.ClusterDeploymentName,
+	}, cd)
+	if err != nil {
+		return err
+	} else if cd.Status.ProvisionRef == nil {
+		return fmt.Errorf("unable to get Hive installer logs because the ClusterDeployment object's status.provisionRef is nil")
+	}
+
+	cp := &hivev1.ClusterProvision{}
+	err = clients.Hive.Get(ctx, client.ObjectKey{
+		Namespace: clusterDoc.Properties.HiveProfile.Namespace,
+		Name:      cd.Status.ProvisionRef.Name,
+	}, cp)
+	if err != nil {
+		return err
+	} else if cp.Spec.InstallLog == nil {
+		return fmt.Errorf("unable to get Hive installer logs because the ClusterProvision object's spec.installLog is nil")
+	}
+
+	spew.Dump(*cp.Spec.InstallLog)
+	return nil
+}
