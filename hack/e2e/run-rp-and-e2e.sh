@@ -15,7 +15,7 @@ if [[ $CI ]]; then
     CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     PRIVATE_CLUSTER=true
-    E2E_DELETE_CLUSTER=false
+    E2E_DELETE_CLUSTER=true # any value other than "false" ensures the cluster is deleted
     set +a
 fi
 
