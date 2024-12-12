@@ -63,7 +63,6 @@ func updateCorrelationDataAndEnrichLogWithRequest(correlationData *api.Correlati
 
 	l = utillog.EnrichWithCorrelationData(l, correlationData)
 	l = l.WithFields(logrus.Fields{
-		"request_URL": req.URL,
 		"LOGKIND":     outboundRequests,
 	})
 
