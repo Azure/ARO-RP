@@ -9,7 +9,6 @@
 !pkg
 !swagger
 !test
-!vendor
 !.bingo
 
 # Ignore locally built NPM artifacts - using new automated process
