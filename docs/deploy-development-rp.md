@@ -125,11 +125,14 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 
    1. Manually create the cluster using the public documentation.
 
-      Before following the instructions in [Create, access, and manage an Azure Red
-      Hat OpenShift 4 Cluster][1], you will need to manually register your subscription to your local RP:
+      Before following the instructions in [Create, access, and manage an Azure Red Hat
+      OpenShift 4 Cluster][1],
+      you will need to add the OCP version you want to install to your DB by
+      [put(ting) a new OpenShift installation version](#openshift-version),
+      and you will also need to manually register your subscription to your local RP:
 
       ```bash
-      curl -k -X PUT   -H 'Content-Type: application/json'   -d '{
+      curl -k -X PUT -H 'Content-Type: application/json' -d '{
       "state": "Registered",
       "properties": {
          "tenantId": "'"$AZURE_TENANT_ID"'",
@@ -143,7 +146,10 @@ mock a cluster MSI. This script will also create the platform identities, platfo
       }' "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
       ```
 
-      Note that as long as the `RP_MODE` environment variable is set to `development`, the `az aro` client will
+      Note that, as there is no default version defined, you will need to provide the `--version` argument
+      to `az aro create` with one of the version you added to your DB.
+      
+      Note also that as long as the `RP_MODE` environment variable is set to `development`, the `az aro` client will
       connect to your local RP.
 
    1. Use the create utility:
@@ -388,11 +394,12 @@ export RESOURCEGROUP=<resource-group-name>
 
 - Admin - Put a new OpenShift installation version
 
-This command adds the image to your cosmosDB. **openShiftPullspec** comes from [quay.io/repository/openshift-release-dev](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags) ; and **installerPullspec** modifies as per example below, replace `X.Y` accordingly.
+This command adds the image to your cosmosDB. **openShiftPullspec** comes from [quay.io/repository/openshift-release-dev](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags) (in production we must use sha tag, but in dev we can use tag for simplicity) ; and **installerPullspec** from int to work in dev without to have to set any secret, but you can use repo for installer if you configured secret for it.
 
   ```bash
-  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.14.16", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:XXXX", "installerPullspec": "arosvc.azurecr.io/aro-installer:release-X.Y" } }'
-  ```
+  OCP_VERSION=<x.y.z>
+  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "'${OCP_VERSION}'", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release:'${OCP_VERSION}'-x86_64", "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'" } }'
+```
 
 - List the enabled OpenShift installation versions within a region
   ```bash
