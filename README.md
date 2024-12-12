@@ -159,8 +159,6 @@ questions or comments.
 
 * test: End-to-end tests.
 
-* vendor: Vendored Go libraries.
-
 
 ## Basic architecture
 
