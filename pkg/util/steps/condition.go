@@ -22,7 +22,7 @@ import (
 // Efforts are being made  to not have generic Hive errors but specific, actionable failure cases.
 // Instead of providing Hive-specific error messages to customers, the below will send a timeout error message.
 // The below functions are run during Install, Update, AdminUpdate.
-var timeoutConditionErrors = map[string]string{
+var TimeoutConditionErrors = map[string]string{
 	"attachNSGs":                             "Failed to attach the ARO NSG to the cluster subnets.",
 	"apiServersReady":                        "Kube API has not initialised successfully and is unavailable.",
 	"minimumWorkerNodesReady":                "Minimum number of worker nodes have not been successfully created.",
@@ -110,7 +110,7 @@ func enrichConditionTimeoutError(f conditionFunction, originalErr error) error {
 	funcNameParts := strings.Split(FriendlyName(f), ".")
 	funcName := funcNameParts[len(funcNameParts)-1]
 
-	message, exists := timeoutConditionErrors[funcName]
+	message, exists := TimeoutConditionErrors[funcName]
 	if !exists {
 		return originalErr
 	}
