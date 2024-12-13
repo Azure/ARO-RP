@@ -378,7 +378,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					fmt.Printf("pullsecret.Reconcile(): pretended %v", err)
 				} else {
 					// failed naturally
-					t.Errorf("pullsecret.Reconcile(): natural %v", err)
+					t.Errorf("PullsecretReconciler.Reconcile() error = %v, wantErr %v", err, tt.wantErr)
 					return
 				}
 			}
