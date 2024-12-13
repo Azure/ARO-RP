@@ -44,6 +44,10 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - name: Go Mod Download
+      run: |
+        go mod download
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
