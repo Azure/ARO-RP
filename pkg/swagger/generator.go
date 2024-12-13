@@ -29,10 +29,6 @@ const apiv20231122Path = "github.com/Azure/ARO-RP/pkg/api/v20231122"
 const apiv20240812previewPath = "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
 
 type generator struct {
-	exampleSyncIdentityProviderPutParameter            func() interface{}
-	exampleSyncIdentityProviderPatchParameter          func() interface{}
-	exampleSyncIdentityProviderResponse                func() interface{}
-	exampleSyncIdentityProviderListResponse            func() interface{}
 	exampleOpenShiftClusterPutParameter                func() interface{}
 	exampleOpenShiftClusterPatchParameter              func() interface{}
 	exampleOpenShiftClusterResponse                    func() interface{}
@@ -195,10 +191,6 @@ var apis = map[string]*generator{
 		workerProfilesStatus: true,
 	},
 	apiv20240812previewPath: {
-		exampleSyncIdentityProviderPutParameter:            v20240812preview.ExampleSyncIdentityProviderPutParameter,
-		exampleSyncIdentityProviderPatchParameter:          v20240812preview.ExampleSyncIdentityProviderPatchParameter,
-		exampleSyncIdentityProviderResponse:                v20240812preview.ExampleSyncIdentityProviderResponse,
-		exampleSyncIdentityProviderListResponse:            v20240812preview.ExampleSyncIdentityProviderListResponse,
 		exampleOpenShiftClusterPutParameter:                v20240812preview.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:              v20240812preview.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterGetResponse:                 v20240812preview.ExampleOpenShiftClusterGetResponse,
