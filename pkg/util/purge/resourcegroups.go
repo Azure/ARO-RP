@@ -67,41 +67,33 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 	rc.log.Printf("Starting cleanNetworking for ResourceGroup: %s", *resourceGroup.Name)
 	secGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
 	if err != nil {
-		rc.log.Printf("Error listing security groups: %v", err)
 		return err
 	}
 
 	for _, secGroup := range secGroups {
 		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
-			rc.log.Printf("Skipping security group with nil properties or subnets")
 			continue
 		}
 
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
 			if secGroupSubnet.ID == nil || secGroupSubnet.Name == nil {
-				rc.log.Printf("Skipping subnet with nil ID or Name")
 				continue
 			}
 
 			vnetID, _, err := apisubnet.Split(*secGroupSubnet.ID)
 			if err != nil {
-				rc.log.Printf("Error splitting subnet ID: %v", err)
 				return err
 			}
 
 			r, err := azure.ParseResourceID(vnetID)
 			if err != nil {
-				rc.log.Printf("Error parsing resource ID: %v", err)
 				return err
 			}
 
 			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, r.ResourceName, *secGroupSubnet.Name, nil)
 			if err != nil {
-				rc.log.Printf("Error getting subnet: %v", err)
 				return err
 			}
-
-			rc.log.Printf("1 - Checking VNet name: %s - %s - %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
 
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
@@ -120,7 +112,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 					return err
 				}
 				err = rc.subnet.CreateOrUpdateAndWait(ctx, *resourceGroup.Name, r.ResourceName, *subnet.Name, subnet.Subnet, nil)
-				rc.log.Printf("2 - Checking VNet name: %s - %s - %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
+				rc.log.Printf("Resources Deleted: RG: %s - Vnet: %s - Subnet: %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
 				if err != nil {
 					return err
 				}
