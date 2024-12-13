@@ -172,8 +172,12 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 						body = g.exampleOpenShiftClusterListResponse()
 					case "#/definitions/OperationList":
 						body = g.exampleOperationListResponse()
+					case "#/definitions/OpenShiftVersion":
+						body = g.exampleOpenShiftVersionResponse()
 					case "#/definitions/OpenShiftVersionList":
 						body = g.exampleOpenShiftVersionListResponse()
+					case "#/definitions/PlatformWorkloadIdentityRoleSet":
+						body = g.examplePlatformWorkloadIdentityRoleSetResponse()
 					case "#/definitions/PlatformWorkloadIdentityRoleSetList":
 						body = g.examplePlatformWorkloadIdentityRoleSetListResponse()
 					}

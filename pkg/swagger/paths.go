@@ -211,7 +211,7 @@ func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespa
 			},
 		},
 	}
-	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/"+childResourceType+"/{childResourceName}"] = &PathItem{
+	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/"+childResourceType+"s/{childResourceName}"] = &PathItem{
 		Get: &Operation{
 			Tags:        []string{titleCaser.String(childResourceType) + "s"},
 			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
