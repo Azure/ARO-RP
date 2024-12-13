@@ -147,7 +147,7 @@ mock a cluster MSI. This script will also create the platform identities, platfo
       ```
 
       Note that, as there is no default version defined, you will need to provide the `--version` argument
-      to `az aro create` with one of the version you added to your DB.
+      to `az aro create` with one of the versions you added to your DB.
       
       Note also that as long as the `RP_MODE` environment variable is set to `development`, the `az aro` client will
       connect to your local RP.
