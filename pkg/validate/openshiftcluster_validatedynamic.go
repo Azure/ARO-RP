@@ -214,7 +214,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			dv.fpAuthorizer,
 			nil,
 			dynamic.AuthorizerWorkloadIdentity,
-			nil,
+			fpClientCred,
 			pdpClient,
 		)
 		if err != nil {
