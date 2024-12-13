@@ -135,7 +135,7 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 }
 
 func (m *manager) logPodLogs(ctx context.Context) (interface{}, error) {
-	if m.operatorcli == nil {
+	if m.kubernetescli == nil {
 		return nil, nil
 	}
 
