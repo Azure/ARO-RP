@@ -14,31 +14,28 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-func (f *frontend) listPlatformWorkloadIdentityRoleSets(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) getPlatformWorkloadIdentityRoleSet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
+	requestedMinorVersion := chi.URLParam(r, "openshiftMinorVersion")
 	if f.apis[apiVersion].PlatformWorkloadIdentityRoleSetConverter == nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", resourceProviderNamespace, apiVersion)
 		return
 	}
 
-	roleSets := f.getAvailablePlatformWorkloadIdentityRoleSets()
+	f.platformWorkloadIdentityRoleSetsMu.RLock()
+	platformWorkloadIdentityRoleSet, ok := f.availablePlatformWorkloadIdentityRoleSets[requestedMinorVersion]
+	f.platformWorkloadIdentityRoleSetsMu.RUnlock()
+	if !ok {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", "The Resource platformWorkloadIdentityRoleSet with version '%s' was not found in the namespace '%s' for api version '%s'.", requestedMinorVersion, resourceProviderNamespace, apiVersion)
+		return
+	}
+
 	converter := f.apis[apiVersion].PlatformWorkloadIdentityRoleSetConverter
 
-	b, err := json.MarshalIndent(converter.ToExternalList(roleSets), "", "    ")
+	b, err := json.MarshalIndent(converter.ToExternal(platformWorkloadIdentityRoleSet), "", "    ")
+	frontendOperationResultLog(log, r.Method, err)
 	reply(log, w, nil, b, err)
-}
-
-func (f *frontend) getAvailablePlatformWorkloadIdentityRoleSets() []*api.PlatformWorkloadIdentityRoleSet {
-	roleSets := make([]*api.PlatformWorkloadIdentityRoleSet, 0)
-
-	f.platformWorkloadIdentityRoleSetsMu.RLock()
-	for _, pwirs := range f.availablePlatformWorkloadIdentityRoleSets {
-		roleSets = append(roleSets, pwirs)
-	}
-	f.platformWorkloadIdentityRoleSetsMu.RUnlock()
-
-	return roleSets
 }

@@ -21,6 +21,8 @@ func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{}
 		Properties: OpenShiftVersionProperties{
 			Version: v.Properties.Version,
 		},
+		Name: v.Properties.Version,
+		Type: api.OpenShiftVersionsType,
 	}
 
 	return out

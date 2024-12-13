@@ -270,8 +270,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.Get("/operationresults/{operationId}", f.getAsyncOperationResult)
 
 				r.Get("/openshiftversions", f.listInstallVersions)
+				r.Get("/openshiftversions/{openshiftVersion}", f.getInstallVersion)
 
 				r.Get("/platformworkloadidentityrolesets", f.listPlatformWorkloadIdentityRoleSets)
+				r.Get("/platformworkloadidentityrolesets/{openshiftMinorVersion}", f.getPlatformWorkloadIdentityRoleSet)
 			})
 		})
 	})
