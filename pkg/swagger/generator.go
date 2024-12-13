@@ -29,10 +29,6 @@ const apiv20231122Path = "github.com/Azure/ARO-RP/pkg/api/v20231122"
 const apiv20240812previewPath = "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
 
 type generator struct {
-	exampleSyncIdentityProviderPutParameter            func() interface{}
-	exampleSyncIdentityProviderPatchParameter          func() interface{}
-	exampleSyncIdentityProviderResponse                func() interface{}
-	exampleSyncIdentityProviderListResponse            func() interface{}
 	exampleOpenShiftClusterPutParameter                func() interface{}
 	exampleOpenShiftClusterPatchParameter              func() interface{}
 	exampleOpenShiftClusterResponse                    func() interface{}
