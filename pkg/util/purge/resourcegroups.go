@@ -75,6 +75,10 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 		}
 
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
+			if secGroupSubnet.ID == nil || secGroupSubnet.Name == nil {
+				continue
+			}
+
 			vnetID, _, err := apisubnet.Split(*secGroupSubnet.ID)
 			if err != nil {
 				return err
