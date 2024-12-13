@@ -75,12 +75,22 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 		}
 
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
-			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, *secGroupSubnet.ID, *secGroupSubnet.Name, nil)
+			vnetID, _, err := apisubnet.Split(*secGroupSubnet.ID)
 			if err != nil {
 				return err
 			}
 
-			rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+			r, err := azure.ParseResourceID(vnetID)
+			if err != nil {
+				return err
+			}
+
+			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, r.ResourceName, *secGroupSubnet.Name, nil)
+			if err != nil {
+				return err
+			}
+
+			rc.log.Debugf("Checking VNet name: %s - %s - %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
 
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
