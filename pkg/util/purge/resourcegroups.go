@@ -94,7 +94,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				return err
 			}
 
-			rc.log.Debugf("Checking VNet name: %s - %s - %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
+			rc.log.Printf("1 - Checking VNet name: %s - %s - %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
 
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
@@ -113,7 +113,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 					return err
 				}
 				err = rc.subnet.CreateOrUpdateAndWait(ctx, *resourceGroup.Name, r.ResourceName, *subnet.Name, subnet.Subnet, nil)
-				rc.log.Debugf("Checking VNet name: %s - %s - %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
+				rc.log.Printf("2 - Checking VNet name: %s - %s - %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
 				if err != nil {
 					return err
 				}
