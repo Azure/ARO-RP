@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -27,11 +29,20 @@ import (
 )
 
 var (
-	managedFields            = []metav1.ManagedFieldsEntry{{Manager: "something"}}
-	cvv                      = &configv1.ClusterVersion{ObjectMeta: metav1.ObjectMeta{Name: "version"}}
-	master0Node              = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-0", ManagedFields: managedFields}}
-	master1Node              = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-1", ManagedFields: managedFields}}
-	master2Node              = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-2", ManagedFields: managedFields}}
+	managedFields = []metav1.ManagedFieldsEntry{{Manager: "something"}}
+	cvv           = &configv1.ClusterVersion{ObjectMeta: metav1.ObjectMeta{Name: "version"}}
+	master0Node   = &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-0", ManagedFields: managedFields},
+		Status:     corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}}},
+	}
+	master1Node = &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-1", ManagedFields: managedFields},
+		Status:     corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}},
+	}
+	master2Node = &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-2", ManagedFields: managedFields},
+		Status:     corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionUnknown}}},
+	}
 	aroOperator              = &configv1.ClusterOperator{ObjectMeta: metav1.ObjectMeta{Name: "aro", ManagedFields: managedFields}}
 	machineApiOperator       = &configv1.ClusterOperator{ObjectMeta: metav1.ObjectMeta{Name: "machine-api", ManagedFields: managedFields}}
 	defaultIngressController = &operatorv1.IngressController{ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-ingress-operator", Name: "default", ManagedFields: managedFields}}
@@ -76,18 +87,34 @@ func TestLogClusterVersion(t *testing.T) {
 
 func TestLogNodes(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		objects []kruntime.Object
-		want    interface{}
-		wantErr string
+		name     string
+		objects  []kruntime.Object
+		want     interface{}
+		wantLogs []map[string]types.GomegaMatcher
+		wantErr  string
 	}{
 		{
-			name:    "returns nodes without managed fields",
+			name:    "returns simple node output and logs full node object",
 			objects: []kruntime.Object{master0Node, master1Node, master2Node},
-			want: []corev1.Node{
-				{ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-0"}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-1"}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-2"}},
+			want: fmt.Sprintf(`%s Ready: %s
+%s Ready: %s
+%s Ready: %s`,
+				master0Node.Name, corev1.ConditionTrue,
+				master1Node.Name, corev1.ConditionFalse,
+				master2Node.Name, corev1.ConditionUnknown),
+			wantLogs: []map[string]types.GomegaMatcher{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(asJson(master0Node)),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(asJson(master1Node)),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(asJson(master2Node)),
+				},
 			},
 		},
 	} {
@@ -95,7 +122,7 @@ func TestLogNodes(t *testing.T) {
 			ctx := context.Background()
 			kubernetescli := fake.NewSimpleClientset(tt.objects...)
 
-			_, log := testlog.New()
+			h, log := testlog.New()
 
 			m := &manager{
 				log:           log,
@@ -104,6 +131,7 @@ func TestLogNodes(t *testing.T) {
 
 			got, gotErr := m.logNodes(ctx)
 			utilerror.AssertErrorMessage(t, gotErr, tt.wantErr)
+			require.NoError(t, testlog.AssertLoggingOutput(h, tt.wantLogs))
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -226,4 +254,13 @@ func TestLogPodLogs(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func asJson(r kruntime.Object) string {
+	r = r.DeepCopyObject()
+	a, _ := meta.Accessor(r)
+	a.SetManagedFields(nil)
+
+	json, _ := json.Marshal(r)
+	return string(json)
 }

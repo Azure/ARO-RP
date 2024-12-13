@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -93,11 +94,30 @@ func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	for i := range nodes.Items {
-		nodes.Items[i].ManagedFields = nil
+	lines := make([]string, 0)
+	errs := make([]error, 0)
+
+	for _, node := range nodes.Items {
+		node.ManagedFields = nil
+
+		nodeReady := corev1.ConditionFalse
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == corev1.NodeReady {
+				nodeReady = condition.Status
+				break
+			}
+		}
+		lines = append(lines, fmt.Sprintf("%s Ready: %s", node.Name, nodeReady))
+
+		json, err := json.Marshal(node)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		m.log.Info(string(json))
 	}
 
-	return nodes.Items, nil
+	return strings.Join(lines, "\n"), errors.Join(errs...)
 }
 
 func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) {
