@@ -70,6 +70,16 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							Name:      "childResourceName",
 							Parameter: "childResourceName",
 						})
+					case "openShiftVersion":
+						example.Parameters = append(example.Parameters, NameParameter{
+							Name:      "openShiftVersion",
+							Parameter: "openShiftVersion",
+						})
+					case "openshiftMinorVersion":
+						example.Parameters = append(example.Parameters, NameParameter{
+							Name:      "openshiftMinorVersion",
+							Parameter: "openshiftMinorVersion",
+						})
 					case "parameters":
 						switch param.Schema.Ref {
 						case "#/definitions/OpenShiftCluster":

@@ -124,7 +124,7 @@ func Run(api, outputDir string) error {
 				Summary:     "Lists all OpenShift versions available to install in the specified location.",
 				Description: "The operation returns the installable OpenShift versions as a string.",
 				OperationID: "OpenShiftVersions_List",
-				Parameters:  g.populateParameters(6, "OpenShiftVersionList", "OpenShift Versions"),
+				Parameters:  g.populateParameters(6, "OpenShiftVersionList", "OpenShiftVersion"),
 				Responses:   g.populateResponses("OpenShiftVersionList", false, http.StatusOK),
 				Pageable: &Pageable{
 					NextLinkName: "nextLink",
@@ -140,7 +140,7 @@ func Run(api, outputDir string) error {
 				Summary:     "Gets an available OpenShift version to install in the specified location.",
 				Description: "This operation returns installable OpenShift version as a string.",
 				OperationID: "OpenShiftVersions_Get",
-				Parameters:  g.populateParameters(6, "OpenShiftVersion", "OpenShift Version"),
+				Parameters:  g.populateParameters(6, "OpenShiftVersion", "OpenShiftVersion"),
 				Responses:   g.populateResponses("OpenShiftVersion", false, http.StatusOK),
 			},
 		}
@@ -153,20 +153,20 @@ func Run(api, outputDir string) error {
 				Summary:     "Lists a mapping of OpenShift versions to identity requirements, which include operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
 				Description: "This operation returns a list of Platform Workload Identity Role Sets as a string",
 				OperationID: "PlatformWorkloadIdentityRoleSets_List",
-				Parameters:  g.populateParameters(6, "PlatformWorkloadIdentityRoleSetList", "Platform Workload Identity Role Set List"),
+				Parameters:  g.populateParameters(6, "PlatformWorkloadIdentityRoleSetList", "PlatformWorkloadIdentityRoleSet"),
 				Responses:   g.populateResponses("PlatformWorkloadIdentityRoleSetList", false, http.StatusOK),
 				Pageable: &Pageable{
 					NextLinkName: "nextLink",
 				},
 			},
 		}
-		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{OpenshiftMinorVersion}"] = &PathItem{
+		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{openshiftMinorVersion}"] = &PathItem{
 			Get: &Operation{
 				Tags:        []string{"PlatformWorkloadIdentityRoleSes"},
 				Summary:     "Gets a mapping of an OpenShift version to identity requirements, which includes operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
 				Description: "This operation returns Platform Workload Identity Role Set as a string",
 				OperationID: "PlatformWorkloadIdentityRoleSet_Get",
-				Parameters:  g.populateParameters(6, "PlatformWorkloadIdentityRoleSet", "Platform Workload Identity Role Set"),
+				Parameters:  g.populateParameters(6, "PlatformWorkloadIdentityRoleSet", "PlatformWorkloadIdentityRoleSet"),
 				Responses:   g.populateResponses("PlatformWorkloadIdentityRoleSet", false, http.StatusOK),
 			},
 		}
