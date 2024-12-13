@@ -59,9 +59,16 @@ var (
 			{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
 		}},
 	}
-	defaultIngressController = &operatorv1.IngressController{ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-ingress-operator", Name: "default", ManagedFields: managedFields}}
-	aroOperatorMasterPod     = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-azure-operator", Name: "aro-operator-master-aaaaaaaaa-aaaaa"}, Status: corev1.PodStatus{}}
-	aroOperatorWorkerPod     = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-azure-operator", Name: "aro-operator-worker-bbbbbbbbb-bbbbb"}, Status: corev1.PodStatus{}}
+	defaultIngressController = &operatorv1.IngressController{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-ingress-operator", Name: "default", ManagedFields: managedFields},
+		Status: operatorv1.IngressControllerStatus{Conditions: []operatorv1.OperatorCondition{
+			{Type: operatorv1.OperatorStatusTypeAvailable, Status: operatorv1.ConditionTrue},
+			{Type: operatorv1.OperatorStatusTypeProgressing, Status: operatorv1.ConditionFalse},
+			{Type: operatorv1.OperatorStatusTypeDegraded, Status: operatorv1.ConditionFalse},
+		}},
+	}
+	aroOperatorMasterPod = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-azure-operator", Name: "aro-operator-master-aaaaaaaaa-aaaaa"}, Status: corev1.PodStatus{}}
+	aroOperatorWorkerPod = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-azure-operator", Name: "aro-operator-worker-bbbbbbbbb-bbbbb"}, Status: corev1.PodStatus{}}
 )
 
 func TestLogClusterVersion(t *testing.T) {
@@ -196,16 +203,22 @@ func TestLogClusterOperators(t *testing.T) {
 
 func TestLogIngressControllers(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		objects []kruntime.Object
-		want    interface{}
-		wantErr string
+		name     string
+		objects  []kruntime.Object
+		want     interface{}
+		wantLogs []map[string]types.GomegaMatcher
+		wantErr  string
 	}{
 		{
-			name:    "returns ICs without managed fields",
+			name:    "returns simple IC output and logs full IC object",
 			objects: []kruntime.Object{defaultIngressController},
-			want: []operatorv1.IngressController{
-				{ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-ingress-operator", Name: "default"}},
+			want: fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s",
+				defaultIngressController.Name, operatorv1.ConditionTrue, operatorv1.ConditionFalse, operatorv1.ConditionFalse),
+			wantLogs: []map[string]types.GomegaMatcher{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(asJson(defaultIngressController)),
+				},
 			},
 		},
 	} {
@@ -213,7 +226,7 @@ func TestLogIngressControllers(t *testing.T) {
 			ctx := context.Background()
 			operatorcli := operatorfake.NewSimpleClientset(tt.objects...)
 
-			_, log := testlog.New()
+			h, log := testlog.New()
 
 			m := &manager{
 				log:         log,
@@ -222,6 +235,7 @@ func TestLogIngressControllers(t *testing.T) {
 
 			got, gotErr := m.logIngressControllers(ctx)
 			utilerror.AssertErrorMessage(t, gotErr, tt.wantErr)
+			require.NoError(t, testlog.AssertLoggingOutput(h, tt.wantLogs))
 			assert.Equal(t, tt.want, got)
 		})
 	}

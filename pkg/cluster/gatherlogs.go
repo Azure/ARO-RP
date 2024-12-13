@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -173,11 +174,36 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 		return nil, err
 	}
 
-	for i := range ics.Items {
-		ics.Items[i].ManagedFields = nil
+	lines := make([]string, 0)
+	errs := make([]error, 0)
+
+	for _, ic := range ics.Items {
+		ic.ManagedFields = nil
+
+		icAvailable := operatorv1.ConditionUnknown
+		icProgressing := operatorv1.ConditionUnknown
+		icDegraded := operatorv1.ConditionUnknown
+		for _, condition := range ic.Status.Conditions {
+			switch condition.Type {
+			case operatorv1.OperatorStatusTypeAvailable:
+				icAvailable = condition.Status
+			case operatorv1.OperatorStatusTypeProgressing:
+				icProgressing = condition.Status
+			case operatorv1.OperatorStatusTypeDegraded:
+				icDegraded = condition.Status
+			}
+		}
+		lines = append(lines, fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s", ic.Name, icAvailable, icProgressing, icDegraded))
+
+		json, err := json.Marshal(ic)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		m.log.Infof(string(json))
 	}
 
-	return ics.Items, nil
+	return strings.Join(lines, "\n"), errors.Join(errs...)
 }
 
 func (m *manager) logPodLogs(ctx context.Context) (interface{}, error) {
