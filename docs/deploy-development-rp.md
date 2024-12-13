@@ -394,7 +394,7 @@ export RESOURCEGROUP=<resource-group-name>
 
 - Admin - Put a new OpenShift installation version
 
-This command adds the image to your cosmosDB. **openShiftPullspec** comes from [quay.io/repository/openshift-release-dev](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags) (in production we must use sha tag, but in dev we can use tag for simplicity) ; and **installerPullspec** from int to work in dev without to have to set any secret, but you can use repo for installer if you configured secret for it.
+This command adds the image to your cosmosDB. **openShiftPullspec** comes from [quay.io/repository/openshift-release-dev](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags) (in production we must use sha tag, but in dev we can use tag for simplicity) ; and **installerPullspec** from int to work in dev without having to set any secret, but you can use repo for installer if you configured secret for it.
 
   ```bash
   OCP_VERSION=<x.y.z>
