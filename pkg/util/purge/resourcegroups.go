@@ -64,33 +64,40 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 
 // cleanNetworking lists subnets in vnets and unnassign security groups
 func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
+	rc.log.Printf("Starting cleanNetworking for ResourceGroup: %s", *resourceGroup.Name)
 	secGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
 	if err != nil {
+		rc.log.Printf("Error listing security groups: %v", err)
 		return err
 	}
 
 	for _, secGroup := range secGroups {
 		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
+			rc.log.Printf("Skipping security group with nil properties or subnets")
 			continue
 		}
 
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
 			if secGroupSubnet.ID == nil || secGroupSubnet.Name == nil {
+				rc.log.Printf("Skipping subnet with nil ID or Name")
 				continue
 			}
 
 			vnetID, _, err := apisubnet.Split(*secGroupSubnet.ID)
 			if err != nil {
+				rc.log.Printf("Error splitting subnet ID: %v", err)
 				return err
 			}
 
 			r, err := azure.ParseResourceID(vnetID)
 			if err != nil {
+				rc.log.Printf("Error parsing resource ID: %v", err)
 				return err
 			}
 
 			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, r.ResourceName, *secGroupSubnet.Name, nil)
 			if err != nil {
+				rc.log.Printf("Error getting subnet: %v", err)
 				return err
 			}
 
