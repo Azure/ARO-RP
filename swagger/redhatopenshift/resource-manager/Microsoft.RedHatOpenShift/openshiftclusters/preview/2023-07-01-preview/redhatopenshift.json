@@ -53,13 +53,13 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftVersions": {
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions": {
       "get": {
         "tags": [
           "OpenShiftVersions"
         ],
         "summary": "Lists all OpenShift versions available to install in the specified location.",
-        "description": "The operation returns the installable OpenShift versions as strings.",
+        "description": "The operation returns the installable OpenShift versions as a string.",
         "operationId": "OpenShiftVersions_List",
         "parameters": [
           {
@@ -700,7 +700,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/machinePool/{childResourceName}": {
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/machinePools/{childResourceName}": {
       "get": {
         "tags": [
           "MachinePools"
@@ -958,7 +958,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/secret/{childResourceName}": {
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/secrets/{childResourceName}": {
       "get": {
         "tags": [
           "Secrets"
@@ -1216,7 +1216,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncIdentityProvider/{childResourceName}": {
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/syncIdentityProviders/{childResourceName}": {
       "get": {
         "tags": [
           "SyncIdentityProviders"
@@ -1474,7 +1474,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}": {
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/syncSets/{childResourceName}": {
       "get": {
         "tags": [
           "SyncSets"

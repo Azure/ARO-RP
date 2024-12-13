@@ -53,13 +53,13 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftVersions": {
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions": {
       "get": {
         "tags": [
           "OpenShiftVersions"
         ],
         "summary": "Lists all OpenShift versions available to install in the specified location.",
-        "description": "The operation returns the installable OpenShift versions as strings.",
+        "description": "The operation returns the installable OpenShift versions as a string.",
         "operationId": "OpenShiftVersions_List",
         "parameters": [
           {
@@ -96,13 +96,53 @@
         }
       }
     },
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions/{openShiftVersion}": {
+      "get": {
+        "tags": [
+          "OpenShiftVersions"
+        ],
+        "summary": "Gets an available OpenShift version to install in the specified location.",
+        "description": "This operation returns installable OpenShift version as a string.",
+        "operationId": "OpenShiftVersions_Get",
+        "parameters": [
+          {
+            "$ref": "../../../../../../common-types/resource-management/v6/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../../common-types/resource-management/v6/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../../common-types/resource-management/v6/types.json#/parameters/LocationParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftVersion"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Gets an available OpenShift version to install in the specified location.": {
+            "$ref": "./examples/OpenShiftVersions_Get.json"
+          }
+        }
+      }
+    },
     "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets": {
       "get": {
         "tags": [
           "PlatformWorkloadIdentityRoleSets"
         ],
         "summary": "Lists a mapping of OpenShift versions to identity requirements, which include operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
-        "description": "This operation returns PlatformWorkloadIdentityRoleSet as a string",
+        "description": "This operation returns a list of Platform Workload Identity Role Sets as a string",
         "operationId": "PlatformWorkloadIdentityRoleSets_List",
         "parameters": [
           {
@@ -136,6 +176,46 @@
         },
         "x-ms-pageable": {
           "nextLinkName": "nextLink"
+        }
+      }
+    },
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{OpenshiftMinorVersion}": {
+      "get": {
+        "tags": [
+          "PlatformWorkloadIdentityRoleSes"
+        ],
+        "summary": "Gets a mapping of an OpenShift version to identity requirements, which includes operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
+        "description": "This operation returns Platform Workload Identity Role Set as a string",
+        "operationId": "PlatformWorkloadIdentityRoleSet_Get",
+        "parameters": [
+          {
+            "$ref": "../../../../../../common-types/resource-management/v6/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../../common-types/resource-management/v6/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../../common-types/resource-management/v6/types.json#/parameters/LocationParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PlatformWorkloadIdentityRoleSet"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Gets a mapping of an OpenShift version to identity requirements, which includes operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.": {
+            "$ref": "./examples/PlatformWorkloadIdentityRoleSet_Get.json"
+          }
         }
       }
     },
