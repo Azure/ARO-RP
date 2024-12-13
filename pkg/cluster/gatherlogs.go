@@ -12,6 +12,7 @@ import (
 	"io"
 	"strings"
 
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -100,14 +101,14 @@ func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
 	for _, node := range nodes.Items {
 		node.ManagedFields = nil
 
-		nodeReady := corev1.ConditionFalse
+		nodeReady := corev1.ConditionUnknown
 		for _, condition := range node.Status.Conditions {
 			if condition.Type == corev1.NodeReady {
 				nodeReady = condition.Status
 				break
 			}
 		}
-		lines = append(lines, fmt.Sprintf("%s Ready: %s", node.Name, nodeReady))
+		lines = append(lines, fmt.Sprintf("%s - Ready: %s", node.Name, nodeReady))
 
 		json, err := json.Marshal(node)
 		if err != nil {
@@ -130,11 +131,36 @@ func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) 
 		return nil, err
 	}
 
-	for i := range cos.Items {
-		cos.Items[i].ManagedFields = nil
+	lines := make([]string, 0)
+	errs := make([]error, 0)
+
+	for _, co := range cos.Items {
+		co.ManagedFields = nil
+
+		coAvailable := configv1.ConditionUnknown
+		coProgressing := configv1.ConditionUnknown
+		coDegraded := configv1.ConditionUnknown
+		for _, condition := range co.Status.Conditions {
+			switch condition.Type {
+			case configv1.OperatorAvailable:
+				coAvailable = condition.Status
+			case configv1.OperatorProgressing:
+				coProgressing = condition.Status
+			case configv1.OperatorDegraded:
+				coDegraded = condition.Status
+			}
+		}
+		lines = append(lines, fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s", co.Name, coAvailable, coProgressing, coDegraded))
+
+		json, err := json.Marshal(co)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		m.log.Infof(string(json))
 	}
 
-	return cos.Items, nil
+	return strings.Join(lines, "\n"), errors.Join(errs...)
 }
 
 func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error) {
