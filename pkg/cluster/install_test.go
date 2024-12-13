@@ -216,15 +216,15 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logNodes: ""`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logNodes: `),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterOperators: ""`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterOperators: `),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logIngressControllers: ""`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logIngressControllers: `),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),

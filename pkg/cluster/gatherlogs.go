@@ -31,9 +31,9 @@ func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 
 	s := []diagnosticStep{
 		{f: m.logClusterVersion, isJSON: true},
-		{f: m.logNodes, isJSON: true},
-		{f: m.logClusterOperators, isJSON: true},
-		{f: m.logIngressControllers, isJSON: true},
+		{f: m.logNodes, isJSON: false},
+		{f: m.logClusterOperators, isJSON: false},
+		{f: m.logIngressControllers, isJSON: false},
 		{f: m.logPodLogs, isJSON: false},
 	}
 
