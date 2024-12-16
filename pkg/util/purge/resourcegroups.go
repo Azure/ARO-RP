@@ -85,12 +85,12 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				return err
 			}
 
-			r, err := azure.ParseResourceID(vnetID)
+			vnetResourceID, err := azure.ParseResourceID(vnetID)
 			if err != nil {
 				return err
 			}
 
-			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, r.ResourceName, *secGroupSubnet.Name, nil)
+			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetResourceID.ResourceName, *secGroupSubnet.Name, nil)
 			if err != nil {
 				return err
 			}
@@ -102,22 +102,16 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 
 				subnet.Properties.NetworkSecurityGroup = nil
 
-				vnetID, _, err := apisubnet.Split(*subnet.ID)
+				err = rc.subnet.CreateOrUpdateAndWait(ctx, *resourceGroup.Name, vnetResourceID.ResourceName, *subnet.Name, subnet.Subnet, nil)
+				rc.log.Printf("Resources Dettaching: RG: %s - Vnet: %s - Subnet: %s", *resourceGroup.Name, vnetResourceID.ResourceName, *subnet.Name)
 				if err != nil {
 					return err
 				}
-
-				r, err := azure.ParseResourceID(vnetID)
-				if err != nil {
-					return err
-				}
-				err = rc.subnet.CreateOrUpdateAndWait(ctx, *resourceGroup.Name, r.ResourceName, *subnet.Name, subnet.Subnet, nil)
-				rc.log.Printf("Resources Deleted: RG: %s - Vnet: %s - Subnet: %s", *resourceGroup.Name, r.ResourceName, *subnet.Name)
-				if err != nil {
-					return err
-				}
+			} else {
+				rc.log.Printf("DRY RUN: Resources Dettaching: RG: %s - Vnet: %s - Subnet: %s", *resourceGroup.Name, vnetResourceID.ResourceName, *subnet.Name)
 			}
 		}
+
 	}
 
 	return nil
