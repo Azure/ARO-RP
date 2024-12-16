@@ -162,7 +162,7 @@ func Run(api, outputDir string) error {
 		}
 		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{openShiftMinorVersion}"] = &PathItem{
 			Get: &Operation{
-				Tags:        []string{"PlatformWorkloadIdentityRoleSes"},
+				Tags:        []string{"PlatformWorkloadIdentityRoleSets"},
 				Summary:     "Gets a mapping of an OpenShift version to identity requirements, which includes operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
 				Description: "This operation returns Platform Workload Identity Role Set as a string",
 				OperationID: "PlatformWorkloadIdentityRoleSet_Get",
