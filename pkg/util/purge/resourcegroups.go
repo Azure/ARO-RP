@@ -70,10 +70,13 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 	for _, secGroup := range secGroups {
 		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
 			continue
+		} else {
+			rc.log.Printf("Deleting SecGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
 		}
 
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
 			subnet, err := rc.subnet.Get(ctx, *secGroupSubnet.ID)
+			rc.log.Printf("Deleting Subnet: %v", subnet)
 			if err != nil {
 				return err
 			}
@@ -91,6 +94,8 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				if err != nil {
 					return err
 				}
+			} else {
+				rc.log.Printf("Deleting Subnet: %s , SecGroup: %v", *subnet.ID, *secGroup.Name)
 			}
 		}
 	}
