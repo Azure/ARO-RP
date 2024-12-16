@@ -73,12 +73,12 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 					case "openShiftVersion":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "openShiftVersion",
-							Parameter: "openShiftVersion",
+							Parameter: "4.14.40",
 						})
 					case "openShiftMinorVersion":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "openShiftMinorVersion",
-							Parameter: "openShiftMinorVersion",
+							Parameter: "4.14",
 						})
 					case "parameters":
 						switch param.Schema.Ref {
