@@ -75,10 +75,10 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							Name:      "openShiftVersion",
 							Parameter: "openShiftVersion",
 						})
-					case "openshiftMinorVersion":
+					case "openShiftMinorVersion":
 						example.Parameters = append(example.Parameters, NameParameter{
-							Name:      "openshiftMinorVersion",
-							Parameter: "openshiftMinorVersion",
+							Name:      "openShiftMinorVersion",
+							Parameter: "openShiftMinorVersion",
 						})
 					case "parameters":
 						switch param.Schema.Ref {

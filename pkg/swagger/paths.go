@@ -56,7 +56,7 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 			versionParameter.Pattern = `^(\d+)\.(\d+)\.(\d+)(.*)`
 			s = append(s, versionParameter)
 		case "PlatformWorkloadIdentityRoleSet":
-			versionParameter.Name = "openshiftMinorVersion"
+			versionParameter.Name = "openShiftMinorVersion"
 			versionParameter.Pattern = `^(\d+)\.(\d+)`
 			s = append(s, versionParameter)
 		}

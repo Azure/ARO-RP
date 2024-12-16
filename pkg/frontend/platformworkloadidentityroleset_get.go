@@ -19,7 +19,7 @@ func (f *frontend) getPlatformWorkloadIdentityRoleSet(w http.ResponseWriter, r *
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
-	requestedMinorVersion := chi.URLParam(r, "openshiftMinorVersion")
+	requestedMinorVersion := chi.URLParam(r, "openShiftMinorVersion")
 	if f.apis[apiVersion].PlatformWorkloadIdentityRoleSetConverter == nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", resourceProviderNamespace, apiVersion)
 		return
