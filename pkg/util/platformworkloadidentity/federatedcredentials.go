@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"strings"
+
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
@@ -18,15 +20,18 @@ const (
 )
 
 func GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId azure.Resource, serviceAccountName string) string {
-	clusterResourceKey := fmt.Sprintf("%s_%s", serviceAccountName, clusterResourceId.ResourceName)
-	name := fmt.Sprintf("%s-%s-%s", clusterResourceKey, serviceAccountName, identityResourceId.ResourceName)
+	sanitizedServiceAccountName := strings.ReplaceAll(serviceAccountName, ":", "-")
+	parts := strings.Split(sanitizedServiceAccountName, "-")
+	sanitizedServiceAccountName = strings.Join(parts[2:], "-")
+	clusterResourceKey := fmt.Sprintf("%s_%s", sanitizedServiceAccountName, clusterResourceId.ResourceName)
+	name := fmt.Sprintf("%s-%s-%s", clusterResourceKey, sanitizedServiceAccountName, identityResourceId.ResourceName)
 	// the base-36 encoded string of a SHA-224 hash will typically be around 43 to 44 characters long.
 	hash := sha256.Sum224([]byte(name))
 	encodedName := (&big.Int{}).SetBytes(hash[:]).Text(base36Encoding)
 	remainingChars := maxFederatedCredNameLength - len(encodedName) - numberOfDelimiters
 
 	if remainingChars < len(clusterResourceKey) {
-		return fmt.Sprintf("%s-%s", clusterResourceKey[:remainingChars], encodedName)
+		return fmt.Sprintf("%s-%s", clusterResourceKey, encodedName)[:remainingChars]
 	}
 
 	return fmt.Sprintf("%s-%s", clusterResourceKey, encodedName)
