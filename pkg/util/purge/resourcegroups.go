@@ -71,6 +71,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 	}
 
 	for _, secGroup := range secGroups {
+		rc.log.Printf("DRY RUN: Resources Dettaching: SecGroup %v ", secGroup.Properties.Subnets)
 		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
 			continue
 		}
@@ -78,6 +79,9 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
 			if secGroupSubnet.ID == nil || secGroupSubnet.Name == nil {
 				continue
+			} else {
+				rc.log.Printf("DRY RUN: Resources Dettaching: SecGroupSubnetID %v , secGroupSubnet.Name %v", secGroupSubnet.ID, secGroupSubnet.Name)
+
 			}
 
 			vnetID, _, err := apisubnet.Split(*secGroupSubnet.ID)
@@ -94,6 +98,8 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			if err != nil {
 				return err
 			}
+
+			rc.log.Printf("DRY RUN: Resources Dettaching: Vnet %v", vnetResourceID.ResourceName)
 
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
