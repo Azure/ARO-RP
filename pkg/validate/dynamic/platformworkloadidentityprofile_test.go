@@ -263,9 +263,6 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	expectedPlatformIdentity1FederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, platformIdentity1SAName)
 	expectedOIDCIssuer := "https://fakeissuer.fakedomain/fakecluster"
 	platformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
-		"Dummy2": {
-			ResourceID: platformIdentity1,
-		},
 		"Dummy1": {
 			ResourceID: platformIdentity1,
 		},
@@ -532,6 +529,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return(nil, fmt.Errorf("something unexpected occurred"))
 			},
@@ -560,6 +558,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
 						{
@@ -604,6 +603,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
 						{
@@ -648,6 +648,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
 						{
@@ -692,6 +693,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				},
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
 						{
@@ -935,7 +937,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
-			name:                  "Fail - Mismatch between desired and provided platform Identities - count mismatch 2",
+			name:                  "Fail - Mismatch between desired and provided platform Identities - count mismatch and operator missing",
 			platformIdentityRoles: validRolesForVersion,
 			oc: &api.OpenShiftCluster{
 				ID: clusterID,
@@ -1013,18 +1015,22 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
-							"Dummy2": {
-								ResourceID: "Invalid UUID",
-							},
 							"Dummy1": {
 								ResourceID: "Invalid UUID",
 							},
 						},
 					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
 				},
 				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
 			wantErr: "parsing failed for Invalid UUID. Invalid resource Id format",
 		},

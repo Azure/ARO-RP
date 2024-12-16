@@ -321,6 +321,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 		identities map[string]api.PlatformWorkloadIdentity
 		roles      []api.PlatformWorkloadIdentityRole
 		want       []*corev1.Secret
+		wantErr    string
 	}{
 		{
 			name:       "no identities, no secrets",
@@ -394,17 +395,15 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "ignores identities with no role present",
+			name: "error - identities with unexpected operator name present",
 			identities: map[string]api.PlatformWorkloadIdentity{
 				"foo": {
 					ClientID: "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
-				"bar": {
-					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
-				},
 			},
-			roles: []api.PlatformWorkloadIdentityRole{},
-			want:  []*corev1.Secret{},
+			roles:   []api.PlatformWorkloadIdentityRole{},
+			want:    []*corev1.Secret{},
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
 			name: "skips ARO operator identity",
@@ -466,6 +465,9 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 								PlatformWorkloadIdentities: tt.identities,
 							},
+							ClusterProfile: api.ClusterProfile{
+								Version: "4.14.40",
+							},
 						},
 					},
 				},
@@ -484,7 +486,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			}
 			got, err := m.generatePlatformWorkloadIdentitySecrets()
 
-			utilerror.AssertErrorMessage(t, err, "")
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			assert.ElementsMatch(t, got, tt.want)
 		})
 	}

@@ -1811,7 +1811,7 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 			wantErr: "OIDCIssuer is nil",
 		},
 		{
-			name: "Success - Operator name do not exists in PlatformWorkloadIdentityProfile",
+			name: "Fail - Operator name does not exist in PlatformWorkloadIdentityProfile",
 			oc: &api.OpenShiftClusterDocument{
 				ID: docID,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -1857,7 +1857,7 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 					},
 				)
 			},
-			wantErr: "",
+			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s or %s'. The required platform workload identities are '[CloudControllerManager]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14", "4.15"),
 		},
 	} {
 		uuidGen := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.OPENSHIFT_VERSIONS)

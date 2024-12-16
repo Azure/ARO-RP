@@ -34,8 +34,6 @@ import (
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -813,57 +811,6 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		uuidGen := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.OPENSHIFT_VERSIONS)
-		dbPlatformWorkloadIdentityRoleSets, _ := testdatabase.NewFakePlatformWorkloadIdentityRoleSets(uuidGen)
-		f := testdatabase.NewFixture().WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets, uuidGen)
-		pir := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
-		f.AddPlatformWorkloadIdentityRoleSetDocuments(&api.PlatformWorkloadIdentityRoleSetDocument{
-			PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
-				Name: "testRoleSet",
-				Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-					OpenShiftVersion: "4.14",
-					PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-						{
-							OperatorName:    "CloudControllerManager",
-							ServiceAccounts: []string{ccmServiceAccountName},
-						},
-						{
-							OperatorName:    "ClusterIngressOperator",
-							ServiceAccounts: []string{ingressServiceAccountName},
-						},
-					},
-				},
-			},
-		},
-			&api.PlatformWorkloadIdentityRoleSetDocument{
-				PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
-					Name: "testRoleSet",
-					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-						OpenShiftVersion: "4.15",
-						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-							{
-								OperatorName:    "CloudControllerManager",
-								ServiceAccounts: []string{"openshift-cloud-controller-manager:cloud-controller-manager"},
-							},
-							{
-								OperatorName:    "ClusterIngressOperator",
-								ServiceAccounts: []string{"openshift-ingress-operator:ingress-operator"},
-							},
-						},
-					},
-				},
-			},
-		)
-		err := f.Create()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = pir.PopulatePlatformWorkloadIdentityRolesByVersion(ctx, tt.doc.OpenShiftCluster, dbPlatformWorkloadIdentityRoleSets)
-		if err != nil {
-			t.Fatal(err)
-		}
-
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -876,7 +823,6 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			m := manager{
 				log:                                    logrus.NewEntry(logrus.StandardLogger()),
 				doc:                                    tt.doc,
-				platformWorkloadIdentityRolesByVersion: pir,
 				clusterMsiFederatedIdentityCredentials: federatedIdentityCredentials,
 			}
 

@@ -12,9 +12,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -34,93 +34,68 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 	dv.log.Print("ValidatePlatformWorkloadIdentityProfile")
 
 	dv.platformIdentitiesActionsMap = map[string][]string{}
-	dv.platformIdentities = map[string]api.PlatformWorkloadIdentity{}
-
-	for k, pwi := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		_, ok := platformWorkloadIdentityRolesByRoleName[k]
-		if ok {
-			dv.platformIdentitiesActionsMap[k] = nil
-			dv.platformIdentities[k] = pwi
-
-			identityResourceId, err := azure.ParseResourceID(pwi.ResourceID)
-			if err != nil {
-				return err
-			}
-
-			// validate federated identity credentials
-			federatedCredentials, err := clusterMsiFederatedIdentityCredentials.List(ctx, identityResourceId.ResourceGroup, identityResourceId.ResourceName, &sdkmsi.FederatedIdentityCredentialsClientListOptions{})
-			if err != nil {
-				return err
-			}
-
-			for _, federatedCredential := range federatedCredentials {
-				switch {
-				case federatedCredential == nil,
-					federatedCredential.Name == nil,
-					federatedCredential.Properties == nil:
-					return fmt.Errorf("received invalid federated credential")
-				case oc.Properties.ProvisioningState == api.ProvisioningStateCreating:
-					return api.NewCloudError(
-						http.StatusBadRequest,
-						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
-						fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId", k),
-						"Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure this identity is only used for this cluster and does not have any existing federated identity credentials.",
-						*federatedCredential.Name,
-						pwi.ResourceID,
-						k,
-					)
-				case len(federatedCredential.Properties.Audiences) != 1,
-					*federatedCredential.Properties.Audiences[0] != expectedAudience,
-					federatedCredential.Properties.Issuer == nil,
-					*federatedCredential.Properties.Issuer != string(*oc.Properties.ClusterProfile.OIDCIssuer):
-					return api.NewCloudError(
-						http.StatusBadRequest,
-						api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
-						fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId", k),
-						"Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
-						*federatedCredential.Name,
-						pwi.ResourceID,
-						k,
-					)
-				}
-			}
-		}
-	}
+	dv.platformIdentities = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 
 	// Check if any required platform identity is missing
 	if len(dv.platformIdentities) != len(platformWorkloadIdentityRolesByRoleName) {
-		requiredOperatorIdentities := []string{}
-		for _, role := range platformWorkloadIdentityRolesByRoleName {
-			requiredOperatorIdentities = append(requiredOperatorIdentities, role.OperatorName)
-		}
-		currentOpenShiftVersion, err := version.ParseVersion(oc.Properties.ClusterProfile.Version)
-		if err != nil {
-			return err
-		}
-		currentMinorVersion := currentOpenShiftVersion.MinorVersion()
-		v := currentMinorVersion
-		if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
-			upgradeableVersion, err := version.ParseVersion(string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo))
-			if err != nil {
-				return err
-			}
-			upgradeableMinorVersion := upgradeableVersion.MinorVersion()
-			if currentMinorVersion != upgradeableMinorVersion && currentOpenShiftVersion.Lt(upgradeableVersion) {
-				v = fmt.Sprintf("%s or %s", v, upgradeableMinorVersion)
-			}
-		}
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePlatformWorkloadIdentityMismatch,
-			"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '%v'", v, requiredOperatorIdentities)
+		return platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(oc, platformWorkloadIdentityRolesByRoleName)
 	}
 
-	for _, role := range platformWorkloadIdentityRolesByRoleName {
+	for k, pwi := range dv.platformIdentities {
+		role, exists := platformWorkloadIdentityRolesByRoleName[k]
+		if !exists {
+			return platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(oc, platformWorkloadIdentityRolesByRoleName)
+		}
+
 		roleDefinitionID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
 		actions, err := getActionsForRoleDefinition(ctx, roleDefinitionID, roleDefinitions)
 		if err != nil {
 			return err
 		}
-
 		dv.platformIdentitiesActionsMap[role.OperatorName] = actions
+
+		identityResourceId, err := azure.ParseResourceID(pwi.ResourceID)
+		if err != nil {
+			return err
+		}
+
+		// validate federated identity credentials
+		federatedCredentials, err := clusterMsiFederatedIdentityCredentials.List(ctx, identityResourceId.ResourceGroup, identityResourceId.ResourceName, &sdkmsi.FederatedIdentityCredentialsClientListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, federatedCredential := range federatedCredentials {
+			switch {
+			case federatedCredential == nil,
+				federatedCredential.Name == nil,
+				federatedCredential.Properties == nil:
+				return fmt.Errorf("received invalid federated credential")
+			case oc.Properties.ProvisioningState == api.ProvisioningStateCreating:
+				return api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+					fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId", k),
+					"Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure this identity is only used for this cluster and does not have any existing federated identity credentials.",
+					*federatedCredential.Name,
+					pwi.ResourceID,
+					k,
+				)
+			case len(federatedCredential.Properties.Audiences) != 1,
+				*federatedCredential.Properties.Audiences[0] != expectedAudience,
+				federatedCredential.Properties.Issuer == nil,
+				*federatedCredential.Properties.Issuer != string(*oc.Properties.ClusterProfile.OIDCIssuer):
+				return api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential,
+					fmt.Sprintf("properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId", k),
+					"Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
+					*federatedCredential.Name,
+					pwi.ResourceID,
+					k,
+				)
+			}
+		}
 	}
 
 	return nil
