@@ -88,7 +88,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			}
 			rc.log.Printf("Before 'GET' Resources Dettaching: RG: %v ", *resourceGroup.Name)
 			rc.log.Printf("Before 'GET' Resources Dettaching: Vnet: %v ", vnetResourceID.ResourceName)
-			rc.log.Printf("Before 'GET' Resources Dettaching: secGroupSubnet.Name: %v", *secGroupSubnet.Name)
+			rc.log.Printf("Before 'GET' Resources Dettaching: secGroupSubnet.Name: %v", secGroupSubnet.Name)
 
 			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetResourceID.ResourceName, *secGroupSubnet.Name, nil)
 			rc.log.Printf("Deleting Subnet: %v", subnet)
