@@ -113,6 +113,16 @@
           },
           {
             "$ref": "../../../../../../common-types/resource-management/v6/types.json#/parameters/LocationParameter"
+          },
+          {
+            "name": "openShiftVersion",
+            "in": "path",
+            "description": "The desired version value of the OpenShiftVersion resource.",
+            "required": true,
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^(\\d+)\\.(\\d+)\\.(\\d+)(.*)"
           }
         ],
         "responses": {
@@ -179,7 +189,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{OpenshiftMinorVersion}": {
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{openshiftMinorVersion}": {
       "get": {
         "tags": [
           "PlatformWorkloadIdentityRoleSes"
@@ -196,6 +206,16 @@
           },
           {
             "$ref": "../../../../../../common-types/resource-management/v6/types.json#/parameters/LocationParameter"
+          },
+          {
+            "name": "openshiftMinorVersion",
+            "in": "path",
+            "description": "The desired version value of the PlatformWorkloadIdentityRoleSet resource.",
+            "required": true,
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^(\\d+)\\.(\\d+)"
           }
         ],
         "responses": {
