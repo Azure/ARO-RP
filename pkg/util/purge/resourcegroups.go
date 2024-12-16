@@ -7,7 +7,9 @@ import (
 	"context"
 	"sort"
 
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // CleanResourceGroups loop through the resourgroups in the subscription
@@ -75,7 +77,17 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 		}
 
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
-			subnet, err := rc.subnet.Get(ctx, *secGroupSubnet.ID)
+			vnetID, _, err := apisubnet.Split(*secGroupSubnet.ID)
+			if err != nil {
+				return err
+			}
+
+			vnetResourceID, err := azure.ParseResourceID(vnetID)
+			if err != nil {
+				return err
+			}
+
+			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetResourceID.ResourceName, *secGroupSubnet.Name, nil)
 			rc.log.Printf("Deleting Subnet: %v", subnet)
 			if err != nil {
 				return err
@@ -84,18 +96,18 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
 
 			if !rc.dryRun {
-				if subnet.NetworkSecurityGroup == nil {
+				if subnet.Properties.NetworkSecurityGroup == nil {
 					continue
 				}
 
-				subnet.NetworkSecurityGroup = nil
-
-				err = rc.subnet.CreateOrUpdate(ctx, *subnet.ID, subnet)
+				subnet.Properties.NetworkSecurityGroup = nil
+				rc.log.Printf("Resources Dettaching: RG: %s - Vnet: %s - secGroupSubnet: %s", *resourceGroup.Name, vnetResourceID.ResourceName, *secGroupSubnet.Name)
+				err = rc.subnet.CreateOrUpdateAndWait(ctx, *resourceGroup.Name, vnetResourceID.ResourceName, *secGroupSubnet.Name, subnet.Subnet, nil)
 				if err != nil {
 					return err
 				}
 			} else {
-				rc.log.Printf("Deleting Subnet: %s , SecGroup: %v", *subnet.ID, *secGroup.Name)
+				rc.log.Printf("Resources Dettaching: RG: %s - Vnet: %s - secGroupSubnet: %s", *resourceGroup.Name, vnetResourceID.ResourceName, *secGroupSubnet.Name)
 			}
 		}
 	}
