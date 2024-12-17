@@ -36,6 +36,7 @@ func (m *manager) ensureSSHKey(ctx context.Context) error {
 }
 
 func randomLowerCaseAlphanumericStringWithNoVowels(n int) (string, error) {
+	// no vowels to avoid accidental words https://github.com/Azure/ARO-RP/pull/485/files#r409569888
 	return randomString("bcdfghjklmnpqrstvwxyz0123456789", n)
 }
 
