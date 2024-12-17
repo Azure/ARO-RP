@@ -84,7 +84,8 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				return err
 			}
 
-			rc.log.Printf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+			rc.log.Printf("RG: %s secGroup.Name: %s subnet.Name: %s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+			rc.log.Printf("What is subnet.NetwSecurityGroup: %v", subnet.NetworkSecurityGroup)
 
 			if !rc.dryRun {
 				if subnet.NetworkSecurityGroup == nil {
