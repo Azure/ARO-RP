@@ -68,23 +68,23 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 	}
 
 	for _, secGroup := range secGroups {
-		rc.log.Debugf("What is secGroup: %v", secGroup)
-		rc.log.Debugf("What is secGroup.Properties: %v", secGroup.Properties)
-		rc.log.Debugf("What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
+		rc.log.Printf("What is secGroup: %v", secGroup)
+		rc.log.Printf("What is secGroup.Properties: %v", secGroup.Properties)
+		rc.log.Printf("What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
 		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
 			continue
 		}
 
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
-			rc.log.Debugf("[FOR LOOP]What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
+			rc.log.Printf("[FOR LOOP]What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
 			subnet, err := rc.subnet.Get(ctx, *secGroupSubnet.ID)
-			rc.log.Debugf("What is 'subnet': %v", subnet)
-			rc.log.Debugf("What is '*secGroupSubnet.ID': %v", *secGroupSubnet.ID)
+			rc.log.Printf("What is 'subnet': %v", subnet)
+			rc.log.Printf("What is '*secGroupSubnet.ID': %v", *secGroupSubnet.ID)
 			if err != nil {
 				return err
 			}
 
-			rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+			rc.log.Printf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
 
 			if !rc.dryRun {
 				if subnet.NetworkSecurityGroup == nil {
@@ -98,7 +98,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 					return err
 				}
 			} else {
-				rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+				rc.log.Printf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
 			}
 		}
 	}
