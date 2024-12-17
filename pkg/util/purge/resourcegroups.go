@@ -78,11 +78,9 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 		}
 
 		for _, SubnetResource := range secGroup.Properties.Subnets {
-			rc.log.Printf("[FOR LOOP]What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
-			rc.log.Printf("[FOR LOOP]What is SubnetResource: %v", SubnetResource)
 			rc.log.Printf("[FOR LOOP]What is SubnetResource.ID: %v", *SubnetResource.ID)
 
-			vnetID, subnetID, err := apisubnet.Split(*SubnetResource.ID)
+			vnetID, subnetName, err := apisubnet.Split(*SubnetResource.ID)
 			if err != nil {
 				return err
 			}
@@ -91,21 +89,17 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			if err != nil {
 				return err
 			}
-			rc.log.Printf("What is subnetID: %v", subnetID)
-			rc.log.Printf("What is vnetID: %v", vnetID)
-			rc.log.Printf("Before 'GET' Resources Dettaching: RG: %v ", *resourceGroup.Name)
-			rc.log.Printf("Before 'GET' Resources Dettaching: Vnet: %v ", vnetName.ResourceName)
-			rc.log.Printf("Before 'GET' Resources Dettaching: SubnetResource.ID: %v", *SubnetResource.ID)
 
-			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetName.ResourceName, *SubnetResource.ID, nil)
+			rc.log.Printf("Before 'GET' RG: %s - vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, vnetName.ResourceName, subnetName)
 
-			rc.log.Printf("After GET 'subnet': %v", subnet)
+			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetName.ResourceName, subnetName, nil)
+
+			rc.log.Printf("After GET 'subnet.Name': %v", subnet.Name)
 			rc.log.Printf("After 'GET' *SubnetResource.ID': %v", *SubnetResource.ID)
 			if err != nil {
 				return err
 			}
 
-			rc.log.Printf("What is secGroup.Name: %s subnet.Name: %s", *secGroup.Name, *subnet.Name)
 			rc.log.Printf("What is subnet.Properties.NetworkSecurityGroup: %v", subnet.Properties.NetworkSecurityGroup)
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
@@ -119,7 +113,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 					return err
 				}
 			} else {
-				rc.log.Printf("Resources Dettaching: RG: %s - Vnet: %s - SubnetResource.ID: %s", *resourceGroup.Name, vnetName.ResourceName, *SubnetResource.ID)
+				rc.log.Printf("Resources Dettaching: RG: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", *resourceGroup.Name, vnetName.ResourceName, subnetName, *secGroup.Name)
 			}
 		}
 	}
