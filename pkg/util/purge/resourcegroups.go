@@ -92,6 +92,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				return err
 			}
 			rc.log.Printf("What is subnetID: %v", subnetID)
+			rc.log.Printf("What is vnetID: %v", vnetID)
 			rc.log.Printf("Before 'GET' Resources Dettaching: RG: %v ", *resourceGroup.Name)
 			rc.log.Printf("Before 'GET' Resources Dettaching: Vnet: %v ", vnetName.ResourceName)
 			rc.log.Printf("Before 'GET' Resources Dettaching: SubnetResource.ID: %v", *SubnetResource.ID)
