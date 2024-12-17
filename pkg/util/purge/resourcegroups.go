@@ -70,16 +70,18 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 	}
 
 	for _, secGroup := range secGroups {
+		rc.log.Printf("What is secGroup: %v", secGroup)
+		rc.log.Printf("What is secGroup.Properties: %v", secGroup.Properties)
+		rc.log.Printf("What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
 		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
 			continue
-		} else {
-			rc.log.Printf("What is the SecGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
 		}
 
 		for _, SubnetResource := range secGroup.Properties.Subnets {
-			rc.log.Printf("What is the SubnetResource.ID with * : %v", *SubnetResource.ID)
+			rc.log.Printf("[FOR LOOP]What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
+			rc.log.Printf("[FOR LOOP]What is SubnetResource: %v", SubnetResource)
 
-			vnetID, _, err := apisubnet.Split(*SubnetResource.ID)
+			vnetID, subnetID, err := apisubnet.Split(*SubnetResource.ID)
 			if err != nil {
 				return err
 			}
@@ -88,18 +90,27 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			if err != nil {
 				return err
 			}
-			rc.log.Printf("Before 'GET' Resources Dettaching: RG: %v ", *resourceGroup.Name)
-			rc.log.Printf("Before 'GET' Resources Dettaching: Vnet: %v ", vnetName.ResourceName)
-			rc.log.Printf("Before 'GET' Resources Dettaching: SubnetResource.ID: %v", *SubnetResource.ID)
 
-			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetName.ResourceName, *SubnetResource.ID, nil)
-			rc.log.Printf("Deleting Subnet: %v", subnet)
+			subnetName, err := azure.ParseResourceID(subnetID)
 			if err != nil {
 				return err
 			}
 
-			rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+			rc.log.Printf("Before 'GET' Resources Dettaching: RG: %v ", *resourceGroup.Name)
+			rc.log.Printf("Before 'GET' Resources Dettaching: Vnet: %v ", vnetName.ResourceName)
+			rc.log.Printf("Before 'GET' Resources Dettaching: subnetNameResourceName: %v", subnetName.ResourceName)
+			rc.log.Printf("Before 'GET' Resources Dettaching: SubnetResource.ID: %v", *SubnetResource.ID)
 
+			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetName.ResourceName, *SubnetResource.ID, nil)
+
+			rc.log.Printf("After GET 'subnet': %v", subnet)
+			rc.log.Printf("After 'GET' *SubnetResource.ID': %v", *SubnetResource.ID)
+			if err != nil {
+				return err
+			}
+
+			rc.log.Printf("What is secGroup.Name: %s subnet.Name: %s", *secGroup.Name, *subnet.Name)
+			rc.log.Printf("What is subnet.Properties.NetworkSecurityGroup: %v", subnet.Properties.NetworkSecurityGroup)
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
 					continue
