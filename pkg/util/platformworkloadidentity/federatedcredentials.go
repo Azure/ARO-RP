@@ -20,10 +20,8 @@ const (
 )
 
 func GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId azure.Resource, serviceAccountName string) string {
-	sanitizedServiceAccountName := strings.ReplaceAll(serviceAccountName, ":", "-")
-	parts := strings.Split(sanitizedServiceAccountName, "-")
-	sanitizedServiceAccountName = strings.Join(parts[2:], "-")
-	clusterResourceKey := fmt.Sprintf("%s_%s", sanitizedServiceAccountName, clusterResourceId.ResourceName)
+	sanitizedServiceAccountName := strings.Join((strings.Split(strings.ReplaceAll(serviceAccountName, ":", "-"), "-"))[2:], "-")
+	clusterResourceKey := fmt.Sprintf("%s_%s", clusterResourceId.ResourceName, sanitizedServiceAccountName)
 	name := fmt.Sprintf("%s-%s-%s", clusterResourceKey, sanitizedServiceAccountName, identityResourceId.ResourceName)
 	// the base-36 encoded string of a SHA-224 hash will typically be around 43 to 44 characters long.
 	hash := sha256.Sum224([]byte(name))
@@ -31,8 +29,8 @@ func GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityRes
 	remainingChars := maxFederatedCredNameLength - len(encodedName) - numberOfDelimiters
 
 	if remainingChars < len(clusterResourceKey) {
-		return fmt.Sprintf("%s-%s", clusterResourceKey, encodedName)[:remainingChars]
+		return fmt.Sprintf("%s_%s", clusterResourceKey, encodedName)[:remainingChars]
 	}
 
-	return fmt.Sprintf("%s-%s", clusterResourceKey, encodedName)
+	return fmt.Sprintf("%s_%s", clusterResourceKey, encodedName)
 }

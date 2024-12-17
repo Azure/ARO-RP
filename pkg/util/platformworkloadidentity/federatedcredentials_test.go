@@ -20,9 +20,6 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 	clusterName := "cluster"
 	identityName := "identity"
 	saName := "system:serviceaccount:openshift-workload:workload"
-	sanitizedsaName := strings.ReplaceAll(saName, ":", "-")
-	parts := strings.Split(sanitizedsaName, "-")
-	sanitizedsaName = strings.Join(parts[2:], "-")
 
 	clusterResourceId, _ := azure.ParseResourceID(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscriptionId, resourceGroup, clusterName))
 	identityResourceId, _ := azure.ParseResourceID(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAAssignedIdentities/%s", subscriptionId, resourceGroup, identityName))
@@ -32,7 +29,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 	})
 
 	t.Run("has expected key as prefix", func(t *testing.T) {
-		wantPrefix := fmt.Sprintf("%s_%s", sanitizedsaName, clusterName)
+		wantPrefix := fmt.Sprintf("%s_%s", clusterName, strings.Join((strings.Split(strings.ReplaceAll(saName, ":", "-"), "-"))[2:], "-"))
 		got := GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId, saName)
 
 		if !strings.HasPrefix(got, wantPrefix) {
