@@ -80,6 +80,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 		for _, SubnetResource := range secGroup.Properties.Subnets {
 			rc.log.Printf("[FOR LOOP]What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
 			rc.log.Printf("[FOR LOOP]What is SubnetResource: %v", SubnetResource)
+			rc.log.Printf("[FOR LOOP]What is SubnetResource.ID: %v", *SubnetResource.ID)
 
 			vnetID, subnetID, err := apisubnet.Split(*SubnetResource.ID)
 			if err != nil {
@@ -90,15 +91,9 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			if err != nil {
 				return err
 			}
-
-			subnetName, err := azure.ParseResourceID(subnetID)
-			if err != nil {
-				return err
-			}
-
+			rc.log.Printf("What is subnetID: %v", subnetID)
 			rc.log.Printf("Before 'GET' Resources Dettaching: RG: %v ", *resourceGroup.Name)
 			rc.log.Printf("Before 'GET' Resources Dettaching: Vnet: %v ", vnetName.ResourceName)
-			rc.log.Printf("Before 'GET' Resources Dettaching: subnetNameResourceName: %v", subnetName.ResourceName)
 			rc.log.Printf("Before 'GET' Resources Dettaching: SubnetResource.ID: %v", *SubnetResource.ID)
 
 			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetName.ResourceName, *SubnetResource.ID, nil)
