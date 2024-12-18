@@ -212,13 +212,12 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 }
 
 // handleClusterDeploymentGetError is intended to take in an error value returned by hr.GetClusterDeployment()
-// and apply some special handling: if we are in CI and the error has resulted from a temporarily lost VPN
-// connection, replace the error with nil and otherwise return the same error passed in.
+// and apply some special handling: if we encounter a transient connection error, return nil so that the RP continues
+// polling the ClusterDeployment. Otherwise, return the error that was passed in.
 //
 // This allows CI to be resilient to temporary VPN failures that occur while the RP polls the Hive ClusterDeployment.
-// This function can be removed if the VPN gateway is replaced with some less flaky networking solution.
 func (hr *clusterManager) handleClusterDeploymentGetError(err error) error {
-	if hr.env.IsCI() && err != nil && strings.Contains(err.Error(), "http2: client connection lost") {
+	if err != nil && strings.Contains(err.Error(), "http2: client connection lost") {
 		return nil
 	}
 
