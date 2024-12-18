@@ -7,7 +7,9 @@ import (
 	"context"
 	"sort"
 
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // CleanResourceGroups loop through the resourgroups in the subscription
@@ -62,32 +64,48 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 
 // cleanNetworking lists subnets in vnets and unnassign security groups
 func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
-	secGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
+	netwSecurityGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
 	if err != nil {
 		return err
 	}
 
-	for _, secGroup := range secGroups {
-		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
+	for _, networkSecGroup := range netwSecurityGroups {
+		if networkSecGroup.Properties == nil || networkSecGroup.Properties.Subnets == nil {
 			continue
 		}
 
-		for _, secGroupSubnet := range secGroup.Properties.Subnets {
-			subnet, err := rc.subnet.Get(ctx, *secGroupSubnet.ID)
+		for _, nsgSubnet := range networkSecGroup.Properties.Subnets {
+
+			vnetID, subnetName, err := apisubnet.Split(*nsgSubnet.ID)
 			if err != nil {
 				return err
 			}
 
-			rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+			vnetName, err := azure.ParseResourceID(vnetID)
+			if err != nil {
+				return err
+			}
+
+			subnetRGName, err := apisubnet.SplitRG(*nsgSubnet.ID)
+			if err != nil {
+				return err
+			}
+
+			subnet, err := rc.subnet.Get(ctx, subnetRGName, vnetName.ResourceName, subnetName, nil)
+			if err != nil {
+				return err
+			}
+
+			rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *networkSecGroup.Name, *subnet.Name)
 
 			if !rc.dryRun {
-				if subnet.NetworkSecurityGroup == nil {
+				if subnet.Properties.NetworkSecurityGroup == nil {
 					continue
 				}
 
-				subnet.NetworkSecurityGroup = nil
+				subnet.Properties.NetworkSecurityGroup = nil
 
-				err = rc.subnet.CreateOrUpdate(ctx, *subnet.ID, subnet)
+				err = rc.subnet.CreateOrUpdateAndWait(ctx, subnetRGName, vnetName.ResourceName, subnetName, subnet.Subnet, nil)
 				if err != nil {
 					return err
 				}
