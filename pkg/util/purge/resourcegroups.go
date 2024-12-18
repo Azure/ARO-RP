@@ -96,7 +96,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				return err
 			}
 
-			rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *networkSecGroup.Name, *subnet.Name)
+			rc.log.Printf("Dettaching NSG from subnet: %s/%s/%s", *resourceGroup.Name, *networkSecGroup.Name, *subnet.Name)
 
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
@@ -109,6 +109,9 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				if err != nil {
 					return err
 				}
+				rc.log.Printf("[DRY-RUN=False] Resources Dettaching: NSG RG: %s - NSG: %v || Subnet RG: %v vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, *networkSecGroup.Name, subnetRGName, vnetName.ResourceName, subnetName)
+			} else {
+				rc.log.Printf("[DRY-RUN=True] Resources Dettaching: NSG RG: %s - NSG: %v || Subnet RG: %v vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, *networkSecGroup.Name, subnetRGName, vnetName.ResourceName, subnetName)
 			}
 		}
 	}
