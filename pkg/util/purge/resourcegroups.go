@@ -79,13 +79,13 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			rc.log.Printf("Before 'GET' RG: %s - *secGroup.Name: %v", *resourceGroup.Name, *secGroup.Name)
 			subnet, err := rc.subnet.Get(ctx, *secGroupSubnet.ID)
 
-			rc.log.Printf("After GET '*secGroupSubnet.ID': %v", *secGroupSubnet.ID)
+			rc.log.Printf("After GET '*secGroupSubnet.ID': %v - subnet: %v", *secGroupSubnet.ID, subnet)
 			if err != nil {
 				return err
 			}
 
 			rc.log.Printf("After GET RG: %s secGroup.Name: %s subnet.Name: %s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
-			rc.log.Printf("What is subnet.NetwSecurityGroup: %v", subnet.NetworkSecurityGroup)
+			rc.log.Printf("What is subnet.NetwSecurityGroup.Name: %v", subnet.NetworkSecurityGroup.Name)
 
 			if !rc.dryRun {
 				if subnet.NetworkSecurityGroup == nil {
@@ -99,7 +99,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 					return err
 				}
 			} else {
-				rc.log.Printf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+				rc.log.Printf("Removing security group from RG: %s secGroup.Name: %s - *subnet.ID: %v, subnet: %v", *resourceGroup.Name, *secGroup.Name, *subnet.ID, subnet)
 			}
 		}
 	}
