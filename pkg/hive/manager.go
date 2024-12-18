@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/sirupsen/logrus"
@@ -163,7 +164,7 @@ func (hr *clusterManager) Delete(ctx context.Context, doc *api.OpenShiftClusterD
 func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
 	cd, err := hr.GetClusterDeployment(ctx, doc)
 	if err != nil {
-		return false, err
+		return false, hr.handleClusterDeploymentGetError(err)
 	}
 
 	if len(cd.Status.Conditions) == 0 {
@@ -190,7 +191,7 @@ func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api
 func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
 	cd, err := hr.GetClusterDeployment(ctx, doc)
 	if err != nil {
-		return false, err
+		return false, hr.handleClusterDeploymentGetError(err)
 	}
 
 	if cd.Spec.Installed {
@@ -208,6 +209,20 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 	}
 
 	return false, nil
+}
+
+// handleClusterDeploymentGetError is intended to take in an error value returned by hr.GetClusterDeployment()
+// and apply some special handling: if we are in CI and the error has resulted from a temporarily lost VPN
+// connection, replace the error with nil and otherwise return the same error passed in.
+//
+// This allows CI to be resilient to temporary VPN failures that occur while the RP polls the Hive ClusterDeployment.
+// This function can be removed if the VPN gateway is replaced with some less flaky networking solution.
+func (hr *clusterManager) handleClusterDeploymentGetError(err error) error {
+	if hr.env.IsCI() && err != nil && strings.Contains(err.Error(), "http2: client connection lost") {
+		return nil
+	}
+
+	return err
 }
 
 func (hr *clusterManager) GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error) {

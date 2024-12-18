@@ -11,6 +11,7 @@ import (
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive/failure"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -112,13 +114,21 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
 				fakeClientBuilder.WithRuntimeObjects(tt.cd)
 			}
+
+			mockEnv := mock_env.NewMockInterface(controller)
+			mockEnv.EXPECT().IsCI().AnyTimes().Return(true)
+
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
 				log:           logrus.NewEntry(logrus.StandardLogger()),
+				env:           mockEnv,
 			}
 
 			result, err := c.IsClusterDeploymentReady(context.Background(), doc)
@@ -348,6 +358,9 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(tt.cd)
@@ -357,9 +370,14 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 			} else {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(makeClusterProvision(""))
 			}
+
+			mockEnv := mock_env.NewMockInterface(controller)
+			mockEnv.EXPECT().IsCI().AnyTimes().Return(true)
+
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
 				log:           logrus.NewEntry(logrus.StandardLogger()),
+				env:           mockEnv,
 			}
 
 			result, err := c.IsClusterInstallationComplete(context.Background(), doc)
