@@ -140,6 +140,16 @@ var OperationListInstallVersions = Operation{
 	Origin: "user,system",
 }
 
+var OperationListPlatformWorkloadIdentityRoleSets = Operation{
+	Name: "Microsoft.RedHatOpenShift/locations/listInstallVersions/read",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "listPlatformWorkloadIdentityRoleSets",
+		Operation: "Lists all PlatformWorkloadIdentityRoleSets available in the specified location",
+	},
+	Origin: "user,system",
+}
+
 var OperationSyncSetsRead = Operation{
 	Name: "Microsoft.RedHatOpenShift/openShiftClusters/syncSets/read",
 	Display: Display{
