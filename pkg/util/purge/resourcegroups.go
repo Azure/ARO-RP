@@ -63,28 +63,28 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 // cleanNetworking lists subnets in vnets and unnassign security groups
 func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
 	secGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
+	rc.log.Printf(">>> Entering 'cleanNetworking': %v", *resourceGroup.Name)
 	if err != nil {
 		return err
 	}
 
 	for _, secGroup := range secGroups {
-		rc.log.Printf("What is secGroup: %v", secGroup)
-		rc.log.Printf("What is secGroup.Properties: %v", secGroup.Properties)
-		rc.log.Printf("What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
 		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
 			continue
 		}
+		rc.log.Printf(">>>> Entering 'secGroup' loop | *secGroup.ID: %s", *secGroup.ID)
 
 		for _, secGroupSubnet := range secGroup.Properties.Subnets {
-			rc.log.Printf("[FOR LOOP]What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
+			rc.log.Printf("[FOR LOOP] What is secGroupSubnet.ID: %v", *secGroupSubnet.ID)
+			rc.log.Printf("Before 'GET' RG: %s - *secGroup.Name: %v", *resourceGroup.Name, *secGroup.Name)
 			subnet, err := rc.subnet.Get(ctx, *secGroupSubnet.ID)
-			rc.log.Printf("What is 'subnet': %v", subnet)
-			rc.log.Printf("What is '*secGroupSubnet.ID': %v", *secGroupSubnet.ID)
+
+			rc.log.Printf("After GET '*secGroupSubnet.ID': %v", *secGroupSubnet.ID)
 			if err != nil {
 				return err
 			}
 
-			rc.log.Printf("RG: %s secGroup.Name: %s subnet.Name: %s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
+			rc.log.Printf("After GET RG: %s secGroup.Name: %s subnet.Name: %s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
 			rc.log.Printf("What is subnet.NetwSecurityGroup: %v", subnet.NetworkSecurityGroup)
 
 			if !rc.dryRun {
