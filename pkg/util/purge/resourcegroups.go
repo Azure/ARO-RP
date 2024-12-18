@@ -64,21 +64,20 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 
 // cleanNetworking lists subnets in vnets and unnassign security groups
 func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
-	secGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
+	nsGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
 	if err != nil {
 		return err
 	}
+	rc.log.Printf(">>>> Entering 'cleanNetworking' RG: %s", *resourceGroup.Name)
 
-	for _, secGroup := range secGroups {
-		rc.log.Printf("What is secGroup: %v", secGroup)
-		rc.log.Printf("What is secGroup.Properties: %v", secGroup.Properties)
-		rc.log.Printf("What is secGroup.Properties.Subnets: %v", secGroup.Properties.Subnets)
-		if secGroup.Properties == nil || secGroup.Properties.Subnets == nil {
+	for _, networkSecurityGroup := range nsGroups {
+		if networkSecurityGroup.Properties == nil || networkSecurityGroup.Properties.Subnets == nil {
 			continue
 		}
+		rc.log.Printf(">>>> Entering 'secGroup' loop | *secGroup.ID: %s", *networkSecurityGroup.ID)
 
-		for _, SubnetResource := range secGroup.Properties.Subnets {
-			rc.log.Printf("[FOR LOOP]What is SubnetResource.ID: %v", *SubnetResource.ID)
+		for _, SubnetResource := range networkSecurityGroup.Properties.Subnets {
+			rc.log.Printf("[FOR LOOP] What is SubnetResource.ID: %v", *SubnetResource.ID)
 
 			vnetID, subnetName, err := apisubnet.Split(*SubnetResource.ID)
 			if err != nil {
@@ -90,17 +89,18 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				return err
 			}
 
-			rc.log.Printf("Before 'GET' RG: %s - vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, vnetName.ResourceName, subnetName)
+			rc.log.Printf("Before 'GET' RG: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", *resourceGroup.Name, vnetName.ResourceName, subnetName, *networkSecurityGroup.Name)
 
 			subnet, err := rc.subnet.Get(ctx, *resourceGroup.Name, vnetName.ResourceName, subnetName, nil)
-
-			rc.log.Printf("After GET 'subnet.Name': %v", subnet.Name)
-			rc.log.Printf("After 'GET' *SubnetResource.ID': %v", *SubnetResource.ID)
 			if err != nil {
 				return err
 			}
 
-			rc.log.Printf("What is subnet.Properties.NetworkSecurityGroup: %v", subnet.Properties.NetworkSecurityGroup)
+			rc.log.Printf("After 'GET' subnet.Name: %v", subnet.Name)
+			rc.log.Printf("After 'GET' *SubnetResource.ID': %v", *SubnetResource.ID)
+			rc.log.Printf("After 'GET' subnet.Properties.NetworkSecurityGroup: %v", subnet.Properties.NetworkSecurityGroup)
+			rc.log.Printf("After 'GET' RG: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", *resourceGroup.Name, vnetName.ResourceName, subnetName, *networkSecurityGroup.Name)
+
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
 					continue
@@ -113,7 +113,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 					return err
 				}
 			} else {
-				rc.log.Printf("Resources Dettaching: RG: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", *resourceGroup.Name, vnetName.ResourceName, subnetName, *secGroup.Name)
+				rc.log.Printf("Resources Dettaching: \nRG: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", *resourceGroup.Name, vnetName.ResourceName, subnetName, *networkSecurityGroup.Name)
 			}
 		}
 	}
