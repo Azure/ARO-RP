@@ -395,19 +395,12 @@ func (m *manager) bootstrap() []steps.Step {
 	}
 
 	if m.installViaHive {
-		// Hack - it seems like ClusterDeployments have started taking longer to
-		// be ready in CI
-		clusterDeploymentReadyTimeout := 5 * time.Minute
-		if m.env.IsCI() {
-			clusterDeploymentReadyTimeout = 10 * time.Minute
-		}
-
 		s = append(s,
 			steps.Action(m.runHiveInstaller),
 			// Give Hive 60 minutes to install the cluster, since this includes
 			// all of bootstrapping being complete
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
-			steps.Condition(m.hiveClusterDeploymentReady, clusterDeploymentReadyTimeout, true),
+			steps.Condition(m.hiveClusterDeploymentReady, 10*time.Minute, true),
 			steps.Action(m.generateKubeconfigs),
 		)
 	} else {
