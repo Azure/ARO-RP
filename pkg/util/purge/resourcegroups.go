@@ -89,17 +89,17 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				return err
 			}
 
-			resourceGroupName, err := apisubnet.SplitRG(*SubnetResource.ID)
+			subnetRGName, err := apisubnet.SplitRG(*SubnetResource.ID)
 			if err != nil {
 				return err
 			}
-			rc.log.Printf("Before 'GET' RG: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", resourceGroupName, vnetName.ResourceName, subnetName, *networkSecurityGroup.Name)
+			rc.log.Printf("Before 'GET' resourceGroupName: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", subnetRGName, vnetName.ResourceName, subnetName, *networkSecurityGroup.Name)
 
-			subnet, err := rc.subnet.Get(ctx, resourceGroupName, vnetName.ResourceName, subnetName, nil)
+			subnet, err := rc.subnet.Get(ctx, subnetRGName, vnetName.ResourceName, subnetName, nil)
 			if err != nil {
 				return err
 			}
-			rc.log.Printf("After 'GET' RG: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", *resourceGroup.Name, vnetName.ResourceName, subnetName, *networkSecurityGroup.Name)
+			rc.log.Printf("After 'GET' resourceGroupName: %s - vnetName.ResourceName: %s - subnetName: %s - *secGroup.Name: %v", subnetRGName, vnetName.ResourceName, subnetName, *networkSecurityGroup.Name)
 
 			if !rc.dryRun {
 				if subnet.Properties.NetworkSecurityGroup == nil {
@@ -107,13 +107,13 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				}
 
 				subnet.Properties.NetworkSecurityGroup = nil
-				rc.log.Printf("Resources Dettaching: RG: %s - Vnet: %s - *SubnetResource.Name: %s", resourceGroupName, vnetName.ResourceName, *SubnetResource.Name)
-				err = rc.subnet.CreateOrUpdateAndWait(ctx, resourceGroupName, vnetName.ResourceName, *SubnetResource.Name, subnet.Subnet, nil)
+				rc.log.Printf("Resources Dettaching: NSG RG: %s - Subnet RG: %v vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, subnetRGName, vnetName.ResourceName, subnetName)
+				err = rc.subnet.CreateOrUpdateAndWait(ctx, subnetRGName, vnetName.ResourceName, subnetName, subnet.Subnet, nil)
 				if err != nil {
 					return err
 				}
 			} else {
-				rc.log.Printf("Resources Dettaching: RG: %s - vnetName.ResourceName: %s - *SubnetResource.Name: %s - *secGroup.Name: %v", *resourceGroup.Name, vnetName.ResourceName, *SubnetResource.Name, *networkSecurityGroup.Name)
+				rc.log.Printf("[DRY-RUN] Resources Dettaching: NSG RG: %s - Subnet RG: %v vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, subnetRGName, vnetName.ResourceName, subnetName)
 			}
 		}
 	}
