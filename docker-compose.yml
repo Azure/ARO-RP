@@ -3,9 +3,9 @@
 # ones here to reduce duplication.
 x-aro-common-env:
   environment: &common-env
-    ARO_ADOPT_BY_HIVE: "false"
+    ARO_ADOPT_BY_HIVE:
     ARO_IMAGE:
-    ARO_INSTALL_VIA_HIVE: "false"
+    ARO_INSTALL_VIA_HIVE:
     ARO_PODMAN_SOCKET: "tcp://localhost:8888"
     AZURE_ARM_CLIENT_ID:
     AZURE_CLIENT_ID:
