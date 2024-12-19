@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"net"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	mcoclientv1 "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -173,7 +173,7 @@ func StatefulSetIsReady(s *appsv1.StatefulSet) bool {
 
 // MachineConfigPoolIsReady returns true if a MachineConfigPool is considered
 // ready
-func MachineConfigPoolIsReady(s *mcv1.MachineConfigPool) bool {
+func MachineConfigPoolIsReady(s *mcfgv1.MachineConfigPool) bool {
 	return s.Status.MachineCount == s.Status.UpdatedMachineCount &&
 		s.Status.MachineCount == s.Status.ReadyMachineCount &&
 		s.Generation == s.Status.ObservedGeneration
@@ -196,7 +196,7 @@ func CheckMachineConfigPoolIsReady(ctx context.Context, cli mcoclientv1.MachineC
 }
 
 type MCPLister interface {
-	List(ctx context.Context, opts metav1.ListOptions) (*mcv1.MachineConfigPoolList, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*mcfgv1.MachineConfigPoolList, error)
 }
 
 type NodeLister interface {
@@ -239,7 +239,7 @@ func SameNumberOfNodesAndMachines(ctx context.Context, mcpLister MCPLister, node
 
 // TotalMachinesInTheMCPs returns the total number of machines in the machineConfigPools
 // and an error, if any.
-func TotalMachinesInTheMCPs(machineConfigPools []mcv1.MachineConfigPool) (int, error) {
+func TotalMachinesInTheMCPs(machineConfigPools []mcfgv1.MachineConfigPool) (int, error) {
 	totalMachines := 0
 	for _, mcp := range machineConfigPools {
 		if !MCPContainsARODNSConfig(mcp) {
@@ -255,7 +255,7 @@ func TotalMachinesInTheMCPs(machineConfigPools []mcv1.MachineConfigPool) (int, e
 	return totalMachines, nil
 }
 
-func MCPContainsARODNSConfig(mcp mcv1.MachineConfigPool) bool {
+func MCPContainsARODNSConfig(mcp mcfgv1.MachineConfigPool) bool {
 	for _, source := range mcp.Status.Configuration.Source {
 		mcpPrefix := "99-"
 		mcpSuffix := "-aro-dns"

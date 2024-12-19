@@ -10,11 +10,11 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +37,7 @@ func init() {
 	utilruntime.Must(aropreviewv1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(machinev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(mcv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(mcfgv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(configv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(corev1defaults.RegisterDefaults(scheme.Scheme))

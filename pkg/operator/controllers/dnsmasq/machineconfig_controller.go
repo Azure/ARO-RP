@@ -7,7 +7,7 @@ import (
 	"context"
 	"regexp"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,7 +74,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 	role := m[1]
 
-	mcp := &mcv1.MachineConfigPool{}
+	mcp := &mcfgv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: role}, mcp)
 	if kerrors.IsNotFound(err) {
 		r.ClearDegraded(ctx)
@@ -103,7 +103,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 // SetupWithManager setup our mananger
 func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&mcv1.MachineConfig{}).
+		For(&mcfgv1.MachineConfig{}).
 		Named(MachineConfigControllerName).
 		Complete(r)
 }

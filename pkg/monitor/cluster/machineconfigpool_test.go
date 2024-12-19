@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -35,11 +35,11 @@ func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
 					Name: "aro-master-0",
 				},
 			},
-			mcps: &mcv1.MachineConfigPool{
+			mcps: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "machine-config-pool",
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: mcfgv1.MachineConfigPoolStatus{
 					MachineCount: 0,
 				},
 			},
@@ -52,11 +52,11 @@ func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
 					Name: "aro-master-0",
 				},
 			},
-			mcps: &mcv1.MachineConfigPool{
+			mcps: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "machine-config-pool",
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: mcfgv1.MachineConfigPoolStatus{
 					MachineCount: 2,
 				},
 			},

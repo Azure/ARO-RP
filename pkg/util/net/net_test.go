@@ -11,9 +11,9 @@ import (
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/to"
 	configv1 "github.com/openshift/api/config/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	"go.uber.org/mock/gomock"
@@ -205,12 +205,12 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 		},
 	}
 
-	mcp := &mcv1.MachineConfigPool{
+	mcp := &mcfgv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "master",
 		},
-		Status: mcv1.MachineConfigPoolStatus{
-			Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+		Status: mcfgv1.MachineConfigPoolStatus{
+			Configuration: mcfgv1.MachineConfigPoolStatusConfiguration{
 				Source: []corev1.ObjectReference{{Name: "99-master-aro-dns"}},
 			},
 			MachineCount: 1,
@@ -244,7 +244,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 			mocks: func(privateZones *mock_privatedns.MockPrivateZonesClient, virtualNetworkLinks *mock_privatedns.MockVirtualNetworkLinksClient) {
 				privateZones.EXPECT().ListByResourceGroup(ctx, "testGroup", nil).Return([]mgmtprivatedns.PrivateZone{{ID: to.StringPtr(id)}}, nil)
 			},
-			mcocli:    mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{}),
+			mcocli:    mcofake.NewSimpleClientset(&mcfgv1.MachineConfigPool{}),
 			configcli: configfake.NewSimpleClientset(),
 			kubernetescli: fake.NewSimpleClientset(
 				&corev1.Node{},
@@ -288,12 +288,12 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 				&corev1.Node{},
 			),
 			mcocli: mcofake.NewSimpleClientset(
-				&mcv1.MachineConfigPool{
+				&mcfgv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "master",
 					},
-					Status: mcv1.MachineConfigPoolStatus{
-						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+					Status: mcfgv1.MachineConfigPoolStatus{
+						Configuration: mcfgv1.MachineConfigPoolStatusConfiguration{
 							Source: []corev1.ObjectReference{
 								{
 									Name: "99-master-aro-dns",

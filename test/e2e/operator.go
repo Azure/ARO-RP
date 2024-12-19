@@ -20,8 +20,8 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -615,7 +615,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 	mcpName := "test-aro-custom-mcp"
 	mcName := fmt.Sprintf("99-%s-aro-dns", mcpName)
 
-	customMcp := mcv1.MachineConfigPool{
+	customMcp := mcfgv1.MachineConfigPool{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "machineconfiguration.openshift.io/v1",
 			Kind:       "MachineConfigPool",
@@ -623,7 +623,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mcpName,
 		},
-		Spec: mcv1.MachineConfigPoolSpec{},
+		Spec: mcfgv1.MachineConfigPoolSpec{},
 	}
 
 	getMachineConfigNames := func(g Gomega, ctx context.Context) []string {

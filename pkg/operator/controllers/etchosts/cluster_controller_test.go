@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -106,15 +106,15 @@ var (
 			GatewayPrivateEndpointIP: "20.20.20.20",
 		},
 	}
-	machinePoolMaster = &mcv1.MachineConfigPool{
+	machinePoolMaster = &mcfgv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{Name: "master"},
-		Status:     mcv1.MachineConfigPoolStatus{},
-		Spec:       mcv1.MachineConfigPoolSpec{},
+		Status:     mcfgv1.MachineConfigPoolStatus{},
+		Spec:       mcfgv1.MachineConfigPoolSpec{},
 	}
-	machinePoolWorker = &mcv1.MachineConfigPool{
+	machinePoolWorker = &mcfgv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-		Status:     mcv1.MachineConfigPoolStatus{},
-		Spec:       mcv1.MachineConfigPoolSpec{},
+		Status:     mcfgv1.MachineConfigPoolStatus{},
+		Spec:       mcfgv1.MachineConfigPoolSpec{},
 	}
 	clusterVersionNotUpdating = &configv1.ClusterVersion{
 		ObjectMeta: metav1.ObjectMeta{

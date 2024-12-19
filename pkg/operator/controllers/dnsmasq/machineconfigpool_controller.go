@@ -6,7 +6,7 @@ package dnsmasq
 import (
 	"context"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -66,7 +66,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 	}
 
 	r.Log.Debug("running")
-	mcp := &mcv1.MachineConfigPool{}
+	mcp := &mcfgv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, mcp)
 	if kerrors.IsNotFound(err) {
 		r.ClearDegraded(ctx)
@@ -95,7 +95,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 // SetupWithManager setup our mananger
 func (r *MachineConfigPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&mcv1.MachineConfigPool{}).
+		For(&mcfgv1.MachineConfigPool{}).
 		Named(MachineConfigPoolControllerName).
 		Complete(r)
 }

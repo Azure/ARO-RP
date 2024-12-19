@@ -12,8 +12,8 @@ import (
 
 	"github.com/go-test/deep"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -209,8 +209,8 @@ func merge(old, new client.Object) (client.Object, bool, string, error) {
 
 		new.Status = old.Status
 
-	case *mcv1.KubeletConfig:
-		old, new := old.(*mcv1.KubeletConfig), new.(*mcv1.KubeletConfig)
+	case *mcfgv1.KubeletConfig:
+		old, new := old.(*mcfgv1.KubeletConfig), new.(*mcfgv1.KubeletConfig)
 		new.Status = old.Status
 
 	case *extensionsv1.CustomResourceDefinition:

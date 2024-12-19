@@ -6,7 +6,7 @@ package etchosts
 import (
 	"context"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	etchostsMasterMCMetadata = &mcv1.MachineConfig{
+	etchostsMasterMCMetadata = &mcfgv1.MachineConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "99-master-aro-etc-hosts-gateway-domains",
 		},
@@ -39,7 +39,7 @@ var (
 			Kind: "MachineConfig",
 		},
 	}
-	etchostsWorkerMCMetadata = &mcv1.MachineConfig{
+	etchostsWorkerMCMetadata = &mcfgv1.MachineConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "99-worker-aro-etc-hosts-gateway-domains",
 		},
@@ -118,8 +118,8 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	// EtchostsManaged = true, create machine configs if missing
 	r.Log.Debug("running")
 	// If 99-master-aro-etc-hosts-gateway-domains doesn't exist, create it
-	mcp := &mcv1.MachineConfigPool{}
-	mc := &mcv1.MachineConfig{}
+	mcp := &mcfgv1.MachineConfigPool{}
+	mc := &mcfgv1.MachineConfig{}
 
 	err = r.Client.Get(ctx, types.NamespacedName{Name: "master"}, mcp)
 	if kerrors.IsNotFound(err) {
@@ -197,10 +197,10 @@ func (r *EtcHostsClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	etcHostsBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
-		Watches(&source.Kind{Type: &mcv1.MachineConfigPool{}},
+		Watches(&source.Kind{Type: &mcfgv1.MachineConfigPool{}},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&source.Kind{Type: &mcv1.MachineConfig{}},
+		Watches(&source.Kind{Type: &mcfgv1.MachineConfig{}},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
@@ -210,7 +210,7 @@ func (r *EtcHostsClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EtcHostsClusterReconciler) removeMachineConfig(ctx context.Context, mc *mcv1.MachineConfig) error {
+func (r *EtcHostsClusterReconciler) removeMachineConfig(ctx context.Context, mc *mcfgv1.MachineConfig) error {
 	r.Log.Debugf("removing machine config %s", mc.Name)
 	err := r.Client.Delete(ctx, mc)
 	return err

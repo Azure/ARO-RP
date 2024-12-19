@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -496,9 +496,9 @@ func TestMerge(t *testing.T) {
 		},
 		{
 			name: "KubeletConfig no changes",
-			old: &mcv1.KubeletConfig{
-				Status: mcv1.KubeletConfigStatus{
-					Conditions: []mcv1.KubeletConfigCondition{
+			old: &mcfgv1.KubeletConfig{
+				Status: mcfgv1.KubeletConfigStatus{
+					Conditions: []mcfgv1.KubeletConfigCondition{
 						{
 							Message: "Success",
 							Status:  "True",
@@ -507,10 +507,10 @@ func TestMerge(t *testing.T) {
 					},
 				},
 			},
-			new: &mcv1.KubeletConfig{},
-			want: &mcv1.KubeletConfig{
-				Status: mcv1.KubeletConfigStatus{
-					Conditions: []mcv1.KubeletConfigCondition{
+			new: &mcfgv1.KubeletConfig{},
+			want: &mcfgv1.KubeletConfig{
+				Status: mcfgv1.KubeletConfigStatus{
+					Conditions: []mcfgv1.KubeletConfigCondition{
 						{
 							Message: "Success",
 							Status:  "True",

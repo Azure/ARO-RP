@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -74,7 +74,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	}
 
 	r.Log.Debug("running")
-	mcps := &mcv1.MachineConfigPoolList{}
+	mcps := &mcfgv1.MachineConfigPoolList{}
 	err = r.Client.List(ctx, mcps)
 	if err != nil {
 		r.Log.Error(err)
@@ -110,7 +110,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, ch clienthelper.Interface, c client.Client, allowReconcile bool, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, ch clienthelper.Interface, c client.Client, allowReconcile bool, restartDnsmasq bool, mcps ...mcfgv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
 		resource, err := dnsmasqMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, restartDnsmasq)

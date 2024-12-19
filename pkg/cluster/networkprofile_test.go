@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -163,7 +163,7 @@ func TestEnsureMTUSize(t *testing.T) {
 					},
 				},
 				mcocli: mcofake.NewSimpleClientset(
-					&mcv1.MachineConfig{
+					&mcfgv1.MachineConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "master",
 						},
@@ -197,7 +197,7 @@ func TestEnsureMTUSize(t *testing.T) {
 					},
 				},
 				mcocli: mcofake.NewSimpleClientset(
-					&mcv1.MachineConfig{
+					&mcfgv1.MachineConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "master",
 						},
@@ -228,7 +228,7 @@ func TestEnsureMTUSize(t *testing.T) {
 					},
 				},
 				mcocli: mcofake.NewSimpleClientset(
-					&mcv1.MachineConfig{
+					&mcfgv1.MachineConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "99-master-mtu",
 						},
@@ -259,7 +259,7 @@ func TestEnsureMTUSize(t *testing.T) {
 					},
 				},
 				mcocli: mcofake.NewSimpleClientset(
-					&mcv1.MachineConfig{
+					&mcfgv1.MachineConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "master",
 						},

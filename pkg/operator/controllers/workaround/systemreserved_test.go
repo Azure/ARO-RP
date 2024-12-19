@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"go.uber.org/mock/gomock"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,8 +22,8 @@ import (
 )
 
 func TestSystemreservedEnsure(t *testing.T) {
-	kubeletConfig := func(resourceVersion string) *mcv1.KubeletConfig {
-		return &mcv1.KubeletConfig{
+	kubeletConfig := func(resourceVersion string) *mcfgv1.KubeletConfig {
+		return &mcfgv1.KubeletConfig{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "KubeletConfig",
 				APIVersion: "machineconfiguration.openshift.io/v1",
@@ -35,7 +35,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 				},
 				ResourceVersion: resourceVersion,
 			},
-			Spec: mcv1.KubeletConfigSpec{
+			Spec: mcfgv1.KubeletConfigSpec{
 				MachineConfigPoolSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"aro.openshift.io/limits": "",
@@ -50,13 +50,13 @@ func TestSystemreservedEnsure(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		mcp               *mcv1.MachineConfigPool
-		kc                *mcv1.KubeletConfig
-		wantKubeletConfig *mcv1.KubeletConfig
+		mcp               *mcfgv1.MachineConfigPool
+		kc                *mcfgv1.KubeletConfig
+		wantKubeletConfig *mcfgv1.KubeletConfig
 	}{
 		{
 			name: "first time create KubeletConfig",
-			mcp: &mcv1.MachineConfigPool{
+			mcp: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "worker",
 				},
@@ -65,7 +65,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 		},
 		{
 			name: "label already exists on MCP, but no KubeletConfig",
-			mcp: &mcv1.MachineConfigPool{
+			mcp: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "worker",
 					Labels: map[string]string{labelName: labelValue},
@@ -75,12 +75,12 @@ func TestSystemreservedEnsure(t *testing.T) {
 		},
 		{
 			name: "no label on MCP, but KubeletConfig exists",
-			mcp: &mcv1.MachineConfigPool{
+			mcp: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "worker",
 				},
 			},
-			kc: &mcv1.KubeletConfig{
+			kc: &mcfgv1.KubeletConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            kubeletConfigName,
 					ResourceVersion: "1",
@@ -90,13 +90,13 @@ func TestSystemreservedEnsure(t *testing.T) {
 		},
 		{
 			name: "label and KubeletConfig already exist",
-			mcp: &mcv1.MachineConfigPool{
+			mcp: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "worker",
 					Labels: map[string]string{labelName: labelValue},
 				},
 			},
-			kc: &mcv1.KubeletConfig{
+			kc: &mcfgv1.KubeletConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            kubeletConfigName,
 					ResourceVersion: "1",
@@ -131,7 +131,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 				t.Error(err)
 			}
 
-			result := &mcv1.MachineConfigPool{}
+			result := &mcfgv1.MachineConfigPool{}
 			err = clientFake.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, result)
 			if err != nil {
 				t.Fatal(err)
@@ -141,7 +141,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 				t.Error(result.Labels)
 			}
 
-			kc := &mcv1.KubeletConfig{}
+			kc := &mcfgv1.KubeletConfig{}
 			err = clientFake.Get(ctx, types.NamespacedName{Name: kubeletConfigName}, kc)
 			if err != nil {
 				t.Fatal(err)
@@ -156,12 +156,12 @@ func TestSystemreservedEnsure(t *testing.T) {
 func TestSystemreservedRemove(t *testing.T) {
 	tests := []struct {
 		name string
-		mcp  *mcv1.MachineConfigPool
-		kc   *mcv1.KubeletConfig
+		mcp  *mcfgv1.MachineConfigPool
+		kc   *mcfgv1.KubeletConfig
 	}{
 		{
 			name: "label is not set, not KubeletConfig",
-			mcp: &mcv1.MachineConfigPool{
+			mcp: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "worker",
 				},
@@ -169,12 +169,12 @@ func TestSystemreservedRemove(t *testing.T) {
 		},
 		{
 			name: "label is not set, KubeletConfig exists",
-			mcp: &mcv1.MachineConfigPool{
+			mcp: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "worker",
 				},
 			},
-			kc: &mcv1.KubeletConfig{
+			kc: &mcfgv1.KubeletConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            kubeletConfigName,
 					ResourceVersion: "1",
@@ -183,7 +183,7 @@ func TestSystemreservedRemove(t *testing.T) {
 		},
 		{
 			name: "label is set, but KubeletConfig does not exist",
-			mcp: &mcv1.MachineConfigPool{
+			mcp: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "worker",
 					Labels: map[string]string{labelName: labelValue},
@@ -192,13 +192,13 @@ func TestSystemreservedRemove(t *testing.T) {
 		},
 		{
 			name: "both label and KubeletConfig set exist",
-			mcp: &mcv1.MachineConfigPool{
+			mcp: &mcfgv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "worker",
 					Labels: map[string]string{labelName: labelValue},
 				},
 			},
-			kc: &mcv1.KubeletConfig{
+			kc: &mcfgv1.KubeletConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            kubeletConfigName,
 					ResourceVersion: "1",
@@ -230,7 +230,7 @@ func TestSystemreservedRemove(t *testing.T) {
 				t.Error(err)
 			}
 
-			result := &mcv1.MachineConfigPool{}
+			result := &mcfgv1.MachineConfigPool{}
 			err = clientFake.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, result)
 			if err != nil {
 				t.Fatal(err)
@@ -240,7 +240,7 @@ func TestSystemreservedRemove(t *testing.T) {
 				t.Error(result.Labels)
 			}
 
-			kc := &mcv1.KubeletConfig{}
+			kc := &mcfgv1.KubeletConfig{}
 			err = clientFake.Get(ctx, types.NamespacedName{Name: kubeletConfigName}, kc)
 			if !kerrors.IsNotFound(err) {
 				t.Error(err)

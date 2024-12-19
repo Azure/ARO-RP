@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -58,7 +58,7 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 
 	// Step 1. Add label to worker MachineConfigPool.
 	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
-	mcp := &mcv1.MachineConfigPool{}
+	mcp := &mcfgv1.MachineConfigPool{}
 	err := sr.client.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, mcp)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 	}
 
 	//   Step 2. Create KubeletConfig CRD with appropriate limits.
-	kc := &mcv1.KubeletConfig{
+	kc := &mcfgv1.KubeletConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeletConfigName,
 		},
@@ -103,7 +103,7 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 			return err
 		}
 
-		kc.Spec = mcv1.KubeletConfigSpec{
+		kc.Spec = mcfgv1.KubeletConfigSpec{
 			MachineConfigPoolSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{labelName: labelValue},
 			},
@@ -120,7 +120,7 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 
 func (sr *systemreserved) Remove(ctx context.Context) error {
 	sr.log.Debug("remove systemreserved")
-	mcp := &mcv1.MachineConfigPool{}
+	mcp := &mcfgv1.MachineConfigPool{}
 	err := sr.client.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, mcp)
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (sr *systemreserved) Remove(ctx context.Context) error {
 		}
 	}
 
-	kc := &mcv1.KubeletConfig{
+	kc := &mcfgv1.KubeletConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeletConfigName,
 		},

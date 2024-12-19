@@ -7,7 +7,7 @@ import (
 	"context"
 	"regexp"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -103,7 +103,7 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 
 	// EtchostsManaged = true, reconcile machine configs
 	r.Log.Debug("running")
-	mcp := &mcv1.MachineConfigPool{}
+	mcp := &mcfgv1.MachineConfigPool{}
 	// Make sure we are reconciling against etchosts machine config
 	m := etcHostsRegex.FindStringSubmatch(request.Name)
 	if m == nil {
@@ -142,8 +142,8 @@ func (r *EtcHostsMachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) err
 	r.Log.Info("starting etchosts-machine-config controller")
 
 	etcHostsBuilder := ctrl.NewControllerManagedBy(mgr).
-		For(&mcv1.MachineConfig{}).
-		Watches(&source.Kind{Type: &mcv1.MachineConfigPool{}},
+		For(&mcfgv1.MachineConfig{}).
+		Watches(&source.Kind{Type: &mcfgv1.MachineConfigPool{}},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &arov1alpha1.Cluster{}},
@@ -156,7 +156,7 @@ func (r *EtcHostsMachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, role string, dh dynamichelper.Interface, allowReconcile bool, mcps ...mcv1.MachineConfigPool) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, role string, dh dynamichelper.Interface, allowReconcile bool, mcps ...mcfgv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
 		resource, err := EtcHostsMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, role)
@@ -187,7 +187,7 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 	return nil
 }
 
-func (r *EtcHostsMachineConfigReconciler) removeMachineConfig(ctx context.Context, mc *mcv1.MachineConfig) error {
+func (r *EtcHostsMachineConfigReconciler) removeMachineConfig(ctx context.Context, mc *mcfgv1.MachineConfig) error {
 	r.Log.Debugf("removing machine config %s", mc.Name)
 	err := r.Client.Delete(ctx, mc)
 	return err
