@@ -3,9 +3,10 @@
 # ones here to reduce duplication.
 x-aro-common-env:
   environment: &common-env
-    ARO_ADOPT_BY_HIVE: "true"
+    ARO_ADOPT_BY_HIVE: "false"
     ARO_IMAGE:
-    ARO_INSTALL_VIA_HIVE: "true"
+    ARO_INSTALL_VIA_HIVE: "false"
+    ARO_PODMAN_SOCKET: "tcp://localhost:8888"
     AZURE_ARM_CLIENT_ID:
     AZURE_CLIENT_ID:
     AZURE_CLIENT_SECRET:
@@ -88,6 +89,8 @@ services:
     depends_on:
       vpn:
         condition: service_healthy
+      podman:
+        condition: service_healthy
     command: ["rp"]
     secrets:
       - source: proxy-client-key
@@ -147,6 +150,22 @@ services:
     restart: on-failure:3
     healthcheck:
       test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8444/healthz/ready"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  podman:
+    image: registry.access.redhat.com/ubi8/podman:8.10-11
+    container_name: podman
+    network_mode: host
+    privileged: true
+    ports:
+      - "8888:8888"
+    restart: on-failure:3
+    command:
+      ["podman", "--log-level=debug", "system", "service", "--time=0", "tcp://127.0.0.1:8888"]
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-sS", "-f", "http://localhost:8888/v1.30/_ping"]
       interval: 30s
       timeout: 20s
       retries: 3
