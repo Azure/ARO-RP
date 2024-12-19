@@ -7,9 +7,8 @@ import (
 	"context"
 	"sort"
 
-	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // CleanResourceGroups loop through the resourgroups in the subscription
@@ -64,34 +63,22 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 
 // cleanNetworking lists subnets in vnets and unnassign security groups
 func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
-	netwSecurityGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
+	networkSecurityGroups, err := rc.securitygroupscli.List(ctx, *resourceGroup.Name, nil)
 	if err != nil {
 		return err
 	}
 
-	for _, networkSecGroup := range netwSecurityGroups {
+	for _, networkSecGroup := range networkSecurityGroups {
 		if networkSecGroup.Properties == nil || networkSecGroup.Properties.Subnets == nil {
 			continue
 		}
 
 		for _, nsgSubnet := range networkSecGroup.Properties.Subnets {
-
-			vnetID, subnetName, err := apisubnet.Split(*nsgSubnet.ID)
+			r, err := arm.ParseResourceID(*nsgSubnet.ID)
 			if err != nil {
 				return err
 			}
-
-			vnetName, err := azure.ParseResourceID(vnetID)
-			if err != nil {
-				return err
-			}
-
-			subnetRGName, err := apisubnet.SplitRG(*nsgSubnet.ID)
-			if err != nil {
-				return err
-			}
-
-			subnet, err := rc.subnet.Get(ctx, subnetRGName, vnetName.ResourceName, subnetName, nil)
+			subnet, err := rc.subnet.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
 			if err != nil {
 				return err
 			}
@@ -105,13 +92,13 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 
 				subnet.Properties.NetworkSecurityGroup = nil
 
-				err = rc.subnet.CreateOrUpdateAndWait(ctx, subnetRGName, vnetName.ResourceName, subnetName, subnet.Subnet, nil)
+				err = rc.subnet.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, subnet.Subnet, nil)
 				if err != nil {
 					return err
 				}
-				rc.log.Printf("[DRY-RUN=False] Resources Dettaching: NSG RG: %s - NSG: %v || Subnet RG: %v vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, *networkSecGroup.Name, subnetRGName, vnetName.ResourceName, subnetName)
+				rc.log.Printf("[DRY-RUN=False] Resources Dettaching: NSG RG: %s - NSG: %v || Subnet RG: %v vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, *networkSecGroup.Name, r.ResourceGroupName, r.Parent.Name, r.Name)
 			} else {
-				rc.log.Printf("[DRY-RUN=True] Resources Dettaching: NSG RG: %s - NSG: %v || Subnet RG: %v vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, *networkSecGroup.Name, subnetRGName, vnetName.ResourceName, subnetName)
+				rc.log.Printf("[DRY-RUN=True] Resources Dettaching: NSG RG: %s - NSG: %v || Subnet RG: %v vnetName.ResourceName: %s - subnetName: %s", *resourceGroup.Name, *networkSecGroup.Name, r.ResourceGroupName, r.Parent.Name, r.Name)
 			}
 		}
 	}
