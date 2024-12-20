@@ -20,17 +20,5 @@ func init() {
 		OpenShiftClusterConverter:            openShiftClusterConverter{},
 		OpenShiftClusterStaticValidator:      openShiftClusterStaticValidator{},
 		OpenShiftClusterCredentialsConverter: openShiftClusterCredentialsConverter{},
-		OperationList: api.OperationList{
-			Operations: []api.Operation{
-				api.OperationResultsRead,
-				api.OperationStatusRead,
-				api.OperationRead,
-				api.OperationOpenShiftClusterRead,
-				api.OperationOpenShiftClusterWrite,
-				api.OperationOpenShiftClusterDelete,
-				api.OperationOpenShiftClusterListCredentials,
-				api.OperationOpenShiftClusterGetDetectors,
-			},
-		},
 	}
 }
