@@ -400,7 +400,6 @@ func (m *manager) bootstrap() []steps.Step {
 			// Give Hive 60 minutes to install the cluster, since this includes
 			// all of bootstrapping being complete
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
-			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
 			steps.Action(m.generateKubeconfigs),
 		)
 	} else {
