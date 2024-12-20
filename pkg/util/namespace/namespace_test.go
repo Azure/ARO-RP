@@ -61,6 +61,10 @@ func TestIsOpenShiftNamespace(t *testing.T) {
 			want:      true,
 		},
 		{
+			namespace: "openshift-ovn-kubernetes",
+			want:      true,
+		},
+		{
 			namespace: "openshift-cluster-version",
 			want:      true,
 		},
