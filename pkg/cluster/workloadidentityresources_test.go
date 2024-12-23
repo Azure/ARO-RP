@@ -669,10 +669,10 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 					},
 				},
 			},
-			serviceAccount: "openshift-cloud-controller-manager:cloud-controller-manager",
+			serviceAccount: "system:serviceaccount:openshift-cloud-controller-manager:cloud-controller-manager",
 			identity:       api.PlatformWorkloadIdentity{ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm")},
 			wantErr:        "",
-			want:           fmt.Sprintf("%s-%s-%s", subID, clusterRGName, clusterName),
+			want:           fmt.Sprintf("%s_%s", clusterName, "cloud-controller-manager"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
