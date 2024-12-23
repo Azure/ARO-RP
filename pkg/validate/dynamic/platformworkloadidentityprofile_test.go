@@ -421,7 +421,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 
 				expectedPlatformIdentity1FederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, platformIdentity1SAName)
-				expectedPlatformIdentity1ExtraFederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, "something else")
+				expectedPlatformIdentity1ExtraFederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, "system:serviceaccount:something:else")
 
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
