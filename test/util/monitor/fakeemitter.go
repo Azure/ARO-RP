@@ -6,6 +6,7 @@ package monitor
 import (
 	"fmt"
 	"maps"
+	"testing"
 
 	"golang.org/x/exp/slices"
 )
@@ -28,15 +29,29 @@ func Metric[T float64 | int64](metricName string, metricValue T, dimensions map[
 }
 
 type fakeEmitter struct {
+	t        *testing.T
+	asserted bool
+
 	floats []emittedMetric[float64]
 	gauges []emittedMetric[int64]
 }
 
-func NewFakeEmitter() *fakeEmitter {
-	return &fakeEmitter{
+func NewFakeEmitter(t *testing.T) *fakeEmitter {
+	e := &fakeEmitter{
+		t:      t,
 		floats: make([]emittedMetric[float64], 0),
 		gauges: make([]emittedMetric[int64], 0),
 	}
+
+	if t != nil {
+		t.Cleanup(func() {
+			if !e.asserted {
+				t.Error("metrics were not asserted upon")
+			}
+		})
+	}
+
+	return e
 }
 
 func (c *fakeEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
@@ -50,6 +65,7 @@ func (c *fakeEmitter) EmitGauge(metricName string, metricValue int64, dimensions
 func (c *fakeEmitter) Reset() {
 	c.floats = make([]emittedMetric[float64], 0)
 	c.gauges = make([]emittedMetric[int64], 0)
+	c.asserted = false
 }
 
 // VerifyEmittedMetrics will verify the output of the emitter with a list of
@@ -58,7 +74,13 @@ func (c *fakeEmitter) Reset() {
 // number goes up and then down), organise your code such that you can test the
 // initial value, use this struct's Reset() method, and then test for the higher
 // value.
-func (c *fakeEmitter) VerifyEmittedMetrics(floats []FloatMetric, gauges []GaugeMetric) []error {
+func (c *fakeEmitter) VerifyEmittedMetrics(floats []FloatMetric, gauges []GaugeMetric) {
+	for _, err := range c._verifyEmittedMetrics(floats, gauges) {
+		c.t.Error(err)
+	}
+}
+func (c *fakeEmitter) _verifyEmittedMetrics(floats []FloatMetric, gauges []GaugeMetric) []error {
+	c.asserted = true
 	errors := make([]error, 0)
 
 	if len(floats) != len(c.floats) {

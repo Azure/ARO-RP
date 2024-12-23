@@ -12,11 +12,11 @@ func TestEmitter(t *testing.T) {
 	a := assert.New(t)
 
 	// emitted metrics should line up
-	e := NewFakeEmitter()
+	e := NewFakeEmitter(nil)
 	e.EmitFloat("foo", 1.1, map[string]string{"bar": "baz"})
 	e.EmitGauge("foo", 1, map[string]string{"baz": "bar"})
 
-	errs := e.VerifyEmittedMetrics([]FloatMetric{
+	errs := e._verifyEmittedMetrics([]FloatMetric{
 		Metric("foo", 1.1, map[string]string{"bar": "baz"}),
 	}, []GaugeMetric{
 		Metric[int64]("foo", 1, map[string]string{"baz": "bar"}),
@@ -25,7 +25,7 @@ func TestEmitter(t *testing.T) {
 	a.Len(errs, 0, "did not match")
 
 	// Unexpected metrics
-	errs = e.VerifyEmittedMetrics([]FloatMetric{}, []GaugeMetric{})
+	errs = e._verifyEmittedMetrics([]FloatMetric{}, []GaugeMetric{})
 	a.Len(errs, 4, "did not match")
 
 	errstrings := make([]string, 0)
@@ -40,7 +40,7 @@ func TestEmitter(t *testing.T) {
 	})
 
 	// Metrics that can't be found
-	errs = e.VerifyEmittedMetrics([]FloatMetric{
+	errs = e._verifyEmittedMetrics([]FloatMetric{
 		Metric("foo", 1.2, map[string]string{"bar": "baz"}),
 	}, []GaugeMetric{
 		Metric[int64]("foo", 2, map[string]string{"baz": "bar"}),
@@ -59,6 +59,6 @@ func TestEmitter(t *testing.T) {
 
 	// Reset, we should have none
 	e.Reset()
-	errs = e.VerifyEmittedMetrics([]FloatMetric{}, []GaugeMetric{})
+	errs = e._verifyEmittedMetrics([]FloatMetric{}, []GaugeMetric{})
 	a.Len(errs, 0, "did not match")
 }
