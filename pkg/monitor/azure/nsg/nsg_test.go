@@ -27,8 +27,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 var (
@@ -182,11 +182,11 @@ func TestMonitor(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name        string
-		mockSubnet  func(*mock_armnetwork.MockSubnetsClient)
-		mockEmitter func(*mock_metrics.MockEmitter)
-		modOC       func(*api.OpenShiftCluster)
-		wantErr     string
+		name       string
+		mockSubnet func(*mock_armnetwork.MockSubnetsClient)
+		modOC      func(*api.OpenShiftCluster)
+		metrics    []testmonitor.ExpectedMetric
+		wantErr    string
 	}{
 		{
 			name: "fail - forbidden access when retrieving worker subnet 2",
@@ -204,8 +204,8 @@ func TestMonitor(t *testing.T) {
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, &forbiddenRespErr)
 			},
-			mockEmitter: func(mock *mock_metrics.MockEmitter) {
-				mock.EXPECT().EmitGauge(MetricSubnetAccessForbidden, int64(1), workerSubnet2MetricDimensions)
+			metrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric(MetricSubnetAccessForbidden, int64(1), workerSubnet2MetricDimensions),
 			},
 			wantErr: forbiddenRespErr.Error(),
 		},
@@ -483,8 +483,8 @@ func TestMonitor(t *testing.T) {
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
 			},
-			mockEmitter: func(mock *mock_metrics.MockEmitter) {
-				mock.EXPECT().EmitGauge(MetricInvalidDenyRule, int64(1), map[string]string{
+			metrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric(MetricInvalidDenyRule, int64(1), map[string]string{
 					dimension.ResourceID:          ocID,
 					dimension.Location:            ocLocation,
 					dimension.SubscriptionID:      subscriptionID,
@@ -495,8 +495,8 @@ func TestMonitor(t *testing.T) {
 					dimension.NSGRuleDestinations: subsetOfMaster2,
 					dimension.NSGRuleDirection:    string(armnetwork.SecurityRuleDirectionInbound),
 					dimension.NSGRulePriority:     fmt.Sprint(priority1),
-				})
-				mock.EXPECT().EmitGauge(MetricInvalidDenyRule, int64(1), map[string]string{
+				}),
+				testmonitor.Metric(MetricInvalidDenyRule, int64(1), map[string]string{
 					dimension.ResourceID:          ocID,
 					dimension.Location:            ocLocation,
 					dimension.SubscriptionID:      subscriptionID,
@@ -507,7 +507,7 @@ func TestMonitor(t *testing.T) {
 					dimension.NSGRuleDestinations: "*",
 					dimension.NSGRuleDirection:    string(armnetwork.SecurityRuleDirectionOutbound),
 					dimension.NSGRulePriority:     fmt.Sprint(priority3),
-				})
+				}),
 			},
 		},
 	} {
@@ -515,13 +515,10 @@ func TestMonitor(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			subnetClient := mock_armnetwork.NewMockSubnetsClient(ctrl)
-			emitter := mock_metrics.NewMockEmitter(ctrl)
+			emitter := testmonitor.NewFakeEmitter(t)
 
 			if tt.mockSubnet != nil {
 				tt.mockSubnet(subnetClient)
-			}
-			if tt.mockEmitter != nil {
-				tt.mockEmitter(emitter)
 			}
 			oc := ocFactory()
 			if tt.modOC != nil {
@@ -558,6 +555,7 @@ func TestMonitor(t *testing.T) {
 			if len(err) != 0 {
 				utilerror.AssertErrorMessage(t, err[0], tt.wantErr)
 			}
+			emitter.VerifyEmittedMetrics(tt.metrics...)
 		})
 	}
 }
@@ -585,7 +583,7 @@ func TestNewMonitor(t *testing.T) {
 		name          string
 		modOC         func(*api.OpenShiftCluster)
 		mockInterface func(*mock_env.MockInterface)
-		mockEmitter   func(*mock_metrics.MockEmitter)
+		metrics       []testmonitor.ExpectedMetric
 		tick          bool
 		valid         func(monitoring.Monitor) bool
 	}{
@@ -598,8 +596,8 @@ func TestNewMonitor(t *testing.T) {
 			modOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			mockEmitter: func(emitter *mock_metrics.MockEmitter) {
-				emitter.EXPECT().EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
+			metrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric(MetricPreconfiguredNSGEnabled, int64(1), dims),
 			},
 			valid: isOfType[*monitoring.NoOpMonitor],
 		},
@@ -608,9 +606,9 @@ func TestNewMonitor(t *testing.T) {
 			modOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			mockEmitter: func(emitter *mock_metrics.MockEmitter) {
-				emitter.EXPECT().EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
-				emitter.EXPECT().EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
+			metrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric(MetricPreconfiguredNSGEnabled, int64(1), dims),
+				testmonitor.Metric(MetricFailedNSGMonitorCreation, int64(1), dims),
 			},
 			mockInterface: func(mi *mock_env.MockInterface) {
 				mi.EXPECT().FPNewClientCertificateCredential(gomock.Any(), gomock.Any()).Return(nil, errors.New("Unknown Error"))
@@ -623,8 +621,8 @@ func TestNewMonitor(t *testing.T) {
 			modOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
-			mockEmitter: func(emitter *mock_metrics.MockEmitter) {
-				emitter.EXPECT().EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
+			metrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric(MetricPreconfiguredNSGEnabled, int64(1), dims),
 			},
 			mockInterface: func(mi *mock_env.MockInterface) {
 				mi.EXPECT().FPNewClientCertificateCredential(gomock.Any(), gomock.Any()).Return(&azidentity.ClientCertificateCredential{}, nil)
@@ -638,7 +636,7 @@ func TestNewMonitor(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			e := mock_env.NewMockInterface(ctrl)
-			emitter := mock_metrics.NewMockEmitter(ctrl)
+			emitter := testmonitor.NewFakeEmitter(t)
 
 			oc := ocFactory()
 			if tt.modOC != nil {
@@ -646,9 +644,6 @@ func TestNewMonitor(t *testing.T) {
 			}
 			if tt.mockInterface != nil {
 				tt.mockInterface(e)
-			}
-			if tt.mockEmitter != nil {
-				tt.mockEmitter(emitter)
 			}
 			ticking := make(chan time.Time, 1) // buffered
 			if tt.tick {
@@ -659,6 +654,7 @@ func TestNewMonitor(t *testing.T) {
 			if !tt.valid(mon) {
 				t.Error("Invalid monitoring object returned")
 			}
+			emitter.VerifyEmittedMetrics(tt.metrics...)
 		})
 	}
 }

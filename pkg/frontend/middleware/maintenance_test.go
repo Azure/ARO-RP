@@ -7,10 +7,8 @@ import (
 	"net/http"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestUnplannedMaintenanceSignal(t *testing.T) {
@@ -26,16 +24,9 @@ func TestUnplannedMaintenanceSignal(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := mock_metrics.NewMockEmitter(controller)
+			m := testmonitor.NewFakeEmitter(t)
 
 			maintenanceMiddleware := MaintenanceMiddleware{m}
-
-			m.EXPECT().EmitGauge("frontend.maintenance.unplanned", int64(1), map[string]string{
-				"resourceId": tt.resourceID,
-			})
 
 			handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 			handler := maintenanceMiddleware.UnplannedMaintenanceSignal(handlerFunc)
@@ -48,6 +39,12 @@ func TestUnplannedMaintenanceSignal(t *testing.T) {
 			w := responsewriter.New(r)
 
 			handler.ServeHTTP(w, r)
+
+			m.VerifyEmittedMetrics(
+				testmonitor.Metric("frontend.maintenance.unplanned", int64(1), map[string]string{
+					"resourceId": tt.resourceID,
+				}),
+			)
 		})
 	}
 }

@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 type testRoundTripper struct {
@@ -29,7 +29,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 		name               string
 		url                string
 		rt                 http.RoundTripper
-		mocks              func(*mock_metrics.MockEmitter)
+		metrics            []testmonitor.ExpectedMetric
 		wantErr            string
 		wantRespStatusCode int
 	}{
@@ -38,22 +38,22 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 			rt: &testRoundTripper{
 				err: errors.New("roundtrip failed"),
 			},
-			mocks: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("client.cosmosdb.count", int64(1), map[string]string{
+			metrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric("client.cosmosdb.count", int64(1), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
 					"code": "0",
-				})
-				m.EXPECT().EmitGauge("client.cosmosdb.duration", gomock.Any(), map[string]string{
+				}),
+				testmonitor.MatchingMetric("client.cosmosdb.duration", gomega.BeNumerically(">", -0.01), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
 					"code": "0",
-				})
-				m.EXPECT().EmitGauge("client.cosmosdb.errors", int64(1), map[string]string{
+				}),
+				testmonitor.Metric("client.cosmosdb.errors", int64(1), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
 					"code": "0",
-				})
+				}),
 			},
 			wantErr: "roundtrip failed",
 		},
@@ -67,17 +67,17 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("client.cosmosdb.count", int64(1), map[string]string{
+			metrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric("client.cosmosdb.count", int64(1), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
 					"code": "401",
-				})
-				m.EXPECT().EmitGauge("client.cosmosdb.duration", gomock.Any(), map[string]string{
+				}),
+				testmonitor.MatchingMetric("client.cosmosdb.duration", gomega.BeNumerically(">", -0.01), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
 					"code": "401",
-				})
+				}),
 			},
 			wantRespStatusCode: http.StatusUnauthorized,
 		},
@@ -92,32 +92,28 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("client.cosmosdb.count", int64(1), map[string]string{
+			metrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric("client.cosmosdb.count", int64(1), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/docs/{id}",
 					"code": "200",
-				})
-				m.EXPECT().EmitGauge("client.cosmosdb.duration", gomock.Any(), map[string]string{
+				}),
+				testmonitor.MatchingMetric("client.cosmosdb.duration", gomega.BeNumerically(">", -0.01), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/docs/{id}",
 					"code": "200",
-				})
-				m.EXPECT().EmitFloat("client.cosmosdb.requestunits", 1.23, map[string]string{
+				}),
+				testmonitor.Metric("client.cosmosdb.requestunits", 1.23, map[string]string{
 					"verb": http.MethodGet,
 					"path": "/docs/{id}",
 					"code": "200",
-				})
+				}),
 			},
 			wantRespStatusCode: http.StatusOK,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := mock_metrics.NewMockEmitter(controller)
-			tt.mocks(m)
+			m := testmonitor.NewFakeEmitter(t)
 
 			tripper := &tracerRoundTripper{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -141,6 +137,8 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 				resp == nil && tt.wantRespStatusCode != 0 {
 				t.Error(resp)
 			}
+
+			m.VerifyEmittedMetrics(tt.metrics...)
 		})
 	}
 }

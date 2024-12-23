@@ -7,9 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/mock/gomock"
-
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitMetrics(t *testing.T) {
@@ -33,25 +31,27 @@ func TestEmitMetrics(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			mockController := gomock.NewController(t)
-			defer mockController.Finish()
-			mock_metrics := mock_metrics.NewMockEmitter(mockController)
+			emitter := testmonitor.NewFakeEmitter(t)
 
-			mock_metrics.EXPECT().EmitGauge("gateway.connections.open", tt.httpConnections, map[string]string{"protocol": "http"}).Times(1)
-			mock_metrics.EXPECT().EmitGauge("gateway.connections.open", tt.httpsConnections, map[string]string{"protocol": "https"}).Times(1)
+			expectedGauges := []testmonitor.ExpectedMetric{
+				testmonitor.Metric("gateway.connections.open", tt.httpConnections, map[string]string{"protocol": "http"}),
+				testmonitor.Metric("gateway.connections.open", tt.httpsConnections, map[string]string{"protocol": "https"}),
+			}
 
 			gateway := gateway{
-				m:                mock_metrics,
+				m:                emitter,
 				httpConnections:  tt.httpConnections,
 				httpsConnections: tt.httpsConnections,
 			}
 
 			if !tt.lastChangefeedTime.Equal(testStartTime) {
 				gateway.lastChangefeed.Store(tt.lastChangefeedTime)
-				mock_metrics.EXPECT().EmitGauge("gateway.lastchangefeed", tt.lastChangefeedTime.Unix(), nil).Times(1)
+				expectedGauges = append(expectedGauges, testmonitor.Metric("gateway.lastchangefeed", tt.lastChangefeedTime.Unix(), nil))
 			}
 
 			gateway._emitMetrics()
+
+			emitter.VerifyEmittedMetrics(expectedGauges...)
 		})
 	}
 }

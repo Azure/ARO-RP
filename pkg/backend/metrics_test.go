@@ -13,12 +13,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitMetrics(t *testing.T) {
 	controller := gomock.NewController(t)
-	emitter := mock_metrics.NewMockEmitter(controller)
+	emitter := testmonitor.NewFakeEmitter(t)
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().SubscriptionID().AnyTimes()
 	env.EXPECT().Domain().AnyTimes()
@@ -259,9 +259,12 @@ func TestEmitMetrics(t *testing.T) {
 			ocb.gatherNetworkMetrics(log, tt.doc, dimensions)
 			ocb.gatherNodeMetrics(log, tt.doc, dimensions)
 
-			emitter.EXPECT().EmitGauge(ocb.getMetricName(tt.operationType), metricValue, dimensions).MaxTimes(1)
-
+			emitter.Reset()
 			d := ocb.emitMetrics(log, tt.doc, tt.operationType, tt.provisioningState, tt.backendErr)
+
+			emitter.VerifyEmittedMetrics(
+				testmonitor.Metric(ocb.getMetricName(tt.operationType), metricValue, dimensions),
+			)
 
 			ok := reflect.DeepEqual(dimensions, d)
 			if !ok {

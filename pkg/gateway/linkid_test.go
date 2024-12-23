@@ -12,8 +12,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestGatewayVerification(t *testing.T) {
@@ -87,7 +87,6 @@ func TestGatewayVerification(t *testing.T) {
 		}} {
 		t.Run(tt.name, func(t *testing.T) {
 			mockController := gomock.NewController(t)
-			defer mockController.Finish()
 
 			gatewayMap := map[string]*api.Gateway{
 				"1":        {ID: "1", StorageSuffix: "suffix-1", ImageRegistryStorageAccountName: "account1"},
@@ -102,17 +101,10 @@ func TestGatewayVerification(t *testing.T) {
 				Return(&azureclient.AROEnvironment{Environment: azure.Environment{StorageEndpointSuffix: "storageEndpointSuffix"}}).
 				AnyTimes()
 
-			mock_metrics := mock_metrics.NewMockEmitter(mockController)
-
-			if tt.host == "" {
-				mock_metrics.EXPECT().EmitGauge("gateway.nohost", int64(1), map[string]string{
-					"linkid": tt.idParam,
-					"action": "denied",
-				}).MinTimes(1)
-			}
+			emitter := testmonitor.NewFakeEmitter(t)
 
 			gateway := gateway{
-				m:         mock_metrics,
+				m:         emitter,
 				gateways:  gatewayMap,
 				env:       mockCore,
 				allowList: tt.allowList,
@@ -129,6 +121,17 @@ func TestGatewayVerification(t *testing.T) {
 			}
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			if tt.host == "" {
+				emitter.VerifyEmittedMetrics(
+					testmonitor.Metric("gateway.nohost", int64(1), map[string]string{
+						"linkid": tt.idParam,
+						"action": "denied",
+					}),
+				)
+			} else {
+				emitter.VerifyEmittedMetrics()
+			}
 		})
 	}
 }
