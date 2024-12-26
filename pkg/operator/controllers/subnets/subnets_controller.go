@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -22,13 +25,11 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -53,7 +54,7 @@ type reconcileManager struct {
 	instance       *arov1alpha1.Cluster
 	subscriptionID string
 
-	subnets     subnet.Manager
+	subnets     armnetwork.SubnetsClient
 	kubeSubnets subnet.KubeManager
 }
 
@@ -96,13 +97,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// create a refreshable authorizer from token
-	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.client)
+	credential, err := azidentity.NewDefaultAzureCredential(azEnv.DefaultAzureCredentialOptions())
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	authorizer, err := azRefreshAuthorizer.NewRefreshableAuthorizerToken(ctx)
+	options := azEnv.ArmClientOptions()
+
+	subnetGroupsClient, err := armnetwork.NewSubnetsClient(resource.SubscriptionID, credential, options)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -113,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
 		kubeSubnets:    subnet.NewKubeManager(r.client, resource.SubscriptionID),
-		subnets:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
+		subnets:        subnetGroupsClient,
 	}
 
 	return reconcile.Result{}, manager.reconcileSubnets(ctx)
