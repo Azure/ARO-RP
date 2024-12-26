@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/davecgh/go-spew/spew"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
@@ -44,7 +45,7 @@ const (
 	serviceAccountName    = "etcd-recovery-privileged"
 	kubeServiceAccount    = "system:serviceaccount" + namespaceEtcds + ":" + serviceAccountName
 	namespaceEtcds        = "openshift-etcd"
-	image                 = "ubi8/ubi-minimal"
+	image                 = "ubi9/ubi-minimal"
 	jobName               = "etcd-recovery-"
 	patchOverides         = "unsupportedConfigOverrides:"
 	patchDisableOverrides = `{"useUnsupportedUnsafeNonHANonProductionUnstableEtcd": true}`
@@ -69,7 +70,7 @@ func (f *frontend) fixEtcd(ctx context.Context, log *logrus.Entry, env env.Inter
 
 	de, err := findDegradedEtcd(log, pods)
 	if err != nil {
-		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return []byte{}, api.NewCloudError(http.StatusBadRequest, "", "", err.Error())
 	}
 	log.Infof("Found degraded endpoint: %v", de)
 
@@ -196,67 +197,50 @@ func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured
 	// Frontend kubeactions expects an unstructured type
 	jobFixPeers := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"objectMeta": map[string]interface{}{
-				"name":      jobNameFixPeers,
-				"namespace": namespaceEtcds,
-				"labels":    map[string]string{"app": jobNameFixPeers},
-			},
 			"spec": map[string]interface{}{
-				"template": map[string]interface{}{
-					"objectMeta": map[string]interface{}{
-						"name":      jobNameFixPeers,
-						"namespace": namespaceEtcds,
-						"labels":    map[string]string{"app": jobNameFixPeers},
-					},
-					"activeDeadlineSeconds":   to.Int64Ptr(10),
-					"completions":             to.Int32Ptr(1),
-					"ttlSecondsAfterFinished": to.Int32Ptr(300),
-					"spec": map[string]interface{}{
-						"restartPolicy":      corev1.RestartPolicyOnFailure,
-						"serviceAccountName": serviceAccountName,
-						"containers": []corev1.Container{
+				"restartPolicy":      corev1.RestartPolicyOnFailure,
+				"serviceAccountName": serviceAccountName,
+				"containers": []corev1.Container{
+					{
+						Name:  jobNameFixPeers,
+						Image: image,
+						Command: []string{
+							"/bin/bash",
+							"-cx",
+							backupOrFixEtcd,
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Privileged: to.BoolPtr(true),
+						},
+						Env: []corev1.EnvVar{
 							{
-								Name:  jobNameFixPeers,
-								Image: image,
-								Command: []string{
-									"/bin/bash",
-									"-cx",
-									backupOrFixEtcd,
-								},
-								SecurityContext: &corev1.SecurityContext{
-									Privileged: to.BoolPtr(true),
-								},
-								Env: []corev1.EnvVar{
-									{
-										Name:  "PEER_PODS",
-										Value: peerPods,
-									},
-									{
-										Name:  "DEGRADED_NODE",
-										Value: deNode,
-									},
-									{
-										Name:  "FIX_PEERS",
-										Value: "true",
-									},
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      "host",
-										MountPath: "/host",
-										ReadOnly:  false,
-									},
-								},
+								Name:  "PEER_PODS",
+								Value: peerPods,
+							},
+							{
+								Name:  "DEGRADED_NODE",
+								Value: deNode,
+							},
+							{
+								Name:  "FIX_PEERS",
+								Value: "true",
 							},
 						},
-						"volumes": []corev1.Volume{
+						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name: "host",
-								VolumeSource: corev1.VolumeSource{
-									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/",
-									},
-								},
+								Name:      "host",
+								MountPath: "/host",
+								ReadOnly:  false,
+							},
+						},
+					},
+				},
+				"volumes": []corev1.Volume{
+					{
+						Name: "host",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: "/",
 							},
 						},
 					},
@@ -268,10 +252,11 @@ func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured
 	// This creates an embedded "metadata" map[string]string{} in the unstructured object
 	// For an unknown reason, creating "metadata" directly in the object doesn't work
 	// and the helper functions must be used
-	jobFixPeers.SetKind("Job")
-	jobFixPeers.SetAPIVersion("batch/v1")
+	jobFixPeers.SetKind("Pod")
+	jobFixPeers.SetAPIVersion("v1")
 	jobFixPeers.SetName(jobNameFixPeers)
 	jobFixPeers.SetNamespace(namespaceEtcds)
+	jobFixPeers.SetLabels(map[string]string{"app": jobNameFixPeers})
 
 	return jobFixPeers
 }
@@ -309,7 +294,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 
 	log.Infof("Deleting %s now", jobFixPeers.GetName())
 	propPolicy := metav1.DeletePropagationBackground
-	err = kubeActions.KubeDelete(ctx, "Job", namespaceEtcds, jobFixPeers.GetName(), true, &propPolicy)
+	err = kubeActions.KubeDelete(ctx, jobFixPeers.GetKind(), jobFixPeers.GetNamespace(), jobFixPeers.GetName(), true, &propPolicy)
 	if err != nil {
 		return containerLogs, err
 	}
@@ -501,28 +486,41 @@ func backupEtcdData(ctx context.Context, log *logrus.Entry, cluster, node string
 
 	log.Infof("Deleting job %s now", jobDataBackup.GetName())
 	propPolicy := metav1.DeletePropagationBackground
-	return containerLogs, kubeActions.KubeDelete(ctx, "Job", namespaceEtcds, jobDataBackup.GetName(), true, &propPolicy)
+	return containerLogs, kubeActions.KubeDelete(ctx, jobDataBackup.GetKind(), jobDataBackup.GetNamespace(), jobDataBackup.GetName(), true, &propPolicy)
 }
 
 func waitForJobSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Interface, o *unstructured.Unstructured, k adminactions.KubeActions) ([]byte, error) {
 	var waitErr error
 	log.Infof("Waiting for %s to reach %s phase", o.GetName(), corev1.PodSucceeded)
-	select {
-	case event := <-watcher.ResultChan():
-		pod := event.Object.(*corev1.Pod)
-
-		if pod.Status.Phase == corev1.PodSucceeded {
-			log.Infof("Job %s completed with %s", pod.GetName(), pod.Status.Message)
-		} else if pod.Status.Phase == corev1.PodFailed {
-			log.Infof("Job %s reached phase %s with message: %s", pod.GetName(), pod.Status.Phase, pod.Status.Message)
-			waitErr = fmt.Errorf("pod %s event %s received with message %s", pod.Name, pod.Status.Phase, pod.Status.Message)
+	var pod corev1.Pod
+outer:
+	for {
+		select {
+		case event := <-watcher.ResultChan():
+			u, ok := event.Object.(*unstructured.Unstructured)
+			if !ok {
+				return []byte{}, spew.Errorf("unexpected event: %#v", event)
+			}
+			err := kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &pod)
+			if err != nil {
+				return []byte{}, fmt.Errorf("failed to convert unstructured object to Pod: %w", err)
+			}
+			if pod.Status.Phase == corev1.PodSucceeded {
+				log.Infof("Job %s completed with %s: %s", pod.GetName(), pod.Status.Message, pod.Status.Phase)
+				break outer
+			} else if pod.Status.Phase == corev1.PodFailed {
+				log.Infof("Job %s reached phase %s with message: %s", pod.GetName(), pod.Status.Phase, pod.Status.Message)
+				waitErr = fmt.Errorf("pod %s event %s received with message %s", pod.Name, pod.Status.Phase, pod.Status.Message)
+				break outer
+			}
+		case <-ctx.Done():
+			waitErr = fmt.Errorf("context was cancelled while waiting for %s because %s", o.GetName(), ctx.Err())
+			break outer
 		}
-	case <-ctx.Done():
-		waitErr = fmt.Errorf("context was cancelled while waiting for %s because %s", o.GetName(), ctx.Err())
 	}
 
 	// get container name
-	cxName := o.UnstructuredContent()["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})["containers"].([]corev1.Container)[0].Name
+	cxName := o.UnstructuredContent()["spec"].(map[string]interface{})["containers"].([]corev1.Container)[0].Name
 	log.Infof("Collecting container logs for Pod %s, container %s, in namespace %s", o.GetName(), cxName, o.GetNamespace())
 
 	cxLogs, err := k.KubeGetPodLogs(ctx, o.GetNamespace(), o.GetName(), cxName)
@@ -538,65 +536,47 @@ func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
 	const jobNameDataBackup = jobName + "data-backup"
 	j := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"objectMeta": map[string]interface{}{
-				"name":      jobNameDataBackup,
-				"kind":      "Job",
-				"namespace": namespaceEtcds,
-				"labels":    map[string]string{"app": jobNameDataBackup},
-			},
 			"spec": map[string]interface{}{
-				"template": map[string]interface{}{
-					"objectMeta": map[string]interface{}{
-						"name":      jobNameDataBackup,
-						"namespace": namespaceEtcds,
-						"labels":    map[string]string{"app": jobNameDataBackup},
-					},
-					"activeDeadlineSeconds":   to.Int64Ptr(10),
-					"completions":             to.Int32Ptr(1),
-					"ttlSecondsAfterFinished": to.Int32Ptr(300),
-					"spec": map[string]interface{}{
-						"restartPolicy": corev1.RestartPolicyOnFailure,
-						"nodeName":      node,
-						"containers": []corev1.Container{
+				"restartPolicy": corev1.RestartPolicyOnFailure,
+				"nodeName":      node,
+				"containers": []corev1.Container{
+					{
+						Name:  jobNameDataBackup,
+						Image: image,
+						Command: []string{
+							"chroot",
+							"/host",
+							"/bin/bash",
+							"-c",
+							backupOrFixEtcd,
+						},
+						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:  jobNameDataBackup,
-								Image: image,
-								Command: []string{
-									"chroot",
-									"/host",
-									"/bin/bash",
-									"-c",
-									backupOrFixEtcd,
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      "host",
-										MountPath: "/host",
-										ReadOnly:  false,
-									},
-								},
-								SecurityContext: &corev1.SecurityContext{
-									Capabilities: &corev1.Capabilities{
-										Add: []corev1.Capability{"SYS_CHROOT"},
-									},
-									Privileged: to.BoolPtr(true),
-								},
-								Env: []corev1.EnvVar{
-									{
-										Name:  "BACKUP",
-										Value: "true",
-									},
-								},
+								Name:      "host",
+								MountPath: "/host",
+								ReadOnly:  false,
 							},
 						},
-						"volumes": []corev1.Volume{
+						SecurityContext: &corev1.SecurityContext{
+							Capabilities: &corev1.Capabilities{
+								Add: []corev1.Capability{"SYS_CHROOT"},
+							},
+							Privileged: to.BoolPtr(true),
+						},
+						Env: []corev1.EnvVar{
 							{
-								Name: "host",
-								VolumeSource: corev1.VolumeSource{
-									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/",
-									},
-								},
+								Name:  "BACKUP",
+								Value: "true",
+							},
+						},
+					},
+				},
+				"volumes": []corev1.Volume{
+					{
+						Name: "host",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: "/",
 							},
 						},
 					},
@@ -608,14 +588,16 @@ func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
 	// This creates an embedded "metadata" map[string]string{} in the unstructured object
 	// For an unknown reason, creating "metadata" directly in the object doesn't work
 	// and the helper functions must be used
-	j.SetKind("Job")
-	j.SetAPIVersion("batch/v1")
+	j.SetKind("Pod")
+	j.SetAPIVersion("v1")
 	j.SetName(jobNameDataBackup)
 	j.SetNamespace(namespaceEtcds)
+	j.SetLabels(map[string]string{"app": jobNameDataBackup})
 
 	return j
 }
 
+// comparePodEnvToIp compares the etcd container's environment variables to the pod's actual IP address
 func comparePodEnvToIp(log *logrus.Entry, pods *corev1.PodList) (*degradedEtcd, error) {
 	degradedEtcds := []degradedEtcd{}
 	for _, p := range pods.Items {
@@ -649,7 +631,7 @@ func comparePodEnvToIp(log *logrus.Entry, pods *corev1.PodList) (*degradedEtcd, 
 	return de, nil
 }
 
-// comparePodEnvToIp compares the etcd container's environment variables to the pod's actual IP address
+// findDegradedEtcd identifies etcd Pods with degraded status caused by IP conflicts or CrashLoopBackoff issues and returns their details.
 func findDegradedEtcd(log *logrus.Entry, pods *corev1.PodList) (*degradedEtcd, error) {
 	de, err := comparePodEnvToIp(log, pods)
 	if err != nil {
@@ -663,7 +645,7 @@ func findDegradedEtcd(log *logrus.Entry, pods *corev1.PodList) (*degradedEtcd, e
 	}
 
 	// Sanity check
-	// Since we are checking for both an etcd Pod with an IP mis match, and the statuses of all etcd pods, let's make sure the Pod's returned by both are the same
+	// Since we are checking for both an etcd Pod with an IP mismatch, and the statuses of all etcd pods, let's make sure the Pod's returned by both are the same
 	if de.Pod != crashingPodSearchDe.Pod && de.Pod != "" {
 		return de, fmt.Errorf("etcd Pod found in crashlooping state %s is not equal to etcd Pod with IP ENV mis match %s... failed sanity check", de.Pod, crashingPodSearchDe.Pod)
 	}
