@@ -9,12 +9,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEnrichOne(t *testing.T) {
@@ -92,11 +93,7 @@ func TestEnrichOne(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			metricsMock := mock_metrics.NewMockEmitter(controller)
-			metricsMock.EXPECT().EmitGauge("enricher.tasks.count", int64(1), nil).Times(tt.taskCount)
-			metricsMock.EXPECT().EmitGauge("enricher.tasks.duration", gomock.Any(), gomock.Any()).Times(tt.taskDuration)
-			metricsMock.EXPECT().EmitGauge("enricher.timeouts", int64(1), nil).Times(tt.timeoutCount)
-			metricsMock.EXPECT().EmitGauge("enricher.tasks.errors", int64(1), nil).Times(tt.errorCount)
+			m := testmonitor.NewFakeEmitter(t)
 
 			enricherMock := mock_clusterdata.NewMockClusterEnricher(controller)
 			enricherMock.EXPECT().Enrich(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -104,7 +101,7 @@ func TestEnrichOne(t *testing.T) {
 			enricherMock.EXPECT().SetDefaults(gomock.Any()).Times(tt.enricherCallCount)
 
 			e := ParallelEnricher{
-				emitter: metricsMock,
+				emitter: m,
 				enrichers: map[string]ClusterEnricher{
 					enricherName:     enricherMock,
 					servicePrincipal: enricherMock,
@@ -126,6 +123,22 @@ func TestEnrichOne(t *testing.T) {
 			e.enrichOne(ctx, log, oc, clients{}, tt.failedEnrichers)
 
 			e.metricsWG.Wait()
+
+			emittedMetrics := make([]testmonitor.ExpectedMetric, 0)
+			for i := 0; i < tt.taskCount; i++ {
+				emittedMetrics = append(emittedMetrics, testmonitor.Metric("enricher.tasks.count", int64(1), nil))
+			}
+			for i := 0; i < tt.taskDuration; i++ {
+				emittedMetrics = append(emittedMetrics, testmonitor.MatchingMetric("enricher.tasks.duration", gomega.BeNumerically(">", -1), map[string]string{"task": "*mock_clusterdata.MockClusterEnricher"}))
+			}
+			for i := 0; i < tt.timeoutCount; i++ {
+				emittedMetrics = append(emittedMetrics, testmonitor.Metric("enricher.timeouts", int64(1), nil))
+			}
+			for i := 0; i < tt.errorCount; i++ {
+				emittedMetrics = append(emittedMetrics, testmonitor.Metric("enricher.tasks.errors", int64(1), nil))
+			}
+
+			m.VerifyEmittedMetrics(emittedMetrics...)
 		})
 	}
 }
