@@ -4,7 +4,6 @@ package adminactions
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -20,11 +19,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	utiljson "github.com/Azure/ARO-RP/test/util/json"
 )
 
 func validListByResourceGroupMock(resources *mock_features.MockResourcesClient) {
@@ -115,7 +114,7 @@ func TestResourcesList(t *testing.T) {
 			mocks: func(virtualNetworks *mock_armnetwork.MockVirtualNetworksClient, routeTables *mock_armnetwork.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
 				validVirtualNetworksMock(virtualNetworks, routeTables, mockSubID)
 			},
-			wantResponse: []byte(`[{"ExtendedLocation":null,"ID":"/subscriptions/id","Properties":{"AddressSpace":null,"BgpCommunities":null,"DdosProtectionPlan":null,"DhcpOptions":{"DNSServers":[]},"EnableDdosProtection":null,"EnableVMProtection":null,"Encryption":null,"FlowTimeoutInMinutes":null,"IPAllocations":null,"Subnets":[{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master","Name":null,"Properties":{"AddressPrefix":null,"AddressPrefixes":null,"ApplicationGatewayIPConfigurations":null,"Delegations":null,"IPAllocations":null,"NatGateway":null,"NetworkSecurityGroup":null,"PrivateEndpointNetworkPolicies":null,"PrivateLinkServiceNetworkPolicies":null,"RouteTable":{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","Location":null,"Properties":null,"Tags":null,"Etag":null,"Name":null,"Type":null},"ServiceEndpointPolicies":null,"ServiceEndpoints":null,"IPConfigurationProfiles":null,"IPConfigurations":null,"PrivateEndpoints":null,"ProvisioningState":null,"Purpose":null,"ResourceNavigationLinks":null,"ServiceAssociationLinks":null},"Type":null,"Etag":null}],"VirtualNetworkPeerings":null,"FlowLogs":null,"ProvisioningState":null,"ResourceGUID":null},"type":"Microsoft.Network/virtualNetworks"},{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","Properties":null,"name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+			wantResponse: []byte(`[{"apiVersion":"","properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"apiVersion":"","id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 		{
 			name: "vnet get error", //Get resources should continue on error from virtualNetworks.Get()
@@ -132,7 +131,7 @@ func TestResourcesList(t *testing.T) {
 				validDiskEncryptionSetsMock(diskEncryptionSets)
 			},
 			diskEncryptionSetId: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-cluster-des", mockSubID),
-			wantResponse:        []byte(`[{"ExtendedLocation":null,"ID":"/subscriptions/id","Properties":{"AddressSpace":null,"BgpCommunities":null,"DdosProtectionPlan":null,"DhcpOptions":{"DNSServers":[]},"EnableDdosProtection":null,"EnableVMProtection":null,"Encryption":null,"FlowTimeoutInMinutes":null,"IPAllocations":null,"Subnets":[{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master","Name":null,"Properties":{"AddressPrefix":null,"AddressPrefixes":null,"ApplicationGatewayIPConfigurations":null,"Delegations":null,"IPAllocations":null,"NatGateway":null,"NetworkSecurityGroup":null,"PrivateEndpointNetworkPolicies":null,"PrivateLinkServiceNetworkPolicies":null,"RouteTable":{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","Location":null,"Properties":null,"Tags":null,"Etag":null,"Name":null,"Type":null},"ServiceEndpointPolicies":null,"ServiceEndpoints":null,"IPConfigurationProfiles":null,"IPConfigurations":null,"PrivateEndpoints":null,"ProvisioningState":null,"Purpose":null,"ResourceNavigationLinks":null,"ServiceAssociationLinks":null},"Type":null,"Etag":null}],"VirtualNetworkPeerings":null,"FlowLogs":null,"ProvisioningState":null,"ResourceGUID":null},"type":"Microsoft.Network/virtualNetworks"},{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","Properties":null,"name":"routetable1"},{"id":"/subscriptions/id","type":"Microsoft.Compute/diskEncryptionSets"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+			wantResponse:        []byte(`[{"apiVersion":"","properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"apiVersion":"","id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"id":"/subscriptions/id","type":"Microsoft.Compute/diskEncryptionSets"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 		{
 			name: "error getting diskencryptionsets",
@@ -143,7 +142,7 @@ func TestResourcesList(t *testing.T) {
 				diskEncryptionSets.EXPECT().Get(gomock.Any(), "test-cluster", "test-cluster-des").Return(mgmtcompute.DiskEncryptionSet{}, fmt.Errorf("Any error during Get, expecting a permissions error"))
 			},
 			diskEncryptionSetId: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-cluster-des", mockSubID),
-			wantResponse:        []byte(`[{"ExtendedLocation":null,"ID":"/subscriptions/id","Properties":{"AddressSpace":null,"BgpCommunities":null,"DdosProtectionPlan":null,"DhcpOptions":{"DNSServers":[]},"EnableDdosProtection":null,"EnableVMProtection":null,"Encryption":null,"FlowTimeoutInMinutes":null,"IPAllocations":null,"Subnets":[{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master","Name":null,"Properties":{"AddressPrefix":null,"AddressPrefixes":null,"ApplicationGatewayIPConfigurations":null,"Delegations":null,"IPAllocations":null,"NatGateway":null,"NetworkSecurityGroup":null,"PrivateEndpointNetworkPolicies":null,"PrivateLinkServiceNetworkPolicies":null,"RouteTable":{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","Location":null,"Properties":null,"Tags":null,"Etag":null,"Name":null,"Type":null},"ServiceEndpointPolicies":null,"ServiceEndpoints":null,"IPConfigurationProfiles":null,"IPConfigurations":null,"PrivateEndpoints":null,"ProvisioningState":null,"Purpose":null,"ResourceNavigationLinks":null,"ServiceAssociationLinks":null},"Type":null,"Etag":null}],"VirtualNetworkPeerings":null,"FlowLogs":null,"ProvisioningState":null,"ResourceGUID":null},"type":"Microsoft.Network/virtualNetworks"},{"ID":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","Properties":null,"name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+			wantResponse:        []byte(`[{"apiVersion":"","properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"apiVersion":"","id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -192,9 +191,7 @@ func TestResourcesList(t *testing.T) {
 			b, _ := io.ReadAll(reader)
 			if tt.wantError == "" {
 				if tt.wantResponse != nil {
-					if !bytes.Equal(b, tt.wantResponse) {
-						t.Errorf("got unexpected response, diff: %s", cmp.Diff(string(b), string(tt.wantResponse)))
-					}
+					utiljson.AssertJsonMatches(t, tt.wantResponse, b)
 				}
 			} else {
 				if err.Error() != tt.wantError {

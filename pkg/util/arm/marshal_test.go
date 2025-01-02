@@ -12,8 +12,8 @@ import (
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/to"
 
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	utiljson "github.com/Azure/ARO-RP/test/util/json"
 )
 
 func TestResourceMarshal(t *testing.T) {
@@ -286,7 +286,7 @@ func TestResourceMarshal(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertJsonMatches(t, test.want, b)
+			utiljson.AssertJsonMatches(t, test.want, b)
 		})
 	}
 }
@@ -317,21 +317,4 @@ type testResource struct {
 // during marshalling as part of arm.Resource type
 func (r *testResource) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("should not be called")
-}
-
-// Compare expected and actual JSON responses via unmarshaling into a map,
-// to avoid issues with e.g. field ordering
-func assertJsonMatches(t *testing.T, want, got []byte) {
-	t.Helper()
-	wantMap, gotMap := map[string]any{}, map[string]any{}
-	if err := json.Unmarshal(want, &wantMap); err != nil {
-		t.Error(err)
-	}
-	if err := json.Unmarshal(got, &gotMap); err != nil {
-		t.Error(err)
-	}
-
-	if diff := cmp.Diff(wantMap, gotMap); diff != "" {
-		t.Error(diff)
-	}
 }
