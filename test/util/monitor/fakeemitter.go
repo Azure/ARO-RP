@@ -143,7 +143,8 @@ func (c *fakeEmitter) _verifyEmittedMetrics(metrics ...ExpectedMetric) []error {
 				return errors
 			}
 
-			if wanted.name == emitted.name &&
+			if slices.Index(foundGauges, x) == -1 &&
+				wanted.name == emitted.name &&
 				s == true &&
 				maps.Equal(wanted.dimensions, emitted.dimensions) {
 				found = true
