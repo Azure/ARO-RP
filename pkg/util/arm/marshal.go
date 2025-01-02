@@ -9,34 +9,29 @@ import (
 	"reflect"
 	"strings"
 
-	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	gofrsuuid "github.com/gofrs/uuid"
+)
+
+const (
+	track2sdkPkgPathPrefix = "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager"
 )
 
 // MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods
 // on its types.  It then merges remaining fields of r over the result
 func (r *Resource) MarshalJSON() ([]byte, error) {
-	var b []byte
-	var err error
-
 	// hack to handle newer track2 sdk which doesn't have json tags
-	if strings.HasPrefix(r.Type, "Microsoft.DocumentDB/databaseAccounts/sqlDatabases") {
-		if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLDatabaseCreateUpdateParameters{}) {
-			b, err = r.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).MarshalJSON()
-		} else if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLContainerCreateUpdateParameters{}) {
-			b, err = r.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).MarshalJSON()
-		} else if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLTriggerCreateUpdateParameters{}) {
-			b, err = r.Resource.(*sdkcosmos.SQLTriggerCreateUpdateParameters).MarshalJSON()
+	v := reflect.Indirect(reflect.ValueOf(r.Resource))
+
+	if strings.HasPrefix(v.Type().PkgPath(), track2sdkPkgPathPrefix) {
+		res, ok := r.Resource.(json.Marshaler)
+		if !ok {
+			return nil, fmt.Errorf("resource %s identified as track2 sdk struct not marshalable", v.Type().Name())
 		}
-	} else if strings.HasPrefix(r.Type, "Microsoft.DocumentDB/databaseAccounts") {
-		b, err = r.Resource.(*sdkcosmos.DatabaseAccountCreateUpdateParameters).MarshalJSON()
-	}
+		b, err := res.MarshalJSON()
 
-	if err != nil {
-		return b, err
-	}
-
-	if b != nil {
+		if err != nil {
+			return b, err
+		}
 		dataMap := map[string]interface{}{}
 		err = json.Unmarshal(b, &dataMap)
 		if err != nil {
