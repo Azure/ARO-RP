@@ -67,9 +67,7 @@ func TestValidatePlatformWorkloadIdentities(t *testing.T) {
 			upgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.10.25")),
 		},
 		{
-			test:    "Fail - Not a MIWI Cluster",
-			version: defaultVersion,
-			wantErr: "PopulatePlatformWorkloadIdentityRolesByVersionUsingRoleSets called for a Cluster Service Principal cluster",
+			test: "Success - Not a MIWI Cluster, do nothing",
 		},
 		{
 			test:    "Fail - Invalid Cluster Version",

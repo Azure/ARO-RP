@@ -8,8 +8,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 )
 
-// validatePlatformWorkloadIdentities validates that customer provided platform workload identities are expected
+// validatePlatformWorkloadIdentities validates for workload identity clusters that customer provided platform workload identities are expected
 func (f *frontend) validatePlatformWorkloadIdentities(oc *api.OpenShiftCluster) error {
+	if !oc.UsesWorkloadIdentity() {
+		return nil
+	}
 	roleSets := f.getAvailablePlatformWorkloadIdentityRoleSets()
 
 	platformWorkloadIdentityRolesByVersionService := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
