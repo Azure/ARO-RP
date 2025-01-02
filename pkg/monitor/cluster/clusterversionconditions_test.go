@@ -9,10 +9,9 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitClusterVersionConditions(t *testing.T) {
@@ -63,44 +62,38 @@ func TestEmitClusterVersionConditions(t *testing.T) {
 			},
 		},
 	})
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
+	m := testmonitor.NewFakeEmitter(t)
 
 	mon := &Monitor{
 		configcli: configcli,
 		m:         m,
 	}
 
-	m.EXPECT().EmitGauge("clusterversion.conditions", int64(1), map[string]string{
-		"type":   "Available",
-		"status": "False",
-	})
-
-	m.EXPECT().EmitGauge("clusterversion.conditions", int64(1), map[string]string{
-		"type":   "Degraded",
-		"status": "True",
-	})
-
-	m.EXPECT().EmitGauge("clusterversion.conditions", int64(1), map[string]string{
-		"type":   "Progressing",
-		"status": "True",
-	})
-
-	m.EXPECT().EmitGauge("clusterversion.conditions", int64(1), map[string]string{
-		"type":   "Upgradeable",
-		"status": "False",
-	})
-
-	m.EXPECT().EmitGauge("clusterversion.conditions", int64(1), map[string]string{
-		"type":   "dummy",
-		"status": "True",
-	})
-
 	err := mon.emitClusterVersionConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	m.VerifyEmittedMetrics(
+		testmonitor.Metric("clusterversion.conditions", int64(1), map[string]string{
+			"type":   "Available",
+			"status": "False",
+		}),
+		testmonitor.Metric("clusterversion.conditions", int64(1), map[string]string{
+			"type":   "Degraded",
+			"status": "True",
+		}),
+		testmonitor.Metric("clusterversion.conditions", int64(1), map[string]string{
+			"type":   "Progressing",
+			"status": "True",
+		}),
+		testmonitor.Metric("clusterversion.conditions", int64(1), map[string]string{
+			"type":   "Upgradeable",
+			"status": "False",
+		}),
+		testmonitor.Metric("clusterversion.conditions", int64(1), map[string]string{
+			"type":   "dummy",
+			"status": "True",
+		}),
+	)
 }

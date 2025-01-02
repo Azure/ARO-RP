@@ -9,14 +9,13 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitClusterVersion(t *testing.T) {
@@ -137,11 +136,7 @@ func TestEmitClusterVersion(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			configcli := configfake.NewSimpleClientset(tt.cv)
-
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := mock_metrics.NewMockEmitter(controller)
+			m := testmonitor.NewFakeEmitter(t)
 
 			mon := &Monitor{
 				configcli: configcli,
@@ -150,7 +145,12 @@ func TestEmitClusterVersion(t *testing.T) {
 				cli:       cli,
 			}
 
-			m.EXPECT().EmitGauge("cluster.versions", int64(1), map[string]string{
+			err := mon.emitClusterVersions(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			m.VerifyEmittedMetrics(testmonitor.Metric("cluster.versions", int64(1), map[string]string{
 				"actualVersion":                        tt.wantActualVersion,
 				"desiredVersion":                       tt.wantDesiredVersion,
 				"provisionedByResourceProviderVersion": tt.wantProvisionedByResourceProviderVersion,
@@ -158,12 +158,7 @@ func TestEmitClusterVersion(t *testing.T) {
 				"resourceProviderVersion":              "unknown",
 				"availableRP":                          tt.wantAvailableRP,
 				"actualMinorVersion":                   tt.wantActualMinorVersion,
-			})
-
-			err := mon.emitClusterVersions(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
+			}))
 		})
 	}
 }

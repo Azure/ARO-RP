@@ -10,13 +10,12 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitSummary(t *testing.T) {
@@ -64,13 +63,9 @@ func TestEmitSummary(t *testing.T) {
 			},
 		})
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
 	mockCreatedAt := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		configcli: configcli,
 		cli:       cli,
@@ -84,17 +79,18 @@ func TestEmitSummary(t *testing.T) {
 		hourlyRun: true,
 	}
 
-	m.EXPECT().EmitGauge("cluster.summary", int64(1), map[string]string{
-		"actualVersion":     "4.3.0",
-		"desiredVersion":    "4.3.3",
-		"masterCount":       "1",
-		"workerCount":       "2",
-		"provisioningState": api.ProvisioningStateFailed.String(),
-		"createdAt":         mockCreatedAt.String(),
-	})
-
 	err := mon.emitSummary(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	m.VerifyEmittedMetrics(
+		testmonitor.Metric("cluster.summary", int64(1), map[string]string{
+			"actualVersion":     "4.3.0",
+			"desiredVersion":    "4.3.3",
+			"masterCount":       "1",
+			"workerCount":       "2",
+			"provisioningState": api.ProvisioningStateFailed.String(),
+			"createdAt":         mockCreatedAt.String(),
+		}))
 }

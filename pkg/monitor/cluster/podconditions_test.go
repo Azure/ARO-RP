@@ -10,12 +10,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitPodConditions(t *testing.T) {
@@ -55,47 +54,45 @@ func TestEmitPodConditions(t *testing.T) {
 		},
 	)
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		cli: cli,
 		m:   m,
 	}
 
-	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
-		"name":      "name",
-		"namespace": "openshift",
-		"nodeName":  "fake-node-name",
-		"status":    "False",
-		"type":      "ContainersReady",
-	})
-	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
-		"name":      "name",
-		"namespace": "openshift",
-		"nodeName":  "fake-node-name",
-		"status":    "False",
-		"type":      "Initialized",
-	})
-	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
-		"name":      "name",
-		"namespace": "openshift",
-		"nodeName":  "fake-node-name",
-		"status":    "False",
-		"type":      "PodScheduled",
-	})
-	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
-		"name":      "name",
-		"namespace": "openshift",
-		"nodeName":  "fake-node-name",
-		"status":    "False",
-		"type":      "Ready",
-	})
-
 	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	mon._emitPodConditions(ps)
+
+	m.VerifyEmittedMetrics(
+		testmonitor.Metric("pod.conditions", int64(1), map[string]string{
+			"name":      "name",
+			"namespace": "openshift",
+			"nodeName":  "fake-node-name",
+			"status":    "False",
+			"type":      "ContainersReady",
+		}),
+		testmonitor.Metric("pod.conditions", int64(1), map[string]string{
+			"name":      "name",
+			"namespace": "openshift",
+			"nodeName":  "fake-node-name",
+			"status":    "False",
+			"type":      "Initialized",
+		}),
+		testmonitor.Metric("pod.conditions", int64(1), map[string]string{
+			"name":      "name",
+			"namespace": "openshift",
+			"nodeName":  "fake-node-name",
+			"status":    "False",
+			"type":      "PodScheduled",
+		}),
+		testmonitor.Metric("pod.conditions", int64(1), map[string]string{
+			"name":      "name",
+			"namespace": "openshift",
+			"nodeName":  "fake-node-name",
+			"status":    "False",
+			"type":      "Ready",
+		}),
+	)
 }
 
 func TestEmitPodContainerStatuses(t *testing.T) {
@@ -123,26 +120,22 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		},
 	)
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		cli: cli,
 		m:   m,
 	}
 
-	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
+	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	mon._emitPodContainerStatuses(ps)
+
+	m.VerifyEmittedMetrics(testmonitor.Metric("pod.containerstatuses", int64(1), map[string]string{
 		"name":          "name",
 		"namespace":     "openshift",
 		"nodeName":      "fake-node-name",
 		"containername": "containername",
 		"reason":        "ImagePullBackOff",
-	})
-
-	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
-	mon._emitPodContainerStatuses(ps)
+	}))
 }
 
 func TestEmitPodContainerRestartCounter(t *testing.T) {
@@ -255,11 +248,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		},
 	)
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		cli:       cli,
 		m:         m,
@@ -269,27 +258,29 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	log := logrus.NewEntry(logger)
 	mon.log = log
 
-	m.EXPECT().EmitGauge("pod.restartcounter", int64(42), map[string]string{
-		"name":      "podname1",
-		"namespace": "openshift",
-	})
-
-	// Expecting data for 'podname2' to be dropped
-
-	m.EXPECT().EmitGauge("pod.restartcounter", int64(restartCounterThreshold), map[string]string{
-		"name":      "podname3",
-		"namespace": "openshift",
-	})
-
-	// Expecting data for 'podname4' to be dropped
-
-	m.EXPECT().EmitGauge("pod.restartcounter", int64(restartCounterThreshold*2), map[string]string{
-		"name":      "multi-container-pod",
-		"namespace": "openshift",
-	})
-
 	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	mon._emitPodContainerRestartCounter(ps)
+
+	m.VerifyEmittedMetrics(
+		testmonitor.Metric("pod.restartcounter", int64(42), map[string]string{
+			"name":      "podname1",
+			"namespace": "openshift",
+		}),
+
+		// Expecting data for 'podname2' to be dropped
+
+		testmonitor.Metric("pod.restartcounter", int64(restartCounterThreshold), map[string]string{
+			"name":      "podname3",
+			"namespace": "openshift",
+		}),
+
+		// Expecting data for 'podname4' to be dropped
+
+		testmonitor.Metric("pod.restartcounter", int64(restartCounterThreshold*2), map[string]string{
+			"name":      "multi-container-pod",
+			"namespace": "openshift",
+		}),
+	)
 
 	// Matches the number of emitted messages
 	assert.Len(t, hook.Entries, 3)

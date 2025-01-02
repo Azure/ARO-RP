@@ -9,13 +9,12 @@ import (
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
@@ -66,23 +65,19 @@ func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
 			mcocli := mcofake.NewSimpleClientset(tt.mcps)
 			cli := fake.NewSimpleClientset(tt.nodes)
 
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := mock_metrics.NewMockEmitter(controller)
-
+			m := testmonitor.NewFakeEmitter(t)
 			mon := &Monitor{
 				mcocli: mcocli,
 				m:      m,
 				cli:    cli,
 			}
 
-			m.EXPECT().EmitGauge("machineconfigpool.unmanagednodescount", tt.expect, map[string]string{})
-
 			err := mon.emitMachineConfigPoolUnmanagedNodeCounts(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			m.VerifyEmittedMetrics(testmonitor.Metric("machineconfigpool.unmanagednodescount", tt.expect, map[string]string{}))
 		})
 	}
 }

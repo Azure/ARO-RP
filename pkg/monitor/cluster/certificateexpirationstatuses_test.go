@@ -1,5 +1,8 @@
 package cluster
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"crypto/x509"
@@ -18,13 +21,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
 type certInfo struct {
 	secretName, certSubject string
 }
@@ -173,13 +176,14 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				t.Fatal(err)
 			}
 			secrets = append(secrets, secretsFromCertInfo...)
+			wantedMetrics := make([]testmonitor.ExpectedMetric, 0)
 
-			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
+			m := testmonitor.NewFakeEmitter(t)
 			for _, w := range tt.wantWarning {
-				m.EXPECT().EmitGauge(secretMissingMetricName, int64(1), w)
+				wantedMetrics = append(wantedMetrics, testmonitor.Metric(secretMissingMetricName, int64(1), w))
 			}
 			for _, g := range tt.wantExpirations {
-				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(daysUntilExpiration), g)
+				wantedMetrics = append(wantedMetrics, testmonitor.Metric(certificateExpirationMetricName, int64(daysUntilExpiration), g))
 			}
 
 			mon := buildMonitor(m, tt.url, clusterID, tt.ingressController, secrets...)
@@ -187,6 +191,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			err = mon.emitCertificateExpirationStatuses(ctx)
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			m.VerifyEmittedMetrics(wantedMetrics...)
 		})
 	}
 
@@ -245,7 +250,7 @@ func buildSecret(secretName string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func buildMonitor(m *mock_metrics.MockEmitter, url, id string, ingressController *operatorv1.IngressController, secrets ...client.Object) *Monitor {
+func buildMonitor(m metrics.Emitter, url, id string, ingressController *operatorv1.IngressController, secrets ...client.Object) *Monitor {
 	ocpclientset := fake.
 		NewClientBuilder().
 		WithObjects(ingressController).
@@ -311,25 +316,23 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := mock_metrics.NewMockEmitter(controller)
+			m := testmonitor.NewFakeEmitter(t)
 			mon := &Monitor{
 				cli:       tt.cli,
 				configcli: tt.configcli,
 				m:         m,
 			}
 
-			m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(tt.minDaysUntilExpiration), map[string]string{
-				"namespace": "openshift-etcd",
-				"name":      "etcd-peer-master-0",
-				"subject":   "etcd-cert",
-			})
 			err = mon.emitEtcdCertificateExpiry(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			m.VerifyEmittedMetrics(testmonitor.Metric(certificateExpirationMetricName, int64(tt.minDaysUntilExpiration), map[string]string{
+				"namespace": "openshift-etcd",
+				"name":      "etcd-peer-master-0",
+				"subject":   "etcd-cert",
+			}))
 		})
 	}
 }

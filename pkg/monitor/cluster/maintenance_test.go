@@ -7,10 +7,8 @@ import (
 	"context"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitMaintenanceState(t *testing.T) {
@@ -61,10 +59,6 @@ func TestEmitMaintenanceState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := mock_metrics.NewMockEmitter(controller)
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ProvisioningState:    tt.provisioningState,
@@ -72,19 +66,21 @@ func TestEmitMaintenanceState(t *testing.T) {
 					LastAdminUpdateError: tt.adminUpdateErr,
 				},
 			}
+
+			m := testmonitor.NewFakeEmitter(t)
 			mon := &Monitor{
 				m:  m,
 				oc: oc,
 			}
 
-			m.EXPECT().EmitGauge("cluster.maintenance.pucm", int64(1), map[string]string{
-				"state": tt.expectedState.String(),
-			})
-
 			err := mon.emitMaintenanceState(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			m.VerifyEmittedMetrics(testmonitor.Metric("cluster.maintenance.pucm", int64(1), map[string]string{
+				"state": tt.expectedState.String(),
+			}))
 		})
 	}
 }

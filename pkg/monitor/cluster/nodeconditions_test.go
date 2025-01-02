@@ -12,13 +12,12 @@ import (
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitNodeConditions(t *testing.T) {
@@ -97,44 +96,41 @@ func TestEmitNodeConditions(t *testing.T) {
 		},
 	)
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		cli:    cli,
 		maocli: machineclient,
 		m:      m,
 	}
 
-	m.EXPECT().EmitGauge("node.count", int64(2), map[string]string{})
-	m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
-		"nodeName":     "aro-master-0",
-		"status":       "True",
-		"type":         "MemoryPressure",
-		"spotInstance": "false",
-	})
-	m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
-		"nodeName":     "aro-master-1",
-		"status":       "False",
-		"type":         "Ready",
-		"spotInstance": "false",
-	})
-
-	m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
-		"nodeName":       "aro-master-0",
-		"kubeletVersion": kubeletVersion,
-	})
-	m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
-		"nodeName":       "aro-master-1",
-		"kubeletVersion": kubeletVersion,
-	})
-
 	err = mon.emitNodeConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	m.VerifyEmittedMetrics(
+		testmonitor.Metric("node.count", int64(2), map[string]string{}),
+		testmonitor.Metric("node.conditions", int64(1), map[string]string{
+			"nodeName":     "aro-master-0",
+			"status":       "True",
+			"type":         "MemoryPressure",
+			"spotInstance": "false",
+		}),
+		testmonitor.Metric("node.conditions", int64(1), map[string]string{
+			"nodeName":     "aro-master-1",
+			"status":       "False",
+			"type":         "Ready",
+			"spotInstance": "false",
+		}),
+		testmonitor.Metric("node.kubelet.version", int64(1), map[string]string{
+			"nodeName":       "aro-master-0",
+			"kubeletVersion": kubeletVersion,
+		}),
+		testmonitor.Metric("node.kubelet.version", int64(1), map[string]string{
+			"nodeName":       "aro-master-1",
+			"kubeletVersion": kubeletVersion,
+		}),
+	)
 }
 
 func TestGetSpotInstances(t *testing.T) {
@@ -257,9 +253,6 @@ func TestGetSpotInstances(t *testing.T) {
 			expectedSpotInstance: false,
 		},
 	} {
-		controller := gomock.NewController(t)
-		defer controller.Finish()
-
 		mon := &Monitor{
 			maocli: tt.maocli,
 			log:    logrus.NewEntry(logrus.StandardLogger()),

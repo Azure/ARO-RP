@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitDebugPodsCount(t *testing.T) {
@@ -42,20 +41,18 @@ func TestEmitDebugPodsCount(t *testing.T) {
 
 	cli.PrependReactor("list", "events", reactorFn)
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		cli: cli,
 		m:   m,
 	}
 
-	m.EXPECT().EmitGauge("debugpods.count", int64(2), map[string]string{})
 	err := mon.emitDebugPodsCount(ctx)
 	if err != nil {
 		t.Fatalf("got unexpected error: %v", err)
 	}
+
+	m.VerifyEmittedMetrics(testmonitor.Metric("debugpods.count", int64(2), map[string]string{}))
 }
 
 func reactorFn(_ ktesting.Action) (handled bool, ret kruntime.Object, err error) {

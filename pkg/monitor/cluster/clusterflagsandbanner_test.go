@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,35 +12,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
-
-type fakeMetricsEmitter struct {
-	Metrics map[string]fakeMetrics
-}
-
-type fakeMetrics struct {
-	Value int64
-	Dims  map[string]string
-}
-
-func newfakeMetricsEmitter() *fakeMetricsEmitter {
-	m := make(map[string]fakeMetrics)
-	return &fakeMetricsEmitter{
-		Metrics: m,
-	}
-}
-
-func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[string]string) {
-	data := fakeMetrics{
-		Value: value,
-	}
-	if dims != nil {
-		data.Dims = dims
-	}
-	e.Metrics[topic] = data
-}
-
-func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
 
 func generateDefaultFlags() arov1alpha1.OperatorFlags {
 	df := make(arov1alpha1.OperatorFlags)
@@ -182,11 +154,11 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			}
 			baseCluster.Spec.Banner = tt.clusterBanner
 			arocli := arofake.NewSimpleClientset(baseCluster)
-			fm := newfakeMetricsEmitter()
+			m := testmonitor.NewFakeEmitter(t)
 
 			mon := &Monitor{
 				arocli: arocli,
-				m:      fm,
+				m:      m,
 			}
 
 			err := mon.emitOperatorFlagsAndSupportBanner(ctx)
@@ -194,21 +166,14 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if fm.Metrics[operatorFlagMetricsTopic].Value != tt.expectFlagsMetricsValue {
-				t.Errorf("incorrect operator flag metrics value, want: %d, got: %d", tt.expectFlagsMetricsValue, fm.Metrics[operatorFlagMetricsTopic].Value)
+			emittedMetrics := make([]testmonitor.ExpectedMetric, 0)
+			if tt.expectFlagsMetricsValue != 0 {
+				emittedMetrics = append(emittedMetrics, testmonitor.Metric(operatorFlagMetricsTopic, tt.expectFlagsMetricsValue, tt.expectFlagsMetricsDims))
 			}
-
-			if !reflect.DeepEqual(fm.Metrics[operatorFlagMetricsTopic].Dims, tt.expectFlagsMetricsDims) {
-				t.Errorf("incorrect operator flag metrics dims, want: %v, got: %v", tt.expectFlagsMetricsDims, fm.Metrics[operatorFlagMetricsTopic].Dims)
+			if tt.expectBannerMetricsValue != 0 {
+				emittedMetrics = append(emittedMetrics, testmonitor.Metric(supportBannerMetricsTopic, tt.expectBannerMetricsValue, tt.expectBannerMetricsDims))
 			}
-
-			if fm.Metrics[supportBannerMetricsTopic].Value != tt.expectBannerMetricsValue {
-				t.Errorf("incorrect support banner metrics value, want: %d, got: %d", tt.expectBannerMetricsValue, fm.Metrics[supportBannerMetricsTopic].Value)
-			}
-
-			if !reflect.DeepEqual(fm.Metrics[supportBannerMetricsTopic].Dims, tt.expectBannerMetricsDims) {
-				t.Errorf("incorrect support banner metrics dims, want: %v, got: %v", tt.expectBannerMetricsDims, fm.Metrics[supportBannerMetricsTopic].Dims)
-			}
+			m.VerifyEmittedMetrics(emittedMetrics...)
 		})
 	}
 }

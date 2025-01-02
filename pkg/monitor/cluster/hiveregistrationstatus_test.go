@@ -12,7 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -21,8 +20,8 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitHiveRegistrationStatus(t *testing.T) {
@@ -256,20 +255,21 @@ func TestEmitFilteredClusterDeploymentMetrics(t *testing.T) {
 		},
 	}
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		m: m,
 	}
 
+	emittedMetrics := make([]testmonitor.ExpectedMetric, 0)
+
 	for _, c := range conditions {
-		m.EXPECT().EmitGauge("hive.clusterdeployment.conditions", int64(1), map[string]string{
+		emittedMetrics = append(emittedMetrics, testmonitor.Metric("hive.clusterdeployment.conditions", int64(1), map[string]string{
 			"type":   string(c.Type),
 			"reason": c.Reason,
-		})
+		}))
 	}
 
 	mon.emitFilteredClusterDeploymentMetrics(conditions)
+
+	m.VerifyEmittedMetrics(emittedMetrics...)
 }

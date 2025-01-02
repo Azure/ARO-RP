@@ -8,13 +8,12 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitAroOperatorHeartbeat(t *testing.T) {
@@ -76,27 +75,24 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 		},
 	)
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		cli: cli,
 		m:   m,
 		log: utillog.GetLogger(),
 	}
 
-	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(0), map[string]string{
-		"name": "aro-operator-master",
-	})
-
-	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(1), map[string]string{
-		"name": "aro-operator-worker",
-	})
-
 	err := mon.emitAroOperatorHeartbeat(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	m.VerifyEmittedMetrics(
+		testmonitor.Metric("arooperator.heartbeat", int64(0), map[string]string{
+			"name": "aro-operator-master",
+		}),
+		testmonitor.Metric("arooperator.heartbeat", int64(1), map[string]string{
+			"name": "aro-operator-worker",
+		}),
+	)
 }

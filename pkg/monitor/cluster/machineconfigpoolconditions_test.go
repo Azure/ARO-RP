@@ -9,11 +9,10 @@ import (
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitMachineConfigPoolConditions(t *testing.T) {
@@ -49,50 +48,48 @@ func TestEmitMachineConfigPoolConditions(t *testing.T) {
 		},
 	})
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		mcocli: mcocli,
 		m:      m,
 	}
 
-	m.EXPECT().EmitGauge("machineconfigpool.count", int64(1), map[string]string{})
-
-	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
-		"name":   "machine-config-pool",
-		"type":   "Degraded",
-		"status": "True",
-	})
-
-	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
-		"name":   "machine-config-pool",
-		"type":   "NodeDegraded",
-		"status": "True",
-	})
-
-	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
-		"name":   "machine-config-pool",
-		"type":   "RenderDegraded",
-		"status": "True",
-	})
-
-	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
-		"name":   "machine-config-pool",
-		"type":   "Updated",
-		"status": "False",
-	})
-
-	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
-		"name":   "machine-config-pool",
-		"type":   "Updating",
-		"status": "True",
-	})
-
 	err := mon.emitMachineConfigPoolConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	m.VerifyEmittedMetrics(
+		testmonitor.Metric("machineconfigpool.count", int64(1), map[string]string{}),
+
+		testmonitor.Metric("machineconfigpool.conditions", int64(1), map[string]string{
+			"name":   "machine-config-pool",
+			"type":   "Degraded",
+			"status": "True",
+		}),
+
+		testmonitor.Metric("machineconfigpool.conditions", int64(1), map[string]string{
+			"name":   "machine-config-pool",
+			"type":   "NodeDegraded",
+			"status": "True",
+		}),
+
+		testmonitor.Metric("machineconfigpool.conditions", int64(1), map[string]string{
+			"name":   "machine-config-pool",
+			"type":   "RenderDegraded",
+			"status": "True",
+		}),
+
+		testmonitor.Metric("machineconfigpool.conditions", int64(1), map[string]string{
+			"name":   "machine-config-pool",
+			"type":   "Updated",
+			"status": "False",
+		}),
+
+		testmonitor.Metric("machineconfigpool.conditions", int64(1), map[string]string{
+			"name":   "machine-config-pool",
+			"type":   "Updating",
+			"status": "True",
+		}),
+	)
+
 }

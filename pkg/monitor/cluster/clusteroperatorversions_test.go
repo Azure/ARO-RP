@@ -9,10 +9,9 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitClusterOperatorVersion(t *testing.T) {
@@ -47,23 +46,19 @@ func TestEmitClusterOperatorVersion(t *testing.T) {
 			},
 		})
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		configcli: configcli,
 		m:         m,
 	}
 
-	m.EXPECT().EmitGauge("clusteroperator.versions", int64(1), map[string]string{
-		"name":    "console",
-		"version": "4.3.0",
-	})
-
 	err := mon.emitClusterOperatorVersions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	m.VerifyEmittedMetrics(testmonitor.Metric("clusteroperator.versions", int64(1), map[string]string{
+		"name":    "console",
+		"version": "4.3.0",
+	}))
 }

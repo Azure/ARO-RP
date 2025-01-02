@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestMHCQuota2(t *testing.T) {
@@ -74,21 +73,21 @@ func TestMHCQuota2(t *testing.T) {
 				},
 			)
 
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := mock_metrics.NewMockEmitter(controller)
+			m := testmonitor.NewFakeEmitter(t)
 			mon := &Monitor{
 				cli: cli,
 				m:   m,
 			}
 
-			if tt.wantGauge {
-				m.EXPECT().EmitGauge(cpuQuotaMetric, int64(1), map[string]string{})
-			}
 			err := mon.detectQuotaFailure(ctx)
 			if err != nil {
 				t.Fatalf("got unexpected error: %v", err)
+			}
+
+			if tt.wantGauge {
+				m.VerifyEmittedMetrics(testmonitor.Metric(cpuQuotaMetric, int64(1), map[string]string{}))
+			} else {
+				m.VerifyEmittedMetrics()
 			}
 		})
 	}

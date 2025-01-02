@@ -8,12 +8,11 @@ import (
 	"strconv"
 	"testing"
 
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func TestEmitStatefulsetStatuses(t *testing.T) {
@@ -50,27 +49,24 @@ func TestEmitStatefulsetStatuses(t *testing.T) {
 		},
 	)
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
+	m := testmonitor.NewFakeEmitter(t)
 	mon := &Monitor{
 		cli: cli,
 		m:   m,
 	}
 
-	m.EXPECT().EmitGauge("statefulset.count", int64(3), map[string]string{})
-
-	m.EXPECT().EmitGauge("statefulset.statuses", int64(1), map[string]string{
-		"name":          "name1",
-		"namespace":     "openshift",
-		"replicas":      strconv.Itoa(2),
-		"readyReplicas": strconv.Itoa(1),
-	})
-
 	err := mon.emitStatefulsetStatuses(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	m.VerifyEmittedMetrics(
+		testmonitor.Metric("statefulset.count", int64(3), map[string]string{}),
+		testmonitor.Metric("statefulset.statuses", int64(1), map[string]string{
+			"name":          "name1",
+			"namespace":     "openshift",
+			"replicas":      strconv.Itoa(2),
+			"readyReplicas": strconv.Itoa(1),
+		}),
+	)
 }
