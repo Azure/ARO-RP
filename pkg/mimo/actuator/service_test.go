@@ -19,31 +19,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
-
-type fakeMetricsEmitter struct {
-	Metrics map[string]int64
-}
-
-func newfakeMetricsEmitter() *fakeMetricsEmitter {
-	m := make(map[string]int64)
-	return &fakeMetricsEmitter{
-		Metrics: m,
-	}
-}
-
-func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
-	e.Metrics[metricName] = metricValue
-}
-
-func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
-}
 
 var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var fixtures *testdatabase.Fixture
@@ -52,7 +34,6 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
 	var clusters database.OpenShiftClusters
 	//var clustersClient cosmosdb.OpenShiftClusterDocumentClient
-	var m metrics.Emitter
 
 	var svc *service
 
@@ -86,8 +67,6 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 
 		_, log = testlog.New()
 
-		m = newfakeMetricsEmitter()
-
 		fixtures = testdatabase.NewFixture()
 		checker = testdatabase.NewChecker()
 	})
@@ -98,7 +77,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
 		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
 
-		svc = NewService(_env, log, nil, dbg, m)
+		svc = NewService(_env, log, nil, dbg, &noop.Noop{})
 		svc.now = now
 		svc.serveHealthz = false
 	})

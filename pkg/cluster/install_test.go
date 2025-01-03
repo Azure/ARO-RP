@@ -29,6 +29,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
 )
 
 func failingFunc(context.Context) error { return errors.New("oh no!") }
@@ -36,24 +37,6 @@ func failingFunc(context.Context) error { return errors.New("oh no!") }
 func successfulActionStep(context.Context) error { return nil }
 
 func successfulConditionStep(context.Context) (bool, error) { return true, nil }
-
-type fakeMetricsEmitter struct {
-	Metrics map[string]int64
-}
-
-func newfakeMetricsEmitter() *fakeMetricsEmitter {
-	m := make(map[string]int64)
-	return &fakeMetricsEmitter{
-		Metrics: m,
-	}
-}
-
-func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
-	e.Metrics[metricName] = metricValue
-}
-
-func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
-}
 
 var clusterOperator = &configv1.ClusterOperator{
 	ObjectMeta: metav1.ObjectMeta{
@@ -282,14 +265,13 @@ func TestUpdateProvisionedBy(t *testing.T) {
 
 func TestInstallationTimeMetrics(t *testing.T) {
 	_, log := testlog.New()
-	fm := newfakeMetricsEmitter()
 
 	for _, tt := range []struct {
 		name          string
 		metricsTopic  string
 		timePerStep   int64
 		steps         []steps.Step
-		wantedMetrics map[string]int64
+		wantedMetrics []testmonitor.ExpectedMetric
 	}{
 		{
 			name:         "Failed step run will not generate any install time metrics",
@@ -308,10 +290,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				steps.Condition(successfulConditionStep, 30*time.Minute, true),
 				steps.Action(successfulActionStep),
 			},
-			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.install.duration.total.seconds":                             4,
-				"backend.openshiftcluster.install.action.successfulActionStep.duration.seconds":       2,
-				"backend.openshiftcluster.install.condition.successfulConditionStep.duration.seconds": 2,
+			wantedMetrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric("backend.openshiftcluster.install.duration.total.seconds", int64(4), nil),
+				testmonitor.Metric("backend.openshiftcluster.install.action.successfulActionStep.duration.seconds", int64(2), nil),
+				testmonitor.Metric("backend.openshiftcluster.install.condition.successfulConditionStep.duration.seconds", int64(2), nil),
 			},
 		},
 		{
@@ -323,39 +305,24 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				steps.Condition(successfulConditionStep, 30*time.Minute, true),
 				steps.Action(successfulActionStep),
 			},
-			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.update.duration.total.seconds":                             6,
-				"backend.openshiftcluster.update.action.successfulActionStep.duration.seconds":       3,
-				"backend.openshiftcluster.update.condition.successfulConditionStep.duration.seconds": 3,
+			wantedMetrics: []testmonitor.ExpectedMetric{
+				testmonitor.Metric("backend.openshiftcluster.update.duration.total.seconds", int64(6), nil),
+				testmonitor.Metric("backend.openshiftcluster.update.action.successfulActionStep.duration.seconds", int64(3), nil),
+				testmonitor.Metric("backend.openshiftcluster.update.condition.successfulConditionStep.duration.seconds", int64(3), nil),
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			fm := testmonitor.NewFakeEmitter(t)
 			m := &manager{
 				log:            log,
 				metricsEmitter: fm,
 				now:            func() time.Time { return time.Now().Add(time.Duration(tt.timePerStep) * time.Second) },
 			}
 
-			err := m.runSteps(ctx, tt.steps, tt.metricsTopic)
-			if err != nil {
-				if len(fm.Metrics) != 0 {
-					t.Error("fake metrics obj should be empty when run steps failed")
-				}
-			} else {
-				if tt.wantedMetrics != nil {
-					for k, v := range tt.wantedMetrics {
-						time, ok := fm.Metrics[k]
-						if !ok {
-							t.Errorf("unexpected metrics key: %s", k)
-						}
-						if time != v {
-							t.Errorf("incorrect fake metrics value, want: %d, got: %d", v, time)
-						}
-					}
-				}
-			}
+			m.runSteps(ctx, tt.steps, tt.metricsTopic)
+			fm.VerifyEmittedMetrics(tt.wantedMetrics...)
 		})
 	}
 }
