@@ -24,6 +24,14 @@ func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{}
 		},
 	}
 
+	if out.Name != "" {
+		out.Name = v.Properties.Version
+	}
+
+	if out.Type != "" {
+		out.Type = api.OpenShiftVersionsType
+	}
+
 	return out
 }
 
@@ -52,4 +60,6 @@ func (c openShiftVersionConverter) ToInternal(_new interface{}, out *api.OpenShi
 	out.Properties.InstallerPullspec = new.Properties.InstallerPullspec
 	out.Properties.OpenShiftPullspec = new.Properties.OpenShiftPullspec
 	out.Properties.Version = new.Properties.Version
+	out.Name = new.Properties.Version
+	out.Type = api.OpenShiftVersionsType
 }

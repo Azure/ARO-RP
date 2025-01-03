@@ -101,6 +101,8 @@ func appendOpenShiftVersions(ocpVersions []api.OpenShiftVersion, installStreams 
 				Enabled:           true,
 				Default:           isDefault,
 			},
+			Name: fullVersion,
+			Type: api.OpenShiftVersionsType,
 		})
 	}
 
