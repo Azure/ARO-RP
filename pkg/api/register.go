@@ -91,7 +91,6 @@ type Version struct {
 	OpenShiftVersionStaticValidator                OpenShiftVersionStaticValidator
 	PlatformWorkloadIdentityRoleSetConverter       PlatformWorkloadIdentityRoleSetConverter
 	PlatformWorkloadIdentityRoleSetStaticValidator PlatformWorkloadIdentityRoleSetStaticValidator
-	OperationList                                  OperationList
 	SyncSetConverter                               SyncSetConverter
 	MachinePoolConverter                           MachinePoolConverter
 	SyncIdentityProviderConverter                  SyncIdentityProviderConverter
