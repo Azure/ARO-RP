@@ -220,26 +220,21 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.Action(m.fixupClusterMsiTenantID),
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
-		)
-	}
-
-	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
-
-	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
-			steps.Action(m.federateIdentityCredentials),
 		)
 	} else {
 		s = append(s,
 			// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
 			// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
-
-			// CSP credentials rotation flow steps
-			steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
 		)
+	}
+
+	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s, steps.Action(m.createOrUpdateClusterServicePrincipalRBAC)) // CSP credentials rotation flow steps
 	}
 
 	s = append(s,
