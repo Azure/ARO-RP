@@ -233,7 +233,9 @@ func (m *manager) Update(ctx context.Context) error {
 
 	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
 
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s, steps.Action(m.federateIdentityCredentials))
+	} else {
 		s = append(s, steps.Action(m.createOrUpdateClusterServicePrincipalRBAC)) // CSP credentials rotation flow steps
 	}
 
