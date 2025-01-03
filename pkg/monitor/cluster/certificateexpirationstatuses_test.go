@@ -13,7 +13,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakeClient "k8s.io/client-go/kubernetes/fake"
@@ -22,7 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testmonitor "github.com/Azure/ARO-RP/test/util/monitor"
@@ -202,8 +201,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 		secrets = append(secrets, s)
 
 		ctx := context.Background()
-		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
-		mon := buildMonitor(m, managedDomainApiURL, clusterID, defaultIngressController, secrets...)
+		mon := buildMonitor(&noop.Noop{}, managedDomainApiURL, clusterID, defaultIngressController, secrets...)
 
 		wantErr := "unable to find certificate"
 		err := mon.emitCertificateExpirationStatuses(ctx)

@@ -14,9 +14,9 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 )
 
@@ -95,11 +95,8 @@ func TestNewGateway(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			baseLog := logrus.NewEntry(logrus.StandardLogger())
-			metrics := mock_metrics.NewMockEmitter(controller)
-
 			httpl, _ := utilnet.Listen("tcp", ":8080", SocketSize)
 			httpsl, _ := utilnet.Listen("tcp", ":8443", SocketSize)
 			healthListener, _ := utilnet.Listen("tcp", ":8081", SocketSize)
@@ -107,7 +104,7 @@ func TestNewGateway(t *testing.T) {
 			env := mock_env.NewMockCore(controller)
 			tt.mocks(env)
 
-			gtwy, err := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, healthListener, tt.acrResourceID, tt.gatewayDomains, metrics)
+			gtwy, err := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, healthListener, tt.acrResourceID, tt.gatewayDomains, &noop.Noop{})
 
 			if tt.wantErr != "" {
 				if err == nil {
@@ -156,8 +153,7 @@ func TestNewGatewayDefaultConditions(t *testing.T) {
 	baseLog := logrus.NewEntry(logrus.StandardLogger())
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
-	metrics := mock_metrics.NewMockEmitter(controller)
+	metrics := &noop.Noop{}
 	env := mock_env.NewMockCore(controller)
 	env.EXPECT().Environment().AnyTimes().Return(populatedEnv)
 	env.EXPECT().Location().AnyTimes().Return("location")
