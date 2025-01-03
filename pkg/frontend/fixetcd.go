@@ -285,7 +285,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 		}
 	}()
 
-	log.Infof("Creating job %s", jobFixPeers.GetName())
+	log.Infof("Creating Pod %s", jobFixPeers.GetName())
 	err = kubeActions.KubeCreateOrUpdate(ctx, jobFixPeers)
 	if err != nil {
 		return []byte{}, err
@@ -301,7 +301,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 		return containerLogs, err
 	}
 
-	log.Infof("Deleting %s now", jobFixPeers.GetName())
+	log.Infof("Deleting Pod %s now", jobFixPeers.GetName())
 	propPolicy := metav1.DeletePropagationBackground
 	err = kubeActions.KubeDelete(ctx, jobFixPeers.GetKind(), jobFixPeers.GetNamespace(), jobFixPeers.GetName(), true, &propPolicy)
 	if err != nil {
