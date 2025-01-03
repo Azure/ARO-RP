@@ -28,7 +28,7 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should fix etcd automatically", Serial, func(ctx context.Context) {
-		By("Disable reconciliation")
+		By("Disabling reconciliation")
 		dep, err := clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Get(ctx, "cluster-version-operator", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		dep.Spec.Replicas = pointerutils.ToPtr(int32(0))
@@ -64,7 +64,7 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 			g.Expect(machines.Items).To(HaveLen(2))
 		}, 10*time.Minute, 10*time.Second, ctx).Should(Succeed())
 
-		By("Revert deployments") // cluster-version-operator reconciles etcd-operator.
+		By("Reverting deployments") // cluster-version-operator reconciles etcd-operator.
 		dep, err = clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Get(ctx, "cluster-version-operator", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		dep.Spec.Replicas = pointerutils.ToPtr(int32(1))
@@ -80,7 +80,7 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 		_, err = clients.MachineAPI.MachineV1beta1().Machines("openshift-machine-api").Create(ctx, &machine, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		By("Waiting for the machine to be created")
+		By("Waiting for the machine to be created and its node to be ready")
 		Eventually(func(g Gomega, ctx context.Context) {
 			node, err := clients.Kubernetes.CoreV1().Nodes().Get(ctx, machine.Name, metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
