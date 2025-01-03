@@ -252,6 +252,7 @@ stages:
 
           # Clean Up Database
           - bash: |
+              . ./hack/e2e/run-rp-and-e2e.sh
               az cosmosdb sql database delete --name "$DATABASE_NAME" --yes --account-name "$DATABASE_ACCOUNT_NAME" --resource-group "$RESOURCEGROUP"
             displayName: Clean Up Database
             condition: always()
