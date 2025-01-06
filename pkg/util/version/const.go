@@ -41,19 +41,19 @@ var DefaultInstallStream = Stream{
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
 	// https://github.com/microsoft/azurelinux/releases
-	return acrDomain + "/fluentbit:1.9.10-cm20240628@sha256:dbf5304bd98cd51c72e4ae0ee8511d3bbcdbcb7e72e65e7d1495a50d7ac33b8d"
+	return acrDomain + "/fluentbit:1.9.10-cm20241208@sha256:fa35a491542b1e531b73658da83e47f0f549786a186f00b0cdaffec86100c980"
 }
 
 // MdmImage contains the location of the MDM container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/distroless/genevamdm:2.2024.626.1539-d1a6e7-20240715t0935@sha256:372fbc981bbfdf2b9a9d0ffdca2c51ed389b291a3bcff0401e9afb0c01605823"
+	return acrDomain + "/distroless/genevamdm:2.2024.1115.1908-5b4aed-20241230t1713@sha256:249a57801d76244f722a739c8bb03cb519cbfbc3ca8356b7da36ffe9084afecd"
 }
 
 // MdsdImage contains the location of the MDSD container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/distroless/genevamdsd:mariner_20240711.1@sha256:86d73d9df70aca71c54bbfbdf6402a2cc1ddd9cbbebf3d6a0319de5950b10382"
+	return acrDomain + "/distroless/genevamdsd:mariner_20241212.2@sha256:a7a71af5b631ea5a8ad587a09d8680b17719cae25b95de81e8a4d71f2cc55f45"
 }
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
