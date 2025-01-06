@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
@@ -538,6 +540,84 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
 					"errorDetails":  gomega.ContainSubstring("This is a server error result type"),
 				}},
+		},
+		{
+			name:                     "Server Error Status Code DetailedError With Response",
+			initialProvisioningState: api.ProvisioningStateFailed,
+			backendErr: autorest.NewErrorWithResponse(
+				"packageName",
+				"methodName",
+				&http.Response{StatusCode: http.StatusInternalServerError},
+				"An error message",
+			),
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"LOGKIND":       gomega.Equal("asyncqos"),
+					"operationType": gomega.Equal("Failed"),
+					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
+				},
+			},
+		},
+		{
+			name:                     "User Error Status Code DetailedError With Response",
+			initialProvisioningState: api.ProvisioningStateFailed,
+			backendErr: autorest.NewErrorWithResponse(
+				"packageName",
+				"methodName",
+				&http.Response{StatusCode: http.StatusBadRequest},
+				"An error message",
+			),
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"LOGKIND":       gomega.Equal("asyncqos"),
+					"operationType": gomega.Equal("Failed"),
+					"resultType":    gomega.Equal(utillog.UserErrorResultType),
+				},
+			},
+		},
+		{
+			name:                     "Server Error Status Code DetailedError No Response",
+			initialProvisioningState: api.ProvisioningStateFailed,
+			backendErr: autorest.NewError(
+				"packageName",
+				"methodName",
+				"An error message",
+			),
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"LOGKIND":       gomega.Equal("asyncqos"),
+					"operationType": gomega.Equal("Failed"),
+					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
+				},
+			},
+		},
+		{
+			name:                     "Server Error Status Code ResponseError",
+			initialProvisioningState: api.ProvisioningStateFailed,
+			backendErr: runtime.NewResponseError(
+				&http.Response{StatusCode: http.StatusInternalServerError},
+			),
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"LOGKIND":       gomega.Equal("asyncqos"),
+					"operationType": gomega.Equal("Failed"),
+					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
+				},
+			},
+		},
+		{
+			name:                     "User Error Status Code ResponseError",
+			initialProvisioningState: api.ProvisioningStateFailed,
+			backendErr: runtime.NewResponseError(
+				&http.Response{StatusCode: http.StatusUnauthorized},
+			),
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"LOGKIND":       gomega.Equal("asyncqos"),
+					"operationType": gomega.Equal("Failed"),
+					"resultType":    gomega.Equal(utillog.UserErrorResultType),
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
