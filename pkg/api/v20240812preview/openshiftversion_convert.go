@@ -25,11 +25,11 @@ func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{}
 		Type: v.Type,
 	}
 
-	if out.Name != "" {
+	if out.Name == "" {
 		out.Name = v.Properties.Version
 	}
 
-	if out.Type != "" {
+	if out.Type == "" {
 		out.Type = api.OpenShiftVersionsType
 	}
 

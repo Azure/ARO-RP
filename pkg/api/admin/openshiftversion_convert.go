@@ -22,13 +22,15 @@ func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{}
 			InstallerPullspec: v.Properties.InstallerPullspec,
 			Enabled:           v.Properties.Enabled,
 		},
+		Name: v.Name,
+		Type: v.Type,
 	}
 
-	if out.Name != "" {
+	if out.Name == "" {
 		out.Name = v.Properties.Version
 	}
 
-	if out.Type != "" {
+	if out.Type == "" {
 		out.Type = api.OpenShiftVersionsType
 	}
 

@@ -35,7 +35,9 @@ func TestGetPlatformWorkloadIdentityRoleSet(t *testing.T) {
 					},
 				},
 			},
-			ID: "mockID",
+			Name: availableMinorVersion,
+			Type: api.PlatformWorkloadIdentityRoleSetsType,
+			ID:   "mockID",
 		},
 	}
 
