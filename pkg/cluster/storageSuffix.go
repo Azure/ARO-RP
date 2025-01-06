@@ -15,7 +15,7 @@ func setDocStorageSuffix(doc *api.OpenShiftClusterDocument) error {
 		return nil
 	}
 
-	storageSuffix, err := randomLowerCaseAlphanumericStringWithNoVowels(5)
+	storageSuffix, err := randomLowerCaseAlphanumericStringWithNoVowels(10)
 	doc.OpenShiftCluster.Properties.StorageSuffix = storageSuffix
 
 	return err
