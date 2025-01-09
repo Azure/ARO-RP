@@ -10,6 +10,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	samplesv1 "github.com/openshift/api/samples/v1"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,7 +52,7 @@ func Test_manager_disableSamples(t *testing.T) {
 			samplesCRGetError:           kerrors.NewNotFound(schema.GroupResource{}, "samples"),
 			expectedMinNumberOfGetCalls: 2,
 			expectedMaxNumberOfGetCalls: 15,
-			wantErr:                     " \"samples\" not found",
+			wantErr:                     "",
 		},
 		{
 			name:                        "samples cr update is conflicting and retried",
@@ -59,7 +60,7 @@ func Test_manager_disableSamples(t *testing.T) {
 			expectedMinNumberOfGetCalls: 2,
 			expectedMaxNumberOfGetCalls: 15,
 			samplesCRUpdateError:        kerrors.NewConflict(schema.GroupResource{}, "samples", errors.New("conflict")),
-			wantErr:                     "Operation cannot be fulfilled on  \"samples\": conflict",
+			wantErr:                     "",
 		},
 	}
 	for _, tt := range tests {
@@ -85,6 +86,7 @@ func Test_manager_disableSamples(t *testing.T) {
 			}
 
 			m := &manager{
+				log: logrus.NewEntry(logrus.StandardLogger()),
 				env: env,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
