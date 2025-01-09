@@ -13,14 +13,14 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-// disableSamples disables the samples if there's no appropriate pull secret
+// disableSamples disables the samples operator if there's no appropriate pull secret
 func (m *manager) disableSamples(ctx context.Context) error {
 	if !m.env.IsLocalDevelopmentMode() &&
 		m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
 		return nil
 	}
 
-	return retry.OnError(
+	_err := retry.OnError(
 		retry.DefaultRetry,
 		func(err error) bool {
 			return errors.IsConflict(err) || errors.IsNotFound(err)
@@ -36,6 +36,13 @@ func (m *manager) disableSamples(ctx context.Context) error {
 			_, err = m.samplescli.SamplesV1().Configs().Update(ctx, c, metav1.UpdateOptions{})
 			return err
 		})
+
+	// TODO: Come up with a better solution for this situation (?)
+	if _err != nil {
+		m.log.Warningf("continuing cluster installation despite failing to disable samples operator with error: %s", _err)
+	}
+
+	return nil
 }
 
 // disableOperatorHubSources disables operator hub sources if there's no
