@@ -188,6 +188,8 @@ func Run(api, outputDir string) error {
 
 	if g.installVersionList {
 		names = append(names, "OpenShiftVersionList")
+	}
+	if g.installVersionGet {
 		names = append(names, "OpenShiftVersion")
 	}
 
