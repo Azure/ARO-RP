@@ -247,6 +247,9 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
              version=None,
              pod_cidr=None,  # pylint: disable=unused-argument
              service_cidr=None,  # pylint: disable=unused-argument
+             enable_managed_identity=False,  # pylint: disable=unused-argument
+             platform_workload_identities=None,  # pylint: disable=unused-argument
+             mi_user_assigned=None,  # pylint: disable=unused-argument
              warnings_as_text=False):
 
     class mockoc:  # pylint: disable=too-few-public-methods
@@ -343,21 +346,24 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
 
 
 def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
-                 client,  # pylint: disable=unused-argument
-                 resource_group_name,  # pylint: disable=unused-argument
-                 resource_name,  # pylint: disable=unused-argument
+                 client,
+                 resource_group_name,
+                 resource_name,
                  master_subnet,
                  worker_subnet,
                  vnet=None,
-                 cluster_resource_group=None,  # pylint: disable=unused-argument
+                 cluster_resource_group=None,
                  client_id=None,
-                 client_secret=None,  # pylint: disable=unused-argument
-                 vnet_resource_group_name=None,  # pylint: disable=unused-argument
+                 client_secret=None,
+                 vnet_resource_group_name=None,
                  disk_encryption_set=None,
-                 location=None,  # pylint: disable=unused-argument
+                 location=None,
                  version=None,
-                 pod_cidr=None,  # pylint: disable=unused-argument
-                 service_cidr=None,  # pylint: disable=unused-argument
+                 pod_cidr=None,
+                 service_cidr=None,
+                 enable_managed_identity=False,
+                 platform_workload_identities=None,
+                 mi_user_assigned=None,
                  ):
 
     validate(cmd,
@@ -376,6 +382,9 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
              version=version,
              pod_cidr=pod_cidr,
              service_cidr=service_cidr,
+             enable_managed_identity=enable_managed_identity,
+             platform_workload_identities=platform_workload_identities,
+             mi_user_assigned=mi_user_assigned,
              warnings_as_text=False)
 
 
