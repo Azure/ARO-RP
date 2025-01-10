@@ -270,6 +270,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	desiredPlatformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
 		"Dummy1": {
 			ResourceID: platformIdentity1,
+			ObjectID:   dummyObjectId,
+			ClientID:   dummyClientId,
 		},
 	}
 	desiredPlatformWorkloadIdentitiesMap := map[string]api.PlatformWorkloadIdentityRole{
@@ -311,11 +313,19 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 
 	platformIdentityRequiredPermissionsList := []string{"FakeAction1", "FakeAction2", "FakeDataAction1", "FakeDataAction2"}
 
+	userAssignedIdentityResponse := sdkmsi.UserAssignedIdentitiesClientGetResponse{
+		Identity: sdkmsi.Identity{
+			Properties: &sdkmsi.UserAssignedIdentityProperties{
+				ClientID:    pointerutils.ToPtr(dummyClientId),
+				PrincipalID: pointerutils.ToPtr(dummyObjectId),
+			},
+		},
+	}
 	for _, tt := range []struct {
 		name                             string
 		platformIdentityRoles            map[string]api.PlatformWorkloadIdentityRole
 		oc                               *api.OpenShiftCluster
-		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient, *mock_armmsi.MockFederatedIdentityCredentialsClient)
+		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient, *mock_armmsi.MockFederatedIdentityCredentialsClient, *mock_armmsi.MockUserAssignedIdentitiesClient)
 		wantPlatformIdentities           map[string]api.PlatformWorkloadIdentity
 		wantPlatformIdentitiesActionsMap map[string][]string
 		wantErr                          string
@@ -342,9 +352,10 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -373,7 +384,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 
 				expectedPlatformIdentity1FederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, platformIdentity1SAName)
@@ -389,6 +400,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							},
 						},
 					}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -417,7 +429,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 
 				expectedPlatformIdentity1FederatedCredName := platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, platformIdentity1ResourceId, platformIdentity1SAName)
@@ -442,6 +454,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							},
 						},
 					}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -467,15 +480,12 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
-			wantPlatformIdentities: map[string]api.PlatformWorkloadIdentity{
-				"Dummy1": {
-					ResourceID: platformIdentity1,
-				},
-			},
+			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
 				"Dummy1": platformIdentityRequiredPermissionsList,
 			},
@@ -497,9 +507,10 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
@@ -528,10 +539,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return(nil, fmt.Errorf("something unexpected occurred"))
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: "something unexpected occurred",
 		},
@@ -557,7 +569,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
@@ -570,6 +582,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							},
 						},
 					}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: fmt.Sprintf(
 				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
@@ -602,7 +615,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
@@ -615,6 +628,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							},
 						},
 					}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: fmt.Sprintf(
 				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
@@ -647,7 +661,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
@@ -660,6 +674,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							},
 						},
 					}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: fmt.Sprintf(
 				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
@@ -692,7 +707,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{
@@ -705,6 +720,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							},
 						},
 					}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: fmt.Sprintf(
 				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure only federated credentials provisioned by the ARO service for this cluster are present.",
@@ -738,7 +754,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
@@ -752,6 +768,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							},
 						},
 					}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: fmt.Sprintf(
 				"400: %s: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities.%s.resourceId: Unexpected federated credential '%s' found on platform workload identity '%s' used for role '%s'. Please ensure this identity is only used for this cluster and does not have any existing federated identity credentials.",
@@ -784,11 +801,12 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{nil}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: "received invalid federated credential",
 		},
@@ -814,7 +832,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
@@ -828,6 +846,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 							},
 						},
 					}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: "received invalid federated credential",
 		},
@@ -853,11 +872,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
-
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{{Name: &expectedPlatformIdentity1FederatedCredName}}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: "received invalid federated credential",
 		},
@@ -884,6 +903,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
+			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s or %s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14", "4.15"),
 		},
 		{
@@ -908,6 +930,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
@@ -934,6 +959,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
+			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
@@ -953,6 +981,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
@@ -981,6 +1012,9 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
+			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
@@ -1001,9 +1035,10 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, errors.New("Generic Error"))
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: "Generic Error",
 		},
@@ -1029,10 +1064,10 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 			},
-			wantErr: "parsing failed for Invalid UUID. Invalid resource Id format",
+			wantErr: "platform workload identity 'Dummy1' invalid: invalid resource ID: resource id 'Invalid UUID' must start with '/'",
 		},
 		{
 			name:                  "Fail - Getting Role Definition for Platform Identity Role returns error",
@@ -1052,11 +1087,35 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
-			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, errors.New("Generic Error"))
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, nil)
 			},
 			wantErr: "Generic Error",
+		},
+		{
+			name:                  "Fail - Getting User Assigned Identity for Platform Identity returns error",
+			platformIdentityRoles: validRolesForVersion,
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: platformWorkloadIdentities,
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient, userAssignedIdentities *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				userAssignedIdentities.EXPECT().Get(ctx, resourceGroupName, gomock.Any(), &sdkmsi.UserAssignedIdentitiesClientGetOptions{}).AnyTimes().Return(userAssignedIdentityResponse, errors.New("Generic Error"))
+			},
+			wantErr: "error occured when retrieving platform workload identity 'Dummy1' details: Generic Error",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1075,7 +1134,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			}
 
 			if tt.mocks != nil {
-				tt.mocks(roleDefinitions, federatedIdentityCredentials)
+				tt.mocks(roleDefinitions, federatedIdentityCredentials, userAssignedIdentitiesClient)
 			}
 
 			err := dv.ValidatePlatformWorkloadIdentityProfile(ctx, tt.oc, tt.platformIdentityRoles, roleDefinitions, federatedIdentityCredentials, userAssignedIdentitiesClient)
