@@ -220,23 +220,25 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.Action(m.fixupClusterMsiTenantID),
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
-		)
-	} else {
-		s = append(s,
-			// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
-			// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
 		)
 	}
 
 	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		s = append(s, steps.Action(m.federateIdentityCredentials))
+		s = append(s,
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.Action(m.federateIdentityCredentials),
+		)
 	} else {
-		s = append(s, steps.Action(m.createOrUpdateClusterServicePrincipalRBAC)) // CSP credentials rotation flow steps
+		s = append(s,
+			// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
+			// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+
+			// CSP credentials rotation flow steps
+			steps.Action(m.createOrUpdateClusterServicePrincipalRBAC))
 	}
 
 	s = append(s,
@@ -344,6 +346,13 @@ func (m *manager) bootstrap() []steps.Step {
 		s = append(s,
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
+		)
+	}
+
+	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
 		)
@@ -353,9 +362,7 @@ func (m *manager) bootstrap() []steps.Step {
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
 		)
 	}
-
 	s = append(s,
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.ensurePreconfiguredNSG),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),

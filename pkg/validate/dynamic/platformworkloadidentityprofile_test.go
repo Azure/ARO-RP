@@ -1066,6 +1066,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			_env := mock_env.NewMockInterface(controller)
 			roleDefinitions := mock_armauthorization.NewMockRoleDefinitionsClient(controller)
 			federatedIdentityCredentials := mock_armmsi.NewMockFederatedIdentityCredentialsClient(controller)
+			userAssignedIdentitiesClient := mock_armmsi.NewMockUserAssignedIdentitiesClient(controller)
 
 			dv := &dynamic{
 				env:            _env,
@@ -1077,7 +1078,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				tt.mocks(roleDefinitions, federatedIdentityCredentials)
 			}
 
-			err := dv.ValidatePlatformWorkloadIdentityProfile(ctx, tt.oc, tt.platformIdentityRoles, roleDefinitions, federatedIdentityCredentials)
+			err := dv.ValidatePlatformWorkloadIdentityProfile(ctx, tt.oc, tt.platformIdentityRoles, roleDefinitions, federatedIdentityCredentials, userAssignedIdentitiesClient)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantPlatformIdentities != nil && !reflect.DeepEqual(tt.wantPlatformIdentities, dv.platformIdentities) {
