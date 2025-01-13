@@ -84,7 +84,6 @@ services:
           soft: 4096
           hard: 4096
     container_name: aro-rp
-    network_mode: host
     depends_on:
       vpn:
         condition: service_healthy
