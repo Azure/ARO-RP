@@ -88,7 +88,10 @@ func (m *manager) getZerothSteps() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-		steps.Action(m.fixupClusterSPObjectID),
+	}
+
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		bootstrap = append(bootstrap, steps.Action(m.fixupClusterSPObjectID))
 	}
 
 	// Generic fix-up actions that are fairly safe to always take, and don't require a running cluster
