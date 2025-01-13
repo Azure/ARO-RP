@@ -8,6 +8,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesv1 "github.com/openshift/api/samples/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -27,7 +28,26 @@ func (m *manager) disableSamples(ctx context.Context) error {
 		},
 		func() error {
 			c, err := m.samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
-			if err != nil {
+
+			// if config cr is missing, we create it with managementState: Removed to
+			// immediately disable the samples operator without waiting for it to
+			// bootstrap and create the resource
+			//
+			// https://docs.openshift.com/container-platform/4.17/openshift_images/configuring-samples-operator.html#samples-operator-restricted-network-install-with-access
+			if errors.IsNotFound(err) {
+				c = &samplesv1.Config{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+					Spec: samplesv1.ConfigSpec{
+						ManagementState: operatorv1.Removed,
+					},
+				}
+
+				_, err := m.samplescli.SamplesV1().Configs().Create(ctx, c, metav1.CreateOptions{})
+
+				return err
+			} else if err != nil {
 				return err
 			}
 

@@ -36,11 +36,9 @@ func Test_manager_disableSamples(t *testing.T) {
 		{
 			name:          "samples cr is found and updated",
 			samplesConfig: samplesConfig,
-			wantErr:       "",
 		},
 		{
-			name:    "samples cr is not found and retried",
-			wantErr: `configs.samples.operator.openshift.io "cluster" not found`,
+			name: "samples cr is not found, creates new resource with management state removed",
 		},
 	}
 	for _, tt := range tests {
@@ -73,18 +71,16 @@ func Test_manager_disableSamples(t *testing.T) {
 			}
 
 			err := m.disableSamples(ctx)
-
-			if tt.samplesConfig != nil {
-				got, err := samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
-				if err != nil {
-					t.Error(err)
-				}
-
-				if got.Spec.ManagementState != operatorv1.Removed {
-					t.Errorf("wanted ManagementState %s but got %s", operatorv1.Removed, got.Spec.ManagementState)
-				}
-			}
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			got, err := samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if got.Spec.ManagementState != operatorv1.Removed {
+				t.Errorf("wanted ManagementState %s but got %s", operatorv1.Removed, got.Spec.ManagementState)
+			}
 		})
 	}
 }
