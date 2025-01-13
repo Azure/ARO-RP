@@ -44,6 +44,11 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action initializeKubernetesClients]",
 		"[Action ensureBillingRecord]",
 		"[Action ensureDefaults]",
+		"[Action fixupClusterMsiTenantID]",
+		"[Action ensureClusterMsiCertificate]",
+		"[Action initializeClusterMsiClients]",
+		"[AuthorizationRetryingAction clusterIdentityIDs]",
+		"[AuthorizationRetryingAction platformWorkloadIdentityIDs]",
 		"[Action fixInfraID]",
 	}
 
@@ -231,7 +236,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 			),
 		},
 		{
-			name: "adminUpdate() on managed identity cluster skips steps that are specific to service principal clusters",
+			name: "adminUpdate() on managed identity cluster skips steps that are specific to service principal clusters and includes steps that are specific to managed identity",
 			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
