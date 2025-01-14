@@ -88,7 +88,7 @@ type Dynamic interface {
 		platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole,
 		roleDefinitions armauthorization.RoleDefinitionsClient,
 		clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
-		userAssignedIdentityClient armmsi.UserAssignedIdentitiesClient,
+		platformWorkloadIdentities map[string]api.PlatformWorkloadIdentity,
 	) error
 }
 

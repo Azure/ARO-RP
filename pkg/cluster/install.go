@@ -220,6 +220,7 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.Action(m.fixupClusterMsiTenantID),
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
+			steps.Action(m.platformWorkloadIdentityIDs),
 		)
 	}
 
@@ -228,7 +229,7 @@ func (m *manager) Update(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
 			steps.Action(m.federateIdentityCredentials),
 		)
 	} else {
@@ -346,6 +347,7 @@ func (m *manager) bootstrap() []steps.Step {
 		s = append(s,
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
+			steps.Action(m.platformWorkloadIdentityIDs),
 		)
 	}
 
@@ -354,7 +356,7 @@ func (m *manager) bootstrap() []steps.Step {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
 		)
 	} else {
 		s = append(s,

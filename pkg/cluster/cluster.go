@@ -137,6 +137,7 @@ type manager struct {
 	openShiftClusterDocumentVersioner openShiftClusterDocumentVersioner
 
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion
+	platformWorkloadIdentities             map[string]api.PlatformWorkloadIdentity
 }
 
 // New returns a cluster manager

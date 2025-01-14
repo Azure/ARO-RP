@@ -40,7 +40,7 @@ func NewOpenShiftClusterDynamicValidator(
 	fpAuthorizer autorest.Authorizer,
 	roleDefinitions armauthorization.RoleDefinitionsClient,
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
-	userAssignedIdentitiesClient armmsi.UserAssignedIdentitiesClient,
+	platformWorkloadIdentities map[string]api.PlatformWorkloadIdentity,
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion,
 	clusterMSICredential azcore.TokenCredential,
 ) OpenShiftClusterDynamicValidator {
@@ -55,7 +55,7 @@ func NewOpenShiftClusterDynamicValidator(
 		clusterMsiFederatedIdentityCredentials: clusterMsiFederatedIdentityCredentials,
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 		clusterMSICredential:                   clusterMSICredential,
-		userAssignedIdentitiesClient:           userAssignedIdentitiesClient,
+		platformWorkloadIdentities:             platformWorkloadIdentities,
 	}
 }
 
@@ -70,7 +70,7 @@ type openShiftClusterDynamicValidator struct {
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion
 	clusterMSICredential                   azcore.TokenCredential
-	userAssignedIdentitiesClient           armmsi.UserAssignedIdentitiesClient
+	platformWorkloadIdentities             map[string]api.PlatformWorkloadIdentity
 }
 
 // ensureAccessTokenClaims can detect an error when the service principal (fp, cluster sp) has accidentally deleted from
@@ -223,7 +223,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		err = spDynamic.ValidatePlatformWorkloadIdentityProfile(ctx, dv.oc, dv.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName(), dv.roleDefinitions, dv.clusterMsiFederatedIdentityCredentials, dv.userAssignedIdentitiesClient)
+		err = spDynamic.ValidatePlatformWorkloadIdentityProfile(ctx, dv.oc, dv.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName(), dv.roleDefinitions, dv.clusterMsiFederatedIdentityCredentials, dv.platformWorkloadIdentities)
 		if err != nil {
 			return err
 		}
