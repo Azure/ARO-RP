@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/Azure/msi-dataplane/pkg/store"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -36,7 +35,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -48,6 +46,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
@@ -128,8 +127,8 @@ type manager struct {
 
 	aroOperatorDeployer deploy.Operator
 
-	msiDataplane                           *dataplane.ManagedIdentityClient
-	clusterMsiKeyVaultStore                *store.MsiKeyVaultStore
+	msiDataplane                           dataplane.ClientFactory
+	clusterMsiKeyVaultStore                keyvault.Manager
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
 
 	now func() time.Time
@@ -316,36 +315,36 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 			return nil, err
 		}
 
-		msiDataplaneClientOptions, err := _env.MsiDataplaneClientOptions(msiResourceId)
-		if err != nil {
-			return nil, err
-		}
+		var msiDataplane dataplane.ClientFactory
+		if _env.FeatureIsSet(env.FeatureUseMockMsiRp) {
+			msiDataplane = _env.MockMSIResponses(msiResourceId)
+		} else {
+			msiDataplaneClientOptions, err := _env.MsiDataplaneClientOptions()
+			if err != nil {
+				return nil, err
+			}
 
-		cloud, err := _env.Environment().CloudNameForMsiDataplane()
-		if err != nil {
-			return nil, err
-		}
+			// MSI dataplane client receives tenant from the bearer challenge, so we can't limit the allowed tenants in the credential
+			fpMSICred, err := _env.FPNewClientCertificateCredential(_env.TenantID(), []string{"*"})
+			if err != nil {
+				return nil, err
+			}
 
-		// MSI dataplane client receives tenant from the bearer challenge, so we can't limit the allowed tenants in the credential
-		fpMSICred, err := _env.FPNewClientCertificateCredential(_env.TenantID(), []string{"*"})
-		if err != nil {
-			return nil, err
-		}
-		authenticatorPolicy := dataplane.NewAuthenticatorPolicy(fpMSICred, _env.MsiRpEndpoint())
-		msiDataplane, err := dataplane.NewClient(cloud, authenticatorPolicy, msiDataplaneClientOptions)
-		if err != nil {
-			return nil, err
+			msiDataplane, err = dataplane.NewClientFactory(fpMSICred, _env.MsiRpEndpoint(), msiDataplaneClientOptions)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		clusterMsiKeyVaultName := _env.ClusterMsiKeyVaultName()
 		clusterMsiKeyVaultURL := fmt.Sprintf("https://%s.%s", clusterMsiKeyVaultName, _env.Environment().KeyVaultDNSSuffix)
-		clusterMsiSecretsClient, err := azsecrets.NewClient(clusterMsiKeyVaultURL, msiCredential, clientOptions)
+		authorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 		if err != nil {
 			return nil, err
 		}
 
 		m.msiDataplane = msiDataplane
-		m.clusterMsiKeyVaultStore = store.NewMsiKeyVaultStore(clusterMsiSecretsClient)
+		m.clusterMsiKeyVaultStore = keyvault.NewManager(authorizer, clusterMsiKeyVaultURL)
 	}
 
 	return m, nil

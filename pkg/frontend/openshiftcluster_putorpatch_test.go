@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -4106,8 +4105,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			var internal api.OpenShiftCluster
 			f.apis["2024-08-12-preview"].OpenShiftClusterConverter.ToInternal(oc, &internal)
 			if internal.UsesWorkloadIdentity() {
-				requestHeaders.Add(dataplane.MsiIdentityURLHeader, middleware.MockIdentityURL)
-				requestHeaders.Add(dataplane.MsiTenantHeader, mockGuid)
+				requestHeaders.Add(middleware.MsiIdentityURLHeader, middleware.MockIdentityURL)
+				requestHeaders.Add(middleware.MsiTenantHeader, mockGuid)
 			}
 
 			resp, b, err := ti.request(method,

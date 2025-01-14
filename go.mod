@@ -1,6 +1,6 @@
 module github.com/Azure/ARO-RP
 
-go 1.23.2
+go 1.21
 
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible

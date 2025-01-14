@@ -4,7 +4,6 @@ package azureclient
 // Licensed under the Apache License 2.0.
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -183,18 +182,6 @@ func (e *AROEnvironment) NewGraphServiceClient(tokenCredential azcore.TokenCrede
 // cloud name. This function might seem a little strange, but it's necessary because
 // the cloud names stored in the AROEnvironments are in all-caps, whereas the ones
 // defined as constants in the dataplane module are in camel case.
-func (e *AROEnvironment) CloudNameForMsiDataplane() (string, error) {
-	cloud := ""
-	switch strings.ToUpper(e.Name) {
-	case dataplane.AzurePublicCloud:
-		cloud = dataplane.AzurePublicCloud
-	case dataplane.AzureUSGovCloud:
-		cloud = dataplane.AzureUSGovCloud
-	}
-
-	if cloud == "" {
-		return "", errors.New("could not determine which Azure Cloud to use to instantiate MSI dataplane client")
-	}
-
-	return cloud, nil
+func (e *AROEnvironment) CloudNameForMsiDataplane() (dataplane.AzureCloud, error) {
+	return dataplane.AzureCloud(e.Name), nil
 }

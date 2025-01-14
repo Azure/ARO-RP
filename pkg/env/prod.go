@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
@@ -399,52 +398,87 @@ func (p *prod) MsiRpEndpoint() string {
 	return fmt.Sprintf("https://%s", os.Getenv("MSI_RP_ENDPOINT"))
 }
 
-func (p *prod) MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy.ClientOptions, error) {
+func (p *prod) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
 	armClientOptions := p.Environment().ArmClientOptions()
 	clientOptions := armClientOptions.ClientOptions
 
-	if p.FeatureIsSet(FeatureUseMockMsiRp) {
-		keysToValidate := []string{
-			"MOCK_MSI_CLIENT_ID",
-			"MOCK_MSI_OBJECT_ID",
-			"MOCK_MSI_CERT",
-			"MOCK_MSI_TENANT_ID",
-		}
+	return &clientOptions, nil
+}
 
-		if err := ValidateVars(keysToValidate...); err != nil {
-			return nil, err
-		}
+func (p *prod) MockMSIResponses(msiResourceId *arm.ResourceID) dataplane.ClientFactory {
+	return &mockFactory{aadHost: p.Environment().Cloud.ActiveDirectoryAuthorityHost, msiResourceId: msiResourceId.String()}
+}
 
-		// Every attribute on the NestedCredentialsObject needs to be set for the mock MSI
-		// dataplane to be happy.
-		placeholder := "placeholder"
-		clientOptions.Transport = dataplane.NewStub([]*dataplane.CredentialsObject{
-			{
-				CredentialsObject: swagger.CredentialsObject{
-					ExplicitIdentities: []*swagger.NestedCredentialsObject{
-						{
-							ClientID:                   ptr.To(os.Getenv("MOCK_MSI_CLIENT_ID")),
-							ClientSecret:               ptr.To(os.Getenv("MOCK_MSI_CERT")),
-							TenantID:                   ptr.To(os.Getenv("MOCK_MSI_TENANT_ID")),
-							ObjectID:                   ptr.To(os.Getenv("MOCK_MSI_OBJECT_ID")),
-							ResourceID:                 ptr.To(msiResourceId.String()),
-							AuthenticationEndpoint:     ptr.To(p.Environment().Cloud.ActiveDirectoryAuthorityHost),
-							CannotRenewAfter:           &placeholder,
-							ClientSecretURL:            &placeholder,
-							MtlsAuthenticationEndpoint: &placeholder,
-							NotAfter:                   &placeholder,
-							NotBefore:                  &placeholder,
-							RenewAfter:                 &placeholder,
-							CustomClaims: &swagger.CustomClaims{
-								XMSAzNwperimid: []*string{&placeholder},
-								XMSAzTm:        &placeholder,
-							},
-						},
-					},
-				},
-			},
-		})
+func MockMSIResponses(aadHost string, msiResourceId *arm.ResourceID) dataplane.ClientFactory {
+	return &mockFactory{aadHost: aadHost, msiResourceId: msiResourceId.String()}
+}
+
+type mockFactory struct {
+	aadHost       string
+	msiResourceId string
+}
+
+var _ dataplane.ClientFactory = (*mockFactory)(nil)
+
+func (m *mockFactory) NewClient(identityURL string) (dataplane.Client, error) {
+	return &mockClient{
+		aadHost:       m.aadHost,
+		msiResourceId: m.msiResourceId,
+	}, nil
+}
+
+type mockClient struct {
+	aadHost       string
+	msiResourceId string
+}
+
+var _ dataplane.Client = (*mockClient)(nil)
+
+func (m *mockClient) DeleteSystemAssignedIdentity(ctx context.Context) error {
+	panic("not yet implemented")
+}
+
+func (m *mockClient) GetSystemAssignedIdentityCredentials(ctx context.Context) (*dataplane.ManagedIdentityCredentials, error) {
+	panic("not yet implemented")
+}
+
+func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, request dataplane.UserAssignedIdentitiesRequest) (*dataplane.ManagedIdentityCredentials, error) {
+	keysToValidate := []string{
+		"MOCK_MSI_CLIENT_ID",
+		"MOCK_MSI_OBJECT_ID",
+		"MOCK_MSI_CERT",
+		"MOCK_MSI_TENANT_ID",
 	}
 
-	return &clientOptions, nil
+	if err := ValidateVars(keysToValidate...); err != nil {
+		return nil, err
+	}
+
+	placeholder := "placeholder"
+	return &dataplane.ManagedIdentityCredentials{
+		ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
+			{
+				ClientId:                   ptr.To(os.Getenv("MOCK_MSI_CLIENT_ID")),
+				ClientSecret:               ptr.To(os.Getenv("MOCK_MSI_CERT")),
+				TenantId:                   ptr.To(os.Getenv("MOCK_MSI_TENANT_ID")),
+				ObjectId:                   ptr.To(os.Getenv("MOCK_MSI_OBJECT_ID")),
+				ResourceId:                 ptr.To(m.msiResourceId),
+				AuthenticationEndpoint:     ptr.To(m.aadHost),
+				CannotRenewAfter:           &placeholder,
+				ClientSecretUrl:            &placeholder,
+				MtlsAuthenticationEndpoint: &placeholder,
+				NotAfter:                   &placeholder,
+				NotBefore:                  &placeholder,
+				RenewAfter:                 &placeholder,
+				CustomClaims: &dataplane.CustomClaims{
+					XmsAzNwperimid: &[]string{placeholder},
+					XmsAzTm:        &placeholder,
+				},
+			},
+		},
+	}, nil
+}
+
+func (m *mockClient) MoveIdentity(ctx context.Context, request dataplane.MoveIdentityRequest) (*dataplane.MoveIdentityResponse, error) {
+	panic("not yet implemented")
 }
