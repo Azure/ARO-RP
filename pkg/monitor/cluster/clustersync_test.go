@@ -10,28 +10,39 @@ import (
 	"time"
 
 	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Azure/ARO-RP/pkg/hive"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
 func TestEmitClusterSync(t *testing.T) {
 	for _, tt := range []struct {
-		name              string
-		clusterSync       *hivev1alpha1.ClusterSync
-		getClusterSyncErr error
-		expectedError     error
-		expectedGauges    []struct {
+		name               string
+		withClusterManager bool
+		clusterSync        *hivev1alpha1.ClusterSync
+		getClusterSyncErr  error
+		expectedError      error
+		expectedGauges     []struct {
 			name   string
 			value  int64
 			labels map[string]string
 		}
+		wantLog string
 	}{
 		{
-			name: "SyncSets and SelectorSyncSets have elements",
+			name:               "Don't do anything because Monitor does not have a Hive ClusterManager",
+			withClusterManager: false,
+			wantLog:            "skipping: no hive cluster manager",
+		},
+		{
+			name:               "SyncSets and SelectorSyncSets have elements",
+			withClusterManager: true,
 			clusterSync: &hivev1alpha1.ClusterSync{
 				Status: hivev1alpha1.ClusterSyncStatus{
 					SyncSets: []hivev1alpha1.SyncStatus{
@@ -81,7 +92,8 @@ func TestEmitClusterSync(t *testing.T) {
 			},
 		},
 		{
-			name: "SyncSets and SelectorSyncSets have success and failure",
+			name:               "SyncSets and SelectorSyncSets have success and failure",
+			withClusterManager: true,
 			clusterSync: &hivev1alpha1.ClusterSync{
 				Status: hivev1alpha1.ClusterSyncStatus{
 					SyncSets: []hivev1alpha1.SyncStatus{
@@ -131,7 +143,8 @@ func TestEmitClusterSync(t *testing.T) {
 			},
 		},
 		{
-			name: "SyncSets and SelectorSyncSets are nil",
+			name:               "SyncSets and SelectorSyncSets are nil",
+			withClusterManager: true,
 			clusterSync: &hivev1alpha1.ClusterSync{
 				Status: hivev1alpha1.ClusterSyncStatus{
 					SyncSets:         nil,
@@ -146,9 +159,10 @@ func TestEmitClusterSync(t *testing.T) {
 			}{},
 		},
 		{
-			name:              "GetSyncSetResources returns error",
-			getClusterSyncErr: errors.New("some error"),
-			expectedError:     errors.New("some error"),
+			name:               "GetSyncSetResources returns error",
+			withClusterManager: true,
+			getClusterSyncErr:  errors.New("some error"),
+			expectedError:      errors.New("some error"),
 			expectedGauges: []struct {
 				name   string
 				value  int64
@@ -160,17 +174,24 @@ func TestEmitClusterSync(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockHiveClusterManager := mock_hive.NewMockClusterManager(ctrl)
+			ctx := context.Background()
+
+			var mockHiveClusterManager hive.ClusterManager
+			if tt.withClusterManager {
+				_mockHiveClusterManager := mock_hive.NewMockClusterManager(ctrl)
+				_mockHiveClusterManager.EXPECT().GetClusterSync(ctx, gomock.Any()).Return(tt.clusterSync, tt.getClusterSyncErr).AnyTimes()
+				mockHiveClusterManager = _mockHiveClusterManager
+			}
+
 			m := mock_metrics.NewMockEmitter(ctrl)
+			logger, hook := test.NewNullLogger()
+			log := logrus.NewEntry(logger)
 
 			mockMonitor := &Monitor{
 				hiveClusterManager: mockHiveClusterManager,
 				m:                  m,
+				log:                log,
 			}
-
-			ctx := context.Background()
-
-			mockHiveClusterManager.EXPECT().GetClusterSync(ctx, mockMonitor.doc).Return(tt.clusterSync, tt.getClusterSyncErr).AnyTimes()
 
 			for _, gauge := range tt.expectedGauges {
 				m.EXPECT().EmitGauge(gauge.name, gauge.value, gauge.labels).Times(1)
@@ -178,6 +199,11 @@ func TestEmitClusterSync(t *testing.T) {
 
 			err := mockMonitor.emitClusterSync(ctx)
 			assert.Equal(t, tt.expectedError, err)
+
+			if tt.wantLog != "" {
+				x := hook.LastEntry()
+				assert.Equal(t, tt.wantLog, x.Message)
+			}
 		})
 	}
 }

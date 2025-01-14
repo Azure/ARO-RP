@@ -11,6 +11,12 @@ import (
 )
 
 func (mon *Monitor) emitClusterSync(ctx context.Context) error {
+	if mon.hiveClusterManager == nil {
+		// TODO(hive): remove this once we have Hive everywhere
+		mon.log.Info("skipping: no hive cluster manager")
+		return nil
+	}
+
 	clusterSync, err := mon.hiveClusterManager.GetClusterSync(ctx, mon.doc)
 	if err != nil {
 		return err
