@@ -104,7 +104,6 @@ func (m *manager) getZerothSteps() []steps.Step {
 		bootstrap = append(bootstrap, managedIdentitySteps...)
 	} else {
 		bootstrap = append(bootstrap, steps.Action(m.fixupClusterSPObjectID))
-
 	}
 
 	// Generic fix-up actions that are fairly safe to always take, and don't require a running cluster
