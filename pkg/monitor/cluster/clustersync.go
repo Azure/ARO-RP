@@ -12,7 +12,7 @@ import (
 
 func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 	if mon.hiveClusterManager == nil {
-		// TODO(hive): remove this once we have Hive everywhere
+		// TODO(hive): remove this once we have Hive everywhere.
 		mon.log.Info("skipping: no hive cluster manager")
 		return nil
 	}
@@ -21,18 +21,22 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if clusterSync != nil {
-		if clusterSync.Status.SyncSets != nil {
+	if clusterSync == nil {
+		return nil
+	} else {
+		if clusterSync.Status.SyncSets == nil {
+			return nil
+		} else {
 			for _, s := range clusterSync.Status.SyncSets {
 				mon.emitGauge("hive.clustersync", 1, map[string]string{
-					"metric": "SyncSets",
-					"name":   s.Name,
-					"result": string(s.Result),
+					"syncType": "SyncSets",
+					"name":     s.Name,
+					"result":   string(s.Result),
 				})
 
 				if mon.hourlyRun {
 					mon.log.WithFields(logrus.Fields{
-						"metric":             "SyncSets",
+						"syncType":           "SyncSets",
 						"name":               s.Name,
 						"result":             string(s.Result),
 						"firstSuccessTime":   timeToString(s.FirstSuccessTime),
@@ -42,16 +46,18 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 				}
 			}
 		}
-		if clusterSync.Status.SelectorSyncSets != nil {
+		if clusterSync.Status.SelectorSyncSets == nil {
+			return nil
+		} else {
 			for _, s := range clusterSync.Status.SelectorSyncSets {
 				mon.emitGauge("hive.clustersync", 1, map[string]string{
-					"metric": "SelectorSyncSets",
-					"name":   s.Name,
-					"result": string(s.Result),
+					"syncType": "SelectorSyncSets",
+					"name":     s.Name,
+					"result":   string(s.Result),
 				})
 				if mon.hourlyRun {
 					mon.log.WithFields(logrus.Fields{
-						"metric":             "SelectorSyncSets",
+						"syncType":           "SelectorSyncSets",
 						"name":               s.Name,
 						"result":             string(s.Result),
 						"firstSuccessTime":   timeToString(s.FirstSuccessTime),
