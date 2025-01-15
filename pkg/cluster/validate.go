@@ -16,6 +16,6 @@ func (m *manager) validateResources(ctx context.Context) error {
 		clusterMSICredential = m.userAssignedIdentities.GetClusterMSICredential()
 	}
 	return validate.NewOpenShiftClusterDynamicValidator(
-		m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, m.fpAuthorizer, m.armRoleDefinitions, m.clusterMsiFederatedIdentityCredentials, m.platformWorkloadIdentityRolesByVersion, clusterMSICredential,
+		m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, m.fpAuthorizer, m.armRoleDefinitions, m.clusterMsiFederatedIdentityCredentials, m.platformWorkloadIdentities, m.platformWorkloadIdentityRolesByVersion, clusterMSICredential,
 	).Dynamic(ctx)
 }

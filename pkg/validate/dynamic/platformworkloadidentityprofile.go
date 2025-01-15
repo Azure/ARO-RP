@@ -30,11 +30,12 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 	platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole,
 	roleDefinitions armauthorization.RoleDefinitionsClient,
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
-) error {
+	platformWorkloadIdentities map[string]api.PlatformWorkloadIdentity, // Platform Workload Identities with object and client IDs
+) (err error) {
 	dv.log.Print("ValidatePlatformWorkloadIdentityProfile")
 
 	dv.platformIdentitiesActionsMap = map[string][]string{}
-	dv.platformIdentities = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+	dv.platformIdentities = platformWorkloadIdentities
 
 	// Check if any required platform identity is missing
 	if len(dv.platformIdentities) != len(platformWorkloadIdentityRolesByRoleName) {

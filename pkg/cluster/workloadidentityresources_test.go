@@ -317,17 +317,19 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 	location := "eastus"
 
 	for _, tt := range []struct {
-		name       string
-		identities map[string]api.PlatformWorkloadIdentity
-		roles      []api.PlatformWorkloadIdentityRole
-		want       []*corev1.Secret
-		wantErr    string
+		name           string
+		identities     map[string]api.PlatformWorkloadIdentity
+		roles          []api.PlatformWorkloadIdentityRole
+		wantSecrets    []*corev1.Secret
+		wantNamespaces []*corev1.Namespace
+		wantErr        string
 	}{
 		{
-			name:       "no identities, no secrets",
-			identities: map[string]api.PlatformWorkloadIdentity{},
-			roles:      []api.PlatformWorkloadIdentityRole{},
-			want:       []*corev1.Secret{},
+			name:           "no identities, no secrets",
+			identities:     map[string]api.PlatformWorkloadIdentity{},
+			roles:          []api.PlatformWorkloadIdentityRole{},
+			wantSecrets:    []*corev1.Secret{},
+			wantNamespaces: []*corev1.Namespace{},
 		},
 		{
 			name: "converts cluster PWIs if a role definition is present",
@@ -355,7 +357,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 			},
-			want: []*corev1.Secret{
+			wantSecrets: []*corev1.Secret{
 				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: "v1",
@@ -393,6 +395,26 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 			},
+			wantNamespaces: []*corev1.Namespace{
+				{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-foo",
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-bar",
+					},
+				},
+			},
 		},
 		{
 			name: "error - identities with unexpected operator name present",
@@ -401,9 +423,10 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
 			},
-			roles:   []api.PlatformWorkloadIdentityRole{},
-			want:    []*corev1.Secret{},
-			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
+			roles:          []api.PlatformWorkloadIdentityRole{},
+			wantSecrets:    []*corev1.Secret{},
+			wantNamespaces: []*corev1.Namespace{},
+			wantErr:        fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
 			name: "skips ARO operator identity",
@@ -431,7 +454,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 			},
-			want: []*corev1.Secret{
+			wantSecrets: []*corev1.Secret{
 				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: "v1",
@@ -448,6 +471,17 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 						"azure_tenant_id":            tenantId,
 						"azure_region":               location,
 						"azure_federated_token_file": azureFederatedTokenFileLocation,
+					},
+				},
+			},
+			wantNamespaces: []*corev1.Namespace{
+				{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-foo",
 					},
 				},
 			},
@@ -484,10 +518,11 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					controller, tt.roles,
 				),
 			}
-			got, err := m.generatePlatformWorkloadIdentitySecrets()
+			gotSecrets, gotNamespaces, err := m.generatePlatformWorkloadIdentitySecretsAndNamespaces()
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			assert.ElementsMatch(t, got, tt.want)
+			assert.ElementsMatch(t, gotSecrets, tt.wantSecrets)
+			assert.ElementsMatch(t, gotNamespaces, tt.wantNamespaces)
 		})
 	}
 }

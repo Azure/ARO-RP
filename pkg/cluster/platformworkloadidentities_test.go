@@ -186,6 +186,11 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 			err := m.platformWorkloadIdentityIDs(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
+			if err == nil {
+				err = m.persistPlatformWorkloadIdentityIDs(ctx)
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			}
+
 			if tt.wantIdentities != nil {
 				assert.Equal(t, *tt.wantIdentities, m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities)
 			}
