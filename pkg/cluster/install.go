@@ -256,6 +256,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.fixUserAdminKubeconfig),
 		steps.Action(m.reconcileLoadBalancerProfile),
 		steps.Action(m.reconcileSoftwareDefinedNetwork),
+		steps.Action(m.ensureCredentialsRequest),
 	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
@@ -265,7 +266,6 @@ func (m *manager) Update(ctx context.Context) error {
 		)
 	} else {
 		s = append(s,
-			steps.Action(m.ensureCredentialsRequest),
 			steps.Action(m.updateOpenShiftSecret),
 			steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
 			steps.Action(m.updateAROSecret),
