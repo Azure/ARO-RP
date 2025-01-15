@@ -180,6 +180,15 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 })
 
 var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
+
+	BeforeEach(func(ctx context.Context) {
+		By("checking if monitoring ConfigMap controller is enabled")
+		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		if co.Spec.OperatorFlags[operator.MonitoringEnabled] == operator.FlagFalse {
+			Skip("monitoring ConfigMap controller is disabled, skipping test")
+		}
+	})
 	It("must not have persistent volume set", func(ctx context.Context) {
 		var cm *corev1.ConfigMap
 		getFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get
