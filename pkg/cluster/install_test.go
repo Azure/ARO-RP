@@ -114,15 +114,27 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes:.*"name": "node"`),
+					"msg":   gomega.MatchRegexp(`"name":"node"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators:.*"name": "operator"`),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes:.*node - Ready: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers:.*"name": "ingress-controller"`),
+					"msg":   gomega.MatchRegexp(`"name":"operator"`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators:.*operator - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`"name":"ingress-controller"`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers:.*ingress-controller - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -155,15 +167,27 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes:.*"name": "node"`),
+					"msg":   gomega.MatchRegexp(`"name":"node"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators:.*"name": "operator"`),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes:.*node - Ready: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers:.*"name": "ingress-controller"`),
+					"msg":   gomega.MatchRegexp(`"name":"operator"`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators:.*operator - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`"name":"ingress-controller"`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers:.*ingress-controller - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
@@ -192,15 +216,15 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logNodes: null`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logNodes: `),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterOperators: null`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterOperators: `),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logIngressControllers: null`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logIngressControllers: `),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
