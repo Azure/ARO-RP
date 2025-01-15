@@ -220,6 +220,7 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.Action(m.fixupClusterMsiTenantID),
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
+			steps.Action(m.platformWorkloadIdentityIDs),
 		)
 	}
 
@@ -228,7 +229,7 @@ func (m *manager) Update(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
 			steps.Action(m.federateIdentityCredentials),
 		)
 	} else {
@@ -238,8 +239,7 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
 
 			// CSP credentials rotation flow steps
-			steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
-		)
+			steps.Action(m.createOrUpdateClusterServicePrincipalRBAC))
 	}
 
 	s = append(s,
@@ -347,8 +347,16 @@ func (m *manager) bootstrap() []steps.Step {
 		s = append(s,
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
+			steps.Action(m.platformWorkloadIdentityIDs),
+		)
+	}
+
+	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
 		)
 	} else {
 		s = append(s,
@@ -356,9 +364,7 @@ func (m *manager) bootstrap() []steps.Step {
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
 		)
 	}
-
 	s = append(s,
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.ensurePreconfiguredNSG),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),

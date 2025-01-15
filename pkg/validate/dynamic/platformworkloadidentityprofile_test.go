@@ -270,6 +270,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	desiredPlatformWorkloadIdentities := map[string]api.PlatformWorkloadIdentity{
 		"Dummy1": {
 			ResourceID: platformIdentity1,
+			ObjectID:   dummyObjectId,
+			ClientID:   dummyClientId,
 		},
 	}
 	desiredPlatformWorkloadIdentitiesMap := map[string]api.PlatformWorkloadIdentityRole{
@@ -471,11 +473,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
 			},
-			wantPlatformIdentities: map[string]api.PlatformWorkloadIdentity{
-				"Dummy1": {
-					ResourceID: platformIdentity1,
-				},
-			},
+			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
 				"Dummy1": platformIdentityRequiredPermissionsList,
 			},
@@ -855,7 +853,6 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, gomock.Any(), &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).AnyTimes().Return(platformIdentityRequiredPermissions, nil)
-
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(platformIdentity1ResourceId.ResourceGroup), gomock.Eq(platformIdentity1ResourceId.ResourceName), gomock.Any()).
 					Return([]*sdkmsi.FederatedIdentityCredential{{Name: &expectedPlatformIdentity1FederatedCredName}}, nil)
 			},
@@ -884,6 +881,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s or %s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14", "4.15"),
 		},
 		{
@@ -908,6 +907,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
@@ -934,6 +935,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 					UserAssignedIdentities: clusterMSI,
 				},
 			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy3]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
 		{
@@ -953,6 +956,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
@@ -980,6 +985,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Identity: &api.ManagedServiceIdentity{
 					UserAssignedIdentities: clusterMSI,
 				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 			},
 			wantErr: fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[Dummy1]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
 		},
@@ -1077,7 +1084,18 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				tt.mocks(roleDefinitions, federatedIdentityCredentials)
 			}
 
-			err := dv.ValidatePlatformWorkloadIdentityProfile(ctx, tt.oc, tt.platformIdentityRoles, roleDefinitions, federatedIdentityCredentials)
+			pwis := tt.oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
+			updatedIdentities := make(map[string]api.PlatformWorkloadIdentity, len(pwis))
+
+			for operatorName, pwi := range pwis {
+				updatedIdentities[operatorName] = api.PlatformWorkloadIdentity{
+					ResourceID: pwi.ResourceID,
+					ClientID:   dummyClientId,
+					ObjectID:   dummyObjectId,
+				}
+			}
+
+			err := dv.ValidatePlatformWorkloadIdentityProfile(ctx, tt.oc, tt.platformIdentityRoles, roleDefinitions, federatedIdentityCredentials, updatedIdentities)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantPlatformIdentities != nil && !reflect.DeepEqual(tt.wantPlatformIdentities, dv.platformIdentities) {
