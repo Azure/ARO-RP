@@ -15,22 +15,28 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
+	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 
+	"github.com/Azure/ARO-RP/pkg/api"
+	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
 	managedFields = []metav1.ManagedFieldsEntry{{Manager: "something"}}
-	cvv           = &configv1.ClusterVersion{ObjectMeta: metav1.ObjectMeta{Name: "version"}}
+	doc           = &api.OpenShiftClusterDocument{}
+	cd            = &hivev1.ClusterDeployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster", ManagedFields: managedFields}}
+	cvv           = &configv1.ClusterVersion{ObjectMeta: metav1.ObjectMeta{Name: "version", ManagedFields: managedFields}}
 	master0Node   = &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster-aaaaa-master-0", ManagedFields: managedFields},
 		Status:     corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}}},
@@ -71,6 +77,59 @@ var (
 	aroOperatorWorkerPod = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "openshift-azure-operator", Name: "aro-operator-worker-bbbbbbbbb-bbbbb"}, Status: corev1.PodStatus{}}
 )
 
+func TestLogClusterDeployment(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		doc     *api.OpenShiftClusterDocument
+		cd      *hivev1.ClusterDeployment
+		want    interface{}
+		wantErr string
+	}{
+		{
+			name: "no clusterdoc returns empty",
+		},
+		{
+			name:    "no clusterdeployment returns error",
+			doc:     doc,
+			wantErr: `clusterdeployments.hive.openshift.io "cluster" not found`,
+		},
+		{
+			name: "clusterdeployment present returns clusterdeployment without managed fields",
+			doc:  doc,
+			cd:   cd,
+			want: &hivev1.ClusterDeployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			ctx := context.Background()
+			_, log := testlog.New()
+
+			mockHiveManager := mock_hive.NewMockClusterManager(controller)
+			if tt.cd == nil {
+				mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc)).
+					Return(nil, fmt.Errorf(`clusterdeployments.hive.openshift.io "cluster" not found`)).
+					AnyTimes()
+			} else {
+				mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc)).
+					Return(tt.cd, nil)
+			}
+
+			m := &manager{
+				log:                log,
+				hiveClusterManager: mockHiveManager,
+				doc:                tt.doc,
+			}
+
+			got, gotErr := m.logClusterDeployment(ctx)
+			utilerror.AssertErrorMessage(t, gotErr, tt.wantErr)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestLogClusterVersion(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -85,7 +144,7 @@ func TestLogClusterVersion(t *testing.T) {
 		{
 			name:    "returns cv resource if present",
 			objects: []kruntime.Object{cvv},
-			want:    cvv,
+			want:    &configv1.ClusterVersion{ObjectMeta: metav1.ObjectMeta{Name: "version"}},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -139,7 +198,7 @@ func TestLogNodes(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			kubernetescli := fake.NewSimpleClientset(tt.objects...)
+			kubernetescli := kubernetesfake.NewSimpleClientset(tt.objects...)
 
 			h, log := testlog.New()
 
@@ -276,7 +335,7 @@ func TestLogPodLogs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			kubernetescli := fake.NewSimpleClientset(tt.objects...)
+			kubernetescli := kubernetesfake.NewSimpleClientset(tt.objects...)
 
 			h, log := testlog.New()
 
