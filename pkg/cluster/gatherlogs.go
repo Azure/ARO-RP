@@ -37,9 +37,10 @@ func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 		{f: m.logPodLogs, isJSON: false},
 	}
 
-	// only log serial consoles on an install, not on updates/adminUpdates
+	// only log serial consoles and Hive CD on an install, not on updates/adminUpdates
 	if runType == "install" {
 		s = append(s, diagnosticStep{f: d.LogVMSerialConsole, isJSON: false})
+		s = append(s, diagnosticStep{f: m.logClusterDeployment, isJSON: true})
 	}
 
 	for _, f := range s {
@@ -69,6 +70,21 @@ func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 			}
 		}
 	}
+}
+
+func (m *manager) logClusterDeployment(ctx context.Context) (interface{}, error) {
+	if m.doc == nil || m.hiveClusterManager == nil {
+		return nil, nil
+	}
+
+	cd, err := m.hiveClusterManager.GetClusterDeployment(ctx, m.doc)
+	if err != nil {
+		return nil, err
+	}
+
+	cd.ManagedFields = nil
+
+	return cd, nil
 }
 
 func (m *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
