@@ -203,7 +203,11 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		// and stop monitoring the cluster.
 		// TODO: Provide better communication between RP and Monitor
 		time.Sleep(time.Until(t.Add(time.Second * time.Duration(monitorDeleteWaitTimeSec))))
-		return ocb.dbOpenShiftClusters.Delete(ctx, doc)
+		err := ocb.dbOpenShiftClusters.Delete(ctx, doc)
+		ocb.asyncOperationResultLog(log, doc.OpenShiftCluster.Properties.ProvisioningState, err)
+		ocb.emitMetrics(log, doc, api.ProvisioningStateDeleting, api.ProvisioningStateFailed, err)
+		ocb.emitProvisioningMetrics(doc, api.ProvisioningStateFailed)
+		return err
 	}
 
 	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
