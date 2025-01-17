@@ -160,8 +160,9 @@ def load_arguments(self, _):
                    help='Refresh cluster application credentials.',
                    options_list=['--refresh-credentials'],
                    validator=validate_refresh_cluster_credentials)
-        c.argument('platform_workload_identities', arg_group='Identity',
-                   help='Assign a platform workload identity used within the cluster', is_preview=True,
+        c.argument('platform_workload_identities', arg_group='Identity', is_preview=True,
+                   help='Assign a platform workload identity used within the cluster. Requires two values: \
+                           an operator name and either the name or resource ID of the Azure identity to use for it.',
                    options_list=['--assign-platform-workload-identity', '--assign-platform-wi'],
                    validator=validate_platform_workload_identities(isCreate=False),
                    action=AROPlatformWorkloadIdentityAddAction, nargs='+')
