@@ -138,7 +138,7 @@ def load_arguments(self, _):
                    options_list=['--enable-managed-identity', '--enable-mi'],
                    validator=validate_enable_managed_identity)
         c.argument('platform_workload_identities', arg_group='Identity', is_preview=True,
-                   help='Assign a platform workload identity used within the cluster. Requires two values: the use inside the cluster and the user assigned identity.',
+                   help='Assign a platform workload identity used within the cluster. Requires two values: the user inside the cluster and the user assigned identity.',
                    options_list=['--assign-platform-workload-identity', '--assign-platform-wi'],
                    validator=validate_platform_workload_identities(isCreate=True),
                    action=AROPlatformWorkloadIdentityAddAction, nargs='+')
