@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	utiltrace "github.com/Azure/ARO-RP/pkg/util/trace"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -39,6 +40,8 @@ func main() {
 	ctx := context.Background()
 	audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
+	utiltrace.InstallOpenTelemetryTracer(ctx, log)
+
 
 	go func() {
 		log.Warn(http.ListenAndServe("localhost:6060", nil))

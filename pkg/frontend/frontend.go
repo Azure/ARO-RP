@@ -1,3 +1,4 @@
+// TODO: here
 package frontend
 
 // Copyright (c) Microsoft Corporation.
@@ -19,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -371,6 +373,7 @@ func (f *frontend) setupRouter() chi.Router {
 	chiRouter.NotFound(f.authMiddleware.Authenticate(http.HandlerFunc(notFound)).ServeHTTP)
 	registered := chiRouter.With(
 		chiMiddlewares.CleanPath,
+		otelhttp.NewMiddleware("root"),
 		f.logMiddleware.Log,
 		f.m.Metrics,
 		middleware.Panic,
