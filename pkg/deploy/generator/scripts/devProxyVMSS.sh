@@ -9,7 +9,7 @@ done
 systemctl enable docker
 systemctl start docker
 
-mkdir /root/.docker
+mkdir -p /root/.docker
 cat >/root/.docker/config.json <<EOF
 {
 	"auths": {
@@ -22,7 +22,7 @@ EOF
 
 docker pull "$PROXYIMAGE"
 
-mkdir /etc/proxy
+mkdir -p /etc/proxy
 base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
 base64 -d <<<"$PROXYKEY" >/etc/proxy/proxy.key
 base64 -d <<<"$PROXYCLIENTCERT" >/etc/proxy/proxy-client.crt
