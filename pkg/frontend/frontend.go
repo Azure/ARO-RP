@@ -314,6 +314,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.Get("/clusterdeployment", f.getAdminHiveClusterDeployment)
 
+				r.Get("/clustersync", f.getAdminHiveClusterSync)
+
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/redeployvm", f.postAdminOpenShiftClusterRedeployVM)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/stopvm", f.postAdminOpenShiftClusterStopVM)
