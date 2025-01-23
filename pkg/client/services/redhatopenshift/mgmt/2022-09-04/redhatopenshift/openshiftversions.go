@@ -44,7 +44,7 @@ func NewOpenShiftVersionsClientWithBaseURI(baseURI string, subscriptionID string
 	return OpenShiftVersionsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// List the operation returns the installable OpenShift versions as strings.
+// List the operation returns the installable OpenShift versions as a string.
 // Parameters:
 // location - the name of Azure region.
 func (client OpenShiftVersionsClient) List(ctx context.Context, location string) (result OpenShiftVersionListPage, err error) {
@@ -108,7 +108,7 @@ func (client OpenShiftVersionsClient) ListPreparer(ctx context.Context, location
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }

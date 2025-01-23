@@ -21,6 +21,16 @@ func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{}
 		Properties: OpenShiftVersionProperties{
 			Version: v.Properties.Version,
 		},
+		Name: v.Name,
+		Type: v.Type,
+	}
+
+	if out.Name == "" {
+		out.Name = v.Properties.Version
+	}
+
+	if out.Type == "" {
+		out.Type = api.OpenShiftVersionsType
 	}
 
 	return out
@@ -47,4 +57,6 @@ func (c openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) 
 func (c openShiftVersionConverter) ToInternal(_new interface{}, out *api.OpenShiftVersion) {
 	new := _new.(*OpenShiftVersion)
 	out.Properties.Version = new.Properties.Version
+	out.Name = new.Properties.Version
+	out.Type = api.OpenShiftVersionsType
 }

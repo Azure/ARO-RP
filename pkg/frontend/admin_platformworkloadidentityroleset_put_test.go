@@ -55,6 +55,8 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 									},
 								},
 							},
+							Name: "4.14",
+							Type: api.PlatformWorkloadIdentityRoleSetsType,
 						},
 					},
 				)
@@ -73,6 +75,8 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 						},
 					},
 				},
+				Name: "4.14",
+				Type: api.PlatformWorkloadIdentityRoleSetsType,
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &admin.PlatformWorkloadIdentityRoleSet{
@@ -89,6 +93,8 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 						},
 					},
 				},
+				Name: "4.14",
+				Type: api.PlatformWorkloadIdentityRoleSetsType,
 			},
 			wantDocuments: []*api.PlatformWorkloadIdentityRoleSetDocument{
 				{
@@ -107,6 +113,8 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 								},
 							},
 						},
+						Name: "4.14",
+						Type: api.PlatformWorkloadIdentityRoleSetsType,
 					},
 				},
 			},
@@ -138,6 +146,8 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 									},
 								},
 							},
+							Name: "4.14",
+							Type: api.PlatformWorkloadIdentityRoleSetsType,
 						},
 					},
 				)
@@ -172,6 +182,8 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 						},
 					},
 				},
+				Name: "4.15",
+				Type: api.PlatformWorkloadIdentityRoleSetsType,
 			},
 			wantDocuments: []*api.PlatformWorkloadIdentityRoleSetDocument{
 				{
@@ -198,6 +210,8 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 								},
 							},
 						},
+						Name: "4.14",
+						Type: api.PlatformWorkloadIdentityRoleSetsType,
 					},
 				},
 				{
@@ -216,6 +230,8 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 								},
 							},
 						},
+						Name: "4.15",
+						Type: api.PlatformWorkloadIdentityRoleSetsType,
 					},
 				},
 			},

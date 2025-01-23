@@ -47,6 +47,8 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 							},
 						},
 					},
+					Name: "4.14",
+					Type: api.PlatformWorkloadIdentityRoleSetsType,
 				},
 				"4.15": {
 					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
@@ -70,6 +72,8 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 							},
 						},
 					},
+					Name: "4.15",
+					Type: api.PlatformWorkloadIdentityRoleSetsType,
 				},
 			},
 			apiVersion:     "2024-08-12-preview",
@@ -87,6 +91,8 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 								},
 							},
 						},
+						Name: "4.14",
+						Type: api.PlatformWorkloadIdentityRoleSetsType,
 					},
 					{
 						Properties: v20240812preview.PlatformWorkloadIdentityRoleSetProperties{
@@ -104,6 +110,8 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 								},
 							},
 						},
+						Name: "4.15",
+						Type: api.PlatformWorkloadIdentityRoleSetsType,
 					},
 				},
 			},

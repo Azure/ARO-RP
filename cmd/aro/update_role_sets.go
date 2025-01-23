@@ -101,6 +101,8 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 			ID: dbPlatformWorkloadIdentityRoleSets.NewUUID(),
 			PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
 				Properties: doc,
+				Name:       doc.OpenShiftVersion,
+				Type:       api.PlatformWorkloadIdentityRoleSetsType,
 			},
 		}
 

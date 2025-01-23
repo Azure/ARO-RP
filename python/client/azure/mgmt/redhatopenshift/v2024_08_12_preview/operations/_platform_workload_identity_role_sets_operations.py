@@ -49,47 +49,10 @@ def build_list_request(
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions")  # pylint: disable=line-too-long
+    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets")  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str'),
         "location": _SERIALIZER.url("location", location, 'str', min_length=1),
-    }
-
-    _url = _format_url_section(_url, **path_format_arguments)
-
-    # Construct parameters
-    _query_parameters = kwargs.pop("params", {})  # type: Dict[str, Any]
-    _query_parameters['api-version'] = _SERIALIZER.query("api_version", api_version, 'str')
-
-    # Construct headers
-    _header_parameters = kwargs.pop("headers", {})  # type: Dict[str, Any]
-    _header_parameters['Accept'] = _SERIALIZER.header("accept", accept, 'str')
-
-    return HttpRequest(
-        method="GET",
-        url=_url,
-        params=_query_parameters,
-        headers=_header_parameters,
-        **kwargs
-    )
-
-
-def build_get_request(
-    subscription_id,  # type: str
-    location,  # type: str
-    open_shift_version,  # type: str
-    **kwargs  # type: Any
-):
-    # type: (...) -> HttpRequest
-    api_version = kwargs.pop('api_version', "2024-08-12-preview")  # type: str
-
-    accept = "application/json"
-    # Construct URL
-    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions/{openShiftVersion}")  # pylint: disable=line-too-long
-    path_format_arguments = {
-        "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str'),
-        "location": _SERIALIZER.url("location", location, 'str', min_length=1),
-        "openShiftVersion": _SERIALIZER.url("open_shift_version", open_shift_version, 'str', max_length=63, min_length=1, pattern=r'^(\d+)\.(\d+)\.(\d+)(.*)'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -111,8 +74,8 @@ def build_get_request(
     )
 
 # fmt: on
-class OpenShiftVersionsOperations(object):
-    """OpenShiftVersionsOperations operations.
+class PlatformWorkloadIdentityRoleSetsOperations(object):
+    """PlatformWorkloadIdentityRoleSetsOperations operations.
 
     You should not instantiate this class directly. Instead, you should create a Client instance that
     instantiates it for you and attaches it as an attribute.
@@ -139,23 +102,24 @@ class OpenShiftVersionsOperations(object):
         location,  # type: str
         **kwargs  # type: Any
     ):
-        # type: (...) -> Iterable["_models.OpenShiftVersionList"]
-        """Lists all OpenShift versions available to install in the specified location.
+        # type: (...) -> Iterable["_models.PlatformWorkloadIdentityRoleSetList"]
+        """Lists a mapping of OpenShift versions to identity requirements, which include operatorName,
+        roleDefinitionName, roleDefinitionId, and serviceAccounts.
 
-        The operation returns the installable OpenShift versions as a string.
+        This operation returns a list of Platform Workload Identity Role Sets as a string.
 
         :param location: The name of the Azure region.
         :type location: str
         :keyword callable cls: A custom type or function that will be passed the direct response
-        :return: An iterator like instance of either OpenShiftVersionList or the result of
-         cls(response)
+        :return: An iterator like instance of either PlatformWorkloadIdentityRoleSetList or the result
+         of cls(response)
         :rtype:
-         ~azure.core.paging.ItemPaged[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.OpenShiftVersionList]
+         ~azure.core.paging.ItemPaged[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRoleSetList]
         :raises: ~azure.core.exceptions.HttpResponseError
         """
         api_version = kwargs.pop('api_version', "2024-08-12-preview")  # type: str
 
-        cls = kwargs.pop('cls', None)  # type: ClsType["_models.OpenShiftVersionList"]
+        cls = kwargs.pop('cls', None)  # type: ClsType["_models.PlatformWorkloadIdentityRoleSetList"]
         error_map = {
             401: ClientAuthenticationError, 404: ResourceNotFoundError, 409: ResourceExistsError
         }
@@ -186,7 +150,7 @@ class OpenShiftVersionsOperations(object):
             return request
 
         def extract_data(pipeline_response):
-            deserialized = self._deserialize("OpenShiftVersionList", pipeline_response)
+            deserialized = self._deserialize("PlatformWorkloadIdentityRoleSetList", pipeline_response)
             list_of_elem = deserialized.value
             if cls:
                 list_of_elem = cls(list_of_elem)
@@ -212,65 +176,4 @@ class OpenShiftVersionsOperations(object):
         return ItemPaged(
             get_next, extract_data
         )
-    list.metadata = {'url': "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions"}  # type: ignore
-
-    @distributed_trace
-    def get(
-        self,
-        location,  # type: str
-        open_shift_version,  # type: str
-        **kwargs  # type: Any
-    ):
-        # type: (...) -> "_models.OpenShiftVersion"
-        """Gets an available OpenShift version to install in the specified location.
-
-        This operation returns installable OpenShift version as a string.
-
-        :param location: The name of the Azure region.
-        :type location: str
-        :param open_shift_version: The desired version value of the OpenShiftVersion resource.
-        :type open_shift_version: str
-        :keyword callable cls: A custom type or function that will be passed the direct response
-        :return: OpenShiftVersion, or the result of cls(response)
-        :rtype: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.OpenShiftVersion
-        :raises: ~azure.core.exceptions.HttpResponseError
-        """
-        cls = kwargs.pop('cls', None)  # type: ClsType["_models.OpenShiftVersion"]
-        error_map = {
-            401: ClientAuthenticationError, 404: ResourceNotFoundError, 409: ResourceExistsError
-        }
-        error_map.update(kwargs.pop('error_map', {}))
-
-        api_version = kwargs.pop('api_version', "2024-08-12-preview")  # type: str
-
-        
-        request = build_get_request(
-            subscription_id=self._config.subscription_id,
-            location=location,
-            open_shift_version=open_shift_version,
-            api_version=api_version,
-            template_url=self.get.metadata['url'],
-        )
-        request = _convert_request(request)
-        request.url = self._client.format_url(request.url)
-
-        pipeline_response = self._client._pipeline.run(  # pylint: disable=protected-access
-            request,
-            stream=False,
-            **kwargs
-        )
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response, error_format=ARMErrorFormat)
-
-        deserialized = self._deserialize('OpenShiftVersion', pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-    get.metadata = {'url': "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions/{openShiftVersion}"}  # type: ignore
-
+    list.metadata = {'url': "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets"}  # type: ignore

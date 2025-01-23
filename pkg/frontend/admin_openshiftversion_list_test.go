@@ -81,6 +81,8 @@ func TestOpenShiftVersionList(t *testing.T) {
 							OpenShiftPullspec: "a:a/b",
 							InstallerPullspec: "b:b/c",
 						},
+						Name: "4.9.9",
+						Type: api.OpenShiftVersionsType,
 					},
 					{
 						Properties: admin.OpenShiftVersionProperties{
@@ -88,6 +90,8 @@ func TestOpenShiftVersionList(t *testing.T) {
 							Enabled:           true,
 							OpenShiftPullspec: "a:a/b",
 						},
+						Name: "4.10.0",
+						Type: api.OpenShiftVersionsType,
 					},
 					{
 						Properties: admin.OpenShiftVersionProperties{
@@ -96,6 +100,8 @@ func TestOpenShiftVersionList(t *testing.T) {
 							OpenShiftPullspec: "a:a/b",
 							InstallerPullspec: "b:b/c",
 						},
+						Name: "4.10.1",
+						Type: api.OpenShiftVersionsType,
 					},
 				},
 			},

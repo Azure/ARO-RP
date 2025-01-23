@@ -45,58 +45,59 @@ func NewPlatformWorkloadIdentityRoleSetClientWithBaseURI(baseURI string, subscri
 	return PlatformWorkloadIdentityRoleSetClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// List this operation returns PlatformWorkloadIdentityRoleSet as a string
+// Get this operation returns Platform Workload Identity Role Set as a string
 // Parameters:
 // location - the name of the Azure region.
-func (client PlatformWorkloadIdentityRoleSetClient) List(ctx context.Context, location string) (result PlatformWorkloadIdentityRoleSetListPage, err error) {
+// openShiftMinorVersion - the desired version value of the PlatformWorkloadIdentityRoleSet resource.
+func (client PlatformWorkloadIdentityRoleSetClient) Get(ctx context.Context, location string, openShiftMinorVersion string) (result PlatformWorkloadIdentityRoleSet, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/PlatformWorkloadIdentityRoleSetClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/PlatformWorkloadIdentityRoleSetClient.Get")
 		defer func() {
 			sc := -1
-			if result.pwirsl.Response.Response != nil {
-				sc = result.pwirsl.Response.Response.StatusCode
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: location,
-			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "List", err.Error())
+			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: openShiftMinorVersion,
+			Constraints: []validation.Constraint{{Target: "openShiftMinorVersion", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "openShiftMinorVersion", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "openShiftMinorVersion", Name: validation.Pattern, Rule: `^(\d+)\.(\d+)`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "Get", err.Error())
 	}
 
-	result.fn = client.listNextResults
-	req, err := client.ListPreparer(ctx, location)
+	req, err := client.GetPreparer(ctx, location, openShiftMinorVersion)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "List", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "Get", nil, "Failure preparing request")
 		return
 	}
 
-	resp, err := client.ListSender(req)
+	resp, err := client.GetSender(req)
 	if err != nil {
-		result.pwirsl.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "List", resp, "Failure sending request")
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "Get", resp, "Failure sending request")
 		return
 	}
 
-	result.pwirsl, err = client.ListResponder(resp)
+	result, err = client.GetResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "List", resp, "Failure responding to request")
-		return
-	}
-	if result.pwirsl.hasNextLink() && result.pwirsl.IsEmpty() {
-		err = result.NextWithContext(ctx)
+		err = autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "Get", resp, "Failure responding to request")
 		return
 	}
 
 	return
 }
 
-// ListPreparer prepares the List request.
-func (client PlatformWorkloadIdentityRoleSetClient) ListPreparer(ctx context.Context, location string) (*http.Request, error) {
+// GetPreparer prepares the Get request.
+func (client PlatformWorkloadIdentityRoleSetClient) GetPreparer(ctx context.Context, location string, openShiftMinorVersion string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
-		"location":       autorest.Encode("path", location),
-		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
+		"location":              autorest.Encode("path", location),
+		"openShiftMinorVersion": autorest.Encode("path", openShiftMinorVersion),
+		"subscriptionId":        autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
@@ -107,62 +108,25 @@ func (client PlatformWorkloadIdentityRoleSetClient) ListPreparer(ctx context.Con
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityroleset", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{openShiftMinorVersion}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
-// ListSender sends the List request. The method will close the
+// GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
-func (client PlatformWorkloadIdentityRoleSetClient) ListSender(req *http.Request) (*http.Response, error) {
+func (client PlatformWorkloadIdentityRoleSetClient) GetSender(req *http.Request) (*http.Response, error) {
 	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
-// ListResponder handles the response to the List request. The method always
+// GetResponder handles the response to the Get request. The method always
 // closes the http.Response Body.
-func (client PlatformWorkloadIdentityRoleSetClient) ListResponder(resp *http.Response) (result PlatformWorkloadIdentityRoleSetList, err error) {
+func (client PlatformWorkloadIdentityRoleSetClient) GetResponder(resp *http.Response) (result PlatformWorkloadIdentityRoleSet, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
-	return
-}
-
-// listNextResults retrieves the next set of results, if any.
-func (client PlatformWorkloadIdentityRoleSetClient) listNextResults(ctx context.Context, lastResults PlatformWorkloadIdentityRoleSetList) (result PlatformWorkloadIdentityRoleSetList, err error) {
-	req, err := lastResults.platformWorkloadIdentityRoleSetListPreparer(ctx)
-	if err != nil {
-		return result, autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "listNextResults", nil, "Failure preparing next results request")
-	}
-	if req == nil {
-		return
-	}
-	resp, err := client.ListSender(req)
-	if err != nil {
-		result.Response = autorest.Response{Response: resp}
-		return result, autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "listNextResults", resp, "Failure sending next results request")
-	}
-	result, err = client.ListResponder(resp)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "listNextResults", resp, "Failure responding to next results request")
-	}
-	return
-}
-
-// ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client PlatformWorkloadIdentityRoleSetClient) ListComplete(ctx context.Context, location string) (result PlatformWorkloadIdentityRoleSetListIterator, err error) {
-	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/PlatformWorkloadIdentityRoleSetClient.List")
-		defer func() {
-			sc := -1
-			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.Response.StatusCode
-			}
-			tracing.EndSpan(ctx, sc, err)
-		}()
-	}
-	result.page, err = client.List(ctx, location)
 	return
 }

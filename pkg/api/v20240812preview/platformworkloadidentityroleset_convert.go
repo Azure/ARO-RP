@@ -22,6 +22,8 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 			OpenShiftVersion:              s.Properties.OpenShiftVersion,
 			PlatformWorkloadIdentityRoles: make([]PlatformWorkloadIdentityRole, 0, len(s.Properties.PlatformWorkloadIdentityRoles)),
 		},
+		Name: s.Name,
+		Type: s.Type,
 	}
 
 	for _, r := range s.Properties.PlatformWorkloadIdentityRoles {
@@ -68,4 +70,6 @@ func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, o
 		}
 		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
+	out.Name = new.Properties.OpenShiftVersion
+	out.Type = api.PlatformWorkloadIdentityRoleSetsType
 }

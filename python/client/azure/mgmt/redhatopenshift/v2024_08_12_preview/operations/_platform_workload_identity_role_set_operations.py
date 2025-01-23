@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING
 from msrest import Serializer
 
 from azure.core.exceptions import ClientAuthenticationError, HttpResponseError, ResourceExistsError, ResourceNotFoundError, map_error
-from azure.core.paging import ItemPaged
 from azure.core.pipeline import PipelineResponse
 from azure.core.pipeline.transport import HttpResponse
 from azure.core.rest import HttpRequest
@@ -31,7 +30,7 @@ from .._vendor import _convert_request, _format_url_section
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
-    from typing import Any, Callable, Dict, Iterable, Optional, TypeVar
+    from typing import Any, Callable, Dict, Optional, TypeVar
     T = TypeVar('T')
     ClsType = Optional[Callable[[PipelineResponse[HttpRequest, HttpResponse], T, Dict[str, Any]], Any]]
 
@@ -39,9 +38,10 @@ _SERIALIZER = Serializer()
 _SERIALIZER.client_side_validation = False
 # fmt: off
 
-def build_list_request(
+def build_get_request(
     subscription_id,  # type: str
     location,  # type: str
+    open_shift_minor_version,  # type: str
     **kwargs  # type: Any
 ):
     # type: (...) -> HttpRequest
@@ -49,10 +49,11 @@ def build_list_request(
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityroleset")  # pylint: disable=line-too-long
+    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{openShiftMinorVersion}")  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str'),
         "location": _SERIALIZER.url("location", location, 'str', min_length=1),
+        "openShiftMinorVersion": _SERIALIZER.url("open_shift_minor_version", open_shift_minor_version, 'str', max_length=63, min_length=1, pattern=r'^(\d+)\.(\d+)'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -97,83 +98,64 @@ class PlatformWorkloadIdentityRoleSetOperations(object):
         self._config = config
 
     @distributed_trace
-    def list(
+    def get(
         self,
         location,  # type: str
+        open_shift_minor_version,  # type: str
         **kwargs  # type: Any
     ):
-        # type: (...) -> Iterable["_models.PlatformWorkloadIdentityRoleSetList"]
-        """Lists a mapping of OpenShift versions to identity requirements, which include operatorName,
+        # type: (...) -> "_models.PlatformWorkloadIdentityRoleSet"
+        """Gets a mapping of an OpenShift version to identity requirements, which includes operatorName,
         roleDefinitionName, roleDefinitionId, and serviceAccounts.
 
-        This operation returns PlatformWorkloadIdentityRoleSet as a string.
+        This operation returns Platform Workload Identity Role Set as a string.
 
         :param location: The name of the Azure region.
         :type location: str
+        :param open_shift_minor_version: The desired version value of the
+         PlatformWorkloadIdentityRoleSet resource.
+        :type open_shift_minor_version: str
         :keyword callable cls: A custom type or function that will be passed the direct response
-        :return: An iterator like instance of either PlatformWorkloadIdentityRoleSetList or the result
-         of cls(response)
-        :rtype:
-         ~azure.core.paging.ItemPaged[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRoleSetList]
+        :return: PlatformWorkloadIdentityRoleSet, or the result of cls(response)
+        :rtype: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityRoleSet
         :raises: ~azure.core.exceptions.HttpResponseError
         """
-        api_version = kwargs.pop('api_version', "2024-08-12-preview")  # type: str
-
-        cls = kwargs.pop('cls', None)  # type: ClsType["_models.PlatformWorkloadIdentityRoleSetList"]
+        cls = kwargs.pop('cls', None)  # type: ClsType["_models.PlatformWorkloadIdentityRoleSet"]
         error_map = {
             401: ClientAuthenticationError, 404: ResourceNotFoundError, 409: ResourceExistsError
         }
         error_map.update(kwargs.pop('error_map', {}))
-        def prepare_request(next_link=None):
-            if not next_link:
-                
-                request = build_list_request(
-                    subscription_id=self._config.subscription_id,
-                    location=location,
-                    api_version=api_version,
-                    template_url=self.list.metadata['url'],
-                )
-                request = _convert_request(request)
-                request.url = self._client.format_url(request.url)
 
-            else:
-                
-                request = build_list_request(
-                    subscription_id=self._config.subscription_id,
-                    location=location,
-                    api_version=api_version,
-                    template_url=next_link,
-                )
-                request = _convert_request(request)
-                request.url = self._client.format_url(request.url)
-                request.method = "GET"
-            return request
+        api_version = kwargs.pop('api_version', "2024-08-12-preview")  # type: str
 
-        def extract_data(pipeline_response):
-            deserialized = self._deserialize("PlatformWorkloadIdentityRoleSetList", pipeline_response)
-            list_of_elem = deserialized.value
-            if cls:
-                list_of_elem = cls(list_of_elem)
-            return deserialized.next_link or None, iter(list_of_elem)
-
-        def get_next(next_link=None):
-            request = prepare_request(next_link)
-
-            pipeline_response = self._client._pipeline.run(  # pylint: disable=protected-access
-                request,
-                stream=False,
-                **kwargs
-            )
-            response = pipeline_response.http_response
-
-            if response.status_code not in [200]:
-                map_error(status_code=response.status_code, response=response, error_map=error_map)
-                raise HttpResponseError(response=response, error_format=ARMErrorFormat)
-
-            return pipeline_response
-
-
-        return ItemPaged(
-            get_next, extract_data
+        
+        request = build_get_request(
+            subscription_id=self._config.subscription_id,
+            location=location,
+            open_shift_minor_version=open_shift_minor_version,
+            api_version=api_version,
+            template_url=self.get.metadata['url'],
         )
-    list.metadata = {'url': "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformworkloadidentityroleset"}  # type: ignore
+        request = _convert_request(request)
+        request.url = self._client.format_url(request.url)
+
+        pipeline_response = self._client._pipeline.run(  # pylint: disable=protected-access
+            request,
+            stream=False,
+            **kwargs
+        )
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response, error_format=ARMErrorFormat)
+
+        deserialized = self._deserialize('PlatformWorkloadIdentityRoleSet', pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    get.metadata = {'url': "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{openShiftMinorVersion}"}  # type: ignore
+
