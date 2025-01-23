@@ -88,7 +88,22 @@ func (m *manager) getZerothSteps() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-		steps.Action(m.fixupClusterSPObjectID),
+	}
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		// Since API converters rebuild the struct during PUT/PATCH, we need to repopulate the tenant ID
+		// in the cluster doc for MSI stuff to work.
+		managedIdentitySteps := []steps.Step{
+			steps.Action(m.fixupClusterMsiTenantID),
+			steps.Action(m.ensureClusterMsiCertificate),
+			steps.Action(m.initializeClusterMsiClients),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+		}
+
+		bootstrap = append(bootstrap, managedIdentitySteps...)
+	} else {
+		bootstrap = append(bootstrap, steps.Action(m.fixupClusterSPObjectID))
 	}
 
 	// Generic fix-up actions that are fairly safe to always take, and don't require a running cluster

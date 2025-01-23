@@ -451,10 +451,10 @@ type PlatformWorkloadIdentity struct {
 // UserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
 type UserAssignedIdentity struct {
 	// The ClientID of the ClusterUserAssignedIdentity resource
-	ClientID string `json:"clientId,omitempty"`
+	ClientID string `json:"clientId,omitempty" swagger:"readOnly"`
 
 	// The PrincipalID of the ClusterUserAssignedIdentity resource
-	PrincipalID string `json:"principalId,omitempty"`
+	PrincipalID string `json:"principalId,omitempty" swagger:"readOnly"`
 }
 
 // The ManagedServiceIdentity type.
