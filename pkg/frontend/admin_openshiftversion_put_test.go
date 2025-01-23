@@ -50,6 +50,8 @@ func TestOpenShiftVersionPut(t *testing.T) {
 					OpenShiftPullspec: "c:c/d",
 					InstallerPullspec: "d:d/e",
 				},
+				Name: "4.10.0",
+				Type: api.OpenShiftVersionsType,
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &admin.OpenShiftVersion{
@@ -59,6 +61,8 @@ func TestOpenShiftVersionPut(t *testing.T) {
 					OpenShiftPullspec: "c:c/d",
 					InstallerPullspec: "d:d/e",
 				},
+				Name: "4.10.0",
+				Type: api.OpenShiftVersionsType,
 			},
 			wantDocuments: []*api.OpenShiftVersionDocument{
 				{
@@ -70,6 +74,62 @@ func TestOpenShiftVersionPut(t *testing.T) {
 							OpenShiftPullspec: "c:c/d",
 							InstallerPullspec: "d:d/e",
 						},
+						Name: "4.10.0",
+						Type: api.OpenShiftVersionsType,
+					},
+				},
+			},
+		},
+		{
+			name: "updating known version with name and type present",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftVersionDocuments(
+					&api.OpenShiftVersionDocument{
+						OpenShiftVersion: &api.OpenShiftVersion{
+							Properties: api.OpenShiftVersionProperties{
+								Version:           "4.15.0",
+								Enabled:           true,
+								OpenShiftPullspec: "a:a/b",
+							},
+							Name: "4.15.0",
+							Type: api.OpenShiftVersionsType,
+						},
+					},
+				)
+			},
+			body: &admin.OpenShiftVersion{
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           "4.15.0",
+					Enabled:           false,
+					OpenShiftPullspec: "c:c/d",
+					InstallerPullspec: "d:d/e",
+				},
+				Name: "4.15.0",
+				Type: api.OpenShiftVersionsType,
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: &admin.OpenShiftVersion{
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           "4.15.0",
+					Enabled:           false,
+					OpenShiftPullspec: "c:c/d",
+					InstallerPullspec: "d:d/e",
+				},
+				Name: "4.15.0",
+				Type: api.OpenShiftVersionsType,
+			},
+			wantDocuments: []*api.OpenShiftVersionDocument{
+				{
+					ID: "07070707-0707-0707-0707-070707070001",
+					OpenShiftVersion: &api.OpenShiftVersion{
+						Properties: api.OpenShiftVersionProperties{
+							Version:           "4.15.0",
+							Enabled:           false,
+							OpenShiftPullspec: "c:c/d",
+							InstallerPullspec: "d:d/e",
+						},
+						Name: "4.15.0",
+						Type: api.OpenShiftVersionsType,
 					},
 				},
 			},
@@ -105,6 +165,8 @@ func TestOpenShiftVersionPut(t *testing.T) {
 					OpenShiftPullspec: "f:f/g",
 					InstallerPullspec: "g:g/h",
 				},
+				Name: "4.10.1",
+				Type: api.OpenShiftVersionsType,
 			},
 			wantDocuments: []*api.OpenShiftVersionDocument{
 				{
@@ -126,6 +188,8 @@ func TestOpenShiftVersionPut(t *testing.T) {
 							OpenShiftPullspec: "f:f/g",
 							InstallerPullspec: "g:g/h",
 						},
+						Name: "4.10.1",
+						Type: api.OpenShiftVersionsType,
 					},
 				},
 			},

@@ -45,7 +45,93 @@ func NewOpenShiftVersionsClientWithBaseURI(baseURI string, subscriptionID uuid.U
 	return OpenShiftVersionsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// List the operation returns the installable OpenShift versions as strings.
+// Get this operation returns installable OpenShift version as a string.
+// Parameters:
+// location - the name of the Azure region.
+// openShiftVersion - the desired version value of the OpenShiftVersion resource.
+func (client OpenShiftVersionsClient) Get(ctx context.Context, location string, openShiftVersion string) (result OpenShiftVersion, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftVersionsClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: location,
+			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: openShiftVersion,
+			Constraints: []validation.Constraint{{Target: "openShiftVersion", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "openShiftVersion", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "openShiftVersion", Name: validation.Pattern, Rule: `^(\d+)\.(\d+)\.(\d+)(.*)`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "Get", err.Error())
+	}
+
+	req, err := client.GetPreparer(ctx, location, openShiftVersion)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "Get", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.GetSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "Get", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.GetResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "Get", resp, "Failure responding to request")
+		return
+	}
+
+	return
+}
+
+// GetPreparer prepares the Get request.
+func (client OpenShiftVersionsClient) GetPreparer(ctx context.Context, location string, openShiftVersion string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"location":         autorest.Encode("path", location),
+		"openShiftVersion": autorest.Encode("path", openShiftVersion),
+		"subscriptionId":   autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2024-08-12-preview"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsGet(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions/{openShiftVersion}", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// GetSender sends the Get request. The method will close the
+// http.Response Body if it receives an error.
+func (client OpenShiftVersionsClient) GetSender(req *http.Request) (*http.Response, error) {
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
+}
+
+// GetResponder handles the response to the Get request. The method always
+// closes the http.Response Body.
+func (client OpenShiftVersionsClient) GetResponder(resp *http.Response) (result OpenShiftVersion, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// List the operation returns the installable OpenShift versions as a string.
 // Parameters:
 // location - the name of the Azure region.
 func (client OpenShiftVersionsClient) List(ctx context.Context, location string) (result OpenShiftVersionListPage, err error) {
@@ -107,7 +193,7 @@ func (client OpenShiftVersionsClient) ListPreparer(ctx context.Context, location
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }

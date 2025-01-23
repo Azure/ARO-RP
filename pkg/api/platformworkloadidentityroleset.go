@@ -35,3 +35,5 @@ type SecretLocation struct {
 	Namespace string `json:"namespace,omitempty"`
 	Name      string `json:"name,omitempty"`
 }
+
+const PlatformWorkloadIdentityRoleSetsType = "Microsoft.RedHatOpenShift/PlatformWorkloadIdentityRoleSet"

@@ -70,6 +70,16 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							Name:      "childResourceName",
 							Parameter: "childResourceName",
 						})
+					case "openShiftVersion":
+						example.Parameters = append(example.Parameters, NameParameter{
+							Name:      "openShiftVersion",
+							Parameter: "4.14.40",
+						})
+					case "openShiftMinorVersion":
+						example.Parameters = append(example.Parameters, NameParameter{
+							Name:      "openShiftMinorVersion",
+							Parameter: "4.14",
+						})
 					case "parameters":
 						switch param.Schema.Ref {
 						case "#/definitions/OpenShiftCluster":
@@ -172,8 +182,12 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 						body = g.exampleOpenShiftClusterListResponse()
 					case "#/definitions/OperationList":
 						body = g.exampleOperationListResponse()
+					case "#/definitions/OpenShiftVersion":
+						body = g.exampleOpenShiftVersionResponse()
 					case "#/definitions/OpenShiftVersionList":
 						body = g.exampleOpenShiftVersionListResponse()
+					case "#/definitions/PlatformWorkloadIdentityRoleSet":
+						body = g.examplePlatformWorkloadIdentityRoleSetResponse()
 					case "#/definitions/PlatformWorkloadIdentityRoleSetList":
 						body = g.examplePlatformWorkloadIdentityRoleSetListResponse()
 					}

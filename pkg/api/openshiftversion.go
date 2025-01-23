@@ -27,3 +27,5 @@ type OpenShiftVersionProperties struct {
 	Enabled           bool   `json:"enabled,omitempty"`
 	Default           bool   `json:"default,omitempty"`
 }
+
+const OpenShiftVersionsType = "Microsoft.RedHatOpenShift/OpenShiftVersion"

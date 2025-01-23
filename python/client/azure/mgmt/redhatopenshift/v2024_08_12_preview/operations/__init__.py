@@ -16,20 +16,14 @@
 
 from ._operations import Operations
 from ._open_shift_versions_operations import OpenShiftVersionsOperations
+from ._platform_workload_identity_role_sets_operations import PlatformWorkloadIdentityRoleSetsOperations
 from ._platform_workload_identity_role_set_operations import PlatformWorkloadIdentityRoleSetOperations
 from ._open_shift_clusters_operations import OpenShiftClustersOperations
-from ._machine_pools_operations import MachinePoolsOperations
-from ._secrets_operations import SecretsOperations
-from ._sync_identity_providers_operations import SyncIdentityProvidersOperations
-from ._sync_sets_operations import SyncSetsOperations
 
 __all__ = [
     'Operations',
     'OpenShiftVersionsOperations',
+    'PlatformWorkloadIdentityRoleSetsOperations',
     'PlatformWorkloadIdentityRoleSetOperations',
     'OpenShiftClustersOperations',
-    'MachinePoolsOperations',
-    'SecretsOperations',
-    'SyncIdentityProvidersOperations',
-    'SyncSetsOperations',
 ]

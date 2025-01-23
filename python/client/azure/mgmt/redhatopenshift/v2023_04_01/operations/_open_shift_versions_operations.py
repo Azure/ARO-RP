@@ -49,7 +49,7 @@ def build_list_request(
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions")  # pylint: disable=line-too-long
+    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions")  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "location": _SERIALIZER.url("location", location, 'str', min_length=1),
@@ -105,7 +105,7 @@ class OpenShiftVersionsOperations(object):
         # type: (...) -> Iterable["_models.OpenShiftVersionList"]
         """Lists all OpenShift versions available to install in the specified location.
 
-        The operation returns the installable OpenShift versions as strings.
+        The operation returns the installable OpenShift versions as a string.
 
         :param location: The name of Azure region.
         :type location: str
@@ -175,4 +175,4 @@ class OpenShiftVersionsOperations(object):
         return ItemPaged(
             get_next, extract_data
         )
-    list.metadata = {'url': "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions"}  # type: ignore
+    list.metadata = {'url': "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions"}  # type: ignore

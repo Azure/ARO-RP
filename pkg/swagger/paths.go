@@ -42,6 +42,24 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 		s = append(s, Reference{
 			Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter",
 		})
+		versionParameter := Parameter{
+			In:          "path",
+			Description: "The desired version value of the " + friendlyName + " resource.",
+			Required:    true,
+			Type:        "string",
+			MinLength:   1,
+			MaxLength:   63,
+		}
+		switch typ {
+		case "OpenShiftVersion":
+			versionParameter.Name = "openShiftVersion"
+			versionParameter.Pattern = `^(\d+)\.(\d+)\.(\d+)(.*)`
+			s = append(s, versionParameter)
+		case "PlatformWorkloadIdentityRoleSet":
+			versionParameter.Name = "openShiftMinorVersion"
+			versionParameter.Pattern = `^(\d+)\.(\d+)`
+			s = append(s, versionParameter)
+		}
 		return
 	}
 
@@ -211,7 +229,7 @@ func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespa
 			},
 		},
 	}
-	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/"+childResourceType+"/{childResourceName}"] = &PathItem{
+	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/"+childResourceType+"s/{childResourceName}"] = &PathItem{
 		Get: &Operation{
 			Tags:        []string{titleCaser.String(childResourceType) + "s"},
 			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",

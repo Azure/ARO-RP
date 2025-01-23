@@ -54,12 +54,15 @@ type generator struct {
 	exampleOpenShiftClusterAdminKubeconfigResponse     func() interface{}
 	exampleOpenShiftClusterListResponse                func() interface{}
 	exampleOpenShiftVersionListResponse                func() interface{}
+	exampleOpenShiftVersionResponse                    func() interface{}
 	examplePlatformWorkloadIdentityRoleSetListResponse func() interface{}
+	examplePlatformWorkloadIdentityRoleSetResponse     func() interface{}
 	exampleOperationListResponse                       func() interface{}
 
 	systemData             bool
 	kubeConfig             bool
 	installVersionList     bool
+	installVersionGet      bool
 	clusterManager         bool
 	workerProfilesStatus   bool
 	roleSetList            bool
@@ -317,7 +320,9 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterListResponse:                v20240812preview.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse:     v20240812preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOpenShiftVersionListResponse:                v20240812preview.ExampleOpenShiftVersionListResponse,
+		exampleOpenShiftVersionResponse:                    v20240812preview.ExampleOpenShiftVersionResponse,
 		examplePlatformWorkloadIdentityRoleSetListResponse: v20240812preview.ExamplePlatformWorkloadIdentityRoleSetListResponse,
+		examplePlatformWorkloadIdentityRoleSetResponse:     v20240812preview.ExamplePlatformWorkloadIdentityRoleSetResponse,
 		exampleOperationListResponse:                       api.ExampleOperationListResponse,
 
 		xmsEnum:                []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType", "ManagedServiceIdentityType"},
@@ -326,8 +331,8 @@ var apis = map[string]*generator{
 		commonTypesVersion:     "v6",
 		managedServiceIdentity: true,
 		systemData:             true,
-		clusterManager:         true,
 		installVersionList:     true,
+		installVersionGet:      true,
 		kubeConfig:             true,
 		workerProfilesStatus:   true,
 		roleSetList:            true,
