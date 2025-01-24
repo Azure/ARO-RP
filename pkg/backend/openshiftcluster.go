@@ -204,7 +204,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		// TODO: Provide better communication between RP and Monitor
 		time.Sleep(time.Until(t.Add(time.Second * time.Duration(monitorDeleteWaitTimeSec))))
 		err := ocb.dbOpenShiftClusters.Delete(ctx, doc)
-		ocb.asyncOperationResultLog(log, doc.OpenShiftCluster.Properties.ProvisioningState, err)
+		ocb.asyncOperationResultLog(log, doc, doc.OpenShiftCluster.Properties.ProvisioningState, err)
 		ocb.emitMetrics(log, doc, api.ProvisioningStateDeleting, api.ProvisioningStateFailed, err)
 		ocb.emitProvisioningMetrics(doc, api.ProvisioningStateFailed)
 		return err
@@ -317,7 +317,7 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		if err != nil {
 			return err
 		}
-		ocb.asyncOperationResultLog(log, initialProvisioningState, backendErr)
+		ocb.asyncOperationResultLog(log, doc, initialProvisioningState, backendErr)
 		ocb.emitMetrics(log, doc, operationType, provisioningState, backendErr)
 		ocb.emitProvisioningMetrics(doc, provisioningState)
 	}
@@ -341,11 +341,19 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 	return err
 }
 
-func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, initialProvisioningState api.ProvisioningState, backendErr error) {
+func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, doc *api.OpenShiftClusterDocument, initialProvisioningState api.ProvisioningState, backendErr error) {
+	clusterIdentity := unknown
+	if doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile != nil {
+		clusterIdentity = clusterIdentityManagedIdMetricName
+	} else if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+		clusterIdentity = clusterIdentityServicePrincipalMetricName
+	}
+
 	log = log.WithFields(logrus.Fields{
-		"LOGKIND":       "asyncqos",
-		"resultType":    utillog.SuccessResultType,
-		"operationType": initialProvisioningState.String(),
+		"LOGKIND":         "asyncqos",
+		"resultType":      utillog.SuccessResultType,
+		"operationType":   initialProvisioningState.String(),
+		"clusterIdentity": clusterIdentity,
 	})
 
 	if backendErr == nil {
