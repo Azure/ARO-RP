@@ -1,0 +1,7 @@
+[allowlist]
+  description = "Global Allowlist"
+
+  regexes = [
+    # Ignore lines starting with script
+    '''^\s*\"script\":'''
+  ]
