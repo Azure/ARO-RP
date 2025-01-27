@@ -497,9 +497,10 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       gomega.Equal("asyncqos"),
-					"operationType": gomega.Equal("Succeeded"),
-					"resultType":    gomega.Equal(utillog.SuccessResultType),
+					"LOGKIND":         gomega.Equal("asyncqos"),
+					"operationType":   gomega.Equal("Succeeded"),
+					"resultType":      gomega.Equal(utillog.SuccessResultType),
+					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
 				},
 			},
 		},
@@ -516,10 +517,11 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       gomega.Equal("asyncqos"),
-					"operationType": gomega.Equal("Failed"),
-					"resultType":    gomega.Equal(utillog.UserErrorResultType),
-					"errorDetails":  gomega.ContainSubstring("This is a user error result type"),
+					"LOGKIND":         gomega.Equal("asyncqos"),
+					"operationType":   gomega.Equal("Failed"),
+					"resultType":      gomega.Equal(utillog.UserErrorResultType),
+					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
+					"errorDetails":    gomega.ContainSubstring("This is a user error result type"),
 				}},
 		},
 		{
@@ -535,10 +537,11 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       gomega.Equal("asyncqos"),
-					"operationType": gomega.Equal("Failed"),
-					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
-					"errorDetails":  gomega.ContainSubstring("This is a server error result type"),
+					"LOGKIND":         gomega.Equal("asyncqos"),
+					"operationType":   gomega.Equal("Failed"),
+					"resultType":      gomega.Equal(utillog.ServerErrorResultType),
+					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
+					"errorDetails":    gomega.ContainSubstring("This is a server error result type"),
 				}},
 		},
 		{
@@ -552,9 +555,10 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			),
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       gomega.Equal("asyncqos"),
-					"operationType": gomega.Equal("Failed"),
-					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
+					"LOGKIND":         gomega.Equal("asyncqos"),
+					"operationType":   gomega.Equal("Failed"),
+					"resultType":      gomega.Equal(utillog.ServerErrorResultType),
+					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
 				},
 			},
 		},
@@ -569,9 +573,10 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			),
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       gomega.Equal("asyncqos"),
-					"operationType": gomega.Equal("Failed"),
-					"resultType":    gomega.Equal(utillog.UserErrorResultType),
+					"LOGKIND":         gomega.Equal("asyncqos"),
+					"operationType":   gomega.Equal("Failed"),
+					"resultType":      gomega.Equal(utillog.UserErrorResultType),
+					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
 				},
 			},
 		},
@@ -585,9 +590,10 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			),
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       gomega.Equal("asyncqos"),
-					"operationType": gomega.Equal("Failed"),
-					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
+					"LOGKIND":         gomega.Equal("asyncqos"),
+					"operationType":   gomega.Equal("Failed"),
+					"resultType":      gomega.Equal(utillog.ServerErrorResultType),
+					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
 				},
 			},
 		},
@@ -599,9 +605,10 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			),
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       gomega.Equal("asyncqos"),
-					"operationType": gomega.Equal("Failed"),
-					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
+					"LOGKIND":         gomega.Equal("asyncqos"),
+					"operationType":   gomega.Equal("Failed"),
+					"resultType":      gomega.Equal(utillog.ServerErrorResultType),
+					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
 				},
 			},
 		},
@@ -613,18 +620,20 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			),
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       gomega.Equal("asyncqos"),
-					"operationType": gomega.Equal("Failed"),
-					"resultType":    gomega.Equal(utillog.UserErrorResultType),
+					"LOGKIND":         gomega.Equal("asyncqos"),
+					"operationType":   gomega.Equal("Failed"),
+					"resultType":      gomega.Equal(utillog.UserErrorResultType),
+					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
 				},
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			h, log := testlog.New()
+			doc := api.ExampleOpenShiftClusterDocument()
 
 			ocb := &openShiftClusterBackend{}
-			ocb.asyncOperationResultLog(log, tt.initialProvisioningState, tt.backendErr)
+			ocb.asyncOperationResultLog(log, doc, tt.initialProvisioningState, tt.backendErr)
 			err := testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {
 				t.Error(err)
