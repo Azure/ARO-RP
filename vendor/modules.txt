@@ -1195,7 +1195,7 @@ github.com/openshift/library-go/pkg/operator/resource/resourcehelper
 github.com/openshift/library-go/pkg/operator/resource/resourcemerge
 github.com/openshift/library-go/pkg/operator/status
 github.com/openshift/library-go/pkg/operator/v1helpers
-# github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
+# github.com/openshift/machine-config-operator v0.0.0-00010101000000-000000000000 => github.com/openshift/machine-config-operator v0.0.1-0.20230908201248-46b93e64dea6
 ## explicit; go 1.17
 github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
 github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
@@ -2334,7 +2334,7 @@ tags.cncf.io/container-device-interface/pkg/parser
 # github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 # github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
 # github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
-# github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
+# github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20230908201248-46b93e64dea6
 # go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 # google.golang.org/grpc => google.golang.org/grpc v1.56.3
 # github.com/emicklei/go-restful v2.15.0+incompatible => github.com/emicklei/go-restful v2.16.0+incompatible

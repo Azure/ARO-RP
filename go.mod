@@ -64,7 +64,7 @@ require (
 	github.com/openshift/cloud-credential-operator v0.0.0-20240910012137-a0245d57d1e6
 	github.com/openshift/hive/apis v0.0.0-20241211214914-af54e2fbd990
 	github.com/openshift/library-go v0.0.0-20230620084201-504ca4bd5a83
-	github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d
+	github.com/openshift/machine-config-operator v0.0.0-00010101000000-000000000000
 	github.com/pires/go-proxyproto v0.6.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.50.0
@@ -1593,7 +1593,7 @@ replace (
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
 	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
-	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
+	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20230908201248-46b93e64dea6
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )
