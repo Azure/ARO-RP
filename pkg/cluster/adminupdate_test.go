@@ -49,6 +49,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action initializeClusterMsiClients]",
 		"[AuthorizationRetryingAction clusterIdentityIDs]",
 		"[AuthorizationRetryingAction platformWorkloadIdentityIDs]",
+		"[AuthorizationRetryingAction persistPlatformWorkloadIdentityIDs]",
 		"[Action fixInfraID]",
 	}
 

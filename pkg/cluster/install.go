@@ -99,6 +99,7 @@ func (m *manager) getZerothSteps() []steps.Step {
 			steps.Action(m.initializeClusterMsiClients),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
 		}
 
 		bootstrap = append(bootstrap, managedIdentitySteps...)
