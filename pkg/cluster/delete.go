@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -44,7 +44,7 @@ import (
 func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	nic, err := m.interfaces.Get(ctx, resourceGroup, nicName, "")
+	nic, err := m.armInterfaces.Get(ctx, resourceGroup, nicName, nil)
 
 	// nic is already gone which typically happens on PLS / PE nics
 	// as they are deleted in a different step
@@ -56,9 +56,9 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 		return err
 	}
 
-	if nic.ProvisioningState == mgmtnetwork.Failed {
+	if *nic.Properties.ProvisioningState == armnetwork.ProvisioningStateFailed {
 		m.log.Printf("NIC '%s' is in a Failed provisioning state, attempting to reconcile prior to deletion.", *nic.ID)
-		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic)
+		err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic.Interface, nil)
 		if err != nil {
 			return err
 		}
