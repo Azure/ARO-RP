@@ -80,7 +80,7 @@ require (
 	go.uber.org/mock v0.4.0
 	golang.org/x/crypto v0.31.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
-	golang.org/x/net v0.30.0
+	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/text v0.21.0
