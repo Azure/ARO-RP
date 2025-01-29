@@ -1,5 +1,5 @@
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.21.13-1 AS builder
+FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
 ARG GATEKEEPER_VERSION
 ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
 

@@ -65,7 +65,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    PULL_SECRET=...
    ```
 
-1. Install [Go 1.21](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.22](https://golang.org/dl) or later, if you haven't already.
 
 1. Install the [Azure
    CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you

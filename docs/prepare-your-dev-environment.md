@@ -21,7 +21,7 @@ That's it! You can jump to [Getting Started](#getting-started) below to grab the
 
 If you'd like to run an RP instance as a golang process (via `go run`) locally - you'll need additional tools:
 
-1. Install [Go 1.21](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.22](https://golang.org/dl) or later, if you haven't already.
    1. After downloading follow the [Install instructions](https://go.dev/doc/install), replacing the tar archive with your download.
    1. Append `export PATH="${PATH}:/usr/local/go/bin"` to your shell's profile file.
 
