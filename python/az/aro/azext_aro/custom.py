@@ -3,7 +3,6 @@
 
 import collections
 import random
-import os
 from base64 import b64decode
 import textwrap
 
@@ -52,10 +51,6 @@ logger = get_logger(__name__)
 FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
 
 
-def rp_mode_development():
-    return os.environ.get('RP_MODE', '').lower() == 'development'
-
-
 def aro_create(cmd,  # pylint: disable=too-many-locals
                client,
                resource_group_name,
@@ -91,13 +86,12 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                tags=None,
                version=None,
                no_wait=False):
-    if not rp_mode_development():
-        resource_client = get_mgmt_service_client(
-            cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
-        provider = resource_client.providers.get('Microsoft.RedHatOpenShift')
-        if provider.registration_state != 'Registered':
-            raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
-                                    'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
+    resource_client = get_mgmt_service_client(
+        cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
+    provider = resource_client.providers.get('Microsoft.RedHatOpenShift')
+    if provider.registration_state != 'Registered':
+        raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
+                                'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
 
     validate_subnets(master_subnet, worker_subnet)
 
@@ -138,10 +132,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         if not rp_client_sp_id:
             raise ResourceNotFoundError("RP service principal not found.")
 
-    if rp_mode_development():
-        worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
-    else:
-        worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
+    worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
 
     if apiserver_visibility is not None:
         apiserver_visibility = apiserver_visibility.capitalize()
@@ -679,9 +670,6 @@ def cluster_application_update(cli_ctx,
 
 
 def resolve_rp_client_id():
-    if rp_mode_development():
-        return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
-
     return FP_CLIENT_ID
 
 
