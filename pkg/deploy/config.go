@@ -63,6 +63,7 @@ type Configuration struct {
 	ExtraServiceKeyvaultAccessPolicies []interface{}          `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
 	FluentbitImage                     *string                `json:"fluentbitImage,omitempty" value:"required"`
 	FPClientID                         *string                `json:"fpClientId,omitempty" value:"required"`
+	FPTenantID                         *string                `json:"fpTenantId,omitempty" value:"required"`
 	FPServerCertCommonName             *string                `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID               *string                `json:"fpServicePrincipalId,omitempty" value:"required"`
 	GatewayDomains                     []string               `json:"gatewayDomains,omitempty"`
@@ -78,6 +79,8 @@ type Configuration struct {
 	KeyvaultPrefix                     *string                `json:"keyvaultPrefix,omitempty" value:"required"`
 	MDMFrontendURL                     *string                `json:"mdmFrontendUrl,omitempty" value:"required"`
 	MDSDEnvironment                    *string                `json:"mdsdEnvironment,omitempty" value:"required"`
+	MiseValidAudiences                 []string               `json:"miseValidAudiences,omitempty"`
+	MiseValidAppIDs                    []string               `json:"miseValidAppIDs,omitempty"`
 	NonZonalRegions                    []string               `json:"nonZonalRegions,omitempty"`
 	PortalAccessGroupIDs               []string               `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                     *string                `json:"portalClientId,omitempty" value:"required"`

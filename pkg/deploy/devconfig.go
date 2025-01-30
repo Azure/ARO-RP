@@ -150,6 +150,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			},
 			FluentbitImage:       ptr.To(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
 			FPClientID:           ptr.To(os.Getenv("AZURE_FP_CLIENT_ID")),
+			FPTenantID:           ptr.To(os.Getenv("AZURE_TENANT_ID")),
 			FPServicePrincipalID: ptr.To(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
 			GatewayDomains: []string{
 				"eastus-shared.ppe.warm.ingest.monitor.core.windows.net",
@@ -172,6 +173,13 @@ func DevConfig(_env env.Core) (*Config, error) {
 			MDMFrontendURL:              ptr.To("https://global.ppe.microsoftmetrics.com/"),
 			MDSDEnvironment:             ptr.To(version.DevGenevaLoggingEnvironment),
 			MsiRpEndpoint:               ptr.To("https://iamaplaceholder.com"),
+			MiseValidAudiences: []string{
+				"https://management.core.windows.net/",
+				_env.Environment().ResourceManagerEndpoint,
+			},
+			MiseValidAppIDs: []string{
+				"2187cde1-7e28-4645-9104-19edfa500053",
+			},
 			PortalAccessGroupIDs: []string{
 				os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"),
 			},
@@ -189,6 +197,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"EnableOCMEndpoints",
 				"RequireOIDCStorageWebEndpoint",
 				"UseMockMsiRp",
+				"EnableMISE",
 			},
 			// TODO update this to support FF
 			RPImagePrefix:                     ptr.To(azureUniquePrefix + "aro.azurecr.io/aro"),

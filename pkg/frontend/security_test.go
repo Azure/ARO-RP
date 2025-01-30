@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
+	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -50,6 +51,7 @@ func TestSecurity(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	log := logrus.NewEntry(logrus.StandardLogger())
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
@@ -64,9 +66,12 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validclientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
+	_env.EXPECT().MISEAuthorizer().AnyTimes().Return(miseadapter.NewFakeAuthorizer("http://aro-mise-test:5000", log, http.DefaultClient))
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
 	_env.EXPECT().FeatureIsSet(env.FeatureEnableOCMEndpoints).AnyTimes().Return(true)
+	_env.EXPECT().FeatureIsSet(env.FeatureEnableMISE).AnyTimes().Return(false)
+	_env.EXPECT().FeatureIsSet(env.FeatureEnforceMISE).AnyTimes().Return(false)
 
 	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", nil, nil, false, true)
 	if err != nil {
@@ -76,7 +81,6 @@ func TestSecurity(t *testing.T) {
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
 
-	log := logrus.NewEntry(logrus.StandardLogger())
 	auditHook, auditEntry := testlog.NewAudit()
 	f, err := NewFrontend(ctx, auditEntry, log, _env, database.NewDBGroup(), api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil)
 	if err != nil {
