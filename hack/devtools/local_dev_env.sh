@@ -8,9 +8,11 @@ set -o pipefail
 # The steps here are the ones defined in docs/deploy-development-rp.md
 # We recommend to use this script after you understand the steps of the process, not before.
 
-set -x
-PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$(cat "$(dirname "$0")/platform_workload_identity_role_sets.json")"
-set +x
+if [[ "${BASH_SOURCE[0]}" == "" ]]; then
+  PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$(cat "$(dirname "$0")/platform_workload_identity_role_sets.json")"
+else
+  PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$(cat "$(dirname -- "${BASH_SOURCE[0]}")/platform_workload_identity_role_sets.json")"
+fi
 
 build_development_az_aro_extension() {
     echo "INFO: Building development az aro extension..."
