@@ -64,7 +64,7 @@ type ClusterConfig struct {
 	WorkloadIdentityRoles string `mapstructure:"platform_workload_identity_role_sets"`
 	IsCI                  bool   `mapstructure:"ci"`
 	RpMode                string `mapstructure:"rp_mode"`
-	VnetResourceGroup     string `mapstructure:"vnet_resourcegroup"`
+	VnetResourceGroup     string `mapstructure:"cluster_resourcegroup"`
 	RPResourceGroup       string `mapstructure:"resourcegroup"`
 	OSClusterVersion      string `mapstructure:"os_cluster_version"`
 	FPServicePrincipalID  string `mapstructure:"azure_fp_service_principal_id"`
@@ -349,13 +349,31 @@ func (c *Cluster) SetupClassicRoleAssignments(ctx context.Context, diskEncryptio
 	return nil
 }
 
-func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string) error {
+func (c *Cluster) GetPlatformWIRoles() ([]api.PlatformWorkloadIdentityRole, error) {
 	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
+
 	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &wiRoleSets); err != nil {
-		return fmt.Errorf("failed to parse JSON: %w", err)
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
-	platformWorkloadIdentityRoles := append(wiRoleSets[0].PlatformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
+	for _, rs := range wiRoleSets {
+		if strings.HasPrefix(c.Config.OSClusterVersion, rs.OpenShiftVersion) {
+			return rs.PlatformWorkloadIdentityRoles, nil
+		}
+	}
+
+	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OSClusterVersion)
+
+}
+
+func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string) error {
+
+	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
+	if err != nil {
+		return fmt.Errorf("failed parsing platformWI Roles: %w", err)
+	}
+
+	platformWorkloadIdentityRoles = append(platformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
 		OperatorName:     "aro-Cluster",
 		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
 	})
@@ -754,12 +772,11 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 		return nil
 	}
 	c.log.Info("deleting WIs")
-	jsonData := []byte(os.Getenv("PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"))
-	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
-	if err := json.Unmarshal(jsonData, &wiRoleSets); err != nil {
-		return fmt.Errorf("failed to parse JSON: %w", err)
+	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
+	if err != nil {
+		return fmt.Errorf("failure parsing Platform WI Roles, unable to remove them: %w", err)
 	}
-	platformWorkloadIdentityRoles := append(wiRoleSets[0].PlatformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
+	platformWorkloadIdentityRoles = append(platformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
 		OperatorName:     "aro-Cluster",
 		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
 	})
