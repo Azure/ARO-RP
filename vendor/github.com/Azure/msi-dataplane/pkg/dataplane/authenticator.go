@@ -19,7 +19,7 @@ var (
 )
 
 // Authenticating with MSI: https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardinginteractionwithmsi .
-func NewAuthenticatorPolicy(cred azcore.TokenCredential, audience string) policy.Policy {
+func newAuthenticatorPolicy(cred azcore.TokenCredential, audience string) policy.Policy {
 	return runtime.NewBearerTokenPolicy(cred, nil, &policy.BearerTokenOptions{
 		AuthorizationHandler: policy.AuthorizationHandler{
 			// Make an unauthenticated request
@@ -28,8 +28,9 @@ func NewAuthenticatorPolicy(cred azcore.TokenCredential, audience string) policy
 			},
 			// Inspect WWW-Authenticate header returned from challenge
 			OnChallenge: func(req *policy.Request, resp *http.Response, authenticateAndAuthorize func(policy.TokenRequestOptions) error) error {
-				authHeader := resp.Header.Get(headerWWWAuthenticate)
+				authHeader := resp.Header.Get("WWW-Authenticate")
 
+				// TODO:(skuznets): write a proper parser, https://www.rfc-editor.org/rfc/rfc9110.html#name-www-authenticate
 				// Parse the returned challenge
 				parts := strings.Split(authHeader, " ")
 				vals := map[string]string{}
@@ -42,7 +43,7 @@ func NewAuthenticatorPolicy(cred azcore.TokenCredential, audience string) policy
 					}
 				}
 
-				u, err := url.Parse(vals[headerAuthorization])
+				u, err := url.Parse(vals["authorization"])
 				if err != nil {
 					return fmt.Errorf("%w: %w", errInvalidAuthHeader, err)
 				}
@@ -52,6 +53,8 @@ func NewAuthenticatorPolicy(cred azcore.TokenCredential, audience string) policy
 				if _, err = uuid.FromString(tenantID); err != nil {
 					return fmt.Errorf("%w: %w", errInvalidTenantID, err)
 				}
+
+				req.Raw().Context()
 
 				// Note: "In api versions prior to 2023-09-30, the audience is included in the bearer challenge, but we recommend that partners
 				// rely on hard-configuring the explicit values above for security reasons."

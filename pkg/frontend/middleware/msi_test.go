@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 )
 
 func TestMockMSIMiddleware(t *testing.T) {
@@ -23,10 +21,10 @@ func TestMockMSIMiddleware(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if req.Header.Get(dataplane.MsiIdentityURLHeader) != MockIdentityURL {
-		t.Errorf("Expected %s, got %s", MockIdentityURL, req.Header.Get(dataplane.MsiIdentityURLHeader))
+	if req.Header.Get(MsiIdentityURLHeader) != MockIdentityURL {
+		t.Errorf("Expected %s, got %s", MockIdentityURL, req.Header.Get(MsiIdentityURLHeader))
 	}
-	if req.Header.Get(dataplane.MsiTenantHeader) != mockTenantID {
-		t.Errorf("Expected %s, got %s", mockTenantID, req.Header.Get(dataplane.MsiTenantHeader))
+	if req.Header.Get(MsiTenantHeader) != mockTenantID {
+		t.Errorf("Expected %s, got %s", mockTenantID, req.Header.Get(MsiTenantHeader))
 	}
 }

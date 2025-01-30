@@ -369,12 +369,11 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 		return err
 	}
 
-	err = m.clusterMsiKeyVaultStore.DeleteCredentialsObject(ctx, secretName)
-	if err == nil || azuresdkerrors.IsNotFoundError(err) {
-		return nil
+	if _, err := m.clusterMsiKeyVaultStore.DeleteSecret(ctx, secretName); err != nil && !azuresdkerrors.IsNotFoundError(err) {
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (m *manager) deleteFederatedCredentials(ctx context.Context) error {

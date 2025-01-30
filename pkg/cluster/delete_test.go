@@ -12,14 +12,12 @@ import (
 
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/Azure/msi-dataplane/pkg/store"
-	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -31,6 +29,7 @@ import (
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -380,7 +379,7 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 	tests := []struct {
 		name    string
 		doc     *api.OpenShiftClusterDocument
-		mocks   func(*mockkvclient.MockKeyVaultClient)
+		mocks   func(mockManager *mock_keyvault.MockManager)
 		wantErr string
 	}{
 		{
@@ -442,8 +441,8 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
-				kvclient.EXPECT().DeleteSecret(gomock.Any(), fmt.Sprintf("%s-%s", mockGuid, miName), gomock.Any()).Times(1).Return(azsecrets.DeleteSecretResponse{}, fmt.Errorf("error in DeleteSecret"))
+			mocks: func(kvclient *mock_keyvault.MockManager) {
+				kvclient.EXPECT().DeleteSecret(gomock.Any(), fmt.Sprintf("%s-%s", mockGuid, miName)).Times(1).Return(keyvault.DeletedSecretBundle{}, fmt.Errorf("error in DeleteSecret"))
 			},
 			wantErr: "error in DeleteSecret",
 		},
@@ -462,8 +461,8 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
-				kvclient.EXPECT().DeleteSecret(gomock.Any(), fmt.Sprintf("%s-%s", mockGuid, miName), gomock.Any()).Times(1).Return(azsecrets.DeleteSecretResponse{}, nil)
+			mocks: func(kvclient *mock_keyvault.MockManager) {
+				kvclient.EXPECT().DeleteSecret(gomock.Any(), fmt.Sprintf("%s-%s", mockGuid, miName)).Times(1).Return(keyvault.DeletedSecretBundle{}, nil)
 			},
 		},
 	}
@@ -478,12 +477,12 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 				doc: tt.doc,
 			}
 
-			mockKvClient := mockkvclient.NewMockKeyVaultClient(controller)
+			mockKvClient := mock_keyvault.NewMockManager(controller)
 			if tt.mocks != nil {
 				tt.mocks(mockKvClient)
 			}
 
-			m.clusterMsiKeyVaultStore = store.NewMsiKeyVaultStore(mockKvClient)
+			m.clusterMsiKeyVaultStore = mockKvClient
 
 			err := m.deleteClusterMsiCertificate(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
