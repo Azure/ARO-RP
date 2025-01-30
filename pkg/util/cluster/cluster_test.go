@@ -91,8 +91,8 @@ func TestCluster_GetPlatformWIRoles(t *testing.T) {
 			name:           "Single Roleset with matching version",
 			roleSetsRaw:    oneRoleSet415Raw,
 			clusterVersion: "4.15.36",
-			want: []api.PlatformWorkloadIdentityRole{defaultWIRole},
-			wantErr: false,
+			want:           []api.PlatformWorkloadIdentityRole{defaultWIRole},
+			wantErr:        false,
 		},
 		{
 			name:           "Single Roleset with no matching version",

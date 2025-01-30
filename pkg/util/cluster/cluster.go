@@ -363,11 +363,9 @@ func (c *Cluster) GetPlatformWIRoles() ([]api.PlatformWorkloadIdentityRole, erro
 	}
 
 	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OSClusterVersion)
-
 }
 
 func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string) error {
-
 	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
 	if err != nil {
 		return fmt.Errorf("failed parsing platformWI Roles: %w", err)
