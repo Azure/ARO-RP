@@ -41,6 +41,7 @@ type Manager interface {
 	GetCertificatePolicy(ctx context.Context, certificateName string) (azkeyvault.CertificatePolicy, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string) (azkeyvault.SecretBundle, error)
+	DeleteSecret(ctx context.Context, secretName string) (azkeyvault.DeletedSecretBundle, error)
 	GetSecrets(context.Context) ([]azkeyvault.SecretItem, error)
 	SetCertificateIssuer(ctx context.Context, issuerName string, parameter azkeyvault.CertificateIssuerSetParameters) (result azkeyvault.IssuerBundle, err error)
 	SetSecret(context.Context, string, azkeyvault.SecretSetParameters) error
@@ -210,6 +211,10 @@ func (m *manager) GetCertificateSecret(ctx context.Context, secretName string) (
 
 func (m *manager) GetSecret(ctx context.Context, secretName string) (azkeyvault.SecretBundle, error) {
 	return m.kv.GetSecret(ctx, m.keyvaultURI, secretName, "")
+}
+
+func (m *manager) DeleteSecret(ctx context.Context, secretName string) (azkeyvault.DeletedSecretBundle, error) {
+	return m.kv.DeleteSecret(ctx, m.keyvaultURI, secretName)
 }
 
 func (m *manager) GetSecrets(ctx context.Context) ([]azkeyvault.SecretItem, error) {

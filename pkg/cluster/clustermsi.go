@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,9 +13,10 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
-	"github.com/Azure/msi-dataplane/pkg/store"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -39,7 +41,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 		return err
 	}
 
-	_, err = m.clusterMsiKeyVaultStore.GetCredentialsObject(ctx, secretName)
+	_, err = m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
 	if err == nil {
 		return nil
 	} else if azcoreErr, ok := err.(*azcore.ResponseError); !ok || azcoreErr.StatusCode != http.StatusNotFound {
@@ -51,13 +53,16 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 		return err
 	}
 
-	uaMsiRequest := dataplane.UserAssignedMSIRequest{
-		IdentityURL: m.doc.OpenShiftCluster.Identity.IdentityURL,
-		ResourceIDs: []string{clusterMsiResourceId.String()},
-		TenantID:    m.doc.OpenShiftCluster.Identity.TenantID,
+	uaMsiRequest := dataplane.UserAssignedIdentitiesRequest{
+		DelegatedResources: &[]string{clusterMsiResourceId.String()},
 	}
 
-	msiCredObj, err := m.msiDataplane.GetUserAssignedIdentities(ctx, uaMsiRequest)
+	client, err := m.msiDataplane.NewClient(m.doc.OpenShiftCluster.Identity.IdentityURL)
+	if err != nil {
+		return err
+	}
+
+	msiCredObj, err := client.GetUserAssignedIdentitiesCredentials(ctx, uaMsiRequest)
 	if err != nil {
 		return err
 	}
@@ -76,21 +81,27 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 			return errors.New("unable to pull NotAfter from the MSI CredentialsObject")
 		}
 
-		// The swagger API spec for the MI RP specifies that NotAfter will be "in the format 2017-03-01T14:11:00Z".
+		// The OpenAPI spec for the MI RP specifies that NotAfter will be "in the format 2017-03-01T14:11:00Z".
 		expirationDate, err = time.Parse(time.RFC3339, *identity.NotAfter)
 		if err != nil {
 			return err
 		}
 	}
 
-	secretProperties := store.SecretProperties{
-		Enabled:   true,
-		Expires:   expirationDate,
-		Name:      secretName,
-		NotBefore: now,
+	raw, err := json.Marshal(msiCredObj)
+	if err != nil {
+		return err
 	}
 
-	return m.clusterMsiKeyVaultStore.SetCredentialsObject(ctx, secretProperties, msiCredObj.CredentialsObject)
+	return m.clusterMsiKeyVaultStore.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
+		Value: ptr.To(string(raw)),
+		SecretAttributes: &keyvault.SecretAttributes{
+			Enabled:   ptr.To(true),
+			Expires:   ptr.To(date.UnixTime(expirationDate)),
+			NotBefore: ptr.To(date.UnixTime(expirationDate)),
+		},
+		Tags: nil,
+	})
 }
 
 // initializeClusterMsiClients intializes any Azure clients that use the cluster
@@ -101,17 +112,21 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 		return err
 	}
 
-	kvSecret, err := m.clusterMsiKeyVaultStore.GetCredentialsObject(ctx, secretName)
+	kvSecretResponse, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
 	if err != nil {
+		return err
+	}
+
+	if kvSecretResponse.Value == nil {
+		return fmt.Errorf("secret %q in keyvault missing value", secretName)
+	}
+
+	var kvSecret dataplane.ManagedIdentityCredentials
+	if err := json.Unmarshal([]byte(*kvSecretResponse.Value), &kvSecret); err != nil {
 		return err
 	}
 
 	cloud, err := m.env.Environment().CloudNameForMsiDataplane()
-	if err != nil {
-		return err
-	}
-
-	uaIdentities, err := dataplane.NewUserAssignedIdentities(kvSecret.CredentialsObject, cloud)
 	if err != nil {
 		return err
 	}
@@ -121,9 +136,20 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 		return err
 	}
 
-	azureCred, err := uaIdentities.GetCredential(msiResourceId.String())
-	if err != nil {
-		return err
+	var azureCred azcore.TokenCredential
+	if kvSecret.ExplicitIdentities != nil {
+		for _, identity := range *kvSecret.ExplicitIdentities {
+			if identity.ResourceId != nil && *identity.ResourceId == msiResourceId.String() {
+				var err error
+				azureCred, err = dataplane.GetCredential(cloud, identity)
+				if err != nil {
+					return fmt.Errorf("failed to get credential for msi identity %q: %v", msiResourceId, err)
+				}
+			}
+		}
+	}
+	if azureCred == nil {
+		return fmt.Errorf("managed identity credential missing user-assigned identity %q", msiResourceId)
 	}
 
 	// Note that we are assuming that all of the platform MIs are in the same subscription as the ARO resource.
@@ -165,13 +191,16 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 		return err
 	}
 
-	uaMsiRequest := dataplane.UserAssignedMSIRequest{
-		IdentityURL: m.doc.OpenShiftCluster.Identity.IdentityURL,
-		ResourceIDs: []string{clusterMsiResourceId.String()},
-		TenantID:    m.doc.OpenShiftCluster.Identity.TenantID,
+	uaMsiRequest := dataplane.UserAssignedIdentitiesRequest{
+		DelegatedResources: &[]string{clusterMsiResourceId.String()},
 	}
 
-	msiCredObj, err := m.msiDataplane.GetUserAssignedIdentities(ctx, uaMsiRequest)
+	client, err := m.msiDataplane.NewClient(m.doc.OpenShiftCluster.Identity.IdentityURL)
+	if err != nil {
+		return err
+	}
+
+	msiCredObj, err := client.GetUserAssignedIdentitiesCredentials(ctx, uaMsiRequest)
 	if err != nil {
 		return err
 	}
@@ -180,7 +209,7 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if identity.ClientID == nil || identity.ObjectID == nil {
+	if identity.ClientId == nil || identity.ObjectId == nil {
 		return fmt.Errorf("unable to pull clientID and objectID from the MSI CredentialsObject")
 	}
 
@@ -190,8 +219,8 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 		// passed-in casing on IDs even if it may be incorrect
 		for k, v := range doc.OpenShiftCluster.Identity.UserAssignedIdentities {
 			if strings.EqualFold(k, clusterMsiResourceId.String()) {
-				v.ClientID = *identity.ClientID
-				v.PrincipalID = *identity.ObjectID
+				v.ClientID = *identity.ClientId
+				v.PrincipalID = *identity.ObjectId
 
 				doc.OpenShiftCluster.Identity.UserAssignedIdentities[k] = v
 				return nil
@@ -207,14 +236,13 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 // We expect the GetUserAssignedIdentities request to only ever be made for one identity
 // at a time (the cluster MSI) and thus we expect the response to only contain a single
 // identity's details.
-func getSingleExplicitIdentity(msiCredObj *dataplane.UserAssignedIdentities) (*swagger.NestedCredentialsObject, error) {
+func getSingleExplicitIdentity(msiCredObj *dataplane.ManagedIdentityCredentials) (dataplane.UserAssignedIdentityCredentials, error) {
 	if msiCredObj.ExplicitIdentities == nil ||
-		len(msiCredObj.ExplicitIdentities) == 0 ||
-		msiCredObj.ExplicitIdentities[0] == nil {
-		return nil, errClusterMsiNotPresentInResponse
+		len(*msiCredObj.ExplicitIdentities) == 0 {
+		return dataplane.UserAssignedIdentityCredentials{}, errClusterMsiNotPresentInResponse
 	}
 
-	return msiCredObj.ExplicitIdentities[0], nil
+	return (*msiCredObj.ExplicitIdentities)[0], nil
 }
 
 // fixupClusterMsiTenantID repopulates the cluster MSI's tenant ID in the cluster doc by

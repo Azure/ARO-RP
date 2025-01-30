@@ -19,7 +19,7 @@ github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features
 github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
-# github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0
+# github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/azcore
 github.com/Azure/azure-sdk-for-go/sdk/azcore/arm
@@ -139,12 +139,10 @@ github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 ## explicit; go 1.12
 github.com/Azure/go-autorest/tracing
-# github.com/Azure/msi-dataplane v0.0.8
+# github.com/Azure/msi-dataplane v0.1.0
 ## explicit; go 1.21
 github.com/Azure/msi-dataplane/pkg/dataplane
-github.com/Azure/msi-dataplane/pkg/dataplane/swagger
-github.com/Azure/msi-dataplane/pkg/store
-github.com/Azure/msi-dataplane/pkg/store/mock_kvclient
+github.com/Azure/msi-dataplane/pkg/dataplane/internal
 # github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2
 ## explicit; go 1.18
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache
@@ -222,6 +220,9 @@ github.com/acarl005/stripansi
 # github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20220418222510-f25a4f6275ed
 ## explicit; go 1.16
 github.com/antlr/antlr4/runtime/Go/antlr
+# github.com/apapsch/go-jsonmerge/v2 v2.0.0
+## explicit; go 1.12
+github.com/apapsch/go-jsonmerge/v2
 # github.com/apparentlymart/go-cidr v1.1.0
 ## explicit
 github.com/apparentlymart/go-cidr/cidr
@@ -584,15 +585,10 @@ github.com/exponent-io/jsonpath
 # github.com/felixge/httpsnoop v1.0.4
 ## explicit; go 1.13
 github.com/felixge/httpsnoop
-# github.com/fsnotify/fsnotify v1.7.0
+# github.com/fsnotify/fsnotify v1.8.0
 ## explicit; go 1.17
 github.com/fsnotify/fsnotify
-# github.com/gabriel-vasile/mimetype v1.4.3
-## explicit; go 1.20
-github.com/gabriel-vasile/mimetype
-github.com/gabriel-vasile/mimetype/internal/charset
-github.com/gabriel-vasile/mimetype/internal/json
-github.com/gabriel-vasile/mimetype/internal/magic
+github.com/fsnotify/fsnotify/internal
 # github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 ## explicit
 github.com/ghodss/yaml
@@ -652,16 +648,6 @@ github.com/go-openapi/swag
 # github.com/go-openapi/validate v0.24.0
 ## explicit; go 1.20
 github.com/go-openapi/validate
-# github.com/go-playground/locales v0.14.1
-## explicit; go 1.17
-github.com/go-playground/locales
-github.com/go-playground/locales/currency
-# github.com/go-playground/universal-translator v0.18.1
-## explicit; go 1.18
-github.com/go-playground/universal-translator
-# github.com/go-playground/validator/v10 v10.22.0
-## explicit; go 1.18
-github.com/go-playground/validator/v10
 # github.com/go-stack/stack v1.8.1
 ## explicit; go 1.17
 github.com/go-stack/stack
@@ -824,10 +810,6 @@ github.com/kr/fs
 ## explicit; go 1.11
 github.com/kylelemons/godebug/diff
 github.com/kylelemons/godebug/pretty
-# github.com/leodido/go-urn v1.4.0
-## explicit; go 1.18
-github.com/leodido/go-urn
-github.com/leodido/go-urn/scim/schema
 # github.com/letsencrypt/boulder v0.0.0-20240408210600-327f96d281dd
 ## explicit; go 1.21
 github.com/letsencrypt/boulder/core
@@ -937,6 +919,10 @@ github.com/nxadm/tail/ratelimiter
 github.com/nxadm/tail/util
 github.com/nxadm/tail/watch
 github.com/nxadm/tail/winfile
+# github.com/oapi-codegen/runtime v1.1.1
+## explicit; go 1.20
+github.com/oapi-codegen/runtime
+github.com/oapi-codegen/runtime/types
 # github.com/oklog/ulid v1.3.1
 ## explicit
 github.com/oklog/ulid
@@ -1301,9 +1287,10 @@ github.com/stefanberger/go-pkcs11uri
 # github.com/stoewer/go-strcase v1.2.0
 ## explicit; go 1.11
 github.com/stoewer/go-strcase
-# github.com/stretchr/testify v1.9.0
+# github.com/stretchr/testify v1.10.0
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
+github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/require
 # github.com/sylabs/sif/v2 v2.16.0
 ## explicit; go 1.21
@@ -1408,7 +1395,7 @@ go.starlark.net/syntax
 ## explicit; go 1.20
 go.uber.org/mock/gomock
 go.uber.org/mock/mockgen/model
-# golang.org/x/crypto v0.31.0
+# golang.org/x/crypto v0.32.0
 ## explicit; go 1.20
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -1443,7 +1430,7 @@ golang.org/x/exp/slices
 # golang.org/x/mod v0.17.0
 ## explicit; go 1.18
 golang.org/x/mod/semver
-# golang.org/x/net v0.33.0
+# golang.org/x/net v0.34.0
 ## explicit; go 1.18
 golang.org/x/net/context
 golang.org/x/net/html
@@ -1467,14 +1454,14 @@ golang.org/x/oauth2/internal
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.28.0
+# golang.org/x/sys v0.29.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/term v0.27.0
+# golang.org/x/term v0.28.0
 ## explicit; go 1.18
 golang.org/x/term
 # golang.org/x/text v0.21.0

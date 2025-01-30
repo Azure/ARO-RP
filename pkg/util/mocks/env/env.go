@@ -22,6 +22,7 @@ import (
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
+	dataplane "github.com/Azure/msi-dataplane/pkg/dataplane"
 	logrus "github.com/sirupsen/logrus"
 	gomock "go.uber.org/mock/gomock"
 
@@ -499,19 +500,33 @@ func (mr *MockInterfaceMockRecorder) Logger() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockInterface)(nil).Logger))
 }
 
-// MsiDataplaneClientOptions mocks base method.
-func (m *MockInterface) MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy.ClientOptions, error) {
+// MockMSIResponses mocks base method.
+func (m *MockInterface) MockMSIResponses(msiResourceId *arm.ResourceID) dataplane.ClientFactory {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MsiDataplaneClientOptions", msiResourceId)
+	ret := m.ctrl.Call(m, "MockMSIResponses", msiResourceId)
+	ret0, _ := ret[0].(dataplane.ClientFactory)
+	return ret0
+}
+
+// MockMSIResponses indicates an expected call of MockMSIResponses.
+func (mr *MockInterfaceMockRecorder) MockMSIResponses(msiResourceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MockMSIResponses", reflect.TypeOf((*MockInterface)(nil).MockMSIResponses), msiResourceId)
+}
+
+// MsiDataplaneClientOptions mocks base method.
+func (m *MockInterface) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MsiDataplaneClientOptions")
 	ret0, _ := ret[0].(*policy.ClientOptions)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MsiDataplaneClientOptions indicates an expected call of MsiDataplaneClientOptions.
-func (mr *MockInterfaceMockRecorder) MsiDataplaneClientOptions(msiResourceId any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) MsiDataplaneClientOptions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MsiDataplaneClientOptions", reflect.TypeOf((*MockInterface)(nil).MsiDataplaneClientOptions), msiResourceId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MsiDataplaneClientOptions", reflect.TypeOf((*MockInterface)(nil).MsiDataplaneClientOptions))
 }
 
 // MsiRpEndpoint mocks base method.

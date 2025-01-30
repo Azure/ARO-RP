@@ -19,6 +19,7 @@ type BaseClient interface {
 	GetCertificateOperation(ctx context.Context, vaultBaseURL string, certificateName string) (result azkeyvault.CertificateOperation, err error)
 	GetCertificatePolicy(ctx context.Context, vaultBaseURL string, certificateName string) (result azkeyvault.CertificatePolicy, err error)
 	GetSecret(ctx context.Context, vaultBaseURL string, secretName string, secretVersion string) (result azkeyvault.SecretBundle, err error)
+	DeleteSecret(ctx context.Context, vaultBaseURL string, secretName string) (result azkeyvault.DeletedSecretBundle, err error)
 	GetCertificate(ctx context.Context, vaultBaseURL string, certificateName string, certificateVersion string) (result azkeyvault.CertificateBundle, err error)
 	GetCertificates(ctx context.Context, vaultBaseURL string, maxresults *int32, includePending *bool) (result azkeyvault.CertificateListResultPage, err error)
 	SetSecret(ctx context.Context, vaultBaseURL string, secretName string, parameters azkeyvault.SecretSetParameters) (result azkeyvault.SecretBundle, err error)

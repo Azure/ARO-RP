@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 
@@ -102,7 +103,8 @@ type Interface interface {
 	OIDCEndpoint() string
 	OIDCKeyBitSize() int
 	MsiRpEndpoint() string
-	MsiDataplaneClientOptions(msiResourceId *arm.ResourceID) (*policy.ClientOptions, error)
+	MsiDataplaneClientOptions() (*policy.ClientOptions, error)
+	MockMSIResponses(msiResourceId *arm.ResourceID) dataplane.ClientFactory
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 

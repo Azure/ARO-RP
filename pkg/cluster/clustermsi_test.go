@@ -5,17 +5,15 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/Azure/msi-dataplane/pkg/dataplane/swagger"
-	"github.com/Azure/msi-dataplane/pkg/store"
-	mockkvclient "github.com/Azure/msi-dataplane/pkg/store/mock_kvclient"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -24,6 +22,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
+	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -40,35 +40,26 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 		StatusCode: 404,
 	}
 
-	msiDataPlaneNotFoundError := `failed to get credentials: Request information not available
---------------------------------------------------------------------------------
-RESPONSE 404: 
-ERROR CODE UNAVAILABLE
---------------------------------------------------------------------------------
-Response contained no body
---------------------------------------------------------------------------------
-`
-
 	placeholderString := "placeholder"
-	placeholderCredentialsObject := swagger.CredentialsObject{
-		ExplicitIdentities: []*swagger.NestedCredentialsObject{
+	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
+		ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientID:                   &placeholderString,
+				ClientId:                   &placeholderString,
 				ClientSecret:               &placeholderString,
-				TenantID:                   &placeholderString,
-				ResourceID:                 &miResourceId,
+				TenantId:                   &placeholderString,
+				ResourceId:                 &miResourceId,
 				AuthenticationEndpoint:     &placeholderString,
 				CannotRenewAfter:           &placeholderString,
-				ClientSecretURL:            &placeholderString,
+				ClientSecretUrl:            &placeholderString,
 				MtlsAuthenticationEndpoint: &placeholderString,
 				NotAfter:                   &placeholderString,
 				NotBefore:                  &placeholderString,
 				RenewAfter:                 &placeholderString,
-				CustomClaims: &swagger.CustomClaims{
-					XMSAzNwperimid: []*string{&placeholderString},
-					XMSAzTm:        &placeholderString,
+				CustomClaims: &dataplane.CustomClaims{
+					XmsAzNwperimid: &[]string{placeholderString},
+					XmsAzTm:        &placeholderString,
 				},
-				ObjectID: &placeholderString,
+				ObjectId: &placeholderString,
 			},
 		},
 	}
@@ -76,24 +67,11 @@ Response contained no body
 	tests := []struct {
 		name             string
 		doc              *api.OpenShiftClusterDocument
-		msiDataplaneStub policy.ClientOptions
+		msiDataplaneStub func(*mock_msidataplane.MockClient)
 		envMocks         func(*mock_env.MockInterface)
-		kvClientMocks    func(*mockkvclient.MockKeyVaultClient)
+		kvClientMocks    func(*mock_keyvault.MockManager)
 		wantErr          string
 	}{
-		{
-			name: "error - invalid resource ID (theoretically not possible, but still)",
-			doc: &api.OpenShiftClusterDocument{
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							"Hi hello I'm not a valid resource ID": {},
-						},
-					},
-				},
-			},
-			wantErr: "invalid resource ID: resource id 'Hi hello I'm not a valid resource ID' must start with '/'",
-		},
 		{
 			name: "error - encounter error checking for an existing certificate in the key vault",
 			doc: &api.OpenShiftClusterDocument{
@@ -111,8 +89,8 @@ Response contained no body
 					},
 				},
 			},
-			kvClientMocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, gomock.Any(), gomock.Any()).Times(1).Return(azsecrets.GetSecretResponse{}, fmt.Errorf("error in GetSecret"))
+			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, fmt.Errorf("error in GetSecret"))
 			},
 			wantErr: "error in GetSecret",
 		},
@@ -133,17 +111,13 @@ Response contained no body
 					},
 				},
 			},
-			msiDataplaneStub: policy.ClientOptions{
-				Transport: dataplane.NewStub([]*dataplane.CredentialsObject{
-					{
-						CredentialsObject: swagger.CredentialsObject{},
-					},
-				}),
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(&dataplane.ManagedIdentityCredentials{}, errors.New("error in msi"))
 			},
-			kvClientMocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, gomock.Any(), gomock.Any()).Times(1).Return(azsecrets.GetSecretResponse{}, secretNotFoundError)
+			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, secretNotFoundError)
 			},
-			wantErr: msiDataPlaneNotFoundError,
+			wantErr: "error in msi",
 		},
 		{
 			name: "success - exit early because there is already a certificate in the key vault",
@@ -162,19 +136,17 @@ Response contained no body
 					},
 				},
 			},
-			kvClientMocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
-				credentialsObjectBuffer, err := placeholderCredentialsObject.MarshalJSON()
+			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
+				credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
 				if err != nil {
 					panic(err)
 				}
 
 				credentialsObjectString := string(credentialsObjectBuffer)
-				getSecretResponse := azsecrets.GetSecretResponse{
-					Secret: azsecrets.Secret{
-						Value: &credentialsObjectString,
-					},
+				getSecretResponse := azkeyvault.SecretBundle{
+					Value: &credentialsObjectString,
 				}
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, gomock.Any(), gomock.Any()).Times(1).Return(getSecretResponse, nil)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(getSecretResponse, nil)
 			},
 		},
 		{
@@ -194,19 +166,15 @@ Response contained no body
 					},
 				},
 			},
-			msiDataplaneStub: policy.ClientOptions{
-				Transport: dataplane.NewStub([]*dataplane.CredentialsObject{
-					{
-						CredentialsObject: placeholderCredentialsObject,
-					},
-				}),
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
 			},
 			envMocks: func(mockEnv *mock_env.MockInterface) {
 				mockEnv.EXPECT().FeatureIsSet(env.FeatureUseMockMsiRp).Return(true)
 			},
-			kvClientMocks: func(kvclient *mockkvclient.MockKeyVaultClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, gomock.Any(), gomock.Any()).Times(1).Return(azsecrets.GetSecretResponse{}, secretNotFoundError)
-				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), gomock.Any()).Times(1).Return(azsecrets.SetSecretResponse{}, nil)
+			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, secretNotFoundError)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any()).Times(1).Return(nil)
 			},
 		},
 	}
@@ -220,6 +188,7 @@ Response contained no body
 			if tt.envMocks != nil {
 				tt.envMocks(mockEnv)
 			}
+			mockEnv.EXPECT().FeatureIsSet(env.FeatureUseMockMsiRp).Return(false).AnyTimes()
 
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -227,21 +196,23 @@ Response contained no body
 				env: mockEnv,
 			}
 
-			msiDataplane, err := dataplane.NewClient(dataplane.AzurePublicCloud, nil, &tt.msiDataplaneStub)
-			if err != nil {
-				panic(err)
+			factory := mock_msidataplane.NewMockClientFactory(controller)
+			client := mock_msidataplane.NewMockClient(controller)
+			if tt.msiDataplaneStub != nil {
+				tt.msiDataplaneStub(client)
 			}
+			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 
-			m.msiDataplane = msiDataplane
+			m.msiDataplane = factory
 
-			mockKvClient := mockkvclient.NewMockKeyVaultClient(controller)
+			mockKvClient := mock_keyvault.NewMockManager(controller)
 			if tt.kvClientMocks != nil {
 				tt.kvClientMocks(mockKvClient)
 			}
 
-			m.clusterMsiKeyVaultStore = store.NewMsiKeyVaultStore(mockKvClient)
+			m.clusterMsiKeyVaultStore = mockKvClient
 
-			err = m.ensureClusterMsiCertificate(ctx)
+			err := m.ensureClusterMsiCertificate(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -318,52 +289,40 @@ func TestClusterIdentityIDs(t *testing.T) {
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
 	miResourceIdIncorrectCasing := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
 
-	msiDataPlaneNotFoundError := `failed to get credentials: Request information not available
---------------------------------------------------------------------------------
-RESPONSE 404: 
-ERROR CODE UNAVAILABLE
---------------------------------------------------------------------------------
-Response contained no body
---------------------------------------------------------------------------------
-`
 	miClientId := "ffffffff-ffff-ffff-ffff-ffffffffffff"
 	miObjectId := "99999999-9999-9999-9999-999999999999"
 	placeholderString := "placeholder"
 
-	msiDataPlaneValidStub := policy.ClientOptions{
-		Transport: dataplane.NewStub([]*dataplane.CredentialsObject{
-			{
-				CredentialsObject: swagger.CredentialsObject{
-					ExplicitIdentities: []*swagger.NestedCredentialsObject{
-						{
-							ClientID:   &miClientId,
-							ObjectID:   &miObjectId,
-							ResourceID: &miResourceId,
+	msiDataPlaneValidStub := func(client *mock_msidataplane.MockClient) {
+		client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(&dataplane.ManagedIdentityCredentials{
+			ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
+				{
+					ClientId:   &miClientId,
+					ObjectId:   &miObjectId,
+					ResourceId: &miResourceId,
 
-							ClientSecret:               &placeholderString,
-							TenantID:                   &placeholderString,
-							AuthenticationEndpoint:     &placeholderString,
-							CannotRenewAfter:           &placeholderString,
-							ClientSecretURL:            &placeholderString,
-							MtlsAuthenticationEndpoint: &placeholderString,
-							NotAfter:                   &placeholderString,
-							NotBefore:                  &placeholderString,
-							RenewAfter:                 &placeholderString,
-							CustomClaims: &swagger.CustomClaims{
-								XMSAzNwperimid: []*string{&placeholderString},
-								XMSAzTm:        &placeholderString,
-							},
-						},
+					ClientSecret:               &placeholderString,
+					TenantId:                   &placeholderString,
+					AuthenticationEndpoint:     &placeholderString,
+					CannotRenewAfter:           &placeholderString,
+					ClientSecretUrl:            &placeholderString,
+					MtlsAuthenticationEndpoint: &placeholderString,
+					NotAfter:                   &placeholderString,
+					NotBefore:                  &placeholderString,
+					RenewAfter:                 &placeholderString,
+					CustomClaims: &dataplane.CustomClaims{
+						XmsAzNwperimid: &[]string{placeholderString},
+						XmsAzTm:        &placeholderString,
 					},
 				},
 			},
-		}),
+		}, nil)
 	}
 
 	for _, tt := range []struct {
 		name             string
 		doc              *api.OpenShiftClusterDocument
-		msiDataplaneStub policy.ClientOptions
+		msiDataplaneStub func(*mock_msidataplane.MockClient)
 		wantDoc          *api.OpenShiftClusterDocument
 		wantErr          string
 	}{
@@ -419,14 +378,10 @@ Response contained no body
 					},
 				},
 			},
-			msiDataplaneStub: policy.ClientOptions{
-				Transport: dataplane.NewStub([]*dataplane.CredentialsObject{
-					{
-						CredentialsObject: swagger.CredentialsObject{},
-					},
-				}),
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(&dataplane.ManagedIdentityCredentials{}, errors.New("error in msi"))
 			},
-			wantErr: msiDataPlaneNotFoundError,
+			wantErr: "error in msi",
 		},
 		{
 			name: "success - ClientID and PrincipalID are updated",
@@ -508,26 +463,31 @@ Response contained no body
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			msiDataplane, err := dataplane.NewClient(dataplane.AzurePublicCloud, nil, &tt.msiDataplaneStub)
-			if err != nil {
-				t.Fatal(err)
-			}
+			controller := gomock.NewController(t)
+			defer controller.Finish()
 
 			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
 			fixture.AddOpenShiftClusterDocuments(tt.doc)
-			if err = fixture.Create(); err != nil {
+			if err := fixture.Create(); err != nil {
 				t.Fatal(err)
 			}
+
+			factory := mock_msidataplane.NewMockClientFactory(controller)
+			client := mock_msidataplane.NewMockClient(controller)
+			if tt.msiDataplaneStub != nil {
+				tt.msiDataplaneStub(client)
+			}
+			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 
 			m := manager{
 				log:          logrus.NewEntry(logrus.StandardLogger()),
 				doc:          tt.doc,
 				db:           openShiftClustersDatabase,
-				msiDataplane: msiDataplane,
+				msiDataplane: factory,
 			}
 
-			err = m.clusterIdentityIDs(ctx)
+			err := m.clusterIdentityIDs(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantDoc != nil {
@@ -539,82 +499,48 @@ Response contained no body
 
 func TestGetSingleExplicitIdentity(t *testing.T) {
 	placeholderString := "placeholder"
-	validIdentity := &swagger.NestedCredentialsObject{
-		ClientID:                   &placeholderString,
+	validIdentity := dataplane.UserAssignedIdentityCredentials{
+		ClientId:                   &placeholderString,
 		ClientSecret:               &placeholderString,
-		TenantID:                   &placeholderString,
-		ResourceID:                 &placeholderString,
+		TenantId:                   &placeholderString,
+		ResourceId:                 &placeholderString,
 		AuthenticationEndpoint:     &placeholderString,
 		CannotRenewAfter:           &placeholderString,
-		ClientSecretURL:            &placeholderString,
+		ClientSecretUrl:            &placeholderString,
 		MtlsAuthenticationEndpoint: &placeholderString,
 		NotAfter:                   &placeholderString,
 		NotBefore:                  &placeholderString,
 		RenewAfter:                 &placeholderString,
-		CustomClaims: &swagger.CustomClaims{
-			XMSAzNwperimid: []*string{&placeholderString},
-			XMSAzTm:        &placeholderString,
+		CustomClaims: &dataplane.CustomClaims{
+			XmsAzNwperimid: &[]string{placeholderString},
+			XmsAzTm:        &placeholderString,
 		},
-		ObjectID: &placeholderString,
+		ObjectId: &placeholderString,
 	}
 
 	for _, tt := range []struct {
 		name       string
-		msiCredObj *dataplane.UserAssignedIdentities
-		want       *swagger.NestedCredentialsObject
+		msiCredObj *dataplane.ManagedIdentityCredentials
+		want       dataplane.UserAssignedIdentityCredentials
 		wantErr    string
 	}{
 		{
 			name:       "ExplicitIdentities nil, returns error",
-			msiCredObj: &dataplane.UserAssignedIdentities{},
+			msiCredObj: &dataplane.ManagedIdentityCredentials{},
 			wantErr:    errClusterMsiNotPresentInResponse.Error(),
 		},
 		{
 			name: "ExplicitIdentities empty, returns error",
-			msiCredObj: &dataplane.UserAssignedIdentities{
-				CredentialsObject: dataplane.CredentialsObject{
-					CredentialsObject: swagger.CredentialsObject{
-						ExplicitIdentities: []*swagger.NestedCredentialsObject{},
-					},
-				},
-			},
-			wantErr: errClusterMsiNotPresentInResponse.Error(),
-		},
-		{
-			name: "ExplicitIdentities first element is nil, returns error",
-			msiCredObj: &dataplane.UserAssignedIdentities{
-				CredentialsObject: dataplane.CredentialsObject{
-					CredentialsObject: swagger.CredentialsObject{
-						ExplicitIdentities: []*swagger.NestedCredentialsObject{
-							nil,
-						},
-					},
-				},
-			},
-			wantErr: errClusterMsiNotPresentInResponse.Error(),
-		},
-		{
-			name: "ExplicitIdentities first element is nil, returns error",
-			msiCredObj: &dataplane.UserAssignedIdentities{
-				CredentialsObject: dataplane.CredentialsObject{
-					CredentialsObject: swagger.CredentialsObject{
-						ExplicitIdentities: []*swagger.NestedCredentialsObject{
-							nil,
-						},
-					},
-				},
+			msiCredObj: &dataplane.ManagedIdentityCredentials{
+				ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{},
 			},
 			wantErr: errClusterMsiNotPresentInResponse.Error(),
 		},
 		{
 			name: "ExplicitIdentities first element is valid, returns it",
-			msiCredObj: &dataplane.UserAssignedIdentities{
-				CredentialsObject: dataplane.CredentialsObject{
-					CredentialsObject: swagger.CredentialsObject{
-						ExplicitIdentities: []*swagger.NestedCredentialsObject{
-							validIdentity,
-						},
-					},
+			msiCredObj: &dataplane.ManagedIdentityCredentials{
+				ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
+					validIdentity,
 				},
 			},
 			want: validIdentity,
