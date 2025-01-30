@@ -445,6 +445,10 @@ type MasterProfile struct {
 // VMSize represents a VM size
 type VMSize string
 
+func (vmSize *VMSize) String() string {
+	return string(*vmSize)
+}
+
 // VMSize constants
 // add required resources in pkg/validate/dynamic/quota.go when adding a new VMSize
 const (

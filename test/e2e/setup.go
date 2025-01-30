@@ -115,6 +115,8 @@ var (
 	vnetResourceGroup string
 	clusterName       string
 	osClusterVersion  string
+	masterVmSize      string
+	workerVmSize      string
 	clusterResourceID string
 	clients           *clientSet
 )
@@ -493,6 +495,10 @@ func setup(ctx context.Context) error {
 
 	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
 
+	masterVmSize = os.Getenv("MASTER_VM_SIZE")
+
+	workerVmSize = os.Getenv("WORKER_VM_SIZE")
+
 	if os.Getenv("CI") != "" { // always create cluster in CI
 		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
@@ -503,7 +509,15 @@ func setup(ctx context.Context) error {
 			osClusterVersion = version.DefaultInstallStream.Version.String()
 		}
 
-		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
+		if masterVmSize == "" {
+			masterVmSize = version.DefaultInstallStream.MasterVmSize.String()
+		}
+
+		if workerVmSize == "" {
+			workerVmSize = version.DefaultInstallStream.WorkerVmSize.String()
+		}
+
+		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion, masterVmSize, workerVmSize)
 		if err != nil {
 			return err
 		}

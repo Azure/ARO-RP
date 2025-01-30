@@ -26,16 +26,20 @@ const (
 var GitCommit = "unknown"
 
 type Stream struct {
-	Version  *Version `json:"version"`
-	PullSpec string   `json:"-"`
+	Version      *Version   `json:"version"`
+	PullSpec     string     `json:"-"`
+	MasterVmSize api.VMSize `json:"masterVmSize"`
+	WorkerVmSize api.VMSize `json:"workervMSize"`
 }
 
 // Install stream data for production and INT has moved to RP-Config.
 // This default is left here ONLY for use by local development mode,
 // until we can come up with a better solution.
 var DefaultInstallStream = Stream{
-	Version:  NewVersion(4, 15, 35),
-	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:8c8433f95d09b051e156ff638f4ccc95543918c3aed92b8c09552a8977a2a1a2",
+	Version:      NewVersion(4, 15, 35),
+	PullSpec:     "quay.io/openshift-release-dev/ocp-release@sha256:8c8433f95d09b051e156ff638f4ccc95543918c3aed92b8c09552a8977a2a1a2",
+	MasterVmSize: api.VMSizeStandardD8sV3,
+	WorkerVmSize: api.VMSizeStandardD4sV3,
 }
 
 // FluentbitImage contains the location of the Fluentbit container image
