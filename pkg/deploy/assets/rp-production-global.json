@@ -101,8 +101,10 @@
             "sku": {
                 "name": "Standard_LRS"
             },
+            "kind": "StorageV2",
             "properties": {
-                "allowBlobPublicAccess": false
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2"
             },
             "tags": {},
             "location": "[resourceGroup().location]",
