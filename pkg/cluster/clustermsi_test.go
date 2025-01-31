@@ -34,7 +34,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	clusterRGName := "aro-cluster"
 	miName := "aro-cluster-msi"
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
-	secretName := fmt.Sprintf("%s-%s", mockGuid, miName)
+	secretName := mockGuid
 
 	secretNotFoundError := &azcore.ResponseError{
 		StatusCode: 404,
@@ -214,64 +214,6 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 			err := m.ensureClusterMsiCertificate(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
-func TestClusterMsiSecretName(t *testing.T) {
-	mockGuid := "00000000-0000-0000-0000-000000000000"
-	clusterRGName := "aro-cluster"
-	miName := "aro-cluster-msi"
-	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
-
-	tests := []struct {
-		name       string
-		doc        *api.OpenShiftClusterDocument
-		wantResult string
-		wantErr    string
-	}{
-		{
-			name: "error - invalid resource ID (theoretically not possible, but still)",
-			doc: &api.OpenShiftClusterDocument{
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							"Hi hello I'm not a valid resource ID": {},
-						},
-					},
-				},
-			},
-			wantErr: "invalid resource ID: resource id 'Hi hello I'm not a valid resource ID' must start with '/'",
-		},
-		{
-			name: "success",
-			doc: &api.OpenShiftClusterDocument{
-				ID: mockGuid,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {},
-						},
-					},
-				},
-			},
-			wantResult: fmt.Sprintf("%s-%s", mockGuid, miName),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				doc: tt.doc,
-			}
-
-			result, err := m.clusterMsiSecretName()
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-
-			if result != tt.wantResult {
-				t.Error(result)
-			}
 		})
 	}
 }
