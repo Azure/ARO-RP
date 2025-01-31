@@ -177,7 +177,7 @@ func TestMIMOCancelManifest(t *testing.T) {
 				tt.wantResult(ti.checker)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil, nil)
 
 			if err != nil {
 				t.Fatal(err)
