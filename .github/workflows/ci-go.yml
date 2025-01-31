@@ -15,7 +15,7 @@ jobs:
   vendor-check:
     runs-on: ubuntu-latest
     container:
-      image: registry.access.redhat.com/ubi8/go-toolset:1.21.13-1
+      image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
   generate-check:
     runs-on: ubuntu-latest
     container:
-      image: registry.access.redhat.com/ubi8/go-toolset:1.21.13-1
+      image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4

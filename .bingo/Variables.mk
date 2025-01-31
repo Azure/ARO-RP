@@ -29,11 +29,11 @@ $(CLIENT_GEN): $(BINGO_DIR)/client-gen.mod
 	@echo "(re)installing $(GOBIN)/client-gen-v0.25.16"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=client-gen.mod -o=$(GOBIN)/client-gen-v0.25.16 "k8s.io/code-generator/cmd/client-gen"
 
-CONTROLLER_GEN := $(GOBIN)/controller-gen-v0.9.0
+CONTROLLER_GEN := $(GOBIN)/controller-gen-v0.16.5
 $(CONTROLLER_GEN): $(BINGO_DIR)/controller-gen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/controller-gen-v0.9.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=controller-gen.mod -o=$(GOBIN)/controller-gen-v0.9.0 "sigs.k8s.io/controller-tools/cmd/controller-gen"
+	@echo "(re)installing $(GOBIN)/controller-gen-v0.16.5"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=controller-gen.mod -o=$(GOBIN)/controller-gen-v0.16.5 "sigs.k8s.io/controller-tools/cmd/controller-gen"
 
 ENUMER := $(GOBIN)/enumer-v1.5.10
 $(ENUMER): $(BINGO_DIR)/enumer.mod

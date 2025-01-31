@@ -18,7 +18,7 @@ AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
 
 # Golang version go mod tidy compatibility
-GOLANG_VERSION ?= 1.21
+GOLANG_VERSION ?= 1.22.9
 
 include .bingo/Variables.mk
 
