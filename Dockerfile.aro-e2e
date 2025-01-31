@@ -1,7 +1,7 @@
 # Uses a multi-stage container build to build the RP & E2E components.
 #
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.21.13-1 AS builder
+FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
 
 USER root
 ENV GOPATH=/root/go
