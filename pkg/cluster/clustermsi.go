@@ -36,12 +36,9 @@ var (
 // vault. It does not concern itself with whether an existing certificate is valid
 // or not; that can be left to the certificate refresher component.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
-	secretName, err := m.clusterMsiSecretName()
-	if err != nil {
-		return err
-	}
+	secretName := m.clusterMsiSecretName()
 
-	_, err = m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
+	_, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
 	if err == nil {
 		return nil
 	} else if azcoreErr, ok := err.(*azcore.ResponseError); !ok || azcoreErr.StatusCode != http.StatusNotFound {
@@ -107,10 +104,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 // initializeClusterMsiClients intializes any Azure clients that use the cluster
 // MSI certificate.
 func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
-	secretName, err := m.clusterMsiSecretName()
-	if err != nil {
-		return err
-	}
+	secretName := m.clusterMsiSecretName()
 
 	kvSecretResponse, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
 	if err != nil {
@@ -172,13 +166,8 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 
 // clusterMsiSecretName returns the name to store the cluster MSI certificate under in
 // the cluster MSI key vault.
-func (m *manager) clusterMsiSecretName() (string, error) {
-	clusterMsi, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%s-%s", m.doc.ID, clusterMsi.Name), nil
+func (m *manager) clusterMsiSecretName() string {
+	return m.doc.ID
 }
 
 func (m *manager) clusterIdentityIDs(ctx context.Context) error {
