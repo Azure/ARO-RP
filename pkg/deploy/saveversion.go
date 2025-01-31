@@ -21,8 +21,8 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 	res, err := d.globalaccounts.ListAccountSAS(
 		ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPVersionStorageAccountName, mgmtstorage.AccountSasParameters{
 			Services:               mgmtstorage.ServicesB,
-			ResourceTypes:          mgmtstorage.SignedResourceTypesO,
-			Permissions:            "cw", // create and write
+			ResourceTypes:          mgmtstorage.SignedResourceTypesO + mgmtstorage.SignedResourceTypesS,
+			Permissions:            mgmtstorage.PermissionsC + mgmtstorage.PermissionsW, // create and write
 			Protocols:              mgmtstorage.HTTPProtocolHTTPS,
 			SharedAccessStartTime:  &date.Time{Time: t},
 			SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
@@ -38,6 +38,17 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 
 	blobClient := azstorage.NewAccountSASClient(
 		*d.config.Configuration.RPVersionStorageAccountName, v, (*d.env.Environment()).Environment).GetBlobService()
+
+	// ensure static web content is enabled
+	props := azstorage.ServiceProperties{
+		StaticWebsite: &azstorage.StaticWebsite{
+			Enabled: true,
+		},
+	}
+	err = blobClient.SetServiceProperties(props)
+	if err != nil {
+		return err
+	}
 
 	// save version of RP which is deployed in this location
 	containerRef := blobClient.GetContainerReference("rpversion")
