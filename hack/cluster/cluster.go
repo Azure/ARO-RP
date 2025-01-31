@@ -53,7 +53,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	masterVmSize := os.Getenv("MASTER_VM_SIZE")
 	if masterVmSize == "" {
-		masterVmSize = version.DefaultInstallStream.MasterVmSize.String()
+		masterVmSize = cluster.DefaultMasterVmSize.String()
 		log.Infof("using default master VM size %s", masterVmSize)
 	} else {
 		log.Infof("using specified master VM size %s", masterVmSize)
@@ -61,7 +61,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	workerVmSize := os.Getenv("WORKER_VM_SIZE")
 	if workerVmSize == "" {
-		workerVmSize = version.DefaultInstallStream.WorkerVmSize.String()
+		workerVmSize = cluster.DefaultWorkerVmSize.String()
 		log.Infof("using default worker VM size %s", workerVmSize)
 	} else {
 		log.Infof("using specified worker VM size %s", workerVmSize)

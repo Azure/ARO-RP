@@ -51,7 +51,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
-	"github.com/Azure/ARO-RP/pkg/util/cluster"
+	utilcluster "github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -500,7 +500,7 @@ func setup(ctx context.Context) error {
 	workerVmSize = os.Getenv("WORKER_VM_SIZE")
 
 	if os.Getenv("CI") != "" { // always create cluster in CI
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+		cluster, err := utilcluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}
@@ -510,11 +510,11 @@ func setup(ctx context.Context) error {
 		}
 
 		if masterVmSize == "" {
-			masterVmSize = version.DefaultInstallStream.MasterVmSize.String()
+			masterVmSize = utilcluster.DefaultMasterVmSize.String()
 		}
 
 		if workerVmSize == "" {
-			workerVmSize = version.DefaultInstallStream.WorkerVmSize.String()
+			workerVmSize = utilcluster.DefaultWorkerVmSize.String()
 		}
 
 		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion, masterVmSize, workerVmSize)
@@ -536,7 +536,7 @@ func setup(ctx context.Context) error {
 func done(ctx context.Context) error {
 	// terminate early if delete flag is set to false
 	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+		cluster, err := utilcluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}

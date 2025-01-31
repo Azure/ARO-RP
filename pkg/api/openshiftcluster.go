@@ -445,8 +445,8 @@ type MasterProfile struct {
 // VMSize represents a VM size
 type VMSize string
 
-func (vmSize *VMSize) String() string {
-	return string(*vmSize)
+func (vmSize VMSize) String() string {
+	return string(vmSize)
 }
 
 // VMSize constants

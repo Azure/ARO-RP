@@ -69,6 +69,8 @@ type Cluster struct {
 
 const GenerateSubnetMaxTries = 100
 const localDefaultURL string = "https://localhost:8443"
+const DefaultMasterVmSize = api.VMSizeStandardD8sV3
+const DefaultWorkerVmSize = api.VMSizeStandardD4sV3
 
 func insecureLocalClient() *http.Client {
 	return &http.Client{
@@ -583,7 +585,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 		// In LocalDev mode, if workerVmSize is not default one, then it means user requested a specific one we need to keep.
-		if workerVmSize == version.DefaultInstallStream.WorkerVmSize {
+		if workerVmSize == DefaultWorkerVmSize {
 			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 		}
 	}
