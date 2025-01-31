@@ -93,6 +93,7 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 		Resource: &mgmtstorage.Account{
 			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+			Kind:     mgmtstorage.KindStorageV2,
 			Location: to.StringPtr("[resourceGroup().location]"),
 			Sku: &mgmtstorage.Sku{
 				Name: "Standard_LRS",
