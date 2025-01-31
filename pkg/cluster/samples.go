@@ -16,8 +16,7 @@ import (
 
 // disableSamples disables the samples if there's no appropriate pull secret
 func (m *manager) disableSamples(ctx context.Context) error {
-	if !m.env.IsLocalDevelopmentMode() &&
-		m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
+	if !m.shouldDisableSamples() {
 		return nil
 	}
 
@@ -35,16 +34,7 @@ func (m *manager) disableSamples(ctx context.Context) error {
 			//
 			// https://docs.openshift.com/container-platform/4.17/openshift_images/configuring-samples-operator.html#samples-operator-restricted-network-install-with-access
 			if errors.IsNotFound(err) {
-				c = &samplesv1.Config{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster",
-					},
-					Spec: samplesv1.ConfigSpec{
-						ManagementState: operatorv1.Removed,
-					},
-				}
-
-				_, err := m.samplescli.SamplesV1().Configs().Create(ctx, c, metav1.CreateOptions{})
+				_, err := m.samplescli.SamplesV1().Configs().Create(ctx, bootstrapDisabledSamplesConfig(), metav1.CreateOptions{})
 
 				return err
 			} else if err != nil {
@@ -56,6 +46,25 @@ func (m *manager) disableSamples(ctx context.Context) error {
 			_, err = m.samplescli.SamplesV1().Configs().Update(ctx, c, metav1.UpdateOptions{})
 			return err
 		})
+}
+
+func (m *manager) shouldDisableSamples() bool {
+	return m.env.IsLocalDevelopmentMode() || m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret == ""
+}
+
+func bootstrapDisabledSamplesConfig() *samplesv1.Config {
+	return &samplesv1.Config{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: samplesv1.SchemeGroupVersion.Identifier(),
+			Kind:       "Config",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster",
+		},
+		Spec: samplesv1.ConfigSpec{
+			ManagementState: operatorv1.Removed,
+		},
+	}
 }
 
 // disableOperatorHubSources disables operator hub sources if there's no
