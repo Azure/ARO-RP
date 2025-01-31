@@ -364,10 +364,7 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	secretName, err := m.clusterMsiSecretName()
-	if err != nil {
-		return err
-	}
+	secretName := m.clusterMsiSecretName()
 
 	if _, err := m.clusterMsiKeyVaultStore.DeleteSecret(ctx, secretName); err != nil && !azuresdkerrors.IsNotFoundError(err) {
 		return err

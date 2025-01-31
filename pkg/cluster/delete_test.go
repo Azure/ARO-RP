@@ -372,6 +372,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 func TestDeleteClusterMsiCertificate(t *testing.T) {
 	ctx := context.Background()
 	mockGuid := "00000000-0000-0000-0000-000000000000"
+	secretName := mockGuid
 	clusterRGName := "aro-cluster"
 	miName := "aro-cluster-msi"
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
@@ -410,23 +411,6 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			},
 		},
 		{
-			name: "error - error getting cluster MSI secret name (this theoretically won't happen, but...)",
-			doc: &api.OpenShiftClusterDocument{
-				ID: mockGuid,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							"not a valid MI resource ID": {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
-						},
-					},
-				},
-			},
-			wantErr: "invalid resource ID: resource id 'not a valid MI resource ID' must start with '/'",
-		},
-		{
 			name: "error - error deleting cluster MSI certificate from key vault",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
@@ -442,7 +426,7 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 				},
 			},
 			mocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().DeleteSecret(gomock.Any(), fmt.Sprintf("%s-%s", mockGuid, miName)).Times(1).Return(keyvault.DeletedSecretBundle{}, fmt.Errorf("error in DeleteSecret"))
+				kvclient.EXPECT().DeleteSecret(gomock.Any(), secretName).Times(1).Return(keyvault.DeletedSecretBundle{}, fmt.Errorf("error in DeleteSecret"))
 			},
 			wantErr: "error in DeleteSecret",
 		},
@@ -462,7 +446,7 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 				},
 			},
 			mocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().DeleteSecret(gomock.Any(), fmt.Sprintf("%s-%s", mockGuid, miName)).Times(1).Return(keyvault.DeletedSecretBundle{}, nil)
+				kvclient.EXPECT().DeleteSecret(gomock.Any(), secretName).Times(1).Return(keyvault.DeletedSecretBundle{}, nil)
 			},
 		},
 	}
