@@ -247,16 +247,12 @@ func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool 
 		return supportedAsMaster
 	}
 
-	if requiredD2sV3Workers && vmSize != api.VMSizeStandardD2sV3 {
-		return false
+	if requiredD2sV3Workers {
+		return vmSize == api.VMSizeStandardD2sV3
 	}
 
 	_, supportedAsWorker := SupportedVMSizesByRole(VMRoleWorker)[vmSize]
-	if supportedAsWorker || (requiredD2sV3Workers && vmSize == api.VMSizeStandardD2sV3) {
-		return true
-	}
-
-	return false
+	return supportedAsWorker
 }
 
 func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
