@@ -6,6 +6,7 @@ package deploy
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -51,7 +52,9 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 	}
 
 	// save version of RP which is deployed in this location
-	containerRef := blobClient.GetContainerReference("rpversion")
-	blobRef := containerRef.GetBlobReference(d.config.Location)
-	return blobRef.CreateBlockBlobFromReader(bytes.NewReader([]byte(d.version)), nil)
+	containerRef := blobClient.GetContainerReference("$web")
+	blobRef := containerRef.GetBlobReference(fmt.Sprintf("rpversion/%s", d.config.Location))
+	blobRef.Properties = azstorage.BlobProperties{ContentType: "application/octet-stream"}
+	blobRef.Metadata = azstorage.BlobMetadata{}
+	return blobRef.CreateBlockBlobFromReader(bytes.NewReader([]byte(d.version)), &azstorage.PutBlobOptions{})
 }
