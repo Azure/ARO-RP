@@ -1598,3 +1598,5 @@ replace (
 replace github.com/emicklei/go-restful v2.15.0+incompatible => github.com/emicklei/go-restful v2.16.0+incompatible
 
 replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/distribution v2.8.2+incompatible
+
+replace github.com/elazarl/goproxy v0.0.0-20190911111923-ecfe977594f1 => github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027
