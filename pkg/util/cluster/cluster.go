@@ -584,7 +584,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		if err != nil {
 			return err
 		}
-		// In LocalDev mode, if workerVmSize is not default one, then it means user requested a specific one we need to keep.
+		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
 		if workerVmSize == DefaultWorkerVmSize {
 			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 		}
