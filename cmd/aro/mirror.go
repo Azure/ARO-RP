@@ -124,7 +124,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			srcAuth = srcAuthQuay
 		}
 
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
+		// set expectAlreadyExists to false so that we update tags like :latest
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth, false)
 		if err != nil {
 			imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", ref, err))
 		}
