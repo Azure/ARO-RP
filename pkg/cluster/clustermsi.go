@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
 const (
@@ -41,7 +41,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	_, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
 	if err == nil {
 		return nil
-	} else if azcoreErr, ok := err.(*azcore.ResponseError); !ok || azcoreErr.StatusCode != http.StatusNotFound {
+	} else if err != nil && !azureerrors.IsNotFoundError(err) {
 		return err
 	}
 
