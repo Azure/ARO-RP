@@ -1600,3 +1600,5 @@ replace github.com/emicklei/go-restful v2.15.0+incompatible => github.com/emickl
 replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/distribution v2.8.2+incompatible
 
 replace github.com/elazarl/goproxy v0.0.0-20190911111923-ecfe977594f1 => github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027
+
+replace go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.20.0 => go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.44.0
