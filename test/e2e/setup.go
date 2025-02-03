@@ -391,7 +391,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 			return nil, err
 		}
 
-		hiveCM, err = hive.NewFromConfig(log, _env, hiveRestConfig)
+		hiveCM, err = hive.NewFromConfigClusterManager(log, _env, hiveRestConfig)
 		if err != nil {
 			return nil, err
 		}

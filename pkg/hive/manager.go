@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -58,11 +60,21 @@ type clusterManager struct {
 	dh dynamichelper.Interface
 }
 
+type SyncSetManager interface {
+	List(ctx context.Context, namespace string, label string, listType reflect.Type) (interface{}, error)
+	Get(ctx context.Context, namespace string, name string, getType reflect.Type) (interface{}, error)
+}
+
+type syncSetManager struct {
+	log           *logrus.Entry
+	hiveClientset client.Client
+}
+
 // NewFromEnv can return a nil ClusterManager when hive features are disabled. This exists to support regions where we don't have hive,
 // and we do not want to restrict the frontend from starting up successfully.
 // It has the caveat of requiring a nil check on any operations performed with the returned ClusterManager
 // until this conditional return is removed (we have hive everywhere).
-func NewFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (ClusterManager, error) {
+func NewFromEnvCLusterManager(ctx context.Context, log *logrus.Entry, env env.Interface) (ClusterManager, error) {
 	adoptByHive, err := env.LiveConfig().AdoptByHive(ctx)
 	if err != nil {
 		return nil, err
@@ -80,13 +92,13 @@ func NewFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (Clus
 	if err != nil {
 		return nil, fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
 	}
-	return NewFromConfig(log, env, hiveRestConfig)
+	return NewFromConfigClusterManager(log, env, hiveRestConfig)
 }
 
 // NewFromConfig creates a ClusterManager.
 // It MUST NOT take cluster or subscription document as values
 // in these structs can be change during the lifetime of the cluster manager.
-func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (ClusterManager, error) {
+func NewFromConfigClusterManager(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (ClusterManager, error) {
 	hiveClientset, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return nil, err
@@ -110,6 +122,39 @@ func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (C
 		kubernetescli: kubernetescli,
 
 		dh: dh,
+	}, nil
+}
+
+func NewFromEnvSyncSetManager(ctx context.Context, log *logrus.Entry, env env.Interface) (SyncSetManager, error) {
+	adoptByHive, err := env.LiveConfig().AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	installViaHive, err := env.LiveConfig().InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !adoptByHive && !installViaHive {
+		log.Infof("hive is disabled, skipping creation of SyncSetManager")
+		return nil, nil
+	}
+	hiveShard := 1
+	hiveRestConfig, err := env.LiveConfig().HiveRestConfig(ctx, hiveShard)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
+	}
+	return NewFromConfigSyncSetManager(log, env, hiveRestConfig)
+}
+
+func NewFromConfigSyncSetManager(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (SyncSetManager, error) {
+	hiveClientset, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &syncSetManager{
+		log:           log,
+		hiveClientset: hiveClientset,
 	}, nil
 }
 
@@ -294,4 +339,37 @@ func (hr *clusterManager) GetClusterSync(ctx context.Context, doc *api.OpenShift
 	}
 
 	return clusterSync, nil
+}
+
+func (hr *syncSetManager) List(ctx context.Context, namespace string, label string, listType reflect.Type) (interface{}, error) {
+	list := reflect.New(listType).Interface()
+	objectList, ok := list.(client.ObjectList)
+	if !ok {
+		return nil, fmt.Errorf("provided type %T does not implement client.ObjectList", list)
+	}
+
+	selector, _ := labels.Parse(label)
+	err := hr.hiveClientset.List(ctx, objectList, &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: selector,
+	})
+	if err != nil {
+		hr.log.WithError(err).Warn("could not list syncsets")
+		return nil, err
+	}
+
+	return list, nil
+}
+
+func (hr *syncSetManager) Get(ctx context.Context, namespace string, name string, getType reflect.Type) (interface{}, error) {
+	get := reflect.New(getType).Interface()
+	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}, get.(client.Object))
+	if err != nil {
+		return nil, err
+	}
+
+	return get, nil
 }

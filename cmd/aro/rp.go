@@ -160,7 +160,12 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	hiveClusterManager, err := hive.NewFromEnv(ctx, log, _env)
+	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, log, _env)
+	if err != nil {
+		return err
+	}
+
+	hiveSyncSetManager, err := hive.NewFromEnvSyncSetManager(ctx, log, _env)
 	if err != nil {
 		return err
 	}
@@ -181,7 +186,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		dbg.WithMaintenanceManifests(dbMaintenanceManifests)
 	}
 
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
+	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}
