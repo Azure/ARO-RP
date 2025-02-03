@@ -1518,36 +1518,13 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 
 func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 	return []*arm.Resource{
-		g.storageAccount("[parameters('rpVersionStorageAccountName')]", &mgmtstorage.AccountProperties{
-			AllowBlobPublicAccess: to.BoolPtr(true),
-		}, map[string]*string{
-			tagKeyExemptPublicBlob: to.StringPtr(tagValueExemptPublicBlob),
-		}),
-		{
-			Resource: &mgmtstorage.BlobContainer{
-				Name: to.StringPtr("[concat(parameters('rpVersionStorageAccountName'), '/default/rpversion')]"),
-				Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-				ContainerProperties: &mgmtstorage.ContainerProperties{
-					PublicAccess: mgmtstorage.PublicAccessContainer,
-				},
+		g.storageAccount(
+			"[parameters('rpVersionStorageAccountName')]",
+			&mgmtstorage.AccountProperties{
+				AllowBlobPublicAccess: to.BoolPtr(false),
+				MinimumTLSVersion:     mgmtstorage.MinimumTLSVersionTLS12,
 			},
-			APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-			DependsOn: []string{
-				"[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
-			},
-		},
-		{
-			Resource: &mgmtstorage.BlobContainer{
-				Name: to.StringPtr("[concat(parameters('rpVersionStorageAccountName'), '/default/ocpversions')]"),
-				Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-				ContainerProperties: &mgmtstorage.ContainerProperties{
-					PublicAccess: mgmtstorage.PublicAccessContainer,
-				},
-			},
-			APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-			DependsOn: []string{
-				"[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
-			},
-		},
+			map[string]*string{},
+		),
 	}
 }
