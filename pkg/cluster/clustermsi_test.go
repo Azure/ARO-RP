@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +36,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
 	secretName := mockGuid
 
-	secretNotFoundError := &azcore.ResponseError{
+	secretNotFoundError := autorest.DetailedError{
 		StatusCode: 404,
 	}
 
