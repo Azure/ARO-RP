@@ -51,6 +51,22 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		log.Infof("using specified cluster version %s", osClusterVersion)
 	}
 
+	masterVmSize := os.Getenv("MASTER_VM_SIZE")
+	if masterVmSize == "" {
+		masterVmSize = cluster.DefaultMasterVmSize.String()
+		log.Infof("using default master VM size %s", masterVmSize)
+	} else {
+		log.Infof("using specified master VM size %s", masterVmSize)
+	}
+
+	workerVmSize := os.Getenv("WORKER_VM_SIZE")
+	if workerVmSize == "" {
+		workerVmSize = cluster.DefaultWorkerVmSize.String()
+		log.Infof("using default worker VM size %s", workerVmSize)
+	} else {
+		log.Infof("using specified worker VM size %s", workerVmSize)
+	}
+
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
 	if err != nil {
 		return err
@@ -58,7 +74,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	switch strings.ToLower(os.Args[1]) {
 	case "create":
-		return c.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
+		return c.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion, masterVmSize, workerVmSize)
 	case "delete":
 		return c.Delete(ctx, vnetResourceGroup, clusterName)
 	default:
