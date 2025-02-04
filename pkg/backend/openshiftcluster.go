@@ -126,7 +126,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		if err != nil {
 			return fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
 		}
-		hr, err = hive.NewFromConfig(log, ocb.env, hiveRestConfig)
+		hr, err = hive.NewFromConfigClusterManager(log, ocb.env, hiveRestConfig)
 		if err != nil {
 			return fmt.Errorf("failed creating HiveClusterManager: %w", err)
 		}
