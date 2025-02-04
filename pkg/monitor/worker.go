@@ -288,7 +288,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		log.Error(err)
 		return
 	}
-	hiveClusterManager, _ := hive.NewFromConfig(log, _env, hiveRestConfig)
+	hiveClusterManager, _ := hive.NewFromConfigClusterManager(log, _env, hiveRestConfig)
 
 	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
 
