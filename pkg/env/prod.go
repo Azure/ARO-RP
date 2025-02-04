@@ -4,11 +4,15 @@ package env
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -25,6 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
@@ -399,10 +404,81 @@ func (p *prod) MsiRpEndpoint() string {
 }
 
 func (p *prod) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
-	armClientOptions := p.Environment().ArmClientOptions()
+	armClientOptions := p.Environment().ArmClientOptions(ClientDebugLoggerMiddleware(p.log.WithField("client", "msi-dataplane")))
 	clientOptions := armClientOptions.ClientOptions
 
 	return &clientOptions, nil
+}
+
+func ClientDebugLoggerMiddleware(log *logrus.Entry) azureclient.Middleware {
+	return func(delegate http.RoundTripper) http.RoundTripper {
+		return azureclient.RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			log := log.WithFields(logrus.Fields{
+				"method": req.Method,
+				"url":    req.URL,
+			})
+			if req.Body != nil {
+				body, err := io.ReadAll(req.Body)
+				if err != nil {
+					log.WithError(err).Error("error reading request body")
+				}
+				if err := req.Body.Close(); err != nil {
+					log.WithError(err).Error("error closing request body")
+				}
+				log = log.WithField("body", string(body))
+				req.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the delegate can use it
+			}
+			log.Info("Sending request.")
+			resp, err := delegate.RoundTrip(req)
+			if err != nil {
+				log.WithError(err).Error("Request errored.")
+			} else if resp != nil {
+				log = log.WithFields(logrus.Fields{
+					"status": resp.StatusCode,
+				})
+				body, err := io.ReadAll(resp.Body)
+				if err != nil {
+					log.WithError(err).Error("error reading response body")
+				}
+				if err := resp.Body.Close(); err != nil {
+					log.WithError(err).Error("error closing response body")
+				}
+				// n.b.: we only send one request now, this is best-effort but would need to be updated if we use other methods
+				response := dataplane.ManagedIdentityCredentials{}
+				if err := json.Unmarshal(body, &response); err != nil {
+					log.WithError(err).Error("error unmarshalling response body")
+				} else {
+					censorCredentials(&response)
+					log = log.WithField("body", string(body))
+				}
+				resp.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the upstream round-trippers can use it
+			}
+			log.Info("Received response.")
+
+			return resp, err
+		})
+	}
+}
+
+func censorCredentials(input *dataplane.ManagedIdentityCredentials) {
+	input.ClientSecret = nil
+	if input.DelegatedResources != nil {
+		for i := 0; i < len(*input.DelegatedResources); i++ {
+			if (*input.DelegatedResources)[i].ImplicitIdentity != nil {
+				(*input.DelegatedResources)[i].ImplicitIdentity.ClientSecret = nil
+			}
+			if (*input.DelegatedResources)[i].ExplicitIdentities != nil {
+				for j := 0; j < len(*(*input.DelegatedResources)[i].ExplicitIdentities); j++ {
+					(*(*input.DelegatedResources)[i].ExplicitIdentities)[j].ClientSecret = nil
+				}
+			}
+		}
+	}
+	if input.ExplicitIdentities != nil {
+		for i := 0; i < len(*input.ExplicitIdentities); i++ {
+			(*input.ExplicitIdentities)[i].ClientSecret = nil
+		}
+	}
 }
 
 func (p *prod) MockMSIResponses(msiResourceId *arm.ResourceID) dataplane.ClientFactory {

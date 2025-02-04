@@ -105,10 +105,33 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 	return AROEnvironment{}, fmt.Errorf("cloud environment %q is unsupported by ARO", name)
 }
 
+// RoundTripperFunc allows a function to implement http.RoundTripper
+type RoundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (rt RoundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return rt(req)
+}
+
+// Middleware closes over any client-side middleware
+type Middleware func(http.RoundTripper) http.RoundTripper
+
+// Chain is a handy function to wrap a base RoundTripper (optional) with the middlewares.
+func Chain(rt http.RoundTripper, middlewares ...Middleware) http.RoundTripper {
+	if rt == nil {
+		rt = http.DefaultTransport
+	}
+
+	for _, m := range middlewares {
+		rt = m(rt)
+	}
+
+	return rt
+}
+
 // ArmClientOptions returns an arm.ClientOptions to be passed in when instantiating
 // Azure SDK for Go clients.
-func (e *AROEnvironment) ArmClientOptions() *arm.ClientOptions {
-	customRoundTripper := NewCustomRoundTripper(http.DefaultTransport)
+func (e *AROEnvironment) ArmClientOptions(middlewares ...Middleware) *arm.ClientOptions {
+	customRoundTripper := Chain(http.DefaultTransport, append([]Middleware{NewCustomRoundTripper}, middlewares...)...)
 	return &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: e.Cloud,
