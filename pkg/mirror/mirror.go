@@ -18,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Copy(ctx context.Context, dstreference, srcreference string, dstauth, srcauth *types.DockerAuthConfig) error {
+func Copy(ctx context.Context, dstreference, srcreference string, dstauth, srcauth *types.DockerAuthConfig, expectAlreadyExists bool) error {
 	policyctx, err := signature.NewPolicyContext(&signature.Policy{
 		Default: signature.PolicyRequirements{
 			signature.NewPRInsecureAcceptAnything(),
@@ -49,7 +49,7 @@ func Copy(ctx context.Context, dstreference, srcreference string, dstauth, srcau
 		// optimisation that checks if the source and destination manifests are
 		// equal before attempting to push it (and sending no blobs because
 		// they're all already there)
-		OptimizeDestinationImageAlreadyExists: true,
+		OptimizeDestinationImageAlreadyExists: expectAlreadyExists,
 	})
 
 	return err
@@ -100,7 +100,7 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 				log.Printf("mirroring %s", w.tag)
 				var err error
 				for retry := 0; retry < 6; retry++ {
-					err = Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
+					err = Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth, true)
 					if err == nil {
 						break
 					}
