@@ -91,7 +91,6 @@ require (
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.27.3
 	k8s.io/kubectl v0.24.17
-	k8s.io/kubernetes v1.28.4
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/controller-runtime v0.15.0
 	sigs.k8s.io/yaml v1.4.0
@@ -270,7 +269,6 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.26.2 // indirect
 	k8s.io/component-base v0.27.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-aggregator v0.27.1 // indirect
