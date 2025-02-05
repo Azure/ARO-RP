@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -372,7 +373,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 func TestDeleteClusterMsiCertificate(t *testing.T) {
 	ctx := context.Background()
 	mockGuid := "00000000-0000-0000-0000-000000000000"
-	secretName := mockGuid
+	secretName := dataplane.ManagedIdentityCredentialsStoragePrefix + mockGuid
 	clusterRGName := "aro-cluster"
 	miName := "aro-cluster-msi"
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
