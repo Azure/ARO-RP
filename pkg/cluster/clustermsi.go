@@ -167,7 +167,7 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 // clusterMsiSecretName returns the name to store the cluster MSI certificate under in
 // the cluster MSI key vault.
 func (m *manager) clusterMsiSecretName() string {
-	return m.doc.ID
+	return dataplane.ManagedIdentityCredentialsStoragePrefix + m.doc.ID
 }
 
 func (m *manager) clusterIdentityIDs(ctx context.Context) error {
