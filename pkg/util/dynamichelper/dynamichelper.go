@@ -13,6 +13,7 @@ import (
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -222,6 +223,11 @@ func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 
 	case *corev1.ServiceAccount:
 		old, new := old.(*corev1.ServiceAccount), new.(*corev1.ServiceAccount)
+		for _, name := range maps.Keys(old.ObjectMeta.Annotations) {
+			if strings.HasPrefix(name, "openshift.io/") {
+				copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, name)
+			}
+		}
 		new.Secrets = old.Secrets
 		new.ImagePullSecrets = old.ImagePullSecrets
 
