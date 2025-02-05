@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
-	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -31,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -458,12 +458,12 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 	return &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientId:                   ptr.To(os.Getenv("MOCK_MSI_CLIENT_ID")),
-				ClientSecret:               ptr.To(os.Getenv("MOCK_MSI_CERT")),
-				TenantId:                   ptr.To(os.Getenv("MOCK_MSI_TENANT_ID")),
-				ObjectId:                   ptr.To(os.Getenv("MOCK_MSI_OBJECT_ID")),
-				ResourceId:                 ptr.To(m.msiResourceId),
-				AuthenticationEndpoint:     ptr.To(m.aadHost),
+				ClientId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
+				ClientSecret:               pointerutils.ToPtr(os.Getenv("MOCK_MSI_CERT")),
+				TenantId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
+				ObjectId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
+				ResourceId:                 pointerutils.ToPtr(m.msiResourceId),
+				AuthenticationEndpoint:     pointerutils.ToPtr(m.aadHost),
 				CannotRenewAfter:           &placeholder,
 				ClientSecretUrl:            &placeholder,
 				MtlsAuthenticationEndpoint: &placeholder,

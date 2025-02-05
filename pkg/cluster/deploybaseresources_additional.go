@@ -12,12 +12,12 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
-	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -27,13 +27,13 @@ func (m *manager) denyAssignment() *arm.Resource {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		for _, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
-				ID:   ptr.To(identity.ObjectID),
+				ID:   pointerutils.ToPtr(identity.ObjectID),
 				Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
 			})
 		}
 		excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
-			ID:   ptr.To(m.fpServicePrincipalID),
-			Type: ptr.To(string(mgmtauthorization.ServicePrincipal)),
+			ID:   pointerutils.ToPtr(m.fpServicePrincipalID),
+			Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 		})
 	} else {
 		excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
@@ -540,13 +540,13 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []api.ResourceReference) *arm.Resource {
 	lb := &sdknetwork.LoadBalancer{
 		SKU: &sdknetwork.LoadBalancerSKU{
-			Name: ptr.To(sdknetwork.LoadBalancerSKUNameStandard),
+			Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
 		},
 		Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{},
 			BackendAddressPools: []*sdknetwork.BackendAddressPool{
 				{
-					Name: ptr.To(m.doc.OpenShiftCluster.Properties.InfraID),
+					Name: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 				},
 			},
 			LoadBalancingRules: []*sdknetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
@@ -556,17 +556,17 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 					Properties: &sdknetwork.OutboundRulePropertiesFormat{
 						FrontendIPConfigurations: []*sdknetwork.SubResource{},
 						BackendAddressPool: &sdknetwork.SubResource{
-							ID: ptr.To(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 						},
-						Protocol:             ptr.To(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
-						IdleTimeoutInMinutes: ptr.To(int32(30)),
+						Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
 					},
-					Name: ptr.To("outbound-rule-v4"),
+					Name: pointerutils.ToPtr("outbound-rule-v4"),
 				},
 			},
 		},
 		Name:     &m.doc.OpenShiftCluster.Properties.InfraID,
-		Type:     ptr.To("Microsoft.Network/loadBalancers"),
+		Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
 		Location: &azureRegion,
 	}
 
@@ -574,42 +574,42 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 		lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, &sdknetwork.FrontendIPConfiguration{
 			Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 				PublicIPAddress: &sdknetwork.PublicIPAddress{
-					ID: ptr.To("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
+					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
 				},
 			},
-			Name: ptr.To("public-lb-ip-v4"),
+			Name: pointerutils.ToPtr("public-lb-ip-v4"),
 		})
 
 		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &sdknetwork.LoadBalancingRule{
 			Properties: &sdknetwork.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &sdknetwork.SubResource{
-					ID: ptr.To(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
 				BackendAddressPool: &sdknetwork.SubResource{
-					ID: ptr.To(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
 				Probe: &sdknetwork.SubResource{
-					ID: ptr.To(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
-				Protocol:             ptr.To(sdknetwork.TransportProtocolTCP),
-				LoadDistribution:     ptr.To(sdknetwork.LoadDistributionDefault),
-				FrontendPort:         ptr.To(int32(6443)),
-				BackendPort:          ptr.To(int32(6443)),
-				IdleTimeoutInMinutes: ptr.To(int32(30)),
-				DisableOutboundSnat:  ptr.To(true),
+				Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
+				LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+				FrontendPort:         pointerutils.ToPtr(int32(6443)),
+				BackendPort:          pointerutils.ToPtr(int32(6443)),
+				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+				DisableOutboundSnat:  pointerutils.ToPtr(true),
 			},
-			Name: ptr.To("api-internal-v4"),
+			Name: pointerutils.ToPtr("api-internal-v4"),
 		})
 
 		lb.Properties.Probes = append(lb.Properties.Probes, &sdknetwork.Probe{
 			Properties: &sdknetwork.ProbePropertiesFormat{
-				Protocol:          ptr.To(sdknetwork.ProbeProtocolHTTPS),
-				Port:              ptr.To(int32(6443)),
-				IntervalInSeconds: ptr.To(int32(5)),
-				NumberOfProbes:    ptr.To(int32(2)),
-				RequestPath:       ptr.To("/readyz"),
+				Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolHTTPS),
+				Port:              pointerutils.ToPtr(int32(6443)),
+				IntervalInSeconds: pointerutils.ToPtr(int32(5)),
+				NumberOfProbes:    pointerutils.ToPtr(int32(2)),
+				RequestPath:       pointerutils.ToPtr("/readyz"),
 			},
-			Name: ptr.To("api-internal-probe"),
+			Name: pointerutils.ToPtr("api-internal-probe"),
 		})
 	}
 
