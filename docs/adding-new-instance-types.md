@@ -47,7 +47,7 @@ az aro create   --resource-group $RESOURCEGROUP   --name $CLUSTER   --vnet aro-l
 
 4) Once an install with an alternate size is successful, a basic check of cluster health can be conducted, as well as local e2e tests to confirm supportability.
 
-### Hack scripts method (To be updated)
+### Hack scripts method
 
 1) Comment out `FeatureRequireD2sV3Workers` from the range of features in `pkg/env/dev.go`, and if you want to use worker StandardD4sV3 (which is default version.DefaultInstallStream.WorkerVmSize), only for that specific worker size, comment out also in `createCluster()` at `pkg/util/cluster/cluster.go` the following block:
 ~~~
