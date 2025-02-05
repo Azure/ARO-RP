@@ -5,4 +5,3 @@ package workaround
 
 //go:generate rm -rf ../../../util/mocks/operator/controllers/$GOPACKAGE
 //go:generate mockgen -destination=../../../util/mocks/operator/controllers/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/operator/controllers/$GOPACKAGE Workaround
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../util/mocks/operator/controllers/$GOPACKAGE/$GOPACKAGE.go
