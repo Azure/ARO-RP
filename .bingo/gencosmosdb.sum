@@ -1,4 +1,2 @@
-github.com/jewzaam/go-cosmosdb v0.0.0-20240723075448-058185e3c66d h1:2Xp2eP830w13cWq6sombl3EsBM46xYkdkLog8BgFWyQ=
-github.com/jewzaam/go-cosmosdb v0.0.0-20240723075448-058185e3c66d/go.mod h1:hEk8/SoE/NBT9ofV69Gzs98vbGyF155SaYl1p9bxKb8=
-github.com/jewzaam/go-cosmosdb v0.0.0-20240729051124-c9cf2c4f6aa1 h1:7EGTuO4I+1fln9rQ50K4ysZSejU2gFC2Oz8UyrySYtw=
-github.com/jewzaam/go-cosmosdb v0.0.0-20240729051124-c9cf2c4f6aa1/go.mod h1:+G8ranhkJ4x2BUFTyh3b7Ap0KkDZwAwd/0OqtIVR63c=
+github.com/bennerv/go-cosmosdb v0.0.0-20250203190900-6f9d371594d6 h1:FTEfqwNyuxEBNtkRZwg3CBv+5TiiqscTzQkxeW2HJg4=
+github.com/bennerv/go-cosmosdb v0.0.0-20250203190900-6f9d371594d6/go.mod h1:4bSvv83quaEsAsIBxUGczXmMep28F+/pi7mbSoZkBxs=
