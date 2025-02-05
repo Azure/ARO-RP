@@ -101,40 +101,16 @@
             "sku": {
                 "name": "Standard_LRS"
             },
+            "kind": "StorageV2",
             "properties": {
-                "allowBlobPublicAccess": true
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2"
             },
-            "tags": {
-                "Az.Sec.AnonymousBlobAccessEnforcement::Skip": "PublicRelease"
-            },
+            "tags": {},
             "location": "[resourceGroup().location]",
             "name": "[parameters('rpVersionStorageAccountName')]",
             "type": "Microsoft.Storage/storageAccounts",
             "apiVersion": "2021-09-01"
-        },
-        {
-            "properties": {
-                "publicAccess": "Container",
-                "metadata": null
-            },
-            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/rpversion')]",
-            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "apiVersion": "2021-09-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
-            ]
-        },
-        {
-            "properties": {
-                "publicAccess": "Container",
-                "metadata": null
-            },
-            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/ocpversions')]",
-            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "apiVersion": "2021-09-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
-            ]
         }
     ]
 }
