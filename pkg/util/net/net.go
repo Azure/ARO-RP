@@ -12,15 +12,14 @@ import (
 
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/azure"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	v1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
+	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
-
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	v1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/ready"

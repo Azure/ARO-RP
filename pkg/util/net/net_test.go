@@ -18,11 +18,11 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
+	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
+	mcofake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"

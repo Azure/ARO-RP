@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 

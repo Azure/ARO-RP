@@ -21,12 +21,12 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )
 
 func init() {

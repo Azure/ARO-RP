@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	"github.com/sirupsen/logrus"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,7 +22,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive"

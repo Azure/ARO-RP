@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-test/deep"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
@@ -30,7 +31,6 @@ import (
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
