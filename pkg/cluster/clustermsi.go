@@ -15,12 +15,12 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -91,11 +91,11 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	}
 
 	return m.clusterMsiKeyVaultStore.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
-		Value: ptr.To(string(raw)),
+		Value: pointerutils.ToPtr(string(raw)),
 		SecretAttributes: &keyvault.SecretAttributes{
-			Enabled:   ptr.To(true),
-			Expires:   ptr.To(date.UnixTime(expirationDate)),
-			NotBefore: ptr.To(date.UnixTime(expirationDate)),
+			Enabled:   pointerutils.ToPtr(true),
+			Expires:   pointerutils.ToPtr(date.UnixTime(expirationDate)),
+			NotBefore: pointerutils.ToPtr(date.UnixTime(expirationDate)),
 		},
 		Tags: nil,
 	})
