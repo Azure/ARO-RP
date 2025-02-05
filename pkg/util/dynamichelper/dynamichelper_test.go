@@ -269,6 +269,11 @@ func TestMerge(t *testing.T) {
 		{
 			name: "ServiceAccount no changes",
 			old: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"openshift.io/internal-registry-pull-secret-ref": "example",
+					},
+				},
 				Secrets: []corev1.ObjectReference{
 					{
 						Name: "secret1",
@@ -282,6 +287,11 @@ func TestMerge(t *testing.T) {
 			},
 			new: &corev1.ServiceAccount{},
 			want: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"openshift.io/internal-registry-pull-secret-ref": "example",
+					},
+				},
 				Secrets: []corev1.ObjectReference{
 					{
 						Name: "secret1",
