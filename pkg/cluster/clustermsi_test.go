@@ -34,7 +34,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	clusterRGName := "aro-cluster"
 	miName := "aro-cluster-msi"
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
-	secretName := mockGuid
+	secretName := dataplane.ManagedIdentityCredentialsStoragePrefix + mockGuid
 
 	secretNotFoundError := autorest.DetailedError{
 		StatusCode: 404,
