@@ -5,4 +5,3 @@ package subnet
 
 //go:generate rm -rf ../mocks/$GOPACKAGE
 //go:generate mockgen -destination=../mocks/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/util/$GOPACKAGE Manager,KubeManager
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../mocks/$GOPACKAGE/$GOPACKAGE.go

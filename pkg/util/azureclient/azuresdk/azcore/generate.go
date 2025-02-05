@@ -5,4 +5,3 @@ package azcore
 
 //go:generate rm -rf ../../../../../mocks/azureclient/azuresdk/$GOPACKAGE
 //go:generate mockgen -destination=../../../mocks/azureclient/azuresdk/$GOPACKAGE/tokencredential.go -source=tokencredential.go
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../mocks/azureclient/azuresdk/$GOPACKAGE/tokencredential.go
