@@ -8,9 +8,8 @@ import (
 	"encoding/pem"
 	"os"
 
-	"k8s.io/utils/ptr"
-
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -108,32 +107,32 @@ func DevConfig(_env env.Core) (*Config, error) {
 				RPResourceGroupName:      azureUniquePrefix + "-aro-" + _env.Location(),
 				Configuration: &Configuration{
 					AzureCloudName:         &_env.Environment().ActualCloudName,
-					DatabaseAccountName:    ptr.To(azureUniquePrefix + "-aro-" + _env.Location()),
+					DatabaseAccountName:    pointerutils.ToPtr(azureUniquePrefix + "-aro-" + _env.Location()),
 					KeyvaultDNSSuffix:      &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:         &keyvaultPrefix,
-					OIDCStorageAccountName: ptr.To(oidcStorageAccountName),
+					OIDCStorageAccountName: pointerutils.ToPtr(oidcStorageAccountName),
 				},
 			},
 		},
 		Configuration: &Configuration{
-			ACRResourceID:                ptr.To("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + azureUniquePrefix + "-global/providers/Microsoft.ContainerRegistry/registries/" + azureUniquePrefix + "aro"),
-			AdminAPICABundle:             ptr.To(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
+			ACRResourceID:                pointerutils.ToPtr("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + azureUniquePrefix + "-global/providers/Microsoft.ContainerRegistry/registries/" + azureUniquePrefix + "aro"),
+			AdminAPICABundle:             pointerutils.ToPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			AdminAPIClientCertCommonName: &clientCert.Subject.CommonName,
-			ARMAPICABundle:               ptr.To(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
+			ARMAPICABundle:               pointerutils.ToPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			ARMAPIClientCertCommonName:   &clientCert.Subject.CommonName,
-			ARMClientID:                  ptr.To(os.Getenv("AZURE_ARM_CLIENT_ID")),
-			AzureSecPackVSATenantId:      ptr.To(""),
-			ClusterMDMAccount:            ptr.To(version.DevClusterGenevaMetricsAccount),
-			ClusterMDSDAccount:           ptr.To(version.DevClusterGenevaLoggingAccount),
-			ClusterMDSDConfigVersion:     ptr.To(version.DevClusterGenevaLoggingConfigVersion),
-			ClusterMDSDNamespace:         ptr.To(version.DevClusterGenevaLoggingNamespace),
-			ClusterParentDomainName:      ptr.To(azureUniquePrefix + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
+			ARMClientID:                  pointerutils.ToPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
+			AzureSecPackVSATenantId:      pointerutils.ToPtr(""),
+			ClusterMDMAccount:            pointerutils.ToPtr(version.DevClusterGenevaMetricsAccount),
+			ClusterMDSDAccount:           pointerutils.ToPtr(version.DevClusterGenevaLoggingAccount),
+			ClusterMDSDConfigVersion:     pointerutils.ToPtr(version.DevClusterGenevaLoggingConfigVersion),
+			ClusterMDSDNamespace:         pointerutils.ToPtr(version.DevClusterGenevaLoggingNamespace),
+			ClusterParentDomainName:      pointerutils.ToPtr(azureUniquePrefix + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
 			CosmosDB: &CosmosDBConfiguration{
 				StandardProvisionedThroughput: 1000,
 				PortalProvisionedThroughput:   400,
 				GatewayProvisionedThroughput:  400,
 			},
-			DisableCosmosDBFirewall: ptr.To(true),
+			DisableCosmosDBFirewall: pointerutils.ToPtr(true),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 			},
@@ -148,9 +147,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),
 			},
-			FluentbitImage:       ptr.To(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
-			FPClientID:           ptr.To(os.Getenv("AZURE_FP_CLIENT_ID")),
-			FPServicePrincipalID: ptr.To(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
+			FluentbitImage:       pointerutils.ToPtr(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
+			FPClientID:           pointerutils.ToPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
+			FPServicePrincipalID: pointerutils.ToPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
 			GatewayDomains: []string{
 				"eastus-shared.ppe.warm.ingest.monitor.core.windows.net",
 				"gcs.ppe.monitoring.core.windows.net",
@@ -164,22 +163,22 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"qos.ppe.warm.ingest.monitor.core.windows.net",
 				"test1.diagnostics.monitoring.core.windows.net",
 			},
-			GatewayMDSDConfigVersion:    ptr.To(version.DevGatewayGenevaLoggingConfigVersion),
-			GatewayVMSSCapacity:         ptr.To(1),
-			GlobalResourceGroupLocation: ptr.To(_env.Location()),
-			GlobalResourceGroupName:     ptr.To(azureUniquePrefix + "-global"),
-			GlobalSubscriptionID:        ptr.To(_env.SubscriptionID()),
-			MDMFrontendURL:              ptr.To("https://global.ppe.microsoftmetrics.com/"),
-			MDSDEnvironment:             ptr.To(version.DevGenevaLoggingEnvironment),
-			MsiRpEndpoint:               ptr.To("https://iamaplaceholder.com"),
+			GatewayMDSDConfigVersion:    pointerutils.ToPtr(version.DevGatewayGenevaLoggingConfigVersion),
+			GatewayVMSSCapacity:         pointerutils.ToPtr(1),
+			GlobalResourceGroupLocation: pointerutils.ToPtr(_env.Location()),
+			GlobalResourceGroupName:     pointerutils.ToPtr(azureUniquePrefix + "-global"),
+			GlobalSubscriptionID:        pointerutils.ToPtr(_env.SubscriptionID()),
+			MDMFrontendURL:              pointerutils.ToPtr("https://global.ppe.microsoftmetrics.com/"),
+			MDSDEnvironment:             pointerutils.ToPtr(version.DevGenevaLoggingEnvironment),
+			MsiRpEndpoint:               pointerutils.ToPtr("https://iamaplaceholder.com"),
 			PortalAccessGroupIDs: []string{
 				os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"),
 			},
-			PortalClientID: ptr.To(os.Getenv("AZURE_PORTAL_CLIENT_ID")),
+			PortalClientID: pointerutils.ToPtr(os.Getenv("AZURE_PORTAL_CLIENT_ID")),
 			PortalElevatedGroupIDs: []string{
 				os.Getenv("AZURE_PORTAL_ELEVATED_GROUP_IDS"),
 			},
-			AzureSecPackQualysUrl: ptr.To(""),
+			AzureSecPackQualysUrl: pointerutils.ToPtr(""),
 			RPFeatures: []string{
 				"DisableDenyAssignments",
 				"DisableSignedCertificates",
@@ -191,24 +190,24 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"UseMockMsiRp",
 			},
 			// TODO update this to support FF
-			RPImagePrefix:                     ptr.To(azureUniquePrefix + "aro.azurecr.io/aro"),
-			RPMDMAccount:                      ptr.To(version.DevRPGenevaMetricsAccount),
-			RPMDSDAccount:                     ptr.To(version.DevRPGenevaLoggingAccount),
-			RPMDSDConfigVersion:               ptr.To(version.DevRPGenevaLoggingConfigVersion),
-			RPMDSDNamespace:                   ptr.To(version.DevRPGenevaLoggingNamespace),
-			RPParentDomainName:                ptr.To(azureUniquePrefix + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
-			RPVersionStorageAccountName:       ptr.To(azureUniquePrefix + "rpversion"),
-			RPVMSSCapacity:                    ptr.To(1),
-			SSHPublicKey:                      ptr.To(string(sshPublicKey)),
-			SubscriptionResourceGroupLocation: ptr.To(_env.Location()),
-			SubscriptionResourceGroupName:     ptr.To(azureUniquePrefix + "-subscription"),
-			VMSSCleanupEnabled:                ptr.To(true),
-			VMSize:                            ptr.To("Standard_D2s_v3"),
+			RPImagePrefix:                     pointerutils.ToPtr(azureUniquePrefix + "aro.azurecr.io/aro"),
+			RPMDMAccount:                      pointerutils.ToPtr(version.DevRPGenevaMetricsAccount),
+			RPMDSDAccount:                     pointerutils.ToPtr(version.DevRPGenevaLoggingAccount),
+			RPMDSDConfigVersion:               pointerutils.ToPtr(version.DevRPGenevaLoggingConfigVersion),
+			RPMDSDNamespace:                   pointerutils.ToPtr(version.DevRPGenevaLoggingNamespace),
+			RPParentDomainName:                pointerutils.ToPtr(azureUniquePrefix + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
+			RPVersionStorageAccountName:       pointerutils.ToPtr(azureUniquePrefix + "rpversion"),
+			RPVMSSCapacity:                    pointerutils.ToPtr(1),
+			SSHPublicKey:                      pointerutils.ToPtr(string(sshPublicKey)),
+			SubscriptionResourceGroupLocation: pointerutils.ToPtr(_env.Location()),
+			SubscriptionResourceGroupName:     pointerutils.ToPtr(azureUniquePrefix + "-subscription"),
+			VMSSCleanupEnabled:                pointerutils.ToPtr(true),
+			VMSize:                            pointerutils.ToPtr("Standard_D2s_v3"),
 
 			// TODO: Replace with Live Service Configuration in KeyVault
-			InstallViaHive:           ptr.To(os.Getenv("ARO_INSTALL_VIA_HIVE")),
-			DefaultInstallerPullspec: ptr.To(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
-			AdoptByHive:              ptr.To(os.Getenv("ARO_ADOPT_BY_HIVE")),
+			InstallViaHive:           pointerutils.ToPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
+			DefaultInstallerPullspec: pointerutils.ToPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
+			AdoptByHive:              pointerutils.ToPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
 		},
 	}, nil
 }

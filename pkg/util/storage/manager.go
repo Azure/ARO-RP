@@ -12,12 +12,12 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	storagesdk "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armstorage"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type Manager interface {
@@ -81,12 +81,12 @@ func (m *manager) BlobService(ctx context.Context, resourceGroup, account string
 
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := m.storageAccounts.ListAccountSAS(ctx, resourceGroup, account, storagesdk.AccountSasParameters{
-		Services:               to.Ptr(storagesdk.ServicesB),
-		ResourceTypes:          to.Ptr(r),
-		Permissions:            to.Ptr(p),
-		Protocols:              to.Ptr(storagesdk.HTTPProtocolHTTPS),
+		Services:               pointerutils.ToPtr(storagesdk.ServicesB),
+		ResourceTypes:          pointerutils.ToPtr(r),
+		Permissions:            pointerutils.ToPtr(p),
+		Protocols:              pointerutils.ToPtr(storagesdk.HTTPProtocolHTTPS),
 		SharedAccessStartTime:  &t,
-		SharedAccessExpiryTime: to.Ptr(t.Add(24 * time.Hour)),
+		SharedAccessExpiryTime: pointerutils.ToPtr(t.Add(24 * time.Hour)),
 	}, nil)
 	if err != nil {
 		return nil, getCorrectErrWhenTooManyRequests(err)

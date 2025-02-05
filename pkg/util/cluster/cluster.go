@@ -30,7 +30,6 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
@@ -43,6 +42,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -287,10 +287,10 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 			Value: []sdknetwork.Route{
 				{
 					Properties: &sdknetwork.RoutePropertiesFormat{
-						AddressPrefix: ptr.To("0.0.0.0/0"),
-						NextHopType:   ptr.To(sdknetwork.RouteNextHopTypeNone),
+						AddressPrefix: pointerutils.ToPtr("0.0.0.0/0"),
+						NextHopType:   pointerutils.ToPtr(sdknetwork.RouteNextHopTypeNone),
 					},
-					Name: ptr.To("blackhole"),
+					Name: pointerutils.ToPtr("blackhole"),
 				},
 			},
 		}
