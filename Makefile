@@ -86,7 +86,7 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 .PHONY: client
-client: generate $(GOIMPORTS)
+client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
@@ -112,23 +112,33 @@ generate: install-tools
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
 .PHONY: generate-operator-apiclient
-generate-operator-apiclient: $(GOIMPORTS) $(CLIENT_GEN)
+generate-operator-apiclient: $(CLIENT_GEN)
 	$(CLIENT_GEN) --clientset-name versioned --input-base ./pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package ./pkg/operator/clientset --go-header-file ./hack/licenses/boilerplate.go.txt
 	gofmt -s -w ./pkg/operator/clientset
-	$(GOIMPORTS) -local=github.com/Azure/ARO-RP -e -w ./pkg/operator/clientset ./pkg/operator/apis
+	$(MAKE) imports
 
 .PHONY: generate-guardrails
 generate-guardrails:
 	cd pkg/operator/controllers/guardrails/policies && ./scripts/generate.sh > /dev/null
 
 .PHONY: generate-kiota
-generate-kiota: $(GOIMPORTS)
+generate-kiota:
 	kiota generate --clean-output -l go -o ./pkg/util/graph/graphsdk -n "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk" -d hack/graphsdk/openapi.yaml -c GraphBaseServiceClient --additional-data=False --backing-store=True
 	find ./pkg/util/graph/graphsdk -type f -name "*.go"  -exec sed -i'' -e 's\github.com/azure/aro-rp\github.com/Azure/ARO-RP\g' {} +
-	gofmt -s -w pkg/util/graph/graphsdk
-	$(GOIMPORTS) -w -local=github.com/Azure/ARO-RP pkg/util/graph/graphsdk
-	go run ./hack/validate-imports pkg/util/graph/graphsdk
+	$(MAKE) imports
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
+
+.PHONY: imports
+imports: $(OPENSHIFT_GOIMPORTS)
+	$(OPENSHIFT_GOIMPORTS) --module github.com/Azure/ARO-RP
+
+.PHONY: validate-imports
+validate-imports: imports
+	if ! git diff --quiet HEAD; then \
+		git diff; \
+		echo "You need to run 'make imports' to update import statements and commit them"; \
+		exit 1; \
+	fi
 
 .PHONY: init-contrib
 init-contrib:
@@ -253,10 +263,8 @@ test-e2e: e2e.test
 test-go: generate build-all validate-go lint-go unit-test-go
 
 .PHONY: validate-go
-validate-go: $(GOIMPORTS)
+validate-go: validate-imports
 	gofmt -s -w cmd hack pkg test
-	$(GOIMPORTS) -w -local=github.com/Azure/ARO-RP cmd hack pkg test
-	go run ./hack/validate-imports cmd hack pkg test
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -264,9 +272,8 @@ validate-go: $(GOIMPORTS)
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 .PHONY: validate-go-action
-validate-go-action:
+validate-go-action: validate-imports
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
-	go run ./hack/validate-imports cmd hack pkg test
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
