@@ -310,7 +310,6 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 	return appDetails{appID, appSecret, spID}, nil
 }
 
-
 func (c *Cluster) SetupClassicRoleAssignments(ctx context.Context, diskEncryptionSetID string, clusterServicePrincipalID string) error {
 	c.log.Info("creating role assignments")
 
