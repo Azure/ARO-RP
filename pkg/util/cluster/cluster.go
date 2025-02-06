@@ -69,6 +69,8 @@ type Cluster struct {
 
 const GenerateSubnetMaxTries = 100
 const localDefaultURL string = "https://localhost:8443"
+const DefaultMasterVmSize = api.VMSizeStandardD8sV3
+const DefaultWorkerVmSize = api.VMSizeStandardD4sV3
 
 func insecureLocalClient() *http.Client {
 	return &http.Client{
@@ -194,7 +196,7 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 	return appDetails{appID, appSecret, spID}, nil
 }
 
-func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
+func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string, masterVmSize string, workerVmSize string) error {
 	clusterGet, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
 		if clusterGet.Properties.ProvisioningState == api.ProvisioningStateFailed {
@@ -363,8 +365,11 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		}
 	}
 
+	apiMasterVmSize := api.VMSize(masterVmSize)
+	apiWorkerVmSize := api.VMSize(workerVmSize)
+
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, osClusterVersion)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, osClusterVersion, apiMasterVmSize, apiWorkerVmSize)
 
 	if err != nil {
 		return err
@@ -516,7 +521,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string, masterVmSize api.VMSize, workerVmSize api.VMSize) error {
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -533,7 +538,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 			},
 			MasterProfile: api.MasterProfile{
-				VMSize:              api.VMSizeStandardD8sV3,
+				VMSize:              masterVmSize,
 				SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
 				EncryptionAtHost:    api.EncryptionAtHostEnabled,
 				DiskEncryptionSetID: diskEncryptionSetID,
@@ -541,7 +546,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			WorkerProfiles: []api.WorkerProfile{
 				{
 					Name:                "worker",
-					VMSize:              api.VMSizeStandardD4sV3,
+					VMSize:              workerVmSize,
 					DiskSizeGB:          128,
 					SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
 					Count:               3,
@@ -579,8 +584,10 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		if err != nil {
 			return err
 		}
-
-		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
+		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
+		if workerVmSize == DefaultWorkerVmSize {
+			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
+		}
 	}
 
 	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)

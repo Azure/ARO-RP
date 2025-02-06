@@ -51,7 +51,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
-	"github.com/Azure/ARO-RP/pkg/util/cluster"
+	utilcluster "github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -115,6 +115,8 @@ var (
 	vnetResourceGroup string
 	clusterName       string
 	osClusterVersion  string
+	masterVmSize      string
+	workerVmSize      string
 	clusterResourceID string
 	clients           *clientSet
 )
@@ -493,8 +495,12 @@ func setup(ctx context.Context) error {
 
 	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
 
+	masterVmSize = os.Getenv("MASTER_VM_SIZE")
+
+	workerVmSize = os.Getenv("WORKER_VM_SIZE")
+
 	if os.Getenv("CI") != "" { // always create cluster in CI
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+		cluster, err := utilcluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}
@@ -503,7 +509,15 @@ func setup(ctx context.Context) error {
 			osClusterVersion = version.DefaultInstallStream.Version.String()
 		}
 
-		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
+		if masterVmSize == "" {
+			masterVmSize = utilcluster.DefaultMasterVmSize.String()
+		}
+
+		if workerVmSize == "" {
+			workerVmSize = utilcluster.DefaultWorkerVmSize.String()
+		}
+
+		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion, masterVmSize, workerVmSize)
 		if err != nil {
 			return err
 		}
@@ -522,7 +536,7 @@ func setup(ctx context.Context) error {
 func done(ctx context.Context) error {
 	// terminate early if delete flag is set to false
 	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+		cluster, err := utilcluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}
