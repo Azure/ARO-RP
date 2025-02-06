@@ -49,14 +49,19 @@ az aro create   --resource-group $RESOURCEGROUP   --name $CLUSTER   --vnet aro-l
 
 ### Hack scripts method
 
-1) Comment out `FeatureRequireD2sV3Workers` from the range of features in `pkg/env/dev.go`, and modify the worker and master profiles defined in `createCluster()` at `pkg/util/cluster/cluster.go` to contain your desired instance size. For example:
+1) Comment out `FeatureRequireD2sV3Workers` from the range of features in `pkg/env/dev.go`, and if you want to use worker StandardD4sV3 (which is default version.DefaultInstallStream.WorkerVmSize), only for that specific worker size, comment out also in `createCluster()` at `pkg/util/cluster/cluster.go` the following block:
 ~~~
-oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardL4s
+		// In LocalDev mode, if workerVmSize is not default one, then it means user requested a specific one we need to keep.
+		if workerVmSize == version.DefaultInstallStream.WorkerVmSize {
+			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
+		}
 ~~~
 
-2) Use the [hack script to create a cluster.](https://github.com/cadenmarchese/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster)
+2) Start your local RP. If it was already running, restart it to take into account commented lines.
 
-3) Once an install with an alternate size is successful, a basic check of cluster health can be conducted, as well as local e2e tests to confirm supportability.
+3) Use the [hack script to create a cluster.](https://github.com/cadenmarchese/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster), with MASTER_VM_SIZE and WORKER_VM_SIZE variables set to desired instance size.
+
+4) Once an install with an alternate size is successful, a basic check of cluster health can be conducted, as well as local e2e tests to confirm supportability.
 
 ### Post-install method
 

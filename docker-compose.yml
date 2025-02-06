@@ -179,6 +179,8 @@ services:
       E2E_DELETE_CLUSTER:
       E2E_LABEL:
       OS_CLUSTER_VERSION:
+      MASTER_VM_SIZE:
+      WORKER_VM_SIZE:
       PORTAL_HOSTNAME: "https://localhost:8444"
       RP_BASE_URL: "https://localhost:8443"
     entrypoint: "/usr/local/bin/e2e.test"
