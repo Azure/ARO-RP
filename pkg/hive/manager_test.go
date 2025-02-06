@@ -9,15 +9,17 @@ import (
 	"reflect"
 	"testing"
 
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive/failure"

@@ -11,14 +11,8 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	configv1 "github.com/openshift/api/config/v1"
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
-	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	"github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,6 +20,14 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	ktesting "k8s.io/client-go/testing"
+
+	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"

@@ -10,8 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -19,6 +17,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/fake"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"

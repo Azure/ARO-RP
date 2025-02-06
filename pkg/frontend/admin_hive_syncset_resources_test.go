@@ -11,9 +11,11 @@ import (
 	"testing"
 	"time"
 
-	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	"go.uber.org/mock/gomock"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
