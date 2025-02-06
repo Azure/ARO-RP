@@ -63,7 +63,7 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 			return err
 		}
 	}
-	return m.interfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name)
+	return m.armInterfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
 }
 
 func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string) error {
