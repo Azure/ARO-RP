@@ -22,8 +22,8 @@ var (
 func GetCredential(cloud AzureCloud, credential UserAssignedIdentityCredentials) (*azidentity.ClientCertificateCredential, error) {
 	// Double check nil pointers so we don't panic
 	fieldsToCheck := map[string]*string{
-		"clientID":               credential.ClientId,
-		"tenantID":               credential.TenantId,
+		"clientID":               credential.ClientID,
+		"tenantID":               credential.TenantID,
 		"clientSecret":           credential.ClientSecret,
 		"authenticationEndpoint": credential.AuthenticationEndpoint,
 	}
@@ -70,7 +70,7 @@ func GetCredential(cloud AzureCloud, credential UserAssignedIdentityCredentials)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errParseCertificate, err)
 	}
-	return azidentity.NewClientCertificateCredential(*credential.TenantId, *credential.ClientId, crt, key, opts)
+	return azidentity.NewClientCertificateCredential(*credential.TenantID, *credential.ClientSecret, crt, key, opts)
 }
 
 func getAzCoreCloud(cloud AzureCloud) (azcloud.Configuration, error) {

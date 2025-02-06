@@ -2,10 +2,8 @@ package dataplane
 
 import (
 	"context"
-	"fmt"
-	"time"
 
-	"github.com/Azure/msi-dataplane/pkg/dataplane/internal"
+	"github.com/Azure/msi-dataplane/pkg/dataplane/internal/client"
 )
 
 // Client wraps the generated code to smooth over the rough edges from generation, namely:
@@ -27,71 +25,29 @@ type Client interface {
 	// MoveIdentity moves the identity from one resource group into another.
 	MoveIdentity(ctx context.Context, request MoveIdentityRequest) (*MoveIdentityResponse, error)
 }
-
-var apiVersion string
-
-func init() {
-	date, err := time.Parse(time.RFC3339, string(internal.DeleteidentityParamsApiVersionN20240101T000000Z))
-	if err != nil {
-		panic(fmt.Errorf("failed to parse generated API version as date: %s", err.Error()))
-	}
-	apiVersion = date.Format("2006-01-02")
-}
-
 type clientAdapter struct {
-	delegate *internal.ClientWithResponses
+	hostPath string
+	delegate *client.ManagedIdentityDataPlaneAPIClient
 }
 
 var _ Client = (*clientAdapter)(nil)
 
 func (c *clientAdapter) DeleteSystemAssignedIdentity(ctx context.Context) error {
-	resp, err := c.delegate.DeleteidentityWithResponse(ctx, &internal.DeleteidentityParams{ApiVersion: internal.DeleteidentityParamsApiVersion(apiVersion)})
-	if err != nil {
-		return err
-	}
-	for _, respErr := range []*internal.ErrorResponse{resp.JSON400, resp.JSON401, resp.JSON403, resp.JSON404, resp.JSON405, resp.JSON429, resp.JSON500, resp.JSON503} {
-		if respErr != nil {
-			return &ResponseError{WrappedError: *respErr}
-		}
-	}
-	return nil
+	_, err := c.delegate.Deleteidentity(ctx, c.hostPath, nil)
+	return err
 }
 
 func (c *clientAdapter) GetSystemAssignedIdentityCredentials(ctx context.Context) (*ManagedIdentityCredentials, error) {
-	resp, err := c.delegate.GetcredWithResponse(ctx, &internal.GetcredParams{ApiVersion: internal.GetcredParamsApiVersion(apiVersion)})
-	if err != nil {
-		return nil, err
-	}
-	for _, respErr := range []*internal.ErrorResponse{resp.JSON400, resp.JSON401, resp.JSON403, resp.JSON404, resp.JSON429, resp.JSON500, resp.JSON503} {
-		if respErr != nil {
-			return nil, &ResponseError{WrappedError: *respErr}
-		}
-	}
-	return resp.JSON200, nil
+	resp, err := c.delegate.Getcred(ctx, c.hostPath, nil)
+	return &resp.ManagedIdentityCredentials, err
 }
 
 func (c *clientAdapter) GetUserAssignedIdentitiesCredentials(ctx context.Context, request UserAssignedIdentitiesRequest) (*ManagedIdentityCredentials, error) {
-	resp, err := c.delegate.GetcredsWithResponse(ctx, &internal.GetcredsParams{ApiVersion: internal.GetcredsParamsApiVersion(apiVersion)}, request)
-	if err != nil {
-		return nil, err
-	}
-	for _, respErr := range []*internal.ErrorResponse{resp.JSON400, resp.JSON401, resp.JSON403, resp.JSON404, resp.JSON405, resp.JSON429, resp.JSON500, resp.JSON503} {
-		if respErr != nil {
-			return nil, &ResponseError{WrappedError: *respErr}
-		}
-	}
-	return resp.JSON200, nil
+	resp, err := c.delegate.Getcreds(ctx, c.hostPath, request, nil)
+	return &resp.ManagedIdentityCredentials, err
 }
 
 func (c *clientAdapter) MoveIdentity(ctx context.Context, request MoveIdentityRequest) (*MoveIdentityResponse, error) {
-	resp, err := c.delegate.MoveidentityWithResponse(ctx, &internal.MoveidentityParams{ApiVersion: internal.MoveidentityParamsApiVersion(apiVersion)}, request)
-	if err != nil {
-		return nil, err
-	}
-	for _, respErr := range []*internal.ErrorResponse{resp.JSON400, resp.JSON401, resp.JSON403, resp.JSON404, resp.JSON405, resp.JSON429, resp.JSON500, resp.JSON503} {
-		if respErr != nil {
-			return nil, &ResponseError{WrappedError: *respErr}
-		}
-	}
-	return resp.JSON200, nil
+	resp, err := c.delegate.Moveidentity(ctx, c.hostPath, request, nil)
+	return &resp.MoveIdentityResponse, err
 }

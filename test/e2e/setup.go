@@ -8,7 +8,6 @@ import (
 	"embed"
 	"fmt"
 	"math"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -16,6 +15,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -399,14 +399,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		}
 	}
 
-	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
 	clientOptions := &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
-			Cloud: _env.Environment().Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
+			Cloud:           _env.Environment().Cloud,
+			Retry:           common.RetryOptions,
+			PerCallPolicies: []policy.Policy{azureclient.NewLoggingPolicy()},
 		},
 	}
 

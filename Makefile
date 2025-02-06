@@ -264,7 +264,7 @@ validate-go: $(GOIMPORTS)
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 .PHONY: validate-go-action
-validate-go-action:
+validate-go-action:	
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	go run ./hack/validate-imports cmd hack pkg test
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
