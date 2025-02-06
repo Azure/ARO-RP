@@ -12,6 +12,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -22,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
@@ -41,13 +43,16 @@ type Monitor struct {
 	oc   *api.OpenShiftCluster
 	dims map[string]string
 
-	restconfig *rest.Config
-	cli        kubernetes.Interface
-	configcli  configclient.Interface
-	maocli     machineclient.Interface
-	mcocli     mcoclient.Interface
-	m          metrics.Emitter
-	arocli     aroclient.Interface
+	restconfig  *rest.Config
+	cli         kubernetes.Interface
+	configcli   configclient.Interface
+	operatorcli operatorclient.Interface
+	maocli      machineclient.Interface
+	mcocli      mcoclient.Interface
+	m           metrics.Emitter
+	arocli      aroclient.Interface
+	env         env.Interface
+	tenantID    string
 
 	ocpclientset  client.Client
 	hiveclientset client.Client
@@ -66,7 +71,7 @@ type Monitor struct {
 	doc                *api.OpenShiftClusterDocument
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, doc *api.OpenShiftClusterDocument, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, doc *api.OpenShiftClusterDocument, env env.Interface, tenantID string, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -103,6 +108,10 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	if err != nil {
 		return nil, err
 	}
+	operatorcli, err := operatorclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	// lazy discovery will not attempt to reach out to the apiserver immediately
 	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
@@ -132,9 +141,12 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		restconfig:         restConfig,
 		cli:                cli,
 		configcli:          configcli,
+		operatorcli:        operatorcli,
 		maocli:             maocli,
 		mcocli:             mcocli,
 		arocli:             arocli,
+		env:                env,
+		tenantID:           tenantID,
 		m:                  m,
 		ocpclientset:       ocpclientset,
 		hiveclientset:      hiveclientset,
@@ -219,6 +231,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitCertificateExpirationStatuses,
 		mon.emitEtcdCertificateExpiry,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
+		mon.emitCWPStatus,
 	} {
 		err = f(ctx)
 		if err != nil {
