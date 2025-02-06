@@ -310,7 +310,7 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 	return appDetails{appID, appSecret, spID}, nil
 }
 
-func (c *Cluster) SetupClassicRoleAssignments(ctx context.Context, diskEncryptionSetID string, clusterServicePrincipalID string) error {
+func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, diskEncryptionSetID string, clusterServicePrincipalID string) error {
 	c.log.Info("creating role assignments")
 
 	for _, scope := range []struct{ resource, role string }{
