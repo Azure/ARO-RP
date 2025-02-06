@@ -6,9 +6,10 @@ package env
 import (
 	"testing"
 
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func managedIdentityCredentials(censor bool, delegatedResources []dataplane.DelegatedResource, explicitIdentities []dataplane.UserAssignedIdentityCredentials) dataplane.ManagedIdentityCredentials {

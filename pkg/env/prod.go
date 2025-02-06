@@ -410,54 +410,52 @@ func (p *prod) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
 	return &clientOptions, nil
 }
 
-func ClientDebugLoggerMiddleware(log *logrus.Entry) azureclient.Middleware {
-	return func(delegate http.RoundTripper) http.RoundTripper {
-		return azureclient.RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
-			log := log.WithFields(logrus.Fields{
-				"method": req.Method,
-				"url":    req.URL,
-			})
-			if req.Body != nil {
-				body, err := io.ReadAll(req.Body)
-				if err != nil {
-					log.WithError(err).Error("error reading request body")
-				}
-				if err := req.Body.Close(); err != nil {
-					log.WithError(err).Error("error closing request body")
-				}
-				log = log.WithField("body", string(body))
-				req.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the delegate can use it
-			}
-			log.Info("Sending request.")
-			resp, err := delegate.RoundTrip(req)
-			if err != nil {
-				log.WithError(err).Error("Request errored.")
-			} else if resp != nil {
-				log = log.WithFields(logrus.Fields{
-					"status": resp.StatusCode,
-				})
-				body, err := io.ReadAll(resp.Body)
-				if err != nil {
-					log.WithError(err).Error("error reading response body")
-				}
-				if err := resp.Body.Close(); err != nil {
-					log.WithError(err).Error("error closing response body")
-				}
-				// n.b.: we only send one request now, this is best-effort but would need to be updated if we use other methods
-				response := dataplane.ManagedIdentityCredentials{}
-				if err := json.Unmarshal(body, &response); err != nil {
-					log.WithError(err).Error("error unmarshalling response body")
-				} else {
-					censorCredentials(&response)
-					log = log.WithField("body", string(body))
-				}
-				resp.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the upstream round-trippers can use it
-			}
-			log.Info("Received response.")
-
-			return resp, err
+func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
+	return azureclient.PolicyFunc(func(req *policy.Request) (*http.Response, error) {
+		log := log.WithFields(logrus.Fields{
+			"method": req.Raw().Method,
+			"url":    req.Raw().URL,
 		})
-	}
+		if req.Raw().Body != nil {
+			body, err := io.ReadAll(req.Raw().Body)
+			if err != nil {
+				log.WithError(err).Error("error reading request body")
+			}
+			if err := req.Raw().Body.Close(); err != nil {
+				log.WithError(err).Error("error closing request body")
+			}
+			log = log.WithField("body", string(body))
+			req.Raw().Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the delegate can use it
+		}
+		log.Info("Sending request.")
+		resp, err := req.Next()
+		if err != nil {
+			log.WithError(err).Error("Request errored.")
+		} else if resp != nil {
+			log = log.WithFields(logrus.Fields{
+				"status": resp.StatusCode,
+			})
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.WithError(err).Error("error reading response body")
+			}
+			if err := resp.Body.Close(); err != nil {
+				log.WithError(err).Error("error closing response body")
+			}
+			// n.b.: we only send one request now, this is best-effort but would need to be updated if we use other methods
+			response := dataplane.ManagedIdentityCredentials{}
+			if err := json.Unmarshal(body, &response); err != nil {
+				log.WithError(err).Error("error unmarshalling response body")
+			} else {
+				censorCredentials(&response)
+				log = log.WithField("body", string(body))
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the upstream round-trippers can use it
+		}
+		log.Info("Received response.")
+
+		return resp, err
+	})
 }
 
 func censorCredentials(input *dataplane.ManagedIdentityCredentials) {

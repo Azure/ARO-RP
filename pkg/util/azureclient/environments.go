@@ -5,12 +5,12 @@ package azureclient
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
@@ -105,40 +105,14 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 	return AROEnvironment{}, fmt.Errorf("cloud environment %q is unsupported by ARO", name)
 }
 
-// RoundTripperFunc allows a function to implement http.RoundTripper
-type RoundTripperFunc func(*http.Request) (*http.Response, error)
-
-func (rt RoundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return rt(req)
-}
-
-// Middleware closes over any client-side middleware
-type Middleware func(http.RoundTripper) http.RoundTripper
-
-// Chain is a handy function to wrap a base RoundTripper (optional) with the middlewares.
-func Chain(rt http.RoundTripper, middlewares ...Middleware) http.RoundTripper {
-	if rt == nil {
-		rt = http.DefaultTransport
-	}
-
-	for _, m := range middlewares {
-		rt = m(rt)
-	}
-
-	return rt
-}
-
 // ArmClientOptions returns an arm.ClientOptions to be passed in when instantiating
 // Azure SDK for Go clients.
-func (e *AROEnvironment) ArmClientOptions(middlewares ...Middleware) *arm.ClientOptions {
-	customRoundTripper := Chain(http.DefaultTransport, append([]Middleware{NewCustomRoundTripper}, middlewares...)...)
+func (e *AROEnvironment) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
 	return &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
-			Cloud: e.Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
+			Cloud:           e.Cloud,
+			Retry:           common.RetryOptions,
+			PerCallPolicies: append([]policy.Policy{NewLoggingPolicy()}, middlewares...),
 		},
 	}
 }
