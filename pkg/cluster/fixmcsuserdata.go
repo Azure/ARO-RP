@@ -11,11 +11,13 @@ import (
 	"net/url"
 	"strings"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/ugorji/go/codec"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"

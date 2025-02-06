@@ -6,8 +6,9 @@ package cluster
 import (
 	"context"
 
-	configv1 "github.com/openshift/api/config/v1"
 	"github.com/sirupsen/logrus"
+
+	configv1 "github.com/openshift/api/config/v1"
 )
 
 type clusterOperatorConditionsIgnoreStruct struct {

@@ -6,8 +6,9 @@ package clusteroperators
 import (
 	"testing"
 
-	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	configv1 "github.com/openshift/api/config/v1"
 )
 
 func TestIsOperatorAvailable(t *testing.T) {

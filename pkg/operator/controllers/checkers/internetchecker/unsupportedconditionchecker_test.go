@@ -7,13 +7,14 @@ import (
 	"context"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
+
 	configv1 "github.com/openshift/api/config/v1"
 	consolev1 "github.com/openshift/api/console/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	consolefake "github.com/openshift/client-go/console/clientset/versioned/fake"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )

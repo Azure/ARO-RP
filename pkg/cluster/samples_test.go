@@ -7,12 +7,14 @@ import (
 	"context"
 	"testing"
 
+	"go.uber.org/mock/gomock"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	operatorv1 "github.com/openshift/api/operator/v1"
 	samplesv1 "github.com/openshift/api/samples/v1"
 	samplesfake "github.com/openshift/client-go/samples/clientset/versioned/fake"
-	"go.uber.org/mock/gomock"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"

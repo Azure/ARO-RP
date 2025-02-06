@@ -6,12 +6,13 @@ package dynamichelper
 import (
 	"reflect"
 
-	securityv1 "github.com/openshift/api/security/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	securityv1 "github.com/openshift/api/security/v1"
 )
 
 // rather than list every object, just list the ones whose creation really has

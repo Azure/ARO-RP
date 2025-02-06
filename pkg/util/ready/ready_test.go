@@ -8,14 +8,15 @@ import (
 	"errors"
 	"testing"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )

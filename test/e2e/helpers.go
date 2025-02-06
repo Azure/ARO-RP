@@ -13,8 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	projectv1 "github.com/openshift/api/project/v1"
-	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -23,6 +21,9 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+
+	projectv1 "github.com/openshift/api/project/v1"
+	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/test/util/dynamic"
 )

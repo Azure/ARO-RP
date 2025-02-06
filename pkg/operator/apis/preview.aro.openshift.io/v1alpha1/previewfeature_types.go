@@ -4,8 +4,9 @@ package v1alpha1
 // Licensed under the Apache License 2.0.
 
 import (
-	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
 )
 
 const (
