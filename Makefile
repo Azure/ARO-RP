@@ -109,6 +109,11 @@ discoverycache:
 generate: install-tools
 	go generate ./...
 
+.PHONY: generate-parallel
+generate-parallel: install-tools
+	grep -rl 'go:generate' | grep -v 'vendor/' | xargs -P 0 -I {} bash -c 'go generate "./$$(dirname {})"'
+	$(MAKE) imports
+
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
 .PHONY: generate-operator-apiclient
