@@ -8,12 +8,13 @@ import (
 	"os"
 	"strings"
 
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
+
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"

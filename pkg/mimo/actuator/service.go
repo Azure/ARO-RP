@@ -16,6 +16,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
+
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/Azure/ARO-RP/pkg/api"

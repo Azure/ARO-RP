@@ -7,9 +7,11 @@ import (
 	"context"
 	"testing"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
 	"go.uber.org/mock/gomock"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"

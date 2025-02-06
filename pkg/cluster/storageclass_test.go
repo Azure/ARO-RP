@@ -8,15 +8,17 @@ import (
 	"errors"
 	"testing"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/stretchr/testify/assert"
+
 	storagev1 "k8s.io/api/storage/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/version"

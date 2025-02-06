@@ -5,4 +5,3 @@ package storage
 
 //go:generate rm -rf ../../../../util/mocks/azureclient/mgmt/$GOPACKAGE
 //go:generate mockgen -destination=../../../../util/mocks/azureclient/mgmt/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/$GOPACKAGE AccountsClient
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../../util/mocks/azureclient/mgmt/$GOPACKAGE/$GOPACKAGE.go

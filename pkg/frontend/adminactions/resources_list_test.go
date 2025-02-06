@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
 	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"

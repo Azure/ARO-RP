@@ -16,6 +16,7 @@ import (
 	"github.com/containers/image/v5/docker"
 	"github.com/containers/image/v5/pkg/blobinfocache/memory"
 	"github.com/containers/image/v5/types"
+
 	imagev1 "github.com/openshift/api/image/v1"
 )
 

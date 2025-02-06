@@ -8,12 +8,14 @@ import (
 	"testing"
 	"time"
 
-	configv1 "github.com/openshift/api/config/v1"
-	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	"go.uber.org/mock/gomock"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	configv1 "github.com/openshift/api/config/v1"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"

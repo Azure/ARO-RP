@@ -71,12 +71,6 @@ $(GOCOV): $(BINGO_DIR)/gocov.mod
 	@echo "(re)installing $(GOBIN)/gocov-v1.1.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gocov.mod -o=$(GOBIN)/gocov-v1.1.0 "github.com/axw/gocov/gocov"
 
-GOIMPORTS := $(GOBIN)/goimports-v0.23.0
-$(GOIMPORTS): $(BINGO_DIR)/goimports.mod
-	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/goimports-v0.23.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=goimports.mod -o=$(GOBIN)/goimports-v0.23.0 "golang.org/x/tools/cmd/goimports"
-
 GOJQ := $(GOBIN)/gojq-v0.12.16
 $(GOJQ): $(BINGO_DIR)/gojq.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
@@ -100,4 +94,10 @@ $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
 	@echo "(re)installing $(GOBIN)/mockgen-v0.4.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.4.0 "go.uber.org/mock/mockgen"
+
+OPENSHIFT_GOIMPORTS := $(GOBIN)/openshift-goimports-v0.0.0-20230304234052-c70783e636f2
+$(OPENSHIFT_GOIMPORTS): $(BINGO_DIR)/openshift-goimports.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/openshift-goimports-v0.0.0-20230304234052-c70783e636f2"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=openshift-goimports.mod -o=$(GOBIN)/openshift-goimports-v0.0.0-20230304234052-c70783e636f2 "github.com/openshift-eng/openshift-goimports"
 

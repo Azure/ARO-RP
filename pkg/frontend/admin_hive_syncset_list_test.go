@@ -9,9 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"go.uber.org/mock/gomock"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"

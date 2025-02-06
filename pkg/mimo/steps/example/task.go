@@ -7,8 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )

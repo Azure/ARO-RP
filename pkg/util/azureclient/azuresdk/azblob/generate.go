@@ -5,4 +5,3 @@ package azblob
 
 //go:generate rm -rf ../../../../../mocks/azureclient/azuresdk/$GOPACKAGE
 //go:generate mockgen -destination=../../../mocks/azureclient/azuresdk/$GOPACKAGE/blobs.go -source=blobs.go
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../mocks/azureclient/azuresdk/$GOPACKAGE/blobs.go

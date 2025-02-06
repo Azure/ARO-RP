@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"

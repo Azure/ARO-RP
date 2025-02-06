@@ -8,14 +8,16 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"

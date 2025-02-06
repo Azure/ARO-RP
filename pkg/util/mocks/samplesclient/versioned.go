@@ -12,9 +12,11 @@ package mock_versioned
 import (
 	reflect "reflect"
 
-	v1 "github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1"
 	gomock "go.uber.org/mock/gomock"
+
 	discovery "k8s.io/client-go/discovery"
+
+	v1 "github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1"
 )
 
 // MockInterface is a mock of Interface interface.

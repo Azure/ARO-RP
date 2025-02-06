@@ -6,12 +6,13 @@ package cluster
 import (
 	"context"
 
-	configv1 "github.com/openshift/api/config/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	samplesv1 "github.com/openshift/api/samples/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+
+	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesv1 "github.com/openshift/api/samples/v1"
 )
 
 // disableSamples disables the samples if there's no appropriate pull secret

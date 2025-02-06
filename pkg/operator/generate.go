@@ -5,7 +5,6 @@ package operator
 
 // build the Kubernetes objects
 //go:generate controller-gen object paths=./apis/...
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ./apis
 
 // build the operator's CRD (based on the apis)
 // for master deployment

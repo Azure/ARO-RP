@@ -10,5 +10,3 @@ package dynamic
 //go:generate rm -rf ../../../pkg/util/mocks/$GOPACKAGE
 //go:generate mockgen -destination=../../../pkg/util/mocks/$GOPACKAGE/$GOPACKAGE.go -source=dynamic.go
 //go:generate mockgen -destination=../../../pkg/util/mocks/checkaccess/checkaccess.go github.com/Azure/checkaccess-v2-go-sdk/client RemotePDPClient
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../pkg/util/mocks/$GOPACKAGE/$GOPACKAGE.go
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../../../pkg/util/mocks/checkaccess/checkaccess.go

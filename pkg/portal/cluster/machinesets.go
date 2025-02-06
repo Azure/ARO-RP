@@ -7,8 +7,9 @@ import (
 	"context"
 	"encoding/json"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 )
 
 type OsDiskManagedDisk struct {

@@ -11,12 +11,14 @@ import (
 	"strings"
 	"testing"
 
-	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
-	operatorv1fake "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake"
 	"github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 	kschema "k8s.io/apimachinery/pkg/runtime/schema"
 	ktesting "k8s.io/client-go/testing"
+
+	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
+	operatorv1fake "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"

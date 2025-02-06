@@ -8,12 +8,14 @@ import (
 	"flag"
 	"fmt"
 
-	machinev1 "github.com/openshift/api/machine/v1"
 	"github.com/sirupsen/logrus"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
+	machinev1 "github.com/openshift/api/machine/v1"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"

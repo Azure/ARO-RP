@@ -12,8 +12,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/hive"

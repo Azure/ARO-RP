@@ -15,11 +15,9 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	securityv1 "github.com/openshift/api/security/v1"
-	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +25,10 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
+	securityv1 "github.com/openshift/api/security/v1"
+	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"

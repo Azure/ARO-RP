@@ -5,4 +5,3 @@ package api
 
 //go:generate enumer -type InstallPhase -output zz_generated_installphase_enumer.go
 //go:generate mockgen -destination=../util/mocks/api/api.go github.com/Azure/ARO-RP/pkg/api SyncSetConverter,MachinePoolConverter,SyncIdentityProviderConverter,SecretConverter
-//go:generate goimports -local=github.com/Azure/ARO-RP -e -w ../util/mocks/api/api.go

@@ -8,15 +8,17 @@ import (
 	"encoding/json"
 	"testing"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )

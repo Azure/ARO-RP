@@ -8,14 +8,16 @@ import (
 	"reflect"
 	"testing"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"

@@ -9,10 +9,12 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	configv1 "github.com/openshift/api/config/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"

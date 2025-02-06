@@ -9,6 +9,7 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 

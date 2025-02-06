@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
+
 	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/deploy"

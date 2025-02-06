@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
 	"k8s.io/utils/strings/slices"
 
 	"github.com/Azure/ARO-RP/pkg/database"

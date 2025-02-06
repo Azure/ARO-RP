@@ -6,9 +6,10 @@ package cluster
 import (
 	"context"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
 )
 
 const consoleConfigResourceName string = "cluster"

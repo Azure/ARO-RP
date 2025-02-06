@@ -6,12 +6,8 @@ package clusteroperatoraro
 import (
 	"context"
 
-	configv1 "github.com/openshift/api/config/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	configv1helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
-	"github.com/openshift/library-go/pkg/operator/status"
-	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/api/equality"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	configv1helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
+	"github.com/openshift/library-go/pkg/operator/status"
+	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"

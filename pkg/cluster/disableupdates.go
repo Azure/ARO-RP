@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
-	configv1 "github.com/openshift/api/config/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+
+	configv1 "github.com/openshift/api/config/v1"
 )
 
 func (m *manager) disableUpdates(ctx context.Context) error {

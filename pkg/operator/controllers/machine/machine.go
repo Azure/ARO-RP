@@ -8,8 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"

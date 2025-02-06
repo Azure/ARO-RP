@@ -10,8 +10,10 @@ import (
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
-	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
+
 	"k8s.io/apimachinery/pkg/types"
+
+	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"

@@ -11,9 +11,11 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )

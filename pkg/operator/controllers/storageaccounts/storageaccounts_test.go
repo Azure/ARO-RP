@@ -13,11 +13,13 @@ import (
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
-	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"

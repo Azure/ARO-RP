@@ -9,10 +9,12 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+
 	"k8s.io/apimachinery/pkg/labels"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 )
 
 const (

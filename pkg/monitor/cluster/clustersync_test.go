@@ -9,12 +9,14 @@ import (
 	"testing"
 	"time"
 
-	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 
 	"github.com/Azure/ARO-RP/pkg/hive"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"

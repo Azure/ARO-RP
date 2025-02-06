@@ -6,8 +6,9 @@ package v1alpha1
 import (
 	"strings"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
 )
 
 type BannerContent string

@@ -13,10 +13,9 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,6 +23,9 @@ import (
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	ktesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/yaml"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"

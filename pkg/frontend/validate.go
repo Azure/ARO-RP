@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/coreos/go-semver/semver"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"

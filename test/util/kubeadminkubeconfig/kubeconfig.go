@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 

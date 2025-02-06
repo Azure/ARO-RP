@@ -10,8 +10,9 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
+
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
