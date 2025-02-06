@@ -131,7 +131,7 @@ func TestCluster_GetPlatformWIRoles(t *testing.T) {
 			if tt.wantErr {
 				t.Fatal("GetPlatformWIRoles() succeeded unexpectedly")
 			}
-			// TODO: update the condition below to compare got with tt.want.
+
 			if !reflect.DeepEqual(tt.want, got) {
 				t.Errorf("GetPlatformWIRoles() = %v, want %v", got, tt.want)
 			}
