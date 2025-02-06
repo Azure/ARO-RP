@@ -462,21 +462,17 @@ func ClientDebugLoggerMiddleware(log *logrus.Entry) azureclient.Middleware {
 
 func censorCredentials(input *dataplane.ManagedIdentityCredentials) {
 	input.ClientSecret = nil
-	if input.DelegatedResources != nil {
-		for i := 0; i < len(*input.DelegatedResources); i++ {
-			if (*input.DelegatedResources)[i].ImplicitIdentity != nil {
-				(*input.DelegatedResources)[i].ImplicitIdentity.ClientSecret = nil
-			}
-			if (*input.DelegatedResources)[i].ExplicitIdentities != nil {
-				for j := 0; j < len(*(*input.DelegatedResources)[i].ExplicitIdentities); j++ {
-					(*(*input.DelegatedResources)[i].ExplicitIdentities)[j].ClientSecret = nil
-				}
-			}
+	for i := 0; i < len(input.DelegatedResources); i++ {
+		if input.DelegatedResources[i].ImplicitIdentity != nil {
+			input.DelegatedResources[i].ImplicitIdentity.ClientSecret = nil
+		}
+		for j := 0; j < len(input.DelegatedResources[i].ExplicitIdentities); j++ {
+			input.DelegatedResources[i].ExplicitIdentities[j].ClientSecret = nil
 		}
 	}
 	if input.ExplicitIdentities != nil {
-		for i := 0; i < len(*input.ExplicitIdentities); i++ {
-			(*input.ExplicitIdentities)[i].ClientSecret = nil
+		for i := 0; i < len(input.ExplicitIdentities); i++ {
+			input.ExplicitIdentities[i].ClientSecret = nil
 		}
 	}
 }
@@ -532,23 +528,23 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 
 	placeholder := "placeholder"
 	return &dataplane.ManagedIdentityCredentials{
-		ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
+		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
+				ClientID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
 				ClientSecret:               pointerutils.ToPtr(os.Getenv("MOCK_MSI_CERT")),
-				TenantId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
-				ObjectId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
-				ResourceId:                 pointerutils.ToPtr(m.msiResourceId),
+				TenantID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
+				ObjectID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
+				ResourceID:                 pointerutils.ToPtr(m.msiResourceId),
 				AuthenticationEndpoint:     pointerutils.ToPtr(m.aadHost),
 				CannotRenewAfter:           &placeholder,
-				ClientSecretUrl:            &placeholder,
+				ClientSecretURL:            &placeholder,
 				MtlsAuthenticationEndpoint: &placeholder,
 				NotAfter:                   &placeholder,
 				NotBefore:                  &placeholder,
 				RenewAfter:                 &placeholder,
 				CustomClaims: &dataplane.CustomClaims{
-					XmsAzNwperimid: &[]string{placeholder},
-					XmsAzTm:        &placeholder,
+					XMSAzNwperimid: []string{placeholder},
+					XMSAzTm:        &placeholder,
 				},
 			},
 		},
