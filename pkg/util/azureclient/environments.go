@@ -5,12 +5,12 @@ package azureclient
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
@@ -107,15 +107,12 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 
 // ArmClientOptions returns an arm.ClientOptions to be passed in when instantiating
 // Azure SDK for Go clients.
-func (e *AROEnvironment) ArmClientOptions() *arm.ClientOptions {
-	customRoundTripper := NewCustomRoundTripper(http.DefaultTransport)
+func (e *AROEnvironment) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
 	return &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
-			Cloud: e.Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
+			Cloud:           e.Cloud,
+			Retry:           common.RetryOptions,
+			PerCallPolicies: append([]policy.Policy{NewLoggingPolicy()}, middlewares...),
 		},
 	}
 }

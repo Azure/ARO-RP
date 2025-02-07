@@ -32,10 +32,8 @@ func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
 		},
 	}
 
-	customRoundTripper := azureclient.NewCustomRoundTripper(httpTransport)
-
 	httpClient := &http.Client{
-		Transport: customRoundTripper,
+		Transport: httpTransport,
 	}
 
 	return &ClientOptions{
@@ -54,7 +52,8 @@ func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
 				ApplicationID: userAgent,
 				Disabled:      false,
 			},
-			Transport: httpClient,
+			PerCallPolicies: []policy.Policy{azureclient.NewLoggingPolicy()},
+			Transport:       httpClient,
 		},
 	}
 }

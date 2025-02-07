@@ -42,24 +42,24 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 	placeholderString := "placeholder"
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
-		ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
+		ExplicitIdentities: []*dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientId:                   &placeholderString,
+				ClientID:                   &placeholderString,
 				ClientSecret:               &placeholderString,
-				TenantId:                   &placeholderString,
-				ResourceId:                 &miResourceId,
+				TenantID:                   &placeholderString,
+				ResourceID:                 &miResourceId,
 				AuthenticationEndpoint:     &placeholderString,
 				CannotRenewAfter:           &placeholderString,
-				ClientSecretUrl:            &placeholderString,
+				ClientSecretURL:            &placeholderString,
 				MtlsAuthenticationEndpoint: &placeholderString,
 				NotAfter:                   &placeholderString,
 				NotBefore:                  &placeholderString,
 				RenewAfter:                 &placeholderString,
 				CustomClaims: &dataplane.CustomClaims{
-					XmsAzNwperimid: &[]string{placeholderString},
-					XmsAzTm:        &placeholderString,
+					XMSAzNwperimid: []*string{&placeholderString},
+					XMSAzTm:        &placeholderString,
 				},
-				ObjectId: &placeholderString,
+				ObjectID: &placeholderString,
 			},
 		},
 	}
@@ -237,24 +237,24 @@ func TestClusterIdentityIDs(t *testing.T) {
 
 	msiDataPlaneValidStub := func(client *mock_msidataplane.MockClient) {
 		client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(&dataplane.ManagedIdentityCredentials{
-			ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
+			ExplicitIdentities: []*dataplane.UserAssignedIdentityCredentials{
 				{
-					ClientId:   &miClientId,
-					ObjectId:   &miObjectId,
-					ResourceId: &miResourceId,
+					ClientID:   &miClientId,
+					ObjectID:   &miObjectId,
+					ResourceID: &miResourceId,
 
 					ClientSecret:               &placeholderString,
-					TenantId:                   &placeholderString,
+					TenantID:                   &placeholderString,
 					AuthenticationEndpoint:     &placeholderString,
 					CannotRenewAfter:           &placeholderString,
-					ClientSecretUrl:            &placeholderString,
+					ClientSecretURL:            &placeholderString,
 					MtlsAuthenticationEndpoint: &placeholderString,
 					NotAfter:                   &placeholderString,
 					NotBefore:                  &placeholderString,
 					RenewAfter:                 &placeholderString,
 					CustomClaims: &dataplane.CustomClaims{
-						XmsAzNwperimid: &[]string{placeholderString},
-						XmsAzTm:        &placeholderString,
+						XMSAzNwperimid: []*string{&placeholderString},
+						XMSAzTm:        &placeholderString,
 					},
 				},
 			},
@@ -442,22 +442,22 @@ func TestClusterIdentityIDs(t *testing.T) {
 func TestGetSingleExplicitIdentity(t *testing.T) {
 	placeholderString := "placeholder"
 	validIdentity := dataplane.UserAssignedIdentityCredentials{
-		ClientId:                   &placeholderString,
+		ClientID:                   &placeholderString,
 		ClientSecret:               &placeholderString,
-		TenantId:                   &placeholderString,
-		ResourceId:                 &placeholderString,
+		TenantID:                   &placeholderString,
+		ResourceID:                 &placeholderString,
 		AuthenticationEndpoint:     &placeholderString,
 		CannotRenewAfter:           &placeholderString,
-		ClientSecretUrl:            &placeholderString,
+		ClientSecretURL:            &placeholderString,
 		MtlsAuthenticationEndpoint: &placeholderString,
 		NotAfter:                   &placeholderString,
 		NotBefore:                  &placeholderString,
 		RenewAfter:                 &placeholderString,
 		CustomClaims: &dataplane.CustomClaims{
-			XmsAzNwperimid: &[]string{placeholderString},
-			XmsAzTm:        &placeholderString,
+			XMSAzNwperimid: []*string{&placeholderString},
+			XMSAzTm:        &placeholderString,
 		},
-		ObjectId: &placeholderString,
+		ObjectID: &placeholderString,
 	}
 
 	for _, tt := range []struct {
@@ -474,15 +474,24 @@ func TestGetSingleExplicitIdentity(t *testing.T) {
 		{
 			name: "ExplicitIdentities empty, returns error",
 			msiCredObj: &dataplane.ManagedIdentityCredentials{
-				ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{},
+				ExplicitIdentities: []*dataplane.UserAssignedIdentityCredentials{},
+			},
+			wantErr: errClusterMsiNotPresentInResponse.Error(),
+		},
+		{
+			name: "ExplicitIdentities first element is invalid, returns error",
+			msiCredObj: &dataplane.ManagedIdentityCredentials{
+				ExplicitIdentities: []*dataplane.UserAssignedIdentityCredentials{
+					nil,
+				},
 			},
 			wantErr: errClusterMsiNotPresentInResponse.Error(),
 		},
 		{
 			name: "ExplicitIdentities first element is valid, returns it",
 			msiCredObj: &dataplane.ManagedIdentityCredentials{
-				ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
-					validIdentity,
+				ExplicitIdentities: []*dataplane.UserAssignedIdentityCredentials{
+					&validIdentity,
 				},
 			},
 			want: validIdentity,

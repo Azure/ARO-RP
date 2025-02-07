@@ -1,26 +1,13 @@
 package dataplane
 
-import "github.com/Azure/msi-dataplane/pkg/dataplane/internal"
+import "github.com/Azure/msi-dataplane/pkg/dataplane/internal/client"
 
-type ManagedIdentityCredentials = internal.ManagedIdentityCredentials
-type CustomClaims = internal.CustomClaims
-type DelegatedResource = internal.DelegatedResource
-type UserAssignedIdentityCredentials = internal.UserAssignedIdentityCredentials
+type ManagedIdentityCredentials = client.ManagedIdentityCredentials
+type CustomClaims = client.CustomClaims
+type DelegatedResource = client.DelegatedResource
+type UserAssignedIdentityCredentials = client.UserAssignedIdentityCredentials
 
-type UserAssignedIdentitiesRequest = internal.CredRequestDefinition
+type UserAssignedIdentitiesRequest = client.CredRequestDefinition
 
-type MoveIdentityRequest = internal.MoveRequestBodyDefinition
-type MoveIdentityResponse = internal.MoveIdentityResponse
-
-// ResponseError adapts the generated response error into something implementing a Go error,
-// while exposing the internals so that upstream users can use errors.As to inspect the values.
-type ResponseError struct {
-	WrappedError internal.ErrorResponse
-}
-
-func (e *ResponseError) Error() string {
-	if e.WrappedError.Error.Message != nil {
-		return *e.WrappedError.Error.Message
-	}
-	return "An unknown error occurred."
-}
+type MoveIdentityRequest = client.MoveRequestBodyDefinition
+type MoveIdentityResponse = client.MoveIdentityResponse
