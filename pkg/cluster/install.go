@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
@@ -332,12 +333,17 @@ func (m *manager) runHiveInstaller(ctx context.Context) error {
 		return err
 	}
 
-	var customManifests map[string]kruntime.Object
+	customManifests := map[string]kruntime.Object{}
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		customManifests, err = m.generateWorkloadIdentityResources()
+		workloadIdentityManifests, err := m.generateWorkloadIdentityResources()
 		if err != nil {
 			return err
 		}
+		maps.Copy(customManifests, workloadIdentityManifests)
+	}
+
+	if m.shouldDisableSamples() {
+		customManifests["cluster-config-samples.yaml"] = bootstrapDisabledSamplesConfig()
 	}
 
 	// Run installer. For M5/M6 we will persist the graph inside the installer

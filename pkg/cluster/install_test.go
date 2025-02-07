@@ -25,6 +25,7 @@ import (
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -424,6 +425,9 @@ func TestRunHiveInstallerSetsCreatedByHiveFieldToTrueInClusterDoc(t *testing.T) 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
+	envMock := mock_env.NewMockInterface(controller)
+	envMock.EXPECT().IsLocalDevelopmentMode().Return(false)
+
 	hiveClusterManagerMock := mock_hive.NewMockClusterManager(controller)
 	hiveClusterManagerMock.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 
@@ -434,6 +438,7 @@ func TestRunHiveInstallerSetsCreatedByHiveFieldToTrueInClusterDoc(t *testing.T) 
 			expectedOpenShiftVersion: nil,
 			expectedError:            nil,
 		},
+		env:                envMock,
 		hiveClusterManager: hiveClusterManagerMock,
 	}
 
