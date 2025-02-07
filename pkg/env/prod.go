@@ -443,13 +443,24 @@ func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
 				log.WithError(err).Error("error closing response body")
 			}
 			// n.b.: we only send one request now, this is best-effort but would need to be updated if we use other methods
-			response := dataplane.ManagedIdentityCredentials{}
-			if err := json.Unmarshal(body, &response); err != nil {
-				log.WithError(err).Error("error unmarshalling response body")
+			var responseBody string
+			if resp.StatusCode == http.StatusOK {
+				response := dataplane.ManagedIdentityCredentials{}
+				if err := json.Unmarshal(body, &response); err != nil {
+					log.WithError(err).Error("error unmarshalling response body")
+				} else {
+					censorCredentials(&response)
+					censored, err := json.Marshal(response)
+					if err != nil {
+						log.WithError(err).Error("error marshalling response body after censoring")
+					}
+					responseBody = string(censored)
+				}
 			} else {
-				censorCredentials(&response)
-				log = log.WithField("body", string(body))
+				// error codes don't have anything in them that we need to censor
+				responseBody = string(body)
 			}
+			log = log.WithField("body", responseBody)
 			resp.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the upstream round-trippers can use it
 		}
 		log.Info("Received response.")
