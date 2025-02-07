@@ -113,11 +113,17 @@ const (
 
 // NewCloudError returns a new CloudError
 func NewCloudError(statusCode int, code, target, message string, a ...interface{}) *CloudError {
+	var msg string
+	if len(a) == 0 {
+		msg = fmt.Sprint(message)
+	} else {
+		msg = fmt.Sprintf(message, a...)
+	}
 	return &CloudError{
 		StatusCode: statusCode,
 		CloudErrorBody: &CloudErrorBody{
 			Code:    code,
-			Message: fmt.Sprintf(message, a...),
+			Message: msg,
 			Target:  target,
 		},
 	}

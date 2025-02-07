@@ -175,7 +175,7 @@ func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) 
 			errs = append(errs, err)
 			continue
 		}
-		m.log.Infof(string(json))
+		m.log.Info(string(json))
 	}
 
 	return strings.Join(lines, "\n"), errors.Join(errs...)
@@ -217,7 +217,7 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 			errs = append(errs, err)
 			continue
 		}
-		m.log.Infof(string(json))
+		m.log.Info(string(json))
 	}
 
 	return strings.Join(lines, "\n"), errors.Join(errs...)

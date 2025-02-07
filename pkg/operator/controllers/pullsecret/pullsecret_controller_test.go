@@ -807,8 +807,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
-			if !reflect.DeepEqual(s, tt.wantSecret) {
-				t.Fatalf(cmp.Diff(s, tt.wantSecret))
+			if diff := cmp.Diff(s, tt.wantSecret); diff != "" {
+				t.Fatalf("Unexpected pull secret (-want, +got): %s", diff)
 			}
 		})
 	}

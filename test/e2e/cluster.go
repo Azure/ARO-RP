@@ -44,7 +44,7 @@ var _ = Describe("Cluster", Serial, func() {
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
 			return project.VerifyProjectIsReady(ctx)
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		DeferCleanup(func(ctx context.Context) {
 			By("deleting the test project")
