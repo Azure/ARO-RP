@@ -502,6 +502,30 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 			gatewayEnabled: true,
 		},
 		{
+			name: "ok, skipCreateOrUpdate, !gatewayEnabled",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
+					},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name: "ok, skipCreateOrUpdate, gatewayEnabled",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						PrivateEndpointNetworkPolicies:    to.StringPtr("Disabled"),
+						PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
+					},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			gatewayEnabled: true,
+		},
+		{
 			name: "error",
 			mocks: func(subnet *mock_subnet.MockManager) {
 				subnet.EXPECT().Get(ctx, "subnetID").Return(nil, fmt.Errorf("sad"))
