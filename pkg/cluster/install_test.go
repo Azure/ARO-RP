@@ -12,15 +12,17 @@ import (
 
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
+
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"

@@ -9,9 +9,10 @@ import (
 	"reflect"
 	"strconv"
 
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
+
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"

@@ -8,10 +8,11 @@ import (
 	"sort"
 	"testing"
 
-	securityv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	securityv1 "github.com/openshift/api/security/v1"
 )
 
 func TestCreateOrder(t *testing.T) {
