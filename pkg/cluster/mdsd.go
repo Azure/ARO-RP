@@ -14,6 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// "Rotate" the MDSD certificates in the cluster. The copy that is rotated from
+// comes from RP-Config, and is only able to be updated when the RP is updated.
 func RenewMDSDCertificate(ctx context.Context, log *logrus.Entry, _env env.Interface, ch clienthelper.Interface) error {
 	key, cert := _env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utilpem.Encode(key)
