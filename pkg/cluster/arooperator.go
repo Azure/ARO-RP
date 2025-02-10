@@ -7,8 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 )
 
 var (

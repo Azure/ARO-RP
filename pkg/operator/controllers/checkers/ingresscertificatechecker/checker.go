@@ -14,11 +14,12 @@ import (
 	"context"
 	"errors"
 
-	configv1 "github.com/openshift/api/config/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dns"

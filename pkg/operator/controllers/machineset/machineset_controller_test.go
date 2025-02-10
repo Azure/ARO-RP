@@ -10,14 +10,16 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"

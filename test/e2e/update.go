@@ -8,17 +8,17 @@ import (
 	"math/rand"
 	"strconv"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/go-autorest/autorest/to"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/go-autorest/autorest/to"
-	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 )
 
 var _ = Describe("Update clusters", func() {

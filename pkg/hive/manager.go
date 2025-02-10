@@ -11,9 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 	"github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +22,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	hivev1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"

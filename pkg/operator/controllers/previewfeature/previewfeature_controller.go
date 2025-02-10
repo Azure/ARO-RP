@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"

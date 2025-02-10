@@ -31,6 +31,7 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"

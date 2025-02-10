@@ -16,6 +16,7 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/apparentlymart/go-cidr/cidr"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"

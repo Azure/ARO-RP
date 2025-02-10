@@ -13,12 +13,14 @@ import (
 	context "context"
 	reflect "reflect"
 
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
+
+	kubernetes "k8s.io/client-go/kubernetes"
+
 	versioned "github.com/openshift/client-go/config/clientset/versioned"
 	versioned0 "github.com/openshift/client-go/machine/clientset/versioned"
 	versioned1 "github.com/openshift/client-go/operator/clientset/versioned"
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
-	kubernetes "k8s.io/client-go/kubernetes"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
 )

@@ -6,11 +6,12 @@ package cluster
 import (
 	"context"
 
-	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+
+	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dns"

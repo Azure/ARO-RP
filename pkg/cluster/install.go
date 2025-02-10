@@ -6,9 +6,18 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+
+	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -16,12 +25,6 @@ import (
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
-	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/containerinstall"
@@ -330,12 +333,17 @@ func (m *manager) runHiveInstaller(ctx context.Context) error {
 		return err
 	}
 
-	var customManifests map[string]kruntime.Object
+	customManifests := map[string]kruntime.Object{}
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		customManifests, err = m.generateWorkloadIdentityResources()
+		workloadIdentityManifests, err := m.generateWorkloadIdentityResources()
 		if err != nil {
 			return err
 		}
+		maps.Copy(customManifests, workloadIdentityManifests)
+	}
+
+	if m.shouldDisableSamples() {
+		customManifests["cluster-config-samples.yaml"] = bootstrapDisabledSamplesConfig()
 	}
 
 	// Run installer. For M5/M6 we will persist the graph inside the installer

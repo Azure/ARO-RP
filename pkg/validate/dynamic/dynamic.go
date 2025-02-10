@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"

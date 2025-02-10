@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
 )
 
 type clusterDNSChecker interface {

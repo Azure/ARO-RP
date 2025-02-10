@@ -7,15 +7,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
 	configv1 "github.com/openshift/api/config/v1"
 	consolev1 "github.com/openshift/api/console/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
 	"github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
-	"github.com/sirupsen/logrus"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 )

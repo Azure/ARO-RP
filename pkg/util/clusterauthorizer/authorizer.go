@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"

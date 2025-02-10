@@ -7,9 +7,10 @@ import (
 	"context"
 	"errors"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetClusterVersion fetches the version of the openshift cluster.

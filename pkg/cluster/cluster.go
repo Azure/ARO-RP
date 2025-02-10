@@ -12,6 +12,12 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
+	"github.com/sirupsen/logrus"
+
+	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -19,10 +25,6 @@ import (
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
-	"github.com/sirupsen/logrus"
-	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"

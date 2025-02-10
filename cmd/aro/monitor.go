@@ -9,6 +9,7 @@ import (
 
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
+
 	kmetrics "k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/database"
