@@ -165,31 +165,15 @@ func (c *HookingClient) Create(ctx context.Context, obj client.Object, opts ...c
 }
 
 func (c *HookingClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
-	return schema.GroupVersionKind{}, nil
+	return c.f.GroupVersionKindFor(obj)
 }
 
 func (c *HookingClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
-	return false, nil
+	return c.f.IsObjectNamespaced(obj)
 }
 
-func (c *HookingClient) SubResource(string) client.SubResourceClient {
-	return HookingSubResourceClient{}
-}
-
-func (hsrc HookingSubResourceClient) Create(context.Context, client.Object, client.Object, ...client.SubResourceCreateOption) error {
-	return nil
-}
-
-func (hsrc HookingSubResourceClient) Get(context.Context, client.Object, client.Object, ...client.SubResourceGetOption) error {
-	return nil
-}
-
-func (hsrc HookingSubResourceClient) Patch(context.Context, client.Object, client.Patch, ...client.SubResourcePatchOption) error {
-	return nil
-}
-
-func (hsrc HookingSubResourceClient) Update(context.Context, client.Object, ...client.SubResourceUpdateOption) error {
-	return nil
+func (c *HookingClient) SubResource(input string) client.SubResourceClient {
+	return c.f.SubResource(input)
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Writer.Delete]
