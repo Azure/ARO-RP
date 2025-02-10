@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -25,17 +26,21 @@ const (
 	correlationIdHeader  = "X-Ms-Correlation-Request-Id"
 )
 
-func NewCustomRoundTripper(next http.RoundTripper) http.RoundTripper {
-	return &customRoundTripper{
-		next: next,
-	}
+type PolicyFunc func(req *policy.Request) (*http.Response, error)
+
+func (p PolicyFunc) Do(req *policy.Request) (*http.Response, error) {
+	return p(req)
 }
 
-type customRoundTripper struct {
-	next http.RoundTripper
+var _ policy.Policy = PolicyFunc(nil)
+
+func NewLoggingPolicy() policy.Policy {
+	return PolicyFunc(func(req *policy.Request) (*http.Response, error) {
+		return loggingRoundTripper(req.Raw(), req.Next)
+	})
 }
 
-func (crt *customRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func loggingRoundTripper(req *http.Request, next func() (*http.Response, error)) (*http.Response, error) {
 	correlationData := api.GetCorrelationDataFromCtx(req.Context())
 	if correlationData == nil {
 		correlationData = api.CreateCorrelationDataFromReq(req)
@@ -48,7 +53,7 @@ func (crt *customRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 
 	l.Info("HttpRequestStart")
 
-	res, err := crt.next.RoundTrip(req)
+	res, err := next()
 
 	l = updateCorrelationDataAndEnrichLogWithResponse(correlationData, l, res, requestTime)
 	l.Info("HttpRequestEnd")

@@ -21,19 +21,10 @@ func DecorateSenderWithLogging(sender autorest.Sender) autorest.Sender {
 // in order to intercept http calls using our custom RoundTripper (through the adapter).
 func loggingDecorator() autorest.SendDecorator {
 	return func(s autorest.Sender) autorest.Sender {
-		rt := NewCustomRoundTripper(
-			&roundTripperAdapter{Sender: s},
-		)
-		return autorest.SenderFunc(rt.RoundTrip)
+		return autorest.SenderFunc(func(req *http.Request) (*http.Response, error) {
+			return loggingRoundTripper(req, func() (*http.Response, error) {
+				return s.Do(req)
+			})
+		})
 	}
-}
-
-// roundTripperAdapter converts from autorest.Sender (internal field)
-// to http.RoundTripper (external method).
-type roundTripperAdapter struct {
-	Sender autorest.Sender
-}
-
-func (rta *roundTripperAdapter) RoundTrip(req *http.Request) (*http.Response, error) {
-	return rta.Sender.Do(req)
 }
