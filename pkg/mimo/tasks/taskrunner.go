@@ -18,6 +18,7 @@ var DEFAULT_MAINTENANCE_TASKS = map[string]MaintenanceTask{
 	mimo.TLS_CERT_ROTATION_ID:     TLSCertRotation,
 	mimo.ACR_TOKEN_CHECKER_ID:     ACRTokenChecker,
 	mimo.OPERATOR_FLAGS_UPDATE_ID: UpdateOperatorFlags,
+	mimo.MDSD_CERT_ROTATION_ID:    MDSDCertRotation,
 }
 
 func run(t utilmimo.TaskContext, s []steps.Step) error {
