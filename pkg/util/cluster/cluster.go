@@ -611,7 +611,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 		}
 	} else {
 		c.log.Info("creating Classic role assignments")
-		c.SetupClassicRoleAssignments(ctx, c.Config.DiskEncryptionSetID, appDetails.SPId)
+		c.SetupServicePrincipalRoleAssignments(ctx, c.Config.DiskEncryptionSetID, appDetails.SPId)
 	}
 
 	c.log.Info("creating cluster")
