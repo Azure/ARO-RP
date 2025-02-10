@@ -121,7 +121,6 @@ func TestEmitMDSDCertificateExpiry(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
-
 }
 
 func TestEmitIngressAndAPIServerCertificateExpiry(t *testing.T) {
