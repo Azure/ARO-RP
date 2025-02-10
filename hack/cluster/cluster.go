@@ -12,11 +12,9 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -28,55 +26,22 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: CLUSTER=x %s {create,delete}", os.Args[0])
 	}
 
-	if err := env.ValidateVars(Cluster); err != nil {
-		return err
-	}
-
-	env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
+	conf, err := cluster.NewClusterConfigFromEnv()
 	if err != nil {
 		return err
 	}
 
-	vnetResourceGroup := os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
-	if os.Getenv("CI") != "" {
-		vnetResourceGroup = os.Getenv(Cluster)
-	}
-	clusterName := os.Getenv(Cluster)
-
-	osClusterVersion := os.Getenv("OS_CLUSTER_VERSION")
-	if osClusterVersion == "" {
-		osClusterVersion = version.DefaultInstallStream.Version.String()
-		log.Infof("using default cluster version %s", osClusterVersion)
-	} else {
-		log.Infof("using specified cluster version %s", osClusterVersion)
-	}
-
-	masterVmSize := os.Getenv("MASTER_VM_SIZE")
-	if masterVmSize == "" {
-		masterVmSize = cluster.DefaultMasterVmSize.String()
-		log.Infof("using default master VM size %s", masterVmSize)
-	} else {
-		log.Infof("using specified master VM size %s", masterVmSize)
-	}
-
-	workerVmSize := os.Getenv("WORKER_VM_SIZE")
-	if workerVmSize == "" {
-		workerVmSize = cluster.DefaultWorkerVmSize.String()
-		log.Infof("using default worker VM size %s", workerVmSize)
-	} else {
-		log.Infof("using specified worker VM size %s", workerVmSize)
-	}
-
-	c, err := cluster.New(log, env, os.Getenv("CI") != "")
+	c, err := cluster.New(log, conf)
 	if err != nil {
 		return err
 	}
 
+	spew.Dump(c.Config)
 	switch strings.ToLower(os.Args[1]) {
 	case "create":
-		return c.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion, masterVmSize, workerVmSize)
+		return c.Create(ctx)
 	case "delete":
-		return c.Delete(ctx, vnetResourceGroup, clusterName)
+		return c.Delete(ctx, conf.VnetResourceGroup, conf.ClusterName)
 	default:
 		return fmt.Errorf("invalid command %s", os.Args[1])
 	}
