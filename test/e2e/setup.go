@@ -21,6 +21,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jongio/azidext/go/azidext"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"

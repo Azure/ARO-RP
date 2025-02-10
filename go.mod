@@ -175,7 +175,6 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/googleapis/gnostic v0.6.8 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -1576,8 +1575,6 @@ replace (
 	k8s.io/kubectl => k8s.io/kubectl v0.28.4
 	k8s.io/kubernetes => k8s.io/kubernetes v0.28.4
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.16.3
-	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
-	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
 
 )
