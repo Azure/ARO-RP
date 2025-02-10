@@ -11,12 +11,13 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	"github.com/pkg/errors"
 	"github.com/vincent-petithory/dataurl"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 )
 
 const (

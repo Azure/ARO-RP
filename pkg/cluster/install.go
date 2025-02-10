@@ -15,6 +15,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -577,6 +578,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	if err != nil {
+		return err
+	}
+
 	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return err
@@ -632,7 +638,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 	if err != nil {
 		return err
 	}

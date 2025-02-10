@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	"go.uber.org/mock/gomock"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,6 +15,8 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
