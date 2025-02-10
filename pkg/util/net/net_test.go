@@ -18,10 +18,10 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
+	machineconfigurationclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	mcofake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -207,12 +207,12 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 		},
 	}
 
-	mcp := &mcv1.MachineConfigPool{
+	mcp := &machineconfigurationv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "master",
 		},
-		Status: mcv1.MachineConfigPoolStatus{
-			Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+		Status: machineconfigurationv1.MachineConfigPoolStatus{
+			Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 				Source: []corev1.ObjectReference{{Name: "99-master-aro-dns"}},
 			},
 			MachineCount: 1,
@@ -226,7 +226,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 		doc                       *api.OpenShiftClusterDocument
 		mocks                     func(*mock_privatedns.MockPrivateZonesClient, *mock_privatedns.MockVirtualNetworkLinksClient)
 		kubernetescli             kubernetes.Interface
-		mcocli                    mcoclient.Interface
+		mcocli                    machineconfigurationclient.Interface
 		configcli                 configclient.Interface
 		wantDNSPrivateZoneRemoved bool
 		wantError                 string
@@ -246,7 +246,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 			mocks: func(privateZones *mock_privatedns.MockPrivateZonesClient, virtualNetworkLinks *mock_privatedns.MockVirtualNetworkLinksClient) {
 				privateZones.EXPECT().ListByResourceGroup(ctx, "testGroup", nil).Return([]mgmtprivatedns.PrivateZone{{ID: to.StringPtr(id)}}, nil)
 			},
-			mcocli:    mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{}),
+			mcocli:    mcofake.NewSimpleClientset(&machineconfigurationv1.MachineConfigPool{}),
 			configcli: configfake.NewSimpleClientset(),
 			kubernetescli: fake.NewSimpleClientset(
 				&corev1.Node{},
@@ -290,12 +290,12 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 				&corev1.Node{},
 			),
 			mcocli: mcofake.NewSimpleClientset(
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "master",
 					},
-					Status: mcv1.MachineConfigPoolStatus{
-						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+					Status: machineconfigurationv1.MachineConfigPoolStatus{
+						Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 							Source: []corev1.ObjectReference{
 								{
 									Name: "99-master-aro-dns",

@@ -16,7 +16,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -117,10 +117,10 @@ func TestClusterReconciler(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{Name: "master"},
-					Status:     mcv1.MachineConfigPoolStatus{},
-					Spec:       mcv1.MachineConfigPoolSpec{},
+					Status:     machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:       machineconfigurationv1.MachineConfigPoolSpec{},
 				},
 			},
 			wantCreated: map[string]int{
@@ -145,10 +145,10 @@ func TestClusterReconciler(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{Name: "master"},
-					Status:     mcv1.MachineConfigPoolStatus{},
-					Spec:       mcv1.MachineConfigPoolSpec{},
+					Status:     machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:       machineconfigurationv1.MachineConfigPoolSpec{},
 				},
 			},
 			wantCreated: map[string]int{},
@@ -178,10 +178,10 @@ func TestClusterReconciler(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{Name: "master"},
-					Status:     mcv1.MachineConfigPoolStatus{},
-					Spec:       mcv1.MachineConfigPoolSpec{},
+					Status:     machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:       machineconfigurationv1.MachineConfigPoolSpec{},
 				},
 				&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
@@ -219,14 +219,14 @@ func TestClusterReconciler(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{Name: "master"},
-					Status:     mcv1.MachineConfigPoolStatus{},
-					Spec:       mcv1.MachineConfigPoolSpec{},
+					Status:     machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:       machineconfigurationv1.MachineConfigPoolSpec{},
 				},
-				&mcv1.MachineConfig{
+				&machineconfigurationv1.MachineConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "99-master-aro-dns"},
-					Spec:       mcv1.MachineConfigSpec{},
+					Spec:       machineconfigurationv1.MachineConfigSpec{},
 				},
 				&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
@@ -262,14 +262,14 @@ func TestClusterReconciler(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{Name: "master"},
-					Status:     mcv1.MachineConfigPoolStatus{},
-					Spec:       mcv1.MachineConfigPoolSpec{},
+					Status:     machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:       machineconfigurationv1.MachineConfigPoolSpec{},
 				},
-				&mcv1.MachineConfig{
+				&machineconfigurationv1.MachineConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "99-master-aro-dns"},
-					Spec:       mcv1.MachineConfigSpec{},
+					Spec:       machineconfigurationv1.MachineConfigSpec{},
 				},
 				&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
@@ -308,10 +308,10 @@ func TestClusterReconciler(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{Name: "master"},
-					Status:     mcv1.MachineConfigPoolStatus{},
-					Spec:       mcv1.MachineConfigPoolSpec{},
+					Status:     machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:       machineconfigurationv1.MachineConfigPoolSpec{},
 				},
 				&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{

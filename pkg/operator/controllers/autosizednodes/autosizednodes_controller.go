@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -63,7 +63,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if !aro.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled) {
 		// defaults to deleting the config
-		config := mcv1.KubeletConfig{
+		config := machineconfigurationv1.KubeletConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: configName,
 			},
@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	defaultConfig := makeConfig()
 
-	var config mcv1.KubeletConfig
+	var config machineconfigurationv1.KubeletConfig
 	err = r.client.Get(ctx, key, &config)
 	if kerrors.IsNotFound(err) {
 		// If config doesn't exist, create a new one
@@ -107,17 +107,17 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Any changes will trigger reconcile, but only for that config.
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
-		Owns(&mcv1.KubeletConfig{}).
+		Owns(&machineconfigurationv1.KubeletConfig{}).
 		Named(ControllerName).
 		Complete(r)
 }
 
-func makeConfig() mcv1.KubeletConfig {
-	return mcv1.KubeletConfig{
+func makeConfig() machineconfigurationv1.KubeletConfig {
+	return machineconfigurationv1.KubeletConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: configName,
 		},
-		Spec: mcv1.KubeletConfigSpec{
+		Spec: machineconfigurationv1.KubeletConfigSpec{
 			AutoSizingReserved: to.BoolPtr(true),
 			MachineConfigPoolSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{

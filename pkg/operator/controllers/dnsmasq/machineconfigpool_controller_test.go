@@ -17,7 +17,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -80,13 +80,13 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "custom",
 						Finalizers: []string{MachineConfigPoolControllerName},
 					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					Status: machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:   machineconfigurationv1.MachineConfigPoolSpec{},
 				},
 			},
 			request: ctrl.Request{
@@ -216,14 +216,14 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "custom",
 						Finalizers:        []string{MachineConfigPoolControllerName},
 						DeletionTimestamp: &transitionTime,
 					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					Status: machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:   machineconfigurationv1.MachineConfigPoolSpec{},
 				},
 			},
 			wantCreated: map[string]int{},
@@ -251,13 +251,13 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "custom",
 						Finalizers: []string{MachineConfigPoolControllerName},
 					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					Status: machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:   machineconfigurationv1.MachineConfigPoolSpec{},
 				},
 			},
 			wantCreated: map[string]int{
@@ -287,17 +287,17 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "custom",
 						Finalizers: []string{MachineConfigPoolControllerName},
 					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					Status: machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:   machineconfigurationv1.MachineConfigPoolSpec{},
 				},
-				&mcv1.MachineConfig{
+				&machineconfigurationv1.MachineConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "99-custom-aro-dns"},
-					Spec:       mcv1.MachineConfigSpec{},
+					Spec:       machineconfigurationv1.MachineConfigSpec{},
 				},
 			},
 			wantCreated: map[string]int{},
@@ -326,17 +326,17 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "custom",
 						Finalizers: []string{MachineConfigPoolControllerName},
 					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					Status: machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:   machineconfigurationv1.MachineConfigPoolSpec{},
 				},
-				&mcv1.MachineConfig{
+				&machineconfigurationv1.MachineConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "99-custom-aro-dns"},
-					Spec:       mcv1.MachineConfigSpec{},
+					Spec:       machineconfigurationv1.MachineConfigSpec{},
 				},
 			},
 			wantCreated: map[string]int{},
@@ -439,13 +439,13 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "custom",
 						Finalizers: []string{MachineConfigPoolControllerName},
 					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					Status: machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:   machineconfigurationv1.MachineConfigPoolSpec{},
 				},
 			},
 			wantCreated: map[string]int{
@@ -475,17 +475,17 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 						},
 					},
 				},
-				&mcv1.MachineConfigPool{
+				&machineconfigurationv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "custom",
 						Finalizers: []string{MachineConfigPoolControllerName},
 					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					Status: machineconfigurationv1.MachineConfigPoolStatus{},
+					Spec:   machineconfigurationv1.MachineConfigPoolSpec{},
 				},
-				&mcv1.MachineConfig{
+				&machineconfigurationv1.MachineConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "99-custom-aro-dns"},
-					Spec:       mcv1.MachineConfigSpec{},
+					Spec:       machineconfigurationv1.MachineConfigSpec{},
 				},
 			},
 			wantCreated: map[string]int{},

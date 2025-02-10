@@ -19,7 +19,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -108,15 +108,15 @@ var (
 			GatewayPrivateEndpointIP: "20.20.20.20",
 		},
 	}
-	machinePoolMaster = &mcv1.MachineConfigPool{
+	machinePoolMaster = &machineconfigurationv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{Name: "master"},
-		Status:     mcv1.MachineConfigPoolStatus{},
-		Spec:       mcv1.MachineConfigPoolSpec{},
+		Status:     machineconfigurationv1.MachineConfigPoolStatus{},
+		Spec:       machineconfigurationv1.MachineConfigPoolSpec{},
 	}
-	machinePoolWorker = &mcv1.MachineConfigPool{
+	machinePoolWorker = &machineconfigurationv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-		Status:     mcv1.MachineConfigPoolStatus{},
-		Spec:       mcv1.MachineConfigPoolSpec{},
+		Status:     machineconfigurationv1.MachineConfigPoolStatus{},
+		Spec:       machineconfigurationv1.MachineConfigPoolSpec{},
 	}
 	clusterVersionNotUpdating = &configv1.ClusterVersion{
 		ObjectMeta: metav1.ObjectMeta{

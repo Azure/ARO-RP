@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -217,8 +217,8 @@ func merge(old, new client.Object) (client.Object, bool, string, error) {
 
 		new.Status = old.Status
 
-	case *mcv1.KubeletConfig:
-		old, new := old.(*mcv1.KubeletConfig), new.(*mcv1.KubeletConfig)
+	case *machineconfigurationv1.KubeletConfig:
+		old, new := old.(*machineconfigurationv1.KubeletConfig), new.(*machineconfigurationv1.KubeletConfig)
 		new.Status = old.Status
 
 	case *extensionsv1.CustomResourceDefinition:

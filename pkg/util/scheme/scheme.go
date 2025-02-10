@@ -19,7 +19,7 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
@@ -37,7 +37,7 @@ func init() {
 	utilruntime.Must(aropreviewv1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(machinev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(mcv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(machineconfigurationv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(configv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(appsv1.AddToScheme(scheme.Scheme))

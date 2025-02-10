@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/rest/fake"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
@@ -508,9 +508,9 @@ func TestMerge(t *testing.T) {
 		},
 		{
 			name: "KubeletConfig no changes",
-			old: &mcv1.KubeletConfig{
-				Status: mcv1.KubeletConfigStatus{
-					Conditions: []mcv1.KubeletConfigCondition{
+			old: &machineconfigurationv1.KubeletConfig{
+				Status: machineconfigurationv1.KubeletConfigStatus{
+					Conditions: []machineconfigurationv1.KubeletConfigCondition{
 						{
 							Message: "Success",
 							Status:  "True",
@@ -519,10 +519,10 @@ func TestMerge(t *testing.T) {
 					},
 				},
 			},
-			new: &mcv1.KubeletConfig{},
-			want: &mcv1.KubeletConfig{
-				Status: mcv1.KubeletConfigStatus{
-					Conditions: []mcv1.KubeletConfigCondition{
+			new: &machineconfigurationv1.KubeletConfig{},
+			want: &machineconfigurationv1.KubeletConfig{
+				Status: machineconfigurationv1.KubeletConfigStatus{
+					Conditions: []machineconfigurationv1.KubeletConfigCondition{
 						{
 							Message: "Success",
 							Status:  "True",

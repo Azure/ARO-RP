@@ -21,7 +21,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
+	machineconfigurationclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
@@ -114,7 +114,7 @@ type manager struct {
 	dynamiccli       dynamic.Interface
 	extensionscli    extensionsclient.Interface
 	maocli           machineclient.Interface
-	mcocli           mcoclient.Interface
+	mcocli           machineconfigurationclient.Interface
 	operatorcli      operatorclient.Interface
 	configcli        configclient.Interface
 	samplescli       samplesclient.Interface

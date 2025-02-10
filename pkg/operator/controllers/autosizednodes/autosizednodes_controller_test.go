@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -43,20 +43,20 @@ func TestAutosizednodesReconciler(t *testing.T) {
 		}
 	}
 
-	emptyConfig := mcv1.KubeletConfig{}
+	emptyConfig := machineconfigurationv1.KubeletConfig{}
 	config := makeConfig()
 
 	tests := []struct {
 		name       string
 		wantErrMsg string
 		client     client.Client
-		wantConfig *mcv1.KubeletConfig
+		wantConfig *machineconfigurationv1.KubeletConfig
 	}{
 		{
 			name:       "is not needed",
 			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false)).Build(),
 			wantConfig: &emptyConfig,
-			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
+			wantErrMsg: kerrors.NewNotFound(machineconfigurationv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name:       "is needed and not present already",
@@ -72,17 +72,17 @@ func TestAutosizednodesReconciler(t *testing.T) {
 			name:       "is not needed and is present",
 			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false), &config).Build(),
 			wantConfig: &emptyConfig,
-			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
+			wantErrMsg: kerrors.NewNotFound(machineconfigurationv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name: "is needed and config got modified",
 			client: fake.NewClientBuilder().WithRuntimeObjects(
 				aro(true),
-				&mcv1.KubeletConfig{
+				&machineconfigurationv1.KubeletConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: configName,
 					},
-					Spec: mcv1.KubeletConfigSpec{
+					Spec: machineconfigurationv1.KubeletConfigSpec{
 						AutoSizingReserved: to.BoolPtr(false),
 						MachineConfigPoolSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -113,7 +113,7 @@ func TestAutosizednodesReconciler(t *testing.T) {
 			key := types.NamespacedName{
 				Name: configName,
 			}
-			var c mcv1.KubeletConfig
+			var c machineconfigurationv1.KubeletConfig
 
 			err = r.client.Get(ctx, key, &c)
 			utilerror.AssertErrorMessage(t, err, test.wantErrMsg)

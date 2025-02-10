@@ -11,15 +11,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 )
 
-var machineConfigPoolConditionsExpected = map[mcv1.MachineConfigPoolConditionType]corev1.ConditionStatus{
-	mcv1.MachineConfigPoolDegraded:       corev1.ConditionFalse,
-	mcv1.MachineConfigPoolNodeDegraded:   corev1.ConditionFalse,
-	mcv1.MachineConfigPoolRenderDegraded: corev1.ConditionFalse,
-	mcv1.MachineConfigPoolUpdated:        corev1.ConditionTrue,
-	mcv1.MachineConfigPoolUpdating:       corev1.ConditionFalse,
+var machineConfigPoolConditionsExpected = map[machineconfigurationv1.MachineConfigPoolConditionType]corev1.ConditionStatus{
+	machineconfigurationv1.MachineConfigPoolDegraded:       corev1.ConditionFalse,
+	machineconfigurationv1.MachineConfigPoolNodeDegraded:   corev1.ConditionFalse,
+	machineconfigurationv1.MachineConfigPoolRenderDegraded: corev1.ConditionFalse,
+	machineconfigurationv1.MachineConfigPoolUpdated:        corev1.ConditionTrue,
+	machineconfigurationv1.MachineConfigPoolUpdating:       corev1.ConditionFalse,
 }
 
 func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {

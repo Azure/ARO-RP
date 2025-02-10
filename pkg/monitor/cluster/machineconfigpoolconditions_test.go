@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	mcofake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
@@ -21,30 +21,30 @@ import (
 func TestEmitMachineConfigPoolConditions(t *testing.T) {
 	ctx := context.Background()
 
-	mcocli := mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{
+	mcocli := mcofake.NewSimpleClientset(&machineconfigurationv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "machine-config-pool",
 		},
-		Status: mcv1.MachineConfigPoolStatus{
-			Conditions: []mcv1.MachineConfigPoolCondition{
+		Status: machineconfigurationv1.MachineConfigPoolStatus{
+			Conditions: []machineconfigurationv1.MachineConfigPoolCondition{
 				{
-					Type:   mcv1.MachineConfigPoolDegraded,
+					Type:   machineconfigurationv1.MachineConfigPoolDegraded,
 					Status: corev1.ConditionTrue,
 				},
 				{
-					Type:   mcv1.MachineConfigPoolNodeDegraded,
+					Type:   machineconfigurationv1.MachineConfigPoolNodeDegraded,
 					Status: corev1.ConditionTrue,
 				},
 				{
-					Type:   mcv1.MachineConfigPoolRenderDegraded,
+					Type:   machineconfigurationv1.MachineConfigPoolRenderDegraded,
 					Status: corev1.ConditionTrue,
 				},
 				{
-					Type:   mcv1.MachineConfigPoolUpdated,
+					Type:   machineconfigurationv1.MachineConfigPoolUpdated,
 					Status: corev1.ConditionFalse,
 				},
 				{
-					Type:   mcv1.MachineConfigPoolUpdating,
+					Type:   machineconfigurationv1.MachineConfigPoolUpdating,
 					Status: corev1.ConditionTrue,
 				},
 			},

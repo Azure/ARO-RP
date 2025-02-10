@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	etchostsMasterMCMetadata = &mcv1.MachineConfig{
+	etchostsMasterMCMetadata = &machineconfigurationv1.MachineConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "99-master-aro-etc-hosts-gateway-domains",
 		},
@@ -40,7 +40,7 @@ var (
 			Kind: "MachineConfig",
 		},
 	}
-	etchostsWorkerMCMetadata = &mcv1.MachineConfig{
+	etchostsWorkerMCMetadata = &machineconfigurationv1.MachineConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "99-worker-aro-etc-hosts-gateway-domains",
 		},
@@ -119,8 +119,8 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	// EtchostsManaged = true, create machine configs if missing
 	r.Log.Debug("running")
 	// If 99-master-aro-etc-hosts-gateway-domains doesn't exist, create it
-	mcp := &mcv1.MachineConfigPool{}
-	mc := &mcv1.MachineConfig{}
+	mcp := &machineconfigurationv1.MachineConfigPool{}
+	mc := &machineconfigurationv1.MachineConfig{}
 
 	err = r.Client.Get(ctx, types.NamespacedName{Name: "master"}, mcp)
 	if kerrors.IsNotFound(err) {
@@ -198,10 +198,10 @@ func (r *EtcHostsClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	etcHostsBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
-		Watches(&mcv1.MachineConfigPool{},
+		Watches(&machineconfigurationv1.MachineConfigPool{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&mcv1.MachineConfig{},
+		Watches(&machineconfigurationv1.MachineConfig{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
@@ -211,7 +211,7 @@ func (r *EtcHostsClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EtcHostsClusterReconciler) removeMachineConfig(ctx context.Context, mc *mcv1.MachineConfig) error {
+func (r *EtcHostsClusterReconciler) removeMachineConfig(ctx context.Context, mc *machineconfigurationv1.MachineConfig) error {
 	r.Log.Debugf("removing machine config %s", mc.Name)
 	err := r.Client.Delete(ctx, mc)
 	return err

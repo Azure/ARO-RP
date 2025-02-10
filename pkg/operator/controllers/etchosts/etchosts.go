@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 )
 
 const (
@@ -208,7 +208,7 @@ func EtcHostsIgnitionConfig(clusterDomain string, apiIntIP string, gatewayDomain
 	return ign, nil
 }
 
-func EtcHostsMachineConfig(clusterDomain string, apiIntIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, role string) (*mcv1.MachineConfig, error) {
+func EtcHostsMachineConfig(clusterDomain string, apiIntIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, role string) (*machineconfigurationv1.MachineConfig, error) {
 	ignConfig, err := EtcHostsIgnitionConfig(clusterDomain, apiIntIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
@@ -232,9 +232,9 @@ func EtcHostsMachineConfig(clusterDomain string, apiIntIP string, gatewayDomains
 		return nil, err
 	}
 
-	return &mcv1.MachineConfig{
+	return &machineconfigurationv1.MachineConfig{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: mcv1.SchemeGroupVersion.String(),
+			APIVersion: machineconfigurationv1.SchemeGroupVersion.String(),
 			Kind:       "MachineConfig",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -243,7 +243,7 @@ func EtcHostsMachineConfig(clusterDomain string, apiIntIP string, gatewayDomains
 				"machineconfiguration.openshift.io/role": role,
 			},
 		},
-		Spec: mcv1.MachineConfigSpec{
+		Spec: machineconfigurationv1.MachineConfigSpec{
 			Config: rawExt,
 		},
 	}, nil

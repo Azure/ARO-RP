@@ -88,13 +88,13 @@ linters-settings:
       - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake
         alias: maofake
       - pkg: github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
-        alias: mcv1
+        alias: machineconfigurationv1
       - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
-        alias: mcoclient
+        alias: machineconfigurationclient
       - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake
         alias: mcofake
       - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1
-        alias: mcoclientv1
+        alias: machineconfigurationclientv1
       - pkg: github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1
         alias: monitoringv1
       - pkg: golang.org/x/crypto/ssh

@@ -20,7 +20,7 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	v1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
-	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
+	machineconfigurationclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -96,7 +96,7 @@ type PrivateZoneRemovalConfig struct {
 	Log                *logrus.Entry
 	PrivateZonesClient privatedns.PrivateZonesClient
 	Configcli          configclient.Interface
-	Mcocli             mcoclient.Interface
+	Mcocli             machineconfigurationclient.Interface
 	Kubernetescli      kubernetes.Interface
 	VNetLinksClient    privatedns.VirtualNetworkLinksClient
 	ResourceGroupID    string

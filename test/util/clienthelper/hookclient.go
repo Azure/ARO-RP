@@ -165,37 +165,30 @@ func (c *HookingClient) Create(ctx context.Context, obj client.Object, opts ...c
 }
 
 func (c *HookingClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
-
 	return schema.GroupVersionKind{}, nil
 }
 
 func (c *HookingClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
-
 	return false, nil
 }
 
 func (c *HookingClient) SubResource(string) client.SubResourceClient {
-
 	return HookingSubResourceClient{}
 }
 
 func (hsrc HookingSubResourceClient) Create(context.Context, client.Object, client.Object, ...client.SubResourceCreateOption) error {
-
 	return nil
 }
 
 func (hsrc HookingSubResourceClient) Get(context.Context, client.Object, client.Object, ...client.SubResourceGetOption) error {
-
 	return nil
 }
 
 func (hsrc HookingSubResourceClient) Patch(context.Context, client.Object, client.Patch, ...client.SubResourcePatchOption) error {
-
 	return nil
 }
 
 func (hsrc HookingSubResourceClient) Update(context.Context, client.Object, ...client.SubResourceUpdateOption) error {
-
 	return nil
 }
 

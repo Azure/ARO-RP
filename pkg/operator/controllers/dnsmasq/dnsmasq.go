@@ -18,7 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 )
 
 const (
@@ -158,7 +158,7 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 	return ign, nil
 }
 
-func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*mcv1.MachineConfig, error) {
+func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*machineconfigurationv1.MachineConfig, error) {
 	ignConfig, err := ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
 	if err != nil {
 		return nil, err
@@ -182,9 +182,9 @@ func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatew
 		return nil, err
 	}
 
-	return &mcv1.MachineConfig{
+	return &machineconfigurationv1.MachineConfig{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: mcv1.SchemeGroupVersion.String(),
+			APIVersion: machineconfigurationv1.SchemeGroupVersion.String(),
 			Kind:       "MachineConfig",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -193,7 +193,7 @@ func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatew
 				"machineconfiguration.openshift.io/role": role,
 			},
 		},
-		Spec: mcv1.MachineConfigSpec{
+		Spec: machineconfigurationv1.MachineConfigSpec{
 			Config: rawExt,
 		},
 	}, nil

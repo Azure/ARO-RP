@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	mcofake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -339,18 +339,18 @@ func TestStatefulSetIsReady(t *testing.T) {
 func TestMachineConfigPoolIsReady(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		mcp  *mcv1.MachineConfigPool
+		mcp  *machineconfigurationv1.MachineConfigPool
 		want bool
 	}{
 		{
 			name: "machineconfigpool-with-no-count",
-			mcp:  &mcv1.MachineConfigPool{},
+			mcp:  &machineconfigurationv1.MachineConfigPool{},
 			want: true,
 		},
 		{
 			name: "machineconfigpool-ready",
-			mcp: &mcv1.MachineConfigPool{
-				Status: mcv1.MachineConfigPoolStatus{
+			mcp: &machineconfigurationv1.MachineConfigPool{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					MachineCount:        int32(6),
 					UpdatedMachineCount: int32(6),
 					ReadyMachineCount:   int32(6),
@@ -360,8 +360,8 @@ func TestMachineConfigPoolIsReady(t *testing.T) {
 		},
 		{
 			name: "machineconfigpool-not-ready",
-			mcp: &mcv1.MachineConfigPool{
-				Status: mcv1.MachineConfigPoolStatus{
+			mcp: &machineconfigurationv1.MachineConfigPool{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					MachineCount:        int32(6),
 					UpdatedMachineCount: int32(3),
 					ReadyMachineCount:   int32(5),
@@ -571,7 +571,7 @@ func TestCheckDeploymentIsReadyError(t *testing.T) {
 func TestCheckMachineConfigPoolIsReady(t *testing.T) {
 	ctx := context.Background()
 
-	machineconfigpool := &mcv1.MachineConfigPool{
+	machineconfigpool := &machineconfigurationv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "machineconfigpool-not-found",
 		},
@@ -590,7 +590,7 @@ func TestCheckMachineConfigPoolIsReady(t *testing.T) {
 
 func TestCheckMachineConfigPoolIsReadyNotFound(t *testing.T) {
 	ctx := context.Background()
-	machineconfigpool := &mcv1.MachineConfigPool{
+	machineconfigpool := &machineconfigurationv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "machineconfigpool-not-found",
 		},
@@ -608,7 +608,7 @@ func TestCheckMachineConfigPoolIsReadyError(t *testing.T) {
 
 	clientset := mcofake.NewSimpleClientset()
 	clientset.Fake.PrependReactor("get", "machineconfigpools", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return true, &mcv1.MachineConfigPool{}, errors.New("error getting machineconfigpool")
+		return true, &machineconfigurationv1.MachineConfigPool{}, errors.New("error getting machineconfigpool")
 	})
 	_, err := CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), "")()
 
@@ -660,7 +660,7 @@ func TestTotalMachinesInTheMCPs(t *testing.T) {
 
 	type testCase struct {
 		name               string
-		machineConfigPools []mcv1.MachineConfigPool
+		machineConfigPools []machineconfigurationv1.MachineConfigPool
 		want               int
 		wantErr            string
 	}
@@ -668,14 +668,14 @@ func TestTotalMachinesInTheMCPs(t *testing.T) {
 		{
 			name: "totalMachinesInTheMCPs returns ARO DNS config not found error",
 			want: 0,
-			machineConfigPools: []mcv1.MachineConfigPool{
+			machineConfigPools: []machineconfigurationv1.MachineConfigPool{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "mcp_name",
 					},
-					Status: mcv1.MachineConfigPoolStatus{
+					Status: machineconfigurationv1.MachineConfigPoolStatus{
 						ObservedGeneration: 0,
-						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 							Source: []corev1.ObjectReference{{Name: "non matching name"}},
 						},
 					},
@@ -687,18 +687,18 @@ func TestTotalMachinesInTheMCPs(t *testing.T) {
 			name:    "totalMachinesInTheMCPs returns MCP is not ready error",
 			want:    0,
 			wantErr: "MCP mcp_name not ready",
-			machineConfigPools: []mcv1.MachineConfigPool{
+			machineConfigPools: []machineconfigurationv1.MachineConfigPool{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "mcp_name",
 						Generation: 1,
 					},
-					Status: mcv1.MachineConfigPoolStatus{
+					Status: machineconfigurationv1.MachineConfigPoolStatus{
 						MachineCount:        1,
 						UpdatedMachineCount: 1,
 						ReadyMachineCount:   0,
 						ObservedGeneration:  1,
-						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 							Source: []corev1.ObjectReference{{Name: mcpPrefix + "mcp_name" + mcpSuffix}},
 						},
 					},
@@ -708,18 +708,18 @@ func TestTotalMachinesInTheMCPs(t *testing.T) {
 		{
 			name: "totalMachinesInTheMCPs returns 1",
 			want: 1,
-			machineConfigPools: []mcv1.MachineConfigPool{
+			machineConfigPools: []machineconfigurationv1.MachineConfigPool{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "mcp_name",
 						Generation: 1,
 					},
-					Status: mcv1.MachineConfigPoolStatus{
+					Status: machineconfigurationv1.MachineConfigPoolStatus{
 						MachineCount:        1,
 						UpdatedMachineCount: 1,
 						ReadyMachineCount:   1,
 						ObservedGeneration:  1,
-						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 							Source: []corev1.ObjectReference{
 								{
 									Name: mcpPrefix + "mcp_name" + mcpSuffix,
@@ -756,20 +756,20 @@ func TestMcpContainsARODNSConfig(t *testing.T) {
 
 	type testCase struct {
 		name string
-		mcp  mcv1.MachineConfigPool
+		mcp  machineconfigurationv1.MachineConfigPool
 		want bool
 	}
 
 	testcases := []testCase{
 		{
 			name: "Mcp contains ARO DNS config",
-			mcp: mcv1.MachineConfigPool{
+			mcp: machineconfigurationv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mcp_name",
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					ObservedGeneration: 0,
-					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+					Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 						Source: []corev1.ObjectReference{
 							{
 								Name: mcpPrefix + "mcp_name" + mcpSuffix,
@@ -782,13 +782,13 @@ func TestMcpContainsARODNSConfig(t *testing.T) {
 		},
 		{
 			name: "Mcp does not contain ARO DNS config due to wrong source name",
-			mcp: mcv1.MachineConfigPool{
+			mcp: machineconfigurationv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mcp_name",
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					ObservedGeneration: 0,
-					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+					Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 						Source: []corev1.ObjectReference{
 							{
 								Name: "non matching name",
@@ -801,7 +801,7 @@ func TestMcpContainsARODNSConfig(t *testing.T) {
 		},
 		{
 			name: "Mcp does not contain ARO DNS config due to empty status",
-			mcp: mcv1.MachineConfigPool{
+			mcp: machineconfigurationv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mcp_name",
 				},
@@ -821,11 +821,11 @@ func TestMcpContainsARODNSConfig(t *testing.T) {
 }
 
 type fakeMcpLister struct {
-	expected    *mcv1.MachineConfigPoolList
+	expected    *machineconfigurationv1.MachineConfigPoolList
 	expectedErr error
 }
 
-func (m *fakeMcpLister) List(ctx context.Context, opts metav1.ListOptions) (*mcv1.MachineConfigPoolList, error) {
+func (m *fakeMcpLister) List(ctx context.Context, opts metav1.ListOptions) (*machineconfigurationv1.MachineConfigPoolList, error) {
 	return m.expected, m.expectedErr
 }
 
@@ -872,18 +872,18 @@ func TestSameNumberOfNodesAndMachines(t *testing.T) {
 	})
 	t.Run("should propagate error from TotalMachinesInTheMCPs()", func(t *testing.T) {
 		expectedErr := "ARO DNS config not found in MCP mcp_name"
-		badMachineConfigPools := []mcv1.MachineConfigPool{
+		badMachineConfigPools := []machineconfigurationv1.MachineConfigPool{
 			{
 				ObjectMeta: metav1.ObjectMeta{Name: "mcp_name"},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					ObservedGeneration: 0,
-					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+					Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 						Source: []corev1.ObjectReference{{Name: "non matching name"}},
 					},
 				},
 			},
 		}
-		machineConfigPoolList := &mcv1.MachineConfigPoolList{Items: badMachineConfigPools}
+		machineConfigPoolList := &machineconfigurationv1.MachineConfigPoolList{Items: badMachineConfigPools}
 		mcpLister := &fakeMcpLister{expected: machineConfigPoolList}
 		nodeLister := &fakeNodeLister{}
 
@@ -897,24 +897,24 @@ func TestSameNumberOfNodesAndMachines(t *testing.T) {
 	t.Run("should propagate error from nodeLister", func(t *testing.T) {
 		expectedErr := "some_error"
 
-		machineConfigPools := []mcv1.MachineConfigPool{
+		machineConfigPools := []machineconfigurationv1.MachineConfigPool{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "mcp_name",
 					Generation: 1,
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					MachineCount:        1,
 					UpdatedMachineCount: 1,
 					ReadyMachineCount:   1,
 					ObservedGeneration:  1,
-					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+					Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 						Source: []corev1.ObjectReference{{Name: "99-" + "mcp_name" + "-aro-dns"}},
 					},
 				},
 			},
 		}
-		machineConfigPoolList := &mcv1.MachineConfigPoolList{Items: machineConfigPools}
+		machineConfigPoolList := &machineconfigurationv1.MachineConfigPoolList{Items: machineConfigPools}
 		mcpLister := &fakeMcpLister{expected: machineConfigPoolList}
 		nodeLister := &fakeNodeLister{expectedErr: errors.New(expectedErr)}
 
@@ -927,24 +927,24 @@ func TestSameNumberOfNodesAndMachines(t *testing.T) {
 
 	t.Run("should return true and no error", func(t *testing.T) {
 		expectedErr := ""
-		machineConfigPools := []mcv1.MachineConfigPool{
+		machineConfigPools := []machineconfigurationv1.MachineConfigPool{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "mcp_name",
 					Generation: 1,
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					MachineCount:        1,
 					UpdatedMachineCount: 1,
 					ReadyMachineCount:   1,
 					ObservedGeneration:  1,
-					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+					Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 						Source: []corev1.ObjectReference{{Name: "99-" + "mcp_name" + "-aro-dns"}},
 					},
 				},
 			},
 		}
-		machineConfigPoolList := &mcv1.MachineConfigPoolList{Items: machineConfigPools}
+		machineConfigPoolList := &machineconfigurationv1.MachineConfigPoolList{Items: machineConfigPools}
 		mcpLister := &fakeMcpLister{expected: machineConfigPoolList}
 
 		nodes := &corev1.NodeList{Items: []corev1.Node{{}}}
@@ -959,24 +959,24 @@ func TestSameNumberOfNodesAndMachines(t *testing.T) {
 
 	t.Run("should return false and error due to different number of total machines and nodes", func(t *testing.T) {
 		expectedErr := "cluster has 3 nodes but 1 under MCPs, not removing private DNS zone"
-		machineConfigPools := []mcv1.MachineConfigPool{
+		machineConfigPools := []machineconfigurationv1.MachineConfigPool{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "mcp_name",
 					Generation: 1,
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					MachineCount:        1,
 					UpdatedMachineCount: 1,
 					ReadyMachineCount:   1,
 					ObservedGeneration:  1,
-					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+					Configuration: machineconfigurationv1.MachineConfigPoolStatusConfiguration{
 						Source: []corev1.ObjectReference{{Name: "99-" + "mcp_name" + "-aro-dns"}},
 					},
 				},
 			},
 		}
-		machineConfigPoolList := &mcv1.MachineConfigPoolList{Items: machineConfigPools}
+		machineConfigPoolList := &machineconfigurationv1.MachineConfigPoolList{Items: machineConfigPools}
 		mcpLister := &fakeMcpLister{expected: machineConfigPoolList}
 
 		nodes := &corev1.NodeList{Items: []corev1.Node{{}, {}, {}}}

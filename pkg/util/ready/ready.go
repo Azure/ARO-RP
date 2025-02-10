@@ -15,8 +15,8 @@ import (
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
-	mcoclientv1 "github.com/openshift/client-go/machineconfiguration/clientset/versioned/typed/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationclientv1 "github.com/openshift/client-go/machineconfiguration/clientset/versioned/typed/machineconfiguration/v1"
 )
 
 // NodeIsReady returns true if a Node is considered ready
@@ -174,7 +174,7 @@ func StatefulSetIsReady(s *appsv1.StatefulSet) bool {
 
 // MachineConfigPoolIsReady returns true if a MachineConfigPool is considered
 // ready
-func MachineConfigPoolIsReady(s *mcv1.MachineConfigPool) bool {
+func MachineConfigPoolIsReady(s *machineconfigurationv1.MachineConfigPool) bool {
 	return s.Status.MachineCount == s.Status.UpdatedMachineCount &&
 		s.Status.MachineCount == s.Status.ReadyMachineCount &&
 		s.Generation == s.Status.ObservedGeneration
@@ -182,7 +182,7 @@ func MachineConfigPoolIsReady(s *mcv1.MachineConfigPool) bool {
 
 // CheckMachineConfigPoolIsReady returns a function which polls a
 // MachineConfigPool and returns its readiness
-func CheckMachineConfigPoolIsReady(ctx context.Context, cli mcoclientv1.MachineConfigPoolInterface, name string) func() (bool, error) {
+func CheckMachineConfigPoolIsReady(ctx context.Context, cli machineconfigurationclientv1.MachineConfigPoolInterface, name string) func() (bool, error) {
 	return func() (bool, error) {
 		s, err := cli.Get(ctx, name, metav1.GetOptions{})
 		switch {
@@ -197,7 +197,7 @@ func CheckMachineConfigPoolIsReady(ctx context.Context, cli mcoclientv1.MachineC
 }
 
 type MCPLister interface {
-	List(ctx context.Context, opts metav1.ListOptions) (*mcv1.MachineConfigPoolList, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*machineconfigurationv1.MachineConfigPoolList, error)
 }
 
 type NodeLister interface {
@@ -240,7 +240,7 @@ func SameNumberOfNodesAndMachines(ctx context.Context, mcpLister MCPLister, node
 
 // TotalMachinesInTheMCPs returns the total number of machines in the machineConfigPools
 // and an error, if any.
-func TotalMachinesInTheMCPs(machineConfigPools []mcv1.MachineConfigPool) (int, error) {
+func TotalMachinesInTheMCPs(machineConfigPools []machineconfigurationv1.MachineConfigPool) (int, error) {
 	totalMachines := 0
 	for _, mcp := range machineConfigPools {
 		if !MCPContainsARODNSConfig(mcp) {
@@ -256,7 +256,7 @@ func TotalMachinesInTheMCPs(machineConfigPools []mcv1.MachineConfigPool) (int, e
 	return totalMachines, nil
 }
 
-func MCPContainsARODNSConfig(mcp mcv1.MachineConfigPool) bool {
+func MCPContainsARODNSConfig(mcp machineconfigurationv1.MachineConfigPool) bool {
 	for _, source := range mcp.Status.Configuration.Source {
 		mcpPrefix := "99-"
 		mcpSuffix := "-aro-dns"

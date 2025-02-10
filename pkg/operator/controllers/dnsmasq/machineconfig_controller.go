@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
@@ -76,7 +76,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 	role := m[1]
 
-	mcp := &mcv1.MachineConfigPool{}
+	mcp := &machineconfigurationv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: role}, mcp)
 	if kerrors.IsNotFound(err) {
 		r.ClearDegraded(ctx)
@@ -105,7 +105,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 // SetupWithManager setup our mananger
 func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&mcv1.MachineConfig{}).
+		For(&machineconfigurationv1.MachineConfig{}).
 		Named(MachineConfigControllerName).
 		Complete(r)
 }

@@ -21,7 +21,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
+	machineconfigurationclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive"
@@ -47,7 +47,7 @@ type Monitor struct {
 	cli        kubernetes.Interface
 	configcli  configclient.Interface
 	maocli     machineclient.Interface
-	mcocli     mcoclient.Interface
+	mcocli     machineconfigurationclient.Interface
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
@@ -96,7 +96,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	mcocli, err := mcoclient.NewForConfig(restConfig)
+	mcocli, err := machineconfigurationclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
