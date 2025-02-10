@@ -31,6 +31,7 @@ import (
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	miseadapter "github.com/Azure/ARO-RP/pkg/util/miseadapter"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -498,6 +499,20 @@ func (m *MockInterface) Logger() *logrus.Entry {
 func (mr *MockInterfaceMockRecorder) Logger() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockInterface)(nil).Logger))
+}
+
+// MISEAuthorizer mocks base method.
+func (m *MockInterface) MISEAuthorizer() miseadapter.MISEAdapter {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MISEAuthorizer")
+	ret0, _ := ret[0].(miseadapter.MISEAdapter)
+	return ret0
+}
+
+// MISEAuthorizer indicates an expected call of MISEAuthorizer.
+func (mr *MockInterfaceMockRecorder) MISEAuthorizer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MISEAuthorizer", reflect.TypeOf((*MockInterface)(nil).MISEAuthorizer))
 }
 
 // MockMSIResponses mocks base method.
