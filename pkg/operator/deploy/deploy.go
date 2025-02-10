@@ -62,7 +62,6 @@ type Operator interface {
 	IsReady(context.Context) (bool, error)
 	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
-	RenewMDSDCertificate(context.Context) error
 	EnsureUpgradeAnnotation(context.Context) error
 	SyncClusterObject(context.Context) error
 	SetForceReconcile(context.Context, bool) error
@@ -512,31 +511,6 @@ func (o *operator) CreateOrUpdateCredentialsRequest(ctx context.Context) error {
 	}
 
 	return o.dh.Ensure(ctx, crUnstructured)
-}
-
-func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
-	key, cert := o.env.ClusterGenevaLoggingSecret()
-	gcsKeyBytes, err := utilpem.Encode(key)
-	if err != nil {
-		return err
-	}
-	gcsCertBytes, err := utilpem.Encode(cert)
-	if err != nil {
-		return err
-	}
-
-	s, err := o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	s.Data["gcscert.pem"] = gcsCertBytes
-	s.Data["gcskey.pem"] = gcsKeyBytes
-
-	_, err = o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
