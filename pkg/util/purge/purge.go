@@ -6,10 +6,9 @@ package purge
 // all the purge functions are located here
 
 import (
-	"net/http"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/jongio/azidext/go/azidext"
@@ -49,14 +48,11 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 	scopes := []string{env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
-	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
 	clientOptions := &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
-			Cloud: env.Environment().Cloud,
-			Retry: common.RetryOptions,
-			Transport: &http.Client{
-				Transport: customRoundTripper,
-			},
+			Cloud:           env.Environment().Cloud,
+			Retry:           common.RetryOptions,
+			PerCallPolicies: []policy.Policy{azureclient.NewLoggingPolicy()},
 		},
 	}
 
