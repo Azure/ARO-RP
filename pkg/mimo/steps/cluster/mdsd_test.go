@@ -18,8 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configv1 "github.com/openshift/api/config/v1"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -55,29 +53,28 @@ func TestMDSDRotate(t *testing.T) {
 		{
 			name:    "secret created (did not exist)",
 			objects: []runtime.Object{},
+			wantErr: "TerminalError: failed to fetch operator secret object: secrets \"cluster\" not found",
+		},
+		{
+			name: "secret updated",
+			objects: []runtime.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cluster",
+						Namespace: "openshift-azure-operator",
+					},
+					Data: map[string][]byte{"extdata": {'a'}},
+				},
+			},
 			check: func(i clienthelper.Interface, g Gomega) {
-
 				s := &corev1.Secret{}
 				err := i.GetOne(ctx, types.NamespacedName{Name: "cluster", Namespace: "openshift-azure-operator"}, s)
 				g.Expect(err).NotTo(HaveOccurred())
 
-				g.Expect(maps.Keys(s.Data)).To(ContainElements("gcscert.pem", "gcskey.pem"), "MDSD certs")
+				g.Expect(maps.Keys(s.Data)).To(ContainElements("gcscert.pem", "gcskey.pem", "extdata"), "MDSD certs")
 				g.Expect(s.Data["gcscert.pem"]).To(Equal(encodedCert))
 				g.Expect(s.Data["gcskey.pem"]).To(Equal(encodedKey))
-
-			},
-		},
-		{
-			name: "secret created",
-			objects: []runtime.Object{
-				&configv1.APIServer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster",
-					},
-					Spec: configv1.APIServerSpec{},
-				},
-			},
-			check: func(i clienthelper.Interface, g Gomega) {
+				g.Expect(s.Data["extdata"]).To(Equal([]byte{'a'}))
 			},
 		},
 	} {
