@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
@@ -89,7 +90,7 @@ type testInfra struct {
 }
 
 func newTestInfra(t *testing.T) *testInfra {
-	return newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sV3Workers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableOCMEndpoints: false})
+	return newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sV3Workers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableOCMEndpoints: false, env.FeatureEnableMISE: false, env.FeatureEnforceMISE: false})
 }
 
 func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *testInfra {
@@ -103,6 +104,8 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	keyvault := mock_keyvault.NewMockManager(controller)
 	keyvault.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
 
+	log := logrus.NewEntry(logrus.StandardLogger())
+
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -111,6 +114,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
+	_env.EXPECT().MISEAuthorizer().AnyTimes().Return(miseadapter.NewFakeAuthorizer("http://aro-mise-test:5000", log, http.DefaultClient))
 	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	for f, val := range features {
@@ -121,7 +125,6 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	enricherMock.EXPECT().Enrich(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	_, auditEntry := testlog.NewAudit()
-	log := logrus.NewEntry(logrus.StandardLogger())
 
 	fixture := testdatabase.NewFixture()
 	checker := testdatabase.NewChecker()
