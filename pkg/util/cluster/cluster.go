@@ -502,10 +502,13 @@ func (c *Cluster) Create(ctx context.Context) error {
 		return nil
 	}
 
-	c.log.Info("Creating app")
-	appDetails, err := c.createApp(ctx, c.Config.ClusterName)
-	if err != nil {
-		return err
+	appDetails := appDetails{}
+	if !c.Config.UseWorkloadIdentity {
+		c.log.Info("Creating app")
+		appDetails, err = c.createApp(ctx, c.Config.ClusterName)
+		if err != nil {
+			return err
+		}
 	}
 
 	visibility := api.VisibilityPublic
@@ -565,14 +568,12 @@ func (c *Cluster) Create(ctx context.Context) error {
 	}
 
 	parameters := map[string]*arm.ParametersParameter{
-		"clusterName":               {Value: c.Config.ClusterName},
-		"ci":                        {Value: c.Config.IsCI},
-		"clusterServicePrincipalId": {Value: appDetails.SPId},
-		"fpServicePrincipalId":      {Value: c.Config.FPServicePrincipalID},
-		"vnetAddressPrefix":         {Value: addressPrefix},
-		"masterAddressPrefix":       {Value: masterSubnet},
-		"workerAddressPrefix":       {Value: workerSubnet},
-		"kvName":                    {Value: kvName},
+		"clusterName":         {Value: c.Config.ClusterName},
+		"ci":                  {Value: c.Config.IsCI},
+		"vnetAddressPrefix":   {Value: addressPrefix},
+		"masterAddressPrefix": {Value: masterSubnet},
+		"workerAddressPrefix": {Value: workerSubnet},
+		"kvName":              {Value: kvName},
 	}
 
 	// TODO: ick
