@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -11,7 +13,6 @@ import (
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
-	"github.com/sirupsen/logrus"
 )
 
 // "Rotate" the MDSD certificates in the cluster. The copy that is rotated from
