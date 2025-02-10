@@ -6,9 +6,10 @@ package cluster
 import (
 	"context"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func EnsureMDSDCertificates(ctx context.Context) error {
