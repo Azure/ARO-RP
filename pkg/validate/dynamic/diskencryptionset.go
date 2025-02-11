@@ -5,6 +5,7 @@ package dynamic
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -79,7 +80,7 @@ func (dv *dynamic) validateDiskEncryptionSetPermissions(ctx context.Context, des
 		"Microsoft.Compute/diskEncryptionSets/read",
 	})
 
-	if err == wait.ErrWaitTimeout {
+	if err == wait.ErrorInterrupted(errors.New("timed out waiting for the condition")) {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidWorkloadIdentityPermissions, path, "The %s platform managed identity does not have required permissions on disk encryption set '%s'.", *operatorName, desr.String())
 		}

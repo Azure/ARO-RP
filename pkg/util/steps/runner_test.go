@@ -42,7 +42,7 @@ func timingOutCondition(ctx context.Context) (bool, error) {
 	return false, nil
 }
 func internalTimeoutCondition(ctx context.Context) (bool, error) {
-	return false, wait.ErrWaitTimeout
+	return false, wait.ErrorInterrupted(errors.New("timed out waiting for the condition"))
 }
 
 func currentTimeFunc() time.Time {

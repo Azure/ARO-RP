@@ -217,6 +217,5 @@ func (c *fakeDiscoveryClient) OpenAPIV3() openapi.Client {
 }
 
 func (c *fakeDiscoveryClient) WithLegacy() discovery.DiscoveryInterface {
-
 	return nil
 }

@@ -88,7 +88,7 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
 		cnd, cndErr := c.f(ctx)
-		if errors.Is(cndErr, wait.ErrWaitTimeout) {
+		if errors.Is(cndErr, wait.ErrorInterrupted(errors.New("timed out waiting for the condition"))) {
 			return cnd, fmt.Errorf("condition encountered internal timeout: %w", cndErr)
 		}
 
@@ -99,7 +99,7 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 		log.Warnf("step %s failed but has configured 'fail=%t'. Continuing. Error: %s", c, c.fail, err.Error())
 		return nil
 	}
-	if errors.Is(err, wait.ErrWaitTimeout) {
+	if errors.Is(err, wait.ErrorInterrupted(errors.New("timed out waiting for the condition"))) {
 		return enrichConditionTimeoutError(c.f, err)
 	}
 	return err
