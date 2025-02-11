@@ -1,14 +1,5 @@
 package dataplane
 
-type AzureCloud string
-
-const (
-	// Cloud Environments
-	AzurePublicCloud       AzureCloud = "AzurePublicCloud"
-	AzureUSGovernmentCloud AzureCloud = "AzureUSGovernmentCloud"
-	AzureChinaCloud        AzureCloud = "AzureChinaCloud"
-)
-
 const (
 	// MsiIdentityURLHeader is provided by ARM in responses for resource creation
 	// to specify the URL at which clients can get credentials for a managed identity

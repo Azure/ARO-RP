@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	azcloud "github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 )
 
@@ -19,7 +18,7 @@ var (
 
 // Get an AzIdentity credential for the given nested credential object
 // Clients can use the credential to get a token for the user-assigned identity
-func GetCredential(cloud AzureCloud, credential UserAssignedIdentityCredentials) (*azidentity.ClientCertificateCredential, error) {
+func GetCredential(clientOpts azcore.ClientOptions, credential UserAssignedIdentityCredentials) (*azidentity.ClientCertificateCredential, error) {
 	// Double check nil pointers so we don't panic
 	fieldsToCheck := map[string]*string{
 		"clientID":               credential.ClientID,
@@ -37,15 +36,8 @@ func GetCredential(cloud AzureCloud, credential UserAssignedIdentityCredentials)
 		return nil, fmt.Errorf("%w: %s", errNilField, strings.Join(missing, ","))
 	}
 
-	cloudConfig, err := getAzCoreCloud(cloud)
-	if err != nil {
-		return nil, err
-	}
-
 	opts := &azidentity.ClientCertificateCredentialOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: cloudConfig,
-		},
+		ClientOptions: clientOpts,
 
 		// x5c header required: https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingrequestingatoken
 		SendCertificateChain: true,
@@ -71,15 +63,4 @@ func GetCredential(cloud AzureCloud, credential UserAssignedIdentityCredentials)
 		return nil, fmt.Errorf("%w: %w", errParseCertificate, err)
 	}
 	return azidentity.NewClientCertificateCredential(*credential.TenantID, *credential.ClientID, crt, key, opts)
-}
-
-func getAzCoreCloud(cloud AzureCloud) (azcloud.Configuration, error) {
-	switch cloud {
-	case AzureUSGovernmentCloud:
-		return azcloud.AzureGovernment, nil
-	case AzurePublicCloud:
-		return azcloud.AzurePublic, nil
-	default:
-		return azcloud.Configuration{}, fmt.Errorf("unknown cloud: %s", cloud)
-	}
 }
