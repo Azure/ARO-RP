@@ -81,9 +81,8 @@ jobs:
           . ./hack/e2e/run-rp-and-e2e.sh
           deploy_e2e_db
 
+          export SKIP_MIWI_ROLE_ASSIGNMENT=true
           . ./hack/devtools/local_dev_env.sh
-          # create RG so we can set up the permissions before launching the RP
-          az group create --location "$LOCATION" --resource-group "$CLUSTER"
           create_miwi_env_file
         displayName: Setup (Azure)
 
