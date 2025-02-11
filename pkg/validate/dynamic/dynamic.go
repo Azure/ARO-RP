@@ -460,7 +460,7 @@ func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, 
 
 	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions, oid: oid}
 
-	return wait.PollImmediateUntil(30*time.Second, c.usingCheckAccessV2, timeoutCtx.Done())
+	return wait.PollUntilContextCancel(timeoutCtx, 30*time.Second, true, c.usingCheckAccessV2)
 }
 
 // closure is the closure used in PollImmediateUntil's ConditionalFunc
@@ -492,7 +492,7 @@ func (c *closure) checkAccessAuthReqToken() error {
 }
 
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
-func (c closure) usingCheckAccessV2() (result bool, err error) {
+func (c closure) usingCheckAccessV2(ctx context.Context) (result bool, err error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
 	var authReq *client.AuthorizationRequest

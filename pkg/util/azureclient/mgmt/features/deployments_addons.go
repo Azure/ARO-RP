@@ -48,7 +48,7 @@ func (c *deploymentsClient) DeleteAndWait(ctx context.Context, resourceGroupName
 }
 
 func (c *deploymentsClient) Wait(ctx context.Context, resourceGroupName string, deploymentName string) error {
-	return wait.Poll(c.Client.PollingDelay, c.Client.PollingDuration, func() (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, c.Client.PollingDelay, c.Client.PollingDuration, true, func(ctx context.Context) (bool, error) {
 		deployment, err := c.DeploymentsClient.Get(ctx, resourceGroupName, deploymentName)
 		if err != nil {
 			return false, err

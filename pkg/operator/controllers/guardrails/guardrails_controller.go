@@ -98,9 +98,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
 		defer cancel()
 
-		err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
+		err := wait.PollUntilContextCancel(timeoutCtx, r.readinessPollTime, true, func(ctx context.Context) (bool, error) {
 			return r.gatekeeperDeploymentIsReady(ctx, deployConfig)
-		}, timeoutCtx.Done())
+		})
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("GateKeeper deployment timed out on Ready: %w", err)
 		}
@@ -113,9 +113,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				return reconcile.Result{}, err
 			}
 
-			err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
+			err := wait.PollUntilContextCancel(timeoutCtx, r.readinessPollTime, true, func(ctx context.Context) (bool, error) {
 				return r.gkPolicyTemplate.IsConstraintTemplateReady(ctx, policyConfig)
-			}, timeoutCtx.Done())
+			})
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)
 			}
