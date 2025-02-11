@@ -56,26 +56,26 @@ import (
 )
 
 type ClusterConfig struct {
-	ClusterName           string `mapstructure:"cluster"`
-	SubscriptionID        string `mapstructure:"azure_subscription_id"`
-	TenantID              string `mapstructure:"azure_tenant_id"`
-	Location              string `mapstructure:"location"`
-	AzureEnvironment      string `mapstructure:"azure_environment"`
-	UseWorkloadIdentity   bool   `mapstructure:"use_wi"`
-	WorkloadIdentityRoles string `mapstructure:"platform_workload_identity_role_sets"`
-	IsCI                  bool   `mapstructure:"ci"`
-	RpMode                string `mapstructure:"rp_mode"`
-	VnetResourceGroup     string `mapstructure:"cluster_resourcegroup"`
-	RPResourceGroup       string `mapstructure:"resourcegroup"`
-	OSClusterVersion      string `mapstructure:"os_cluster_version"`
-	FPServicePrincipalID  string `mapstructure:"azure_fp_service_principal_id"`
-	IsPrivate             bool   `mapstructure:"private_cluster"`
-	NoInternet            bool   `mapstructure:"no_internet"`
-	DiskEncryptionSetID   string `mapstructure:"disk_encryption_set_id"`
-	MockMSIClientID       string `mapstructure:"mock_msi_client_id"`
+	ClusterName           string `mapstructure:"CLUSTER"`
+	SubscriptionID        string `mapstructure:"AZURE_SUBSCRIPTION_ID"`
+	TenantID              string `mapstructure:"AZURE_TENANT_ID"`
+	Location              string `mapstructure:"LOCATION"`
+	AzureEnvironment      string `mapstructure:"AZURE_ENVIRONMENT"`
+	UseWorkloadIdentity   bool   `mapstructure:"USE_WI"`
+	WorkloadIdentityRoles string `mapstructure:"PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"`
+	IsCI                  bool   `mapstructure:"CI"`
+	RpMode                string `mapstructure:"RP_MODE"`
+	VnetResourceGroup     string `mapstructure:"CLUSTER_RESOURCEGROUP"`
+	RPResourceGroup       string `mapstructure:"RESOURCEGROUP"`
+	OSClusterVersion      string `mapstructure:"OS_CLUSTER_VERSION"`
+	FPServicePrincipalID  string `mapstructure:"AZURE_FP_SERVICE_PRINCIPAL_ID"`
+	IsPrivate             bool   `mapstructure:"PRIVATE_CLUSTER"`
+	NoInternet            bool   `mapstructure:"NO_INTERNET"`
+	DiskEncryptionSetID   string `mapstructure:"DISK_ENCRYPTION_SET_ID"`
+	MockMSIClientID       string `mapstructure:"MOCK_MSI_CLIENT_ID"`
 
-	MasterVMSize string `mapstructure:"master_vm_size"`
-	WorkerVMSize string `mapstructure:"worker_vm_size"`
+	MasterVMSize string `mapstructure:"MASTER_VM_SIZE"`
+	WorkerVMSize string `mapstructure:"WORKER_VM_SIZE"`
 }
 
 func (cc *ClusterConfig) IsLocalDevelopmentMode() bool {
