@@ -341,7 +341,6 @@ func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, disk
 					}
 				}
 
-				// TODO: tighten this error check
 				if err != nil && i < 4 {
 					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
 					// Retry a few times.
@@ -430,7 +429,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 				ResourceID: *resp.ID,
 			}
 		}
-		// TODO Remove this once builtin roles for disk-csi-driver has
+		// TODO ARO-15117: Remove this once builtin roles for disk-csi-driver has
 		// `Microsoft.Compute/diskEncryptionSets/read` permission
 		if wi.OperatorName == "disk-csi-driver" {
 			c.log.Infof("Adding '%s' permission to disk-csi-driver wi.", diskCsiRoleMissingPermission)
