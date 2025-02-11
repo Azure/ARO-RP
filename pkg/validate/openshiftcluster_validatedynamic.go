@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
-	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -139,9 +139,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	aroEnv := dv.env.Environment()
 	clientOptions := &azcore.ClientOptions{
-		Transport: &http.Client{
-			Transport: azureclient.NewCustomRoundTripper(http.DefaultTransport),
-		},
+		PerCallPolicies: []policy.Policy{azureclient.NewLoggingPolicy()},
 	}
 	pdpClient, err := client.NewRemotePDPClient(
 		fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),

@@ -332,10 +332,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 				return nil, err
 			}
 
-			msiDataplane, err = dataplane.NewClientFactory(fpMSICred, _env.MsiRpEndpoint(), msiDataplaneClientOptions)
-			if err != nil {
-				return nil, err
-			}
+			msiDataplane = dataplane.NewClientFactory(fpMSICred, _env.MsiRpEndpoint(), msiDataplaneClientOptions)
 		}
 
 		clusterMsiKeyVaultName := _env.ClusterMsiKeyVaultName()

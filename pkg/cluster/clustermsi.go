@@ -51,7 +51,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	}
 
 	uaMsiRequest := dataplane.UserAssignedIdentitiesRequest{
-		DelegatedResources: &[]string{clusterMsiResourceId.String()},
+		IdentityIDs: []string{clusterMsiResourceId.String()},
 	}
 
 	client, err := m.msiDataplane.NewClient(m.doc.OpenShiftCluster.Identity.IdentityURL)
@@ -131,14 +131,12 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 	}
 
 	var azureCred azcore.TokenCredential
-	if kvSecret.ExplicitIdentities != nil {
-		for _, identity := range *kvSecret.ExplicitIdentities {
-			if identity.ResourceId != nil && *identity.ResourceId == msiResourceId.String() {
-				var err error
-				azureCred, err = dataplane.GetCredential(cloud, identity)
-				if err != nil {
-					return fmt.Errorf("failed to get credential for msi identity %q: %v", msiResourceId, err)
-				}
+	for _, identity := range kvSecret.ExplicitIdentities {
+		if identity.ResourceID != nil && strings.EqualFold(*identity.ResourceID, msiResourceId.String()) {
+			var err error
+			azureCred, err = dataplane.GetCredential(cloud, identity)
+			if err != nil {
+				return fmt.Errorf("failed to get credential for msi identity %q: %v", msiResourceId, err)
 			}
 		}
 	}
@@ -181,7 +179,7 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 	}
 
 	uaMsiRequest := dataplane.UserAssignedIdentitiesRequest{
-		DelegatedResources: &[]string{clusterMsiResourceId.String()},
+		IdentityIDs: []string{clusterMsiResourceId.String()},
 	}
 
 	client, err := m.msiDataplane.NewClient(m.doc.OpenShiftCluster.Identity.IdentityURL)
@@ -198,7 +196,7 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if identity.ClientId == nil || identity.ObjectId == nil {
+	if identity.ClientID == nil || identity.ObjectID == nil {
 		return fmt.Errorf("unable to pull clientID and objectID from the MSI CredentialsObject")
 	}
 
@@ -208,8 +206,8 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 		// passed-in casing on IDs even if it may be incorrect
 		for k, v := range doc.OpenShiftCluster.Identity.UserAssignedIdentities {
 			if strings.EqualFold(k, clusterMsiResourceId.String()) {
-				v.ClientID = *identity.ClientId
-				v.PrincipalID = *identity.ObjectId
+				v.ClientID = *identity.ClientID
+				v.PrincipalID = *identity.ObjectID
 
 				doc.OpenShiftCluster.Identity.UserAssignedIdentities[k] = v
 				return nil
@@ -226,12 +224,11 @@ func (m *manager) clusterIdentityIDs(ctx context.Context) error {
 // at a time (the cluster MSI) and thus we expect the response to only contain a single
 // identity's details.
 func getSingleExplicitIdentity(msiCredObj *dataplane.ManagedIdentityCredentials) (dataplane.UserAssignedIdentityCredentials, error) {
-	if msiCredObj.ExplicitIdentities == nil ||
-		len(*msiCredObj.ExplicitIdentities) == 0 {
+	if len(msiCredObj.ExplicitIdentities) == 0 {
 		return dataplane.UserAssignedIdentityCredentials{}, errClusterMsiNotPresentInResponse
 	}
 
-	return (*msiCredObj.ExplicitIdentities)[0], nil
+	return msiCredObj.ExplicitIdentities[0], nil
 }
 
 // fixupClusterMsiTenantID repopulates the cluster MSI's tenant ID in the cluster doc by
