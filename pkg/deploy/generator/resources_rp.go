@@ -1517,14 +1517,22 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 }
 
 func (g *generator) rpVersionStorageAccount() []*arm.Resource {
+	storageAccountName := "parameters('rpVersionStorageAccountName')"
 	return []*arm.Resource{
 		g.storageAccount(
-			"[parameters('rpVersionStorageAccountName')]",
+			fmt.Sprintf("[%s]", storageAccountName),
 			&mgmtstorage.AccountProperties{
 				AllowBlobPublicAccess: to.BoolPtr(false),
 				MinimumTLSVersion:     mgmtstorage.MinimumTLSVersionTLS12,
 			},
 			map[string]*string{},
+		),
+		rbac.ResourceRoleAssignmentWithName(
+			rbac.RoleStorageAccountContributor,
+			"parameters('globalDevopsServicePrincipalId')",
+			resourceTypeStorageAccount,
+			storageAccountName,
+			fmt.Sprintf("concat(%s, '/Microsoft.Authorization/', guid(resourceId('%s', %s)))", storageAccountName, resourceTypeStorageAccount, storageAccountName),
 		),
 	}
 }
