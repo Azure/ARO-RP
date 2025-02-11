@@ -5,15 +5,12 @@ package dynamic
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
@@ -80,15 +77,17 @@ func (dv *dynamic) validateDiskEncryptionSetPermissions(ctx context.Context, des
 		"Microsoft.Compute/diskEncryptionSets/read",
 	})
 
-	if err == wait.ErrorInterrupted(errors.New("timed out waiting for the condition")) {
-		if dv.authorizerType == AuthorizerWorkloadIdentity {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidWorkloadIdentityPermissions, path, "The %s platform managed identity does not have required permissions on disk encryption set '%s'.", *operatorName, desr.String())
+	if err != nil {
+		if err.Error() == context.Canceled.Error() {
+			if dv.authorizerType == AuthorizerWorkloadIdentity {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidWorkloadIdentityPermissions, path, fmt.Sprintf("The %s platform managed identity does not have required permissions on disk encryption set '%s'.", *operatorName, desr.String()))
+			}
+			return api.NewCloudError(http.StatusBadRequest, errCode, path, fmt.Sprintf("The %s service principal does not have Reader permission on disk encryption set '%s'.", dv.authorizerType, desr.String()))
 		}
-		return api.NewCloudError(http.StatusBadRequest, errCode, path, "The %s service principal does not have Reader permission on disk encryption set '%s'.", dv.authorizerType, desr.String())
-	}
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedDiskEncryptionSet, path, "The disk encryption set '%s' could not be found.", desr.String())
+		if detailedErr, ok := err.(autorest.DetailedError); ok &&
+			detailedErr.StatusCode == http.StatusNotFound {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedDiskEncryptionSet, path, fmt.Sprintf("The disk encryption set '%s' could not be found.", desr.String()))
+		}
 	}
 
 	return err
@@ -101,13 +100,13 @@ func (dv *dynamic) validateDiskEncryptionSetLocation(ctx context.Context, desr *
 	if err != nil {
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusNotFound {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedDiskEncryptionSet, path, "The disk encryption set '%s' could not be found.", desr.String())
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedDiskEncryptionSet, path, fmt.Sprintf("The disk encryption set '%s' could not be found.", desr.String()))
 		}
 		return err
 	}
 
 	if !strings.EqualFold(*des.Location, location) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedDiskEncryptionSet, "", "The disk encryption set location '%s' must match the cluster location '%s'.", *des.Location, location)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedDiskEncryptionSet, "", fmt.Sprintf("The disk encryption set location '%s' must match the cluster location '%s'.", *des.Location, location))
 	}
 
 	return nil

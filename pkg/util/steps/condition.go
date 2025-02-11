@@ -95,13 +95,16 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 		return cnd, cndErr
 	})
 
-	if err != nil && !c.fail {
-		log.Warnf("step %s failed but has configured 'fail=%t'. Continuing. Error: %s", c, c.fail, err.Error())
-		return nil
+	if err != nil {
+		if !c.fail {
+			log.Warnf("step %s failed but has configured 'fail=%t'. Continuing. Error: %s", c, c.fail, err.Error())
+			return nil
+		}
+		if err.Error() == context.Canceled.Error() {
+			return enrichConditionTimeoutError(c.f, err)
+		}
 	}
-	if errors.Is(err, wait.ErrorInterrupted(errors.New("timed out waiting for the condition"))) {
-		return enrichConditionTimeoutError(c.f, err)
-	}
+
 	return err
 }
 
