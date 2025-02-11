@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
-	mcofake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
+	machineconfigurationfake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
@@ -21,7 +21,7 @@ import (
 func TestEmitMachineConfigPoolConditions(t *testing.T) {
 	ctx := context.Background()
 
-	mcocli := mcofake.NewSimpleClientset(&machineconfigurationv1.MachineConfigPool{
+	mcocli := machineconfigurationfake.NewSimpleClientset(&machineconfigurationv1.MachineConfigPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "machine-config-pool",
 		},

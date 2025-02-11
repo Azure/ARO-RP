@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
-	mcofake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
+	machineconfigurationfake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
@@ -65,7 +65,7 @@ func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			mcocli := mcofake.NewSimpleClientset(tt.mcps)
+			mcocli := machineconfigurationfake.NewSimpleClientset(tt.mcps)
 			cli := fake.NewSimpleClientset(tt.nodes)
 
 			controller := gomock.NewController(t)

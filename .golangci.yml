@@ -92,7 +92,7 @@ linters-settings:
       - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
         alias: machineconfigurationclient
       - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake
-        alias: mcofake
+        alias: machineconfigurationfake
       - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1
         alias: machineconfigurationclientv1
       - pkg: github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1

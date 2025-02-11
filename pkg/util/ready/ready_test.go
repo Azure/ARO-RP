@@ -16,7 +16,7 @@ import (
 	ktesting "k8s.io/client-go/testing"
 
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
-	mcofake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
+	machineconfigurationfake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -576,7 +576,7 @@ func TestCheckMachineConfigPoolIsReady(t *testing.T) {
 			Name: "machineconfigpool-not-found",
 		},
 	}
-	clientset := mcofake.NewSimpleClientset()
+	clientset := machineconfigurationfake.NewSimpleClientset()
 	_, err := clientset.MachineconfigurationV1().MachineConfigPools().Create(ctx, machineconfigpool, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatalf("error creating machineconfigpool: %v", err)
@@ -595,7 +595,7 @@ func TestCheckMachineConfigPoolIsReadyNotFound(t *testing.T) {
 			Name: "machineconfigpool-not-found",
 		},
 	}
-	clientset := mcofake.NewSimpleClientset()
+	clientset := machineconfigurationfake.NewSimpleClientset()
 	ok, _ := CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), machineconfigpool.ObjectMeta.Name)()
 
 	if ok {
@@ -606,7 +606,7 @@ func TestCheckMachineConfigPoolIsReadyNotFound(t *testing.T) {
 func TestCheckMachineConfigPoolIsReadyError(t *testing.T) {
 	ctx := context.Background()
 
-	clientset := mcofake.NewSimpleClientset()
+	clientset := machineconfigurationfake.NewSimpleClientset()
 	clientset.Fake.PrependReactor("get", "machineconfigpools", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &machineconfigurationv1.MachineConfigPool{}, errors.New("error getting machineconfigpool")
 	})
