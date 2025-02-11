@@ -234,6 +234,17 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 		new.ObjectMeta.Finalizers = old.ObjectMeta.Finalizers
 		new.Status = old.Status
 
+		for _, name := range maps.Keys(old.ObjectMeta.Labels) {
+			if strings.HasPrefix(name, "hive.openshift.io/") {
+				copyLabel(&new.ObjectMeta, &old.ObjectMeta, name)
+			}
+		}
+
+		// Copy over the ClusterMetadata.Platform that Hive generates
+		if old.Spec.ClusterMetadata.Platform != nil {
+			new.Spec.ClusterMetadata.Platform = old.Spec.ClusterMetadata.Platform
+		}
+
 	case *corev1.ConfigMap:
 		old, new := old.(*corev1.ConfigMap), new.(*corev1.ConfigMap)
 
