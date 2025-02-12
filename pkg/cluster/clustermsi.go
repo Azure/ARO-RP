@@ -120,11 +120,6 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 		return err
 	}
 
-	cloud, err := m.env.Environment().CloudNameForMsiDataplane()
-	if err != nil {
-		return err
-	}
-
 	msiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
 	if err != nil {
 		return err
@@ -134,7 +129,7 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 	for _, identity := range kvSecret.ExplicitIdentities {
 		if identity.ResourceID != nil && strings.EqualFold(*identity.ResourceID, msiResourceId.String()) {
 			var err error
-			azureCred, err = dataplane.GetCredential(cloud, identity)
+			azureCred, err = dataplane.GetCredential(m.env.Environment().AzureClientOptions(), identity)
 			if err != nil {
 				return fmt.Errorf("failed to get credential for msi identity %q: %v", msiResourceId, err)
 			}
