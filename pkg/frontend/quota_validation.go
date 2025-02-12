@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -24,7 +25,7 @@ type quotaValidator struct{}
 func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
 	vm, ok := validate.VMSizeFromName(vmSize)
 	if !ok {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided VM SKU %s is not supported.", vmSize)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided VM SKU %s is not supported.", vmSize))
 	}
 
 	requiredResources["virtualMachines"] += count
@@ -94,7 +95,7 @@ func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage
 	for _, usage := range computeUsages {
 		required, present := requiredResources[*usage.Name.Value]
 		if present && int64(required) > (*usage.Limit-int64(*usage.CurrentValue)) {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "", "Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *usage.Name.Value, *usage.Limit, *usage.CurrentValue, required)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "", fmt.Sprintf("Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *usage.Name.Value, *usage.Limit, *usage.CurrentValue, required))
 		}
 	}
 
@@ -106,7 +107,7 @@ func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage
 	for _, netUsage := range netUsages {
 		required, present := requiredResources[*netUsage.Name.Value]
 		if present && int64(required) > (*netUsage.Limit-*netUsage.CurrentValue) {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "", "Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *netUsage.Name.Value, *netUsage.Limit, *netUsage.CurrentValue, required)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "", fmt.Sprintf("Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *netUsage.Name.Value, *netUsage.Limit, *netUsage.CurrentValue, required))
 		}
 	}
 

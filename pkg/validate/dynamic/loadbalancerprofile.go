@@ -5,6 +5,7 @@ package dynamic
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -58,7 +59,7 @@ func (dv *dynamic) validatePublicIPQuota(ctx context.Context, oc *api.OpenShiftC
 	for _, netUsage := range netUsages {
 		if *netUsage.Name.Value == "PublicIPAddresses" {
 			if int64(requestedIPs) > (*netUsage.Limit - *netUsage.CurrentValue) {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "properties.networkProfile.loadBalancerProfile.ManagedOutboundIPs.Count", "Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *netUsage.Name.Value, *netUsage.Limit, *netUsage.CurrentValue, requestedIPs)
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "properties.networkProfile.loadBalancerProfile.ManagedOutboundIPs.Count", fmt.Sprintf("Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *netUsage.Name.Value, *netUsage.Limit, *netUsage.CurrentValue, requestedIPs))
 			}
 		}
 	}
@@ -96,8 +97,9 @@ func (dv *dynamic) validateOBRuleV4FrontendPorts(ctx context.Context, oc *api.Op
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
 			"properties.networkProfile.loadBalancerProfile",
-			"Insufficient frontend ports to support the backend instance count.  Total frontend ports: %d, Required frontend ports: %d, Total backend instances: %d", totalSNATPorts, allocatedOutboundPorts*totalBackendInstances, totalBackendInstances,
-		)
+			fmt.Sprintf(
+				"Insufficient frontend ports to support the backend instance count.  Total frontend ports: %d, Required frontend ports: %d, Total backend instances: %d", totalSNATPorts, allocatedOutboundPorts*totalBackendInstances, totalBackendInstances,
+			))
 	}
 
 	return nil

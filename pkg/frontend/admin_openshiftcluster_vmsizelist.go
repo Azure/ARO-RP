@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -42,8 +43,9 @@ func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context,
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
-			"The Resource '%s/%s' under resource group '%s' was not found.",
-			resType, resName, resGroupName)
+			fmt.Sprintf(
+				"The Resource '%s/%s' under resource group '%s' was not found.",
+				resType, resName, resGroupName))
 	case err != nil:
 		return nil, err
 	}

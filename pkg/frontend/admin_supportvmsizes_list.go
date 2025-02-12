@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -24,7 +25,7 @@ func (f *frontend) supportedvmsizes(w http.ResponseWriter, r *http.Request) {
 
 func (f *frontend) supportedVMSizesForRole(vmRole string) ([]byte, error) {
 	if vmRole != validate.VMRoleMaster && vmRole != validate.VMRoleWorker {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmRole '%s' is invalid. vmRole can only be master or worker", vmRole)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided vmRole '%s' is invalid. vmRole can only be master or worker", vmRole))
 	}
 	vmsizes := validate.SupportedVMSizesByRole(vmRole)
 	b, err := json.MarshalIndent(vmsizes, "", "    ")

@@ -166,7 +166,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 func unmarshalRequest(body []byte) (*api.PreflightRequest, error) {
 	preflightRequest := &api.PreflightRequest{}
 	if err := json.Unmarshal(body, preflightRequest); err != nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
 	}
 	return preflightRequest, nil
 }
