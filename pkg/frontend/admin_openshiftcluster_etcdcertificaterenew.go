@@ -448,13 +448,13 @@ func (e *etcdrenew) isEtcdRevised(ctx context.Context) (bool, error) {
 	isAtRevision := true
 	rawEtcd, err := e.k.KubeGet(ctx, "etcd.operator.openshift.io", "", "cluster")
 	if err != nil {
-		e.log.Warnf(err.Error())
+		e.log.Warn(err.Error())
 		return false, nil
 	}
 	etcd := &operatorv1.Etcd{}
 	err = codec.NewDecoderBytes(rawEtcd, &codec.JsonHandle{}).Decode(etcd)
 	if err != nil {
-		e.log.Warnf(err.Error())
+		e.log.Warn(err.Error())
 		return false, nil
 	}
 
