@@ -276,18 +276,17 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		// so we generate a name randomly until it is available
 		diskEncryptionSet, err := c.diskEncryptionSetsClient.Get(ctx, vnetResourceGroup, diskEncryptionSetName)
 		if err == nil {
-			if diskEncryptionSet.EncryptionSetProperties != nil &&
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey != nil &&
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault != nil &&
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID != nil {
-				ID := *diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID
-				var found bool
-				_, kvName, found = strings.Cut(ID, "/providers/Microsoft.KeyVault/vaults/")
-				if !found {
-					return fmt.Errorf("could not find Key Vault name in ID: %v", ID)
-				}
-			} else {
+			if diskEncryptionSet.EncryptionSetProperties == nil ||
+				diskEncryptionSet.EncryptionSetProperties.ActiveKey == nil ||
+				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault == nil ||
+				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID == nil {
 				return fmt.Errorf("no valid Key Vault found in Disk Encryption Set: %v. Delte the Disk Encryption Set and retry", diskEncryptionSet)
+			}
+			ID := *diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID
+			var found bool
+			_, kvName, found = strings.Cut(ID, "/providers/Microsoft.KeyVault/vaults/")
+			if !found {
+				return fmt.Errorf("could not find Key Vault name in ID: %v", ID)
 			}
 		} else {
 			if autorestErr, ok := err.(autorest.DetailedError); ok &&
