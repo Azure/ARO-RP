@@ -305,7 +305,11 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 					return err
 				}
 
-				if result.NameAvailable == nil || *result.NameAvailable {
+				if result.NameAvailable == nil {
+					return fmt.Errorf("have unexpected nil NameAvailable for key vault: %v", kvName)
+				}
+
+				if *result.NameAvailable {
 					break
 				}
 			}
