@@ -287,7 +287,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 					return fmt.Errorf("could not find Key Vault name in ID: %v", ID)
 				}
 			} else {
-				return fmt.Errorf("no valide Key Vault found in Disk Encryption Set: %v", diskEncryptionSet)
+				return fmt.Errorf("no valid Key Vault found in Disk Encryption Set: %v. Delte the Disk Encryption Set and retry", diskEncryptionSet)
 			}
 		} else {
 			if autorestErr, ok := err.(autorest.DetailedError); ok &&
