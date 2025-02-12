@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	otel "github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -170,7 +171,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	log.Printf("listening %s", address)
 
-	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
+	outelAuditClient, err := otel.NewOtelAuditClient()
+	if err != nil {
+		return err
+	}
+
+	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
 
 	return p.Run(ctx)
 }

@@ -148,7 +148,11 @@ func TestNew(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			k := New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil)
+			otelAudit, err := testlog.NewOtelAuditClient()
+			if err != nil {
+				t.Fatal(err)
+			}
+			k := New(baseLog, audit, otelAudit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil)
 
 			if tt.r != nil {
 				tt.r(r)

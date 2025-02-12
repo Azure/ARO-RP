@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/microsoft/go-otel-audit/audit/msgs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -53,7 +54,7 @@ func (rc *logReadCloser) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.Handler {
+func Log(env env.Core, auditLog, baseLog *logrus.Entry, outelAuditClient audit.Client) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t := time.Now()
@@ -103,6 +104,8 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				},
 			})
 
+			otelAuditMsg := createOtelAuditMsg(log, r, username)
+
 			defer func() {
 				statusCode := w.(*logResponseWriter).statusCode
 				log.WithFields(logrus.Fields{
@@ -115,6 +118,13 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				resultType := audit.ResultTypeSuccess
 				if statusCode >= http.StatusBadRequest {
 					resultType = audit.ResultTypeFail
+					otelAuditMsg.Record.OperationResult = msgs.Failure
+					otelAuditMsg.Record.OperationResultDescription = fmt.Sprintf("Status code: %d", statusCode)
+				}
+
+				audit.Validate(&otelAuditMsg.Record)
+				if err := outelAuditClient.Send(r.Context(), otelAuditMsg); err != nil {
+					log.Printf("Portal - Error sending audit message: %v", err)
 				}
 
 				auditEntry.WithFields(logrus.Fields{
@@ -136,4 +146,53 @@ func auditTargetResourceType(r *http.Request) string {
 	}
 
 	return ""
+}
+
+func createOtelAuditMsg(log *logrus.Entry, r *http.Request, username string) msgs.Msg {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		log.Errorf("failed to split host and port for remote request addr %q: %s", r.RemoteAddr, err)
+	}
+
+	addr, err := msgs.ParseAddr(host)
+	if err != nil {
+		log.Errorf("failed to parse address for host %q: %s", host, err)
+	}
+
+	tr := map[string][]msgs.TargetResourceEntry{
+		auditTargetResourceType(r): {
+			{
+				Name: r.URL.Path,
+			},
+		},
+	}
+
+	ci := map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry{
+		msgs.Username: {
+			{
+				Identity:    username,
+				Description: "client username",
+			},
+		},
+	}
+
+	record := msgs.Record{
+		CallerIpAddress:              addr,
+		CallerIdentities:             ci,
+		OperationCategories:          []msgs.OperationCategory{msgs.ResourceManagement},
+		OperationCategoryDescription: "Client Resource Management via frontend",
+		TargetResources:              tr,
+		OperationAccessLevel:         "Azure RedHat OpenShift Contributor Role",
+		OperationName:                fmt.Sprintf("%s %s", r.Method, r.URL.Path),
+		CallerAgent:                  r.UserAgent(),
+		OperationType:                audit.GetOperationType(r.Method),
+		OperationResult:              msgs.Success,
+	}
+
+	msg := msgs.Msg{
+		Type:   msgs.ControlPlane,
+		Record: record,
+	}
+
+	return msg
 }
