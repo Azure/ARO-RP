@@ -6,6 +6,7 @@ package audit
 import (
 	"context"
 	"flag"
+	"os"
 	"strings"
 
 	"github.com/microsoft/go-otel-audit/audit"
@@ -30,7 +31,7 @@ type Audit struct {
 var _ Client = (*Audit)(nil)
 
 func NewOtelAuditClient() (Client, error) {
-	if isTestEnv() {
+	if isTestEnv() || isLocalDevelopmentMode() {
 		return initializeNoOpOtelAuditClient()
 	}
 
@@ -178,4 +179,8 @@ func Validate(r *msgs.Record) {
 
 func isTestEnv() bool {
 	return flag.Lookup("test.v") != nil
+}
+
+func isLocalDevelopmentMode() bool {
+	return strings.EqualFold(os.Getenv("RP_MODE"), "development")
 }
