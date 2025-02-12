@@ -71,14 +71,14 @@ func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusCl
 func checkSKUAvailability(skus map[string]*mgmtcompute.ResourceSku, location, path, vmsize string) error {
 	// Ensure desired sku exists in target region
 	if skus[vmsize] == nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The selected SKU '%v' is unavailable in region '%v'", vmsize, location)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' is unavailable in region '%v'", vmsize, location))
 	}
 
 	// Fail if sku is available, but restricted within the subscription. Restrictions are subscription-specific.
 	// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/error-sku-not-available
 	isRestricted := computeskus.IsRestricted(skus, location, vmsize)
 	if isRestricted {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The selected SKU '%v' is restricted in region '%v' for selected subscription", vmsize, location)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' is restricted in region '%v' for selected subscription", vmsize, location))
 	}
 
 	return nil

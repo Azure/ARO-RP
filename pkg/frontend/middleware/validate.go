@@ -4,6 +4,7 @@ package middleware
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -50,42 +51,42 @@ func (v ValidateMiddleware) Validate(h http.Handler) http.Handler {
 		if subId != "" {
 			valid := uuid.IsValid(subId)
 			if !valid {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionID, "", "The provided subscription identifier '%s' is malformed or invalid.", subId)
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionID, "", fmt.Sprintf("The provided subscription identifier '%s' is malformed or invalid.", subId))
 				return
 			}
 		}
 
 		if resourceGroupName != "" {
 			if !rxResourceGroupName.MatchString(resourceGroupName) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceGroupNotFound, "", "Resource group '%s' could not be found.", resourceGroupName)
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceGroupNotFound, "", fmt.Sprintf("Resource group '%s' could not be found.", resourceGroupName))
 				return
 			}
 		}
 
 		if resourceProviderNamespace != "" {
 			if resourceProviderNamespace != strings.ToLower(wantedResourceProviderNamespace) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceNamespace, "", "The resource namespace '%s' is invalid.", resourceProviderNamespace)
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceNamespace, "", fmt.Sprintf("The resource namespace '%s' is invalid.", resourceProviderNamespace))
 				return
 			}
 		}
 
 		if resourceType != "" {
 			if resourceType != strings.ToLower(resourceTypeOpenshiftCluster) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", resourceType, resourceProviderNamespace, apiVersion)
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", fmt.Sprintf("The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", resourceType, resourceProviderNamespace, apiVersion))
 				return
 			}
 		}
 
 		if resourceName != "" {
 			if !rxResourceGroupName.MatchString(resourceName) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s' under resource group '%s' was not found.", resourceProviderNamespace, resourceType, resourceName, resourceGroupName)
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", fmt.Sprintf("The Resource '%s/%s/%s' under resource group '%s' was not found.", resourceProviderNamespace, resourceType, resourceName, resourceGroupName))
 				return
 			}
 		}
 
 		if location != "" {
 			if !strings.EqualFold(location, v.Location) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidLocation, "", "The provided location '%s' is malformed or invalid.", location)
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidLocation, "", fmt.Sprintf("The provided location '%s' is malformed or invalid.", location))
 				return
 			}
 		}
@@ -93,7 +94,7 @@ func (v ValidateMiddleware) Validate(h http.Handler) http.Handler {
 		if operationId != "" {
 			valid := uuid.IsValid(operationId)
 			if !valid {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidOperationID, "", "The provided operation identifier '%s' is malformed or invalid.", operationId)
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidOperationID, "", fmt.Sprintf("The provided operation identifier '%s' is malformed or invalid.", operationId))
 				return
 			}
 		}

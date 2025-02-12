@@ -308,7 +308,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create service account",
-			wantErr: "500: InternalServerError: : oh no, can't create service account %!!(MISSING)s(<nil>)",
+			wantErr: "500: InternalServerError: : oh no, can't create service account",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -341,7 +341,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create cluster role",
-			wantErr: "500: InternalServerError: : oh no, can't create job fix peers %!!(MISSING)s(<nil>)",
+			wantErr: "500: InternalServerError: : oh no, can't create job fix peers",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -375,7 +375,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create cluster role binding",
-			wantErr: "500: InternalServerError: : oh no, can't create cluster role binding %!!(MISSING)s(<nil>)",
+			wantErr: "500: InternalServerError: : oh no, can't create cluster role binding",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}
@@ -412,7 +412,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:    "fail: create security context constraint",
-			wantErr: "500: InternalServerError: : oh no, can't create security context constraint %!!(MISSING)s(<nil>)",
+			wantErr: "500: InternalServerError: : oh no, can't create security context constraint",
 			pods:    newEtcdPods(t, doc, false, false, false),
 			mocks: func(tt *test, t *testing.T, ti *testInfra, k *mock_adminactions.MockKubeActions, pods *corev1.PodList, ctxCancel context.CancelFunc) {
 				buf := &bytes.Buffer{}

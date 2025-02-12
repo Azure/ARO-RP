@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -40,7 +41,7 @@ func (service *openShiftClusterDocumentVersionerService) Get(ctx context.Context
 		}
 	}
 
-	errUnsupportedVersion := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is not supported.", requestedInstallVersion)
+	errUnsupportedVersion := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", fmt.Sprintf("The requested OpenShift version '%s' is not supported.", requestedInstallVersion))
 
 	for _, active := range activeOpenShiftVersions {
 		if requestedInstallVersion == active.Properties.Version {

@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -21,7 +22,7 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
 	if f.apis[apiVersion].OpenShiftVersionConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", resourceProviderNamespace, apiVersion)
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", fmt.Sprintf("The endpoint could not be found in the namespace '%s' for api version '%s'.", resourceProviderNamespace, apiVersion))
 		return
 	}
 
