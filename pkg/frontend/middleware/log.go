@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/microsoft/go-otel-audit/audit/msgs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -50,11 +52,12 @@ func (rc *logReadCloser) Read(b []byte) (int, error) {
 }
 
 type LogMiddleware struct {
-	EnvironmentName string
-	Hostname        string
-	Location        string
-	AuditLog        *logrus.Entry
-	BaseLog         *logrus.Entry
+	EnvironmentName  string
+	Hostname         string
+	Location         string
+	AuditLog         *logrus.Entry
+	BaseLog          *logrus.Entry
+	OutelAuditClient audit.Client
 }
 
 func (l LogMiddleware) Log(h http.Handler) http.Handler {
@@ -141,6 +144,8 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 			},
 		})
 
+		otelAuditMsg := createOtelAuditMsg(log, r, correlationData)
+
 		defer func() {
 			statusCode := w.(*logResponseWriter).statusCode
 			log.WithFields(logrus.Fields{
@@ -153,10 +158,17 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 			resultType := audit.ResultTypeSuccess
 			if statusCode >= http.StatusBadRequest {
 				resultType = audit.ResultTypeFail
+				otelAuditMsg.Record.OperationResult = msgs.Failure
+				otelAuditMsg.Record.OperationResultDescription = fmt.Sprintf("Status code: %d", statusCode)
 			}
 
 			if r.URL.Path == "/healthz/ready" {
 				return
+			}
+
+			audit.Validate(&otelAuditMsg.Record)
+			if err := l.OutelAuditClient.Send(r.Context(), otelAuditMsg); err != nil {
+				log.Printf("Frontend - Error sending audit message: %v", err)
 			}
 
 			auditEntry.WithFields(logrus.Fields{
@@ -189,4 +201,68 @@ func auditTargetResourceType(r *http.Request) string {
 
 func isAdminOp(r *http.Request) bool {
 	return strings.HasPrefix(r.URL.Path, "/admin")
+}
+
+func createOtelAuditMsg(log *logrus.Entry, r *http.Request, correlationData *api.CorrelationData) msgs.Msg {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		log.Errorf("failed to split host and port for remote request addr %q: %s", r.RemoteAddr, err)
+	}
+
+	addr, err := msgs.ParseAddr(host)
+	if err != nil {
+		log.Errorf("failed to parse address for host %q: %s", host, err)
+	}
+
+	tr := map[string][]msgs.TargetResourceEntry{
+		auditTargetResourceType(r): {
+			{
+				Name: r.URL.Path,
+			},
+		},
+	}
+
+	record := msgs.Record{
+		CallerIpAddress:              addr,
+		CallerIdentities:             getCallerIdentitesMap(correlationData),
+		OperationCategories:          []msgs.OperationCategory{msgs.ResourceManagement},
+		OperationCategoryDescription: "Client Resource Management via frontend",
+		TargetResources:              tr,
+		OperationAccessLevel:         "Azure RedHat OpenShift Contributor Role",
+		OperationName:                fmt.Sprintf("%s %s", r.Method, r.URL.Path),
+		CallerAgent:                  r.UserAgent(),
+		OperationType:                audit.GetOperationType(r.Method),
+		OperationResult:              msgs.Success,
+	}
+
+	msg := msgs.Msg{
+		Type:   msgs.ControlPlane,
+		Record: record,
+	}
+
+	return msg
+}
+
+// used for otelaudit via "github.com/microsoft/go-otel-audit/audit/msgs"
+func getCallerIdentitesMap(correlationData *api.CorrelationData) map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry {
+	caller := make(map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry)
+	if correlationData.ClientPrincipalName != "" {
+		caller[msgs.UPN] = []msgs.CallerIdentityEntry{
+			{
+				Identity:    correlationData.ClientPrincipalName,
+				Description: "client principal name",
+			},
+		}
+	}
+
+	if correlationData.CorrelationID != "" {
+		caller[msgs.CIOther] = []msgs.CallerIdentityEntry{
+			{
+				Identity:    correlationData.CorrelationID,
+				Description: "client request CorrelationID",
+			},
+		}
+	}
+
+	return caller
 }

@@ -35,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -135,13 +136,20 @@ func NewFrontend(ctx context.Context,
 	appLensActionsFactory appLensActionsFactory,
 	enricher clusterdata.BestEffortEnricher,
 ) (*frontend, error) {
+
+	outelAuditClient, err := audit.NewOtelAuditClient()
+	if err != nil {
+		return nil, err
+	}
+
 	f := &frontend{
 		logMiddleware: middleware.LogMiddleware{
-			EnvironmentName: _env.Environment().Name,
-			Location:        _env.Location(),
-			Hostname:        _env.Hostname(),
-			BaseLog:         baseLog.WithField("component", "access"),
-			AuditLog:        auditLog,
+			EnvironmentName:  _env.Environment().Name,
+			Location:         _env.Location(),
+			Hostname:         _env.Hostname(),
+			BaseLog:          baseLog.WithField("component", "access"),
+			AuditLog:         auditLog,
+			OutelAuditClient: outelAuditClient,
 		},
 		baseLog:  baseLog,
 		auditLog: auditLog,
