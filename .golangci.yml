@@ -7,6 +7,7 @@ run:
     - "exclude_graphdriver_devicemapper"
     - "exclude_graphdriver_btrfs"
   go: "1.22"
+
 output:
   formats:
     - format: github-actions
