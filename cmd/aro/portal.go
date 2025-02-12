@@ -20,12 +20,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	otel "github.com/Azure/ARO-RP/pkg/util/log/audit"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
+func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) error {
 	_env, err := env.NewCore(ctx, log, env.COMPONENT_PORTAL)
 	if err != nil {
 		return err
@@ -171,12 +171,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	log.Printf("listening %s", address)
 
-	outelAuditClient, err := otel.NewOtelAuditClient()
+	outelAuditClient, err := audit.NewOtelAuditClient()
 	if err != nil {
 		return err
 	}
 
-	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
+	p := pkgportal.NewPortal(_env, auditLog, log.WithField("component", "portal"), log.WithField("component", "portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
 
 	return p.Run(ctx)
 }
