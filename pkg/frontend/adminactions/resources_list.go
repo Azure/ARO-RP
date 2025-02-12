@@ -159,6 +159,24 @@ func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResou
 					Resource: rt.RouteTable,
 				})
 			}
+			//Due to BYO NSGs not belonging to the managed resource group, we would like to list them as well
+			if snet.Properties.NetworkSecurityGroup.ID != nil {
+				r, err := azure.ParseResourceID(*snet.Properties.NetworkSecurityGroup.ID)
+				if err != nil {
+					a.log.Warnf("skipping NSG '%s' due to ID parse error: %s", *snet.Properties.NetworkSecurityGroup.ID, err)
+					continue
+				}
+				if r.ResourceGroup != stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/') {
+					nsg, err := a.securityGroups.Get(ctx, r.ResourceGroup, r.ResourceName, nil)
+					if err != nil {
+						a.log.Warnf("skipping NSG '%s' due to Get error: %s", *snet.Properties.NetworkSecurityGroup.ID, err)
+						continue
+					}
+					armResources = append(armResources, arm.Resource{
+						Resource: nsg.SecurityGroup,
+					})
+				}
+			}
 		}
 	}
 
