@@ -312,6 +312,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 				if *result.NameAvailable {
 					break
 				}
+				c.log.Debugf("key vault %v is not available and we will try an other one", kvName)
 			}
 		}
 	}
