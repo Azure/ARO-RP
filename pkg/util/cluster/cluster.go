@@ -289,26 +289,25 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 				return fmt.Errorf("could not find Key Vault name in ID: %v", ID)
 			}
 		} else {
-			if autorestErr, ok := err.(autorest.DetailedError); ok &&
-				autorestErr.Response != nil &&
-				autorestErr.Response.StatusCode == http.StatusNotFound {
-				for {
-					kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
-					result, err := c.vaultsClient.CheckNameAvailability(
-						ctx,
-						sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")},
-						nil,
-					)
-					if err != nil {
-						return err
-					}
-
-					if result.NameAvailable == nil || *result.NameAvailable {
-						break
-					}
-				}
-			} else {
+			if autorestErr, ok := err.(autorest.DetailedError); !ok ||
+				autorestErr.Response == nil ||
+				autorestErr.Response.StatusCode != http.StatusNotFound {
 				return fmt.Errorf("failed to get Disk Encryption Set: %v", err)
+			}
+			for {
+				kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
+				result, err := c.vaultsClient.CheckNameAvailability(
+					ctx,
+					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")},
+					nil,
+				)
+				if err != nil {
+					return err
+				}
+
+				if result.NameAvailable == nil || *result.NameAvailable {
+					break
+				}
 			}
 		}
 	}
