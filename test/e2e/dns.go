@@ -51,7 +51,7 @@ var _ = Describe("ARO cluster DNS", Label(regressiontest), func() {
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
 			return p.VerifyProjectIsReady(ctx)
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		DeferCleanup(func(ctx context.Context) {
 			By("deleting the test namespace")

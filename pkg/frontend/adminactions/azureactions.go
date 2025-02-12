@@ -106,7 +106,7 @@ func (a *azureActions) VMRedeployAndWait(ctx context.Context, vmName string) err
 	}
 	if vmDisk := vm.StorageProfile.OsDisk; vmDisk != nil && vmDisk.DiffDiskSettings != nil &&
 		vmDisk.Caching == "ReadOnly" && vmDisk.DiffDiskSettings.Option == "Local" && vmDisk.DiffDiskSettings.Placement == "CacheDisk" {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "VM '%s' has an Ephemeral Disk OS and cannot be redeployed.", vmName)
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", fmt.Sprintf("VM '%s' has an Ephemeral Disk OS and cannot be redeployed.", vmName))
 	}
 	return a.virtualMachines.RedeployAndWait(ctx, clusterRGName, vmName)
 }

@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -25,7 +26,7 @@ func validateTerminalProvisioningState(state api.ProvisioningState) error {
 		return nil
 	}
 
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", state)
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", fmt.Sprintf("Request is not allowed in provisioningState '%s'.", state))
 }
 
 func (f *frontend) getSubscriptionDocument(ctx context.Context, key string) (*api.SubscriptionDocument, error) {
@@ -41,7 +42,7 @@ func (f *frontend) getSubscriptionDocument(ctx context.Context, key string) (*ap
 
 	doc, err := dbSubscriptions.Get(ctx, r.SubscriptionID)
 	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", fmt.Sprintf("Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID))
 	}
 
 	return doc, err
@@ -59,7 +60,7 @@ func (f *frontend) validateSubscriptionState(ctx context.Context, path string, a
 		}
 	}
 
-	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", doc.Subscription.State)
+	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", fmt.Sprintf("Request is not allowed in subscription in state '%s'.", doc.Subscription.State))
 }
 
 // validateOpenShiftUniqueKey returns which unique key if causing a 412 error
@@ -88,14 +89,14 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 			clientIdOrMsi = "service principal with client ID"
 			value = doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID
 		}
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", "The provided %s '%s' is already in use by a cluster.", clientIdOrMsi, value)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", fmt.Sprintf("The provided %s '%s' is already in use by a cluster.", clientIdOrMsi, value))
 	}
 	docs, err = dbOpenShiftClusters.GetByClusterResourceGroupID(ctx, doc.PartitionKey, doc.ClusterResourceGroupIDKey)
 	if err != nil {
 		return err
 	}
 	if docs.Count != 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateResourceGroup, "", fmt.Sprintf("The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
 	}
 	return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 }
@@ -132,11 +133,11 @@ func validateAdminKubernetesObjectsNonCustomer(method string, gvr schema.GroupVe
 	}
 
 	if namespace == "" && !validatePermittedClusterwideObjects(gvr) {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to cluster-scoped object '%v' is forbidden.", gvr)
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", fmt.Sprintf("Access to cluster-scoped object '%v' is forbidden.", gvr))
 	}
 
 	if !utilnamespace.IsOpenShiftNamespace(namespace) {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", fmt.Sprintf("Access to the provided namespace '%s' is forbidden.", namespace))
 	}
 
 	return validateAdminKubernetesObjects(method, gvr, namespace, name)
@@ -158,12 +159,12 @@ func validateAdminKubernetesObjects(method string, gvr schema.GroupVersionResour
 	}
 
 	if !rxKubernetesString.MatchString(namespace) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided namespace '%s' is invalid.", namespace))
 	}
 
 	if (method != http.MethodGet && name == "") ||
 		!rxKubernetesString.MatchString(name) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided name '%s' is invalid.", name)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided name '%s' is invalid.", name))
 	}
 
 	return nil
@@ -171,7 +172,7 @@ func validateAdminKubernetesObjects(method string, gvr schema.GroupVersionResour
 
 func validateAdminKubernetesObjectsForceDelete(groupKind string) error {
 	if !strings.EqualFold(groupKind, "Pod") {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Force deleting groupKind '%s' is forbidden.", groupKind)
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", fmt.Sprintf("Force deleting groupKind '%s' is forbidden.", groupKind))
 	}
 
 	return nil
@@ -179,7 +180,7 @@ func validateAdminKubernetesObjectsForceDelete(groupKind string) error {
 
 func validateAdminVMName(vmName string) error {
 	if vmName == "" || !rxKubernetesString.MatchString(vmName) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmName '%s' is invalid.", vmName)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided vmName '%s' is invalid.", vmName))
 	}
 
 	return nil
@@ -187,19 +188,19 @@ func validateAdminVMName(vmName string) error {
 
 func validateAdminKubernetesPodLogs(namespace, podName, containerName string) error {
 	if podName == "" || !rxKubernetesString.MatchString(podName) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided pod name '%s' is invalid.", podName)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided pod name '%s' is invalid.", podName))
 	}
 
 	if namespace == "" || !rxKubernetesString.MatchString(namespace) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided namespace '%s' is invalid.", namespace))
 	}
 	// Checking if the namespace is an OpenShift namespace not a customer workload namespace.
 	if !utilnamespace.IsOpenShiftNamespace(namespace) {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", fmt.Sprintf("Access to the provided namespace '%s' is forbidden.", namespace))
 	}
 
 	if containerName == "" || !rxKubernetesString.MatchString(containerName) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided container name '%s' is invalid.", containerName)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided container name '%s' is invalid.", containerName))
 	}
 	return nil
 }
@@ -210,7 +211,7 @@ var rxNetworkInterfaceName = regexp.MustCompile(`^[a-zA-Z0-9].*\w$`)
 
 func validateNetworkInterfaceName(nicName string) error {
 	if nicName == "" || !rxNetworkInterfaceName.MatchString(nicName) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided nicName '%s' is invalid.", nicName)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided nicName '%s' is invalid.", nicName))
 	}
 	return nil
 }
@@ -223,7 +224,7 @@ func validateAdminMasterVMSize(vmSize string) error {
 		}
 	}
 
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is unsupported for master.", vmSize)
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided vmSize '%s' is unsupported for master.", vmSize))
 }
 
 // validateInstallVersion validates the install version set in the clusterprofile.version
@@ -241,7 +242,7 @@ func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShift
 	_, err := semver.NewVersion(oc.Properties.ClusterProfile.Version)
 
 	if !ok || err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", fmt.Sprintf("The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version))
 	}
 
 	return nil

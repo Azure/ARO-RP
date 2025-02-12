@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -30,8 +31,9 @@ func (f *frontend) prepareAdminActions(log *logrus.Entry, ctx context.Context, v
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, nil,
 			api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
-				"The Resource '%s/%s' under resource group '%s' was not found.",
-				resourceType, resourceName, resourceGroupName)
+				fmt.Sprintf(
+					"The Resource '%s/%s' under resource group '%s' was not found.",
+					resourceType, resourceName, resourceGroupName))
 	case err != nil:
 		return nil, nil, err
 	}

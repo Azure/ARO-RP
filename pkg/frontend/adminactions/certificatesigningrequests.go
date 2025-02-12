@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -19,7 +20,7 @@ func (k *kubeActions) ApproveCsr(ctx context.Context, csrName string) error {
 	csr, err := k.kubecli.CertificatesV1().CertificateSigningRequests().Get(ctx, csrName, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", "certificate signing request '%s' was not found.", csrName)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", fmt.Sprintf("certificate signing request '%s' was not found.", csrName))
 		}
 		return err
 	}
@@ -57,7 +58,7 @@ func addConditionIfNeeded(csr *certificatesv1.CertificateSigningRequest, mustNot
 	var alreadyHasCondition bool
 	for _, c := range csr.Status.Conditions {
 		if string(c.Type) == mustNotHaveConditionType {
-			return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "", "certificate signing request %q is already %s", csr.Name, c.Type)
+			return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "", fmt.Sprintf("certificate signing request %q is already %s", csr.Name, c.Type))
 		}
 		if string(c.Type) == conditionType {
 			alreadyHasCondition = true

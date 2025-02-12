@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -52,8 +53,9 @@ func (f *frontend) newStreamAzureAction(ctx context.Context, r *http.Request, lo
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
-			"The Resource '%s/%s' under resource group '%s' was not found.",
-			resType, resName, resGroupName)
+			fmt.Sprintf(
+				"The Resource '%s/%s' under resource group '%s' was not found.",
+				resType, resName, resGroupName))
 	case err != nil:
 		return nil, err
 	}

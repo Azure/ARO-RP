@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"regexp"
@@ -49,14 +50,16 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	}
 	if !exists {
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "",
-			`"The VirtualMachine '%s' under resource group '%s' was not found."`,
-			vmName, resourceGroupName)
+			fmt.Sprintf(
+				`"The VirtualMachine '%s' under resource group '%s' was not found."`,
+				vmName, resourceGroupName))
 	}
 
 	if !nodeIsMaster(vmName) {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "",
-			`"The vmName '%s' provided cannot be resized. It is either not a master node or not adhering to the standard naming convention."`,
-			vmName)
+			fmt.Sprintf(
+				`"The vmName '%s' provided cannot be resized. It is either not a master node or not adhering to the standard naming convention."`,
+				vmName))
 	}
 
 	return action.VMResize(ctx, vmName, vmSize)

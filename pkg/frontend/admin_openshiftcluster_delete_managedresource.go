@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -40,13 +41,13 @@ func (f *frontend) _postAdminOpenShiftClusterDeleteManagedResource(ctx context.C
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName))
 	case err != nil:
 		return err
 	}
 
 	if !strings.HasPrefix(strings.ToLower(managedResourceID), strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The resource %s is not within the cluster's managed resource group %s.", managedResourceID, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The resource %s is not within the cluster's managed resource group %s.", managedResourceID, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
 	}
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
@@ -63,7 +64,7 @@ func (f *frontend) _postAdminOpenShiftClusterDeleteManagedResource(ctx context.C
 	if err != nil {
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusNotFound {
-			return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The resource '%s' could not be found.", managedResourceID)
+			return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", fmt.Sprintf("The resource '%s' could not be found.", managedResourceID))
 		}
 		return err
 	}
