@@ -136,7 +136,6 @@ func NewFrontend(ctx context.Context,
 	appLensActionsFactory appLensActionsFactory,
 	enricher clusterdata.BestEffortEnricher,
 ) (*frontend, error) {
-
 	outelAuditClient, err := audit.NewOtelAuditClient()
 	if err != nil {
 		return nil, err

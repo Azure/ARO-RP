@@ -1,5 +1,8 @@
 package audit
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"flag"
@@ -27,7 +30,6 @@ type Audit struct {
 var _ Client = (*Audit)(nil)
 
 func NewOtelAuditClient() (Client, error) {
-
 	if isTestEnv() {
 		return initializeNoOpOtelAuditClient()
 	}
