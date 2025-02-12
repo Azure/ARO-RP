@@ -152,7 +152,7 @@ func networkSecurityGroupMock(virtualNetworks *mock_armnetwork.MockVirtualNetwor
 			Properties: &sdknetwork.SecurityGroupPropertiesFormat{
 				Subnets: []*sdknetwork.Subnet{
 					{
-						ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker"),
+						ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/byo-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker"),
 					},
 				},
 			},
