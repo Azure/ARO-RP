@@ -40,6 +40,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
@@ -55,17 +56,18 @@ type Cluster struct {
 	ci           bool
 	ciParentVnet string
 
-	spGraphClient        *utilgraph.GraphServiceClient
-	deployments          features.DeploymentsClient
-	groups               features.ResourceGroupsClient
-	openshiftclusters    InternalClient
-	securitygroups       armnetwork.SecurityGroupsClient
-	subnets              armnetwork.SubnetsClient
-	routetables          armnetwork.RouteTablesClient
-	roleassignments      authorization.RoleAssignmentsClient
-	peerings             armnetwork.VirtualNetworkPeeringsClient
-	ciParentVnetPeerings armnetwork.VirtualNetworkPeeringsClient
-	vaultsClient         armkeyvault.VaultsClient
+	spGraphClient            *utilgraph.GraphServiceClient
+	deployments              features.DeploymentsClient
+	groups                   features.ResourceGroupsClient
+	openshiftclusters        InternalClient
+	securitygroups           armnetwork.SecurityGroupsClient
+	subnets                  armnetwork.SubnetsClient
+	routetables              armnetwork.RouteTablesClient
+	roleassignments          authorization.RoleAssignmentsClient
+	peerings                 armnetwork.VirtualNetworkPeeringsClient
+	ciParentVnetPeerings     armnetwork.VirtualNetworkPeeringsClient
+	vaultsClient             armkeyvault.VaultsClient
+	diskEncryptionSetsClient compute.DiskEncryptionSetsClient
 }
 
 const GenerateSubnetMaxTries = 100
@@ -118,6 +120,8 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
+	diskEncryptionSetsClient := compute.NewDiskEncryptionSetsClient(environment.SubscriptionID(), authorizer)
+
 	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
@@ -143,16 +147,17 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		env: environment,
 		ci:  ci,
 
-		spGraphClient:     spGraphClient,
-		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		groups:            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclusters: NewInternalClient(log, environment, authorizer),
-		securitygroups:    securityGroupsClient,
-		subnets:           subnetsClient,
-		routetables:       routeTablesClient,
-		roleassignments:   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		peerings:          virtualNetworkPeeringsClient,
-		vaultsClient:      vaultClient,
+		spGraphClient:            spGraphClient,
+		deployments:              features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		groups:                   features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclusters:        NewInternalClient(log, environment, authorizer),
+		securitygroups:           securityGroupsClient,
+		subnets:                  subnetsClient,
+		routetables:              routeTablesClient,
+		roleassignments:          authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		peerings:                 virtualNetworkPeeringsClient,
+		vaultsClient:             vaultClient,
+		diskEncryptionSetsClient: diskEncryptionSetsClient,
 	}
 
 	if ci && env.IsLocalDevelopmentMode() {
@@ -250,26 +255,65 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
+	diskEncryptionSetName := fmt.Sprintf(
+		"%s%s",
+		vnetResourceGroup,
+		generator.SharedDiskEncryptionSetNameSuffix,
+	)
+
 	var kvName string
-	if len(vnetResourceGroup) > 10 {
-		// keyvault names need to have a maximum length of 24,
-		// so we need to cut off some chars if the resource group name is too long
-		kvName = vnetResourceGroup[:10] + generator.SharedDiskEncryptionKeyVaultNameSuffix
-	} else {
-		kvName = vnetResourceGroup + generator.SharedDiskEncryptionKeyVaultNameSuffix
-	}
-
-	if c.ci {
-		// name is limited to 24 characters, but must be globally unique, so we generate one and try if it is available
-		kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
-
-		result, err := c.vaultsClient.CheckNameAvailability(ctx, sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")}, nil)
-		if err != nil {
-			return err
+	if !c.ci {
+		if len(vnetResourceGroup) > 10 {
+			// keyvault names need to have a maximum length of 24,
+			// so we need to cut off some chars if the resource group name is too long
+			kvName = vnetResourceGroup[:10] + generator.SharedDiskEncryptionKeyVaultNameSuffix
+		} else {
+			kvName = vnetResourceGroup + generator.SharedDiskEncryptionKeyVaultNameSuffix
 		}
+	} else {
+		// if DES already exists in RG, then reuse KV hosting the key of this DES,
+		// otherwise, name is limited to 24 characters, but must be globally unique,
+		// so we generate a name randomly until it is available
+		diskEncryptionSet, err := c.diskEncryptionSetsClient.Get(ctx, vnetResourceGroup, diskEncryptionSetName)
+		if err == nil {
+			if diskEncryptionSet.EncryptionSetProperties == nil ||
+				diskEncryptionSet.EncryptionSetProperties.ActiveKey == nil ||
+				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault == nil ||
+				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID == nil {
+				return fmt.Errorf("no valid Key Vault found in Disk Encryption Set: %v. Delete the Disk Encryption Set and retry", diskEncryptionSet)
+			}
+			ID := *diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID
+			var found bool
+			_, kvName, found = strings.Cut(ID, "/providers/Microsoft.KeyVault/vaults/")
+			if !found {
+				return fmt.Errorf("could not find Key Vault name in ID: %v", ID)
+			}
+		} else {
+			if autorestErr, ok := err.(autorest.DetailedError); !ok ||
+				autorestErr.Response == nil ||
+				autorestErr.Response.StatusCode != http.StatusNotFound {
+				return fmt.Errorf("failed to get Disk Encryption Set: %v", err)
+			}
+			for {
+				kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
+				result, err := c.vaultsClient.CheckNameAvailability(
+					ctx,
+					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")},
+					nil,
+				)
+				if err != nil {
+					return err
+				}
 
-		if result.NameAvailable != nil && !*result.NameAvailable {
-			return fmt.Errorf("could not generate unique key vault name: %v", result.Reason)
+				if result.NameAvailable == nil {
+					return fmt.Errorf("have unexpected nil NameAvailable for key vault: %v", kvName)
+				}
+
+				if *result.NameAvailable {
+					break
+				}
+				c.log.Infof("key vault %v is not available and we will try an other one", kvName)
+			}
 		}
 	}
 
@@ -315,11 +359,10 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	diskEncryptionSetID := fmt.Sprintf(
-		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s%s",
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s",
 		c.env.SubscriptionID(),
 		vnetResourceGroup,
-		vnetResourceGroup,
-		generator.SharedDiskEncryptionSetNameSuffix,
+		diskEncryptionSetName,
 	)
 
 	c.log.Info("creating role assignments")
