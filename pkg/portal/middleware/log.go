@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/microsoft/go-otel-audit/audit/msgs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -53,7 +54,7 @@ func (rc *logReadCloser) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.Handler {
+func Log(env env.Core, auditLog, baseLog *logrus.Entry, outelAuditClient audit.Client) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t := time.Now()
@@ -103,6 +104,23 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				},
 			})
 
+			otelAuditMsg := audit.CreateOtelAuditMsg(log, r)
+			otelAuditMsg.Record.CallerIdentities = map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry{
+				msgs.Username: {
+					{
+						Identity:    username,
+						Description: "client username",
+					},
+				},
+			}
+			otelAuditMsg.Record.TargetResources = map[string][]msgs.TargetResourceEntry{
+				auditTargetResourceType(r): {
+					{
+						Name: r.URL.Path,
+					},
+				},
+			}
+
 			defer func() {
 				statusCode := w.(*logResponseWriter).statusCode
 				log.WithFields(logrus.Fields{
@@ -115,6 +133,13 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				resultType := audit.ResultTypeSuccess
 				if statusCode >= http.StatusBadRequest {
 					resultType = audit.ResultTypeFail
+					otelAuditMsg.Record.OperationResult = msgs.Failure
+					otelAuditMsg.Record.OperationResultDescription = fmt.Sprintf("Status code: %d", statusCode)
+				}
+
+				audit.Validate(&otelAuditMsg.Record)
+				if err := outelAuditClient.Send(r.Context(), otelAuditMsg); err != nil {
+					log.Errorf("Portal - Error sending audit message: %v", err)
 				}
 
 				auditEntry.WithFields(logrus.Fields{

@@ -102,6 +102,7 @@ type Interface interface {
 	OIDCStorageAccountName() string
 	OIDCEndpoint() string
 	OIDCKeyBitSize() int
+	OtelAuditQueueSize() (int, error)
 	MsiRpEndpoint() string
 	MsiDataplaneClientOptions() (*policy.ClientOptions, error)
 	MockMSIResponses(msiResourceId *arm.ResourceID) dataplane.ClientFactory
