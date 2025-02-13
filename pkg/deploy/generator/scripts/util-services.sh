@@ -585,7 +585,6 @@ configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -n conf_file="$1"
     local -n image="$2"
-    local -n ipaddress="$3"
     log "starting"
     log "Configuring fluentbit service"
 
@@ -600,8 +599,6 @@ configure_service_fluentbit() {
     local -r sysconfig_filename='/etc/sysconfig/fluentbit'
     # shellcheck disable=SC2034
     local -r sysconfig_file="FLUENTBITIMAGE=$image
-PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
 
     write_file sysconfig_filename sysconfig_file true
 
@@ -620,9 +617,7 @@ ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --security-opt label=disable \
   --entrypoint /opt/td-agent-bit/bin/td-agent-bit \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
-  -p 29230:29230 \
+  --net=host \
   --hostname %H \
   --name %N \
   --rm \
@@ -901,7 +896,7 @@ configure_vmss_aro_services() {
         configure_certs_rp
     fi
 
-    configure_service_fluentbit "${configs["fluentbit"]}" "${images["fluentbit"]}" "${configs["static_ip_address"]}["fluentbit"]"
+    configure_service_fluentbit "${configs["fluentbit"]}" "${images["fluentbit"]}"
     configure_timers_mdm_mdsd "$1"
     configure_service_mdm "$1" "${images["mdm"]}" "${configs["static_ip_address"]}["mdm"]"
     configure_service_mdsd "$1" "${configs["mdsd"]}"
