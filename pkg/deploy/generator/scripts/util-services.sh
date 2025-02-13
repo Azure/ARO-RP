@@ -140,6 +140,7 @@ ExecStart=/usr/bin/podman run \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
+  -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
   $image \
   ${role,,}
 ExecStop=/usr/bin/podman stop -t 3600 %N
@@ -281,6 +282,7 @@ ExecStart=/usr/bin/podman run \
   -p 2222:2222 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
+  -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
   $image \
   portal
 Restart=always

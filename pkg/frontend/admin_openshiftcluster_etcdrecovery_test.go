@@ -161,8 +161,9 @@ func TestAdminEtcdRecovery(t *testing.T) {
 				kubeActionsFactory = tt.kubeActionsFactory
 			}
 			f, err := NewFrontend(ctx,
-				ti.audit,
+				ti.auditLog,
 				ti.log,
+				ti.otelAudit,
 				ti.env,
 				ti.dbGroup,
 				api.APIs,

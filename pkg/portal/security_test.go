@@ -47,6 +47,7 @@ func TestSecurity(t *testing.T) {
 	_, portalAccessLog := testlog.New()
 	_, portalLog := testlog.New()
 	auditHook, portalAuditLog := testlog.NewAudit()
+	otelAudit := testlog.NewOtelAuditClient()
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -96,7 +97,7 @@ func TestSecurity(t *testing.T) {
 		WithOpenShiftClusters(dbOpenShiftClusters).
 		WithPortal(dbPortal)
 
-	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbg, nil, &noop.Noop{})
+	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, otelAudit, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbg, nil, &noop.Noop{})
 	go func() {
 		err := p.Run(ctx)
 		if err != nil {

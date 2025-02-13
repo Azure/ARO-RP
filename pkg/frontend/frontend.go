@@ -35,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -122,6 +123,7 @@ type Runnable interface {
 func NewFrontend(ctx context.Context,
 	auditLog *logrus.Entry,
 	baseLog *logrus.Entry,
+	outelAuditClient audit.Client,
 	_env env.Interface,
 	dbGroup frontendDBs,
 	apis map[string]*api.Version,
@@ -137,11 +139,12 @@ func NewFrontend(ctx context.Context,
 ) (*frontend, error) {
 	f := &frontend{
 		logMiddleware: middleware.LogMiddleware{
-			EnvironmentName: _env.Environment().Name,
-			Location:        _env.Location(),
-			Hostname:        _env.Hostname(),
-			BaseLog:         baseLog.WithField("component", "access"),
-			AuditLog:        auditLog,
+			EnvironmentName:  _env.Environment().Name,
+			Location:         _env.Location(),
+			Hostname:         _env.Hostname(),
+			BaseLog:          baseLog.WithField("component", "access"),
+			AuditLog:         auditLog,
+			OutelAuditClient: outelAuditClient,
 		},
 		baseLog:  baseLog,
 		auditLog: auditLog,

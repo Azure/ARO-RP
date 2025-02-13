@@ -399,11 +399,12 @@ func TestProxy(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			k := New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer)
+			otelAudit := testlog.NewOtelAuditClient()
+			k := New(baseLog, audit, otelAudit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer)
 
 			unauthenticatedRouter := &mux.Router{}
 			unauthenticatedRouter.Use(middleware.Bearer(k.DbPortal))
-			unauthenticatedRouter.Use(middleware.Log(k.Env, audit, k.BaseAccessLog))
+			unauthenticatedRouter.Use(middleware.Log(k.Env, audit, k.BaseAccessLog, k.OtelAuditClient))
 
 			unauthenticatedRouter.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/proxy/").Handler(k.ReverseProxy)
 

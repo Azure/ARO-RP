@@ -66,7 +66,7 @@ func (o *noopOauther) Exchange(context.Context, string, ...oauth2.AuthCodeOption
 }
 
 func TestNewAAD(t *testing.T) {
-	_, err := NewAAD(nil, nil, nil, nil, "", nil, "", nil, nil, nil, nil, nil)
+	_, err := NewAAD(nil, nil, nil, nil, nil, "", nil, "", nil, nil, nil, nil, nil)
 	if err.Error() != "invalid sessionKey" {
 		t.Error(err)
 	}
@@ -152,7 +152,9 @@ func TestAAD(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
+			otelAudit := testlog.NewOtelAuditClient()
+
+			a, err := NewAAD(baseLog, audit, otelAudit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -255,7 +257,8 @@ func TestCheckAuthentication(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
+			otelAudit := testlog.NewOtelAuditClient()
+			a, err := NewAAD(baseLog, audit, otelAudit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -343,7 +346,8 @@ func TestLogin(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
+			otelAudit := testlog.NewOtelAuditClient()
+			a, err := NewAAD(baseLog, audit, otelAudit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -433,7 +437,8 @@ func TestLogout(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
+			otelAudit := testlog.NewOtelAuditClient()
+			a, err := NewAAD(baseLog, audit, otelAudit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -753,7 +758,8 @@ func TestCallback(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, groups, mux.NewRouter(), tt.verifier)
+			otelAudit := testlog.NewOtelAuditClient()
+			a, err := NewAAD(baseLog, audit, otelAudit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, groups, mux.NewRouter(), tt.verifier)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -845,7 +851,8 @@ func TestClientAssertion(t *testing.T) {
 	_, audit := testlog.NewAudit()
 	_, baseLog := testlog.New()
 	_, baseAccessLog := testlog.New()
-	a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, nil, mux.NewRouter(), nil)
+	otelAudit := testlog.NewOtelAuditClient()
+	a, err := NewAAD(baseLog, audit, otelAudit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, nil, mux.NewRouter(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
