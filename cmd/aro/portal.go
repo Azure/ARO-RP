@@ -47,7 +47,6 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 		"AZURE_PORTAL_CLIENT_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
 		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
-		env.OtelAuditQueueSize,
 	)
 
 	if err != nil {
@@ -174,9 +173,14 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 
 	log.Printf("listening %s", address)
 
-	size, err := strconv.Atoi(os.Getenv(env.OtelAuditQueueSize))
-	if err != nil {
-		return err
+	var size int
+	if err := env.ValidateVars(env.OtelAuditQueueSize); err != nil {
+		size = 4000
+	} else {
+		size, err = strconv.Atoi(os.Getenv(env.OtelAuditQueueSize))
+		if err != nil {
+			return err
+		}
 	}
 
 	outelAuditClient, err := audit.NewOtelAuditClient(size, _env.IsLocalDevelopmentMode())

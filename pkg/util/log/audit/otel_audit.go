@@ -35,31 +35,28 @@ func NewOtelAuditClient(auditLogQueueSize int, isDevEnv bool) (Client, error) {
 
 // https://eng.ms/docs/products/geneva/collect/instrument/opentelemetryaudit/golang/linux/installation
 func initializeOtelAuditClient(auditLogQueueSize int) (Client, error) {
-	newConn := func() (conn.Audit, error) {
-		return conn.NewDomainSocket()
-	}
-
-	client, err := audit.New(newConn, audit.WithAuditOptions(base.WithSettings(base.Settings{QueueSize: auditLogQueueSize})))
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
+	return audit.New(
+		func() (conn.Audit, error) {
+			return conn.NewDomainSocket()
+		},
+		audit.WithAuditOptions(
+			base.WithSettings(
+				base.Settings{
+					QueueSize: auditLogQueueSize,
+				},
+			),
+		),
+	)
 }
 
 // initializeNoOpOtelAuditClient creates a new no-op audit client.
 // NoOP is a no-op connection to the remote audit server used during E2E testing or development environment.
 func initializeNoOpOtelAuditClient() (Client, error) {
-	newNoOpConn := func() (conn.Audit, error) {
-		return conn.NewNoOP(), nil
-	}
-
-	client, err := audit.New(newNoOpConn)
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
+	return audit.New(
+		func() (conn.Audit, error) {
+			return conn.NewNoOP(), nil
+		},
+	)
 }
 
 func GetOperationType(method string) msgs.OperationType {
@@ -107,9 +104,9 @@ func CreateOtelAuditMsg(log *logrus.Entry, r *http.Request) msgs.Msg {
 	return msg
 }
 
-// Validate ensures that all required fields in the Record are set to default values if they are empty or invalid.
+// EnsureDefaults ensures that all required fields in the Record are set to default values if they are empty or invalid.
 // It modifies the Record in place to ensure it meets the expected structure and data requirements.
-func Validate(r *msgs.Record) {
+func EnsureDefaults(r *msgs.Record) {
 	setDefault := func(value *string, defaultValue string) {
 		if *value == "" {
 			*value = defaultValue
