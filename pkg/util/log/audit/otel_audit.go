@@ -5,7 +5,6 @@ package audit
 
 import (
 	"context"
-	"flag"
 	"os"
 	"strings"
 
@@ -31,7 +30,7 @@ type Audit struct {
 var _ Client = (*Audit)(nil)
 
 func NewOtelAuditClient() (Client, error) {
-	if isTestEnv() || isLocalDevelopmentMode() {
+	if isLocalDevelopmentMode() {
 		return initializeNoOpOtelAuditClient()
 	}
 
@@ -58,14 +57,8 @@ func (a *Audit) Send(ctx context.Context, msg msgs.Msg) error {
 	return a.Client.Send(ctx, msg)
 }
 
-type MockAudit struct {
-	Client *audit.Client
-}
-
-var _ Client = (*MockAudit)(nil)
-
 // initializeNoOpOtelAuditClient creates a new no-op audit client.
-// NoOP is a no-op connection to the remote audit server used during testing.
+// NoOP is a no-op connection to the remote audit server used during E2E testing or development environment.
 func initializeNoOpOtelAuditClient() (Client, error) {
 	newNoOpConn := func() (conn.Audit, error) {
 		return conn.NewNoOP(), nil
@@ -79,10 +72,6 @@ func initializeNoOpOtelAuditClient() (Client, error) {
 	return &Audit{
 		Client: client,
 	}, nil
-}
-
-func (a *MockAudit) Send(ctx context.Context, msg msgs.Msg) error {
-	return nil
 }
 
 func GetOperationType(method string) msgs.OperationType {
@@ -175,10 +164,6 @@ func Validate(r *msgs.Record) {
 			}
 		}
 	}
-}
-
-func isTestEnv() bool {
-	return flag.Lookup("test.v") != nil
 }
 
 func isLocalDevelopmentMode() bool {

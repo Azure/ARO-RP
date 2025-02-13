@@ -123,6 +123,7 @@ type Runnable interface {
 func NewFrontend(ctx context.Context,
 	auditLog *logrus.Entry,
 	baseLog *logrus.Entry,
+	outelAuditClient audit.Client,
 	_env env.Interface,
 	dbGroup frontendDBs,
 	apis map[string]*api.Version,
@@ -136,11 +137,6 @@ func NewFrontend(ctx context.Context,
 	appLensActionsFactory appLensActionsFactory,
 	enricher clusterdata.BestEffortEnricher,
 ) (*frontend, error) {
-	outelAuditClient, err := audit.NewOtelAuditClient()
-	if err != nil {
-		return nil, err
-	}
-
 	f := &frontend{
 		logMiddleware: middleware.LogMiddleware{
 			EnvironmentName:  _env.Environment().Name,

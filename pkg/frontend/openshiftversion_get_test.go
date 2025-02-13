@@ -73,7 +73,7 @@ func TestGetInstallVersions(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftVersions()
 			defer ti.done()
 
-			frontend, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+			frontend, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

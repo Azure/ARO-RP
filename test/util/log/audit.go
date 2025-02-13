@@ -24,10 +24,6 @@ func NewAudit() (*test.Hook, *logrus.Entry) {
 	return h, logrus.NewEntry(logger)
 }
 
-func NewOtelAuditClient() (audit.Client, error) {
-	return audit.NewOtelAuditClient()
-}
-
 // AssertAuditPayload compares the audit payloads in `h` with the given expected
 // payloads
 func AssertAuditPayloads(t *testing.T, h *test.Hook, expected []*audit.Payload) {

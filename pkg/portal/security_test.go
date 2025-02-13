@@ -47,10 +47,7 @@ func TestSecurity(t *testing.T) {
 	_, portalAccessLog := testlog.New()
 	_, portalLog := testlog.New()
 	auditHook, portalAuditLog := testlog.NewAudit()
-	otelAudit, err := testlog.NewOtelAuditClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	otelAudit := testlog.NewOtelAuditClient()
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()

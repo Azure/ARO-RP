@@ -78,7 +78,8 @@ func TestSecurity(t *testing.T) {
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 	auditHook, auditEntry := testlog.NewAudit()
-	f, err := NewFrontend(ctx, auditEntry, log, _env, database.NewDBGroup(), api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+	otelAudit := testlog.NewOtelAuditClient()
+	f, err := NewFrontend(ctx, auditEntry, log, otelAudit, _env, database.NewDBGroup(), api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

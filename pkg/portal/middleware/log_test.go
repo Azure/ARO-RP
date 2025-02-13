@@ -27,10 +27,7 @@ import (
 func TestLog(t *testing.T) {
 	h, log := testlog.New()
 	ah, auditLog := testlog.NewAudit()
-	otelAudit, err := testlog.NewOtelAuditClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	otelAudit := testlog.NewOtelAuditClient()
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
