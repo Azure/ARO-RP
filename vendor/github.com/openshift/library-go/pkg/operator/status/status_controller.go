@@ -48,6 +48,8 @@ type StatusSyncer struct {
 	controllerFactory *factory.Factory
 	recorder          events.Recorder
 	degradedInertia   Inertia
+
+	removeUnusedVersions bool
 }
 
 var _ factory.Controller = &StatusSyncer{}
@@ -108,6 +110,14 @@ func (c *StatusSyncer) WithDegradedInertia(inertia Inertia) *StatusSyncer {
 	return &output
 }
 
+// WithVersionRemoval returns a copy of the StatusSyncer that will
+// remove versions that are missing in VersionGetter from the status.
+func (c *StatusSyncer) WithVersionRemoval() *StatusSyncer {
+	output := *c
+	output.removeUnusedVersions = true
+	return &output
+}
+
 // sync reacts to a change in prereqs by finding information that is required to match another value in the cluster. This
 // must be information that is logically "owned" by another component.
 func (c StatusSyncer) Sync(ctx context.Context, syncCtx factory.SyncContext) error {
@@ -143,7 +153,7 @@ func (c StatusSyncer) Sync(ctx context.Context, syncCtx factory.SyncContext) err
 			return nil
 		}
 		if createErr != nil {
-			syncCtx.Recorder().Warningf("StatusCreateFailed", "Failed to create operator status: %v", err)
+			syncCtx.Recorder().Warningf("StatusCreateFailed", "Failed to create operator status: %v", createErr)
 			return createErr
 		}
 	}
@@ -194,8 +204,24 @@ func (c StatusSyncer) Sync(ctx context.Context, syncCtx factory.SyncContext) err
 	configv1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, UnionClusterCondition("Available", operatorv1.ConditionTrue, nil, currentDetailedStatus.Conditions...))
 	configv1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, UnionClusterCondition("Upgradeable", operatorv1.ConditionTrue, nil, currentDetailedStatus.Conditions...))
 
-	// TODO work out removal.  We don't always know the existing value, so removing early seems like a bad idea.  Perhaps a remove flag.
+	c.syncStatusVersions(clusterOperatorObj, syncCtx)
+
+	// if we have no diff, just return
+	if equality.Semantic.DeepEqual(clusterOperatorObj, originalClusterOperatorObj) {
+		return nil
+	}
+	klog.V(2).Infof("clusteroperator/%s diff %v", c.clusterOperatorName, resourceapply.JSONPatchNoError(originalClusterOperatorObj, clusterOperatorObj))
+
+	if _, updateErr := c.clusterOperatorClient.ClusterOperators().UpdateStatus(ctx, clusterOperatorObj, metav1.UpdateOptions{}); updateErr != nil {
+		return updateErr
+	}
+	syncCtx.Recorder().Eventf("OperatorStatusChanged", "Status for clusteroperator/%s changed: %s", c.clusterOperatorName, configv1helpers.GetStatusDiff(originalClusterOperatorObj.Status, clusterOperatorObj.Status))
+	return nil
+}
+
+func (c *StatusSyncer) syncStatusVersions(clusterOperatorObj *configv1.ClusterOperator, syncCtx factory.SyncContext) {
 	versions := c.versionGetter.GetVersions()
+	// Add new versions from versionGetter to status
 	for operand, version := range versions {
 		previousVersion := operatorv1helpers.SetOperandVersion(&clusterOperatorObj.Status.Versions, configv1.OperandVersion{Name: operand, Version: version})
 		if previousVersion != version {
@@ -204,17 +230,19 @@ func (c StatusSyncer) Sync(ctx context.Context, syncCtx factory.SyncContext) err
 		}
 	}
 
-	// if we have no diff, just return
-	if equality.Semantic.DeepEqual(clusterOperatorObj, originalClusterOperatorObj) {
-		return nil
+	if !c.removeUnusedVersions {
+		return
 	}
-	klog.V(2).Infof("clusteroperator/%s diff %v", c.clusterOperatorName, resourceapply.JSONPatchNoError(originalClusterOperatorObj, clusterOperatorObj))
 
-	if _, updateErr := c.clusterOperatorClient.ClusterOperators().UpdateStatus(ctx, clusterOperatorObj, metav1.UpdateOptions{}); err != nil {
-		return updateErr
+	// Filter out all versions from status that are not in versionGetter
+	filteredVersions := make([]configv1.OperandVersion, 0, len(clusterOperatorObj.Status.Versions))
+	for _, version := range clusterOperatorObj.Status.Versions {
+		if _, found := versions[version.Name]; found {
+			filteredVersions = append(filteredVersions, version)
+		}
 	}
-	syncCtx.Recorder().Eventf("OperatorStatusChanged", "Status for clusteroperator/%s changed: %s", c.clusterOperatorName, configv1helpers.GetStatusDiff(originalClusterOperatorObj.Status, clusterOperatorObj.Status))
-	return nil
+
+	clusterOperatorObj.Status.Versions = filteredVersions
 }
 
 func (c *StatusSyncer) watchVersionGetterPostRunHook(ctx context.Context, syncCtx factory.SyncContext) error {

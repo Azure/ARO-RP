@@ -12,8 +12,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationfake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -164,8 +164,8 @@ func TestEnsureMTUSize(t *testing.T) {
 						},
 					},
 				},
-				mcocli: mcofake.NewSimpleClientset(
-					&mcv1.MachineConfig{
+				mcocli: machineconfigurationfake.NewSimpleClientset(
+					&machineconfigurationv1.MachineConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "master",
 						},
@@ -198,8 +198,8 @@ func TestEnsureMTUSize(t *testing.T) {
 						},
 					},
 				},
-				mcocli: mcofake.NewSimpleClientset(
-					&mcv1.MachineConfig{
+				mcocli: machineconfigurationfake.NewSimpleClientset(
+					&machineconfigurationv1.MachineConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "master",
 						},
@@ -229,8 +229,8 @@ func TestEnsureMTUSize(t *testing.T) {
 						},
 					},
 				},
-				mcocli: mcofake.NewSimpleClientset(
-					&mcv1.MachineConfig{
+				mcocli: machineconfigurationfake.NewSimpleClientset(
+					&machineconfigurationv1.MachineConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "99-master-mtu",
 						},
@@ -260,8 +260,8 @@ func TestEnsureMTUSize(t *testing.T) {
 						},
 					},
 				},
-				mcocli: mcofake.NewSimpleClientset(
-					&mcv1.MachineConfig{
+				mcocli: machineconfigurationfake.NewSimpleClientset(
+					&machineconfigurationv1.MachineConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "master",
 						},

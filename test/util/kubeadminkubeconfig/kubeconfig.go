@@ -48,7 +48,7 @@ func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autore
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	err = wait.PollImmediateUntil(time.Second, func() (bool, error) {
+	err = wait.PollUntilContextCancel(timeoutCtx, time.Second, true, func(ctx context.Context) (bool, error) {
 		token, err = getAuthorizedToken(ctx, tokenURL, *creds.KubeadminUsername, *creds.KubeadminPassword)
 		if err != nil {
 			log.Print(err)
@@ -56,7 +56,7 @@ func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autore
 		}
 
 		return true, nil
-	}, timeoutCtx.Done())
+	})
 	if err != nil {
 		return nil, err
 	}
