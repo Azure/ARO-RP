@@ -154,7 +154,7 @@ func NewValidator(
 
 		spNetworkUsage:                        usagesClient,
 		virtualNetworks:                       newVirtualNetworksCache(virtualNetworksClient),
-		diskEncryptionSets:                    compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
+		diskEncryptionSets:                    compute.NewDiskEncryptionSetsClientWithAROEnvironment(azEnv, subscriptionID, authorizer),
 		resourceSkusClient:                    compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpClient:                             pdpClient,
 		loadBalancerBackendAddressPoolsClient: network.NewLoadBalancerBackendAddressPoolsClient(azEnv, subscriptionID, authorizer),
