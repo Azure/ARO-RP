@@ -131,55 +131,57 @@ func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResou
 	armResources = append(armResources, arm.Resource{
 		Resource: vnet.VirtualNetwork,
 	})
-	if vnet.Properties.Subnets != nil {
-		for _, snet := range vnet.Properties.Subnets {
-			//we already have the VNet resource, filtering subnets instead of fetching them individually with a SubnetClient
-			interestingSubnet := (*snet.ID == a.oc.Properties.MasterProfile.SubnetID)
-			workerProfiles, _ := api.GetEnrichedWorkerProfiles(a.oc.Properties)
+	if vnet.Properties.Subnets == nil {
+		return armResources, nil
+	}
+	for _, snet := range vnet.Properties.Subnets {
+		//we already have the VNet resource, filtering subnets instead of fetching them individually with a SubnetClient
+		interestingSubnet := (*snet.ID == a.oc.Properties.MasterProfile.SubnetID)
+		workerProfiles, _ := api.GetEnrichedWorkerProfiles(a.oc.Properties)
 
-			for _, wProfile := range workerProfiles {
-				interestingSubnet = interestingSubnet || (*snet.ID == wProfile.SubnetID)
-			}
-			if !interestingSubnet {
+		for _, wProfile := range workerProfiles {
+			interestingSubnet = interestingSubnet || (*snet.ID == wProfile.SubnetID)
+		}
+		if !interestingSubnet {
+			continue
+		}
+		//by this time the snet subnet is used in a Master or Worker profile
+		if snet.Properties.RouteTable != nil {
+			r, err := azure.ParseResourceID(*snet.Properties.RouteTable.ID)
+			if err != nil {
+				a.log.Warnf("skipping route table '%s' due to ID parse error: %s", *snet.Properties.RouteTable.ID, err)
 				continue
 			}
-			//by this time the snet subnet is used in a Master or Worker profile
-			if snet.Properties.RouteTable != nil {
-				r, err := azure.ParseResourceID(*snet.Properties.RouteTable.ID)
-				if err != nil {
-					a.log.Warnf("skipping route table '%s' due to ID parse error: %s", *snet.Properties.RouteTable.ID, err)
-					continue
-				}
-				rt, err := a.routeTables.Get(ctx, r.ResourceGroup, r.ResourceName, nil)
-				if err != nil {
-					a.log.Warnf("skipping route table '%s' due to Get error: %s", *snet.Properties.RouteTable.ID, err)
-					continue
-				}
-				armResources = append(armResources, arm.Resource{
-					Resource: rt.RouteTable,
-				})
+			rt, err := a.routeTables.Get(ctx, r.ResourceGroup, r.ResourceName, nil)
+			if err != nil {
+				a.log.Warnf("skipping route table '%s' due to Get error: %s", *snet.Properties.RouteTable.ID, err)
+				continue
 			}
-			//Due to BYO NSGs not belonging to the managed resource group, we would like to list them as well
-			if snet.Properties.NetworkSecurityGroup.ID != nil {
-				r, err := azure.ParseResourceID(*snet.Properties.NetworkSecurityGroup.ID)
-				if err != nil {
-					a.log.Warnf("skipping NSG '%s' due to ID parse error: %s", *snet.Properties.NetworkSecurityGroup.ID, err)
-					continue
-				}
-				if r.ResourceGroup != stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/') {
-					nsg, err := a.securityGroups.Get(ctx, r.ResourceGroup, r.ResourceName, nil)
-					if err != nil {
-						a.log.Warnf("skipping NSG '%s' due to Get error: %s", *snet.Properties.NetworkSecurityGroup.ID, err)
-						continue
-					}
-					armResources = append(armResources, arm.Resource{
-						Resource: nsg.SecurityGroup,
-					})
-				}
-			}
+			armResources = append(armResources, arm.Resource{
+				Resource: rt.RouteTable,
+			})
 		}
+		//Due to BYO NSGs not belonging to the managed resource group, we would like to list them as well
+		if snet.Properties.NetworkSecurityGroup == nil {
+			continue
+		}
+		nsgID, err := azure.ParseResourceID(*snet.Properties.NetworkSecurityGroup.ID)
+		if err != nil {
+			a.log.Warnf("skipping NSG '%s' due to ID parse error: %s", *snet.Properties.NetworkSecurityGroup.ID, err)
+			continue
+		}
+		if nsgID.ResourceGroup == stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/') {
+			continue
+		}
+		nsg, err := a.securityGroups.Get(ctx, nsgID.ResourceGroup, nsgID.ResourceName, nil)
+		if err != nil {
+			a.log.Warnf("skipping NSG '%s' due to Get error: %s", *snet.Properties.NetworkSecurityGroup.ID, err)
+			continue
+		}
+		armResources = append(armResources, arm.Resource{
+			Resource: nsg.SecurityGroup,
+		})
 	}
-
 	return armResources, nil
 }
 
