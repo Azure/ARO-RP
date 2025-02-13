@@ -124,7 +124,7 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry, outelAuditClient audit.C
 
 				audit.Validate(&otelAuditMsg.Record)
 				if err := outelAuditClient.Send(r.Context(), otelAuditMsg); err != nil {
-					log.Printf("Portal - Error sending audit message: %v", err)
+					log.Errorf("Portal - Error sending audit message: %v", err)
 				}
 
 				auditEntry.WithFields(logrus.Fields{

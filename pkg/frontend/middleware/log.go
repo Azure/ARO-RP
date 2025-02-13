@@ -168,7 +168,7 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 
 			audit.Validate(&otelAuditMsg.Record)
 			if err := l.OutelAuditClient.Send(r.Context(), otelAuditMsg); err != nil {
-				log.Printf("Frontend - Error sending audit message: %v", err)
+				log.Errorf("Frontend - Error sending audit message: %v", err)
 			}
 
 			auditEntry.WithFields(logrus.Fields{
