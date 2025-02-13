@@ -108,8 +108,13 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		return err
 	}
 
+	globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+	if err != nil {
+		return err
+	}
+
 	// deploy ACR RBAC, RP version storage account
-	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String())
+	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMSI.PrincipalID.String())
 	if err != nil {
 		return err
 	}
@@ -158,7 +163,7 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 	return d.configureServiceSecrets(ctx, lbHealthcheckWaitTimeSec)
 }
 
-func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID string) error {
+func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID, devopsServicePrincipalId string) error {
 	deploymentName := "rp-global-" + d.config.Location
 
 	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobal)
@@ -178,6 +183,9 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 	}
 	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
 		Value: gatewayServicePrincipalID,
+	}
+	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
+		Value: devopsServicePrincipalId,
 	}
 
 	for i := 0; i < 2; i++ {

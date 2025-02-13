@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -62,7 +63,7 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	doc.Subscription = &api.Subscription{}
 	err = codec.NewDecoderBytes(body, h).Decode(&doc.Subscription)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
 	}
 
 	switch doc.Subscription.State {
@@ -72,11 +73,11 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	case api.SubscriptionStateDeleted:
 		doc.Deleting = true
 	default:
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "state", "The provided state '%s' is invalid.", doc.Subscription.State)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "state", fmt.Sprintf("The provided state '%s' is invalid.", doc.Subscription.State))
 	}
 
 	if oldState == api.SubscriptionStateDeleted && doc.Subscription.State != api.SubscriptionStateDeleted {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", oldState)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", fmt.Sprintf("Request is not allowed in subscription in state '%s'.", oldState))
 	}
 
 	if doc.Subscription.Properties != nil &&

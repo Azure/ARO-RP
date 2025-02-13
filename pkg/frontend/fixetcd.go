@@ -288,10 +288,19 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 	jobFixPeers := newJobFixPeers(cluster, peerPods, de.Node)
 
 	cleanup, err, nestedCleanupErr := createPrivilegedServiceAccount(ctx, log, serviceAccountName, cluster, kubeServiceAccount, kubeActions)
-	if err != nil || nestedCleanupErr != nil {
-		return []byte{}, fmt.Errorf("%s %s", err, nestedCleanupErr)
+	if err != nil {
+		return []byte{}, err
 	}
-	defer cleanup()
+	if nestedCleanupErr != nil {
+		return []byte{}, nestedCleanupErr
+	}
+	defer func() {
+		if cleanup != nil {
+			if err := cleanup(); err != nil {
+				log.WithError(err).Error("error cleaning up")
+			}
+		}
+	}()
 
 	log.Infof("Creating job %s", jobFixPeers.GetName())
 	err = kubeActions.KubeCreateOrUpdate(ctx, jobFixPeers)

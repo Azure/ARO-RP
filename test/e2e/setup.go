@@ -440,7 +440,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Disks:                 compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClientWithAROEnvironment(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Interfaces:            interfacesClient,
 		LoadBalancers:         loadBalancersClient,
 		NetworkSecurityGroups: securityGroupsClient,

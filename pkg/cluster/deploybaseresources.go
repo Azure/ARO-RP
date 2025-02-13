@@ -393,7 +393,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 						continue
 					}
 
-					return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
+					return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", fmt.Sprintf("The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID))
 				}
 
 				s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{

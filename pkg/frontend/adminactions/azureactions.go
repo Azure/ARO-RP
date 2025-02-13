@@ -53,6 +53,7 @@ type azureActions struct {
 	storageAccounts    storage.AccountsClient
 	networkInterfaces  network.InterfacesClient
 	loadBalancers      network.LoadBalancersClient
+	securityGroups     armnetwork.SecurityGroupsClient
 }
 
 // NewAzureActions returns an azureActions
@@ -81,6 +82,11 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	securityGroups, err := armnetwork.NewSecurityGroupsClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
@@ -90,11 +96,12 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		resourceSkus:       compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualNetworks:    virtualNetworks,
-		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		diskEncryptionSets: compute.NewDiskEncryptionSetsClientWithAROEnvironment(env.Environment(), subscriptionDoc.ID, fpAuth),
 		routeTables:        routeTables,
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		loadBalancers:      network.NewLoadBalancersClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		securityGroups:     securityGroups,
 	}, nil
 }
 
@@ -106,7 +113,7 @@ func (a *azureActions) VMRedeployAndWait(ctx context.Context, vmName string) err
 	}
 	if vmDisk := vm.StorageProfile.OsDisk; vmDisk != nil && vmDisk.DiffDiskSettings != nil &&
 		vmDisk.Caching == "ReadOnly" && vmDisk.DiffDiskSettings.Option == "Local" && vmDisk.DiffDiskSettings.Placement == "CacheDisk" {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "VM '%s' has an Ephemeral Disk OS and cannot be redeployed.", vmName)
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", fmt.Sprintf("VM '%s' has an Ephemeral Disk OS and cannot be redeployed.", vmName))
 	}
 	return a.virtualMachines.RedeployAndWait(ctx, clusterRGName, vmName)
 }

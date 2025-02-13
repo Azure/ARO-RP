@@ -112,20 +112,20 @@ const (
 )
 
 // NewCloudError returns a new CloudError
-func NewCloudError(statusCode int, code, target, message string, a ...interface{}) *CloudError {
+func NewCloudError(statusCode int, code, target, message string) *CloudError {
 	return &CloudError{
 		StatusCode: statusCode,
 		CloudErrorBody: &CloudErrorBody{
 			Code:    code,
-			Message: fmt.Sprintf(message, a...),
+			Message: message,
 			Target:  target,
 		},
 	}
 }
 
 // WriteError constructs and writes a CloudError to the given ResponseWriter
-func WriteError(w http.ResponseWriter, statusCode int, code, target, message string, a ...interface{}) {
-	WriteCloudError(w, NewCloudError(statusCode, code, target, message, a...))
+func WriteError(w http.ResponseWriter, statusCode int, code, target, message string) {
+	WriteCloudError(w, NewCloudError(statusCode, code, target, message))
 }
 
 // WriteCloudError writes a CloudError to the given ResponseWriter

@@ -13,7 +13,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
@@ -120,9 +119,7 @@ func (e *AROEnvironment) ArmClientOptions(middlewares ...policy.Policy) *arm.Cli
 func (e *AROEnvironment) ClientCertificateCredentialOptions(additionalTenants []string) *azidentity.ClientCertificateCredentialOptions {
 	return &azidentity.ClientCertificateCredentialOptions{
 		AdditionallyAllowedTenants: additionalTenants,
-		ClientOptions: azcore.ClientOptions{
-			Cloud: e.Cloud,
-		},
+		ClientOptions:              e.AzureClientOptions(),
 		// Required for Subject Name/Issuer (SNI) authentication
 		SendCertificateChain: true,
 	}
@@ -130,33 +127,31 @@ func (e *AROEnvironment) ClientCertificateCredentialOptions(additionalTenants []
 
 func (e *AROEnvironment) ClientSecretCredentialOptions() *azidentity.ClientSecretCredentialOptions {
 	return &azidentity.ClientSecretCredentialOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: e.Cloud,
-		},
+		ClientOptions: e.AzureClientOptions(),
 	}
 }
 
 func (e *AROEnvironment) DefaultAzureCredentialOptions() *azidentity.DefaultAzureCredentialOptions {
 	return &azidentity.DefaultAzureCredentialOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: e.Cloud,
-		},
+		ClientOptions: e.AzureClientOptions(),
 	}
 }
 
 func (e *AROEnvironment) EnvironmentCredentialOptions() *azidentity.EnvironmentCredentialOptions {
 	return &azidentity.EnvironmentCredentialOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: e.Cloud,
-		},
+		ClientOptions: e.AzureClientOptions(),
 	}
 }
 
 func (e *AROEnvironment) ManagedIdentityCredentialOptions() *azidentity.ManagedIdentityCredentialOptions {
 	return &azidentity.ManagedIdentityCredentialOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: e.Cloud,
-		},
+		ClientOptions: e.AzureClientOptions(),
+	}
+}
+
+func (e *AROEnvironment) AzureClientOptions() azcore.ClientOptions {
+	return azcore.ClientOptions{
+		Cloud: e.Cloud,
 	}
 }
 
@@ -172,13 +167,4 @@ func (e *AROEnvironment) NewGraphServiceClient(tokenCredential azcore.TokenCrede
 	client.GetAdapter().SetBaseUrl(e.MicrosoftGraphEndpoint + "v1.0")
 
 	return client, nil
-}
-
-// CloudNameForMsiDataplane returns the cloud name to be passed in when instantiating
-// an MSI dataplane client or an error if it encounters an issue getting the correct
-// cloud name. This function might seem a little strange, but it's necessary because
-// the cloud names stored in the AROEnvironments are in all-caps, whereas the ones
-// defined as constants in the dataplane module are in camel case.
-func (e *AROEnvironment) CloudNameForMsiDataplane() (dataplane.AzureCloud, error) {
-	return dataplane.AzureCloud(e.Name), nil
 }

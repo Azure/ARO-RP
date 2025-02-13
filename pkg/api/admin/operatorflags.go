@@ -5,6 +5,7 @@ package admin
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -28,7 +29,7 @@ func OperatorFlagsMergeStrategy(oc *api.OpenShiftCluster, body []byte) error {
 
 	err := json.Unmarshal(body, &payload)
 	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
 	}
 
 	// if it's empty, use the default of merge, which is performed by
@@ -40,7 +41,7 @@ func OperatorFlagsMergeStrategy(oc *api.OpenShiftCluster, body []byte) error {
 	// return error if OperatorFlagsMergeStrategy is not merge or reset, default is merge
 	if payload.OperatorFlagsMergeStrategy != OperatorFlagsMergeStrategyMerge &&
 		payload.OperatorFlagsMergeStrategy != OperatorFlagsMergeStrategyReset {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "invalid operatorFlagsMergeStrategy '%s', can only be 'merge' or 'reset'", payload.OperatorFlagsMergeStrategy)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("invalid operatorFlagsMergeStrategy '%s', can only be 'merge' or 'reset'", payload.OperatorFlagsMergeStrategy))
 	}
 
 	// return nil, if OperatorFlagsMergeStrategy is merge and payload has not operatorFlags

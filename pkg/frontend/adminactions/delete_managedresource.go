@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -34,7 +35,7 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 	for _, regex := range denyList {
 		re := regexp.MustCompile(regex)
 		if re.MatchString(resourceID) {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "deletion of resource %s is forbidden", resourceID)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("deletion of resource %s is forbidden", resourceID))
 		}
 	}
 

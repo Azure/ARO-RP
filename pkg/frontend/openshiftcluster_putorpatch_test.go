@@ -2661,7 +2661,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			ocpVersionsChangeFeed: getOCPVersionsChangeFeed(),
-			quotaValidatorError:   api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided VM SKU %s is not supported.", "something"),
+			quotaValidatorError:   api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided VM SKU %s is not supported.", "something")),
 			wantEnriched:          []string{},
 			wantStatusCode:        http.StatusBadRequest,
 			wantError:             "400: InvalidParameter: : The provided VM SKU something is not supported.",
@@ -2705,7 +2705,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			ocpVersionsChangeFeed: getOCPVersionsChangeFeed(),
-			skuValidatorError:     api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is unavailable in region '%v'", "Standard_Sku", "somewhere"),
+			skuValidatorError:     api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The selected SKU '%v' is unavailable in region '%v'", "Standard_Sku", "somewhere")),
 			wantEnriched:          []string{},
 			wantStatusCode:        http.StatusBadRequest,
 			wantError:             "400: InvalidParameter: : The selected SKU 'Standard_Sku' is unavailable in region 'somewhere'",
@@ -2727,7 +2727,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			ocpVersionsChangeFeed: getOCPVersionsChangeFeed(),
-			skuValidatorError:     api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is restricted in region '%v' for selected subscription", "Standard_Sku", "somewhere"),
+			skuValidatorError:     api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The selected SKU '%v' is restricted in region '%v' for selected subscription", "Standard_Sku", "somewhere")),
 			wantEnriched:          []string{},
 			wantStatusCode:        http.StatusBadRequest,
 			wantError:             "400: InvalidParameter: : The selected SKU 'Standard_Sku' is restricted in region 'somewhere' for selected subscription",
@@ -2750,7 +2750,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			ocpVersionsChangeFeed:   getOCPVersionsChangeFeed(),
-			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Authorization"),
+			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", fmt.Sprintf("The resource provider '%s' is not registered.", "Microsoft.Authorization")),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
 			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Authorization' is not registered.",
@@ -2772,7 +2772,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			ocpVersionsChangeFeed:   getOCPVersionsChangeFeed(),
-			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Compute"),
+			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", fmt.Sprintf("The resource provider '%s' is not registered.", "Microsoft.Compute")),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
 			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Compute' is not registered.",
@@ -2794,7 +2794,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			ocpVersionsChangeFeed:   getOCPVersionsChangeFeed(),
-			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Network"),
+			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", fmt.Sprintf("The resource provider '%s' is not registered.", "Microsoft.Network")),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
 			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Network' is not registered.",
@@ -2816,7 +2816,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			ocpVersionsChangeFeed:   getOCPVersionsChangeFeed(),
-			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Storage"),
+			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", fmt.Sprintf("The resource provider '%s' is not registered.", "Microsoft.Storage")),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
 			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Storage' is not registered.",

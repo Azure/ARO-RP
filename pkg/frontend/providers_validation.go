@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -54,7 +55,7 @@ func validateProviders(ctx context.Context, providersClient features.ProvidersCl
 	for _, provider := range requiredResourceProviders {
 		if providerMap[provider].RegistrationState == nil ||
 			*providerMap[provider].RegistrationState != "Registered" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", fmt.Sprintf("The resource provider '%s' is not registered.", provider))
 		}
 	}
 
