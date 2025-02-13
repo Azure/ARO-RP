@@ -639,7 +639,7 @@ func TestMerge(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, changed, diff, err := merge(tt.old, tt.new)
+			got, changed, diff, err := Merge(tt.old, tt.new)
 			if err != nil {
 				t.Fatal(err)
 			}
