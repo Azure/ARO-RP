@@ -357,7 +357,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if err != nil {
 		return err
 	}
-return nil
+
 	diskEncryptionSetID := fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s",
 		c.env.SubscriptionID(),
