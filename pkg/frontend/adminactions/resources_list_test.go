@@ -130,20 +130,6 @@ func networkSecurityGroupMock(virtualNetworks *mock_armnetwork.MockVirtualNetwor
 			},
 		},
 	}, nil)
-	securityGroups.EXPECT().Get(gomock.Any(), "test-cluster", "test-nsg", nil).Return(sdknetwork.SecurityGroupsClientGetResponse{
-		SecurityGroup: sdknetwork.SecurityGroup{
-			ID:   ptr.To("/subscriptions/id"),
-			Type: ptr.To("Microsoft.Network/networkSecurityGroups"),
-			Name: ptr.To("test-nsg"),
-			Properties: &sdknetwork.SecurityGroupPropertiesFormat{
-				Subnets: []*sdknetwork.Subnet{
-					{
-						ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"),
-					},
-				},
-			},
-		},
-	}, nil)
 	securityGroups.EXPECT().Get(gomock.Any(), "byo-rg", "byo-nsg", nil).Return(sdknetwork.SecurityGroupsClientGetResponse{
 		SecurityGroup: sdknetwork.SecurityGroup{
 			ID:   ptr.To("/subscriptions/id"),
@@ -209,11 +195,11 @@ func TestResourcesList(t *testing.T) {
 			wantResponse:        []byte(`[{"apiVersion":"","properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"},"networkSecurityGroup":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/networkSecurityGroups/test-nsg"}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"apiVersion":"","id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 		{
-			name: "get NetworkSecurityGroups both managed and BYO",
+			name: "get BYO NetworkSecurityGroup",
 			mocks: func(virtualNetworks *mock_armnetwork.MockVirtualNetworksClient, routeTables *mock_armnetwork.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, securityGroups *mock_armnetwork.MockSecurityGroupsClient) {
 				networkSecurityGroupMock(virtualNetworks, securityGroups)
 			},
-			wantResponse: []byte(`[{"apiVersion":"","properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"networkSecurityGroup":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/networkSecurityGroups/test-nsg"}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"},{"properties":{"networkSecurityGroup":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/byo-rg/providers/Microsoft.Network/networkSecurityGroups/byo-nsg"}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"type":"Microsoft.Network/networkSecurityGroups","id":"/subscriptions/id","name":"byo-nsg","properties":{"subnets":[{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker"}]}},{"type":"Microsoft.Network/networkSecurityGroups","id":"/subscriptions/id","name":"test-nsg","properties":{"subnets":[{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker"}]}},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+			wantResponse: []byte(`[{"apiVersion":"","id":"/subscriptions/id","properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master","properties":{"networkSecurityGroup":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/networkSecurityGroups/test-nsg"}}},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker","properties":{"networkSecurityGroup":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/byo-rg/providers/Microsoft.Network/networkSecurityGroups/byo-nsg"}}}]},"type":"Microsoft.Network/virtualNetworks"},{"apiVersion":"","id":"/subscriptions/id","name":"byo-nsg","properties":{"subnets":[{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/byo-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker"}]},"type":"Microsoft.Network/networkSecurityGroups"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -247,11 +233,11 @@ func TestResourcesList(t *testing.T) {
 							SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID),
 							DiskEncryptionSetID: tt.diskEncryptionSetId,
 						},
-						// WorkerProfiles: []api.WorkerProfile{
-						// 	{
-						// 		SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", mockSubID),
-						// 	},
-						// },
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", mockSubID),
+							},
+						},
 					},
 				},
 
@@ -260,6 +246,7 @@ func TestResourcesList(t *testing.T) {
 				virtualNetworks:    virtualNetworks,
 				diskEncryptionSets: diskEncryptionSets,
 				routeTables:        routeTables,
+				securityGroups:     networkSecurityGroups,
 			}
 
 			reader, writer := io.Pipe()
