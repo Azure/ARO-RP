@@ -66,7 +66,6 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 			"MDM_NAMESPACE",
 			"MSI_RP_ENDPOINT",
 			env.OIDCStorageAccountName,
-			env.OtelAuditQueueSize,
 		}
 
 		if _, found := os.LookupEnv("PULL_SECRET"); found {

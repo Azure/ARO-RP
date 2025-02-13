@@ -286,7 +286,12 @@ func (p *prod) OIDCKeyBitSize() int {
 	return 4096
 }
 
+// OtelAuditQueueSize returns the size of the otel audit queue.
+// If the OTEL_AUDIT_QUEUE_SIZE environment variable is not set, it returns the default value of 4000.
 func (p *prod) OtelAuditQueueSize() (int, error) {
+	if err := ValidateVars(OtelAuditQueueSize); err != nil {
+		return 4000, nil
+	}
 	return strconv.Atoi(os.Getenv(OtelAuditQueueSize))
 }
 
