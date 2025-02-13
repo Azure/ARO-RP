@@ -16,7 +16,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/monitor/azure/nsg"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
@@ -284,12 +283,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	var monitors []monitoring.Monitor
 	var wg sync.WaitGroup
 
-	_env, err := env.NewEnv(ctx, log, env.COMPONENT_MONITOR)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	hiveClusterManager, _ := hive.NewFromConfigClusterManager(log, _env, hiveRestConfig)
+	hiveClusterManager, _ := hive.NewFromConfigClusterManager(log, mon.env, hiveRestConfig)
 
 	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
 
