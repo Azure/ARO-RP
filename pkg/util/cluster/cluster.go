@@ -280,7 +280,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 				diskEncryptionSet.EncryptionSetProperties.ActiveKey == nil ||
 				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault == nil ||
 				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID == nil {
-				return fmt.Errorf("no valid Key Vault found in Disk Encryption Set: %v. Delte the Disk Encryption Set and retry", diskEncryptionSet)
+				return fmt.Errorf("no valid Key Vault found in Disk Encryption Set: %v. Delete the Disk Encryption Set and retry", diskEncryptionSet)
 			}
 			ID := *diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID
 			var found bool
@@ -312,7 +312,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 				if *result.NameAvailable {
 					break
 				}
-				c.log.Debugf("key vault %v is not available and we will try an other one", kvName)
+				c.log.Infof("key vault %v is not available and we will try an other one", kvName)
 			}
 		}
 	}
@@ -357,7 +357,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if err != nil {
 		return err
 	}
-
+return nil
 	diskEncryptionSetID := fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s",
 		c.env.SubscriptionID(),
