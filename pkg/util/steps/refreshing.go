@@ -7,7 +7,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -91,24 +93,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		return true, err
 	}, timeoutCtx.Done())
 
-	// After timeout, return any actionable errors to the user
-	if err != nil {
-		switch {
-		case azureerrors.IsUnauthorizedClientError(err):
-			return s.servicePrincipalCloudError(
-				"The provided service principal application (client) ID was not found in the directory (tenant). Please ensure that the provided application (client) id and client secret value are correct.",
-			)
-		case azureerrors.HasAuthorizationFailedError(err) || azureerrors.IsInvalidSecretError(err):
-			return s.servicePrincipalCloudError(
-				"Authorization using provided credentials failed. Please ensure that the provided application (client) id and client secret value are correct.",
-			)
-		default:
-			// If not actionable, still log err in RP logs
-			return err
-		}
-	}
-
-	return nil
+	return CreateActionableError(err)
 }
 
 func (s *authorizationRefreshingActionStep) String() string {
@@ -119,10 +104,56 @@ func (s *authorizationRefreshingActionStep) metricsName() string {
 	return fmt.Sprintf("authorizationretryingaction.%s", shortName(FriendlyName(s.f)))
 }
 
-func (s *authorizationRefreshingActionStep) servicePrincipalCloudError(message string) error {
+// Creates a one line string from a series of strings delimited by a space character.
+func make_one_line_str(tokens ...string) string {
+	return strings.Join(tokens, " ")
+}
+
+// Creates a CloudError due to an invalid service principal error.
+func newServicePrincipalCloudError(message string, statusCode int) error {
 	return api.NewCloudError(
-		http.StatusBadRequest,
+		statusCode,
 		api.CloudErrorCodeInvalidServicePrincipalCredentials,
 		"properties.servicePrincipalProfile",
 		message)
+}
+
+// Creates a user-actionable error from an error.
+// NOTE: the resultant error must be user-friendly
+// as this may be potentially be presented to a user.
+func CreateActionableError(err error) error {
+	// Log this error for debugging new error types.
+	log.Printf("Converting to user actionable error: %v [%T]", err, err)
+
+	if err == nil {
+		return err
+	}
+
+	switch {
+	case azureerrors.IsUnauthorizedClientError(err):
+		return newServicePrincipalCloudError(make_one_line_str(
+			"The provided service principal application",
+			"(client) ID was not found in the directory",
+			"(tenant). Please ensure that the provided",
+			"application (client) id and client secret",
+			"value are correct."),
+			http.StatusBadRequest,
+		)
+	case azureerrors.HasAuthorizationFailedError(err) || azureerrors.IsInvalidSecretError(err):
+		return newServicePrincipalCloudError(make_one_line_str(
+			"Authorization using provided credentials failed.",
+			"Please ensure that the provided application (client)",
+			"id and client secret value are correct."),
+			http.StatusBadRequest,
+		)
+	case azureerrors.IsClientSecretKeysExpired(err):
+		return newServicePrincipalCloudError(make_one_line_str(
+			"The provided application client and secret keys are expired.",
+			"Please create new keys for your application."),
+			http.StatusBadRequest,
+		)
+	default:
+		log.Printf("Unable to convert to actionable error: %v", err)
+		return err
+	}
 }
