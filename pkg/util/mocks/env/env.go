@@ -630,6 +630,21 @@ func (mr *MockInterfaceMockRecorder) OIDCStorageAccountName() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OIDCStorageAccountName", reflect.TypeOf((*MockInterface)(nil).OIDCStorageAccountName))
 }
 
+// OtelAuditQueueSize mocks base method.
+func (m *MockInterface) OtelAuditQueueSize() (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OtelAuditQueueSize")
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OtelAuditQueueSize indicates an expected call of OtelAuditQueueSize.
+func (mr *MockInterfaceMockRecorder) OtelAuditQueueSize() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OtelAuditQueueSize", reflect.TypeOf((*MockInterface)(nil).OtelAuditQueueSize))
+}
+
 // ResourceGroup mocks base method.
 func (m *MockInterface) ResourceGroup() string {
 	m.ctrl.T.Helper()

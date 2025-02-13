@@ -27,6 +27,7 @@ import (
 func TestLog(t *testing.T) {
 	h, log := testlog.New()
 	ah, auditLog := testlog.NewAudit()
+	otelAudit := testlog.NewOtelAuditClient()
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -46,7 +47,7 @@ func TestLog(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// chain a custom handler with the Log middleware to mutate the request
-	Log(_env, auditLog, log)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	Log(_env, auditLog, log, otelAudit)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.URL = nil // mutate the request
 
 		_ = w.(http.Hijacker) // must implement http.Hijacker

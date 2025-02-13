@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,6 +44,7 @@ const (
 	KeyvaultPrefix         = "KEYVAULT_PREFIX"
 	OIDCAFDEndpoint        = "OIDC_AFD_ENDPOINT"
 	OIDCStorageAccountName = "OIDC_STORAGE_ACCOUNT_NAME"
+	OtelAuditQueueSize     = "OTEL_AUDIT_QUEUE_SIZE"
 )
 
 type prod struct {
@@ -282,6 +284,10 @@ func (p *prod) OIDCEndpoint() string {
 
 func (p *prod) OIDCKeyBitSize() int {
 	return 4096
+}
+
+func (p *prod) OtelAuditQueueSize() (int, error) {
+	return strconv.Atoi(os.Getenv(OtelAuditQueueSize))
 }
 
 func (p *prod) AROOperatorImage() string {

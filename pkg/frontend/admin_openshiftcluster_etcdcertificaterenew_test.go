@@ -530,8 +530,9 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 			tt.mocks(tt, k)
 
 			f, err := NewFrontend(ctx,
-				ti.audit,
+				ti.auditLog,
 				ti.log,
+				ti.otelAudit,
 				ti.env,
 				ti.dbGroup,
 				api.APIs,
@@ -747,8 +748,9 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 			tt.mocks(tt, k)
 
 			f, err := NewFrontend(ctx,
-				ti.audit,
+				ti.auditLog,
 				ti.log,
+				ti.otelAudit,
 				ti.env,
 				ti.dbGroup,
 				api.APIs,

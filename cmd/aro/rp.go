@@ -39,9 +39,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
-func rp(ctx context.Context, log, audit *logrus.Entry) error {
+func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 	stop := make(chan struct{})
 
 	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)
@@ -65,6 +66,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 			"MDM_NAMESPACE",
 			"MSI_RP_ENDPOINT",
 			env.OIDCStorageAccountName,
+			env.OtelAuditQueueSize,
 		}
 
 		if _, found := os.LookupEnv("PULL_SECRET"); found {
@@ -187,7 +189,17 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		dbg.WithMaintenanceManifests(dbMaintenanceManifests)
 	}
 
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
+	size, err := _env.OtelAuditQueueSize()
+	if err != nil {
+		return err
+	}
+
+	outelAuditClient, err := audit.NewOtelAuditClient(size, _env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+
+	f, err := frontend.NewFrontend(ctx, auditLog, log.WithField("component", "frontend"), outelAuditClient, _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}

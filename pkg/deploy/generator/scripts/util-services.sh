@@ -135,11 +135,13 @@ ExecStart=/usr/bin/podman run \
   -e OIDC_AFD_ENDPOINT \
   -e OIDC_STORAGE_ACCOUNT_NAME \
   -e MSI_RP_ENDPOINT \
+  -e OTEL_AUDIT_QUEUE_SIZE \
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
+  -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
   $image \
   ${role,,}
 ExecStop=/usr/bin/podman stop -t 3600 %N
@@ -248,6 +250,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
+OTEL_AUDIT_QUEUE_SIZE=4000
 RPIMAGE='$image'"
 
     write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
@@ -276,11 +279,13 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e PORTAL_HOSTNAME \
+  -e OTEL_AUDIT_QUEUE_SIZE \
   -m 2g \
   -p 444:8444 \
   -p 2222:2222 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
+  -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
   $image \
   portal
 Restart=always
