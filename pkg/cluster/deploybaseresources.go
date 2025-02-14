@@ -391,7 +391,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 						continue
 					}
 
-					return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
+					return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", fmt.Sprintf("The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID))
 				}
 
 				s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
@@ -431,10 +431,27 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 		s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
 	}
 
+	// we need to track whether or not we need to send an update to the AzureRM API based on whether
+	// or not our private endpoint network policies or private link service network policies
+	// already match a desired condition of 'Disabled' or not.
+	var needsUpdate bool
+
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+		if s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies == nil || *s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies != "Disabled" {
+			needsUpdate = true
+			s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+		}
 	}
-	s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+
+	if s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies == nil || *s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies != "Disabled" {
+		needsUpdate = true
+		s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+	}
+
+	// return if we do not need to update the subnet
+	if !needsUpdate {
+		return nil
+	}
 
 	err = m.subnet.CreateOrUpdate(ctx, subnetId, s)
 

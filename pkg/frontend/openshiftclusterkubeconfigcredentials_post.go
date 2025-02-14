@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 
@@ -26,7 +27,7 @@ func (f *frontend) postOpenShiftClusterKubeConfigCredentials(w http.ResponseWrit
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 
 	if f.apis[apiVersion].OpenShiftClusterAdminKubeconfigConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", resourceType, resourceProviderNamespace, apiVersion)
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", fmt.Sprintf("The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", resourceType, resourceProviderNamespace, apiVersion))
 		return
 	}
 
@@ -61,7 +62,7 @@ func (f *frontend) _postOpenShiftClusterKubeConfigCredentials(ctx context.Contex
 	doc, err := dbOpenShiftClusters.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resourceType, resourceName, resourceGroupName)
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.", resourceType, resourceName, resourceGroupName))
 	case err != nil:
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (f *frontend) _postOpenShiftClusterKubeConfigCredentials(ctx context.Contex
 		doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateDeleting ||
 		doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed && doc.OpenShiftCluster.Properties.FailedProvisioningState == api.ProvisioningStateCreating ||
 		doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed && doc.OpenShiftCluster.Properties.FailedProvisioningState == api.ProvisioningStateDeleting {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", doc.OpenShiftCluster.Properties.ProvisioningState)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", fmt.Sprintf("Request is not allowed in provisioningState '%s'.", doc.OpenShiftCluster.Properties.ProvisioningState))
 	}
 
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""

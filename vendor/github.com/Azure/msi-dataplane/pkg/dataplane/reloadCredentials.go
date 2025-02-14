@@ -23,9 +23,9 @@ const (
 )
 
 type reloadingCredential struct {
+	clientOpts   azcore.ClientOptions
 	currentValue *azidentity.ClientCertificateCredential
 	notBefore    string
-	cloud        AzureCloud
 	lock         *sync.RWMutex
 	logger       *logr.Logger
 	ticker       *time.Ticker
@@ -49,18 +49,24 @@ func WithBackstopRefresh(d time.Duration) Option {
 	}
 }
 
+// WithClientOpts adds common Azure client options. Use this field to, for instance,
+// configure the cloud environment in which this credential should authenticate.
+func WithClientOpts(o azcore.ClientOptions) Option {
+	return func(c *reloadingCredential) {
+		c.clientOpts = o
+	}
+}
+
 // NewUserAssignedIdentityCredential creates a new reloadingCredential for a user-assigned identity.
 // ctx is used to manage the lifecycle of the reloader, allowing for cancellation if reloading is no longer needed.
-// cloud specifies the cloud environment.
 // credentialPath is the path to the credential file.
-// opts allows for additional configuration, such as setting a custom logger, periodic reload time.
+// opts allows for additional configuration, such as setting a custom logger, periodic reload time, and cloud environment.
 //
 // The function ensures that a valid token is loaded before returning the credential.
 // It also starts a background process to watch for changes to the credential file and reloads it as necessary.
-func NewUserAssignedIdentityCredential(ctx context.Context, cloud AzureCloud, credentialPath string, opts ...Option) (azcore.TokenCredential, error) {
+func NewUserAssignedIdentityCredential(ctx context.Context, credentialPath string, opts ...Option) (azcore.TokenCredential, error) {
 	defaultLog := logr.FromSlogHandler(slog.NewTextHandler(os.Stdout, nil))
 	credential := &reloadingCredential{
-		cloud:  cloud,
 		lock:   &sync.RWMutex{},
 		logger: &defaultLog,
 		ticker: time.NewTicker(6 * time.Hour),
@@ -71,11 +77,11 @@ func NewUserAssignedIdentityCredential(ctx context.Context, cloud AzureCloud, cr
 	}
 
 	// load once to validate everything and ensure we have a useful token before we return
-	if err := credential.load(cloud, credentialPath); err != nil {
+	if err := credential.load(credentialPath); err != nil {
 		return nil, err
 	}
 	// start the process of watching - the caller can cancel ctx if they want to stop
-	credential.start(ctx, cloud, credentialPath)
+	credential.start(ctx, credentialPath)
 	return credential, nil
 }
 
@@ -88,7 +94,7 @@ func (r *reloadingCredential) GetToken(ctx context.Context, options policy.Token
 	return r.currentValue.GetToken(ctx, options)
 }
 
-func (r *reloadingCredential) start(ctx context.Context, cloud AzureCloud, credentialFile string) {
+func (r *reloadingCredential) start(ctx context.Context, credentialFile string) {
 	// set up the file watcher, call load() when we see events or on some timer in case no events are delivered
 	fileWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -114,12 +120,12 @@ func (r *reloadingCredential) start(ctx context.Context, cloud AzureCloud, crede
 					return
 				}
 				if event.Op.Has(fsnotify.Write) {
-					if err := r.load(cloud, credentialFile); err != nil {
+					if err := r.load(credentialFile); err != nil {
 						r.logger.Error(err, errLoadCredentials)
 					}
 				}
 			case <-r.ticker.C:
-				if err := r.load(cloud, credentialFile); err != nil {
+				if err := r.load(credentialFile); err != nil {
 					r.logger.Error(err, errLoadCredentials)
 				}
 			case err, ok := <-fileWatcher.Errors:
@@ -136,7 +142,7 @@ func (r *reloadingCredential) start(ctx context.Context, cloud AzureCloud, crede
 	}()
 }
 
-func (r *reloadingCredential) load(cloud AzureCloud, credentialFile string) error {
+func (r *reloadingCredential) load(credentialFile string) error {
 	// read the file from the filesystem and update the current value we're holding on to if the certificate we read is newer, making sure to not step on the toes of anyone calling GetToken()
 	byteValue, err := os.ReadFile(credentialFile)
 	if err != nil {
@@ -149,7 +155,7 @@ func (r *reloadingCredential) load(cloud AzureCloud, credentialFile string) erro
 	}
 
 	var newCertValue *azidentity.ClientCertificateCredential
-	newCertValue, err = GetCredential(cloud, credentials)
+	newCertValue, err = GetCredential(r.clientOpts, credentials)
 	if err != nil {
 		return err
 	}

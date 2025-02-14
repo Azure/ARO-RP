@@ -42,7 +42,7 @@ func (dv *dynamic) validateEncryptionAtHostSupport(VMSize api.VMSize, path strin
 	}
 
 	if !computeskus.HasCapability(sku, "EncryptionAtHostSupported") {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "VM SKU '%s' does not support encryption at host.", VMSize)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("VM SKU '%s' does not support encryption at host.", VMSize))
 	}
 
 	return nil

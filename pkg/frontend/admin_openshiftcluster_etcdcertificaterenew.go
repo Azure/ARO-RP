@@ -175,7 +175,7 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdCertificateRenew(ctx context.Co
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", r.ResourceType, r.ResourceName, r.ResourceGroup)
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.", r.ResourceType, r.ResourceName, r.ResourceGroup))
 	case err != nil:
 		return err
 	}
@@ -244,7 +244,7 @@ func (e *etcdrenew) validateEtcdOperatorControllersState(ctx context.Context) er
 			continue
 		}
 		if etcdOperatorControllerConditionsExpected[c.Type] != c.Status {
-			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "%s is in state %s, quiting.", c.Type, c.Status)
+			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("%s is in state %s, quiting.", c.Type, c.Status))
 		}
 	}
 	e.log.Infoln("EtcdOperator Controllers state is validated.")
@@ -306,7 +306,7 @@ func (e *etcdrenew) validateEtcdCertsExistsAndExpiry(ctx context.Context) error 
 			return fmt.Errorf("invalid cert data when parsing secret: %s", secret.Name)
 		}
 		if utilcert.IsCertExpired(certData[0]) {
-			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "secret %s is already expired, quitting.", secretname)
+			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("secret %s is already expired, quitting.", secretname))
 		}
 	}
 	e.log.Infoln("Etcd certs exits, are not expired")
@@ -448,13 +448,13 @@ func (e *etcdrenew) isEtcdRevised(ctx context.Context) (bool, error) {
 	isAtRevision := true
 	rawEtcd, err := e.k.KubeGet(ctx, "etcd.operator.openshift.io", "", "cluster")
 	if err != nil {
-		e.log.Warnf(err.Error())
+		e.log.Warn(err.Error())
 		return false, nil
 	}
 	etcd := &operatorv1.Etcd{}
 	err = codec.NewDecoderBytes(rawEtcd, &codec.JsonHandle{}).Decode(etcd)
 	if err != nil {
-		e.log.Warnf(err.Error())
+		e.log.Warn(err.Error())
 		return false, nil
 	}
 
@@ -489,7 +489,7 @@ func (e *etcdrenew) recoverEtcdSecrets(ctx context.Context) error {
 			obj := &unstructured.Unstructured{}
 			err := obj.UnmarshalJSON(data)
 			if err != nil {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
 			}
 			err = e.k.KubeCreateOrUpdate(ctx, obj)
 			if err != nil {

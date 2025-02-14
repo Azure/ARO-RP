@@ -91,7 +91,7 @@ func (service *PlatformWorkloadIdentityRolesByVersionService) PopulatePlatformWo
 
 	for version, exists := range requiredMinorVersions {
 		if !exists {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '%s'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket", version)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("No PlatformWorkloadIdentityRoleSet found for the requested or upgradeable OpenShift minor version '%s'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket", version))
 		}
 	}
 
@@ -153,5 +153,5 @@ func GetPlatformWorkloadIdentityMismatchError(oc *api.OpenShiftCluster, platform
 		}
 	}
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePlatformWorkloadIdentityMismatch,
-		"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '%v'", v, requiredOperatorIdentities)
+		"properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", fmt.Sprintf("There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '%v'", v, requiredOperatorIdentities))
 }

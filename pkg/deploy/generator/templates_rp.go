@@ -193,6 +193,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"rpParentDomainName",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
+		"globalDevopsServicePrincipalId",
 	}
 
 	for _, param := range params {

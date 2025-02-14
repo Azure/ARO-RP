@@ -6,6 +6,7 @@ package steps
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -73,9 +74,10 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 						http.StatusBadRequest,
 						api.CloudErrorCodeInvalidServicePrincipalCredentials,
 						"encountered error",
-						"%s: %s",
-						*oDataError.GetErrorEscaped().GetCode(),
-						*oDataError.GetErrorEscaped().GetMessage())
+						fmt.Sprintf(
+							"%s: %s",
+							*oDataError.GetErrorEscaped().GetCode(),
+							*oDataError.GetErrorEscaped().GetMessage()))
 				} else {
 					spew.Fdump(log.Writer(), oDataError.GetErrorEscaped())
 				}

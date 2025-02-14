@@ -154,7 +154,7 @@ func NewValidator(
 
 		spNetworkUsage:                        usagesClient,
 		virtualNetworks:                       newVirtualNetworksCache(virtualNetworksClient),
-		diskEncryptionSets:                    compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
+		diskEncryptionSets:                    compute.NewDiskEncryptionSetsClientWithAROEnvironment(azEnv, subscriptionID, authorizer),
 		resourceSkusClient:                    compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpClient:                             pdpClient,
 		loadBalancerBackendAddressPoolsClient: network.NewLoadBalancerBackendAddressPoolsClient(azEnv, subscriptionID, authorizer),
@@ -258,20 +258,22 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
 				"",
-				errMsgWIHasNoRequiredPermissionsOnVNet,
-				*operatorName,
-				vnet.String(),
-			)
+				fmt.Sprintf(
+					errMsgWIHasNoRequiredPermissionsOnVNet,
+					*operatorName,
+					vnet.String(),
+				))
 		} else {
 			noPermissionsErr = api.NewCloudError(
 				http.StatusBadRequest,
 				errCode,
 				"",
-				errMsgSPHasNoRequiredPermissionsOnVNet,
-				dv.authorizerType,
-				*dv.appID,
-				vnet.String(),
-			)
+				fmt.Sprintf(
+					errMsgSPHasNoRequiredPermissionsOnVNet,
+					dv.authorizerType,
+					*dv.appID,
+					vnet.String(),
+				))
 		}
 	}
 
@@ -287,9 +289,10 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidLinkedVNet,
 				"",
-				errMsgVnetNotFound,
-				vnet.String(),
-			)
+				fmt.Sprintf(
+					errMsgVnetNotFound,
+					vnet.String(),
+				))
 		case http.StatusForbidden:
 			noPermissionsErr.Message = fmt.Sprintf(
 				"%s\nOriginal error message: %s",
@@ -347,19 +350,21 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
 				"",
-				errMsgWIHasNoRequiredPermissionsOnRT,
-				*operatorName,
-				rtID,
-			)
+				fmt.Sprintf(
+					errMsgWIHasNoRequiredPermissionsOnRT,
+					*operatorName,
+					rtID,
+				))
 		}
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			errCode,
 			"",
-			errMsgSPHasNoRequiredPermissionsOnRT,
-			dv.authorizerType,
-			rtID,
-		)
+			fmt.Sprintf(
+				errMsgSPHasNoRequiredPermissionsOnRT,
+				dv.authorizerType,
+				rtID,
+			))
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
@@ -367,9 +372,10 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidLinkedRouteTable,
 			"",
-			errMsgRTNotFound,
-			rtID,
-		)
+			fmt.Sprintf(
+				errMsgRTNotFound,
+				rtID,
+			))
 	}
 	return err
 }
@@ -423,19 +429,21 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
 				"",
-				errMsgWIHasNoRequiredPermissionsOnNatGW,
-				*operatorName,
-				ngID,
-			)
+				fmt.Sprintf(
+					errMsgWIHasNoRequiredPermissionsOnNatGW,
+					*operatorName,
+					ngID,
+				))
 		}
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			errCode,
 			"",
-			errMsgSPHasNoRequiredPermissionsOnNatGW,
-			dv.authorizerType,
-			ngID,
-		)
+			fmt.Sprintf(
+				errMsgSPHasNoRequiredPermissionsOnNatGW,
+				dv.authorizerType,
+				ngID,
+			))
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
@@ -443,9 +451,10 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidLinkedNatGateway,
 			"",
-			errMsgNatGWNotFound,
-			ngID,
-		)
+			fmt.Sprintf(
+				errMsgNatGWNotFound,
+				ngID,
+			))
 	}
 	return err
 }
@@ -608,9 +617,10 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidLinkedVNet,
 			"",
-			errMsgCIDROverlaps,
-			err,
-		)
+			fmt.Sprintf(
+				errMsgCIDROverlaps,
+				err,
+			))
 	}
 
 	return nil
@@ -629,10 +639,11 @@ func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resourc
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidLinkedVNet,
 			"",
-			errMsgInvalidVNetLocation,
-			*vnet.Location,
-			location,
-		)
+			fmt.Sprintf(
+				errMsgInvalidVNetLocation,
+				*vnet.Location,
+				location,
+			))
 	}
 
 	return nil
@@ -668,9 +679,10 @@ func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (m
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidLinkedVNet,
 				s.Path,
-				errMsgSubnetNotFound,
-				s.ID,
-			)
+				fmt.Sprintf(
+					errMsgSubnetNotFound,
+					s.ID,
+				))
 		}
 
 		subnetByID[s.ID] = ss
@@ -735,7 +747,7 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 					return api.NewCloudError(
 						http.StatusBadRequest,
 						api.CloudErrorCodeInvalidLinkedVNet,
-						s.Path, errMsgNSGAttached, s.ID)
+						s.Path, fmt.Sprintf(errMsgNSGAttached, s.ID))
 				}
 			}
 		} else {
@@ -750,10 +762,11 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 						http.StatusBadRequest,
 						api.CloudErrorCodeInvalidLinkedVNet,
 						s.Path,
-						errMsgOriginalNSGNotAttached,
-						s.ID,
-						nsgID,
-					)
+						fmt.Sprintf(
+							errMsgOriginalNSGNotAttached,
+							s.ID,
+							nsgID,
+						))
 				}
 			} else {
 				if !subnetHasNSGAttached(ss) {
@@ -761,9 +774,10 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 						http.StatusBadRequest,
 						api.CloudErrorCodeInvalidLinkedVNet,
 						s.Path,
-						errMsgNSGNotAttached,
-						s.ID,
-					)
+						fmt.Sprintf(
+							errMsgNSGNotAttached,
+							s.ID,
+						))
 				}
 			}
 		}
@@ -773,9 +787,10 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidLinkedVNet,
 				s.Path,
-				errMsgSubnetNotInSucceededState,
-				s.ID,
-			)
+				fmt.Sprintf(
+					errMsgSubnetNotInSucceededState,
+					s.ID,
+				))
 		}
 
 		// Handle both addressPrefix & addressPrefixes
@@ -809,9 +824,10 @@ func validateSubnetSize(s Subnet, address string) error {
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidLinkedVNet,
 			s.Path,
-			errMsgSubnetInvalidSize,
-			s.ID,
-		)
+			fmt.Sprintf(
+				errMsgSubnetInvalidSize,
+				s.ID,
+			))
 	}
 	return nil
 }
@@ -884,20 +900,22 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
 				"",
-				errMsgWIHasNoRequiredPermissionsOnNSG,
-				*operatorName,
-				nsgID,
-			)
+				fmt.Sprintf(
+					errMsgWIHasNoRequiredPermissionsOnNSG,
+					*operatorName,
+					nsgID,
+				))
 		}
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			errCode,
 			"",
-			errMsgSPHasNoRequiredPermissionsOnNSG,
-			dv.authorizerType,
-			*dv.appID,
-			nsgID,
-		)
+			fmt.Sprintf(
+				errMsgSPHasNoRequiredPermissionsOnNSG,
+				dv.authorizerType,
+				*dv.appID,
+				nsgID,
+			))
 	}
 
 	return err
@@ -950,9 +968,10 @@ func findSubnet(vnet *sdknetwork.VirtualNetwork, subnetID string) (*sdknetwork.S
 		http.StatusBadRequest,
 		api.CloudErrorCodeInvalidLinkedVNet,
 		"",
-		errMsgSubnetNotFound,
-		subnetID,
-	)
+		fmt.Sprintf(
+			errMsgSubnetNotFound,
+			subnetID,
+		))
 }
 
 // uniqueSubnetSlice returns string subnets with unique values only

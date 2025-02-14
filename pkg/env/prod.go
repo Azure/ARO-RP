@@ -4,11 +4,15 @@ package env
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -25,6 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
@@ -399,10 +404,86 @@ func (p *prod) MsiRpEndpoint() string {
 }
 
 func (p *prod) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
-	armClientOptions := p.Environment().ArmClientOptions()
+	armClientOptions := p.Environment().ArmClientOptions(ClientDebugLoggerMiddleware(p.log.WithField("client", "msi-dataplane")))
 	clientOptions := armClientOptions.ClientOptions
 
 	return &clientOptions, nil
+}
+
+func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
+	return azureclient.PolicyFunc(func(req *policy.Request) (*http.Response, error) {
+		log := log.WithFields(logrus.Fields{
+			"method": req.Raw().Method,
+			"url":    req.Raw().URL,
+		})
+		if req.Raw().Body != nil {
+			body, err := io.ReadAll(req.Raw().Body)
+			if err != nil {
+				log.WithError(err).Error("error reading request body")
+			}
+			if err := req.Raw().Body.Close(); err != nil {
+				log.WithError(err).Error("error closing request body")
+			}
+			log = log.WithField("body", string(body))
+			req.Raw().Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the delegate can use it
+		}
+		log.Info("Sending request.")
+		resp, err := req.Next()
+		if err != nil {
+			log.WithError(err).Error("Request errored.")
+		} else if resp != nil {
+			log = log.WithFields(logrus.Fields{
+				"status": resp.StatusCode,
+			})
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.WithError(err).Error("error reading response body")
+			}
+			if err := resp.Body.Close(); err != nil {
+				log.WithError(err).Error("error closing response body")
+			}
+			// n.b.: we only send one request now, this is best-effort but would need to be updated if we use other methods
+			var responseBody string
+			if resp.StatusCode == http.StatusOK {
+				response := dataplane.ManagedIdentityCredentials{}
+				if err := json.Unmarshal(body, &response); err != nil {
+					log.WithError(err).Error("error unmarshalling response body")
+				} else {
+					censorCredentials(&response)
+					censored, err := json.Marshal(response)
+					if err != nil {
+						log.WithError(err).Error("error marshalling response body after censoring")
+					}
+					responseBody = string(censored)
+				}
+			} else {
+				// error codes don't have anything in them that we need to censor
+				responseBody = string(body)
+			}
+			log = log.WithField("body", responseBody)
+			resp.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the upstream round-trippers can use it
+		}
+		log.Info("Received response.")
+
+		return resp, err
+	})
+}
+
+func censorCredentials(input *dataplane.ManagedIdentityCredentials) {
+	input.ClientSecret = nil
+	for i := 0; i < len(input.DelegatedResources); i++ {
+		if input.DelegatedResources[i].ImplicitIdentity != nil {
+			input.DelegatedResources[i].ImplicitIdentity.ClientSecret = nil
+		}
+		for j := 0; j < len(input.DelegatedResources[i].ExplicitIdentities); j++ {
+			input.DelegatedResources[i].ExplicitIdentities[j].ClientSecret = nil
+		}
+	}
+	if input.ExplicitIdentities != nil {
+		for i := 0; i < len(input.ExplicitIdentities); i++ {
+			input.ExplicitIdentities[i].ClientSecret = nil
+		}
+	}
 }
 
 func (p *prod) MockMSIResponses(msiResourceId *arm.ResourceID) dataplane.ClientFactory {
@@ -456,23 +537,23 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 
 	placeholder := "placeholder"
 	return &dataplane.ManagedIdentityCredentials{
-		ExplicitIdentities: &[]dataplane.UserAssignedIdentityCredentials{
+		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
+				ClientID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
 				ClientSecret:               pointerutils.ToPtr(os.Getenv("MOCK_MSI_CERT")),
-				TenantId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
-				ObjectId:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
-				ResourceId:                 pointerutils.ToPtr(m.msiResourceId),
+				TenantID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
+				ObjectID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
+				ResourceID:                 pointerutils.ToPtr(m.msiResourceId),
 				AuthenticationEndpoint:     pointerutils.ToPtr(m.aadHost),
 				CannotRenewAfter:           &placeholder,
-				ClientSecretUrl:            &placeholder,
+				ClientSecretURL:            &placeholder,
 				MtlsAuthenticationEndpoint: &placeholder,
 				NotAfter:                   &placeholder,
 				NotBefore:                  &placeholder,
 				RenewAfter:                 &placeholder,
 				CustomClaims: &dataplane.CustomClaims{
-					XmsAzNwperimid: &[]string{placeholder},
-					XmsAzTm:        &placeholder,
+					XMSAzNwperimid: []string{placeholder},
+					XMSAzTm:        &placeholder,
 				},
 			},
 		},
