@@ -88,19 +88,19 @@ type Cluster struct {
 	ciParentVnet       string
 	workloadIdentities map[string]api.PlatformWorkloadIdentity
 
-	spGraphClient        *utilgraph.GraphServiceClient
-	deployments          features.DeploymentsClient
-	groups               features.ResourceGroupsClient
-	openshiftclusters    InternalClient
-	securitygroups       armnetwork.SecurityGroupsClient
-	subnets              armnetwork.SubnetsClient
-	routetables          armnetwork.RouteTablesClient
-	roleassignments      authorization.RoleAssignmentsClient
-	roledefinitions      authorization.RoleDefinitionsClient
-	peerings             armnetwork.VirtualNetworkPeeringsClient
-	ciParentVnetPeerings armnetwork.VirtualNetworkPeeringsClient
-	vaultsClient         armkeyvault.VaultsClient
-	msiClient            armmsi.UserAssignedIdentitiesClient
+	spGraphClient            *utilgraph.GraphServiceClient
+	deployments              features.DeploymentsClient
+	groups                   features.ResourceGroupsClient
+	openshiftclusters        InternalClient
+	securitygroups           armnetwork.SecurityGroupsClient
+	subnets                  armnetwork.SubnetsClient
+	routetables              armnetwork.RouteTablesClient
+	roleassignments          authorization.RoleAssignmentsClient
+	roledefinitions          authorization.RoleDefinitionsClient
+	peerings                 armnetwork.VirtualNetworkPeeringsClient
+	ciParentVnetPeerings     armnetwork.VirtualNetworkPeeringsClient
+	vaultsClient             armkeyvault.VaultsClient
+	msiClient                armmsi.UserAssignedIdentitiesClient
 	diskEncryptionSetsClient compute.DiskEncryptionSetsClient
 }
 
@@ -248,18 +248,18 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		//		env:                environment,
 		workloadIdentities: make(map[string]api.PlatformWorkloadIdentity),
 
-		spGraphClient:     spGraphClient,
-		deployments:       features.NewDeploymentsClient(&azEnvironment, conf.SubscriptionID, authorizer),
-		groups:            features.NewResourceGroupsClient(&azEnvironment, conf.SubscriptionID, authorizer),
-		openshiftclusters: clusterClient,
-		securitygroups:    securityGroupsClient,
-		subnets:           subnetsClient,
-		routetables:       routeTablesClient,
-		roleassignments:   authorization.NewRoleAssignmentsClient(&azEnvironment, conf.SubscriptionID, authorizer),
-		roledefinitions:   authorization.NewRoleDefinitionsClient(&azEnvironment, conf.SubscriptionID, authorizer),
-		peerings:          virtualNetworkPeeringsClient,
-		vaultsClient:      vaultClient,
-		msiClient:         *msiClient,
+		spGraphClient:            spGraphClient,
+		deployments:              features.NewDeploymentsClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		groups:                   features.NewResourceGroupsClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		openshiftclusters:        clusterClient,
+		securitygroups:           securityGroupsClient,
+		subnets:                  subnetsClient,
+		routetables:              routeTablesClient,
+		roleassignments:          authorization.NewRoleAssignmentsClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		roledefinitions:          authorization.NewRoleDefinitionsClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		peerings:                 virtualNetworkPeeringsClient,
+		vaultsClient:             vaultClient,
+		msiClient:                *msiClient,
 		diskEncryptionSetsClient: diskEncryptionSetsClient,
 	}
 
