@@ -36,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/ssh"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
@@ -49,13 +50,14 @@ type Runnable interface {
 }
 
 type portal struct {
-	env           env.Core
-	audit         *logrus.Entry
-	log           *logrus.Entry
-	baseAccessLog *logrus.Entry
-	l             net.Listener
-	sshl          net.Listener
-	verifier      oidc.Verifier
+	env              env.Core
+	auditLog         *logrus.Entry
+	log              *logrus.Entry
+	baseAccessLog    *logrus.Entry
+	outelAuditClient audit.Client
+	l                net.Listener
+	sshl             net.Listener
+	verifier         oidc.Verifier
 
 	hostname     string
 	servingKey   *rsa.PrivateKey
@@ -82,9 +84,10 @@ type portal struct {
 }
 
 func NewPortal(env env.Core,
-	audit *logrus.Entry,
+	auditLog *logrus.Entry,
 	log *logrus.Entry,
 	baseAccessLog *logrus.Entry,
+	outelAuditClient audit.Client,
 	l net.Listener,
 	sshl net.Listener,
 	verifier oidc.Verifier,
@@ -103,13 +106,14 @@ func NewPortal(env env.Core,
 	m metrics.Emitter,
 ) Runnable {
 	return &portal{
-		env:           env,
-		audit:         audit,
-		log:           log,
-		baseAccessLog: baseAccessLog,
-		l:             l,
-		sshl:          sshl,
-		verifier:      verifier,
+		env:              env,
+		auditLog:         auditLog,
+		log:              log,
+		baseAccessLog:    baseAccessLog,
+		outelAuditClient: outelAuditClient,
+		l:                l,
+		sshl:             sshl,
+		verifier:         verifier,
 
 		hostname:     hostname,
 		servingKey:   servingKey,
@@ -162,14 +166,14 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 	allGroups := append([]string{}, p.groupIDs...)
 	allGroups = append(allGroups, p.elevatedGroupIDs...)
 
-	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
+	p.aad, err = middleware.NewAAD(p.log, p.auditLog, p.outelAuditClient, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
 	if err != nil {
 		return nil, err
 	}
 
 	aadAuthenticatedRouter := r.NewRoute().Subrouter()
 	aadAuthenticatedRouter.Use(p.aad.AAD)
-	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
+	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.auditLog, p.baseAccessLog, p.outelAuditClient))
 	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
 	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0), csrf.Path("/")))
 
@@ -199,7 +203,7 @@ func (p *portal) setupServices() (*kubeconfig.Kubeconfig, *prometheus.Prometheus
 		return nil, nil, nil, err
 	}
 
-	k := kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, dbOpenShiftClusters, dbPortal, p.dialer)
+	k := kubeconfig.New(p.log, p.auditLog, p.outelAuditClient, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, dbOpenShiftClusters, dbPortal, p.dialer)
 
 	prom := prometheus.New(p.log, dbOpenShiftClusters, p.dialer)
 
@@ -252,14 +256,14 @@ func bearerRoutes(r *mux.Router, k *kubeconfig.Kubeconfig) {
 	if k != nil {
 		bearerAuthenticatedRouter := r.NewRoute().Subrouter()
 		bearerAuthenticatedRouter.Use(middleware.Bearer(k.DbPortal))
-		bearerAuthenticatedRouter.Use(middleware.Log(k.Env, k.Audit, k.BaseAccessLog))
+		bearerAuthenticatedRouter.Use(middleware.Log(k.Env, k.AuditLog, k.BaseAccessLog, k.OtelAuditClient))
 
 		bearerAuthenticatedRouter.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/proxy/").Handler(k.ReverseProxy)
 	}
 }
 
 func (p *portal) unauthenticatedRoutes(r *mux.Router) {
-	logger := middleware.Log(p.env, p.audit, p.baseAccessLog)
+	logger := middleware.Log(p.env, p.auditLog, p.baseAccessLog, p.outelAuditClient)
 
 	r.Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
 }

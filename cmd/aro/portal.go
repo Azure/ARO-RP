@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -20,11 +21,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
+func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) error {
 	_env, err := env.NewCore(ctx, log, env.COMPONENT_PORTAL)
 	if err != nil {
 		return err
@@ -44,7 +46,8 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	err = env.ValidateVars(
 		"AZURE_PORTAL_CLIENT_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
-		"AZURE_PORTAL_ELEVATED_GROUP_IDS")
+		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
+	)
 
 	if err != nil {
 		return err
@@ -170,7 +173,22 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	log.Printf("listening %s", address)
 
-	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
+	var size int
+	if err := env.ValidateVars(env.OtelAuditQueueSize); err != nil {
+		size = 4000
+	} else {
+		size, err = strconv.Atoi(os.Getenv(env.OtelAuditQueueSize))
+		if err != nil {
+			return err
+		}
+	}
+
+	outelAuditClient, err := audit.NewOtelAuditClient(size, _env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+
+	p := pkgportal.NewPortal(_env, auditLog, log.WithField("component", "portal"), log.WithField("component", "portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
 
 	return p.Run(ctx)
 }

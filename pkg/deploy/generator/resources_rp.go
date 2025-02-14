@@ -396,6 +396,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpMdsdNamespace",
 		"rpParentDomainName",
 		"oidcStorageAccountName",
+		"otelAuditQueueSize",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",

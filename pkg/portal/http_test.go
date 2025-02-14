@@ -31,9 +31,10 @@ func NewTestPortal(_env env.Core, dbOpenShiftClusters database.OpenShiftClusters
 	_, portalAccessLog := testlog.New()
 	portalLogHook, portalLog := testlog.New()
 	auditHook, portalAuditLog := testlog.NewAudit()
+	otelAudit := testlog.NewOtelAuditClient()
 
 	l := listener.NewListener()
-	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, nil, nil, "", nil, nil, "", nil, nil, make([]byte, 32), nil, nonElevatedGroupIDs, elevatedGroupIDs, nil, nil, nil).(*portal)
+	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, otelAudit, l, nil, nil, "", nil, nil, "", nil, nil, make([]byte, 32), nil, nonElevatedGroupIDs, elevatedGroupIDs, nil, nil, nil).(*portal)
 
 	return &testPortal{
 		p:             p,

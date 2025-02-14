@@ -76,6 +76,12 @@ func (d *dev) AROOperatorImage() string {
 	return fmt.Sprintf("%s/aro:%s", d.ACRDomain(), version.GitCommit)
 }
 
+// OtelAuditQueueSize returns the size of the audit queue for the OTel audit.
+// In development environment this size is set to zero as we create noop connection to audit server.
+func (d *dev) OtelAuditQueueSize() (int, error) {
+	return 0, nil
+}
+
 func (d *dev) Listen() (net.Listener, error) {
 	if d.Component() == string(COMPONENT_MIMO_ACTUATOR) {
 		return net.Listen("tcp", ":8445")

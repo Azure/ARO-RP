@@ -126,6 +126,9 @@
         "oidcStorageAccountName": {
             "value": ""
         },
+        "otelAuditQueueSize": {
+            "value": ""
+        },
         "portalAccessGroupIds": {
             "value": ""
         },
