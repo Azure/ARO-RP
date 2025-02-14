@@ -134,7 +134,7 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 		if err != nil {
 			return err
 		}
-		candidate, changed, diff, err := merge(oldObj, newObj)
+		candidate, changed, diff, err := Merge(oldObj, newObj)
 		if err != nil || !changed {
 			return err
 		}
@@ -146,7 +146,7 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 // merge takes the existing (old) and desired (new) objects.  It compares them
 // to see if an update is necessary, fixes up the new object if needed, and
 // returns the difference for debugging purposes.
-func merge(old, new client.Object) (client.Object, bool, string, error) {
+func Merge(old, new client.Object) (client.Object, bool, string, error) {
 	if reflect.TypeOf(old) != reflect.TypeOf(new) {
 		return nil, false, "", fmt.Errorf("types differ: %T %T", old, new)
 	}

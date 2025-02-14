@@ -5,20 +5,12 @@ package dynamichelper
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,13 +18,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
-
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -166,156 +154,8 @@ func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntim
 	if strings.HasPrefix(groupKind, "ConstraintTemplate.templates.gatekeeper") {
 		return mergeGK(old, new)
 	}
-	return merge(old, new)
-}
 
-// merge takes the existing (old) and desired (new) objects.  It compares them
-// to see if an update is necessary, fixes up the new object if needed, and
-// returns the difference for debugging purposes.
-func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
-	if reflect.TypeOf(old) != reflect.TypeOf(new) {
-		return nil, false, "", fmt.Errorf("types differ: %T %T", old, new)
-	}
-
-	// 1. Set defaults on new.  This gets rid of many false positive diffs.
-	scheme.Scheme.Default(new)
-
-	// 2. Copy immutable fields from old to new to avoid false positives.
-	oldtypemeta := old.GetObjectKind()
-	newtypemeta := new.GetObjectKind()
-
-	oldobjectmeta, err := meta.Accessor(old)
-	if err != nil {
-		return nil, false, "", err
-	}
-
-	newobjectmeta, err := meta.Accessor(new)
-	if err != nil {
-		return nil, false, "", err
-	}
-
-	newtypemeta.SetGroupVersionKind(oldtypemeta.GroupVersionKind())
-
-	newobjectmeta.SetSelfLink(oldobjectmeta.GetSelfLink())
-	newobjectmeta.SetUID(oldobjectmeta.GetUID())
-	newobjectmeta.SetResourceVersion(oldobjectmeta.GetResourceVersion())
-	newobjectmeta.SetGeneration(oldobjectmeta.GetGeneration())
-	newobjectmeta.SetCreationTimestamp(oldobjectmeta.GetCreationTimestamp())
-	newobjectmeta.SetManagedFields(oldobjectmeta.GetManagedFields())
-
-	// 3. Do fix-ups on a per-Kind basis.
-	switch old.(type) {
-	case *corev1.Namespace:
-		old, new := old.(*corev1.Namespace), new.(*corev1.Namespace)
-		for _, name := range []string{
-			"openshift.io/sa.scc.mcs",
-			"openshift.io/sa.scc.supplemental-groups",
-			"openshift.io/sa.scc.uid-range",
-		} {
-			copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, name)
-		}
-		// Copy OLM label
-		for k := range old.Labels {
-			if strings.HasPrefix(k, "olm.operatorgroup.uid/") {
-				copyLabel(&new.ObjectMeta, &old.ObjectMeta, k)
-			}
-		}
-		new.Spec.Finalizers = old.Spec.Finalizers
-		new.Status = old.Status
-
-	case *corev1.ServiceAccount:
-		old, new := old.(*corev1.ServiceAccount), new.(*corev1.ServiceAccount)
-		for _, name := range maps.Keys(old.ObjectMeta.Annotations) {
-			if strings.HasPrefix(name, "openshift.io/") {
-				copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, name)
-			}
-		}
-		new.Secrets = old.Secrets
-		new.ImagePullSecrets = old.ImagePullSecrets
-
-	case *corev1.Service:
-		old, new := old.(*corev1.Service), new.(*corev1.Service)
-		new.Spec.ClusterIP = old.Spec.ClusterIP
-
-	case *appsv1.DaemonSet:
-		old, new := old.(*appsv1.DaemonSet), new.(*appsv1.DaemonSet)
-		copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "deprecated.daemonset.template.generation")
-		new.Status = old.Status
-
-	case *appsv1.Deployment:
-		old, new := old.(*appsv1.Deployment), new.(*appsv1.Deployment)
-		copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "deployment.kubernetes.io/revision")
-
-		// populated automatically by the Kubernetes API (observed on 4.9)
-		if old.Spec.Template.Spec.DeprecatedServiceAccount != "" {
-			new.Spec.Template.Spec.DeprecatedServiceAccount = old.Spec.Template.Spec.DeprecatedServiceAccount
-		}
-
-		new.Status = old.Status
-
-	case *machineconfigurationv1.KubeletConfig:
-		old, new := old.(*machineconfigurationv1.KubeletConfig), new.(*machineconfigurationv1.KubeletConfig)
-		new.Status = old.Status
-
-	case *extensionsv1beta1.CustomResourceDefinition:
-		old, new := old.(*extensionsv1beta1.CustomResourceDefinition), new.(*extensionsv1beta1.CustomResourceDefinition)
-		new.Status = old.Status
-
-	case *extensionsv1.CustomResourceDefinition:
-		old, new := old.(*extensionsv1.CustomResourceDefinition), new.(*extensionsv1.CustomResourceDefinition)
-		new.Status = old.Status
-
-	case *arov1alpha1.Cluster:
-		old, new := old.(*arov1alpha1.Cluster), new.(*arov1alpha1.Cluster)
-		new.Status = old.Status
-
-	case *hivev1.ClusterDeployment:
-		old, new := old.(*hivev1.ClusterDeployment), new.(*hivev1.ClusterDeployment)
-		new.ObjectMeta.Finalizers = old.ObjectMeta.Finalizers
-		new.Status = old.Status
-
-	case *corev1.ConfigMap:
-		old, new := old.(*corev1.ConfigMap), new.(*corev1.ConfigMap)
-
-		_, injectTrustBundle := new.ObjectMeta.Labels["config.openshift.io/inject-trusted-cabundle"]
-		if injectTrustBundle {
-			caBundle, ext := old.Data["ca-bundle.crt"]
-			if ext {
-				new.Data["ca-bundle.crt"] = caBundle
-			}
-			// since OCP 4.15 this annotation is added to the trusted-ca-bundle ConfigMap by the ConfigMap's controller
-			copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "openshift.io/owning-component")
-		}
-
-	case *machinev1beta1.MachineHealthCheck:
-		old, new := old.(*machinev1beta1.MachineHealthCheck), new.(*machinev1beta1.MachineHealthCheck)
-		new.Status = old.Status
-	}
-
-	var diff string
-	if _, ok := old.(*corev1.Secret); !ok { // Don't show a diff if kind is Secret
-		diff = cmp.Diff(old, new)
-	}
-
-	return new, !reflect.DeepEqual(old, new), diff, nil
-}
-
-func copyAnnotation(dst, src *metav1.ObjectMeta, name string) {
-	if _, found := src.Annotations[name]; found {
-		if dst.Annotations == nil {
-			dst.Annotations = map[string]string{}
-		}
-		dst.Annotations[name] = src.Annotations[name]
-	}
-}
-
-func copyLabel(dst, src *metav1.ObjectMeta, name string) {
-	if _, found := src.Labels[name]; found {
-		if dst.Labels == nil {
-			dst.Labels = map[string]string{}
-		}
-		dst.Labels[name] = src.Labels[name]
-	}
+	return clienthelper.Merge(old.(client.Object), new.(client.Object))
 }
 
 func makeURLSegments(gvr *schema.GroupVersionResource, namespace, name string) (url []string) {
