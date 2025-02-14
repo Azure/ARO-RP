@@ -125,7 +125,6 @@ RPIMAGE='$rpimage'"
     # use default podman network with range 10.88.0.0/16
     local -rA static_ip_addresses=(
         ["gateway"]="10.88.0.2"
-        ["fluentbit"]="10.88.0.7"
         ["mdm"]="10.88.0.8"
     )
 
