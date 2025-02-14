@@ -89,10 +89,19 @@ main() {
     local -r fluentbit_conf_file="[INPUT]
 	Name systemd
 	Tag journald
-    Systemd_Filter_Type service
 	Systemd_Filter _COMM=aro
-    Systemd_Filter _SYSTEMD_UNIT=aro-mise.service
-    Systemd_Filter _SYSTEMD_UNIT=aro-otel-collector.service
+	DB /var/lib/fluent/journaldb
+
+[INPUT]
+	Name systemd
+	Tag journald
+	Systemd_Filter _SYSTEMD_UNIT=aro-mise.service
+	DB /var/lib/fluent/journaldb
+
+[INPUT]
+	Name systemd
+	Tag journald
+	Systemd_Filter _SYSTEMD_UNIT=aro-otel-collector.service
 	DB /var/lib/fluent/journaldb
 
 [FILTER]
@@ -140,7 +149,6 @@ main() {
         ["portal"]="10.88.0.4"
         ["mise"]="10.88.0.5"
         ["otel_collector"]="10.88.0.6"
-        ["fluentbit"]="10.88.0.7"
         ["mdm"]="10.88.0.8"
     )
 
