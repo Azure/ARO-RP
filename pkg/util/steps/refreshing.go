@@ -148,8 +148,8 @@ func CreateActionableError(err error) error {
 		)
 	case azureerrors.IsClientSecretKeysExpired(err):
 		return newServicePrincipalCloudError(make_one_line_str(
-			"The provided application client and secret keys are expired.",
-			"Please create new keys for your application."),
+			"The provided client secret is expired.",
+			"Please create a new one for your service principal."),
 			http.StatusBadRequest,
 		)
 	default:

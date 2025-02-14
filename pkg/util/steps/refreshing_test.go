@@ -21,7 +21,7 @@ type expectCloudErrorFields struct {
 	message    string
 }
 
-func TestToActionableError(t *testing.T) {
+func TestCreateActionableError(t *testing.T) {
 	for _, tt := range []struct {
 		testName         string
 		rawErr           error
@@ -30,6 +30,11 @@ func TestToActionableError(t *testing.T) {
 		{
 			"Should not return a CloudError when original error is nil",
 			nil,
+			nil,
+		},
+		{
+			"Should return the error if it is not convertible to user actionable one",
+			errors.New("unknown or unhandled error"),
 			nil,
 		},
 		{
@@ -68,7 +73,7 @@ func TestToActionableError(t *testing.T) {
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidServicePrincipalCredentials,
 				"properties.servicePrincipalProfile",
-				"The provided application client and secret keys are expired. Please create new keys for your application.",
+				"The provided client secret is expired. Please create a new one for your service principal.",
 			},
 		},
 	} {
@@ -84,6 +89,8 @@ func TestToActionableError(t *testing.T) {
 					assert.Equal(t, tt.expectCloudError.target, cloudErr.Target)
 					assert.Equal(t, tt.expectCloudError.message, cloudErr.Message)
 				}
+			} else {
+				assert.Equal(t, err, tt.rawErr)
 			}
 		})
 	}
