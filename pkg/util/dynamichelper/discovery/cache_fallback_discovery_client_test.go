@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	openapi_v2 "github.com/google/gnostic/openapiv2"
+	openapi_v2 "github.com/google/gnostic-models/openapiv2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kversion "k8s.io/apimachinery/pkg/version"
@@ -214,4 +214,8 @@ func (c *fakeDiscoveryClient) OpenAPISchema() (*openapi_v2.Document, error) {
 // https://github.com/kubernetes/client-go/blob/master/discovery/fake/discovery.go#L163C2-L164C1
 func (c *fakeDiscoveryClient) OpenAPIV3() openapi.Client {
 	panic("unimplemented")
+}
+
+func (c *fakeDiscoveryClient) WithLegacy() discovery.DiscoveryInterface {
+	return nil
 }

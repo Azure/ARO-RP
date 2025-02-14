@@ -11,7 +11,6 @@ import (
 	consolev1alpha1 "github.com/openshift/client-go/console/applyconfigurations/console/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -22,9 +21,9 @@ type FakeConsolePlugins struct {
 	Fake *FakeConsoleV1alpha1
 }
 
-var consolepluginsResource = schema.GroupVersionResource{Group: "console.openshift.io", Version: "v1alpha1", Resource: "consoleplugins"}
+var consolepluginsResource = v1alpha1.SchemeGroupVersion.WithResource("consoleplugins")
 
-var consolepluginsKind = schema.GroupVersionKind{Group: "console.openshift.io", Version: "v1alpha1", Kind: "ConsolePlugin"}
+var consolepluginsKind = v1alpha1.SchemeGroupVersion.WithKind("ConsolePlugin")
 
 // Get takes name of the consolePlugin, and returns the corresponding consolePlugin object, and an error if there is any.
 func (c *FakeConsolePlugins) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ConsolePlugin, err error) {

@@ -15,16 +15,17 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machineconfigurationclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/containerinstall"
@@ -577,6 +578,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	if err != nil {
+		return err
+	}
+
 	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return err
@@ -597,7 +603,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.mcocli, err = mcoclient.NewForConfig(restConfig)
+	m.mcocli, err = machineconfigurationclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -632,7 +638,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 	if err != nil {
 		return err
 	}

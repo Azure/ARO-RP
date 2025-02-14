@@ -15,7 +15,10 @@ import (
 // Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).
 // +openshift:compatibility-gen:level=1
 type Console struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// +kubebuilder:validation:Required
@@ -92,6 +95,7 @@ type ConsoleCustomization struct {
 	// providing the brand field.  There is a limited set of specific brand options.
 	// This field controls elements of the console such as the logo.
 	// Invalid value will prevent a console rollout.
+	// +kubebuilder:validation:Enum:=openshift;okd;online;ocp;dedicated;azure;OpenShift;OKD;Online;OCP;Dedicated;Azure;ROSA
 	Brand Brand `json:"brand,omitempty"`
 	// documentationBaseURL links to external documentation are shown in various sections
 	// of the web console.  Providing documentationBaseURL will override the default
@@ -288,6 +292,9 @@ type PerspectiveVisibility struct {
 	AccessReview *ResourceAttributesAccessReview `json:"accessReview,omitempty"`
 }
 
+// Perspective defines a perspective that cluster admins want to show/hide in the perspective switcher dropdown
+// +kubebuilder:validation:XValidation:rule="has(self.id) && self.id != 'dev'? !has(self.pinnedResources) : true",message="pinnedResources is allowed only for dev and forbidden for other perspectives"
+// +optional
 type Perspective struct {
 	// id defines the id of the perspective.
 	// Example: "dev", "admin".
@@ -298,25 +305,69 @@ type Perspective struct {
 	// visibility defines the state of perspective along with access review checks if needed for that perspective.
 	// +kubebuilder:validation:Required
 	Visibility PerspectiveVisibility `json:"visibility"`
+	// pinnedResources defines the list of default pinned resources that users will see on the perspective navigation if they have not customized these pinned resources themselves.
+	// The list of available Kubernetes resources could be read via `kubectl api-resources`.
+	// The console will also provide a configuration UI and a YAML snippet that will list the available resources that can be pinned to the navigation.
+	// Incorrect or unknown resources will be ignored.
+	// +kubebuilder:validation:MaxItems=100
+	// +optional
+	PinnedResources *[]PinnedResourceReference `json:"pinnedResources,omitempty"`
+}
+
+// PinnedResourceReference includes the group, version and type of resource
+type PinnedResourceReference struct {
+	// group is the API Group of the Resource.
+	// Enter empty string for the core group.
+	// This value should consist of only lowercase alphanumeric characters, hyphens and periods.
+	// Example: "", "apps", "build.openshift.io", etc.
+	// +kubebuilder:validation:Pattern:="^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+	// +kubebuilder:validation:Required
+	Group string `json:"group"`
+	// version is the API Version of the Resource.
+	// This value should consist of only lowercase alphanumeric characters.
+	// Example: "v1", "v1beta1", etc.
+	// +kubebuilder:validation:Pattern:="^[a-z0-9]+$"
+	// +kubebuilder:validation:Required
+	Version string `json:"version"`
+	// resource is the type that is being referenced.
+	// It is normally the plural form of the resource kind in lowercase.
+	// This value should consist of only lowercase alphanumeric characters and hyphens.
+	// Example: "deployments", "deploymentconfigs", "pods", etc.
+	// +kubebuilder:validation:Pattern:="^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+	// +kubebuilder:validation:Required
+	Resource string `json:"resource"`
 }
 
 // Brand is a specific supported brand within the console.
-// +kubebuilder:validation:Pattern=`^$|^(ocp|origin|okd|dedicated|online|azure)$`
 type Brand string
 
 const (
+	// Legacy branding for OpenShift
+	BrandOpenShiftLegacy Brand = "openshift"
+	// Legacy branding for The Origin Community Distribution of Kubernetes
+	BrandOKDLegacy Brand = "okd"
+	// Legacy branding for OpenShift Online
+	BrandOnlineLegacy Brand = "online"
+	// Legacy branding for OpenShift Container Platform
+	BrandOCPLegacy Brand = "ocp"
+	// Legacy branding for OpenShift Dedicated
+	BrandDedicatedLegacy Brand = "dedicated"
+	// Legacy branding for Azure Red Hat OpenShift
+	BrandAzureLegacy Brand = "azure"
 	// Branding for OpenShift
-	BrandOpenShift Brand = "openshift"
+	BrandOpenShift Brand = "OpenShift"
 	// Branding for The Origin Community Distribution of Kubernetes
-	BrandOKD Brand = "okd"
+	BrandOKD Brand = "OKD"
 	// Branding for OpenShift Online
-	BrandOnline Brand = "online"
+	BrandOnline Brand = "Online"
 	// Branding for OpenShift Container Platform
-	BrandOCP Brand = "ocp"
+	BrandOCP Brand = "OCP"
 	// Branding for OpenShift Dedicated
-	BrandDedicated Brand = "dedicated"
+	BrandDedicated Brand = "Dedicated"
 	// Branding for Azure Red Hat OpenShift
-	BrandAzure Brand = "azure"
+	BrandAzure Brand = "Azure"
+	// Branding for Red Hat OpenShift Service on AWS
+	BrandROSA Brand = "ROSA"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -325,6 +376,9 @@ const (
 // +openshift:compatibility-gen:level=1
 type ConsoleList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard list's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ListMeta `json:"metadata"`
 
 	Items []Console `json:"items"`

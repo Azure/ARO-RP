@@ -36,10 +36,10 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machineconfigurationclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -99,7 +99,7 @@ type clientSet struct {
 	Kubernetes         kubernetes.Interface
 	Client             client.Client
 	MachineAPI         machineclient.Interface
-	MachineConfig      mcoclient.Interface
+	MachineConfig      machineconfigurationclient.Interface
 	Route              routeclient.Interface
 	AROClusters        aroclient.Interface
 	ConfigClient       configclient.Interface
@@ -332,7 +332,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	mcocli, err := mcoclient.NewForConfig(restconfig)
+	mcocli, err := machineconfigurationclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}

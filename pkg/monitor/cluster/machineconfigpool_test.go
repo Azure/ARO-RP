@@ -14,8 +14,8 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
+	machineconfigurationfake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
@@ -37,11 +37,11 @@ func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
 					Name: "aro-master-0",
 				},
 			},
-			mcps: &mcv1.MachineConfigPool{
+			mcps: &machineconfigurationv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "machine-config-pool",
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					MachineCount: 0,
 				},
 			},
@@ -54,18 +54,18 @@ func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
 					Name: "aro-master-0",
 				},
 			},
-			mcps: &mcv1.MachineConfigPool{
+			mcps: &machineconfigurationv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "machine-config-pool",
 				},
-				Status: mcv1.MachineConfigPoolStatus{
+				Status: machineconfigurationv1.MachineConfigPoolStatus{
 					MachineCount: 2,
 				},
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			mcocli := mcofake.NewSimpleClientset(tt.mcps)
+			mcocli := machineconfigurationfake.NewSimpleClientset(tt.mcps)
 			cli := fake.NewSimpleClientset(tt.nodes)
 
 			controller := gomock.NewController(t)
