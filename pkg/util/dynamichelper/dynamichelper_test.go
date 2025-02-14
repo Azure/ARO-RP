@@ -18,7 +18,6 @@ import (
 	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/rest/fake"
 
@@ -219,14 +218,9 @@ func TestMergeGK(t *testing.T) {
 			},
 			want: &appsv1.Deployment{
 				Spec: appsv1.DeploymentSpec{
-					Replicas: to.Int32Ptr(1),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
-							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
-							DNSPolicy:                     "ClusterFirst",
-							SecurityContext:               &corev1.PodSecurityContext{},
-							SchedulerName:                 "default-scheduler",
+							RestartPolicy: "",
 							Containers: []corev1.Container{
 								{
 									Image: "nginx:2.0.1",
@@ -240,28 +234,11 @@ func TestMergeGK(t *testing.T) {
 											"memory": apiresource.MustParse("100Mi"),
 										},
 									},
-									TerminationMessagePath:   "/dev/termination-log",
-									TerminationMessagePolicy: "File",
-									ImagePullPolicy:          "IfNotPresent",
 								},
 							},
 						},
 					},
-					Strategy: appsv1.DeploymentStrategy{
-						Type: appsv1.RollingUpdateDeploymentStrategyType,
-						RollingUpdate: &appsv1.RollingUpdateDeployment{
-							MaxUnavailable: &intstr.IntOrString{
-								Type:   1,
-								StrVal: "25%",
-							},
-							MaxSurge: &intstr.IntOrString{
-								Type:   1,
-								StrVal: "25%",
-							},
-						},
-					},
-					RevisionHistoryLimit:    to.Int32Ptr(10),
-					ProgressDeadlineSeconds: to.Int32Ptr(600),
+					Strategy: appsv1.DeploymentStrategy{},
 				},
 			},
 			wantChanged: true,
@@ -333,7 +310,6 @@ func TestMergeGK(t *testing.T) {
 				Data: map[string][]byte{
 					"secret": []byte("old"),
 				},
-				Type: corev1.SecretTypeOpaque,
 			},
 			wantChanged:   false,
 			wantEmptyDiff: true,

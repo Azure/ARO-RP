@@ -238,7 +238,7 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 		old, new := old.(*corev1.ConfigMap), new.(*corev1.ConfigMap)
 
 		_, injectTrustBundle := new.ObjectMeta.Labels["config.openshift.io/inject-trusted-cabundle"]
-		new.Data = map[string]string{}
+		new.Data = make(map[string]string)
 		if injectTrustBundle {
 			caBundle, ext := old.Data["ca-bundle.crt"]
 			if ext {

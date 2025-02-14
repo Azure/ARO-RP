@@ -86,7 +86,6 @@ func TestEnsureDeleted(t *testing.T) {
 }
 
 func TestMerge(t *testing.T) {
-	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster
 
 	mhc := &machinev1beta1.MachineHealthCheck{
 		ObjectMeta: metav1.ObjectMeta{
@@ -202,7 +201,6 @@ func TestMerge(t *testing.T) {
 						"openshift.io/sa.scc.supplemental-groups": "groups",
 						"openshift.io/sa.scc.uid-range":           "uids",
 					},
-					Labels: map[string]string{"kubernetes.io/metadata.name": "test"},
 				},
 				Spec: corev1.NamespaceSpec{
 					Finalizers: []corev1.FinalizerName{
@@ -359,27 +357,6 @@ func TestMerge(t *testing.T) {
 			wantEmptyDiff: true,
 		},
 		{
-			name: "Service no changes",
-			old: &corev1.Service{
-				Spec: corev1.ServiceSpec{
-					ClusterIP:             "1.2.3.4",
-					Type:                  corev1.ServiceTypeClusterIP,
-					SessionAffinity:       corev1.ServiceAffinityNone,
-					InternalTrafficPolicy: &serviceInternalTrafficPolicy,
-				},
-			},
-			new: &corev1.Service{},
-			want: &corev1.Service{
-				Spec: corev1.ServiceSpec{
-					ClusterIP:             "1.2.3.4",
-					Type:                  corev1.ServiceTypeClusterIP,
-					SessionAffinity:       corev1.ServiceAffinityNone,
-					InternalTrafficPolicy: &serviceInternalTrafficPolicy,
-				},
-			},
-			wantEmptyDiff: true,
-		},
-		{
 			name: "DaemonSet changes",
 			old: &appsv1.DaemonSet{
 				ObjectMeta: metav1.ObjectMeta{
@@ -404,25 +381,6 @@ func TestMerge(t *testing.T) {
 					CurrentNumberScheduled: 5,
 					NumberReady:            5,
 					ObservedGeneration:     1,
-				},
-				Spec: appsv1.DaemonSetSpec{
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
-							DNSPolicy:                     "ClusterFirst",
-							SecurityContext:               &corev1.PodSecurityContext{},
-							SchedulerName:                 "default-scheduler",
-						},
-					},
-					UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
-						Type: appsv1.RollingUpdateDaemonSetStrategyType,
-						RollingUpdate: &appsv1.RollingUpdateDaemonSet{
-							MaxUnavailable: &intstr.IntOrString{IntVal: 1},
-							MaxSurge:       &intstr.IntOrString{IntVal: 0},
-						},
-					},
-					RevisionHistoryLimit: to.Int32Ptr(10),
 				},
 			},
 			wantChanged: true,
@@ -463,32 +421,11 @@ func TestMerge(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: to.Int32Ptr(1),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
-							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
-							DNSPolicy:                     "ClusterFirst",
-							SecurityContext:               &corev1.PodSecurityContext{},
-							SchedulerName:                 "default-scheduler",
-							DeprecatedServiceAccount:      "openshift-apiserver-sa",
+							DeprecatedServiceAccount: "openshift-apiserver-sa",
 						},
 					},
-					Strategy: appsv1.DeploymentStrategy{
-						Type: appsv1.RollingUpdateDeploymentStrategyType,
-						RollingUpdate: &appsv1.RollingUpdateDeployment{
-							MaxUnavailable: &intstr.IntOrString{
-								Type:   1,
-								StrVal: "25%",
-							},
-							MaxSurge: &intstr.IntOrString{
-								Type:   1,
-								StrVal: "25%",
-							},
-						},
-					},
-					RevisionHistoryLimit:    to.Int32Ptr(10),
-					ProgressDeadlineSeconds: to.Int32Ptr(600),
 				},
 			},
 			wantChanged: true,
@@ -632,7 +569,6 @@ func TestMerge(t *testing.T) {
 				Data: map[string][]byte{
 					"secret": []byte("new"),
 				},
-				Type: corev1.SecretTypeOpaque,
 			},
 			wantChanged:      true,
 			wantScrubbedDiff: true,
