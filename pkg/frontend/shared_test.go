@@ -135,7 +135,6 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	enricherMock.EXPECT().Enrich(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	_, auditEntry := testlog.NewAudit()
-	log := logrus.NewEntry(logrus.StandardLogger())
 	otelAudit := testlog.NewOtelAuditClient()
 
 	fixture := testdatabase.NewFixture()
