@@ -230,7 +230,8 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitClusterSync,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitMaintenanceState,
-		mon.emitCertificateExpirationStatuses,
+		mon.emitMDSDCertificateExpiry,
+		mon.emitIngressAndAPIServerCertificateExpiry,
 		mon.emitEtcdCertificateExpiry,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 		mon.emitCWPStatus,
