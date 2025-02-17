@@ -76,24 +76,34 @@ mock a cluster MSI. This script will also create the platform identities, platfo
      `eastus`).
    - `RP_MODE`: Set to `development` to use a development RP running at
      https://localhost:8443/.
+   
+    **NOTE:** When creating a MIWI cluster, add the following as well:
+  
+
    - `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
    - `MOCK_MSI_OBJECT_ID`: Object ID for service principal that mocks cluster MSI (see previous step).
    - `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
    - `MOCK_MSI_TENANT_ID`: Tenant ID for service principal that mocks cluster MSI (see previous step).
    - `PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS`: The platform workload identity role sets (see previous step or value in `local_dev_env.sh`).
 
-1. Create your own RP database:
+1. Create your own RP database (if you don't already have one in the $LOCATION):
 
-   ```bash
-   az deployment group create \
-     -g "$RESOURCEGROUP" \
-     -n "databases-development-${AZURE_PREFIX:-$USER}" \
-     --template-file pkg/deploy/assets/databases-development.json \
-     --parameters \
-       "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
-       "databaseName=$DATABASE_NAME" \
-     1>/dev/null
-   ```
+    * The following command can be used to check whether a DB already exists
+        ```bash
+        az deployment group list -g "$RESOURCEGROUP" -o table | grep "databases-development-${AZURE_PREFIX:-$USER}"
+        ```
+
+    * This is how you create one, if needed
+      ```bash
+      az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n "databases-development-${AZURE_PREFIX:-$USER}" \
+        --template-file pkg/deploy/assets/databases-development.json \
+        --parameters \
+          "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
+          "databaseName=$DATABASE_NAME" \
+        1>/dev/null
+      ```
 
 ## Run the RP and create a cluster
 
