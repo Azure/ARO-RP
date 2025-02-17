@@ -10,7 +10,7 @@ run:
 
 output:
   format: 
-    - github-actions
+    - 'github-actions'
 
 issues:
   max-same-issues: 0
