@@ -171,6 +171,7 @@ Make sure that `PKG_CONFIG_PATH` contains the pkgconfig files of the above packa
     make init-contrib
     git config --global github.user <<user_name>>
     ```
+    - **NOTE**: ```make init-contrib``` will enforce a branch naming regex on your commits.
 
 # Troubleshooting
 
@@ -179,6 +180,13 @@ To resolve, run `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets`.
 
 - `az -v` does not return `aro` as dependency.
 To resolve, make sure it is being used the `env` file parameters as per the `env.example`
+
+- If you get the following error when running `git commit`
+
+    ```bash
+    There is something wrong with your branch name. Branch names in this project must adhere to this contract: ^${USERNAME}\/(ARO-[0-9]{4}[a-z0-9._-]*|hotfix-[a-z0-9._-]+|gh-issue-[0-9]+[a-z0-9._-]*)$. Your commit will be rejected. Please rename your branch (git branch --move) to a valid name and try again.
+    ```
+    Make sure you adhere to the rule, unless the PR is not tied to a Jira ticket, a GitHub issue or a hotfix. For those cases you can append `--no-verify` to your `git commit` command.
 
 ## Getting Started with Docker Compose
 
