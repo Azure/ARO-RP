@@ -9,7 +9,8 @@ run:
   go: "1.22"
 
 output:
-  format: github-actions
+  format: 
+    - github-actions
 
 issues:
   max-same-issues: 0
