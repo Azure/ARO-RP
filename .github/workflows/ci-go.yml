@@ -56,7 +56,7 @@ jobs:
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v6
       with:
-        version: v1.65.5
+        version: v1.64.5
         args: -v --timeout 15m
 
   validate-go:
