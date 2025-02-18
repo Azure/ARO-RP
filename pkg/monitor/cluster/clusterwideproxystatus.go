@@ -208,7 +208,7 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 				"status":  strconv.FormatBool(status),
 				"Message": message,
 			})
-			mon.log.Infof(message)
+			mon.log.Info(message)
 			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
 					"metric":  cwp,
