@@ -15,7 +15,7 @@ issues:
   exclude-dirs:
     - vendor/portal
     - vendor
-  exclude-dirs-use-default: true 
+  exclude-dirs-use-default: true
   exclude-rules:
     - linters:
         - staticcheck
