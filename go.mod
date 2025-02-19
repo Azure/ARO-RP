@@ -63,7 +63,7 @@ require (
 	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/cloud-credential-operator v0.0.0-20240910012137-a0245d57d1e6
-	github.com/openshift/hive/apis v0.0.0-20241211214914-af54e2fbd990
+	github.com/openshift/hive/apis v0.0.0-20250212001559-5d3f4d77dc90
 	github.com/openshift/library-go v0.0.0-20230620084201-504ca4bd5a83
 	github.com/openshift/machine-config-operator v0.0.0-00010101000000-000000000000
 	github.com/pires/go-proxyproto v0.6.2
