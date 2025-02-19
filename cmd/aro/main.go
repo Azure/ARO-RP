@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -39,6 +40,11 @@ func main() {
 	ctx := context.Background()
 	audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
+
+	if env.IsLocalDevelopmentMode() {
+		log.Logger.SetFormatter(utillog.NewDevFilterFormatter())
+		log.Logger.Out = os.Stdout
+	}
 
 	go func() {
 		log.Warn(http.ListenAndServe("localhost:6060", nil))
