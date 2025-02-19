@@ -117,6 +117,12 @@ func IsUnauthorizedClientError(err error) bool {
 	return strings.Contains(err.Error(), "AADSTS700016")
 }
 
+// Returns true when the error is due to expired application client/secret keys.
+// See https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes#aadsts-error-codes
+func IsClientSecretKeysExpired(err error) bool {
+	return strings.Contains(err.Error(), "AADSTS7000222")
+}
+
 // ResourceGroupNotFound returns true if the error is an ResourceGroupNotFound error
 func ResourceGroupNotFound(err error) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
