@@ -25,7 +25,7 @@ type manager struct {
 	env  env.Interface
 
 	clusterUUID string
-	pullSecret  *pullsecret.UserPass
+	pullSecrets map[string]*pullsecret.UserPass
 
 	success bool
 }
@@ -36,7 +36,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, clusterUUID 
 		return nil, errors.New("running cluster installs in a container is only run in development")
 	}
 
-	pullSecret, err := pullsecret.Extract(os.Getenv("PULL_SECRET"), env.ACRDomain())
+	pullSecrets, err := pullsecret.Extract(os.Getenv("PULL_SECRET"))
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +52,6 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, clusterUUID 
 		env:  env,
 
 		clusterUUID: clusterUUID,
-		pullSecret:  pullSecret,
+		pullSecrets: pullSecrets,
 	}, nil
 }
