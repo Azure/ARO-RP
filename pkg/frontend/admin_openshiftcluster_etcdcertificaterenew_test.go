@@ -299,7 +299,6 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 								},
 							},
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -320,7 +319,6 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 								},
 							},
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -450,7 +448,6 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 								},
 							},
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -471,7 +468,6 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 								},
 							},
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -646,7 +642,6 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 								},
 							},
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -667,7 +662,6 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 								},
 							},
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -688,7 +682,6 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 								},
 							},
 						},
-						LatestAvailableRevision: 3,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",

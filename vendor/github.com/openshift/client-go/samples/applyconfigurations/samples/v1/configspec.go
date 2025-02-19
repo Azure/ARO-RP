@@ -4,16 +4,18 @@ package v1
 
 import (
 	v1 "github.com/openshift/api/operator/v1"
+	samplesv1 "github.com/openshift/api/samples/v1"
 )
 
 // ConfigSpecApplyConfiguration represents an declarative configuration of the ConfigSpec type for use
 // with apply.
 type ConfigSpecApplyConfiguration struct {
-	ManagementState     *v1.ManagementState `json:"managementState,omitempty"`
-	SamplesRegistry     *string             `json:"samplesRegistry,omitempty"`
-	Architectures       []string            `json:"architectures,omitempty"`
-	SkippedImagestreams []string            `json:"skippedImagestreams,omitempty"`
-	SkippedTemplates    []string            `json:"skippedTemplates,omitempty"`
+	ManagementState     *v1.ManagementState       `json:"managementState,omitempty"`
+	SamplesRegistry     *string                   `json:"samplesRegistry,omitempty"`
+	Architectures       []string                  `json:"architectures,omitempty"`
+	SkippedImagestreams []string                  `json:"skippedImagestreams,omitempty"`
+	SkippedTemplates    []string                  `json:"skippedTemplates,omitempty"`
+	SkippedHelmCharts   []samplesv1.HelmChartName `json:"skippedHelmCharts,omitempty"`
 }
 
 // ConfigSpecApplyConfiguration constructs an declarative configuration of the ConfigSpec type for use with
@@ -64,6 +66,16 @@ func (b *ConfigSpecApplyConfiguration) WithSkippedImagestreams(values ...string)
 func (b *ConfigSpecApplyConfiguration) WithSkippedTemplates(values ...string) *ConfigSpecApplyConfiguration {
 	for i := range values {
 		b.SkippedTemplates = append(b.SkippedTemplates, values[i])
+	}
+	return b
+}
+
+// WithSkippedHelmCharts adds the given value to the SkippedHelmCharts field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the SkippedHelmCharts field.
+func (b *ConfigSpecApplyConfiguration) WithSkippedHelmCharts(values ...samplesv1.HelmChartName) *ConfigSpecApplyConfiguration {
+	for i := range values {
+		b.SkippedHelmCharts = append(b.SkippedHelmCharts, values[i])
 	}
 	return b
 }

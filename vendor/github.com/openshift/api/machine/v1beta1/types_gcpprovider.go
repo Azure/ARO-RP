@@ -25,13 +25,56 @@ const (
 	RestartPolicyNever GCPRestartPolicyType = "Never"
 )
 
+// SecureBootPolicy represents the secure boot configuration for the GCP machine.
+type SecureBootPolicy string
+
+const (
+	// SecureBootPolicyEnabled enables the secure boot configuration for the GCP machine.
+	SecureBootPolicyEnabled SecureBootPolicy = "Enabled"
+	// SecureBootPolicyDisabled disables the secure boot configuration for the GCP machine.
+	SecureBootPolicyDisabled SecureBootPolicy = "Disabled"
+)
+
+// VirtualizedTrustedPlatformModulePolicy represents the virtualized trusted platform module configuration for the GCP machine.
+type VirtualizedTrustedPlatformModulePolicy string
+
+const (
+	// VirtualizedTrustedPlatformModulePolicyEnabled enables the virtualized trusted platform module configuration for the GCP machine.
+	VirtualizedTrustedPlatformModulePolicyEnabled VirtualizedTrustedPlatformModulePolicy = "Enabled"
+	// VirtualizedTrustedPlatformModulePolicyDisabled disables the virtualized trusted platform module configuration for the GCP machine.
+	VirtualizedTrustedPlatformModulePolicyDisabled VirtualizedTrustedPlatformModulePolicy = "Disabled"
+)
+
+// IntegrityMonitoringPolicy represents the integrity monitoring configuration for the GCP machine.
+type IntegrityMonitoringPolicy string
+
+const (
+	// IntegrityMonitoringPolicyEnabled enables integrity monitoring for the GCP machine.
+	IntegrityMonitoringPolicyEnabled IntegrityMonitoringPolicy = "Enabled"
+	// IntegrityMonitoringPolicyDisabled disables integrity monitoring for the GCP machine.
+	IntegrityMonitoringPolicyDisabled IntegrityMonitoringPolicy = "Disabled"
+)
+
+// ConfidentialComputePolicy represents the confidential compute configuration for the GCP machine.
+type ConfidentialComputePolicy string
+
+const (
+	// ConfidentialComputePolicyEnabled enables confidential compute for the GCP machine.
+	ConfidentialComputePolicyEnabled ConfidentialComputePolicy = "Enabled"
+	// ConfidentialComputePolicyDisabled disables confidential compute for the GCP machine.
+	ConfidentialComputePolicyDisabled ConfidentialComputePolicy = "Disabled"
+)
+
 // GCPMachineProviderSpec is the type that will be embedded in a Machine.Spec.ProviderSpec field
 // for an GCP virtual machine. It is used by the GCP machine actuator to create a single Machine.
 // Compatibility level 2: Stable within a major release for a minimum of 9 months or 3 minor releases (whichever is longer).
 // +openshift:compatibility-gen:level=2
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type GCPMachineProviderSpec struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// UserDataSecret contains a local reference to a secret that contains the
 	// UserData to apply to the instance
@@ -59,7 +102,7 @@ type GCPMachineProviderSpec struct {
 	NetworkInterfaces []*GCPNetworkInterface `json:"networkInterfaces,omitempty"`
 	// ServiceAccounts is a list of GCP service accounts to be used by the VM.
 	ServiceAccounts []GCPServiceAccount `json:"serviceAccounts"`
-	// Tags list of tags to apply to the VM.
+	// Tags list of network tags to apply to the VM.
 	Tags []string `json:"tags,omitempty"`
 	// TargetPools are used for network TCP/UDP load balancing. A target pool references member instances,
 	// an associated legacy HttpHealthCheck resource, and, optionally, a backup target pool
@@ -95,6 +138,60 @@ type GCPMachineProviderSpec struct {
 	// +kubebuilder:validation:Enum=Always;Never;
 	// +optional
 	RestartPolicy GCPRestartPolicyType `json:"restartPolicy,omitempty"`
+
+	// ShieldedInstanceConfig is the Shielded VM configuration for the VM
+	// +optional
+	ShieldedInstanceConfig GCPShieldedInstanceConfig `json:"shieldedInstanceConfig,omitempty"`
+
+	// confidentialCompute Defines whether the instance should have confidential compute enabled.
+	// If enabled OnHostMaintenance is required to be set to "Terminate".
+	// If omitted, the platform chooses a default, which is subject to change over time, currently that default is false.
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +optional
+	ConfidentialCompute ConfidentialComputePolicy `json:"confidentialCompute,omitempty"`
+
+	// resourceManagerTags is an optional list of tags to apply to the GCP resources created for
+	// the cluster. See https://cloud.google.com/resource-manager/docs/tags/tags-overview for
+	// information on tagging GCP resources. GCP supports a maximum of 50 tags per resource.
+	// +kubebuilder:validation:MaxItems=50
+	// +listType=map
+	// +listMapKey=key
+	// +optional
+	ResourceManagerTags []ResourceManagerTag `json:"resourceManagerTags,omitempty"`
+}
+
+// ResourceManagerTag is a tag to apply to GCP resources created for the cluster.
+type ResourceManagerTag struct {
+	// parentID is the ID of the hierarchical resource where the tags are defined
+	// e.g. at the Organization or the Project level. To find the Organization or Project ID ref
+	// https://cloud.google.com/resource-manager/docs/creating-managing-organization#retrieving_your_organization_id
+	// https://cloud.google.com/resource-manager/docs/creating-managing-projects#identifying_projects
+	// An OrganizationID can have a maximum of 32 characters and must consist of decimal numbers, and
+	// cannot have leading zeroes. A ProjectID must be 6 to 30 characters in length, can only contain
+	// lowercase letters, numbers, and hyphens, and must start with a letter, and cannot end with a hyphen.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=32
+	// +kubebuilder:validation:Pattern=`(^[1-9][0-9]{0,31}$)|(^[a-z][a-z0-9-]{4,28}[a-z0-9]$)`
+	ParentID string `json:"parentID"`
+
+	// key is the key part of the tag. A tag key can have a maximum of 63 characters and cannot be empty.
+	// Tag key must begin and end with an alphanumeric character, and must contain only uppercase, lowercase
+	// alphanumeric characters, and the following special characters `._-`.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([0-9A-Za-z_.-]{0,61}[a-zA-Z0-9])?$`
+	Key string `json:"key"`
+
+	// value is the value part of the tag. A tag value can have a maximum of 63 characters and cannot be empty.
+	// Tag value must begin and end with an alphanumeric character, and must contain only uppercase, lowercase
+	// alphanumeric characters, and the following special characters `_-.@%=+:,*#&(){}[]` and spaces.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([0-9A-Za-z_.@%=+:,*#&()\[\]{}\-\s]{0,61}[a-zA-Z0-9])?$`
+	Value string `json:"value"`
 }
 
 // GCPDisk describes disks for GCP.
@@ -200,4 +297,31 @@ type GCPMachineProviderStatus struct {
 	// errors or other status
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// GCPShieldedInstanceConfig describes the shielded VM configuration of the instance on GCP.
+// Shielded VM configuration allow users to enable and disable Secure Boot, vTPM, and Integrity Monitoring.
+type GCPShieldedInstanceConfig struct {
+	// SecureBoot Defines whether the instance should have secure boot enabled.
+	// Secure Boot verify the digital signature of all boot components, and halting the boot process if signature verification fails.
+	// If omitted, the platform chooses a default, which is subject to change over time, currently that default is Disabled.
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	//+optional
+	SecureBoot SecureBootPolicy `json:"secureBoot,omitempty"`
+
+	// VirtualizedTrustedPlatformModule enable virtualized trusted platform module measurements to create a known good boot integrity policy baseline.
+	// The integrity policy baseline is used for comparison with measurements from subsequent VM boots to determine if anything has changed.
+	// This is required to be set to "Enabled" if IntegrityMonitoring is enabled.
+	// If omitted, the platform chooses a default, which is subject to change over time, currently that default is Enabled.
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +optional
+	VirtualizedTrustedPlatformModule VirtualizedTrustedPlatformModulePolicy `json:"virtualizedTrustedPlatformModule,omitempty"`
+
+	// IntegrityMonitoring determines whether the instance should have integrity monitoring that verify the runtime boot integrity.
+	// Compares the most recent boot measurements to the integrity policy baseline and return
+	// a pair of pass/fail results depending on whether they match or not.
+	// If omitted, the platform chooses a default, which is subject to change over time, currently that default is Enabled.
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +optional
+	IntegrityMonitoring IntegrityMonitoringPolicy `json:"integrityMonitoring,omitempty"`
 }

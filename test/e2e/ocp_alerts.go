@@ -22,6 +22,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// First, create a struct that implements the SecretReader interface
+type StaticSecretReader struct {
+	value string
+}
+
+// Implement the required methods
+func (s *StaticSecretReader) Fetch(ctx context.Context) (string, error) {
+	return s.value, nil
+}
+
+func (s *StaticSecretReader) Description() string {
+	return "Static token from Kubernetes secret"
+}
+
+func (s *StaticSecretReader) Immutable() bool {
+	// If your token is static/unchanging, return true
+	return true
+}
+
 var _ = Describe("Alerts", Label(smoke), Serial, func() {
 	It("should not be firing", func(ctx context.Context) {
 		var host string
@@ -55,7 +74,7 @@ var _ = Describe("Alerts", Label(smoke), Serial, func() {
 			Client: &http.Client{
 				Transport: config.NewAuthorizationCredentialsRoundTripper(
 					"Bearer",
-					config.Secret(token.Status.Token),
+					&StaticSecretReader{value: token.Status.Token},
 					roundTripper,
 				),
 			},
