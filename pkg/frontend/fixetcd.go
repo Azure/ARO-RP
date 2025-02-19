@@ -16,9 +16,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/davecgh/go-spew/spew"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	securityv1 "github.com/openshift/api/security/v1"
-	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
