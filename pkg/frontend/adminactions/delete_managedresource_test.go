@@ -146,6 +146,23 @@ func TestDeleteManagedResource(t *testing.T) {
 								},
 							},
 						},
+						Probes: &[]mgmtnetwork.Probe{
+							{
+								Name: to.StringPtr("probe-2"),
+								ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/probe-2"),
+								ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+									Port:           to.Int32Ptr(80),
+									Protocol:       mgmtnetwork.ProbeProtocolHTTP,
+									NumberOfProbes: to.Int32Ptr(3),
+									RequestPath:    to.StringPtr("/health2"),
+									LoadBalancingRules: &[]mgmtnetwork.SubResource{
+										{
+											ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+										},
+									},
+								},
+							},
+						},
 					},
 					Name:     to.StringPtr(infraID),
 					Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
@@ -184,11 +201,12 @@ func TestDeleteManagedResource(t *testing.T) {
 			},
 		},
 		{
-			name:        "deletion of probe still in use is forbidden",
+			name:        "prevent deletion of probe still in use",
 			resourceID:  probeID,
-			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("probe %s still in use by load balancing rules, remove references prior to removing the probe", probeID)),
+			expectedErr: fmt.Sprintf("probe %s still in use by load balancing rules, remove references prior to removing the probe", probeID),
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
-				resources.EXPECT().GetByID(gomock.Any(), probeID, "2020-08-01").Return(originalLB, nil)
+				resources.EXPECT().GetByID(gomock.Any(), probeID, "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", "").Return(originalLB, nil)
 			},
 		},
 	} {
