@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
@@ -116,8 +115,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
-		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.MachineRoleMaster)).    // to reconcile on master machine replacement
-		Watches(&source.Kind{Type: &machinev1beta1.MachineSet{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.MachineRoleWorker)). // to reconcile on worker machines
+		Watches(&machinev1beta1.Machine{}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.MachineRoleMaster)).    // to reconcile on master machine replacement
+		Watches(&machinev1beta1.MachineSet{}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(predicates.MachineRoleWorker)). // to reconcile on worker machines
 		Named(ControllerName).
 		Complete(r)
 }

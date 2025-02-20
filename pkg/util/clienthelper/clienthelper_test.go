@@ -115,7 +115,7 @@ func TestMerge(t *testing.T) {
 
 	mhcWithStatus := mhc.DeepCopy()
 	mhcWithStatus.Status = machinev1beta1.MachineHealthCheckStatus{
-		Conditions: machinev1beta1.Conditions{
+		Conditions: []machinev1beta1.Condition{
 			{
 				Type:               machinev1beta1.RemediationAllowedCondition,
 				Status:             corev1.ConditionTrue,

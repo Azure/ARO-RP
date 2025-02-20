@@ -18,6 +18,7 @@ package metrics
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -57,7 +58,7 @@ func NewTestableTimingHistogram(nowFunc func() time.Time, opts *TimingHistogramO
 	h := &TimingHistogram{
 		TimingHistogramOpts: opts,
 		nowFunc:             nowFunc,
-		lazyMetric:          lazyMetric{},
+		lazyMetric:          lazyMetric{stabilityLevel: opts.StabilityLevel},
 	}
 	h.setPrometheusHistogram(noopMetric{})
 	h.lazyInit(h, BuildFQName(opts.Namespace, opts.Subsystem, opts.Name))
@@ -125,18 +126,13 @@ func NewTestableTimingHistogramVec(nowFunc func() time.Time, opts *TimingHistogr
 	opts.StabilityLevel.setDefaults()
 
 	fqName := BuildFQName(opts.Namespace, opts.Subsystem, opts.Name)
-	allowListLock.RLock()
-	if allowList, ok := labelValueAllowLists[fqName]; ok {
-		opts.LabelValueAllowLists = allowList
-	}
-	allowListLock.RUnlock()
 
 	v := &TimingHistogramVec{
 		TimingHistogramVec:  noopTimingHistogramVec,
 		TimingHistogramOpts: opts,
 		nowFunc:             nowFunc,
 		originalLabels:      labels,
-		lazyMetric:          lazyMetric{},
+		lazyMetric:          lazyMetric{stabilityLevel: opts.StabilityLevel},
 	}
 	v.lazyInit(v, fqName)
 	return v
@@ -175,8 +171,20 @@ func (v *TimingHistogramVec) WithLabelValuesChecked(lvs ...string) (GaugeMetric,
 	}
 	if v.LabelValueAllowLists != nil {
 		v.LabelValueAllowLists.ConstrainToAllowedList(v.originalLabels, lvs)
+	} else {
+		v.initializeLabelAllowListsOnce.Do(func() {
+			allowListLock.RLock()
+			if allowList, ok := labelValueAllowLists[v.FQName()]; ok {
+				v.LabelValueAllowLists = allowList
+				allowList.ConstrainToAllowedList(v.originalLabels, lvs)
+			}
+			allowListLock.RUnlock()
+		})
 	}
 	ops, err := v.TimingHistogramVec.GetMetricWithLabelValues(lvs...)
+	if err != nil {
+		return noop, err
+	}
 	return ops.(GaugeMetric), err
 }
 
@@ -211,6 +219,15 @@ func (v *TimingHistogramVec) WithChecked(labels map[string]string) (GaugeMetric,
 	}
 	if v.LabelValueAllowLists != nil {
 		v.LabelValueAllowLists.ConstrainLabelMap(labels)
+	} else {
+		v.initializeLabelAllowListsOnce.Do(func() {
+			allowListLock.RLock()
+			if allowList, ok := labelValueAllowLists[v.FQName()]; ok {
+				v.LabelValueAllowLists = allowList
+				allowList.ConstrainLabelMap(labels)
+			}
+			allowListLock.RUnlock()
+		})
 	}
 	ops, err := v.TimingHistogramVec.GetMetricWith(labels)
 	return ops.(GaugeMetric), err
@@ -249,6 +266,13 @@ func (v *TimingHistogramVec) Reset() {
 	}
 
 	v.TimingHistogramVec.Reset()
+}
+
+// ResetLabelAllowLists resets the label allow list for the TimingHistogramVec.
+// NOTE: This should only be used in test.
+func (v *TimingHistogramVec) ResetLabelAllowLists() {
+	v.initializeLabelAllowListsOnce = sync.Once{}
+	v.LabelValueAllowLists = nil
 }
 
 // WithContext returns wrapped TimingHistogramVec with context

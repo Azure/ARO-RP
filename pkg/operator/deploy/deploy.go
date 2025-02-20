@@ -432,7 +432,7 @@ func (o *operator) applyDeployment(ctx context.Context, resources []kruntime.Obj
 				return err
 			}
 
-			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
+			err = wait.PollUntilContextTimeout(ctx, time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 				crd, err := o.extensionscli.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, acc.GetName(), metav1.GetOptions{})
 				if err != nil {
 					return false, err
@@ -727,7 +727,7 @@ func (o *operator) IsRunningDesiredVersion(ctx context.Context) (bool, error) {
 }
 
 func checkIngressIP(ingressProfiles []api.IngressProfile) (string, error) {
-	if len(ingressProfiles) < 1 {
+	if ingressProfiles == nil || len(ingressProfiles) < 1 {
 		return "", errors.New("no Ingress Profiles found")
 	}
 	ingressIP := ingressProfiles[0].IP

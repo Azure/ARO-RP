@@ -19,14 +19,15 @@ package leaderelection
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 	coordinationv1client "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+
 	"sigs.k8s.io/controller-runtime/pkg/recorder"
 )
 
@@ -39,7 +40,7 @@ type Options struct {
 	LeaderElection bool
 
 	// LeaderElectionResourceLock determines which resource lock to use for leader election,
-	// defaults to "configmapsleases".
+	// defaults to "leases".
 	LeaderElectionResourceLock string
 
 	// LeaderElectionNamespace determines the namespace in which the leader
@@ -49,6 +50,12 @@ type Options struct {
 	// LeaderElectionID determines the name of the resource that leader election
 	// will use for holding the leader lock.
 	LeaderElectionID string
+
+	// RenewDeadline is the renew deadline for this leader election client.
+	// Must be set to ensure the resource lock has an appropriate client timeout.
+	// Without that, a single slow response from the API server can result
+	// in losing leadership.
+	RenewDeadline time.Duration
 }
 
 // NewResourceLock creates a new resource lock for use in a leader election loop.
@@ -57,11 +64,12 @@ func NewResourceLock(config *rest.Config, recorderProvider recorder.Provider, op
 		return nil, nil
 	}
 
-	// Default resource lock to "configmapsleases". We must keep this default until we are sure all controller-runtime
-	// users have upgraded from the original default ConfigMap lock to a controller-runtime version that has this new
-	// default. Many users of controller-runtime skip versions, so we should be extremely conservative here.
+	// Default resource lock to "leases". The previous default (from v0.7.0 to v0.11.x) was configmapsleases, which was
+	// used to migrate from configmaps to leases. Since the default was "configmapsleases" for over a year, spanning
+	// five minor releases, any actively maintained operators are very likely to have a released version that uses
+	// "configmapsleases". Therefore defaulting to "leases" should be safe.
 	if options.LeaderElectionResourceLock == "" {
-		options.LeaderElectionResourceLock = resourcelock.ConfigMapsLeasesResourceLock
+		options.LeaderElectionResourceLock = resourcelock.LeasesResourceLock
 	}
 
 	// LeaderElectionID must be provided to prevent clashes
@@ -87,6 +95,20 @@ func NewResourceLock(config *rest.Config, recorderProvider recorder.Provider, op
 
 	// Construct clients for leader election
 	rest.AddUserAgent(config, "leader-election")
+
+	if options.RenewDeadline != 0 {
+		return resourcelock.NewFromKubeconfig(options.LeaderElectionResourceLock,
+			options.LeaderElectionNamespace,
+			options.LeaderElectionID,
+			resourcelock.ResourceLockConfig{
+				Identity:      id,
+				EventRecorder: recorderProvider.GetEventRecorderFor(id),
+			},
+			config,
+			options.RenewDeadline,
+		)
+	}
+
 	corev1Client, err := corev1client.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -96,7 +118,6 @@ func NewResourceLock(config *rest.Config, recorderProvider recorder.Provider, op
 	if err != nil {
 		return nil, err
 	}
-
 	return resourcelock.New(options.LeaderElectionResourceLock,
 		options.LeaderElectionNamespace,
 		options.LeaderElectionID,
@@ -105,7 +126,8 @@ func NewResourceLock(config *rest.Config, recorderProvider recorder.Provider, op
 		resourcelock.ResourceLockConfig{
 			Identity:      id,
 			EventRecorder: recorderProvider.GetEventRecorderFor(id),
-		})
+		},
+	)
 }
 
 func getInClusterNamespace() (string, error) {
@@ -118,7 +140,7 @@ func getInClusterNamespace() (string, error) {
 	}
 
 	// Load the namespace file and return its content
-	namespace, err := ioutil.ReadFile(inClusterNamespacePath)
+	namespace, err := os.ReadFile(inClusterNamespacePath)
 	if err != nil {
 		return "", fmt.Errorf("error reading namespace file: %w", err)
 	}
