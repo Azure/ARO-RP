@@ -17,8 +17,10 @@ import (
 )
 
 var (
-	frontendIPConfigurationPattern = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/frontendIPConfigurations/([^/]+)$`
-	denyList                       = []string{
+	frontendIPConfigurationPattern        = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/frontendIPConfigurations/([^/]+)$`
+	loadbalancerProbeConfigurationPattern = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/probes/([^/]+)$`
+
+	denyList = []string{
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateLinkServices/([^/]+)$`,
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateEndpoints/([^/]+)$`,
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Storage/(.+)$`,
@@ -51,6 +53,12 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 		return a.deleteFrontendIPConfiguration(ctx, resourceID)
 	}
 
+	re = regexp.MustCompile(loadbalancerProbeConfigurationPattern)
+	// Probes aren't a standalone resource, just a setting inside the loadbalancer resource.
+	if re.MatchString(resourceID) {
+		return a.deleteLoadbalancerProbeConfiguration(ctx, resourceID)
+	}
+
 	return a.resources.DeleteByIDAndWait(ctx, resourceID, apiVersion)
 }
 
@@ -65,6 +73,24 @@ func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resour
 	}
 
 	err = loadbalancer.RemoveFrontendIPConfiguration(&lb, resourceID)
+	if err != nil {
+		return err
+	}
+
+	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, lbName, lb)
+}
+
+func (a *azureActions) deleteLoadbalancerProbeConfiguration(ctx context.Context, resourceID string) error {
+	idParts := strings.Split(resourceID, "/")
+	rg := idParts[4]
+	lbName := idParts[8]
+
+	lb, err := a.loadBalancers.Get(ctx, rg, lbName, "")
+	if err != nil {
+		return err
+	}
+
+	err = loadbalancer.RemoveLoadbalancerProbeConfiguration(&lb, resourceID)
 	if err != nil {
 		return err
 	}
