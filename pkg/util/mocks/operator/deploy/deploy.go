@@ -111,20 +111,6 @@ func (mr *MockOperatorMockRecorder) IsRunningDesiredVersion(arg0 any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunningDesiredVersion", reflect.TypeOf((*MockOperator)(nil).IsRunningDesiredVersion), arg0)
 }
 
-// RenewMDSDCertificate mocks base method.
-func (m *MockOperator) RenewMDSDCertificate(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RenewMDSDCertificate", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RenewMDSDCertificate indicates an expected call of RenewMDSDCertificate.
-func (mr *MockOperatorMockRecorder) RenewMDSDCertificate(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenewMDSDCertificate", reflect.TypeOf((*MockOperator)(nil).RenewMDSDCertificate), arg0)
-}
-
 // Restart mocks base method.
 func (m *MockOperator) Restart(arg0 context.Context, arg1 []string) error {
 	m.ctrl.T.Helper()
