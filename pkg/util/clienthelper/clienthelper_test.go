@@ -698,7 +698,7 @@ func TestMerge(t *testing.T) {
 			wantEmptyDiff: true,
 		},
 		{
-			name: "Hive ClusterDeployment no changes",
+			name: "Hive ClusterDeployment changes",
 			old: &hivev1.ClusterDeployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
