@@ -91,8 +91,14 @@ func GetAuditEntry() *logrus.Entry {
 	return logrus.NewEntry(auditLogger)
 }
 
+var preconfiguredLogger *logrus.Entry
+
 // GetLogger returns a consistently configured log entry
 func GetLogger() *logrus.Entry {
+	if preconfiguredLogger != nil {
+		return preconfiguredLogger
+	}
+
 	logger := getBaseLogger()
 
 	logger.SetReportCaller(true)
@@ -113,6 +119,8 @@ func GetLogger() *logrus.Entry {
 	} else {
 		log.Warn(err)
 	}
+
+	preconfiguredLogger = log
 
 	return log
 }
