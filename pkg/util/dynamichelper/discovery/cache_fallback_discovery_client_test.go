@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	openapi_v2 "github.com/google/gnostic/openapiv2"
+	openapi_v2 "github.com/google/gnostic-models/openapiv2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kversion "k8s.io/apimachinery/pkg/version"
@@ -161,6 +161,9 @@ type fakeDiscoveryClient struct {
 var _ discovery.DiscoveryInterface = &fakeDiscoveryClient{}
 
 func (c *fakeDiscoveryClient) RESTClient() rest.Interface {
+	return nil
+}
+func (c *fakeDiscoveryClient) WithLegacy() discovery.DiscoveryInterface {
 	return nil
 }
 
