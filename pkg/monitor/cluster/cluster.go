@@ -16,7 +16,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -115,15 +114,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	// lazy discovery will not attempt to reach out to the apiserver immediately
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	ocpclientset, err := client.New(restConfig, client.Options{
-		Mapper: mapper,
-	})
+	ocpclientset, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -163,15 +154,7 @@ func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
 		return nil, nil
 	}
 
-	// lazy discovery will not attempt to reach out to the apiserver immediately
-	mapper, err := apiutil.NewDynamicRESTMapper(hiveRestConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	hiveclientset, err := client.New(hiveRestConfig, client.Options{
-		Mapper: mapper,
-	})
+	hiveclientset, err := client.New(hiveRestConfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
