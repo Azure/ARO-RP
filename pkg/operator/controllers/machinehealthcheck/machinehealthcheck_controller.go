@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -174,7 +173,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&machinev1beta1.MachineHealthCheck{}).
 		Owns(&monitoringv1.PrometheusRule{}).
 		Watches(
-			&source.Kind{Type: &configv1.ClusterVersion{}},
+			&configv1.ClusterVersion{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicates.ClusterVersion),
 		).

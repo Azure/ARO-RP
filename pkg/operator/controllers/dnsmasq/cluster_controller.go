@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	configv1 "github.com/openshift/api/config/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -105,7 +104,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Named(ClusterControllerName).
 		Watches(
-			&source.Kind{Type: &configv1.ClusterVersion{}},
+			&configv1.ClusterVersion{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(clusterVersionPredicate),
 		).

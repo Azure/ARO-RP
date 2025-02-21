@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -127,7 +126,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Watches(
-			&source.Kind{Type: &operatorv1.DNS{}},
+			&operatorv1.DNS{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(defaultClusterDNSPredicate),
 		)
