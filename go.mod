@@ -294,6 +294,7 @@ require (
 // strip cloud.google.com/go dependencies -- these are not required as dependencies
 exclude (
 	cloud.google.com/go v0.37.4
+	cloud.google.com/go v0.38.0
 	cloud.google.com/go v0.41.0
 	cloud.google.com/go v0.44.1
 	cloud.google.com/go v0.44.2
@@ -301,6 +302,7 @@ exclude (
 	cloud.google.com/go v0.45.1
 	cloud.google.com/go v0.46.3
 	cloud.google.com/go v0.50.0
+	cloud.google.com/go v0.51.0
 	cloud.google.com/go v0.52.0
 	cloud.google.com/go v0.53.0
 	cloud.google.com/go v0.54.0
