@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -59,7 +60,12 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		return nil, err
 	}
 
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
