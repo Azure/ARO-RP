@@ -36,6 +36,10 @@ func (c *FakeConsoleV1) ConsoleQuickStarts() v1.ConsoleQuickStartInterface {
 	return &FakeConsoleQuickStarts{c}
 }
 
+func (c *FakeConsoleV1) ConsoleSamples() v1.ConsoleSampleInterface {
+	return &FakeConsoleSamples{c}
+}
+
 func (c *FakeConsoleV1) ConsoleYAMLSamples() v1.ConsoleYAMLSampleInterface {
 	return &FakeConsoleYAMLSamples{c}
 }

@@ -84,6 +84,12 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: samplesRegistry
       type:
         scalar: string
+    - name: skippedHelmCharts
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: associative
     - name: skippedImagestreams
       type:
         list:

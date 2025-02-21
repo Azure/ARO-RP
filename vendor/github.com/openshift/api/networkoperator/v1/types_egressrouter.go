@@ -20,13 +20,21 @@ import (
 //
 // EgressRouter is a single egressrouter pod configuration object.
 // +k8s:openapi-gen=true
+// +openshift:compatibility-gen:level=1
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=egressrouters,scope=Namespaced
+// +openshift:api-approved.openshift.io=https://github.com/openshift/api/pull/851
+// +openshift:file-pattern=operatorOrdering=001
+// +kubebuilder:metadata:annotations=include.release.openshift.io/self-managed-high-availability=true
+// +kubebuilder:metadata:annotations=include.release.openshift.io/ibm-cloud-managed=true
 // +kubebuilder:printcolumn:name="Condition",type=string,JSONPath=".status.conditions[*].type"
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=".status.conditions[*].status"
-// +openshift:compatibility-gen:level=1
 type EgressRouter struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Specification of the desired egress router.
@@ -253,6 +261,9 @@ type EgressRouterStatus struct {
 // +openshift:compatibility-gen:level=1
 type EgressRouterList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard list's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	Items []EgressRouter `json:"items" protobuf:"bytes,2,rep,name=items"`

@@ -8,7 +8,6 @@ import (
 	"github.com/robfig/cron"
 	"k8s.io/apimachinery/pkg/runtime"
 	errorutil "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/openshift/library-go/pkg/operator/events"
@@ -26,24 +25,23 @@ func DefaultQueueKeysFunc(_ runtime.Object) []string {
 // Factory is generator that generate standard Kubernetes controllers.
 // Factory is really generic and should be only used for simple controllers that does not require special stuff..
 type Factory struct {
-	sync                  SyncFunc
-	syncContext           SyncContext
-	syncDegradedClient    operatorv1helpers.OperatorClient
-	resyncInterval        time.Duration
-	resyncSchedules       []string
-	informers             []filteredInformers
-	informerQueueKeys     []informersWithQueueKey
-	bareInformers         []Informer
-	postStartHooks        []PostStartHook
-	namespaceInformers    []*namespaceInformer
-	cachesToSync          []cache.InformerSynced
-	interestingNamespaces sets.String
+	sync               SyncFunc
+	syncContext        SyncContext
+	syncDegradedClient operatorv1helpers.OperatorClient
+	resyncInterval     time.Duration
+	resyncSchedules    []string
+	informers          []filteredInformers
+	informerQueueKeys  []informersWithQueueKey
+	bareInformers      []Informer
+	postStartHooks     []PostStartHook
+	namespaceInformers []*namespaceInformer
+	cachesToSync       []cache.InformerSynced
 }
 
 // Informer represents any structure that allow to register event handlers and informs if caches are synced.
 // Any SharedInformer will comply.
 type Informer interface {
-	AddEventHandler(handler cache.ResourceEventHandler)
+	AddEventHandler(handler cache.ResourceEventHandler) (cache.ResourceEventHandlerRegistration, error)
 	HasSynced() bool
 }
 
@@ -201,7 +199,8 @@ func (f *Factory) WithNamespaceInformer(informer Informer, interestingNamespaces
 // This is useful when you want to refresh every N minutes or you fear that your informers can be stucked.
 // If this is not called, no periodical resync will happen.
 // Note: The controller context passed to Sync() function in this case does not contain the object metadata or object itself.
-//       This can be used to detect periodical resyncs, but normal Sync() have to be cautious about `nil` objects.
+//
+//	This can be used to detect periodical resyncs, but normal Sync() have to be cautious about `nil` objects.
 func (f *Factory) ResyncEvery(interval time.Duration) *Factory {
 	f.resyncInterval = interval
 	return f
@@ -216,7 +215,8 @@ func (f *Factory) ResyncEvery(interval time.Duration) *Factory {
 // factory.New().ResyncSchedule("30 * * * *").ToController()	// Every hour on the half hour
 //
 // Note: The controller context passed to Sync() function in this case does not contain the object metadata or object itself.
-//       This can be used to detect periodical resyncs, but normal Sync() have to be cautious about `nil` objects.
+//
+//	This can be used to detect periodical resyncs, but normal Sync() have to be cautious about `nil` objects.
 func (f *Factory) ResyncSchedule(schedules ...string) *Factory {
 	f.resyncSchedules = append(f.resyncSchedules, schedules...)
 	return f
@@ -275,12 +275,6 @@ func (f *Factory) ToController(name string, eventRecorder events.Recorder) Contr
 		syncContext:        ctx,
 		postStartHooks:     f.postStartHooks,
 		cacheSyncTimeout:   defaultCacheSyncTimeout,
-	}
-
-	// Warn about too fast resyncs as they might drain the operators QPS.
-	// This event is cheap as it is only emitted on operator startup.
-	if c.resyncEvery.Seconds() < 60 {
-		ctx.Recorder().Warningf("FastControllerResync", "Controller %q resync interval is set to %s which might lead to client request throttling", name, c.resyncEvery)
 	}
 
 	for i := range f.informerQueueKeys {

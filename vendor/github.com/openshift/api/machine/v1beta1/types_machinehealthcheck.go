@@ -13,8 +13,14 @@ type RemediationStrategyType string
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // MachineHealthCheck is the Schema for the machinehealthchecks API
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=machinehealthchecks,scope=Namespaced,shortName=mhc;mhcs
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=mhc;mhcs
+// +openshift:api-approved.openshift.io=https://github.com/openshift/api/pull/1032
+// +openshift:file-pattern=cvoRunLevel=0000_10,operatorName=machine-api,operatorOrdering=01
+// +openshift:capability=MachineAPI
+// +kubebuilder:metadata:annotations="exclude.release.openshift.io/internal-openshift-hosted=true"
+// +kubebuilder:metadata:annotations="include.release.openshift.io/self-managed-high-availability=true"
 // +k8s:openapi-gen=true
 // +kubebuilder:printcolumn:name="MaxUnhealthy",type="string",JSONPath=".spec.maxUnhealthy",description="Maximum number of unhealthy machines allowed"
 // +kubebuilder:printcolumn:name="ExpectedMachines",type="integer",JSONPath=".status.expectedMachines",description="Number of machines currently monitored"
@@ -22,7 +28,10 @@ type RemediationStrategyType string
 // Compatibility level 2: Stable within a major release for a minimum of 9 months or 3 minor releases (whichever is longer).
 // +openshift:compatibility-gen:level=2
 type MachineHealthCheck struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Specification of machine health check policy
@@ -41,8 +50,12 @@ type MachineHealthCheck struct {
 // +openshift:compatibility-gen:level=2
 type MachineHealthCheckList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard list's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MachineHealthCheck `json:"items"`
+
+	Items []MachineHealthCheck `json:"items"`
 }
 
 // MachineHealthCheckSpec defines the desired state of MachineHealthCheck

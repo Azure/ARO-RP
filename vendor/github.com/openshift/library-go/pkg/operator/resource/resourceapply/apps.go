@@ -84,7 +84,7 @@ func SetSpecHashAnnotation(objMeta *metav1.ObjectMeta, spec interface{}) error {
 // rollout in response to changes in resources external to the deployment, it will need to be
 // revised to set that external state as an annotation e.g.
 //
-//   myoperator.openshift.io/my-resource: <resourceVersion>
+//	myoperator.openshift.io/my-resource: <resourceVersion>
 //
 // - Update the call to use ApplyDeploymentWithForce. This is available as a temporary measure
 // but the method is deprecated and will be removed in 4.6.
@@ -125,12 +125,12 @@ func ApplyDeploymentWithForce(ctx context.Context, client appsclientv1.Deploymen
 		return nil, false, err
 	}
 
-	modified := resourcemerge.BoolPtr(false)
+	modified := false
 	existingCopy := existing.DeepCopy()
 
-	resourcemerge.EnsureObjectMeta(modified, &existingCopy.ObjectMeta, required.ObjectMeta)
+	resourcemerge.EnsureObjectMeta(&modified, &existingCopy.ObjectMeta, required.ObjectMeta)
 	// there was no change to metadata, the generation was right, and we weren't asked for force the deployment
-	if !*modified && existingCopy.ObjectMeta.Generation == expectedGeneration && !forceRollout {
+	if !modified && existingCopy.ObjectMeta.Generation == expectedGeneration && !forceRollout {
 		return existingCopy, false, nil
 	}
 
@@ -150,7 +150,7 @@ func ApplyDeploymentWithForce(ctx context.Context, client appsclientv1.Deploymen
 		toWrite.Spec.Template.Annotations["operator.openshift.io/force"] = forceString
 	}
 
-	if klog.V(4).Enabled() {
+	if klog.V(2).Enabled() {
 		klog.Infof("Deployment %q changes: %v", required.Namespace+"/"+required.Name, JSONPatchNoError(existing, toWrite))
 	}
 
@@ -174,7 +174,7 @@ func ApplyDeploymentWithForce(ctx context.Context, client appsclientv1.Deploymen
 // rollout in response to changes in resources external to the daemonset, it will need to be
 // revised to set that external state as an annotation e.g.
 //
-//   myoperator.openshift.io/my-resource: <resourceVersion>
+//	myoperator.openshift.io/my-resource: <resourceVersion>
 //
 // - Update the call to use ApplyDaemonSetWithForce. This is available as a temporary measure
 // but the method is deprecated and will be removed in 4.6.
@@ -212,12 +212,12 @@ func ApplyDaemonSetWithForce(ctx context.Context, client appsclientv1.DaemonSets
 		return nil, false, err
 	}
 
-	modified := resourcemerge.BoolPtr(false)
+	modified := false
 	existingCopy := existing.DeepCopy()
 
-	resourcemerge.EnsureObjectMeta(modified, &existingCopy.ObjectMeta, required.ObjectMeta)
+	resourcemerge.EnsureObjectMeta(&modified, &existingCopy.ObjectMeta, required.ObjectMeta)
 	// there was no change to metadata, the generation was right, and we weren't asked for force the deployment
-	if !*modified && existingCopy.ObjectMeta.Generation == expectedGeneration && !forceRollout {
+	if !modified && existingCopy.ObjectMeta.Generation == expectedGeneration && !forceRollout {
 		return existingCopy, false, nil
 	}
 
@@ -237,7 +237,7 @@ func ApplyDaemonSetWithForce(ctx context.Context, client appsclientv1.DaemonSets
 		toWrite.Spec.Template.Annotations["operator.openshift.io/force"] = forceString
 	}
 
-	if klog.V(4).Enabled() {
+	if klog.V(2).Enabled() {
 		klog.Infof("DaemonSet %q changes: %v", required.Namespace+"/"+required.Name, JSONPatchNoError(existing, toWrite))
 	}
 	actual, err := client.DaemonSets(required.Namespace).Update(ctx, toWrite, metav1.UpdateOptions{})

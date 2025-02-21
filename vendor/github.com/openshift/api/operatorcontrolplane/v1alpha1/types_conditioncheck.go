@@ -12,10 +12,18 @@ import (
 // PodNetworkConnectivityCheck
 //
 // Compatibility level 4: No compatibility is provided, the API can change at any point for any reason. These capabilities should not be used by applications needing long term support.
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=podnetworkconnectivitychecks,scope=Namespaced
 // +kubebuilder:subresource:status
+// +openshift:api-approved.openshift.io=https://github.com/openshift/api/pull/639
+// +openshift:file-pattern=cvoRunLevel=0000_10,operatorName=network,operatorOrdering=01
+// +kubebuilder:metadata:annotations=include.release.openshift.io/self-managed-high-availability=true
 // +openshift:compatibility-gen:level=4
 type PodNetworkConnectivityCheck struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata"`
 
 	// Spec defines the source and target of the connectivity check
@@ -180,6 +188,9 @@ const (
 // +openshift:compatibility-gen:level=4
 type PodNetworkConnectivityCheckList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard list's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ListMeta `json:"metadata"`
 
 	// Items contains the items
