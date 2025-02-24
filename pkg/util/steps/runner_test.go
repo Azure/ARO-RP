@@ -14,8 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	"k8s.io/apimachinery/pkg/util/wait"
-
 	"github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -42,7 +40,7 @@ func timingOutCondition(ctx context.Context) (bool, error) {
 	return false, nil
 }
 func internalTimeoutCondition(ctx context.Context) (bool, error) {
-	return false, wait.ErrWaitTimeout
+	return false, context.DeadlineExceeded
 }
 
 func currentTimeFunc() time.Time {
@@ -198,7 +196,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] failed but has configured 'fail=false'. Continuing. Error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] failed but has configured 'fail=false'. Continuing. Error: context deadline exceeded"),
 					"level": gomega.Equal(logrus.WarnLevel),
 				},
 				{
@@ -231,11 +229,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: context deadline exceeded"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "context deadline exceeded",
 		},
 		{
 			name: "A Condition that returns a timeout error causes a different failure from a timed out Condition",
@@ -261,11 +259,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition encountered internal timeout: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: context deadline exceeded"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "condition encountered internal timeout: timed out waiting for the condition",
+			wantErr: "context deadline exceeded",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
@@ -286,11 +284,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: context deadline exceeded"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "context deadline exceeded",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

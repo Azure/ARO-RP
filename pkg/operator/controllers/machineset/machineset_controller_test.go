@@ -215,6 +215,7 @@ func TestReconciler(t *testing.T) {
 
 			clientFake := ctrlfake.NewClientBuilder().
 				WithObjects(instance).
+				WithStatusSubresource(instance).
 				WithObjects(tt.machinesets...).
 				Build()
 

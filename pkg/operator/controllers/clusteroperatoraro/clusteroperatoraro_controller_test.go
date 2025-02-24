@@ -231,8 +231,11 @@ func TestConditions(t *testing.T) {
 					Conditions: tt.controllerConditions,
 				},
 			}
+
+			co := defaultOperator()
 			clientFake := ctrlfake.NewClientBuilder().
-				WithObjects(cluster).
+				WithObjects(cluster, co).
+				WithStatusSubresource(cluster, co).
 				Build()
 
 			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
@@ -272,5 +275,44 @@ func TestConditions(t *testing.T) {
 				t.Error(diff)
 			}
 		})
+	}
+}
+
+func defaultOperator() *configv1.ClusterOperator {
+	currentTime := metav1.Now()
+	return &configv1.ClusterOperator{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: clusterOperatorName,
+		},
+		Status: configv1.ClusterOperatorStatus{
+			Versions: []configv1.OperandVersion{
+				{
+					Name:    "operator",
+					Version: version.GitCommit,
+				},
+			},
+			Conditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:               configv1.OperatorAvailable,
+					Status:             configv1.ConditionFalse,
+					LastTransitionTime: currentTime,
+					Reason:             reasonInitializing,
+					Message:            "Operator is initializing",
+				},
+				{
+					Type:               configv1.OperatorProgressing,
+					Status:             configv1.ConditionTrue,
+					LastTransitionTime: currentTime,
+					Reason:             reasonInitializing,
+					Message:            "Operator is initializing",
+				},
+				{
+					Type:               configv1.OperatorDegraded,
+					Status:             configv1.ConditionFalse,
+					LastTransitionTime: currentTime,
+					Reason:             reasonAsExpected,
+				},
+			},
+		},
 	}
 }
