@@ -265,7 +265,7 @@ func TestDeleteResourceGroup(t *testing.T) {
 			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
-			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Times(1).Return(tt.deleteErr)
+			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.deleteErr).Times(1)
 
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -330,18 +330,18 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 					},
 				}
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
-				subnets.EXPECT().Get(gomock.Any(), subnetId).Times(1).Return(&mgmtnetwork.Subnet{
+				subnets.EXPECT().Get(gomock.Any(), subnetId).Return(&mgmtnetwork.Subnet{
 					ID: ptr.To(subnetId),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 							ID: ptr.To(nsgId),
 						},
 					},
-				}, nil)
+				}, nil).Times(1)
 				subnets.EXPECT().CreateOrUpdate(gomock.Any(), subnetId, &mgmtnetwork.Subnet{
 					ID:                     ptr.To(subnetId),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{},
-				}).Times(1).Return(nil)
+				}).Return(nil).Times(1)
 			},
 		},
 	}
