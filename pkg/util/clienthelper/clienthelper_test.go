@@ -921,6 +921,61 @@ func TestMergeApply(t *testing.T) {
 				},
 			},
 			wantEmptyDiff: true,
+			wantChanged:   true,
+		},
+		{
+			name: "Namespace no changes",
+			old: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testobj",
+					Annotations: map[string]string{
+						"openshift.io/sa.scc.mcs":                 "mcs",
+						"openshift.io/sa.scc.supplemental-groups": "groups",
+						"openshift.io/sa.scc.uid-range":           "uids",
+					},
+					Labels: map[string]string{
+						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+						"kubernetes.io/metadata.name":        "testobj",
+					},
+				},
+				Spec: corev1.NamespaceSpec{
+					Finalizers: []corev1.FinalizerName{
+						"finalizer",
+					},
+				},
+				Status: corev1.NamespaceStatus{
+					Phase: corev1.NamespaceActive,
+				},
+			},
+			new: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testobj",
+				},
+			},
+			want: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testobj",
+					Annotations: map[string]string{
+						"openshift.io/sa.scc.mcs":                 "mcs",
+						"openshift.io/sa.scc.supplemental-groups": "groups",
+						"openshift.io/sa.scc.uid-range":           "uids",
+					},
+					Labels: map[string]string{
+						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+						"kubernetes.io/metadata.name":        "testobj",
+					},
+				},
+				Spec: corev1.NamespaceSpec{
+					Finalizers: []corev1.FinalizerName{
+						"finalizer",
+					},
+				},
+				Status: corev1.NamespaceStatus{
+					Phase: corev1.NamespaceActive,
+				},
+			},
+			wantEmptyDiff: true,
+			wantChanged:   false,
 		},
 		{
 			name: "ServiceAccount no changes",
@@ -1031,7 +1086,7 @@ func TestMergeApply(t *testing.T) {
 						"config.openshift.io/inject-trusted-cabundle": "",
 					},
 				},
-				Data: map[string]string{},
+				Data: nil,
 			},
 			wantEmptyDiff: true,
 		},
@@ -1557,6 +1612,10 @@ func TestGetOne(t *testing.T) {
 						Name:            "funobj",
 						Namespace:       "somewhere",
 						ResourceVersion: "1",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Secret",
+						APIVersion: "v1",
 					},
 					StringData: map[string]string{
 						"secret": "squirrels",

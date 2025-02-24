@@ -266,7 +266,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.instance != nil {
-				clientBuilder = clientBuilder.WithObjects(tt.instance)
+				clientBuilder = clientBuilder.WithObjects(tt.instance).WithStatusSubresource(tt.instance)
 			}
 			if tt.clusterversion == nil {
 				clientBuilder = clientBuilder.WithObjects(clusterversionDefault)
