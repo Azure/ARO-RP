@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -216,7 +215,7 @@ func (r *MonitoringReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to For(&v1.ConfigMap{}, ...)., but can't call For multiple times on one builder
 		Watches(
-			&source.Kind{Type: &corev1.ConfigMap{}},
+			&corev1.ConfigMap{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(monitoringConfigMapPredicate),
 		).

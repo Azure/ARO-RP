@@ -97,7 +97,7 @@ type CredentialsRequestStatus struct {
 
 	// LastSyncCloudCredsSecretResourceVersion is the resource version of the
 	// cloud credentials secret resource when the credentials request resource
-	// was last synced. Used to determine if the the cloud credentials have
+	// was last synced. Used to determine if the cloud credentials have
 	// been updated since the last sync.
 	// +optional
 	LastSyncCloudCredsSecretResourceVersion string `json:"lastSyncCloudCredsSecretResourceVersion,omitempty"`
