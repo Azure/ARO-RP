@@ -5,6 +5,7 @@ package dynamic
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -277,7 +278,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		}
 	}
 
-	if err == wait.ErrWaitTimeout {
+	if err == wait.ErrorInterrupted(errors.New("timed out waiting for the condition")) {
 		return noPermissionsErr
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
@@ -344,7 +345,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		"Microsoft.Network/routeTables/read",
 		"Microsoft.Network/routeTables/write",
 	})
-	if err == wait.ErrWaitTimeout {
+	if err == wait.ErrorInterrupted(errors.New("timed out waiting for the condition")) {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(
 				http.StatusBadRequest,
@@ -423,7 +424,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 		"Microsoft.Network/natGateways/read",
 		"Microsoft.Network/natGateways/write",
 	})
-	if err == wait.ErrWaitTimeout {
+	if err == wait.ErrorInterrupted(errors.New("timed out waiting for the condition")) {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(
 				http.StatusBadRequest,
@@ -469,7 +470,7 @@ func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, 
 
 	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions, oid: oid}
 
-	return wait.PollImmediateUntil(30*time.Second, c.usingCheckAccessV2, timeoutCtx.Done())
+	return wait.PollUntilContextCancel(timeoutCtx, 30*time.Second, true, c.usingCheckAccessV2)
 }
 
 // closure is the closure used in PollImmediateUntil's ConditionalFunc
@@ -501,7 +502,7 @@ func (c *closure) checkAccessAuthReqToken() error {
 }
 
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
-func (c closure) usingCheckAccessV2() (result bool, err error) {
+func (c closure) usingCheckAccessV2(ctx context.Context) (result bool, err error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
 	var authReq *client.AuthorizationRequest
@@ -891,7 +892,7 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 		"Microsoft.Network/networkSecurityGroups/join/action",
 	})
 
-	if err == wait.ErrWaitTimeout {
+	if err == wait.ErrorInterrupted(errors.New("timed out waiting for the condition")) {
 		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
 		if dv.authorizerType == AuthorizerClusterServicePrincipal {
 			errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
