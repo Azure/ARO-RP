@@ -570,9 +570,9 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 }
 
 func (d *deployer) waitForReadiness(ctx context.Context, vmssName string, vmInstanceID string) error {
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	return wait.PollUntilContextCancel(ctx, 10*time.Second, true, func(ctx context.Context) (bool, error) {
 		return d.isVMInstanceHealthy(ctx, d.config.RPResourceGroupName, vmssName, vmInstanceID), nil
-	}, ctx.Done())
+	})
 }
 
 func (d *deployer) isVMInstanceHealthy(ctx context.Context, resourceGroupName string, vmssName string, vmInstanceID string) bool {

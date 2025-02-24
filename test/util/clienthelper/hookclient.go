@@ -8,6 +8,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,9 @@ type HookingClient struct {
 	postCreateHook []hookFunc
 	postUpdateHook []hookFunc
 	postPatchHook  []hookFunc
+}
+
+type HookingSubResourceClient struct {
 }
 
 var _ client.Client = &HookingClient{}
@@ -106,7 +110,7 @@ func (c *HookingClient) WithPrePatchHook(f hookFunc) *HookingClient {
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.Get]
-func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	for _, h := range c.preGetHook {
 		err := h(key, obj)
 		if err != nil {
@@ -159,6 +163,18 @@ func (c *HookingClient) Create(ctx context.Context, obj client.Object, opts ...c
 		}
 	}
 	return nil
+}
+
+func (c *HookingClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+	return c.f.GroupVersionKindFor(obj)
+}
+
+func (c *HookingClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	return c.f.IsObjectNamespaced(obj)
+}
+
+func (c *HookingClient) SubResource(input string) client.SubResourceClient {
+	return c.f.SubResource(input)
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Writer.Delete]

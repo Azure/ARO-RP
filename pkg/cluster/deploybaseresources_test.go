@@ -282,16 +282,16 @@ func TestAttachNSGs(t *testing.T) {
 				},
 			},
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(gomock.Any(), "masterSubnetID", &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
 						},
 					},
 				}).Return(nil)
-				subnet.EXPECT().Get(ctx, "workerSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "workerSubnetID", &mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "workerSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(gomock.Any(), "workerSubnetID", &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
@@ -348,7 +348,7 @@ func TestAttachNSGs(t *testing.T) {
 				},
 			},
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, fmt.Errorf("subnet not found"))
+				subnet.EXPECT().Get(gomock.Any(), "masterSubnetID").Return(&mgmtnetwork.Subnet{}, fmt.Errorf("subnet not found"))
 			},
 			wantErr: "subnet not found",
 		},
@@ -374,7 +374,7 @@ func TestAttachNSGs(t *testing.T) {
 				},
 			},
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "masterSubnetID").Return(&mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("I shouldn't be here!"),
@@ -406,8 +406,8 @@ func TestAttachNSGs(t *testing.T) {
 				},
 			},
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(gomock.Any(), "masterSubnetID", &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
@@ -438,8 +438,8 @@ func TestAttachNSGs(t *testing.T) {
 				},
 			},
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(gomock.Any(), "masterSubnetID", &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
@@ -479,8 +479,8 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 		{
 			name: "ok, !gatewayEnabled",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "subnetID", &mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "subnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(gomock.Any(), "subnetID", &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
 					},
@@ -490,8 +490,8 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 		{
 			name: "ok, gatewayEnabled",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "subnetID", &mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "subnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(gomock.Any(), "subnetID", &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						PrivateEndpointNetworkPolicies:    pointerutils.ToPtr("Disabled"),
 						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
@@ -503,7 +503,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 		{
 			name: "ok, skipCreateOrUpdate, !gatewayEnabled",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "subnetID").Return(&mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
 					},
@@ -514,7 +514,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 		{
 			name: "ok, skipCreateOrUpdate, gatewayEnabled",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), "subnetID").Return(&mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						PrivateEndpointNetworkPolicies:    pointerutils.ToPtr("Disabled"),
 						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
@@ -527,7 +527,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 		{
 			name: "error",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(nil, fmt.Errorf("sad"))
+				subnet.EXPECT().Get(gomock.Any(), "subnetID").Return(nil, fmt.Errorf("sad"))
 			},
 			wantErr: "sad",
 		},
@@ -679,14 +679,14 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		{
 			name: "no service endpoints set returns empty string slice",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(gomock.Any(), masterSubnet).Return(&mgmtnetwork.Subnet{}, nil)
 			},
 			wantSubnets: []string{},
 		},
 		{
 			name: "master subnet has service endpoint, but incorrect location",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), masterSubnet).Return(&mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 							{
@@ -698,7 +698,7 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 						},
 					},
 				}, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(gomock.Any(), fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -708,7 +708,7 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		{
 			name: "master subnet has service endpoint with correct location",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), masterSubnet).Return(&mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 							{
@@ -720,7 +720,7 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 						},
 					},
 				}, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(gomock.Any(), fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -730,7 +730,7 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		{
 			name: "master subnet has service endpoint with all location",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
+				subnet.EXPECT().Get(gomock.Any(), masterSubnet).Return(&mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 							{
@@ -742,7 +742,7 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 						},
 					},
 				}, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(gomock.Any(), fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -765,8 +765,8 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 					},
 				}
 
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(subnetWithServiceEndpoint, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(subnetWithServiceEndpoint, nil)
+				subnet.EXPECT().Get(gomock.Any(), masterSubnet).Return(subnetWithServiceEndpoint, nil)
+				subnet.EXPECT().Get(gomock.Any(), fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(subnetWithServiceEndpoint, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -792,9 +792,9 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 					},
 				}
 
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(subnetWithServiceEndpoint, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(subnetWithServiceEndpoint, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-002")).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(gomock.Any(), masterSubnet).Return(subnetWithServiceEndpoint, nil)
+				subnet.EXPECT().Get(gomock.Any(), fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(subnetWithServiceEndpoint, nil)
+				subnet.EXPECT().Get(gomock.Any(), fmt.Sprintf(workerSubnetFormatString, "worker-subnet-002")).Return(&mgmtnetwork.Subnet{}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -809,7 +809,7 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		{
 			name: "Get subnet returns error",
 			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(nil, errors.New("generic error"))
+				subnet.EXPECT().Get(gomock.Any(), masterSubnet).Return(nil, errors.New("generic error"))
 			},
 			workerSubnets: []string{},
 			wantErr:       "generic error",

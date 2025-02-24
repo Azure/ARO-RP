@@ -67,7 +67,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 
 	// Propagate the latest authorization error to the user,
 	// rather than timeout error from PollImmediateUntil.
-	_ = wait.PollImmediateUntil(pollInterval, func() (bool, error) {
+	_ = wait.PollUntilContextCancel(timeoutCtx, pollInterval, true, func(ctx context.Context) (bool, error) {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
@@ -91,7 +91,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 			log.Printf("non-auth error, giving up: %v", err)
 		}
 		return true, err
-	}, timeoutCtx.Done())
+	})
 
 	return CreateActionableError(err)
 }

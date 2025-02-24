@@ -81,25 +81,25 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 	// runner.pollInterval, until the condition returns true or timeoutCtx's
 	// timeout fires. Errors from `f` are returned directly unless the error
 	// is ErrWaitTimeout. Internal ErrWaitTimeout errors are wrapped to avoid
-	// confusion with wait.PollImmediateUntil's own behavior of returning
+	// confusion with wait.PollUntilContextCancel's own behavior of returning
 	// ErrWaitTimeout when the condition is not met.
-	err := wait.PollImmediateUntil(pollInterval, func() (bool, error) {
+	err := wait.PollUntilContextCancel(timeoutCtx, pollInterval, true, func(ctx context.Context) (bool, error) {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
 		cnd, cndErr := c.f(ctx)
-		if errors.Is(cndErr, wait.ErrWaitTimeout) {
+		if errors.Is(cndErr, wait.ErrorInterrupted(errors.New("timed out waiting for the condition"))) {
 			return cnd, fmt.Errorf("condition encountered internal timeout: %w", cndErr)
 		}
 
 		return cnd, cndErr
-	}, timeoutCtx.Done())
+	})
 
 	if err != nil && !c.fail {
 		log.Warnf("step %s failed but has configured 'fail=%t'. Continuing. Error: %s", c, c.fail, err.Error())
 		return nil
 	}
-	if errors.Is(err, wait.ErrWaitTimeout) {
+	if errors.Is(err, wait.ErrorInterrupted(errors.New("timed out waiting for the condition"))) {
 		return enrichConditionTimeoutError(c.f, err)
 	}
 	return err

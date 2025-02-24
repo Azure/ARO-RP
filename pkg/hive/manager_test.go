@@ -662,7 +662,7 @@ func TestListSyncSet(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if result != nil && reflect.DeepEqual(result, syncsetTest) {
+			if result != nil && !reflect.DeepEqual(result, syncsetTest) {
 				t.Fatal("Unexpected syncset list returned", result)
 			}
 		})
@@ -703,7 +703,7 @@ func TestGetSyncSet(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if result != nil && reflect.DeepEqual(result, syncsetTest) {
+			if result != nil && !reflect.DeepEqual(result, syncsetTest) {
 				t.Fatal("Unexpected syncset is returned", result)
 			}
 		})

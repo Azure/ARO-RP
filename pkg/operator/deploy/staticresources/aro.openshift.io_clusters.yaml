@@ -135,6 +135,8 @@ spec:
                       type: string
                     type:
                       type: string
+                  required:
+                  - type
                   type: object
                 type: array
               operatorVersion:
