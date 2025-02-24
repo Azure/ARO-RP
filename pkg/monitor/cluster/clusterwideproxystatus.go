@@ -105,7 +105,7 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 
 		if res.Properties.AddressPrefix != nil {
 			if !noProxyMap[*res.Properties.AddressPrefix] {
-				missing_no_proxy_list = append(missing_no_proxy_list, *res.Properties.AddressPrefix)
+				missing_no_proxy_list = append(missing_no_proxy_list, "machineCIDR:"+*res.Properties.AddressPrefix)
 			}
 		}
 
@@ -146,12 +146,12 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 		}
 		for _, network := range networkConfig.Spec.ClusterNetwork {
 			if !noProxyMap[network.CIDR] {
-				missing_no_proxy_list = append(missing_no_proxy_list, network.CIDR)
+				missing_no_proxy_list = append(missing_no_proxy_list, "PodCIDR:"+network.CIDR)
 			}
 		}
 		for _, network := range networkConfig.Spec.ServiceNetwork {
 			if !noProxyMap[network] {
-				missing_no_proxy_list = append(missing_no_proxy_list, network)
+				missing_no_proxy_list = append(missing_no_proxy_list, "ServiceCIDR:"+network)
 			}
 		}
 
@@ -162,7 +162,8 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 			return err
 		}
 		clusterDomain := clusterdetails.Spec.Domain
-		if !(noProxyMap[clusterDomain] || noProxyMap[".apps."+clusterDomain] || noProxyMap["."+clusterDomain]) {
+		clusterDomaincheck := noProxyMap[clusterDomain] || noProxyMap["."+clusterDomain]
+		if !(noProxyMap[".apps."+clusterDomain] || clusterDomaincheck) {
 			missing_no_proxy_list = append(missing_no_proxy_list, clusterDomain)
 		}
 		for _, gatewayDomain := range clusterdetails.Spec.GatewayDomains {
@@ -186,7 +187,7 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 			return err
 		}
 		apiServerIntdomain := strings.Split(apiServerIntURL.Host, ":")[0]
-		if !noProxyMap[apiServerIntdomain] {
+		if !(noProxyMap[apiServerIntdomain] || clusterDomaincheck) {
 			missing_no_proxy_list = append(missing_no_proxy_list, apiServerIntdomain)
 		}
 
@@ -197,7 +198,7 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 			return err
 		}
 		apiServerProfiledomain := strings.Split(apiServerProfileURL.Host, ":")[0]
-		if !noProxyMap[apiServerProfiledomain] {
+		if !(noProxyMap[apiServerProfiledomain] || clusterDomaincheck) {
 			missing_no_proxy_list = append(missing_no_proxy_list, apiServerProfiledomain)
 		}
 
