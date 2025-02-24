@@ -5,9 +5,11 @@ package azureerrors
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -93,9 +95,17 @@ func IsDeploymentActiveError(err error) bool {
 }
 
 func IsNotFoundError(err error) bool {
-	detailedErr, ok := err.(autorest.DetailedError)
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) {
+		return detailedErr.StatusCode == http.StatusNotFound
+	}
 
-	return ok && detailedErr.StatusCode == http.StatusNotFound
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		return responseError.StatusCode == http.StatusNotFound
+	}
+
+	return false
 }
 
 // IsInvalidSecretError returns if errors is InvalidCredentials error

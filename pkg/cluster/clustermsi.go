@@ -12,8 +12,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
-	"github.com/Azure/go-autorest/autorest/date"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -38,10 +37,9 @@ var (
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	secretName := m.clusterMsiSecretName()
 
-	_, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
-	if err == nil {
+	if _, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
 		return nil
-	} else if err != nil && !azureerrors.IsNotFoundError(err) {
+	} else if !azureerrors.IsNotFoundError(err) {
 		return err
 	}
 
@@ -90,15 +88,15 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 		return err
 	}
 
-	return m.clusterMsiKeyVaultStore.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
+	_, err = m.clusterMsiKeyVaultStore.SetSecret(ctx, secretName, azsecrets.SetSecretParameters{
 		Value: pointerutils.ToPtr(string(raw)),
-		SecretAttributes: &keyvault.SecretAttributes{
+		SecretAttributes: &azsecrets.SecretAttributes{
 			Enabled:   pointerutils.ToPtr(true),
-			Expires:   pointerutils.ToPtr(date.UnixTime(expirationDate)),
-			NotBefore: pointerutils.ToPtr(date.UnixTime(expirationDate)),
+			Expires:   pointerutils.ToPtr(expirationDate),
+			NotBefore: pointerutils.ToPtr(expirationDate),
 		},
-		Tags: nil,
-	})
+	}, nil)
+	return err
 }
 
 // initializeClusterMsiClients intializes any Azure clients that use the cluster
@@ -106,7 +104,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 	secretName := m.clusterMsiSecretName()
 
-	kvSecretResponse, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
+	kvSecretResponse, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil)
 	if err != nil {
 		return err
 	}

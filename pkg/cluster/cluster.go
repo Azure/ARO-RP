@@ -37,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -48,7 +49,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
@@ -130,7 +130,7 @@ type manager struct {
 	aroOperatorDeployer deploy.Operator
 
 	msiDataplane                           dataplane.ClientFactory
-	clusterMsiKeyVaultStore                keyvault.Manager
+	clusterMsiKeyVaultStore                azsecrets.Client
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
 
 	now func() time.Time
@@ -334,16 +334,13 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 			msiDataplane = dataplane.NewClientFactory(fpMSICred, _env.MsiRpEndpoint(), msiDataplaneClientOptions)
 		}
-
-		clusterMsiKeyVaultName := _env.ClusterMsiKeyVaultName()
-		clusterMsiKeyVaultURL := fmt.Sprintf("https://%s.%s", clusterMsiKeyVaultName, _env.Environment().KeyVaultDNSSuffix)
-		authorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
-		if err != nil {
-			return nil, err
-		}
-
 		m.msiDataplane = msiDataplane
-		m.clusterMsiKeyVaultStore = keyvault.NewManager(authorizer, clusterMsiKeyVaultURL)
+
+		secretsClient, err := azsecrets.NewClient(azsecrets.URI(_env, _env.ClusterMsiKeyVaultName(), ""), msiCredential, _env.Environment().AzureClientOptions())
+		if err != nil {
+			return nil, fmt.Errorf("cannot create MSI key vault client: %w", err)
+		}
+		m.clusterMsiKeyVaultStore = secretsClient
 	}
 
 	return m, nil

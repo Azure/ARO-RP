@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
@@ -21,8 +21,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -69,7 +69,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 		doc              *api.OpenShiftClusterDocument
 		msiDataplaneStub func(*mock_msidataplane.MockClient)
 		envMocks         func(*mock_env.MockInterface)
-		kvClientMocks    func(*mock_keyvault.MockManager)
+		kvClientMocks    func(*mock_azsecrets.MockClient)
 		wantErr          string
 	}{
 		{
@@ -89,8 +89,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 					},
 				},
 			},
-			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, fmt.Errorf("error in GetSecret"))
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, fmt.Errorf("error in GetSecret")).Times(1)
 			},
 			wantErr: "error in GetSecret",
 		},
@@ -114,8 +114,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
 				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(&dataplane.ManagedIdentityCredentials{}, errors.New("error in msi"))
 			},
-			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, secretNotFoundError)
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, secretNotFoundError).Times(1)
 			},
 			wantErr: "error in msi",
 		},
@@ -136,17 +136,19 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 					},
 				},
 			},
-			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
 				credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
 				if err != nil {
 					panic(err)
 				}
 
 				credentialsObjectString := string(credentialsObjectBuffer)
-				getSecretResponse := azkeyvault.SecretBundle{
-					Value: &credentialsObjectString,
+				getSecretResponse := azsecrets.GetSecretResponse{
+					Secret: azsecrets.Secret{
+						Value: &credentialsObjectString,
+					},
 				}
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(getSecretResponse, nil)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
 			},
 		},
 		{
@@ -172,9 +174,9 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			envMocks: func(mockEnv *mock_env.MockInterface) {
 				mockEnv.EXPECT().FeatureIsSet(env.FeatureUseMockMsiRp).Return(true)
 			},
-			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, secretNotFoundError)
-				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any()).Times(1).Return(nil)
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, secretNotFoundError).Times(1)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
 			},
 		},
 	}
@@ -205,7 +207,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 			m.msiDataplane = factory
 
-			mockKvClient := mock_keyvault.NewMockManager(controller)
+			mockKvClient := mock_azsecrets.NewMockClient(controller)
 			if tt.kvClientMocks != nil {
 				tt.kvClientMocks(mockKvClient)
 			}

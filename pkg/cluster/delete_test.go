@@ -12,7 +12,7 @@ import (
 
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -28,10 +28,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
+	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -265,7 +265,7 @@ func TestDeleteResourceGroup(t *testing.T) {
 			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
-			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Times(1).Return(tt.deleteErr)
+			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.deleteErr).Times(1)
 
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -330,18 +330,18 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 					},
 				}
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
-				subnets.EXPECT().Get(gomock.Any(), subnetId).Times(1).Return(&mgmtnetwork.Subnet{
+				subnets.EXPECT().Get(gomock.Any(), subnetId).Return(&mgmtnetwork.Subnet{
 					ID: ptr.To(subnetId),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 							ID: ptr.To(nsgId),
 						},
 					},
-				}, nil)
+				}, nil).Times(1)
 				subnets.EXPECT().CreateOrUpdate(gomock.Any(), subnetId, &mgmtnetwork.Subnet{
 					ID:                     ptr.To(subnetId),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{},
-				}).Times(1).Return(nil)
+				}).Return(nil).Times(1)
 			},
 		},
 	}
@@ -382,7 +382,7 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 	tests := []struct {
 		name    string
 		doc     *api.OpenShiftClusterDocument
-		mocks   func(mockManager *mock_keyvault.MockManager)
+		mocks   func(mockManager *mock_azsecrets.MockClient)
 		wantErr string
 	}{
 		{
@@ -427,8 +427,8 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().DeleteSecret(gomock.Any(), secretName).Times(1).Return(keyvault.DeletedSecretBundle{}, fmt.Errorf("error in DeleteSecret"))
+			mocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().DeleteSecret(gomock.Any(), secretName, nil).Return(azsecrets.DeleteSecretResponse{}, fmt.Errorf("error in DeleteSecret")).Times(1)
 			},
 			wantErr: "error in DeleteSecret",
 		},
@@ -447,8 +447,8 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().DeleteSecret(gomock.Any(), secretName).Times(1).Return(keyvault.DeletedSecretBundle{}, nil)
+			mocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().DeleteSecret(gomock.Any(), secretName, nil).Return(azsecrets.DeleteSecretResponse{}, nil).Times(1)
 			},
 		},
 	}
@@ -463,7 +463,7 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 				doc: tt.doc,
 			}
 
-			mockKvClient := mock_keyvault.NewMockManager(controller)
+			mockKvClient := mock_azsecrets.NewMockClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(mockKvClient)
 			}

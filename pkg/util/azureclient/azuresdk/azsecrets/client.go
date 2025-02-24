@@ -3,11 +3,9 @@ package azsecrets
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
-
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -28,9 +26,9 @@ type ArmClient struct {
 
 var _ Client = &ArmClient{}
 
-func NewClient(vaultURL string, credential azcore.TokenCredential, options *arm.ClientOptions) (ArmClient, error) {
+func NewClient(vaultURL string, credential azcore.TokenCredential, options azcore.ClientOptions) (ArmClient, error) {
 	azSecretsOptions := azsecrets.ClientOptions{
-		ClientOptions: (*options).ClientOptions,
+		ClientOptions: options,
 	}
 	_client, err := azsecrets.NewClient(vaultURL, credential, &azSecretsOptions)
 	return ArmClient{

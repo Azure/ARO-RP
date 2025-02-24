@@ -83,6 +83,9 @@ github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.5.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage
+# github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates v1.1.0
+## explicit; go 1.18
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates
 # github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.1.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets
