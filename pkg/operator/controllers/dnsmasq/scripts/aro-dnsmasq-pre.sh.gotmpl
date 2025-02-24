@@ -15,7 +15,7 @@ if [ "$NODEIP" != "" ]; then
     SEARCHDOMAIN=$(awk '/^search/ { print $2; }' /etc/resolv.conf.dnsmasq)
     /bin/chmod 0744 /etc/resolv.conf.dnsmasq
 
-    cat <<EOF | /bin/tee /etc/NetworkManager/conf.d/dns-servers.conf
+    cat <<EOF | /bin/tee /etc/NetworkManager/conf.d/aro-dns.conf
 # Added by dnsmasq.service
 [global-dns]
 searches=$SEARCHDOMAIN
