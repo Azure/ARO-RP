@@ -1558,6 +1558,10 @@ func TestGetOne(t *testing.T) {
 						Namespace:       "somewhere",
 						ResourceVersion: "1",
 					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Secret",
+						APIVersion: "v1",
+					},
 					StringData: map[string]string{
 						"secret": "squirrels",
 					},

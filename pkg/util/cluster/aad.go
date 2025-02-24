@@ -51,9 +51,9 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 	defer cancel()
 
 	// NOTE: Do not override err with the error returned by
-	// wait.PollImmediateUntil. Doing this will not propagate the latest error
+	// wait.PollUntilContextCancel. Doing this will not propagate the latest error
 	// to the user in case when wait exceeds the timeout
-	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	_ = wait.PollUntilContextCancel(timeoutCtx, 10*time.Second, true, func(ctx context.Context) (bool, error) {
 		requestBody := msgraph_models.NewServicePrincipal()
 		requestBody.SetAppId(&appID)
 		result, err = c.spGraphClient.ServicePrincipals().Post(ctx, requestBody, nil)
@@ -73,7 +73,7 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 			return false, nil
 		}
 		return err == nil, err
-	}, timeoutCtx.Done())
+	})
 	if err != nil {
 		return "", err
 	}

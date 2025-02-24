@@ -13,6 +13,7 @@ package v1
 // AUTO-GENERATED FUNCTIONS START HERE
 var map_AlibabaCloudMachineProviderConfig = map[string]string{
 	"":                  "AlibabaCloudMachineProviderConfig is the Schema for the alibabacloudmachineproviderconfig API Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"metadata":          "metadata is the standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
 	"instanceType":      "The instance type of the instance.",
 	"vpcId":             "The ID of the vpc",
 	"regionId":          "The ID of the region in which to create the instance. You can call the DescribeRegions operation to query the most recent region list.",
@@ -36,7 +37,8 @@ func (AlibabaCloudMachineProviderConfig) SwaggerDoc() map[string]string {
 }
 
 var map_AlibabaCloudMachineProviderConfigList = map[string]string{
-	"": "AlibabaCloudMachineProviderConfigList contains a list of AlibabaCloudMachineProviderConfig Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"":         "AlibabaCloudMachineProviderConfigList contains a list of AlibabaCloudMachineProviderConfig Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"metadata": "metadata is the standard list's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
 }
 
 func (AlibabaCloudMachineProviderConfigList) SwaggerDoc() map[string]string {
@@ -45,6 +47,7 @@ func (AlibabaCloudMachineProviderConfigList) SwaggerDoc() map[string]string {
 
 var map_AlibabaCloudMachineProviderStatus = map[string]string{
 	"":              "AlibabaCloudMachineProviderStatus is the Schema for the alibabacloudmachineproviderconfig API Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"metadata":      "metadata is the standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
 	"instanceId":    "InstanceID is the instance ID of the machine created in alibabacloud",
 	"instanceState": "InstanceState is the state of the alibabacloud instance for this machine",
 	"conditions":    "Conditions is a set of conditions associated with the Machine to indicate errors or other status",
@@ -156,8 +159,9 @@ func (AWSFailureDomainPlacement) SwaggerDoc() map[string]string {
 }
 
 var map_AzureFailureDomain = map[string]string{
-	"":     "AzureFailureDomain configures failure domain information for the Azure platform.",
-	"zone": "Availability Zone for the virtual machine. If nil, the virtual machine should be deployed to no zone.",
+	"":       "AzureFailureDomain configures failure domain information for the Azure platform.",
+	"zone":   "Availability Zone for the virtual machine. If nil, the virtual machine should be deployed to no zone.",
+	"subnet": "subnet is the name of the network subnet in which the VM will be created. When omitted, the subnet value from the machine providerSpec template will be used.",
 }
 
 func (AzureFailureDomain) SwaggerDoc() map[string]string {
@@ -165,7 +169,8 @@ func (AzureFailureDomain) SwaggerDoc() map[string]string {
 }
 
 var map_ControlPlaneMachineSet = map[string]string{
-	"": "ControlPlaneMachineSet ensures that a specified number of control plane machine replicas are running at any given time. Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"":         "ControlPlaneMachineSet ensures that a specified number of control plane machine replicas are running at any given time. Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"metadata": "metadata is the standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
 }
 
 func (ControlPlaneMachineSet) SwaggerDoc() map[string]string {
@@ -173,7 +178,8 @@ func (ControlPlaneMachineSet) SwaggerDoc() map[string]string {
 }
 
 var map_ControlPlaneMachineSetList = map[string]string{
-	"": "ControlPlaneMachineSetList contains a list of ControlPlaneMachineSet Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"":         "ControlPlaneMachineSetList contains a list of ControlPlaneMachineSet Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"metadata": "metadata is the standard list's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
 }
 
 func (ControlPlaneMachineSetList) SwaggerDoc() map[string]string {
@@ -237,11 +243,14 @@ func (ControlPlaneMachineSetTemplateObjectMeta) SwaggerDoc() map[string]string {
 }
 
 var map_FailureDomains = map[string]string{
-	"":         "FailureDomain represents the different configurations required to spread Machines across failure domains on different platforms.",
-	"platform": "Platform identifies the platform for which the FailureDomain represents. Currently supported values are AWS, Azure, and GCP.",
-	"aws":      "AWS configures failure domain information for the AWS platform.",
-	"azure":    "Azure configures failure domain information for the Azure platform.",
-	"gcp":      "GCP configures failure domain information for the GCP platform.",
+	"":          "FailureDomain represents the different configurations required to spread Machines across failure domains on different platforms.",
+	"platform":  "Platform identifies the platform for which the FailureDomain represents. Currently supported values are AWS, Azure, GCP, OpenStack, VSphere and Nutanix.",
+	"aws":       "AWS configures failure domain information for the AWS platform.",
+	"azure":     "Azure configures failure domain information for the Azure platform.",
+	"gcp":       "GCP configures failure domain information for the GCP platform.",
+	"vsphere":   "vsphere configures failure domain information for the VSphere platform.",
+	"openstack": "OpenStack configures failure domain information for the OpenStack platform.",
+	"nutanix":   "nutanix configures failure domain information for the Nutanix platform.",
 }
 
 func (FailureDomains) SwaggerDoc() map[string]string {
@@ -257,6 +266,15 @@ func (GCPFailureDomain) SwaggerDoc() map[string]string {
 	return map_GCPFailureDomain
 }
 
+var map_NutanixFailureDomainReference = map[string]string{
+	"":     "NutanixFailureDomainReference refers to the failure domain of the Nutanix platform.",
+	"name": "name of the failure domain in which the nutanix machine provider will create the VM. Failure domains are defined in a cluster's config.openshift.io/Infrastructure resource.",
+}
+
+func (NutanixFailureDomainReference) SwaggerDoc() map[string]string {
+	return map_NutanixFailureDomainReference
+}
+
 var map_OpenShiftMachineV1Beta1MachineTemplate = map[string]string{
 	"":               "OpenShiftMachineV1Beta1MachineTemplate is a template for the ControlPlaneMachineSet to create Machines from the v1beta1.machine.openshift.io API group.",
 	"failureDomains": "FailureDomains is the list of failure domains (sometimes called availability zones) in which the ControlPlaneMachineSet should balance the Control Plane Machines. This will be merged into the ProviderSpec given in the template. This field is optional on platforms that do not require placement information.",
@@ -268,8 +286,48 @@ func (OpenShiftMachineV1Beta1MachineTemplate) SwaggerDoc() map[string]string {
 	return map_OpenShiftMachineV1Beta1MachineTemplate
 }
 
+var map_OpenStackFailureDomain = map[string]string{
+	"":                 "OpenStackFailureDomain configures failure domain information for the OpenStack platform.",
+	"availabilityZone": "availabilityZone is the nova availability zone in which the OpenStack machine provider will create the VM. If not specified, the VM will be created in the default availability zone specified in the nova configuration. Availability zone names must NOT contain : since it is used by admin users to specify hosts where instances are launched in server creation. Also, it must not contain spaces otherwise it will lead to node that belongs to this availability zone register failure, see kubernetes/cloud-provider-openstack#1379 for further information. The maximum length of availability zone name is 63 as per labels limits.",
+	"rootVolume":       "rootVolume contains settings that will be used by the OpenStack machine provider to create the root volume attached to the VM. If not specified, no root volume will be created.",
+}
+
+func (OpenStackFailureDomain) SwaggerDoc() map[string]string {
+	return map_OpenStackFailureDomain
+}
+
+var map_RootVolume = map[string]string{
+	"":                 "RootVolume represents the volume metadata to boot from. The original RootVolume struct is defined in the v1alpha1 but it's not best practice to use it directly here so we define a new one that should stay in sync with the original one.",
+	"availabilityZone": "availabilityZone specifies the Cinder availability zone where the root volume will be created. If not specifified, the root volume will be created in the availability zone specified by the volume type in the cinder configuration. If the volume type (configured in the OpenStack cluster) does not specify an availability zone, the root volume will be created in the default availability zone specified in the cinder configuration. See https://docs.openstack.org/cinder/latest/admin/availability-zone-type.html for more details. If the OpenStack cluster is deployed with the cross_az_attach configuration option set to false, the root volume will have to be in the same availability zone as the VM (defined by OpenStackFailureDomain.AvailabilityZone). Availability zone names must NOT contain spaces otherwise it will lead to volume that belongs to this availability zone register failure, see kubernetes/cloud-provider-openstack#1379 for further information. The maximum length of availability zone name is 63 as per labels limits.",
+	"volumeType":       "volumeType specifies the type of the root volume that will be provisioned. The maximum length of a volume type name is 255 characters, as per the OpenStack limit. ",
+}
+
+func (RootVolume) SwaggerDoc() map[string]string {
+	return map_RootVolume
+}
+
+var map_VSphereFailureDomain = map[string]string{
+	"":     "VSphereFailureDomain configures failure domain information for the vSphere platform",
+	"name": "name of the failure domain in which the vSphere machine provider will create the VM. Failure domains are defined in a cluster's config.openshift.io/Infrastructure resource. When balancing machines across failure domains, the control plane machine set will inject configuration from the Infrastructure resource into the machine providerSpec to allocate the machine to a failure domain.",
+}
+
+func (VSphereFailureDomain) SwaggerDoc() map[string]string {
+	return map_VSphereFailureDomain
+}
+
+var map_NutanixCategory = map[string]string{
+	"":      "NutanixCategory identifies a pair of prism category key and value",
+	"key":   "key is the prism category key name",
+	"value": "value is the prism category value associated with the key",
+}
+
+func (NutanixCategory) SwaggerDoc() map[string]string {
+	return map_NutanixCategory
+}
+
 var map_NutanixMachineProviderConfig = map[string]string{
 	"":                  "NutanixMachineProviderConfig is the Schema for the nutanixmachineproviderconfigs API Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
+	"metadata":          "metadata is the standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
 	"cluster":           "cluster is to identify the cluster (the Prism Element under management of the Prism Central), in which the Machine's VM will be created. The cluster identifier (uuid or name) can be obtained from the Prism Central console or using the prism_central API.",
 	"image":             "image is to identify the rhcos image uploaded to the Prism Central (PC) The image identifier (uuid or name) can be obtained from the Prism Central console or using the prism_central API.",
 	"subnets":           "subnets holds a list of identifiers (one or more) of the cluster's network subnets for the Machine's VM to connect to. The subnet identifiers (uuid or name) can be obtained from the Prism Central console or using the prism_central API.",
@@ -277,8 +335,12 @@ var map_NutanixMachineProviderConfig = map[string]string{
 	"vcpuSockets":       "vcpuSockets is the number of vCPU sockets of the VM",
 	"memorySize":        "memorySize is the memory size (in Quantity format) of the VM The minimum memorySize is 2Gi bytes",
 	"systemDiskSize":    "systemDiskSize is size (in Quantity format) of the system disk of the VM The minimum systemDiskSize is 20Gi bytes",
+	"bootType":          "bootType indicates the boot type (Legacy, UEFI or SecureBoot) the Machine's VM uses to boot. If this field is empty or omitted, the VM will use the default boot type \"Legacy\" to boot. \"SecureBoot\" depends on \"UEFI\" boot, i.e., enabling \"SecureBoot\" means that \"UEFI\" boot is also enabled.",
+	"project":           "project optionally identifies a Prism project for the Machine's VM to associate with.",
+	"categories":        "categories optionally adds one or more prism categories (each with key and value) for the Machine's VM to associate with. All the category key and value pairs specified must already exist in the prism central.",
 	"userDataSecret":    "userDataSecret is a local reference to a secret that contains the UserData to apply to the VM",
 	"credentialsSecret": "credentialsSecret is a local reference to a secret that contains the credentials data to access Nutanix PC client",
+	"failureDomain":     "failureDomain refers to the name of the FailureDomain with which this Machine is associated. If this is configured, the Nutanix machine controller will use the prism_central endpoint and credentials defined in the referenced FailureDomain to communicate to the prism_central. It will also verify that the 'cluster' and subnets' configuration in the NutanixMachineProviderConfig is consistent with that in the referenced failureDomain.",
 }
 
 func (NutanixMachineProviderConfig) SwaggerDoc() map[string]string {
@@ -306,6 +368,16 @@ func (NutanixResourceIdentifier) SwaggerDoc() map[string]string {
 	return map_NutanixResourceIdentifier
 }
 
+var map_LoadBalancerReference = map[string]string{
+	"":     "LoadBalancerReference is a reference to a load balancer on IBM Cloud virtual private cloud(VPC).",
+	"name": "name of the LoadBalancer in IBM Cloud VPC. The name should be between 1 and 63 characters long and may consist of lowercase alphanumeric characters and hyphens only. The value must not end with a hyphen. It is a reference to existing LoadBalancer created by openshift installer component.",
+	"type": "type of the LoadBalancer service supported by IBM Cloud VPC. Currently, only Application LoadBalancer is supported. More details about Application LoadBalancer https://cloud.ibm.com/docs/vpc?topic=vpc-load-balancers-about&interface=ui Supported values are Application.",
+}
+
+func (LoadBalancerReference) SwaggerDoc() map[string]string {
+	return map_LoadBalancerReference
+}
+
 var map_PowerVSMachineProviderConfig = map[string]string{
 	"":                  "PowerVSMachineProviderConfig is the type that will be embedded in a Machine.Spec.ProviderSpec field for a PowerVS virtual machine. It is used by the PowerVS machine actuator to create a single Machine.\n\nCompatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).",
 	"userDataSecret":    "userDataSecret contains a local reference to a secret that contains the UserData to apply to the instance.",
@@ -318,6 +390,7 @@ var map_PowerVSMachineProviderConfig = map[string]string{
 	"processorType":     "processorType is the VM instance processor type. It must be set to one of the following values: Dedicated, Capped or Shared. Dedicated: resources are allocated for a specific client, The hypervisor makes a 1:1 binding of a partition’s processor to a physical processor core. Shared: Shared among other clients. Capped: Shared, but resources do not expand beyond those that are requested, the amount of CPU time is Capped to the value specified for the entitlement. if the processorType is selected as Dedicated, then processors value cannot be fractional. When omitted, this means that the user has no opinion and the platform is left to choose a reasonable default, which is subject to change over time. The current default is Shared.",
 	"processors":        "processors is the number of virtual processors in a virtual machine. when the processorType is selected as Dedicated the processors value cannot be fractional. maximum value for the Processors depends on the selected SystemType. when SystemType is set to e880 or e980 maximum Processors value is 143. when SystemType is set to s922 maximum Processors value is 15. minimum value for Processors depends on the selected ProcessorType. when ProcessorType is set as Shared or Capped, The minimum processors is 0.5. when ProcessorType is set as Dedicated, The minimum processors is 1. When omitted, this means that the user has no opinion and the platform is left to choose a reasonable default, which is subject to change over time. The default is set based on the selected ProcessorType. when ProcessorType selected as Dedicated, the default is set to 1. when ProcessorType selected as Shared or Capped, the default is set to 0.5.",
 	"memoryGiB":         "memoryGiB is the size of a virtual machine's memory, in GiB. maximum value for the MemoryGiB depends on the selected SystemType. when SystemType is set to e880 maximum MemoryGiB value is 7463 GiB. when SystemType is set to e980 maximum MemoryGiB value is 15307 GiB. when SystemType is set to s922 maximum MemoryGiB value is 942 GiB. The minimum memory is 32 GiB. When omitted, this means the user has no opinion and the platform is left to choose a reasonable default, which is subject to change over time. The current default is 32.",
+	"loadBalancers":     "loadBalancers is the set of load balancers to which the new control plane instance should be added once it is created.",
 }
 
 func (PowerVSMachineProviderConfig) SwaggerDoc() map[string]string {

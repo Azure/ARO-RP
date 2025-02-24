@@ -332,13 +332,13 @@ func (m *manager) deleteGatewayAndWait(ctx context.Context) error {
 	}
 
 	m.log.Info("waiting for gateway record deletion")
-	return wait.PollImmediateUntil(15*time.Second, func() (bool, error) {
+	return wait.PollUntilContextCancel(timeoutCtx, 15*time.Second, true, func(ctx context.Context) (bool, error) {
 		_, err := m.dbGateway.Get(ctx, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID)
-		if err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) /* already gone */ {
-			return true, nil
+		if err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+			return true, err
 		}
 		return false, nil
-	}, timeoutCtx.Done())
+	})
 }
 
 func (m *manager) deleteGateway(ctx context.Context) error {
