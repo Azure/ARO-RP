@@ -281,31 +281,31 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 					vnet.String(),
 				))
 		}
-	}
 
-	if err == wait.ErrWaitTimeout {
-		return noPermissionsErr
-	}
-	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		dv.log.Error(detailedErr)
-
-		switch detailedErr.StatusCode {
-		case http.StatusNotFound:
-			return api.NewCloudError(
-				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidLinkedVNet,
-				"",
-				fmt.Sprintf(
-					errMsgVnetNotFound,
-					vnet.String(),
-				))
-		case http.StatusForbidden:
-			noPermissionsErr.Message = fmt.Sprintf(
-				"%s\nOriginal error message: %s",
-				noPermissionsErr.Message,
-				detailedErr.Message,
-			)
+		if err.Error() == context.Canceled.Error() {
 			return noPermissionsErr
+		}
+		if detailedErr, ok := err.(autorest.DetailedError); ok {
+			dv.log.Error(detailedErr)
+
+			switch detailedErr.StatusCode {
+			case http.StatusNotFound:
+				return api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodeInvalidLinkedVNet,
+					"",
+					fmt.Sprintf(
+						errMsgVnetNotFound,
+						vnet.String(),
+					))
+			case http.StatusForbidden:
+				noPermissionsErr.Message = fmt.Sprintf(
+					"%s\nOriginal error message: %s",
+					noPermissionsErr.Message,
+					detailedErr.Message,
+				)
+				return noPermissionsErr
+			}
 		}
 	}
 	return err
@@ -370,31 +370,31 @@ func (dv *dynamic) validateSubnetPermissions(ctx context.Context, s Subnet) erro
 					subnetr.String(),
 				))
 		}
-	}
 
-	if err == wait.ErrWaitTimeout {
-		return noPermissionsErr
-	}
-	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		dv.log.Error(detailedErr)
-
-		switch detailedErr.StatusCode {
-		case http.StatusNotFound:
-			return api.NewCloudError(
-				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidLinkedSubnet,
-				"",
-				fmt.Sprintf(
-					errMsgSubnetNotFound,
-					subnetr.String(),
-				))
-		case http.StatusForbidden:
-			noPermissionsErr.Message = fmt.Sprintf(
-				"%s\nOriginal error message: %s",
-				noPermissionsErr.Message,
-				detailedErr.Message,
-			)
+		if err.Error() == context.Canceled.Error() {
 			return noPermissionsErr
+		}
+		if detailedErr, ok := err.(autorest.DetailedError); ok {
+			dv.log.Error(detailedErr)
+
+			switch detailedErr.StatusCode {
+			case http.StatusNotFound:
+				return api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodeInvalidLinkedSubnet,
+					"",
+					fmt.Sprintf(
+						errMsgSubnetNotFound,
+						subnetr.String(),
+					))
+			case http.StatusForbidden:
+				noPermissionsErr.Message = fmt.Sprintf(
+					"%s\nOriginal error message: %s",
+					noPermissionsErr.Message,
+					detailedErr.Message,
+				)
+				return noPermissionsErr
+			}
 		}
 	}
 	return err
@@ -439,38 +439,40 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		"Microsoft.Network/routeTables/read",
 		"Microsoft.Network/routeTables/write",
 	})
-	if err == wait.ErrWaitTimeout {
-		if dv.authorizerType == AuthorizerWorkloadIdentity {
+	if err != nil {
+		if err.Error() == context.Canceled.Error() {
+			if dv.authorizerType == AuthorizerWorkloadIdentity {
+				return api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+					"",
+					fmt.Sprintf(
+						errMsgWIHasNoRequiredPermissionsOnRT,
+						*operatorName,
+						rtID,
+					))
+			}
 			return api.NewCloudError(
 				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				errCode,
 				"",
 				fmt.Sprintf(
-					errMsgWIHasNoRequiredPermissionsOnRT,
-					*operatorName,
+					errMsgSPHasNoRequiredPermissionsOnRT,
+					dv.authorizerType,
 					rtID,
 				))
 		}
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			errCode,
-			"",
-			fmt.Sprintf(
-				errMsgSPHasNoRequiredPermissionsOnRT,
-				dv.authorizerType,
-				rtID,
-			))
-	}
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidLinkedRouteTable,
-			"",
-			fmt.Sprintf(
-				errMsgRTNotFound,
-				rtID,
-			))
+		if detailedErr, ok := err.(autorest.DetailedError); ok &&
+			detailedErr.StatusCode == http.StatusNotFound {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedRouteTable,
+				"",
+				fmt.Sprintf(
+					errMsgRTNotFound,
+					rtID,
+				))
+		}
 	}
 	return err
 }
@@ -518,38 +520,40 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 		"Microsoft.Network/natGateways/read",
 		"Microsoft.Network/natGateways/write",
 	})
-	if err == wait.ErrWaitTimeout {
-		if dv.authorizerType == AuthorizerWorkloadIdentity {
+	if err != nil {
+		if err.Error() == context.Canceled.Error() {
+			if dv.authorizerType == AuthorizerWorkloadIdentity {
+				return api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+					"",
+					fmt.Sprintf(
+						errMsgWIHasNoRequiredPermissionsOnNatGW,
+						*operatorName,
+						ngID,
+					))
+			}
 			return api.NewCloudError(
 				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				errCode,
 				"",
 				fmt.Sprintf(
-					errMsgWIHasNoRequiredPermissionsOnNatGW,
-					*operatorName,
+					errMsgSPHasNoRequiredPermissionsOnNatGW,
+					dv.authorizerType,
 					ngID,
 				))
 		}
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			errCode,
-			"",
-			fmt.Sprintf(
-				errMsgSPHasNoRequiredPermissionsOnNatGW,
-				dv.authorizerType,
-				ngID,
-			))
-	}
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidLinkedNatGateway,
-			"",
-			fmt.Sprintf(
-				errMsgNatGWNotFound,
-				ngID,
-			))
+		if detailedErr, ok := err.(autorest.DetailedError); ok &&
+			detailedErr.StatusCode == http.StatusNotFound {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedNatGateway,
+				"",
+				fmt.Sprintf(
+					errMsgNatGWNotFound,
+					ngID,
+				))
+		}
 	}
 	return err
 }
@@ -564,7 +568,7 @@ func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, 
 
 	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions, oid: oid}
 
-	return wait.PollImmediateUntil(30*time.Second, c.usingCheckAccessV2, timeoutCtx.Done())
+	return wait.PollUntilContextCancel(timeoutCtx, 30*time.Second, true, c.usingCheckAccessV2)
 }
 
 // closure is the closure used in PollImmediateUntil's ConditionalFunc
@@ -596,7 +600,7 @@ func (c *closure) checkAccessAuthReqToken() error {
 }
 
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
-func (c closure) usingCheckAccessV2() (result bool, err error) {
+func (c closure) usingCheckAccessV2(ctx context.Context) (result bool, err error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
 	var authReq *client.AuthorizationRequest
@@ -986,33 +990,34 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 		"Microsoft.Network/networkSecurityGroups/join/action",
 	})
 
-	if err == wait.ErrWaitTimeout {
-		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
-		if dv.authorizerType == AuthorizerClusterServicePrincipal {
-			errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
-		} else if dv.authorizerType == AuthorizerWorkloadIdentity {
+	if err != nil {
+		if err.Error() == context.Canceled.Error() {
+			errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
+			if dv.authorizerType == AuthorizerClusterServicePrincipal {
+				errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
+			} else if dv.authorizerType == AuthorizerWorkloadIdentity {
+				return api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+					"",
+					fmt.Sprintf(
+						errMsgWIHasNoRequiredPermissionsOnNSG,
+						*operatorName,
+						nsgID,
+					))
+			}
 			return api.NewCloudError(
 				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				errCode,
 				"",
 				fmt.Sprintf(
-					errMsgWIHasNoRequiredPermissionsOnNSG,
-					*operatorName,
+					errMsgSPHasNoRequiredPermissionsOnNSG,
+					dv.authorizerType,
+					*dv.appID,
 					nsgID,
 				))
 		}
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			errCode,
-			"",
-			fmt.Sprintf(
-				errMsgSPHasNoRequiredPermissionsOnNSG,
-				dv.authorizerType,
-				*dv.appID,
-				nsgID,
-			))
 	}
-
 	return err
 }
 

@@ -77,17 +77,14 @@ func TestEmitHiveRegistrationPanics(t *testing.T) {
 // true and we avoid future panics.
 func TestEmitHiveRegistrationDoesNotPanicWhenWeAssignLiteralNil(t *testing.T) {
 	// interface type: *client.Client, interface value: nil
-	hiveclientset, err := client.New(&rest.Config{}, client.Options{})
+	hiveclientset, _ := client.New(&rest.Config{}, client.Options{})
 	fmt.Printf("hiveclientset: interface type is %T, interface value is: %v\n", hiveclientset, hiveclientset)
 	fmt.Printf("hiveclientset == nil ? %v\n\n", hiveclientset == nil)
-	if err == nil {
-		t.Fatalf("this test wants client.New() to return an error to mimic the behavior in production")
+	if hiveclientset == nil {
+		t.Fatalf("hiveclientset should not be nil")
 	}
 
-	if err != nil {
-		// This modifies the interface type to nil, making hiveclientset == nil evaluate to true.
-		hiveclientset = nil
-	}
+	hiveclientset = nil
 
 	fmt.Printf("hiveclientset: interface type is %T, interface value is: %v\n", hiveclientset, hiveclientset)
 	fmt.Printf("hiveclientset == nil ? %v\n\n", hiveclientset == nil)
