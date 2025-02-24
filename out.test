@@ -1,0 +1,2220 @@
+/Users/taylor/go/bin/gotestsum-v1.11.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+∅  hack/aead (215ms) (coverage: 0.0% of statements)
+∅  hack/clean (215ms) (coverage: 0.0% of statements)
+∅  cmd/aro (216ms) (coverage: 0.0% of statements)
+∅  hack/hive/hive-config (2ms)
+∅  hack/cluster (23ms) (coverage: 0.0% of statements)
+∅  hack/gendevconfig (26ms) (coverage: 0.0% of statements)
+∅  hack/fakecluster (28ms) (coverage: 0.0% of statements)
+∅  hack/db (32ms) (coverage: 0.0% of statements)
+∅  hack/gendeploy (33ms) (coverage: 0.0% of statements)
+∅  hack/genkey (34ms) (coverage: 0.0% of statements)
+∅  hack/licenses (37ms) (coverage: 0.0% of statements)
+∅  hack/monitor (37ms) (coverage: 0.0% of statements)
+∅  hack/portalauth (39ms) (coverage: 0.0% of statements)
+∅  hack/proxy (22ms) (coverage: 0.0% of statements)
+∅  hack/role (20ms) (coverage: 0.0% of statements)
+✓  hack/genhiveconfig (506ms) (coverage: 16.7% of statements)
+✓  hack/gendiscoverycache (896ms) (coverage: 23.1% of statements)
+∅  hack/swagger (20ms) (coverage: 0.0% of statements)
+∅  hack/tunnel (20ms) (coverage: 0.0% of statements)
+✓  pkg/api/admin (663ms) (coverage: 32.0% of statements)
+✓  pkg/api/v20191231preview (841ms) (coverage: 84.6% of statements)
+✓  pkg/api/util/subnet (970ms) (coverage: 81.8% of statements)
+✓  pkg/api/util/immutable (1.004s) (coverage: 61.8% of statements)
+✓  pkg/api (1.309s) (coverage: 28.5% of statements)
+✓  pkg/api/v20200430 (1.544s) (coverage: 84.6% of statements)
+✓  pkg/api/v20220401 (1.728s) (coverage: 83.8% of statements)
+✓  pkg/api/v20210901preview (1.914s) (coverage: 84.5% of statements)
+✓  pkg/api/v20220904 (2.101s) (coverage: 61.5% of statements)
+✓  pkg/api/v20230401 (2.174s) (coverage: 62.1% of statements)
+✓  pkg/api/v20230701preview (2.001s) (coverage: 67.1% of statements)
+✓  pkg/api/v20230904 (2.179s) (coverage: 59.7% of statements)
+✓  pkg/api/v20231122 (1.994s) (coverage: 61.7% of statements)
+✓  pkg/api/validate (1.804s) (coverage: 57.9% of statements)
+✓  pkg/api/v20240812preview (2.202s) (coverage: 61.6% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift/redhatopenshiftapi
+∅  pkg/client/services/redhatopenshift/mgmt/2021-09-01-preview/redhatopenshift/redhatopenshiftapi (1ms)
+∅  pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift/redhatopenshiftapi (1ms)
+∅  pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift/redhatopenshiftapi (1ms)
+∅  pkg/client/services/redhatopenshift/mgmt/2023-04-01/redhatopenshift/redhatopenshiftapi (1ms)
+∅  pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift (23ms) (coverage: 0.0% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift (28ms) (coverage: 0.0% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift (32ms) (coverage: 0.0% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2021-09-01-preview/redhatopenshift (39ms) (coverage: 0.0% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2023-04-01/redhatopenshift (43ms) (coverage: 0.0% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2023-07-01-preview/redhatopenshift (51ms) (coverage: 0.0% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2023-07-01-preview/redhatopenshift/redhatopenshiftapi (3ms)
+∅  pkg/client/services/redhatopenshift/mgmt/2023-09-04/redhatopenshift (21ms) (coverage: 0.0% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2023-09-04/redhatopenshift/redhatopenshiftapi
+∅  pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift/redhatopenshiftapi (1ms)
+∅  pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift/redhatopenshiftapi (4ms)
+∅  pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift (39ms) (coverage: 0.0% of statements)
+∅  pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift (42ms) (coverage: 0.0% of statements)
+✓  pkg/backend (1.268s) (coverage: 62.3% of statements)
+∅  pkg/deploy/assets (1ms)
+∅  pkg/deploy/generator (21ms) (coverage: 0.0% of statements)
+∅  pkg/database/cosmosdb (24ms) (coverage: 0.0% of statements)
+✓  pkg/cluster/graph (1.851s) (coverage: 26.0% of statements)
+✓  pkg/cluster/failurediagnostics (2.262s) (coverage: 81.0% of statements)
+✓  pkg/deploy (3.208s) (coverage: 49.5% of statements)
+✓  pkg/deploy/vmsscleaner (3.41s) (coverage: 94.1% of statements)
+∅  pkg/metrics
+∅  pkg/hive/gomock_reflect_962333910 (14ms) (coverage: 0.0% of statements)
+∅  pkg/metrics/noop (13ms)
+✓  pkg/env (3.828s) (coverage: 8.8% of statements)
+✓  pkg/containerinstall (3.847s) (coverage: 4.4% of statements)
+✖  pkg/cluster (3.921s) (coverage: 57.6% of statements)
+∅  pkg/metrics/statsd/golang (16ms) (coverage: 0.0% of statements)
+∅  pkg/mimo
+✓  pkg/frontend/adminactions (3.089s) (coverage: 36.7% of statements)
+✓  pkg/database (5.696s) (coverage: 4.1% of statements)
+✓  pkg/frontend/middleware (3.489s) (coverage: 42.6% of statements)
+✓  pkg/hive/failure (2.572s) (coverage: 0.0% of statements)
+✓  pkg/hive (3.199s) (coverage: 34.7% of statements)
+✓  pkg/metrics/statsd (2.732s) (coverage: 68.5% of statements)
+✓  pkg/metrics/statsd/azure (2.771s) (coverage: 88.9% of statements)
+✓  pkg/metrics/statsd/cosmosdb (2.951s) (coverage: 95.0% of statements)
+✓  pkg/metrics/statsd/k8s (3.05s) (coverage: 50.0% of statements)
+∅  pkg/mimo/tasks (10ms) (coverage: 0.0% of statements)
+✓  pkg/frontend (7.533s) (coverage: 81.1% of statements)
+✓  pkg/gateway (6.594s) (coverage: 31.3% of statements)
+✖  pkg/mimo/steps/cluster (914ms) (coverage: 65.3% of statements)
+✓  pkg/mimo/steps/example (1.419s) (coverage: 75.0% of statements)
+✓  pkg/mirror (1.843s) (coverage: 1.6% of statements)
+∅  pkg/monitor/dimension
+∅  pkg/operator/clientset/versioned/fake (27ms) (coverage: 0.0% of statements)
+∅  pkg/operator/apis/aro.openshift.io/v1alpha1 (32ms) (coverage: 0.0% of statements)
+∅  pkg/monitor/emitter (33ms) (coverage: 0.0% of statements)
+∅  pkg/monitor/monitoring (36ms) (coverage: 0.0% of statements)
+∅  pkg/operator/apis/preview.aro.openshift.io/v1alpha1 (36ms) (coverage: 0.0% of statements)
+∅  pkg/operator/clientset/versioned (36ms) (coverage: 0.0% of statements)
+∅  pkg/operator/clientset/versioned/scheme (38ms) (coverage: 0.0% of statements)
+∅  pkg/operator/clientset/versioned/typed/preview.aro.openshift.io/v1alpha1 (20ms) (coverage: 0.0% of statements)
+∅  pkg/operator/clientset/versioned/typed/preview.aro.openshift.io/v1alpha1/fake (22ms) (coverage: 0.0% of statements)
+∅  pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1 (32ms) (coverage: 0.0% of statements)
+∅  pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1/fake (33ms) (coverage: 0.0% of statements)
+✓  pkg/mimo/actuator (3.433s) (coverage: 53.8% of statements)
+✓  pkg/monitor (2.246s) (coverage: 11.9% of statements)
+✓  pkg/monitor/azure/nsg (2.637s) (coverage: 92.8% of statements)
+✓  pkg/operator (1.851s) (coverage: 91.7% of statements)
+✓  pkg/operator/controllers/alertwebhook (904ms) (coverage: 73.2% of statements)
+✖  pkg/monitor/cluster (2.618s) (coverage: 58.3% of statements)
+✓  pkg/operator/controllers/autosizednodes (1.109s) (coverage: 78.1% of statements)
+✓  pkg/operator/controllers/banner (1.604s) (coverage: 81.2% of statements)
+✖  pkg/operator/controllers/base (1.929s) (coverage: 56.8% of statements)
+✖  pkg/operator/controllers/checkers/ingresscertificatechecker (2.421s) (coverage: 83.9% of statements)
+∅  pkg/operator/controllers/guardrails/config
+✖  pkg/operator/controllers/checkers/clusterdnschecker (2.896s) (coverage: 80.5% of statements)
+✖  pkg/operator/controllers/checkers/internetchecker (3.206s) (coverage: 74.3% of statements)
+✖  pkg/operator/controllers/checkers/serviceprincipalchecker (3.438s) (coverage: 67.6% of statements)
+✓  pkg/operator/controllers/cloudproviderconfig (3.921s) (coverage: 71.9% of statements)
+✖  pkg/operator/controllers/clusteroperatoraro (4.279s) (coverage: 50.0% of statements)
+✓  pkg/operator/controllers/cpms (4.273s) (coverage: 70.8% of statements)
+∅  pkg/operator/controllers/muo/config
+✖  pkg/operator/controllers/dnsmasq (4.392s)
+✖  pkg/operator/controllers/etchosts (4.605s) (coverage: 61.2% of statements)
+✓  pkg/operator/controllers/genevalogging (4.801s) (coverage: 72.5% of statements)
+✓  pkg/operator/controllers/guardrails (4.834s) (coverage: 33.8% of statements)
+✖  pkg/operator/controllers/imageconfig (4.526s) (coverage: 83.6% of statements)
+∅  pkg/operator/controllers/rbac (15ms) (coverage: 0.0% of statements)
+∅  pkg/operator/controllers/previewfeature (16ms) (coverage: 0.0% of statements)
+✖  pkg/operator/controllers/ingress (4.873s) (coverage: 79.2% of statements)
+✖  pkg/operator/controllers/machine (5.017s) (coverage: 80.8% of statements)
+✖  pkg/operator/controllers/machinehealthcheck (4.751s) (coverage: 81.0% of statements)
+✖  pkg/operator/controllers/machineset (4.93s) (coverage: 79.5% of statements)
+∅  pkg/operator/predicates (10ms) (coverage: 0.0% of statements)
+✖  pkg/operator/controllers/monitoring (4.924s) (coverage: 74.3% of statements)
+✓  pkg/operator/controllers/muo (4.91s) (coverage: 80.4% of statements)
+∅  pkg/portal/assets
+✖  pkg/operator/controllers/node (3.326s) (coverage: 78.1% of statements)
+✓  pkg/operator/controllers/previewfeature/nsgflowlogs (3.695s) (coverage: 76.0% of statements)
+✖  pkg/operator/controllers/pullsecret (4.197s) (coverage: 75.3% of statements)
+✓  pkg/operator/controllers/routefix (3.928s) (coverage: 6.9% of statements)
+✓  pkg/operator/controllers/storageaccounts (4.048s) (coverage: 61.0% of statements)
+✓  pkg/operator/controllers/subnets (4.474s) (coverage: 61.6% of statements)
+∅  pkg/proxy/gomock_reflect_210525447 (9ms) (coverage: 0.0% of statements)
+✖  pkg/operator/controllers/workaround (4.771s) (coverage: 70.6% of statements)
+✓  pkg/operator/deploy (4.582s) (coverage: 26.5% of statements)
+✓  pkg/portal (4.686s) (coverage: 49.4% of statements)
+∅  pkg/util/azureclaim (9ms) (coverage: 0.0% of statements)
+✓  pkg/portal/cluster (4.609s) (coverage: 39.1% of statements)
+✓  pkg/portal/middleware (4.853s) (coverage: 89.5% of statements)
+∅  pkg/util/azureclient/azuresdk/armauthorization (9ms) (coverage: 0.0% of statements)
+✓  pkg/portal/kubeconfig (4.97s) (coverage: 85.0% of statements)
+∅  pkg/util/azureclient/azuresdk/armcontainerservice (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/armcosmos (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/armdns (11ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/armdns/gomock_reflect_1527283793 (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/armkeyvault (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/armmsi (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/armnetwork (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/armstorage (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/azcore
+∅  pkg/util/azureclient/azuresdk/azblob (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/azsecrets (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/common (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/azuresdk/errors (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/keyvault (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/authorization (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/compute (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/containerregistry (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/dns (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/features (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/features/gomock_reflect_3138480052 (14ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/msi (14ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/privatedns (10ms) (coverage: 0.0% of statements)
+✓  pkg/portal/util/clientcache (4.443s) (coverage: 100.0% of statements)
+∅  pkg/util/azureclient/mgmt/network (14ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift (11ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift (12ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift (13ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift (12ms) (coverage: 0.0% of statements)
+✓  pkg/portal/prometheus (5.042s) (coverage: 94.3% of statements)
+∅  pkg/util/azureclient/mgmt/redhatopenshift/2023-07-01-preview/redhatopenshift (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/redhatopenshift/2023-09-04/redhatopenshift (13ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift (16ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/redhatopenshift/2024-08-12-preview/redhatopenshift (13ms) (coverage: 0.0% of statements)
+∅  pkg/util/azureclient/mgmt/storage (14ms) (coverage: 0.0% of statements)
+✓  pkg/portal/util/responsewriter (4.709s) (coverage: 100.0% of statements)
+✓  pkg/portal/ssh (5.378s) (coverage: 51.5% of statements)
+∅  pkg/util/cert (13ms) (coverage: 0.0% of statements)
+∅  pkg/util/blob (14ms) (coverage: 0.0% of statements)
+∅  pkg/util/buckets (15ms) (coverage: 0.0% of statements)
+∅  pkg/util/bucket (17ms) (coverage: 0.0% of statements)
+✓  pkg/proxy (4.228s) (coverage: 8.2% of statements)
+✓  pkg/swagger (3.985s) (coverage: 2.8% of statements)
+✓  pkg/util/acrtoken (3.886s) (coverage: 74.1% of statements)
+∅  pkg/util/cluster (13ms) (coverage: 0.0% of statements)
+✓  pkg/util/arm (3.852s) (coverage: 91.6% of statements)
+✓  pkg/util/azureclient (3.519s) (coverage: 33.8% of statements)
+✓  pkg/util/azureclient/applens (3.394s) (coverage: 61.5% of statements)
+✓  pkg/util/azureerrors (2.217s) (coverage: 64.9% of statements)
+✓  pkg/util/billing (2.093s) (coverage: 93.3% of statements)
+∅  pkg/util/deployer/gomock_reflect_657251090 (11ms) (coverage: 0.0% of statements)
+✖  pkg/util/clienthelper (1.835s) (coverage: 85.5% of statements)
+✓  pkg/util/clusterauthorizer (2.221s) (coverage: 45.5% of statements)
+✓  pkg/util/cmp (1.923s) (coverage: 37.5% of statements)
+✓  pkg/util/clientauthorizer (3.102s) (coverage: 71.2% of statements)
+✓  pkg/util/clusterdata (2.529s) (coverage: 64.7% of statements)
+∅  pkg/util/embed (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/generics (15ms) (coverage: 0.0% of statements)
+∅  pkg/util/graph (15ms) (coverage: 0.0% of statements)
+∅  pkg/util/feature (17ms) (coverage: 0.0% of statements)
+∅  pkg/util/graph/graphsdk (19ms) (coverage: 0.0% of statements)
+∅  pkg/util/graph/graphsdk/applications (12ms) (coverage: 0.0% of statements)
+∅  pkg/util/graph/graphsdk/models (15ms) (coverage: 0.0% of statements)
+∅  pkg/util/graph/graphsdk/models/odataerrors (13ms) (coverage: 0.0% of statements)
+∅  pkg/util/graph/graphsdk/serviceprincipals (11ms) (coverage: 0.0% of statements)
+∅  pkg/util/heartbeat (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/installer (9ms) (coverage: 0.0% of statements)
+✓  pkg/util/clusteroperators (2.703s) (coverage: 100.0% of statements)
+✓  pkg/util/computeskus (2.9s) (coverage: 100.0% of statements)
+✖  pkg/util/conditions (2.827s) (coverage: 97.7% of statements)
+∅  pkg/util/log/audit (13ms) (coverage: 0.0% of statements)
+∅  pkg/util/mimo (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/adminactions (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/api (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azblob (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/armauthorization (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/armcosmos (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/armdns (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/armmsi (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/armnetwork (6ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/armstorage (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/azblob (7ms) (coverage: 0.0% of statements)
+✓  pkg/util/deployer (3.083s) (coverage: 66.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/azcore (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/azuresdk/azsecrets (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/keyvault (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/authorization (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/compute (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/containerregistry (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/dns (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/features (11ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/msi (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/network (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/privatedns (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/azureclient/mgmt/storage (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/billing (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/blob (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/cluster (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/checkaccess (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/clusterdata (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/cosmosdb (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/deployer (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/dns (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/dynamic (11ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/dynamichelper (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/encryption (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/env (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/frontend (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/graph (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/hive (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/instancemetadata (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/keyvault (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/metrics (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/msidataplane (7ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/net (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/operator/controllers/workaround (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/operator/deploy (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/platformworkloadidentity (8ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/proxy (7ms) (coverage: 0.0% of statements)
+✓  pkg/util/dns (3.144s) (coverage: 93.3% of statements)
+∅  pkg/util/mocks/samples (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/samplesclient (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/storage (12ms) (coverage: 0.0% of statements)
+∅  pkg/util/mocks/subnet (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/msidataplane (1ms)
+∅  pkg/util/mocks/vmsscleaner (9ms) (coverage: 0.0% of statements)
+✓  pkg/util/dynamichelper/discovery (2.07s) (coverage: 80.0% of statements)
+∅  pkg/util/oidc (10ms) (coverage: 0.0% of statements)
+✓  pkg/util/dynamichelper (2.638s) (coverage: 36.6% of statements)
+✓  pkg/util/encryption (2.982s) (coverage: 55.4% of statements)
+∅  pkg/util/pki (7ms) (coverage: 0.0% of statements)
+✓  pkg/util/keyvault (2.653s) (coverage: 21.3% of statements)
+✓  pkg/util/instancemetadata (2.929s) (coverage: 41.6% of statements)
+∅  pkg/util/portforward (10ms) (coverage: 0.0% of statements)
+✓  pkg/util/kubernetes (3.064s) (coverage: 100.0% of statements)
+∅  pkg/util/purge (10ms) (coverage: 0.0% of statements)
+✓  pkg/util/liveconfig (3.078s) (coverage: 40.0% of statements)
+∅  pkg/util/rbac (9ms) (coverage: 0.0% of statements)
+✓  pkg/util/loadbalancer (3.127s) (coverage: 100.0% of statements)
+✓  pkg/util/namespace (2.609s) (coverage: 100.0% of statements)
+✓  pkg/util/log (3.498s) (coverage: 42.3% of statements)
+∅  pkg/util/refreshable (10ms) (coverage: 0.0% of statements)
+✓  pkg/util/orderedmap (2.125s) (coverage: 83.0% of statements)
+✓  pkg/util/net (2.471s) (coverage: 52.4% of statements)
+∅  pkg/util/scheme (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/roundtripper (10ms) (coverage: 0.0% of statements)
+∅  pkg/util/status (12ms) (coverage: 0.0% of statements)
+✓  pkg/util/oidcbuilder (2.706s) (coverage: 85.5% of statements)
+✓  pkg/util/pointerutils (2.064s) (coverage: 100.0% of statements)
+✓  pkg/util/pem (3.158s) (coverage: 17.9% of statements)
+∅  pkg/util/uuid (9ms) (coverage: 0.0% of statements)
+∅  pkg/util/uuid/fake (7ms) (coverage: 0.0% of statements)
+✓  pkg/util/platformworkloadidentity (2.605s) (coverage: 81.3% of statements)
+✓  pkg/util/pullsecret (2.512s) (coverage: 71.8% of statements)
+✓  pkg/util/ready (2.215s) (coverage: 96.6% of statements)
+✓  pkg/util/recover (2.276s) (coverage: 66.7% of statements)
+✓  pkg/util/restconfig (2.376s) (coverage: 33.3% of statements)
+✓  pkg/util/stringutils (2.005s) (coverage: 63.6% of statements)
+✓  pkg/util/steps (2.189s) (coverage: 69.3% of statements)
+✓  pkg/util/storage (2.307s) (coverage: 19.2% of statements)
+∅  test/mimo/tasks (14ms) (coverage: 0.0% of statements)
+∅  test/e2e (16ms) (coverage: 0.0% of statements)
+∅  test/util/bufferedpipe (16ms) (coverage: 0.0% of statements)
+∅  test/util/clienthelper (16ms) (coverage: 0.0% of statements)
+∅  test/util/azure/msi (18ms) (coverage: 0.0% of statements)
+∅  test/util/conditions (11ms) (coverage: 0.0% of statements)
+✓  pkg/util/subnet (2.811s) (coverage: 79.1% of statements)
+✓  pkg/util/tls (2.831s) (coverage: 81.2% of statements)
+∅  test/util/dynamic (12ms) (coverage: 0.0% of statements)
+∅  test/util/error (14ms) (coverage: 0.0% of statements)
+∅  test/util/json (10ms) (coverage: 0.0% of statements)
+✓  pkg/util/token (2.928s) (coverage: 100.0% of statements)
+✓  pkg/util/version (2.723s) (coverage: 51.8% of statements)
+∅  test/util/listener (16ms) (coverage: 0.0% of statements)
+∅  test/util/matcher (20ms) (coverage: 0.0% of statements)
+∅  test/util/testpoller (23ms) (coverage: 0.0% of statements)
+∅  test/util/serversideapply (24ms) (coverage: 0.0% of statements)
+∅  test/util/testliveconfig (25ms) (coverage: 0.0% of statements)
+∅  test/util/token (12ms) (coverage: 0.0% of statements)
+∅  test/validate (10ms) (coverage: 0.0% of statements)
+✓  pkg/validate (2.545s) (coverage: 13.3% of statements)
+✓  pkg/validate/dynamic (2.585s) (coverage: 82.6% of statements)
+✓  test/util/deterministicuuid (1.69s) (coverage: 83.3% of statements)
+✓  test/database (2.737s) (coverage: 0.9% of statements)
+✓  test/util/kubeadminkubeconfig (1.717s) (coverage: 25.7% of statements)
+✓  test/util/log (1.753s) (coverage: 51.1% of statements)
+✓  test/util/http/server (7.933s) (coverage: 81.1% of statements)
+
+=== Failed
+=== FAIL: pkg/cluster TestAttachNSGs (0.00s)
+time="2025-02-26T06:12:21-08:00" level=info msg="attaching network security group to subnet masterSubnetID"
+    deploybaseresources.go:373: Unexpected call to *mock_subnet.MockManager.Get([context.Background.WithDeadline(2025-02-26 06:12:21.808433 -0800 PST m=+0.065339168 [932.125µs]) masterSubnetID]) at /Users/taylor/go/ARO-RP/pkg/cluster/deploybaseresources.go:373 because: 
+        expected call at /Users/taylor/go/ARO-RP/pkg/cluster/deploybaseresources_test.go:286 doesn't match the argument at index 0.
+        Got: context.Background.WithDeadline(2025-02-26 06:12:21.808433 -0800 PST m=+0.065339168 [983µs]) (*context.timerCtx)
+        Want: is equal to context.Background (context.backgroundCtx)
+        expected call at /Users/taylor/go/ARO-RP/pkg/cluster/deploybaseresources_test.go:294 doesn't match the argument at index 0.
+        Got: context.Background.WithDeadline(2025-02-26 06:12:21.808433 -0800 PST m=+0.065339168 [975.5µs]) (*context.timerCtx)
+        Want: is equal to context.Background (context.backgroundCtx)
+    controller.go:243: missing call(s) to *mock_subnet.MockManager.Get(is equal to context.Background (context.backgroundCtx), is equal to masterSubnetID (string)) /Users/taylor/go/ARO-RP/pkg/cluster/deploybaseresources_test.go:286
+    controller.go:243: missing call(s) to *mock_subnet.MockManager.Get(is equal to context.Background (context.backgroundCtx), is equal to workerSubnetID (string)) /Users/taylor/go/ARO-RP/pkg/cluster/deploybaseresources_test.go:294
+    controller.go:243: missing call(s) to *mock_subnet.MockManager.CreateOrUpdate(is equal to context.Background (context.backgroundCtx), is equal to masterSubnetID (string), is equal to &{{<nil>} 0x140006a0500 <nil> <nil> <nil>} (*network.Subnet)) /Users/taylor/go/ARO-RP/pkg/cluster/deploybaseresources_test.go:287
+    controller.go:243: missing call(s) to *mock_subnet.MockManager.CreateOrUpdate(is equal to context.Background (context.backgroundCtx), is equal to workerSubnetID (string), is equal to &{{<nil>} 0x140006a0640 <nil> <nil> <nil>} (*network.Subnet)) /Users/taylor/go/ARO-RP/pkg/cluster/deploybaseresources_test.go:295
+    controller.go:243: aborting test due to missing call(s)
+
+=== FAIL: pkg/mimo/steps/cluster TestOperatorFlags/not_ready (0.00s)
+    operatorflags_test.go:122: 
+        Expected
+            <[]string | len:2, cap:2>: [
+                "TypeMeta.Kind: Cluster != ",
+                "TypeMeta.APIVersion: aro.openshift.io/v1alpha1 != ",
+            ]
+        to be empty
+
+=== FAIL: pkg/mimo/steps/cluster TestOperatorFlags (0.00s)
+
+=== FAIL: pkg/monitor/cluster TestEmitHiveRegistrationDoesNotPanicWhenWeAssignLiteralNil (0.00s)
+hiveclientset: interface type is *client.client, interface value is: &{{0x14000879c20 0x1400061c7c0} {0x14000879c20 {}} {0x1400059aa40 0x140005f78b0} 0x14000317260 0x140005f78b0 <nil> map[] false}
+hiveclientset == nil ? false
+
+    hiveregistrationstatus_panics_test.go:84: this test wants client.New() to return an error to mimic the behavior in production
+
+=== FAIL: pkg/operator/controllers/base TestConditions/SetConditions_-_sets_all_provided_conditions (0.01s)
+time="2025-02-26T06:12:34-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    aro_controller_test.go:142: condition FakeControllerAvailable not found
+    aro_controller_test.go:142:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "FakeControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:34.095243 -0800 PST m=+0.017570084",
+        - 	},
+        + 	nil,
+          )
+        
+    aro_controller_test.go:142: condition FakeControllerProgressing not found
+    aro_controller_test.go:142:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "FakeControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:34.095243 -0800 PST m=+0.017570376",
+        - 	},
+        + 	nil,
+          )
+        
+    aro_controller_test.go:142: condition FakeControllerDegraded not found
+    aro_controller_test.go:142:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "FakeControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:34.095243 -0800 PST m=+0.017570626",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/base TestConditions/SetConditions_-_if_condition_exists_and_status_matches,_does_not_update (0.00s)
+time="2025-02-26T06:12:34-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    aro_controller_test.go:142: condition FakeControllerProgressing not found
+    aro_controller_test.go:142:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "FakeControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:34.095243 -0800 PST m=+0.017570376",
+        - 	},
+        + 	nil,
+          )
+        
+    aro_controller_test.go:142: condition FakeControllerDegraded not found
+    aro_controller_test.go:142:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "FakeControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:34.095243 -0800 PST m=+0.017570626",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/base TestConditions/SetConditions_-_if_condition_exists_and_status_does_not_match,_updates (0.00s)
+time="2025-02-26T06:12:34-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    aro_controller_test.go:142:   &v1.OperatorCondition{
+          	Type:               "FakeControllerAvailable",
+        - 	Status:             "False",
+        + 	Status:             "True",
+        - 	LastTransitionTime: v1.Time{Time: s"2025-02-26 06:12:34.095243 -0800 PST m=+0.017570084"},
+        + 	LastTransitionTime: v1.Time{Time: s"2025-02-26 05:12:34 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "Something bad happened",
+        + 	Message:            "",
+          }
+        
+    aro_controller_test.go:142: condition FakeControllerProgressing not found
+    aro_controller_test.go:142:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "FakeControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:34.095243 -0800 PST m=+0.017570376",
+        - 	},
+        + 	nil,
+          )
+        
+    aro_controller_test.go:142: condition FakeControllerDegraded not found
+    aro_controller_test.go:142:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "FakeControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:34.095243 -0800 PST m=+0.017570626",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/base TestConditions/SetProgressing_-_sets_Progressing_to_true_with_message (0.00s)
+time="2025-02-26T06:12:34-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    aro_controller_test.go:142:   &v1.OperatorCondition{
+          	Type:               "FakeControllerProgressing",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:34 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "Controller is performing task",
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/base TestConditions/ClearProgressing_-_sets_Progressing_to_false_and_clears_message (0.00s)
+time="2025-02-26T06:12:34-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    aro_controller_test.go:142:   &v1.OperatorCondition{
+          	Type:               "FakeControllerProgressing",
+        - 	Status:             "False",
+        + 	Status:             "True",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:34 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "",
+        + 	Message:            "Controller is performing task",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/base TestConditions/SetDegraded_-_sets_Degraded_to_true_with_message (0.00s)
+time="2025-02-26T06:12:34-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    aro_controller_test.go:142:   &v1.OperatorCondition{
+          	Type:               "FakeControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:34 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "Controller failed to perform task",
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/base TestConditions/ClearDegraded_-_sets_Degraded_to_false_and_clears_message (0.00s)
+time="2025-02-26T06:12:34-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    aro_controller_test.go:142:   &v1.OperatorCondition{
+          	Type:               "FakeControllerDegraded",
+        - 	Status:             "False",
+        + 	Status:             "True",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:34 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "",
+        + 	Message:            "Controller failed to perform task",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/base TestConditions (0.01s)
+
+=== FAIL: pkg/operator/controllers/checkers/clusterdnschecker TestReconcile/no_errors (0.00s)
+    controller_test.go:118: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:121:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:136: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/clusterdnschecker TestReconcile/check_passed_but_failed_condition (0.00s)
+    controller_test.go:118: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:121:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:136: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/clusterdnschecker TestReconcile/check_failed_with_an_error (0.00s)
+    controller_test.go:118: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error 'fake basic error'
+    controller_test.go:121:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:136: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/clusterdnschecker TestReconcile/controller_disabled (0.00s)
+    controller_test.go:118: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:136: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/clusterdnschecker TestReconcile (0.00s)
+
+=== FAIL: pkg/operator/controllers/checkers/ingresscertificatechecker TestReconcile/no_errors (0.00s)
+    controller_test.go:97: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:100:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:115: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/ingresscertificatechecker TestReconcile/reconciler_handles_correctly_any_error_returned_from_the_reconciler.checker (0.00s)
+    controller_test.go:97: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:100:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:115: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/ingresscertificatechecker TestReconcile/controller_disabled (0.00s)
+    controller_test.go:97: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:115: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/ingresscertificatechecker TestReconcile (0.00s)
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/master/no_errors (0.00s)
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:112:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/master/error_making_a_request (0.00s)
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error 'fake error from checker'
+    controller_test.go:112:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/master/controller_disabled (0.00s)
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/master (0.00s)
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/worker/no_errors (0.00s)
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:112:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/worker/error_making_a_request (0.00s)
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error 'fake error from checker'
+    controller_test.go:112:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/worker/controller_disabled (0.00s)
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/worker (0.00s)
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/incorrect-role/no_errors (0.00s)
+time="2025-02-26T06:12:35-08:00" level=warning msg="unknown role incorrect-role, assuming worker role" func="internetchecker.(*Reconciler).conditionType()" file="pkg/operator/controllers/checkers/internetchecker/controller.go:121"
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:112:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/incorrect-role/error_making_a_request (0.00s)
+time="2025-02-26T06:12:35-08:00" level=warning msg="unknown role incorrect-role, assuming worker role" func="internetchecker.(*Reconciler).conditionType()" file="pkg/operator/controllers/checkers/internetchecker/controller.go:121"
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error 'fake error from checker'
+    controller_test.go:112:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/incorrect-role/controller_disabled (0.00s)
+time="2025-02-26T06:12:35-08:00" level=warning msg="unknown role incorrect-role, assuming worker role" func="internetchecker.(*Reconciler).conditionType()" file="pkg/operator/controllers/checkers/internetchecker/controller.go:121"
+    controller_test.go:109: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:126: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile/incorrect-role (0.00s)
+
+=== FAIL: pkg/operator/controllers/checkers/internetchecker TestReconcile (0.00s)
+
+=== FAIL: pkg/operator/controllers/checkers/serviceprincipalchecker TestReconcile/no_errors (0.00s)
+    controller_test.go:103: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:106:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:121: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/serviceprincipalchecker TestReconcile/check_failed_with_an_error (0.00s)
+    controller_test.go:103: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error 'fake basic error'
+    controller_test.go:106:   reconcile.Result{
+          	Requeue:      false,
+        - 	RequeueAfter: s"1h0m0s",
+        + 	RequeueAfter: s"0s",
+          }
+        
+    controller_test.go:121: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/serviceprincipalchecker TestReconcile/controller_disabled (0.00s)
+    controller_test.go:103: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    controller_test.go:121: no condition found
+
+=== FAIL: pkg/operator/controllers/checkers/serviceprincipalchecker TestReconcile (0.00s)
+
+=== FAIL: pkg/operator/controllers/clusteroperatoraro TestConditions/no_conditions_sets_defaults (0.00s)
+time="2025-02-26T06:12:37-08:00" level=info msg="ClusterOperator does not exist, creating a new one."
+    clusteroperatoraro_controller_test.go:245: got error 'clusteroperators.config.openshift.io "aro" not found', but wanted error ''
+    clusteroperatoraro_controller_test.go:252:   []v1.ClusterOperatorStatusCondition{
+          	{
+          		Type:               "Available",
+        - 		Status:             "Unknown",
+        + 		Status:             "False",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "NoData",
+        + 		Reason:             "Initializing",
+        - 		Message:            "",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{
+          		Type:               "Progressing",
+        - 		Status:             "Unknown",
+        + 		Status:             "True",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "NoData",
+        + 		Reason:             "Initializing",
+        - 		Message:            "",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{Type: "Degraded", Status: "False", LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"}, Reason: "AsExpected", ...},
+          }
+        
+    clusteroperatoraro_controller_test.go:272:   []v1.OwnerReference(
+        - 	{
+        - 		{
+        - 			APIVersion:         "aro.openshift.io/v1alpha1",
+        - 			Kind:               "Cluster",
+        - 			Name:               "cluster",
+        - 			Controller:         &true,
+        - 			BlockOwnerDeletion: &true,
+        - 		},
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/clusteroperatoraro TestConditions/All_controllers_available_sets_Available=True (0.00s)
+time="2025-02-26T06:12:37-08:00" level=info msg="ClusterOperator does not exist, creating a new one."
+    clusteroperatoraro_controller_test.go:245: got error 'clusteroperators.config.openshift.io "aro" not found', but wanted error ''
+    clusteroperatoraro_controller_test.go:252:   []v1.ClusterOperatorStatusCondition{
+          	{
+          		Type:               "Available",
+        - 		Status:             "True",
+        + 		Status:             "False",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "AsExpected",
+        + 		Reason:             "Initializing",
+        - 		Message:            "All is well",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{
+          		Type:               "Progressing",
+        - 		Status:             "Unknown",
+        + 		Status:             "True",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "NoData",
+        + 		Reason:             "Initializing",
+        - 		Message:            "",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{Type: "Degraded", Status: "False", LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"}, Reason: "AsExpected", ...},
+          }
+        
+    clusteroperatoraro_controller_test.go:272:   []v1.OwnerReference(
+        - 	{
+        - 		{
+        - 			APIVersion:         "aro.openshift.io/v1alpha1",
+        - 			Kind:               "Cluster",
+        - 			Name:               "cluster",
+        - 			Controller:         &true,
+        - 			BlockOwnerDeletion: &true,
+        - 		},
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/clusteroperatoraro TestConditions/Controller_not_available_sets_Available=False (0.00s)
+time="2025-02-26T06:12:37-08:00" level=info msg="ClusterOperator does not exist, creating a new one."
+    clusteroperatoraro_controller_test.go:245: got error 'clusteroperators.config.openshift.io "aro" not found', but wanted error ''
+    clusteroperatoraro_controller_test.go:252:   []v1.ClusterOperatorStatusCondition{
+          	{
+          		Type:               "Available",
+          		Status:             "False",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "ControllerB_SomeError",
+        + 		Reason:             "Initializing",
+        - 		Message:            "ControllerBAvailable: An error occurred",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{
+          		Type:               "Progressing",
+        - 		Status:             "Unknown",
+        + 		Status:             "True",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "NoData",
+        + 		Reason:             "Initializing",
+        - 		Message:            "",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{Type: "Degraded", Status: "False", LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"}, Reason: "AsExpected", ...},
+          }
+        
+    clusteroperatoraro_controller_test.go:272:   []v1.OwnerReference(
+        - 	{
+        - 		{
+        - 			APIVersion:         "aro.openshift.io/v1alpha1",
+        - 			Kind:               "Cluster",
+        - 			Name:               "cluster",
+        - 			Controller:         &true,
+        - 			BlockOwnerDeletion: &true,
+        - 		},
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/clusteroperatoraro TestConditions/All_controllers_not_progressing_sets_Progressing=False (0.00s)
+time="2025-02-26T06:12:37-08:00" level=info msg="ClusterOperator does not exist, creating a new one."
+    clusteroperatoraro_controller_test.go:245: got error 'clusteroperators.config.openshift.io "aro" not found', but wanted error ''
+    clusteroperatoraro_controller_test.go:252:   []v1.ClusterOperatorStatusCondition{
+          	{
+          		Type:               "Available",
+        - 		Status:             "Unknown",
+        + 		Status:             "False",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "NoData",
+        + 		Reason:             "Initializing",
+        - 		Message:            "",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{
+          		Type:               "Progressing",
+        - 		Status:             "False",
+        + 		Status:             "True",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "AsExpected",
+        + 		Reason:             "Initializing",
+        - 		Message:            "All is well",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{Type: "Degraded", Status: "False", LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"}, Reason: "AsExpected", ...},
+          }
+        
+    clusteroperatoraro_controller_test.go:272:   []v1.OwnerReference(
+        - 	{
+        - 		{
+        - 			APIVersion:         "aro.openshift.io/v1alpha1",
+        - 			Kind:               "Cluster",
+        - 			Name:               "cluster",
+        - 			Controller:         &true,
+        - 			BlockOwnerDeletion: &true,
+        - 		},
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/clusteroperatoraro TestConditions/Controller_progressing_sets_Progressing=True (0.00s)
+time="2025-02-26T06:12:37-08:00" level=info msg="ClusterOperator does not exist, creating a new one."
+    clusteroperatoraro_controller_test.go:245: got error 'clusteroperators.config.openshift.io "aro" not found', but wanted error ''
+    clusteroperatoraro_controller_test.go:252:   []v1.ClusterOperatorStatusCondition{
+          	{
+          		Type:               "Available",
+        - 		Status:             "Unknown",
+        + 		Status:             "False",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "NoData",
+        + 		Reason:             "Initializing",
+        - 		Message:            "",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{
+          		Type:               "Progressing",
+          		Status:             "True",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "ControllerB_SomeProcess",
+        + 		Reason:             "Initializing",
+        - 		Message:            "ControllerBProgressing: Something is happening",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{Type: "Degraded", Status: "False", LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"}, Reason: "AsExpected", ...},
+          }
+        
+    clusteroperatoraro_controller_test.go:272:   []v1.OwnerReference(
+        - 	{
+        - 		{
+        - 			APIVersion:         "aro.openshift.io/v1alpha1",
+        - 			Kind:               "Cluster",
+        - 			Name:               "cluster",
+        - 			Controller:         &true,
+        - 			BlockOwnerDeletion: &true,
+        - 		},
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/clusteroperatoraro TestConditions/Controller_degraded_does_NOT_set_Degraded=True (0.00s)
+time="2025-02-26T06:12:37-08:00" level=info msg="ClusterOperator does not exist, creating a new one."
+    clusteroperatoraro_controller_test.go:245: got error 'clusteroperators.config.openshift.io "aro" not found', but wanted error ''
+    clusteroperatoraro_controller_test.go:252:   []v1.ClusterOperatorStatusCondition{
+          	{
+          		Type:               "Available",
+        - 		Status:             "Unknown",
+        + 		Status:             "False",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "NoData",
+        + 		Reason:             "Initializing",
+        - 		Message:            "",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{
+          		Type:               "Progressing",
+        - 		Status:             "Unknown",
+        + 		Status:             "True",
+          		LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"},
+        - 		Reason:             "NoData",
+        + 		Reason:             "Initializing",
+        - 		Message:            "",
+        + 		Message:            "Operator is initializing",
+          	},
+          	{Type: "Degraded", Status: "False", LastTransitionTime: {Time: s"2025-02-26 06:12:37 -0800 PST"}, Reason: "AsExpected", ...},
+          }
+        
+    clusteroperatoraro_controller_test.go:272:   []v1.OwnerReference(
+        - 	{
+        - 		{
+        - 			APIVersion:         "aro.openshift.io/v1alpha1",
+        - 			Kind:               "Cluster",
+        - 			Name:               "cluster",
+        - 			Controller:         &true,
+        - 			BlockOwnerDeletion: &true,
+        - 		},
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/clusteroperatoraro TestConditions (0.00s)
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestClusterReconciler/no_MachineConfigPools_does_nothing (0.00s)
+time="2025-02-26T06:12:38-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    cluster_controller_test.go:362:   &v1.OperatorCondition{
+          	Type:               "DnsmasqClusterControllerDegraded",
+        - 	Status:             "False",
+        + 	Status:             "True",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:38 -0800 PST"},
+          	Reason:             "",
+          	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestClusterReconciler/missing_a_clusterversion_fails (0.00s)
+time="2025-02-26T06:12:38-08:00" level=error msg="error getting the ClusterVersion: clusterversions.config.openshift.io \"version\" not found"
+time="2025-02-26T06:12:38-08:00" level=error msg="error getting the ClusterVersion: clusterversions.config.openshift.io \"version\" not found"
+time="2025-02-26T06:12:38-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    cluster_controller_test.go:362:   &v1.OperatorCondition{
+          	Type:               "DnsmasqClusterControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:38 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            `error getting the ClusterVersion: clusterversions.config.openshift.io "version" not found`,
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestClusterReconciler/valid_MachineConfigPool,_while_cluster_updating,_updates_existing_ARO_DNS_MachineConfig (0.00s)
+time="2025-02-26T06:12:38-08:00" level=info msg="Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-dns: ObjectMeta.Labels: <nil map> != map[machineconfiguration.openshift.io/role:master]\nObjectMeta.OwnerReferences: <nil slice> != [{machineconfiguration.openshift.io/v1 MachineConfigPool master  0x140004b9495 0x140004b9494}]\nSpec.Config.Raw: <nil slice> != [123 34 105 103 110 105 116 105 111 110 34 58 123 34 99 111 110 102 105 103 34 58 123 34 114 101 112 108 97 99 101 34 58 123 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 125 44 34 112 114 111 120 121 34 58 123 125 44 34 115 101 99 117 114 105 116 121 34 58 123 34 116 108 115 34 58 123 125 125 44 34 116 105 109 101 111 117 116 115 34 58 123 125 44 34 118 101 114 115 105 111 110 34 58 34 51 46 50 46 48 34 125 44 34 112 97 115 115 119 100 34 58 123 125 44 34 115 116 111 114 97 103 101 34 58 123 34 102 105 108 101 115 34 58 91 123 34 99 111 110 116 101 110 116 115 34 58 123 34 115 111 117 114 99 101 34 58 34 100 97 116 97 58 116 101 120 116 47 112 108 97 105 110 59 99 104 97 114 115 101 116 61 117 116 102 45 56 59 98 97 115 101 54 52 44 67 110 74 108 99 50 57 115 100 105 49 109 97 87 120 108 80 83 57 108 100 71 77 118 99 109 86 122 98 50 120 50 76 109 78 118 98 109 89 117 90 71 53 122 98 87 70 122 99 81 112 122 100 72 74 112 89 51 81 116 98 51 74 107 90 88 73 75 89 87 82 107 99 109 86 122 99 122 48 118 89 88 66 112 76 105 56 75 89 87 82 107 99 109 86 122 99 122 48 118 89 88 66 112 76 87 108 117 100 67 52 118 67 109 70 107 90 72 74 108 99 51 77 57 76 121 53 104 99 72 66 122 76 105 56 75 100 88 78 108 99 106 49 107 98 110 78 116 89 88 78 120 67 109 100 121 98 51 86 119 80 87 82 117 99 50 49 104 99 51 69 75 98 109 56 116 97 71 57 122 100 72 77 75 89 50 70 106 97 71 85 116 99 50 108 54 90 84 48 119 67 103 61 61 34 44 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 44 34 103 114 111 117 112 34 58 123 125 44 34 109 111 100 101 34 58 52 50 48 44 34 111 118 101 114 119 114 105 116 101 34 58 116 114 117 101 44 34 112 97 116 104 34 58 34 47 101 116 99 47 100 110 115 109 97 115 113 46 99 111 110 102 34 44 34 117 115 101 114 34 58 123 34 110 97 109 101 34 58 34 114 111 111 116 34 125 125 44 123 34 99 111 110 116 101 110 116 115 34 58 123 34 115 111 117 114 99 101 34 58 34 100 97 116 97 58 116 101 120 116 47 112 108 97 105 110 59 99 104 97 114 115 101 116 61 117 116 102 45 56 59 98 97 115 101 54 52 44 67 105 77 104 76 50 74 112 98 105 57 105 89 88 78 111 67 110 78 108 100 67 65 116 90 88 86 118 73 72 66 112 99 71 86 109 89 87 108 115 67 103 111 106 73 70 82 111 97 88 77 103 89 109 70 122 97 67 66 122 89 51 74 112 99 72 81 103 97 88 77 103 89 83 66 119 89 88 74 48 73 71 57 109 73 72 82 111 90 83 66 66 85 107 56 103 82 71 53 122 84 87 70 122 99 83 66 106 98 50 53 109 97 87 100 49 99 109 70 48 97 87 57 117 67 105 77 103 83 88 81 110 99 121 66 107 90 88 66 115 98 51 108 108 90 67 66 104 99 121 66 119 89 88 74 48 73 71 57 109 73 72 82 111 90 83 65 53 79 83 49 104 99 109 56 116 90 71 53 122 76 83 111 103 98 87 70 106 97 71 108 117 90 83 66 106 98 50 53 109 97 87 99 75 73 121 66 84 90 87 85 103 97 72 82 48 99 72 77 54 76 121 57 110 97 88 82 111 100 87 73 117 89 50 57 116 76 48 70 54 100 88 74 108 76 48 70 83 84 121 49 83 85 65 111 75 73 121 66 85 97 71 108 122 73 71 90 112 98 71 85 103 89 50 70 117 73 71 74 108 73 72 74 108 99 110 86 117 73 71 70 117 90 67 66 48 97 71 85 103 90 87 90 109 90 87 78 48 73 71 108 122 73 71 108 107 90 87 49 119 98 51 82 108 98 110 81 115 73 71 57 49 100 72 66 49 100 67 66 116 97 87 100 111 100 67 66 106 97 71 70 117 90 50 85 103 97 87 89 103 100 71 104 108 73 69 82 73 81 49 65 103 89 50 57 117 90 109 108 110 100 88 74 104 100 71 108 118 98 105 66 106 97 71 70 117 90 50 86 122 67 103 112 85 84 86 66 84 82 85 120 71 85 107 86 84 84 48 120 87 80 83 81 111 98 87 116 48 90 87 49 119 75 81 112 85 84 86 66 79 82 86 82 83 82 86 78 80 84 70 89 57 74 67 104 116 97 51 82 108 98 88 65 112 67 103 112 108 89 50 104 118 73 67 73 106 73 69 100 108 98 109 86 121 89 88 82 108 90 67 66 109 98 51 73 103 90 71 53 122 98 87 70 122 99 83 53 122 90 88 74 50 97 87 78 108 73 67 48 103 99 50 104 118 100 87 120 107 73 72 66 118 97 87 53 48 73 72 82 118 73 72 78 108 98 71 89 105 73 68 52 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 90 87 78 111 98 121 65 105 73 121 66 72 90 87 53 108 99 109 70 48 90 87 81 103 90 109 57 121 73 71 82 117 99 50 49 104 99 51 69 117 99 50 86 121 100 109 108 106 90 83 65 116 73 72 78 111 98 51 86 115 90 67 66 106 98 50 53 48 89 87 108 117 73 69 82 73 81 49 65 103 89 50 57 117 90 109 108 110 100 88 74 108 90 67 66 69 84 108 77 105 73 68 52 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 103 111 75 97 87 89 103 98 109 49 106 98 71 107 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 89 110 73 116 90 88 103 55 73 72 82 111 90 87 52 75 73 67 65 103 73 71 86 106 97 71 56 103 73 107 57 87 84 105 66 116 98 50 82 108 73 67 48 103 89 110 73 116 90 88 103 103 90 71 86 50 97 87 78 108 73 71 86 52 97 88 78 48 99 121 73 75 73 67 65 103 73 67 78 110 90 88 82 48 97 87 53 110 73 69 82 79 85 121 66 122 90 87 70 121 89 50 103 103 99 51 82 121 97 87 53 110 99 119 111 103 73 67 65 103 85 48 86 66 85 107 78 73 88 49 74 66 86 122 48 107 75 71 53 116 89 50 120 112 73 67 48 116 90 50 86 48 73 69 108 81 78 67 53 69 84 48 49 66 83 85 52 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 89 110 73 116 90 88 103 112 67 105 65 103 73 67 65 106 90 50 86 48 100 71 108 117 90 121 66 69 84 108 77 103 99 50 86 121 100 109 86 121 99 119 111 103 73 67 65 103 84 107 70 78 82 86 78 70 85 108 90 70 85 108 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 82 69 53 84 73 71 82 108 100 109 108 106 90 83 66 122 97 71 57 51 73 71 74 121 76 87 86 52 73 72 119 103 100 72 73 103 76 88 77 103 73 105 66 56 73 67 73 103 73 108 120 117 73 105 107 75 73 67 65 103 73 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 81 85 82 69 85 107 86 84 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 66 105 99 105 49 108 101 67 107 75 90 87 120 122 90 81 111 103 73 67 65 103 84 107 86 85 82 69 86 87 80 83 81 111 98 109 49 106 98 71 107 103 76 83 49 110 90 88 81 103 90 71 86 50 97 87 78 108 73 71 78 118 98 109 53 108 89 51 82 112 98 50 52 103 99 50 104 118 100 121 65 116 76 87 70 106 100 71 108 50 90 83 66 56 73 71 104 108 89 87 81 103 76 87 52 103 77 83 107 103 73 51 82 111 90 88 74 108 73 72 78 111 98 51 86 115 90 67 66 105 90 83 66 118 98 109 120 53 73 71 57 117 90 83 66 104 89 51 82 112 100 109 85 103 90 71 86 50 97 87 78 108 67 105 65 103 73 67 66 108 89 50 104 118 73 67 74 80 86 108 77 103 85 48 82 79 73 71 49 118 90 71 85 103 76 83 66 105 99 105 49 108 101 67 66 117 98 51 81 103 90 109 57 49 98 109 81 115 73 72 86 122 97 87 53 110 73 71 82 108 100 109 108 106 90 83 65 107 84 107 86 85 82 69 86 87 73 103 111 103 73 67 65 103 85 48 86 66 85 107 78 73 88 49 74 66 86 122 48 107 75 71 53 116 89 50 120 112 73 67 48 116 90 50 86 48 73 69 108 81 78 67 53 69 84 48 49 66 83 85 52 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 74 69 53 70 86 69 82 70 86 105 107 75 73 67 65 103 73 69 53 66 84 85 86 84 82 86 74 87 82 86 74 102 85 107 70 88 80 83 81 111 98 109 49 106 98 71 107 103 76 83 49 110 90 88 81 103 83 86 65 48 76 107 82 79 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 65 107 84 107 86 85 82 69 86 87 73 72 119 103 100 72 73 103 76 88 77 103 73 105 66 56 73 67 73 103 73 108 120 117 73 105 107 75 73 67 65 103 73 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 81 85 82 69 85 107 86 84 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 65 107 84 107 86 85 82 69 86 87 75 81 112 109 97 81 111 75 73 51 78 108 89 88 74 106 97 67 66 115 97 87 53 108 67 109 86 106 97 71 56 103 73 110 78 108 89 88 74 106 97 67 65 107 85 48 86 66 85 107 78 73 88 49 74 66 86 121 73 103 102 67 66 48 99 105 65 110 88 71 52 110 73 67 99 103 74 121 65 43 80 105 65 107 86 69 49 81 84 107 86 85 85 107 86 84 84 48 120 87 67 109 86 106 97 71 56 103 73 105 73 103 80 106 52 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 103 112 108 89 50 104 118 73 67 74 122 90 87 70 121 89 50 103 103 74 70 78 70 81 86 74 68 83 70 57 83 81 86 99 105 73 72 119 103 100 72 73 103 74 49 120 117 74 121 65 110 73 67 99 103 80 106 52 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 90 87 78 111 98 121 65 105 73 105 65 43 80 105 65 107 86 69 49 81 85 48 86 77 82 108 74 70 85 48 57 77 86 103 111 75 73 50 53 104 98 87 86 122 90 88 74 50 90 88 74 122 73 71 70 122 73 72 78 108 99 71 70 121 89 88 82 108 73 71 120 112 98 109 86 122 67 109 86 106 97 71 56 103 73 105 82 79 81 85 49 70 85 48 86 83 86 107 86 83 88 49 74 66 86 121 73 103 102 67 66 51 97 71 108 115 90 83 66 121 90 87 70 107 73 67 49 121 73 71 120 112 98 109 85 75 90 71 56 75 73 67 65 103 73 71 86 106 97 71 56 103 73 109 53 104 98 87 86 122 90 88 74 50 90 88 73 103 74 71 120 112 98 109 85 105 73 68 52 43 73 67 82 85 84 86 66 79 82 86 82 83 82 86 78 80 84 70 89 75 90 71 57 117 90 81 111 106 73 71 82 108 100 109 108 106 90 83 66 74 85 72 77 103 89 88 74 108 73 72 74 108 100 72 86 121 98 109 86 107 73 71 108 117 73 71 70 107 90 72 74 108 99 51 77 118 98 87 70 122 97 121 66 109 98 51 74 116 89 88 81 75 90 87 78 111 98 121 65 105 74 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 105 73 72 119 103 100 50 104 112 98 71 85 103 99 109 86 104 90 67 65 116 99 105 66 115 97 87 53 108 67 109 82 118 67 105 65 103 73 67 66 108 89 50 104 118 73 67 74 117 89 87 49 108 99 50 86 121 100 109 86 121 73 67 82 115 97 87 53 108 73 105 66 56 73 71 78 49 100 67 65 116 90 67 99 118 74 121 65 116 90 105 65 120 73 68 52 43 73 67 82 85 84 86 66 84 82 85 120 71 85 107 86 84 84 48 120 87 67 109 82 118 98 109 85 75 67 105 77 103 90 71 57 117 90 83 119 103 89 50 57 119 101 87 108 117 90 121 66 109 97 87 120 108 99 121 66 48 98 121 66 107 90 88 78 48 97 87 53 104 100 71 108 118 98 105 66 115 98 50 78 104 100 71 108 118 98 110 77 103 89 87 53 107 73 71 78 115 90 87 70 117 97 87 53 110 73 72 86 119 67 105 57 105 97 87 52 118 89 51 65 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 105 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 76 109 82 117 99 50 49 104 99 51 69 75 89 50 104 116 98 50 81 103 77 68 99 48 78 67 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 76 109 82 117 99 50 49 104 99 51 69 75 76 50 74 112 98 105 57 106 99 67 65 107 86 69 49 81 85 48 86 77 82 108 74 70 85 48 57 77 86 105 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 67 105 57 49 99 51 73 118 99 50 74 112 98 105 57 121 90 88 78 48 98 51 74 108 89 50 57 117 73 67 57 108 100 71 77 118 99 109 86 122 98 50 120 50 76 109 78 118 98 109 89 75 76 50 74 112 98 105 57 121 98 83 65 107 86 69 49 81 84 107 86 85 85 107 86 84 84 48 120 87 67 105 57 105 97 87 52 118 99 109 48 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 34 44 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 44 34 103 114 111 117 112 34 58 123 125 44 34 109 111 100 101 34 58 52 56 52 44 34 111 118 101 114 119 114 105 116 101 34 58 116 114 117 101 44 34 112 97 116 104 34 58 34 47 117 115 114 47 108 111 99 97 108 47 98 105 110 47 97 114 111 45 100 110 115 109 97 115 113 45 112 114 101 46 115 104 34 44 34 117 115 101 114 34 58 123 34 110 97 109 101 34 58 34 114 111 111 116 34 125 125 93 125 44 34 115 121 115 116 101 109 100 34 58 123 34 117 110 105 116 115 34 58 91 123 34 99 111 110 116 101 110 116 115 34 58 34 92 110 91 85 110 105 116 93 92 110 68 101 115 99 114 105 112 116 105 111 110 61 68 78 83 32 99 97 99 104 105 110 103 32 115 101 114 118 101 114 46 92 110 65 102 116 101 114 61 110 101 116 119 111 114 107 45 111 110 108 105 110 101 46 116 97 114 103 101 116 92 110 66 101 102 111 114 101 61 98 111 111 116 107 117 98 101 46 115 101 114 118 105 99 101 92 110 92 110 91 83 101 114 118 105 99 101 93 92 110 35 32 69 120 101 99 83 116 97 114 116 80 114 101 32 119 105 108 108 32 99 114 101 97 116 101 32 97 32 99 111 112 121 32 111 102 32 116 104 101 32 99 117 115 116 111 109 101 114 32 99 117 114 114 101 110 116 32 114 101 115 111 108 118 46 99 111 110 102 32 102 105 108 101 32 97 110 100 32 109 97 107 101 32 105 116 32 117 112 115 116 114 101 97 109 32 68 78 83 46 92 110 35 32 84 104 105 115 32 102 105 108 101 32 105 115 32 97 32 112 114 111 100 117 99 116 32 111 102 32 117 115 101 114 32 68 78 83 32 115 101 116 116 105 110 103 115 32 111 110 32 116 104 101 32 86 78 69 84 46 32 87 101 32 119 105 108 108 32 114 101 112 108 97 99 101 32 116 104 105 115 32 102 105 108 101 32 116 111 32 112 111 105 110 116 32 116 111 92 110 35 32 100 110 115 109 97 115 113 32 105 110 115 116 97 110 99 101 32 111 110 32 116 104 101 32 110 111 100 101 46 32 100 110 115 109 97 115 113 32 119 105 108 108 32 105 110 106 101 99 116 32 99 101 114 116 97 105 110 32 100 110 115 32 114 101 99 111 114 100 115 32 119 101 32 110 101 101 100 32 97 110 100 32 102 111 114 119 97 114 100 32 114 101 115 116 32 111 102 32 116 104 101 32 113 117 101 114 105 101 115 32 116 111 92 110 35 32 114 101 115 111 108 118 46 99 111 110 102 46 100 110 115 109 97 115 113 32 117 112 115 116 114 101 97 109 32 99 117 115 116 111 109 101 114 32 100 110 115 46 92 110 69 120 101 99 83 116 97 114 116 80 114 101 61 47 98 105 110 47 98 97 115 104 32 47 117 115 114 47 108 111 99 97 108 47 98 105 110 47 97 114 111 45 100 110 115 109 97 115 113 45 112 114 101 46 115 104 92 110 69 120 101 99 83 116 97 114 116 61 47 117 115 114 47 115 98 105 110 47 100 110 115 109 97 115 113 32 45 107 92 110 69 120 101 99 83 116 111 112 80 111 115 116 61 47 98 105 110 47 98 97 115 104 32 45 99 32 39 47 98 105 110 47 109 118 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 46 100 110 115 109 97 115 113 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 59 32 47 117 115 114 47 115 98 105 110 47 114 101 115 116 111 114 101 99 111 110 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 39 92 110 82 101 115 116 97 114 116 61 97 108 119 97 121 115 92 110 92 110 91 73 110 115 116 97 108 108 93 92 110 87 97 110 116 101 100 66 121 61 109 117 108 116 105 45 117 115 101 114 46 116 97 114 103 101 116 92 110 34 44 34 101 110 97 98 108 101 100 34 58 116 114 117 101 44 34 110 97 109 101 34 58 34 100 110 115 109 97 115 113 46 115 101 114 118 105 99 101 34 125 93 125 125]"
+    cluster_controller_test.go:374: update comparison: tallies are not equal
+    cluster_controller_test.go:376: map[MachineConfig//99-master-aro-dns]: 1 != <does not have key>
+    cluster_controller_test.go:376: map[//99-master-aro-dns]: <does not have key> != 1
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestClusterReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestMachineConfigReconciler/missing_a_clusterversion_fails (0.00s)
+time="2025-02-26T06:12:38-08:00" level=error msg="error getting the ClusterVersion: clusterversions.config.openshift.io \"version\" not found"
+time="2025-02-26T06:12:38-08:00" level=error msg="error getting the ClusterVersion: clusterversions.config.openshift.io \"version\" not found"
+time="2025-02-26T06:12:38-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    machineconfig_controller_test.go:126:   &v1.OperatorCondition{
+          	Type:               "DnsmasqMachineConfigControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:38 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            `error getting the ClusterVersion: clusterversions.config.openshift.io "version" not found`,
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestMachineConfigReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestMachineConfigReconcilerNotUpgrading/valid_MachineConfigPool_for_MachineConfig_updates_existing_MachineConfig__when_reconciliation_forced (0.00s)
+time="2025-02-26T06:12:38-08:00" level=info msg="Update MachineConfig.machineconfiguration.openshift.io/99-custom-aro-dns: ObjectMeta.Labels: <nil map> != map[machineconfiguration.openshift.io/role:custom]\nObjectMeta.OwnerReferences: <nil slice> != [{machineconfiguration.openshift.io/v1 MachineConfigPool custom  0x14000776ab5 0x14000776ab4}]\nSpec.Config.Raw: <nil slice> != [123 34 105 103 110 105 116 105 111 110 34 58 123 34 99 111 110 102 105 103 34 58 123 34 114 101 112 108 97 99 101 34 58 123 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 125 44 34 112 114 111 120 121 34 58 123 125 44 34 115 101 99 117 114 105 116 121 34 58 123 34 116 108 115 34 58 123 125 125 44 34 116 105 109 101 111 117 116 115 34 58 123 125 44 34 118 101 114 115 105 111 110 34 58 34 51 46 50 46 48 34 125 44 34 112 97 115 115 119 100 34 58 123 125 44 34 115 116 111 114 97 103 101 34 58 123 34 102 105 108 101 115 34 58 91 123 34 99 111 110 116 101 110 116 115 34 58 123 34 115 111 117 114 99 101 34 58 34 100 97 116 97 58 116 101 120 116 47 112 108 97 105 110 59 99 104 97 114 115 101 116 61 117 116 102 45 56 59 98 97 115 101 54 52 44 67 110 74 108 99 50 57 115 100 105 49 109 97 87 120 108 80 83 57 108 100 71 77 118 99 109 86 122 98 50 120 50 76 109 78 118 98 109 89 117 90 71 53 122 98 87 70 122 99 81 112 122 100 72 74 112 89 51 81 116 98 51 74 107 90 88 73 75 89 87 82 107 99 109 86 122 99 122 48 118 89 88 66 112 76 105 56 75 89 87 82 107 99 109 86 122 99 122 48 118 89 88 66 112 76 87 108 117 100 67 52 118 67 109 70 107 90 72 74 108 99 51 77 57 76 121 53 104 99 72 66 122 76 105 56 75 100 88 78 108 99 106 49 107 98 110 78 116 89 88 78 120 67 109 100 121 98 51 86 119 80 87 82 117 99 50 49 104 99 51 69 75 98 109 56 116 97 71 57 122 100 72 77 75 89 50 70 106 97 71 85 116 99 50 108 54 90 84 48 119 67 103 61 61 34 44 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 44 34 103 114 111 117 112 34 58 123 125 44 34 109 111 100 101 34 58 52 50 48 44 34 111 118 101 114 119 114 105 116 101 34 58 116 114 117 101 44 34 112 97 116 104 34 58 34 47 101 116 99 47 100 110 115 109 97 115 113 46 99 111 110 102 34 44 34 117 115 101 114 34 58 123 34 110 97 109 101 34 58 34 114 111 111 116 34 125 125 44 123 34 99 111 110 116 101 110 116 115 34 58 123 34 115 111 117 114 99 101 34 58 34 100 97 116 97 58 116 101 120 116 47 112 108 97 105 110 59 99 104 97 114 115 101 116 61 117 116 102 45 56 59 98 97 115 101 54 52 44 67 105 77 104 76 50 74 112 98 105 57 105 89 88 78 111 67 110 78 108 100 67 65 116 90 88 86 118 73 72 66 112 99 71 86 109 89 87 108 115 67 103 111 106 73 70 82 111 97 88 77 103 89 109 70 122 97 67 66 122 89 51 74 112 99 72 81 103 97 88 77 103 89 83 66 119 89 88 74 48 73 71 57 109 73 72 82 111 90 83 66 66 85 107 56 103 82 71 53 122 84 87 70 122 99 83 66 106 98 50 53 109 97 87 100 49 99 109 70 48 97 87 57 117 67 105 77 103 83 88 81 110 99 121 66 107 90 88 66 115 98 51 108 108 90 67 66 104 99 121 66 119 89 88 74 48 73 71 57 109 73 72 82 111 90 83 65 53 79 83 49 104 99 109 56 116 90 71 53 122 76 83 111 103 98 87 70 106 97 71 108 117 90 83 66 106 98 50 53 109 97 87 99 75 73 121 66 84 90 87 85 103 97 72 82 48 99 72 77 54 76 121 57 110 97 88 82 111 100 87 73 117 89 50 57 116 76 48 70 54 100 88 74 108 76 48 70 83 84 121 49 83 85 65 111 75 73 121 66 85 97 71 108 122 73 71 90 112 98 71 85 103 89 50 70 117 73 71 74 108 73 72 74 108 99 110 86 117 73 71 70 117 90 67 66 48 97 71 85 103 90 87 90 109 90 87 78 48 73 71 108 122 73 71 108 107 90 87 49 119 98 51 82 108 98 110 81 115 73 71 57 49 100 72 66 49 100 67 66 116 97 87 100 111 100 67 66 106 97 71 70 117 90 50 85 103 97 87 89 103 100 71 104 108 73 69 82 73 81 49 65 103 89 50 57 117 90 109 108 110 100 88 74 104 100 71 108 118 98 105 66 106 97 71 70 117 90 50 86 122 67 103 112 85 84 86 66 84 82 85 120 71 85 107 86 84 84 48 120 87 80 83 81 111 98 87 116 48 90 87 49 119 75 81 112 85 84 86 66 79 82 86 82 83 82 86 78 80 84 70 89 57 74 67 104 116 97 51 82 108 98 88 65 112 67 103 112 108 89 50 104 118 73 67 73 106 73 69 100 108 98 109 86 121 89 88 82 108 90 67 66 109 98 51 73 103 90 71 53 122 98 87 70 122 99 83 53 122 90 88 74 50 97 87 78 108 73 67 48 103 99 50 104 118 100 87 120 107 73 72 66 118 97 87 53 48 73 72 82 118 73 72 78 108 98 71 89 105 73 68 52 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 90 87 78 111 98 121 65 105 73 121 66 72 90 87 53 108 99 109 70 48 90 87 81 103 90 109 57 121 73 71 82 117 99 50 49 104 99 51 69 117 99 50 86 121 100 109 108 106 90 83 65 116 73 72 78 111 98 51 86 115 90 67 66 106 98 50 53 48 89 87 108 117 73 69 82 73 81 49 65 103 89 50 57 117 90 109 108 110 100 88 74 108 90 67 66 69 84 108 77 105 73 68 52 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 103 111 75 97 87 89 103 98 109 49 106 98 71 107 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 89 110 73 116 90 88 103 55 73 72 82 111 90 87 52 75 73 67 65 103 73 71 86 106 97 71 56 103 73 107 57 87 84 105 66 116 98 50 82 108 73 67 48 103 89 110 73 116 90 88 103 103 90 71 86 50 97 87 78 108 73 71 86 52 97 88 78 48 99 121 73 75 73 67 65 103 73 67 78 110 90 88 82 48 97 87 53 110 73 69 82 79 85 121 66 122 90 87 70 121 89 50 103 103 99 51 82 121 97 87 53 110 99 119 111 103 73 67 65 103 85 48 86 66 85 107 78 73 88 49 74 66 86 122 48 107 75 71 53 116 89 50 120 112 73 67 48 116 90 50 86 48 73 69 108 81 78 67 53 69 84 48 49 66 83 85 52 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 89 110 73 116 90 88 103 112 67 105 65 103 73 67 65 106 90 50 86 48 100 71 108 117 90 121 66 69 84 108 77 103 99 50 86 121 100 109 86 121 99 119 111 103 73 67 65 103 84 107 70 78 82 86 78 70 85 108 90 70 85 108 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 82 69 53 84 73 71 82 108 100 109 108 106 90 83 66 122 97 71 57 51 73 71 74 121 76 87 86 52 73 72 119 103 100 72 73 103 76 88 77 103 73 105 66 56 73 67 73 103 73 108 120 117 73 105 107 75 73 67 65 103 73 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 81 85 82 69 85 107 86 84 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 66 105 99 105 49 108 101 67 107 75 90 87 120 122 90 81 111 103 73 67 65 103 84 107 86 85 82 69 86 87 80 83 81 111 98 109 49 106 98 71 107 103 76 83 49 110 90 88 81 103 90 71 86 50 97 87 78 108 73 71 78 118 98 109 53 108 89 51 82 112 98 50 52 103 99 50 104 118 100 121 65 116 76 87 70 106 100 71 108 50 90 83 66 56 73 71 104 108 89 87 81 103 76 87 52 103 77 83 107 103 73 51 82 111 90 88 74 108 73 72 78 111 98 51 86 115 90 67 66 105 90 83 66 118 98 109 120 53 73 71 57 117 90 83 66 104 89 51 82 112 100 109 85 103 90 71 86 50 97 87 78 108 67 105 65 103 73 67 66 108 89 50 104 118 73 67 74 80 86 108 77 103 85 48 82 79 73 71 49 118 90 71 85 103 76 83 66 105 99 105 49 108 101 67 66 117 98 51 81 103 90 109 57 49 98 109 81 115 73 72 86 122 97 87 53 110 73 71 82 108 100 109 108 106 90 83 65 107 84 107 86 85 82 69 86 87 73 103 111 103 73 67 65 103 85 48 86 66 85 107 78 73 88 49 74 66 86 122 48 107 75 71 53 116 89 50 120 112 73 67 48 116 90 50 86 48 73 69 108 81 78 67 53 69 84 48 49 66 83 85 52 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 74 69 53 70 86 69 82 70 86 105 107 75 73 67 65 103 73 69 53 66 84 85 86 84 82 86 74 87 82 86 74 102 85 107 70 88 80 83 81 111 98 109 49 106 98 71 107 103 76 83 49 110 90 88 81 103 83 86 65 48 76 107 82 79 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 65 107 84 107 86 85 82 69 86 87 73 72 119 103 100 72 73 103 76 88 77 103 73 105 66 56 73 67 73 103 73 108 120 117 73 105 107 75 73 67 65 103 73 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 81 85 82 69 85 107 86 84 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 65 107 84 107 86 85 82 69 86 87 75 81 112 109 97 81 111 75 73 51 78 108 89 88 74 106 97 67 66 115 97 87 53 108 67 109 86 106 97 71 56 103 73 110 78 108 89 88 74 106 97 67 65 107 85 48 86 66 85 107 78 73 88 49 74 66 86 121 73 103 102 67 66 48 99 105 65 110 88 71 52 110 73 67 99 103 74 121 65 43 80 105 65 107 86 69 49 81 84 107 86 85 85 107 86 84 84 48 120 87 67 109 86 106 97 71 56 103 73 105 73 103 80 106 52 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 103 112 108 89 50 104 118 73 67 74 122 90 87 70 121 89 50 103 103 74 70 78 70 81 86 74 68 83 70 57 83 81 86 99 105 73 72 119 103 100 72 73 103 74 49 120 117 74 121 65 110 73 67 99 103 80 106 52 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 90 87 78 111 98 121 65 105 73 105 65 43 80 105 65 107 86 69 49 81 85 48 86 77 82 108 74 70 85 48 57 77 86 103 111 75 73 50 53 104 98 87 86 122 90 88 74 50 90 88 74 122 73 71 70 122 73 72 78 108 99 71 70 121 89 88 82 108 73 71 120 112 98 109 86 122 67 109 86 106 97 71 56 103 73 105 82 79 81 85 49 70 85 48 86 83 86 107 86 83 88 49 74 66 86 121 73 103 102 67 66 51 97 71 108 115 90 83 66 121 90 87 70 107 73 67 49 121 73 71 120 112 98 109 85 75 90 71 56 75 73 67 65 103 73 71 86 106 97 71 56 103 73 109 53 104 98 87 86 122 90 88 74 50 90 88 73 103 74 71 120 112 98 109 85 105 73 68 52 43 73 67 82 85 84 86 66 79 82 86 82 83 82 86 78 80 84 70 89 75 90 71 57 117 90 81 111 106 73 71 82 108 100 109 108 106 90 83 66 74 85 72 77 103 89 88 74 108 73 72 74 108 100 72 86 121 98 109 86 107 73 71 108 117 73 71 70 107 90 72 74 108 99 51 77 118 98 87 70 122 97 121 66 109 98 51 74 116 89 88 81 75 90 87 78 111 98 121 65 105 74 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 105 73 72 119 103 100 50 104 112 98 71 85 103 99 109 86 104 90 67 65 116 99 105 66 115 97 87 53 108 67 109 82 118 67 105 65 103 73 67 66 108 89 50 104 118 73 67 74 117 89 87 49 108 99 50 86 121 100 109 86 121 73 67 82 115 97 87 53 108 73 105 66 56 73 71 78 49 100 67 65 116 90 67 99 118 74 121 65 116 90 105 65 120 73 68 52 43 73 67 82 85 84 86 66 84 82 85 120 71 85 107 86 84 84 48 120 87 67 109 82 118 98 109 85 75 67 105 77 103 90 71 57 117 90 83 119 103 89 50 57 119 101 87 108 117 90 121 66 109 97 87 120 108 99 121 66 48 98 121 66 107 90 88 78 48 97 87 53 104 100 71 108 118 98 105 66 115 98 50 78 104 100 71 108 118 98 110 77 103 89 87 53 107 73 71 78 115 90 87 70 117 97 87 53 110 73 72 86 119 67 105 57 105 97 87 52 118 89 51 65 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 105 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 76 109 82 117 99 50 49 104 99 51 69 75 89 50 104 116 98 50 81 103 77 68 99 48 78 67 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 76 109 82 117 99 50 49 104 99 51 69 75 76 50 74 112 98 105 57 106 99 67 65 107 86 69 49 81 85 48 86 77 82 108 74 70 85 48 57 77 86 105 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 67 105 57 49 99 51 73 118 99 50 74 112 98 105 57 121 90 88 78 48 98 51 74 108 89 50 57 117 73 67 57 108 100 71 77 118 99 109 86 122 98 50 120 50 76 109 78 118 98 109 89 75 76 50 74 112 98 105 57 121 98 83 65 107 86 69 49 81 84 107 86 85 85 107 86 84 84 48 120 87 67 105 57 105 97 87 52 118 99 109 48 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 34 44 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 44 34 103 114 111 117 112 34 58 123 125 44 34 109 111 100 101 34 58 52 56 52 44 34 111 118 101 114 119 114 105 116 101 34 58 116 114 117 101 44 34 112 97 116 104 34 58 34 47 117 115 114 47 108 111 99 97 108 47 98 105 110 47 97 114 111 45 100 110 115 109 97 115 113 45 112 114 101 46 115 104 34 44 34 117 115 101 114 34 58 123 34 110 97 109 101 34 58 34 114 111 111 116 34 125 125 93 125 44 34 115 121 115 116 101 109 100 34 58 123 34 117 110 105 116 115 34 58 91 123 34 99 111 110 116 101 110 116 115 34 58 34 92 110 91 85 110 105 116 93 92 110 68 101 115 99 114 105 112 116 105 111 110 61 68 78 83 32 99 97 99 104 105 110 103 32 115 101 114 118 101 114 46 92 110 65 102 116 101 114 61 110 101 116 119 111 114 107 45 111 110 108 105 110 101 46 116 97 114 103 101 116 92 110 66 101 102 111 114 101 61 98 111 111 116 107 117 98 101 46 115 101 114 118 105 99 101 92 110 92 110 91 83 101 114 118 105 99 101 93 92 110 35 32 69 120 101 99 83 116 97 114 116 80 114 101 32 119 105 108 108 32 99 114 101 97 116 101 32 97 32 99 111 112 121 32 111 102 32 116 104 101 32 99 117 115 116 111 109 101 114 32 99 117 114 114 101 110 116 32 114 101 115 111 108 118 46 99 111 110 102 32 102 105 108 101 32 97 110 100 32 109 97 107 101 32 105 116 32 117 112 115 116 114 101 97 109 32 68 78 83 46 92 110 35 32 84 104 105 115 32 102 105 108 101 32 105 115 32 97 32 112 114 111 100 117 99 116 32 111 102 32 117 115 101 114 32 68 78 83 32 115 101 116 116 105 110 103 115 32 111 110 32 116 104 101 32 86 78 69 84 46 32 87 101 32 119 105 108 108 32 114 101 112 108 97 99 101 32 116 104 105 115 32 102 105 108 101 32 116 111 32 112 111 105 110 116 32 116 111 92 110 35 32 100 110 115 109 97 115 113 32 105 110 115 116 97 110 99 101 32 111 110 32 116 104 101 32 110 111 100 101 46 32 100 110 115 109 97 115 113 32 119 105 108 108 32 105 110 106 101 99 116 32 99 101 114 116 97 105 110 32 100 110 115 32 114 101 99 111 114 100 115 32 119 101 32 110 101 101 100 32 97 110 100 32 102 111 114 119 97 114 100 32 114 101 115 116 32 111 102 32 116 104 101 32 113 117 101 114 105 101 115 32 116 111 92 110 35 32 114 101 115 111 108 118 46 99 111 110 102 46 100 110 115 109 97 115 113 32 117 112 115 116 114 101 97 109 32 99 117 115 116 111 109 101 114 32 100 110 115 46 92 110 69 120 101 99 83 116 97 114 116 80 114 101 61 47 98 105 110 47 98 97 115 104 32 47 117 115 114 47 108 111 99 97 108 47 98 105 110 47 97 114 111 45 100 110 115 109 97 115 113 45 112 114 101 46 115 104 92 110 69 120 101 99 83 116 97 114 116 61 47 117 115 114 47 115 98 105 110 47 100 110 115 109 97 115 113 32 45 107 92 110 69 120 101 99 83 116 111 112 80 111 115 116 61 47 98 105 110 47 98 97 115 104 32 45 99 32 39 47 98 105 110 47 109 118 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 46 100 110 115 109 97 115 113 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 59 32 47 117 115 114 47 115 98 105 110 47 114 101 115 116 111 114 101 99 111 110 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 39 92 110 82 101 115 116 97 114 116 61 97 108 119 97 121 115 92 110 92 110 91 73 110 115 116 97 108 108 93 92 110 87 97 110 116 101 100 66 121 61 109 117 108 116 105 45 117 115 101 114 46 116 97 114 103 101 116 92 110 34 44 34 101 110 97 98 108 101 100 34 58 116 114 117 101 44 34 110 97 109 101 34 58 34 100 110 115 109 97 115 113 46 115 101 114 118 105 99 101 34 125 93 125 125]"
+    machineconfig_controller_test.go:318: update comparison: tallies are not equal
+    machineconfig_controller_test.go:320: map[MachineConfig//99-custom-aro-dns]: 1 != <does not have key>
+    machineconfig_controller_test.go:320: map[//99-custom-aro-dns]: <does not have key> != 1
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestMachineConfigReconcilerNotUpgrading (0.00s)
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestMachineConfigReconcilerClusterUpgrading/no_MachineConfigPool_for_MachineConfig_does_nothing_(cluster_upgrading) (0.00s)
+time="2025-02-26T06:12:38-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    machineconfig_controller_test.go:520:   &v1.OperatorCondition{
+          	Type:               "DnsmasqMachineConfigControllerDegraded",
+        - 	Status:             "False",
+        + 	Status:             "True",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:38 -0800 PST"},
+          	Reason:             "",
+          	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestMachineConfigReconcilerClusterUpgrading/valid_MachineConfigPool_for_MachineConfig_updates_existing_MachineConfig_while_cluster_upgrading (0.00s)
+time="2025-02-26T06:12:38-08:00" level=info msg="Update MachineConfig.machineconfiguration.openshift.io/99-custom-aro-dns: ObjectMeta.Labels: <nil map> != map[machineconfiguration.openshift.io/role:custom]\nObjectMeta.OwnerReferences: <nil slice> != [{machineconfiguration.openshift.io/v1 MachineConfigPool custom  0x1400085a785 0x1400085a784}]\nSpec.Config.Raw: <nil slice> != [123 34 105 103 110 105 116 105 111 110 34 58 123 34 99 111 110 102 105 103 34 58 123 34 114 101 112 108 97 99 101 34 58 123 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 125 44 34 112 114 111 120 121 34 58 123 125 44 34 115 101 99 117 114 105 116 121 34 58 123 34 116 108 115 34 58 123 125 125 44 34 116 105 109 101 111 117 116 115 34 58 123 125 44 34 118 101 114 115 105 111 110 34 58 34 51 46 50 46 48 34 125 44 34 112 97 115 115 119 100 34 58 123 125 44 34 115 116 111 114 97 103 101 34 58 123 34 102 105 108 101 115 34 58 91 123 34 99 111 110 116 101 110 116 115 34 58 123 34 115 111 117 114 99 101 34 58 34 100 97 116 97 58 116 101 120 116 47 112 108 97 105 110 59 99 104 97 114 115 101 116 61 117 116 102 45 56 59 98 97 115 101 54 52 44 67 110 74 108 99 50 57 115 100 105 49 109 97 87 120 108 80 83 57 108 100 71 77 118 99 109 86 122 98 50 120 50 76 109 78 118 98 109 89 117 90 71 53 122 98 87 70 122 99 81 112 122 100 72 74 112 89 51 81 116 98 51 74 107 90 88 73 75 89 87 82 107 99 109 86 122 99 122 48 118 89 88 66 112 76 105 56 75 89 87 82 107 99 109 86 122 99 122 48 118 89 88 66 112 76 87 108 117 100 67 52 118 67 109 70 107 90 72 74 108 99 51 77 57 76 121 53 104 99 72 66 122 76 105 56 75 100 88 78 108 99 106 49 107 98 110 78 116 89 88 78 120 67 109 100 121 98 51 86 119 80 87 82 117 99 50 49 104 99 51 69 75 98 109 56 116 97 71 57 122 100 72 77 75 89 50 70 106 97 71 85 116 99 50 108 54 90 84 48 119 67 103 61 61 34 44 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 44 34 103 114 111 117 112 34 58 123 125 44 34 109 111 100 101 34 58 52 50 48 44 34 111 118 101 114 119 114 105 116 101 34 58 116 114 117 101 44 34 112 97 116 104 34 58 34 47 101 116 99 47 100 110 115 109 97 115 113 46 99 111 110 102 34 44 34 117 115 101 114 34 58 123 34 110 97 109 101 34 58 34 114 111 111 116 34 125 125 44 123 34 99 111 110 116 101 110 116 115 34 58 123 34 115 111 117 114 99 101 34 58 34 100 97 116 97 58 116 101 120 116 47 112 108 97 105 110 59 99 104 97 114 115 101 116 61 117 116 102 45 56 59 98 97 115 101 54 52 44 67 105 77 104 76 50 74 112 98 105 57 105 89 88 78 111 67 110 78 108 100 67 65 116 90 88 86 118 73 72 66 112 99 71 86 109 89 87 108 115 67 103 111 106 73 70 82 111 97 88 77 103 89 109 70 122 97 67 66 122 89 51 74 112 99 72 81 103 97 88 77 103 89 83 66 119 89 88 74 48 73 71 57 109 73 72 82 111 90 83 66 66 85 107 56 103 82 71 53 122 84 87 70 122 99 83 66 106 98 50 53 109 97 87 100 49 99 109 70 48 97 87 57 117 67 105 77 103 83 88 81 110 99 121 66 107 90 88 66 115 98 51 108 108 90 67 66 104 99 121 66 119 89 88 74 48 73 71 57 109 73 72 82 111 90 83 65 53 79 83 49 104 99 109 56 116 90 71 53 122 76 83 111 103 98 87 70 106 97 71 108 117 90 83 66 106 98 50 53 109 97 87 99 75 73 121 66 84 90 87 85 103 97 72 82 48 99 72 77 54 76 121 57 110 97 88 82 111 100 87 73 117 89 50 57 116 76 48 70 54 100 88 74 108 76 48 70 83 84 121 49 83 85 65 111 75 73 121 66 85 97 71 108 122 73 71 90 112 98 71 85 103 89 50 70 117 73 71 74 108 73 72 74 108 99 110 86 117 73 71 70 117 90 67 66 48 97 71 85 103 90 87 90 109 90 87 78 48 73 71 108 122 73 71 108 107 90 87 49 119 98 51 82 108 98 110 81 115 73 71 57 49 100 72 66 49 100 67 66 116 97 87 100 111 100 67 66 106 97 71 70 117 90 50 85 103 97 87 89 103 100 71 104 108 73 69 82 73 81 49 65 103 89 50 57 117 90 109 108 110 100 88 74 104 100 71 108 118 98 105 66 106 97 71 70 117 90 50 86 122 67 103 112 85 84 86 66 84 82 85 120 71 85 107 86 84 84 48 120 87 80 83 81 111 98 87 116 48 90 87 49 119 75 81 112 85 84 86 66 79 82 86 82 83 82 86 78 80 84 70 89 57 74 67 104 116 97 51 82 108 98 88 65 112 67 103 112 108 89 50 104 118 73 67 73 106 73 69 100 108 98 109 86 121 89 88 82 108 90 67 66 109 98 51 73 103 90 71 53 122 98 87 70 122 99 83 53 122 90 88 74 50 97 87 78 108 73 67 48 103 99 50 104 118 100 87 120 107 73 72 66 118 97 87 53 48 73 72 82 118 73 72 78 108 98 71 89 105 73 68 52 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 90 87 78 111 98 121 65 105 73 121 66 72 90 87 53 108 99 109 70 48 90 87 81 103 90 109 57 121 73 71 82 117 99 50 49 104 99 51 69 117 99 50 86 121 100 109 108 106 90 83 65 116 73 72 78 111 98 51 86 115 90 67 66 106 98 50 53 48 89 87 108 117 73 69 82 73 81 49 65 103 89 50 57 117 90 109 108 110 100 88 74 108 90 67 66 69 84 108 77 105 73 68 52 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 103 111 75 97 87 89 103 98 109 49 106 98 71 107 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 89 110 73 116 90 88 103 55 73 72 82 111 90 87 52 75 73 67 65 103 73 71 86 106 97 71 56 103 73 107 57 87 84 105 66 116 98 50 82 108 73 67 48 103 89 110 73 116 90 88 103 103 90 71 86 50 97 87 78 108 73 71 86 52 97 88 78 48 99 121 73 75 73 67 65 103 73 67 78 110 90 88 82 48 97 87 53 110 73 69 82 79 85 121 66 122 90 87 70 121 89 50 103 103 99 51 82 121 97 87 53 110 99 119 111 103 73 67 65 103 85 48 86 66 85 107 78 73 88 49 74 66 86 122 48 107 75 71 53 116 89 50 120 112 73 67 48 116 90 50 86 48 73 69 108 81 78 67 53 69 84 48 49 66 83 85 52 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 89 110 73 116 90 88 103 112 67 105 65 103 73 67 65 106 90 50 86 48 100 71 108 117 90 121 66 69 84 108 77 103 99 50 86 121 100 109 86 121 99 119 111 103 73 67 65 103 84 107 70 78 82 86 78 70 85 108 90 70 85 108 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 82 69 53 84 73 71 82 108 100 109 108 106 90 83 66 122 97 71 57 51 73 71 74 121 76 87 86 52 73 72 119 103 100 72 73 103 76 88 77 103 73 105 66 56 73 67 73 103 73 108 120 117 73 105 107 75 73 67 65 103 73 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 81 85 82 69 85 107 86 84 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 66 105 99 105 49 108 101 67 107 75 90 87 120 122 90 81 111 103 73 67 65 103 84 107 86 85 82 69 86 87 80 83 81 111 98 109 49 106 98 71 107 103 76 83 49 110 90 88 81 103 90 71 86 50 97 87 78 108 73 71 78 118 98 109 53 108 89 51 82 112 98 50 52 103 99 50 104 118 100 121 65 116 76 87 70 106 100 71 108 50 90 83 66 56 73 71 104 108 89 87 81 103 76 87 52 103 77 83 107 103 73 51 82 111 90 88 74 108 73 72 78 111 98 51 86 115 90 67 66 105 90 83 66 118 98 109 120 53 73 71 57 117 90 83 66 104 89 51 82 112 100 109 85 103 90 71 86 50 97 87 78 108 67 105 65 103 73 67 66 108 89 50 104 118 73 67 74 80 86 108 77 103 85 48 82 79 73 71 49 118 90 71 85 103 76 83 66 105 99 105 49 108 101 67 66 117 98 51 81 103 90 109 57 49 98 109 81 115 73 72 86 122 97 87 53 110 73 71 82 108 100 109 108 106 90 83 65 107 84 107 86 85 82 69 86 87 73 103 111 103 73 67 65 103 85 48 86 66 85 107 78 73 88 49 74 66 86 122 48 107 75 71 53 116 89 50 120 112 73 67 48 116 90 50 86 48 73 69 108 81 78 67 53 69 84 48 49 66 83 85 52 103 90 71 86 50 97 87 78 108 73 72 78 111 98 51 99 103 74 69 53 70 86 69 82 70 86 105 107 75 73 67 65 103 73 69 53 66 84 85 86 84 82 86 74 87 82 86 74 102 85 107 70 88 80 83 81 111 98 109 49 106 98 71 107 103 76 83 49 110 90 88 81 103 83 86 65 48 76 107 82 79 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 65 107 84 107 86 85 82 69 86 87 73 72 119 103 100 72 73 103 76 88 77 103 73 105 66 56 73 67 73 103 73 108 120 117 73 105 107 75 73 67 65 103 73 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 57 74 67 104 117 98 87 78 115 97 83 65 116 76 87 100 108 100 67 66 74 85 68 81 117 81 85 82 69 85 107 86 84 85 121 66 107 90 88 90 112 89 50 85 103 99 50 104 118 100 121 65 107 84 107 86 85 82 69 86 87 75 81 112 109 97 81 111 75 73 51 78 108 89 88 74 106 97 67 66 115 97 87 53 108 67 109 86 106 97 71 56 103 73 110 78 108 89 88 74 106 97 67 65 107 85 48 86 66 85 107 78 73 88 49 74 66 86 121 73 103 102 67 66 48 99 105 65 110 88 71 52 110 73 67 99 103 74 121 65 43 80 105 65 107 86 69 49 81 84 107 86 85 85 107 86 84 84 48 120 87 67 109 86 106 97 71 56 103 73 105 73 103 80 106 52 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 103 112 108 89 50 104 118 73 67 74 122 90 87 70 121 89 50 103 103 74 70 78 70 81 86 74 68 83 70 57 83 81 86 99 105 73 72 119 103 100 72 73 103 74 49 120 117 74 121 65 110 73 67 99 103 80 106 52 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 90 87 78 111 98 121 65 105 73 105 65 43 80 105 65 107 86 69 49 81 85 48 86 77 82 108 74 70 85 48 57 77 86 103 111 75 73 50 53 104 98 87 86 122 90 88 74 50 90 88 74 122 73 71 70 122 73 72 78 108 99 71 70 121 89 88 82 108 73 71 120 112 98 109 86 122 67 109 86 106 97 71 56 103 73 105 82 79 81 85 49 70 85 48 86 83 86 107 86 83 88 49 74 66 86 121 73 103 102 67 66 51 97 71 108 115 90 83 66 121 90 87 70 107 73 67 49 121 73 71 120 112 98 109 85 75 90 71 56 75 73 67 65 103 73 71 86 106 97 71 56 103 73 109 53 104 98 87 86 122 90 88 74 50 90 88 73 103 74 71 120 112 98 109 85 105 73 68 52 43 73 67 82 85 84 86 66 79 82 86 82 83 82 86 78 80 84 70 89 75 90 71 57 117 90 81 111 106 73 71 82 108 100 109 108 106 90 83 66 74 85 72 77 103 89 88 74 108 73 72 74 108 100 72 86 121 98 109 86 107 73 71 108 117 73 71 70 107 90 72 74 108 99 51 77 118 98 87 70 122 97 121 66 109 98 51 74 116 89 88 81 75 90 87 78 111 98 121 65 105 74 69 120 80 81 48 70 77 88 48 108 81 85 49 57 83 81 86 99 105 73 72 119 103 100 50 104 112 98 71 85 103 99 109 86 104 90 67 65 116 99 105 66 115 97 87 53 108 67 109 82 118 67 105 65 103 73 67 66 108 89 50 104 118 73 67 74 117 89 87 49 108 99 50 86 121 100 109 86 121 73 67 82 115 97 87 53 108 73 105 66 56 73 71 78 49 100 67 65 116 90 67 99 118 74 121 65 116 90 105 65 120 73 68 52 43 73 67 82 85 84 86 66 84 82 85 120 71 85 107 86 84 84 48 120 87 67 109 82 118 98 109 85 75 67 105 77 103 90 71 57 117 90 83 119 103 89 50 57 119 101 87 108 117 90 121 66 109 97 87 120 108 99 121 66 48 98 121 66 107 90 88 78 48 97 87 53 104 100 71 108 118 98 105 66 115 98 50 78 104 100 71 108 118 98 110 77 103 89 87 53 107 73 71 78 115 90 87 70 117 97 87 53 110 73 72 86 119 67 105 57 105 97 87 52 118 89 51 65 103 74 70 82 78 85 69 53 70 86 70 74 70 85 48 57 77 86 105 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 76 109 82 117 99 50 49 104 99 51 69 75 89 50 104 116 98 50 81 103 77 68 99 48 78 67 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 76 109 82 117 99 50 49 104 99 51 69 75 76 50 74 112 98 105 57 106 99 67 65 107 86 69 49 81 85 48 86 77 82 108 74 70 85 48 57 77 86 105 65 118 90 88 82 106 76 51 74 108 99 50 57 115 100 105 53 106 98 50 53 109 67 105 57 49 99 51 73 118 99 50 74 112 98 105 57 121 90 88 78 48 98 51 74 108 89 50 57 117 73 67 57 108 100 71 77 118 99 109 86 122 98 50 120 50 76 109 78 118 98 109 89 75 76 50 74 112 98 105 57 121 98 83 65 107 86 69 49 81 84 107 86 85 85 107 86 84 84 48 120 87 67 105 57 105 97 87 52 118 99 109 48 103 74 70 82 78 85 70 78 70 84 69 90 83 82 86 78 80 84 70 89 75 34 44 34 118 101 114 105 102 105 99 97 116 105 111 110 34 58 123 125 125 44 34 103 114 111 117 112 34 58 123 125 44 34 109 111 100 101 34 58 52 56 52 44 34 111 118 101 114 119 114 105 116 101 34 58 116 114 117 101 44 34 112 97 116 104 34 58 34 47 117 115 114 47 108 111 99 97 108 47 98 105 110 47 97 114 111 45 100 110 115 109 97 115 113 45 112 114 101 46 115 104 34 44 34 117 115 101 114 34 58 123 34 110 97 109 101 34 58 34 114 111 111 116 34 125 125 93 125 44 34 115 121 115 116 101 109 100 34 58 123 34 117 110 105 116 115 34 58 91 123 34 99 111 110 116 101 110 116 115 34 58 34 92 110 91 85 110 105 116 93 92 110 68 101 115 99 114 105 112 116 105 111 110 61 68 78 83 32 99 97 99 104 105 110 103 32 115 101 114 118 101 114 46 92 110 65 102 116 101 114 61 110 101 116 119 111 114 107 45 111 110 108 105 110 101 46 116 97 114 103 101 116 92 110 66 101 102 111 114 101 61 98 111 111 116 107 117 98 101 46 115 101 114 118 105 99 101 92 110 92 110 91 83 101 114 118 105 99 101 93 92 110 35 32 69 120 101 99 83 116 97 114 116 80 114 101 32 119 105 108 108 32 99 114 101 97 116 101 32 97 32 99 111 112 121 32 111 102 32 116 104 101 32 99 117 115 116 111 109 101 114 32 99 117 114 114 101 110 116 32 114 101 115 111 108 118 46 99 111 110 102 32 102 105 108 101 32 97 110 100 32 109 97 107 101 32 105 116 32 117 112 115 116 114 101 97 109 32 68 78 83 46 92 110 35 32 84 104 105 115 32 102 105 108 101 32 105 115 32 97 32 112 114 111 100 117 99 116 32 111 102 32 117 115 101 114 32 68 78 83 32 115 101 116 116 105 110 103 115 32 111 110 32 116 104 101 32 86 78 69 84 46 32 87 101 32 119 105 108 108 32 114 101 112 108 97 99 101 32 116 104 105 115 32 102 105 108 101 32 116 111 32 112 111 105 110 116 32 116 111 92 110 35 32 100 110 115 109 97 115 113 32 105 110 115 116 97 110 99 101 32 111 110 32 116 104 101 32 110 111 100 101 46 32 100 110 115 109 97 115 113 32 119 105 108 108 32 105 110 106 101 99 116 32 99 101 114 116 97 105 110 32 100 110 115 32 114 101 99 111 114 100 115 32 119 101 32 110 101 101 100 32 97 110 100 32 102 111 114 119 97 114 100 32 114 101 115 116 32 111 102 32 116 104 101 32 113 117 101 114 105 101 115 32 116 111 92 110 35 32 114 101 115 111 108 118 46 99 111 110 102 46 100 110 115 109 97 115 113 32 117 112 115 116 114 101 97 109 32 99 117 115 116 111 109 101 114 32 100 110 115 46 92 110 69 120 101 99 83 116 97 114 116 80 114 101 61 47 98 105 110 47 98 97 115 104 32 47 117 115 114 47 108 111 99 97 108 47 98 105 110 47 97 114 111 45 100 110 115 109 97 115 113 45 112 114 101 46 115 104 92 110 69 120 101 99 83 116 97 114 116 61 47 117 115 114 47 115 98 105 110 47 100 110 115 109 97 115 113 32 45 107 92 110 69 120 101 99 83 116 111 112 80 111 115 116 61 47 98 105 110 47 98 97 115 104 32 45 99 32 39 47 98 105 110 47 109 118 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 46 100 110 115 109 97 115 113 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 59 32 47 117 115 114 47 115 98 105 110 47 114 101 115 116 111 114 101 99 111 110 32 47 101 116 99 47 114 101 115 111 108 118 46 99 111 110 102 39 92 110 82 101 115 116 97 114 116 61 97 108 119 97 121 115 92 110 92 110 91 73 110 115 116 97 108 108 93 92 110 87 97 110 116 101 100 66 121 61 109 117 108 116 105 45 117 115 101 114 46 116 97 114 103 101 116 92 110 34 44 34 101 110 97 98 108 101 100 34 58 116 114 117 101 44 34 110 97 109 101 34 58 34 100 110 115 109 97 115 113 46 115 101 114 118 105 99 101 34 125 93 125 125]"
+    machineconfig_controller_test.go:532: update comparison: tallies are not equal
+    machineconfig_controller_test.go:534: map[MachineConfig//99-custom-aro-dns]: 1 != <does not have key>
+    machineconfig_controller_test.go:534: map[//99-custom-aro-dns]: <does not have key> != 1
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestMachineConfigReconcilerClusterUpgrading/changes_for_a_deleted_MachineConfigPool_do_nothing (0.00s)
+
+=== FAIL: pkg/operator/controllers/dnsmasq TestMachineConfigReconcilerClusterUpgrading (0.00s)
+panic: failed to add object &{{ } {custom      0 0001-01-01 00:00:00 +0000 UTC 2025-02-26 06:12:38.090461 -0800 PST m=+0.022858959 <nil> map[] map[] [] [] []} {nil nil false <nil> {{      } []}} {0 {{      } []} 0 0 0 0 0 []}} to fake client: refusing to create obj custom with metadata.deletionTimestamp but no finalizers [recovered]
+	panic: failed to add object &{{ } {custom      0 0001-01-01 00:00:00 +0000 UTC 2025-02-26 06:12:38.090461 -0800 PST m=+0.022858959 <nil> map[] map[] [] [] []} {nil nil false <nil> {{      } []}} {0 {{      } []} 0 0 0 0 0 []}} to fake client: refusing to create obj custom with metadata.deletionTimestamp but no finalizers
+
+goroutine 253 [running]:
+testing.tRunner.func1.2({0x101afdfa0, 0x14000802a40})
+	/opt/homebrew/Cellar/go/1.24.0/libexec/src/testing/testing.go:1734 +0x1ac
+testing.tRunner.func1()
+	/opt/homebrew/Cellar/go/1.24.0/libexec/src/testing/testing.go:1737 +0x334
+panic({0x101afdfa0?, 0x14000802a40?})
+	/opt/homebrew/Cellar/go/1.24.0/libexec/src/runtime/panic.go:787 +0x124
+sigs.k8s.io/controller-runtime/pkg/client/fake.(*ClientBuilder).Build(0x1400033de40)
+	/Users/taylor/go/ARO-RP/vendor/sigs.k8s.io/controller-runtime/pkg/client/fake/client.go:234 +0x85c
+github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq.TestMachineConfigReconcilerClusterUpgrading.func1(0x14000685180)
+	/Users/taylor/go/ARO-RP/pkg/operator/controllers/dnsmasq/machineconfig_controller_test.go:504 +0x20c
+testing.tRunner(0x14000685180, 0x14000862fc0)
+	/opt/homebrew/Cellar/go/1.24.0/libexec/src/testing/testing.go:1792 +0xe4
+created by testing.(*T).Run in goroutine 230
+	/opt/homebrew/Cellar/go/1.24.0/libexec/src/testing/testing.go:1851 +0x374
+
+=== FAIL: pkg/operator/controllers/etchosts TestReconcileEtcHostsCluster (0.00s)
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "running"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-running
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-worker-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-worker-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-master-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-master-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-master-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-master-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "running"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-running
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "running"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-running
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "running"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-running
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-worker-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-worker-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-worker-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-worker-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-master-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-master-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-master-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-master-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-master-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-master-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:382: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:382
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsCluster
+    cluster_controller_test.go:383: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/cluster_controller_test.go:383
+        	Error:      	Not equal: 
+        	            	expected: "99-master-aro-etc-hosts-gateway-domains not found, creating it"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-99-master-aro-etc-hosts-gateway-domains not found, creating it
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsCluster
+
+=== FAIL: pkg/operator/controllers/etchosts TestReconcileEtcHostsMachineConfig (0.00s)
+    machineconfig_controller_test.go:202: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/machineconfig_controller_test.go:202
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsMachineConfig
+    machineconfig_controller_test.go:203: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/machineconfig_controller_test.go:203
+        	Error:      	Not equal: 
+        	            	expected: "reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsMachineConfig
+    machineconfig_controller_test.go:202: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/machineconfig_controller_test.go:202
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsMachineConfig
+    machineconfig_controller_test.go:203: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/machineconfig_controller_test.go:203
+        	Error:      	Not equal: 
+        	            	expected: "reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsMachineConfig
+    machineconfig_controller_test.go:202: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/machineconfig_controller_test.go:202
+        	Error:      	Not equal: 
+        	            	expected: "debug"
+        	            	actual  : "error"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-debug
+        	            	+error
+        	Test:       	TestReconcileEtcHostsMachineConfig
+    machineconfig_controller_test.go:203: 
+        	Error Trace:	/Users/taylor/go/ARO-RP/pkg/operator/controllers/etchosts/machineconfig_controller_test.go:203
+        	Error:      	Not equal: 
+        	            	expected: "reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"
+        	            	actual  : "error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains
+        	            	+error updating controller conditionsclusters.aro.openshift.io "cluster" not found
+        	Test:       	TestReconcileEtcHostsMachineConfig
+
+=== FAIL: pkg/operator/controllers/imageconfig TestImageConfigReconciler/Both_AllowedRegistries_and_BlockedRegistries_are_present,_function_should_fail_silently_and_not_requeue (0.00s)
+time="2025-02-26T06:12:40-08:00" level=error msg="both AllowedRegistries and BlockedRegistries are present"
+time="2025-02-26T06:12:40-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    image_controller_test.go:300:   &v1.OperatorCondition{
+          	Type:               "ImageConfigControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:40 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "both AllowedRegistries and BlockedRegistries are present",
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/imageconfig TestImageConfigReconciler/uses_Public_Cloud_cluster's_ACRDomain_configuration_for_both_Azure_registries (0.00s)
+time="2025-02-26T06:12:40-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    image_controller_test.go:300: condition ImageConfigControllerAvailable not found
+    image_controller_test.go:300:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "ImageConfigControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:40.050446 -0800 PST m=+0.021005335",
+        - 	},
+        + 	nil,
+          )
+        
+    image_controller_test.go:300: condition ImageConfigControllerProgressing not found
+    image_controller_test.go:300:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "ImageConfigControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:40.050447 -0800 PST m=+0.021005626",
+        - 	},
+        + 	nil,
+          )
+        
+    image_controller_test.go:300: condition ImageConfigControllerDegraded not found
+    image_controller_test.go:300:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "ImageConfigControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:40.050447 -0800 PST m=+0.021005751",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/imageconfig TestImageConfigReconciler/uses_USGov_Cloud_cluster's_ACRDomain_configuration_for_both_Azure_registries (0.00s)
+time="2025-02-26T06:12:40-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    image_controller_test.go:300: condition ImageConfigControllerAvailable not found
+    image_controller_test.go:300:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "ImageConfigControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:40.050446 -0800 PST m=+0.021005335",
+        - 	},
+        + 	nil,
+          )
+        
+    image_controller_test.go:300: condition ImageConfigControllerProgressing not found
+    image_controller_test.go:300:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "ImageConfigControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:40.050447 -0800 PST m=+0.021005626",
+        - 	},
+        + 	nil,
+          )
+        
+    image_controller_test.go:300: condition ImageConfigControllerDegraded not found
+    image_controller_test.go:300:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "ImageConfigControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:40.050447 -0800 PST m=+0.021005751",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/imageconfig TestImageConfigReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/ingress TestReconciler/openshift_ingress_controller_not_found (0.00s)
+time="2025-02-26T06:12:40-08:00" level=error msg="ingresscontrollers.operator.openshift.io \"default\" not found"
+time="2025-02-26T06:12:40-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    ingress_controller_test.go:183:   &v1.OperatorCondition{
+          	Type:               "IngressControllerAROControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:40 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            `ingresscontrollers.operator.openshift.io "default" not found`,
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/ingress TestReconciler/openshift_ingress_controller_has_1_replica (0.00s)
+time="2025-02-26T06:12:40-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    ingress_controller_test.go:183:   &v1.OperatorCondition{
+          	Type:               "IngressControllerAROControllerDegraded",
+        - 	Status:             "False",
+        + 	Status:             "True",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:40 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "",
+        + 	Message:            "ingresscontrollers.operator.openshift.io has 1 replica",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/ingress TestReconciler/openshift_ingress_controller_has_0_replica (0.00s)
+time="2025-02-26T06:12:40-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    ingress_controller_test.go:183:   &v1.OperatorCondition{
+          	Type:               "IngressControllerAROControllerDegraded",
+        - 	Status:             "False",
+        + 	Status:             "True",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:40 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "",
+        + 	Message:            "ingresscontrollers.operator.openshift.io has 0 replica",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/ingress TestReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/machine TestMachineReconciler/valid (0.00s)
+    machine_controller_test.go:176: clusters.aro.openshift.io "cluster" not found
+
+=== FAIL: pkg/operator/controllers/machine TestMachineReconciler/wrong_vm_size (0.00s)
+    machine_controller_test.go:176: clusters.aro.openshift.io "cluster" not found
+
+=== FAIL: pkg/operator/controllers/machine TestMachineReconciler/wrong_disk_size (0.00s)
+    machine_controller_test.go:176: clusters.aro.openshift.io "cluster" not found
+
+=== FAIL: pkg/operator/controllers/machine TestMachineReconciler/wrong_image_publisher (0.00s)
+    machine_controller_test.go:176: clusters.aro.openshift.io "cluster" not found
+
+=== FAIL: pkg/operator/controllers/machine TestMachineReconciler/wrong_vm_size_on_master (0.00s)
+    machine_controller_test.go:176: clusters.aro.openshift.io "cluster" not found
+
+=== FAIL: pkg/operator/controllers/machine TestMachineReconciler/invalid_master_machine_count (0.00s)
+    machine_controller_test.go:176: clusters.aro.openshift.io "cluster" not found
+
+=== FAIL: pkg/operator/controllers/machine TestMachineReconciler/invalid_worker_machine_count (0.00s)
+    machine_controller_test.go:176: clusters.aro.openshift.io "cluster" not found
+
+=== FAIL: pkg/operator/controllers/machine TestMachineReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/machinehealthcheck TestMachineHealthCheckReconciler/Managed_Feature_Flag_is_false:_mhc_fails_to_delete,_an_error_is_returned (0.00s)
+time="2025-02-26T06:12:41-08:00" level=error msg="Could not delete mhc"
+time="2025-02-26T06:12:41-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    machinehealthcheck_controller_test.go:295:   &v1.OperatorCondition{
+          	Type:               "MachineHealthCheckControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:41 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "Could not delete mhc",
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/machinehealthcheck TestMachineHealthCheckReconciler/Managed_Feature_Flag_is_false:_mhc_deletes_but_mhc_alert_fails_to_delete,_an_error_is_returned (0.00s)
+time="2025-02-26T06:12:41-08:00" level=error msg="Could not delete mhc alert"
+time="2025-02-26T06:12:41-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    machinehealthcheck_controller_test.go:295:   &v1.OperatorCondition{
+          	Type:               "MachineHealthCheckControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:41 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "Could not delete mhc alert",
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/machinehealthcheck TestMachineHealthCheckReconciler/Managed_Feature_Flag_is_true:_dynamic_helper_ensures_resources (0.00s)
+time="2025-02-26T06:12:41-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    machinehealthcheck_controller_test.go:295: condition MachineHealthCheckControllerAvailable not found
+    machinehealthcheck_controller_test.go:295:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "MachineHealthCheckControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:41.488628 -0800 PST m=+0.019129876",
+        - 	},
+        + 	nil,
+          )
+        
+    machinehealthcheck_controller_test.go:295: condition MachineHealthCheckControllerProgressing not found
+    machinehealthcheck_controller_test.go:295:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "MachineHealthCheckControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:41.488628 -0800 PST m=+0.019130168",
+        - 	},
+        + 	nil,
+          )
+        
+    machinehealthcheck_controller_test.go:295: condition MachineHealthCheckControllerDegraded not found
+    machinehealthcheck_controller_test.go:295:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "MachineHealthCheckControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:41.488628 -0800 PST m=+0.019130334",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/machinehealthcheck TestMachineHealthCheckReconciler/When_ensuring_resources_fails,_an_error_is_returned (0.00s)
+time="2025-02-26T06:12:41-08:00" level=error msg="failed to ensure"
+time="2025-02-26T06:12:41-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    machinehealthcheck_controller_test.go:295:   &v1.OperatorCondition{
+          	Type:               "MachineHealthCheckControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:41 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "failed to ensure",
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/machinehealthcheck TestMachineHealthCheckReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/machineset TestReconciler/one_worker_replica,_machineset-0_modified (0.00s)
+time="2025-02-26T06:12:41-08:00" level=info msg="Found less than 2 worker replicas. The MachineSet controller will attempt scaling."
+time="2025-02-26T06:12:41-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    machineset_controller_test.go:230:   &v1.OperatorCondition{
+          	Type:               "MachineSetControllerDegraded",
+        - 	Status:             "False",
+        + 	Status:             "True",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:41 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "",
+        + 	Message:            `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
+          }
+        
+
+=== FAIL: pkg/operator/controllers/machineset TestReconciler/machineset-0_not_found (0.00s)
+time="2025-02-26T06:12:41-08:00" level=error msg="machinesets.machine.openshift.io \"aro-fake-machineset-0\" not found"
+time="2025-02-26T06:12:41-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    machineset_controller_test.go:230:   &v1.OperatorCondition{
+          	Type:               "MachineSetControllerDegraded",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:41 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/machineset TestReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/monitoring TestReconcilePVC/Should_preserve_1_pvc (0.00s)
+time="2025-02-26T06:12:42-08:00" level=info msg="re-creating monitoring configmap. cluster-monitoring-config"
+    monitoring_controller_test.go:328:   []v1.PersistentVolumeClaim{
+          	{
+          		TypeMeta:   {},
+          		ObjectMeta: {Name: "random-pvc", Namespace: "openshift-monitoring", ResourceVersion: "1", Labels: {"app": "random"}, ...},
+          		Spec: v1.PersistentVolumeClaimSpec{
+          			... // 3 identical fields
+          			VolumeName:                "",
+          			StorageClassName:          nil,
+        - 			VolumeMode:                nil,
+        + 			VolumeMode:                &"Filesystem",
+          			DataSource:                nil,
+          			DataSourceRef:             nil,
+          			VolumeAttributesClassName: nil,
+          		},
+          		Status: v1.PersistentVolumeClaimStatus{
+        - 			Phase:       "",
+        + 			Phase:       "Pending",
+          			AccessModes: nil,
+          			Capacity:    nil,
+          			... // 5 identical fields
+          		},
+          	},
+          }
+        
+
+=== FAIL: pkg/operator/controllers/monitoring TestReconcilePVC (0.00s)
+
+=== FAIL: pkg/operator/controllers/node TestReconciler/isDraining_true,_set_annotation (0.00s)
+time="2025-02-26T06:12:43-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    node_controller_test.go:439:   &v1.OperatorCondition{
+          	Type:               "NodeControllerProgressing",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:43 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "Draining node aro-fake-node-0",
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/node TestReconciler/isDraining_true,_degraded_state,_unable_to_drain (0.00s)
+time="2025-02-26T06:12:43-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    node_controller_test.go:439:   &v1.OperatorCondition{
+          	Type:               "NodeControllerProgressing",
+        - 	Status:             "True",
+        + 	Status:             "False",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:43 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "Draining node aro-fake-node-0",
+        + 	Message:            "",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/node TestReconciler/node_is_draining,_deadline_was_exceeded,_execute_the_drain (0.00s)
+time="2025-02-26T06:12:43-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    node_controller_test.go:439:   &v1.OperatorCondition{
+          	Type:               "NodeControllerProgressing",
+        - 	Status:             "False",
+        + 	Status:             "True",
+          	LastTransitionTime: {Time: s"2025-02-26 06:12:43 -0800 PST"},
+          	Reason:             "",
+        - 	Message:            "",
+        + 	Message:            "Draining node aro-fake-node-0",
+          }
+        
+
+=== FAIL: pkg/operator/controllers/node TestReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/deleted_pull_secret (0.00s)
+time="2025-02-26T06:12:44-08:00" level=info msg="Global Pull secret Not Found, Creating Again"
+time="2025-02-26T06:12:44-08:00" level=info msg="Global Pull secret Created"
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/missing_arosvc_pull_secret (0.00s)
+time="2025-02-26T06:12:44-08:00" level=info msg="Global Pull secret Not Found, Creating Again"
+time="2025-02-26T06:12:44-08:00" level=info msg="Global Pull secret Created"
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/modified_arosvc_pull_secret (0.00s)
+time="2025-02-26T06:12:44-08:00" level=info msg="Updated Existing Global Pull secret"
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/unparseable_secret (0.00s)
+time="2025-02-26T06:12:44-08:00" level=info msg="Updated Existing Global Pull secret"
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/wrong_secret_type (0.00s)
+time="2025-02-26T06:12:44-08:00" level=info msg="Global Pull secret Not Found, Creating Again"
+time="2025-02-26T06:12:44-08:00" level=info msg="Global Pull secret Created"
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/no_change (0.00s)
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/valid_RH_keys_present (0.00s)
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/management_disabled,_valid_RH_key_present (0.00s)
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler/management_disabled,_valid_RH_key_missing (0.00s)
+time="2025-02-26T06:12:44-08:00" level=error msg="error updating controller conditionsclusters.aro.openshift.io \"cluster\" not found"
+    pullsecret_controller_test.go:334: condition PullSecretControllerAvailable not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerAvailable",
+        - 		Status:             "True",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484459",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerProgressing not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerProgressing",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484709",
+        - 	},
+        + 	nil,
+          )
+        
+    pullsecret_controller_test.go:334: condition PullSecretControllerDegraded not found
+    pullsecret_controller_test.go:334:   (*v1.OperatorCondition)(
+        - 	&{
+        - 		Type:               "PullSecretControllerDegraded",
+        - 		Status:             "False",
+        - 		LastTransitionTime: s"2025-02-26 06:12:44.429447 -0800 PST m=+0.019484876",
+        - 	},
+        + 	nil,
+          )
+        
+
+=== FAIL: pkg/operator/controllers/pullsecret TestPullSecretReconciler (0.00s)
+
+=== FAIL: pkg/operator/controllers/workaround TestSystemreservedEnsure/first_time_create_KubeletConfig (0.00s)
+    systemreserved_test.go:152:   &v1.KubeletConfig{
+          	TypeMeta: v1.TypeMeta{
+        - 		Kind:       "",
+        + 		Kind:       "KubeletConfig",
+        - 		APIVersion: "",
+        + 		APIVersion: "machineconfiguration.openshift.io/v1",
+          	},
+          	ObjectMeta: {Name: "aro-limits", ResourceVersion: "1", Labels: {"aro.openshift.io/limits": ""}},
+          	Spec:       {MachineConfigPoolSelector: &{MatchLabels: {"aro.openshift.io/limits": ""}}, KubeletConfig: &{Raw: `{"evictionHard":{"imagefs.available":"15%","memory.available":"5`...}},
+          	Status:     {},
+          }
+        
+
+=== FAIL: pkg/operator/controllers/workaround TestSystemreservedEnsure/label_already_exists_on_MCP,_but_no_KubeletConfig (0.00s)
+    systemreserved_test.go:152:   &v1.KubeletConfig{
+          	TypeMeta: v1.TypeMeta{
+        - 		Kind:       "",
+        + 		Kind:       "KubeletConfig",
+        - 		APIVersion: "",
+        + 		APIVersion: "machineconfiguration.openshift.io/v1",
+          	},
+          	ObjectMeta: {Name: "aro-limits", ResourceVersion: "1", Labels: {"aro.openshift.io/limits": ""}},
+          	Spec:       {MachineConfigPoolSelector: &{MatchLabels: {"aro.openshift.io/limits": ""}}, KubeletConfig: &{Raw: `{"evictionHard":{"imagefs.available":"15%","memory.available":"5`...}},
+          	Status:     {},
+          }
+        
+
+=== FAIL: pkg/operator/controllers/workaround TestSystemreservedEnsure/no_label_on_MCP,_but_KubeletConfig_exists (0.00s)
+    systemreserved_test.go:152:   &v1.KubeletConfig{
+          	TypeMeta: v1.TypeMeta{
+        - 		Kind:       "",
+        + 		Kind:       "KubeletConfig",
+        - 		APIVersion: "",
+        + 		APIVersion: "machineconfiguration.openshift.io/v1",
+          	},
+          	ObjectMeta: {Name: "aro-limits", ResourceVersion: "2", Labels: {"aro.openshift.io/limits": ""}},
+          	Spec:       {MachineConfigPoolSelector: &{MatchLabels: {"aro.openshift.io/limits": ""}}, KubeletConfig: &{Raw: `{"evictionHard":{"imagefs.available":"15%","memory.available":"5`...}},
+          	Status:     {},
+          }
+        
+
+=== FAIL: pkg/operator/controllers/workaround TestSystemreservedEnsure/label_and_KubeletConfig_already_exist (0.00s)
+    systemreserved_test.go:152:   &v1.KubeletConfig{
+          	TypeMeta: v1.TypeMeta{
+        - 		Kind:       "",
+        + 		Kind:       "KubeletConfig",
+        - 		APIVersion: "",
+        + 		APIVersion: "machineconfiguration.openshift.io/v1",
+          	},
+          	ObjectMeta: {Name: "aro-limits", ResourceVersion: "2", Labels: {"aro.openshift.io/limits": ""}},
+          	Spec:       {MachineConfigPoolSelector: &{MatchLabels: {"aro.openshift.io/limits": ""}}, KubeletConfig: &{Raw: `{"evictionHard":{"imagefs.available":"15%","memory.available":"5`...}},
+          	Status:     {},
+          }
+        
+
+=== FAIL: pkg/operator/controllers/workaround TestSystemreservedEnsure (0.00s)
+
+=== FAIL: pkg/util/clienthelper TestMergeApply/Namespace_no_changes (0.00s)
+time="2025-02-26T06:12:52-08:00" level=info msg="Update Namespace/testobj: ObjectMeta.Labels.map[kubernetes.io/metadata.name]: <does not have key> != testobj"
+    clienthelper_test.go:1410: changed: true, want: false
+
+=== FAIL: pkg/util/clienthelper TestMergeApply/ConfigMap_with_injected_ca_bundle_label_and_no_bundle,_no_changes (0.00s)
+time="2025-02-26T06:12:52-08:00" level=info msg="Update ConfigMap/testnamespace/testobj: Data: <nil map> != map[]"
+    clienthelper_test.go:1406: Data: <nil map> != map[]
+    clienthelper_test.go:1410: changed: true, want: false
+
+=== FAIL: pkg/util/clienthelper TestMergeApply (0.00s)
+
+=== FAIL: pkg/util/clienthelper TestGetOne/fetch_success (0.00s)
+    clienthelper_test.go:1506: TypeMeta.Kind:  != Secret
+    clienthelper_test.go:1506: TypeMeta.APIVersion:  != v1
+
+=== FAIL: pkg/util/clienthelper TestGetOne (0.00s)
+
+=== FAIL: pkg/util/conditions TestSetCondition/new_condition_provided (0.00s)
+    condition_test.go:202: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    condition_test.go:217:   v1alpha1.ClusterStatus{
+          	OperatorVersion: "unknown",
+        - 	Conditions:      nil,
+        + 	Conditions: []v1.OperatorCondition{
+        + 		{
+        + 			Type:               "InternetReachableFromMaster",
+        + 			Status:             "False",
+        + 			LastTransitionTime: s"2023-01-01 00:00:00 +0000 UTC",
+        + 		},
+        + 	},
+          	RedHatKeysPresent: nil,
+          }
+        
+
+=== FAIL: pkg/util/conditions TestSetCondition/condition_provided_without_status_change_-_only_update_operator_version (0.00s)
+    condition_test.go:202: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    condition_test.go:217:   v1alpha1.ClusterStatus{
+        - 	OperatorVersion:   "?",
+        + 	OperatorVersion:   "unknown",
+          	Conditions:        {{Type: "InternetReachableFromMaster", Status: "False"}},
+          	RedHatKeysPresent: nil,
+          }
+        
+
+=== FAIL: pkg/util/conditions TestSetCondition/update_one_of_the_existing_conditions (0.00s)
+    condition_test.go:202: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    condition_test.go:217:   v1alpha1.ClusterStatus{
+        - 	OperatorVersion: "?",
+        + 	OperatorVersion: "unknown",
+          	Conditions: []v1.OperatorCondition{
+          		{
+          			Type:               "InternetReachableFromMaster",
+        - 			Status:             "False",
+        + 			Status:             "True",
+        - 			LastTransitionTime: v1.Time{},
+        + 			LastTransitionTime: v1.Time{Time: s"2023-01-01 00:00:00 +0000 UTC"},
+          			Reason:             "",
+          			Message:            "",
+          		},
+          		{Type: "MachineValid", Status: "False"},
+          	},
+          	RedHatKeysPresent: nil,
+          }
+        
+
+=== FAIL: pkg/util/conditions TestSetCondition/cleanup_stale_conditions (0.00s)
+    condition_test.go:202: got error 'clusters.aro.openshift.io "cluster" not found', but wanted error ''
+    condition_test.go:217:   v1alpha1.ClusterStatus{
+          	OperatorVersion: "unknown",
+          	Conditions: []v1.OperatorCondition{
+          		{
+        - 			Type:               "staleType",
+        + 			Type:               "InternetReachableFromMaster",
+          			Status:             "True",
+        - 			LastTransitionTime: v1.Time{},
+        + 			LastTransitionTime: v1.Time{Time: s"2023-01-01 00:00:00 +0000 UTC"},
+          			Reason:             "",
+          			Message:            "",
+          		},
+          	},
+          	RedHatKeysPresent: nil,
+          }
+        
+
+=== FAIL: pkg/util/conditions TestSetCondition (0.00s)
+
+DONE 5005 tests, 114 failures in 105.345s

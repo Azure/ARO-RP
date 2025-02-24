@@ -201,7 +201,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					cancel()
 				}).Return(&msiNotAllowedActions, nil).AnyTimes()
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "context canceled",
 		},
 		{
 			name:               "Fail - An action is missing for a platform identity",
@@ -221,7 +221,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					cancel()
 				}).Return(&msiActionMissing, nil).AnyTimes()
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "context canceled",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
