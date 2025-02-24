@@ -727,7 +727,7 @@ func (o *operator) IsRunningDesiredVersion(ctx context.Context) (bool, error) {
 }
 
 func checkIngressIP(ingressProfiles []api.IngressProfile) (string, error) {
-	if ingressProfiles == nil || len(ingressProfiles) < 1 {
+	if len(ingressProfiles) < 1 {
 		return "", errors.New("no Ingress Profiles found")
 	}
 	ingressIP := ingressProfiles[0].IP

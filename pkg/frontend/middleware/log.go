@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/microsoft/go-otel-audit/audit/msgs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -50,11 +51,12 @@ func (rc *logReadCloser) Read(b []byte) (int, error) {
 }
 
 type LogMiddleware struct {
-	EnvironmentName string
-	Hostname        string
-	Location        string
-	AuditLog        *logrus.Entry
-	BaseLog         *logrus.Entry
+	EnvironmentName  string
+	Hostname         string
+	Location         string
+	AuditLog         *logrus.Entry
+	BaseLog          *logrus.Entry
+	OutelAuditClient audit.Client
 }
 
 func (l LogMiddleware) Log(h http.Handler) http.Handler {
@@ -141,6 +143,16 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 			},
 		})
 
+		otelAuditMsg := audit.CreateOtelAuditMsg(log, r)
+		otelAuditMsg.Record.CallerIdentities = getCallerIdentitesMap(correlationData)
+		otelAuditMsg.Record.TargetResources = map[string][]msgs.TargetResourceEntry{
+			auditTargetResourceType(r): {
+				{
+					Name: r.URL.Path,
+				},
+			},
+		}
+
 		defer func() {
 			statusCode := w.(*logResponseWriter).statusCode
 			log.WithFields(logrus.Fields{
@@ -153,10 +165,17 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 			resultType := audit.ResultTypeSuccess
 			if statusCode >= http.StatusBadRequest {
 				resultType = audit.ResultTypeFail
+				otelAuditMsg.Record.OperationResult = msgs.Failure
+				otelAuditMsg.Record.OperationResultDescription = fmt.Sprintf("Status code: %d", statusCode)
 			}
 
 			if r.URL.Path == "/healthz/ready" {
 				return
+			}
+
+			audit.EnsureDefaults(&otelAuditMsg.Record)
+			if err := l.OutelAuditClient.Send(r.Context(), otelAuditMsg); err != nil {
+				log.Errorf("Frontend - Error sending audit message: %v", err)
 			}
 
 			auditEntry.WithFields(logrus.Fields{
@@ -189,4 +208,28 @@ func auditTargetResourceType(r *http.Request) string {
 
 func isAdminOp(r *http.Request) bool {
 	return strings.HasPrefix(r.URL.Path, "/admin")
+}
+
+// used for otelaudit via "github.com/microsoft/go-otel-audit/audit/msgs"
+func getCallerIdentitesMap(correlationData *api.CorrelationData) map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry {
+	caller := make(map[msgs.CallerIdentityType][]msgs.CallerIdentityEntry)
+	if correlationData.ClientPrincipalName != "" {
+		caller[msgs.UPN] = []msgs.CallerIdentityEntry{
+			{
+				Identity:    correlationData.ClientPrincipalName,
+				Description: "client principal name",
+			},
+		}
+	}
+
+	if correlationData.CorrelationID != "" {
+		caller[msgs.CIOther] = []msgs.CallerIdentityEntry{
+			{
+				Identity:    correlationData.CorrelationID,
+				Description: "client request CorrelationID",
+			},
+		}
+	}
+
+	return caller
 }

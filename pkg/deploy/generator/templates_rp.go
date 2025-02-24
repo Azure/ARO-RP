@@ -78,6 +78,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"vmssCleanupEnabled",
 			"vmssName",
 			"oidcStorageAccountName",
+			"otelAuditQueueSize",
 			"msiRpEndpoint",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
