@@ -72,7 +72,7 @@ type ClusterConfig struct {
 	FPServicePrincipalID  string `mapstructure:"AZURE_FP_SERVICE_PRINCIPAL_ID"`
 	IsPrivate             bool   `mapstructure:"PRIVATE_CLUSTER"`
 	NoInternet            bool   `mapstructure:"NO_INTERNET"`
-	MockMSIClientID       string `mapstructure:"MOCK_MSI_CLIENT_ID"`
+	MockMSIObjectID       string `mapstructure:"MOCK_MSI_OBJECT_ID"`
 
 	MasterVMSize string `mapstructure:"MASTER_VM_SIZE"`
 	WorkerVMSize string `mapstructure:"WORKER_VM_SIZE"`
@@ -388,7 +388,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		mgmtauthorization.RoleAssignmentCreateParameters{
 			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 				RoleDefinitionID: to.StringPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
-				PrincipalID:      &c.Config.MockMSIClientID,
+				PrincipalID:      &c.Config.MockMSIObjectID,
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
