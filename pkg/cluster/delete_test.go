@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"testing"
 
+	sdk_to "github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
-	sdk_to "github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -48,10 +48,10 @@ func TestDeleteNic(t *testing.T) {
 
 	nic := armnetwork.InterfacesClientGetResponse{
 		Interface: armnetwork.Interface{
-			Name:         &nicName,
-			Location:     &location,
-			ID:           &resourceId,
-			Properties: 	&armnetwork.InterfacePropertiesFormat{
+			Name:     &nicName,
+			Location: &location,
+			ID:       &resourceId,
+			Properties: &armnetwork.InterfacePropertiesFormat{
 				ProvisioningState: nil,
 			},
 		},
