@@ -70,6 +70,10 @@ aro: check-release generate
 runlocal-rp:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} rp
 
+.PHONY: runlocal-monitor
+runlocal-monitor:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} monitor
+
 .PHONY: az
 az: pyenv
 	. pyenv/bin/activate && \
