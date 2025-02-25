@@ -93,7 +93,6 @@ var originalLB = mgmtnetwork.LoadBalancer{
 }
 
 func TestRemoveProbe(t *testing.T) {
-
 	expectedLB := mgmtnetwork.LoadBalancer{
 		Sku: &mgmtnetwork.LoadBalancerSku{
 			Name: mgmtnetwork.LoadBalancerSkuNameStandard,
