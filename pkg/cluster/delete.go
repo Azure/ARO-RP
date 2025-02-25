@@ -17,6 +17,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -365,7 +366,7 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	secretName := m.clusterMsiSecretName()
+	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
 	if _, err := m.clusterMsiKeyVaultStore.DeleteSecret(ctx, secretName, nil); err != nil && !azureerrors.IsNotFoundError(err) {
 		return err
