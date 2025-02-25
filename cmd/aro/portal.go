@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -19,8 +20,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	pkgportal "github.com/Azure/ARO-RP/pkg/portal"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -101,31 +102,54 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 		WithOpenShiftClusters(dbOpenShiftClusters).
 		WithPortal(dbPortal)
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
+	msiCredential, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return err
 	}
 
 	keyVaultPrefix := os.Getenv(encryption.KeyVaultPrefix)
-	portalKeyvaultURI := keyvault.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
-	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
+	portalKeyvaultURI := azsecrets.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
+	secretsClient, err := azsecrets.NewClient(portalKeyvaultURI, msiCredential, _env.Environment().AzureClientOptions())
+	if err != nil {
+		return fmt.Errorf("cannot create key vault secrets client: %w", err)
+	}
 
-	servingKey, servingCerts, err := portalKeyvault.GetCertificateSecret(ctx, env.PortalServerSecretName)
+	serverCertificate, err := secretsClient.GetSecret(ctx, env.PortalServerSecretName, "", nil)
+	if err != nil {
+		return fmt.Errorf("cannot get server certificate secret: %w", err)
+	}
+
+	servingKey, servingCerts, err := azsecrets.ParseSecretAsCertificate(serverCertificate)
 	if err != nil {
 		return err
 	}
 
-	clientKey, clientCerts, err := portalKeyvault.GetCertificateSecret(ctx, env.PortalServerClientSecretName)
+	clientCertificate, err := secretsClient.GetSecret(ctx, env.PortalServerClientSecretName, "", nil)
+	if err != nil {
+		return fmt.Errorf("cannot get client certificate secret: %w", err)
+	}
+
+	clientKey, clientCerts, err := azsecrets.ParseSecretAsCertificate(clientCertificate)
 	if err != nil {
 		return err
 	}
 
-	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName, "")
+	serverSession, err := secretsClient.GetSecret(ctx, env.PortalServerSessionKeySecretName, "", nil)
+	if err != nil {
+		return fmt.Errorf("cannot get server session secret: %w", err)
+	}
+
+	sessionKey, err := azsecrets.ExtractBase64Value(serverSession)
 	if err != nil {
 		return err
 	}
 
-	b, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSSHKeySecretName, "")
+	serverSSHKey, err := secretsClient.GetSecret(ctx, env.PortalServerSSHKeySecretName, "", nil)
+	if err != nil {
+		return fmt.Errorf("cannot get server ssh key secret: %w", err)
+	}
+
+	b, err := azsecrets.ExtractBase64Value(serverSSHKey)
 	if err != nil {
 		return err
 	}

@@ -38,6 +38,8 @@ github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0/go.mod h1:5kakwfW5CjC9KK+Q4wjXAg+ShuIm2mBMua0ZFj2C8PE=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.5.0 h1:AifHbc4mg0x9zW52WOpKbsHaDKuRhlI7TVl47thgQ70=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.5.0/go.mod h1:T5RfihdXtBDxt1Ch2wobif3TvzTdumDy29kahv6AV9A=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates v1.1.0 h1:iqsGTcqW10igLT4gfeQGWTiZzH5U5z3SjdGrylJ3Riw=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates v1.1.0/go.mod h1:AbVj1nFPV+Gd+rRX91BQ6F4/g5IaP24k8An4gJusZXs=
 github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.1.0 h1:h4Zxgmi9oyZL2l8jeg1iRTqPloHktywWcu0nlJmo1tA=
 github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.1.0/go.mod h1:LgLGXawqSreJz135Elog0ywTJDsm0Hz2k+N+6ZK35u8=
 github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.1 h1:9fXQS/0TtQmKXp8SureKouF+idbQvp7cPUxykiohnBs=
