@@ -22,8 +22,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
@@ -85,7 +86,7 @@ type Interface interface {
 	ClusterGenevaLoggingEnvironment() string
 	ClusterGenevaLoggingNamespace() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
-	ClusterKeyvault() keyvault.Manager
+	ClusterKeyvault() azsecrets.Client
 	ClusterMsiKeyVaultName() string
 	Domain() string
 	FeatureIsSet(Feature) bool
@@ -96,7 +97,7 @@ type Interface interface {
 	Listen() (net.Listener, error)
 	GatewayDomains() []string
 	GatewayResourceGroup() string
-	ServiceKeyvault() keyvault.Manager
+	ServiceKeyvault() azsecrets.Client
 	ACRResourceID() string
 	ACRDomain() string
 	OIDCStorageAccountName() string
@@ -112,6 +113,7 @@ type Interface interface {
 	// VMSku returns SKU for a given vm size. Note that this
 	// returns a pointer to partly populated object.
 	VMSku(vmSize string) (*mgmtcompute.ResourceSku, error)
+	ClusterCertificates() azcertificates.Client
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {

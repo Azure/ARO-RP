@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -22,8 +23,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
+	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -50,11 +52,16 @@ func TestSecurity(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	serverPki, err := utiltls.MarshalKeyAndCertificate(serverkey, servercerts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	keyvault := mock_keyvault.NewMockManager(controller)
-	keyvault.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+	keyvault := mock_azsecrets.NewMockClient(controller)
+	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)

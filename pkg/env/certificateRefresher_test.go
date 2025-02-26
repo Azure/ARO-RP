@@ -11,12 +11,14 @@ import (
 	"testing"
 	"time"
 
+	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
+	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const testCertBundle1 = `-----BEGIN PRIVATE KEY-----
@@ -180,16 +182,16 @@ func TestRefreshingCertificate(t *testing.T) {
 	tt := []struct {
 		name           string
 		tickCount      int
-		managerFactory func(*gomock.Controller) keyvault.Manager
+		managerFactory func(*gomock.Controller) azsecrets.Client
 		wantKey        *rsa.PrivateKey
 		wantCert       *x509.Certificate
 		wantErr        error
 	}{
 		{
 			name: "test initial certificate, pull exactly once, ticks one time",
-			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
-				manager := mock_keyvault.NewMockManager(controller)
-				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil)
+			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
+				manager := mock_azsecrets.NewMockClient(controller)
+				manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle1)}}, nil)
 				return manager
 			},
 			tickCount: 0,
@@ -199,11 +201,11 @@ func TestRefreshingCertificate(t *testing.T) {
 		},
 		{
 			name: "test refresh certificate, pull exactly twice, first on start, second on refresh, one tick",
-			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
-				manager := mock_keyvault.NewMockManager(mockController)
+			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
+				manager := mock_azsecrets.NewMockClient(mockController)
 				gomock.InOrder(
-					manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil),
-					manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key2, certs2, nil),
+					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle1)}}, nil),
+					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle2)}}, nil),
 				)
 				return manager
 			},
@@ -214,9 +216,9 @@ func TestRefreshingCertificate(t *testing.T) {
 		},
 		{
 			name: "test initial error, pull exactly once with an error, no tick",
-			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
-				manager := mock_keyvault.NewMockManager(mockController)
-				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(nil, nil, cannotPull)
+			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
+				manager := mock_azsecrets.NewMockClient(mockController)
+				manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{}, cannotPull)
 				return manager
 			},
 			tickCount: 0,
@@ -226,11 +228,11 @@ func TestRefreshingCertificate(t *testing.T) {
 		},
 		{
 			name: "test refresh error, pull exactly twice, first on start, second time with an error, one tick",
-			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
-				manager := mock_keyvault.NewMockManager(controller)
+			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
+				manager := mock_azsecrets.NewMockClient(controller)
 				gomock.InOrder(
-					manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil),
-					manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(nil, nil, cannotPull),
+					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle1)}}, nil),
+					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{}, cannotPull),
 				)
 				return manager
 			},
@@ -241,9 +243,9 @@ func TestRefreshingCertificate(t *testing.T) {
 		},
 		{
 			name: "test refresh, pull exactly 5 times, 4 ticks",
-			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
-				manager := mock_keyvault.NewMockManager(controller)
-				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil).Times(5)
+			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
+				manager := mock_azsecrets.NewMockClient(controller)
+				manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle1)}}, nil).Times(5)
 				return manager
 			},
 			tickCount: 4,

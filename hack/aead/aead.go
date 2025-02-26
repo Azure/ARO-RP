@@ -16,6 +16,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -55,7 +56,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
+	msiCredential, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return err
 	}
@@ -65,9 +66,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
+	secretsClient, err := azsecrets.NewClient(serviceKeyvaultURI, msiCredential, _env.Environment().AzureClientOptions())
+	if err != nil {
+		return fmt.Errorf("cannot create key vault secrets client: %w", err)
+	}
 
-	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	aead, err := encryption.NewMulti(ctx, secretsClient, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}

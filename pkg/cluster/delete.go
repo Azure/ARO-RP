@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	azuresdkerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
@@ -570,14 +571,14 @@ func (m *manager) Delete(ctx context.Context) error {
 
 		if managedDomain != "" {
 			m.log.Print("deleting signed apiserver certificate")
-			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.APICertName())
-			if err != nil {
+			_, err = m.env.ClusterCertificates().DeleteCertificate(ctx, m.APICertName(), nil)
+			if err != nil && !azcertificates.IsCertificateNotFoundError(err) {
 				return err
 			}
 
 			m.log.Print("deleting signed ingress certificate")
-			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.IngressCertName())
-			if err != nil {
+			_, err = m.env.ClusterCertificates().DeleteCertificate(ctx, m.IngressCertName(), nil)
+			if err != nil && !azcertificates.IsCertificateNotFoundError(err) {
 				return err
 			}
 		}

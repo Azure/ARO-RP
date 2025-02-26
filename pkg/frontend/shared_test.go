@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
@@ -28,9 +29,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
+	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
@@ -40,6 +42,7 @@ import (
 
 var (
 	serverkey, clientkey     *rsa.PrivateKey
+	serverPki                []byte
 	servercerts, clientcerts []*x509.Certificate
 )
 
@@ -52,6 +55,11 @@ func init() {
 	}
 
 	serverkey, servercerts, err = utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
+	if err != nil {
+		panic(err)
+	}
+
+	serverPki, err = utiltls.MarshalKeyAndCertificate(serverkey, servercerts)
 	if err != nil {
 		panic(err)
 	}
@@ -102,8 +110,8 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 
 	controller := gomock.NewController(t)
 
-	keyvault := mock_keyvault.NewMockManager(controller)
-	keyvault.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+	keyvault := mock_azsecrets.NewMockClient(controller)
+	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
