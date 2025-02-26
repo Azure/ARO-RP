@@ -148,6 +148,10 @@ func TestSystemreservedEnsure(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			// populate typemeta
+			tt.wantKubeletConfig.TypeMeta = kc.TypeMeta
+
 			if !reflect.DeepEqual(kc, tt.wantKubeletConfig) {
 				t.Error(cmp.Diff(kc, tt.wantKubeletConfig))
 			}

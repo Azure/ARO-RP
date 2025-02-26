@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -88,15 +87,7 @@ func (t *th) ClientHelper() (clienthelper.Interface, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := client.New(restConfig, client.Options{
-		Mapper: mapper,
-	})
+	client, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
