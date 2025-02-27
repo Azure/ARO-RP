@@ -19,7 +19,7 @@ func (d *deployer) SaveVersion(ctx context.Context, tokenCredential azcore.Token
 	d.log.Printf("saving RP version %s deployed in %s to storage account %s", d.version, d.config.Location, *d.config.Configuration.RPVersionStorageAccountName)
 
 	d.log.Infof("instantiating blobs client using SAS token")
-	serviceUrl := fmt.Sprintf("https://%s.blob.%s/%s", *d.config.Configuration.RPVersionStorageAccountName, d.env.Environment().StorageEndpointSuffix, "$web")
+	serviceUrl := fmt.Sprintf("https://%s.blob.%s", *d.config.Configuration.RPVersionStorageAccountName, d.env.Environment().StorageEndpointSuffix)
 	blobsClient, err := azblob.NewBlobsClientUsingEntra(serviceUrl, tokenCredential, d.env.Environment().ArmClientOptions())
 	if err != nil {
 		d.log.Errorf("failure to instantiate blobs client using SAS: %v", err)
