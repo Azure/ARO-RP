@@ -534,6 +534,10 @@ func (m *mockClient) GetSystemAssignedIdentityCredentials(ctx context.Context) (
 	panic("not yet implemented")
 }
 
+const (
+	mockMsiCertValidityDays = 90
+)
+
 func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, request dataplane.UserAssignedIdentitiesRequest) (*dataplane.ManagedIdentityCredentials, error) {
 	keysToValidate := []string{
 		"MOCK_MSI_CLIENT_ID",
@@ -546,6 +550,7 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 		return nil, err
 	}
 
+	now := time.Now()
 	placeholder := "placeholder"
 	return &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
@@ -556,12 +561,12 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 				ObjectID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
 				ResourceID:                 pointerutils.ToPtr(m.msiResourceId),
 				AuthenticationEndpoint:     pointerutils.ToPtr(m.aadHost),
-				CannotRenewAfter:           &placeholder,
+				CannotRenewAfter:           pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays*5).Format(time.RFC3339)),
 				ClientSecretURL:            &placeholder,
 				MtlsAuthenticationEndpoint: &placeholder,
-				NotAfter:                   &placeholder,
-				NotBefore:                  &placeholder,
-				RenewAfter:                 &placeholder,
+				NotAfter:                   pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays).Format(time.RFC3339)),
+				NotBefore:                  pointerutils.ToPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+				RenewAfter:                 pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays/2).Format(time.RFC3339)),
 				CustomClaims: &dataplane.CustomClaims{
 					XMSAzNwperimid: []string{placeholder},
 					XMSAzTm:        &placeholder,
