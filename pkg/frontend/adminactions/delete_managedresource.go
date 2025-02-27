@@ -81,6 +81,7 @@ func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resour
 }
 
 func (a *azureActions) deleteLoadbalancerProbeConfiguration(ctx context.Context, resourceID string) error {
+	// For further details on why this was added, please see JIRA ticket [ARO-13789](https://issues.redhat.com/browse/ARO-13789)
 	idParts := strings.Split(resourceID, "/")
 	rg := idParts[4]
 	lbName := idParts[8]
