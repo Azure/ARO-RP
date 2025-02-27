@@ -1550,6 +1550,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			&mgmtstorage.AccountProperties{
 				AllowBlobPublicAccess: to.BoolPtr(false),
 				MinimumTLSVersion:     mgmtstorage.MinimumTLSVersionTLS12,
+				AllowSharedKeyAccess:  to.BoolPtr(false),
 			},
 			map[string]*string{},
 		),
@@ -1559,6 +1560,13 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			resourceTypeStorageAccount,
 			storageAccountName,
 			fmt.Sprintf("concat(%s, '/Microsoft.Authorization/', guid(resourceId('%s', %s)))", storageAccountName, resourceTypeStorageAccount, storageAccountName),
+		),
+		rbac.ResourceRoleAssignmentWithName(
+			rbac.RoleStorageBlobDataContributor,
+			"parameters('globalDevopsServicePrincipalId')",
+			resourceTypeStorageAccount,
+			storageAccountName,
+			fmt.Sprintf("concat(%s, '/Microsoft.Authorization/', guid(%s))", storageAccountName, storageAccountName),
 		),
 	}
 }
