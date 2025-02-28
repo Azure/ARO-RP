@@ -29,10 +29,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	"github.com/openshift/hive/apis/hive/v1/azure"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
@@ -636,6 +639,124 @@ func TestMerge(t *testing.T) {
 			},
 			wantChanged:      true,
 			wantScrubbedDiff: true,
+		},
+		{
+			name: "Hive ClusterDeployment no changes",
+			old: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/version":      "4.13.11",
+						"hive.openshift.io/somemetadata": "bar",
+					},
+					Finalizers: []string{"bar"},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{
+						Platform: &hivev1.ClusterPlatformMetadata{
+							Azure: &azure.Metadata{
+								ResourceGroupName: pointerutils.ToPtr("test"),
+							},
+						},
+					},
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					APIURL: "example",
+				},
+			},
+			new: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/somemetadata": "baz",
+					},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{},
+				},
+			},
+			want: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/version":      "4.13.11",
+						"hive.openshift.io/somemetadata": "bar",
+					},
+					Finalizers: []string{"bar"},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{
+						Platform: &hivev1.ClusterPlatformMetadata{
+							Azure: &azure.Metadata{
+								ResourceGroupName: pointerutils.ToPtr("test"),
+							},
+						},
+					},
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					APIURL: "example",
+				},
+			},
+			wantChanged:   false,
+			wantEmptyDiff: true,
+		},
+		{
+			name: "Hive ClusterDeployment changes",
+			old: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/version": "4.13.11",
+					},
+					Annotations: map[string]string{
+						"hive.openshift.io/additional-log-fields": "oldlog",
+					},
+					Finalizers: []string{"bar"},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{
+						Platform: &hivev1.ClusterPlatformMetadata{
+							Azure: &azure.Metadata{
+								ResourceGroupName: pointerutils.ToPtr("test"),
+							},
+						},
+					},
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					APIURL: "example",
+				},
+			},
+			new: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{},
+					Annotations: map[string]string{
+						"hive.openshift.io/additional-log-fields": "log log log",
+					},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{},
+				},
+			},
+			want: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/version": "4.13.11",
+					},
+					Annotations: map[string]string{
+						"hive.openshift.io/additional-log-fields": "log log log",
+					},
+					Finalizers: []string{"bar"},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{
+						Platform: &hivev1.ClusterPlatformMetadata{
+							Azure: &azure.Metadata{
+								ResourceGroupName: pointerutils.ToPtr("test"),
+							},
+						},
+					},
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					APIURL: "example",
+				},
+			},
+			wantChanged: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
