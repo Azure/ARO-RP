@@ -18,7 +18,7 @@ jobs:
       image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # pin@v4
     - name: Add GOBIN to PATH
       run: |
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
@@ -32,7 +32,7 @@ jobs:
       image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # pin@v4
     - name: Add GOBIN to PATH
       run: |
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
@@ -46,15 +46,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # pin@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # pin@v5
       with:
         go-version-file: go.mod
 
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@2226d7cb06a077cd73e56eedd38eecad18e5d837 # pin@v6
       with:
         version: v1.64.5
         args: -v --timeout 15m
@@ -64,10 +64,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # pin@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # pin@v5
       with:
         go-version-file: go.mod
 
