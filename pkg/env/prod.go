@@ -36,7 +36,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -154,7 +153,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 	keyVaultPrefix := os.Getenv(KeyvaultPrefix)
-	serviceKeyvaultURI := keyvault.URI(p, ServiceKeyvaultSuffix, keyVaultPrefix)
+	serviceKeyvaultURI := azsecrets.URI(p, ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvaultClient, err := azsecrets.NewClient(serviceKeyvaultURI, msiCredential, p.Environment().AzureClientOptions())
 	if err != nil {
 		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)
@@ -178,7 +177,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	clusterKeyvaultURI := keyvault.URI(p, ClusterKeyvaultSuffix, keyVaultPrefix)
+	clusterKeyvaultURI := azsecrets.URI(p, ClusterKeyvaultSuffix, keyVaultPrefix)
 	clusterKeyvaultClient, err := azsecrets.NewClient(clusterKeyvaultURI, localFPKVCredential, p.Environment().AzureClientOptions())
 	if err != nil {
 		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)

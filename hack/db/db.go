@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -46,7 +45,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
+	serviceKeyvaultURI := azsecrets.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault, err := azsecrets.NewClient(serviceKeyvaultURI, msiCredential, _env.Environment().AzureClientOptions())
 	if err != nil {
 		return fmt.Errorf("cannot create key vault secrets client: %w", err)
