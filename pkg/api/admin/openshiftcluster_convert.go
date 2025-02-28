@@ -56,7 +56,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				GatewayPrivateLinkID:       oc.Properties.NetworkProfile.GatewayPrivateLinkID,
 				PreconfiguredNSG: func() PreconfiguredNSG {
 					if oc.Properties.NetworkProfile.PreconfiguredNSG == "" {
-						return PreconfiguredNSGDisabled
+						return PreconfiguredNSGDisabled // Ensure it's using the correct constant
 					}
 					return PreconfiguredNSG(oc.Properties.NetworkProfile.PreconfiguredNSG)
 				}(),
