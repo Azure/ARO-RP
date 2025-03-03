@@ -254,6 +254,8 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 			if ext {
 				new.Data["ca-bundle.crt"] = caBundle
 			}
+			// since OCP 4.15 this annotation is added to the trusted-ca-bundle ConfigMap by the ConfigMap's controller
+			copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "openshift.io/owning-component")
 		}
 
 	case *machinev1beta1.MachineHealthCheck:
