@@ -4,11 +4,18 @@ package azcertificates
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"crypto/x509/pkix"
+	"errors"
+	"fmt"
 	"strings"
+	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
 	"github.com/Azure/go-autorest/autorest/to"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
@@ -85,33 +92,46 @@ func getShortCommonName(commonName string) string {
 	return shortCommonName
 }
 
-//func (m *manager) WaitForCertificateOperation(ctx context.Context, certificateName string) error {
-//	ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-//	defer cancel()
-//
-//	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-//		op, err := m.certificates.GetCertificateOperation(ctx, m.keyvaultURI, certificateName)
-//		if err != nil {
-//			return false, err
-//		}
-//
-//		return checkOperation(&op)
-//	}, ctx.Done())
-//	return err
-//}
+func IsCertificateNotFoundError(err error) bool {
+	azError := &azcore.ResponseError{}
+	if errors.As(err, &azError) {
+		return azError.ErrorCode == "CertificateNotFound"
+	}
+	return false
+}
 
-//func checkOperation(op *azkeyvault.CertificateOperation) (bool, error) {
-//	switch *op.Status {
-//	case "inProgress":
-//		return false, nil
-//
-//	case "completed":
-//		return true, nil
-//
-//	default:
-//		if op.StatusDetails != nil {
-//			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, newError(op.Error))
-//		}
-//		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, newError(op.Error))
-//	}
-//}
+// WaitForCertificateOperation wraps the certificates client to poll for an operation to finish,
+// as the Track 2 client still does not support runtime.Poller.
+func WaitForCertificateOperation(parent context.Context, operation func(ctx context.Context) (azcertificates.CertificateOperation, error)) error {
+	ctx, cancel := context.WithTimeout(parent, 15*time.Minute)
+	defer cancel()
+
+	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		op, err := operation(ctx)
+		if err != nil {
+			return false, err
+		}
+
+		return checkOperation(op)
+	}, ctx.Done())
+	return err
+}
+
+func checkOperation(op azcertificates.CertificateOperation) (bool, error) {
+	if op.Status == nil {
+		return false, fmt.Errorf("operation status is nil")
+	}
+	switch *op.Status {
+	case "inProgress":
+		return false, nil
+
+	case "completed":
+		return true, nil
+
+	default:
+		if op.StatusDetails != nil {
+			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, op.Error)
+		}
+		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, op.Error)
+	}
+}

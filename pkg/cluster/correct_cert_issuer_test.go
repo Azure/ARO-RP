@@ -7,11 +7,12 @@ import (
 	"context"
 	"testing"
 
-	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
 	"go.uber.org/mock/gomock"
 
+	azcertificates_wrapper "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
+	mock_azcertificates "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcertificates"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 )
 
 func TestEnsureCertificateIssuer(t *testing.T) {
@@ -52,30 +53,30 @@ func TestEnsureCertificateIssuer(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			clusterKeyvault := mock_keyvault.NewMockManager(controller)
+			clusterKeyvault := mock_azcertificates.NewMockClient(controller)
 			env := mock_env.NewMockInterface(controller)
 
 			if !test.ExpectError {
-				clusterKeyvault.EXPECT().GetCertificate(gomock.Any(), test.CertificateName).Return(azkeyvault.CertificateBundle{
-					Policy: &azkeyvault.CertificatePolicy{
-						IssuerParameters: &azkeyvault.IssuerParameters{
+				clusterKeyvault.EXPECT().GetCertificate(gomock.Any(), test.CertificateName, "", nil).Return(azcertificates.GetCertificateResponse{Certificate: azcertificates.Certificate{
+					Policy: &azcertificates.CertificatePolicy{
+						IssuerParameters: &azcertificates.IssuerParameters{
 							Name: &test.CurrentIssuerName,
 						},
 					},
-				}, nil)
+				}}, nil)
 
 				if test.CurrentIssuerName != test.NewIssuerName {
-					clusterKeyvault.EXPECT().GetCertificatePolicy(gomock.Any(), test.CertificateName).Return(azkeyvault.CertificatePolicy{
-						IssuerParameters: &azkeyvault.IssuerParameters{
+					clusterKeyvault.EXPECT().GetCertificatePolicy(gomock.Any(), test.CertificateName, nil).Return(azcertificates.GetCertificatePolicyResponse{CertificatePolicy: azcertificates.CertificatePolicy{
+						IssuerParameters: &azcertificates.IssuerParameters{
 							Name: &test.CurrentIssuerName,
 						},
-					}, nil)
+					}}, nil)
 
-					clusterKeyvault.EXPECT().UpdateCertificatePolicy(gomock.Any(), test.CertificateName, gomock.Any()).Return(nil)
-					clusterKeyvault.EXPECT().CreateSignedCertificate(gomock.Any(), test.NewIssuerName, test.CertificateName, test.DNSName, gomock.Any()).Return(nil)
+					clusterKeyvault.EXPECT().UpdateCertificatePolicy(gomock.Any(), test.CertificateName, gomock.Any(), nil).Return(azcertificates.UpdateCertificatePolicyResponse{}, nil)
+					clusterKeyvault.EXPECT().CreateCertificate(gomock.Any(), test.NewIssuerName, azcertificates_wrapper.SignedCertificateParameters(test.CertificateName, test.DNSName, azcertificates_wrapper.EkuServerAuth), nil).Return(azcertificates.CreateCertificateResponse{}, nil)
 				}
 
-				env.EXPECT().ClusterKeyvault().AnyTimes().Return(clusterKeyvault)
+				env.EXPECT().ClusterCertificates().AnyTimes().Return(clusterKeyvault)
 			}
 
 			m := &manager{

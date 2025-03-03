@@ -6,7 +6,7 @@ package encryption
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 )
 
 type multi struct {
@@ -16,8 +16,13 @@ type multi struct {
 
 var _ AEAD = (*multi)(nil)
 
-func NewMulti(ctx context.Context, serviceKeyvault keyvault.Manager, secretName, legacySecretName string) (AEAD, error) {
-	key, err := serviceKeyvault.GetBase64Secret(ctx, secretName, "")
+func NewMulti(ctx context.Context, serviceKeyvault azsecrets.Client, secretName, legacySecretName string) (AEAD, error) {
+	rawKey, err := serviceKeyvault.GetSecret(ctx, secretName, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := azsecrets.ExtractBase64Value(rawKey)
 	if err != nil {
 		return nil, err
 	}
@@ -38,9 +43,26 @@ func NewMulti(ctx context.Context, serviceKeyvault keyvault.Manager, secretName,
 		{secretName, NewAES256SHA512},
 		{legacySecretName, NewXChaCha20Poly1305},
 	} {
-		keys, err := serviceKeyvault.GetBase64Secrets(ctx, x.secretName)
-		if err != nil {
-			return nil, err
+		var keys [][]byte
+		pager := serviceKeyvault.NewListSecretPropertiesVersionsPager(x.secretName, nil)
+		for pager.More() {
+			page, err := pager.NextPage(ctx)
+			if err != nil {
+				return nil, err
+			}
+			for _, properties := range page.Value {
+				if properties != nil && properties.ID != nil && properties.Attributes != nil {
+					raw, err := serviceKeyvault.GetSecret(ctx, (*properties.ID).Name(), (*properties.ID).Version(), nil)
+					if err != nil {
+						return nil, err
+					}
+					version, err := azsecrets.ExtractBase64Value(raw)
+					if err != nil {
+						return nil, err
+					}
+					keys = append(keys, version)
+				}
+			}
 		}
 
 		for _, key := range keys {

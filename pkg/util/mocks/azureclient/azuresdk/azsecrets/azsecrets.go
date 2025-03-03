@@ -41,6 +41,45 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
+// BackupSecret mocks base method.
+func (m *MockClient) BackupSecret(ctx context.Context, name string, options *azsecrets.BackupSecretOptions) (azsecrets.BackupSecretResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BackupSecret", ctx, name, options)
+	ret0, _ := ret[0].(azsecrets.BackupSecretResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BackupSecret indicates an expected call of BackupSecret.
+func (mr *MockClientMockRecorder) BackupSecret(ctx, name, options any) *MockClientBackupSecretCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupSecret", reflect.TypeOf((*MockClient)(nil).BackupSecret), ctx, name, options)
+	return &MockClientBackupSecretCall{Call: call}
+}
+
+// MockClientBackupSecretCall wrap *gomock.Call
+type MockClientBackupSecretCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientBackupSecretCall) Return(arg0 azsecrets.BackupSecretResponse, arg1 error) *MockClientBackupSecretCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientBackupSecretCall) Do(f func(context.Context, string, *azsecrets.BackupSecretOptions) (azsecrets.BackupSecretResponse, error)) *MockClientBackupSecretCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientBackupSecretCall) DoAndReturn(f func(context.Context, string, *azsecrets.BackupSecretOptions) (azsecrets.BackupSecretResponse, error)) *MockClientBackupSecretCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // DeleteSecret mocks base method.
 func (m *MockClient) DeleteSecret(ctx context.Context, name string, options *azsecrets.DeleteSecretOptions) (azsecrets.DeleteSecretResponse, error) {
 	m.ctrl.T.Helper()
@@ -76,6 +115,45 @@ func (c *MockClientDeleteSecretCall) Do(f func(context.Context, string, *azsecre
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockClientDeleteSecretCall) DoAndReturn(f func(context.Context, string, *azsecrets.DeleteSecretOptions) (azsecrets.DeleteSecretResponse, error)) *MockClientDeleteSecretCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// GetDeletedSecret mocks base method.
+func (m *MockClient) GetDeletedSecret(ctx context.Context, name string, options *azsecrets.GetDeletedSecretOptions) (azsecrets.GetDeletedSecretResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeletedSecret", ctx, name, options)
+	ret0, _ := ret[0].(azsecrets.GetDeletedSecretResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeletedSecret indicates an expected call of GetDeletedSecret.
+func (mr *MockClientMockRecorder) GetDeletedSecret(ctx, name, options any) *MockClientGetDeletedSecretCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeletedSecret", reflect.TypeOf((*MockClient)(nil).GetDeletedSecret), ctx, name, options)
+	return &MockClientGetDeletedSecretCall{Call: call}
+}
+
+// MockClientGetDeletedSecretCall wrap *gomock.Call
+type MockClientGetDeletedSecretCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientGetDeletedSecretCall) Return(arg0 azsecrets.GetDeletedSecretResponse, arg1 error) *MockClientGetDeletedSecretCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientGetDeletedSecretCall) Do(f func(context.Context, string, *azsecrets.GetDeletedSecretOptions) (azsecrets.GetDeletedSecretResponse, error)) *MockClientGetDeletedSecretCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientGetDeletedSecretCall) DoAndReturn(f func(context.Context, string, *azsecrets.GetDeletedSecretOptions) (azsecrets.GetDeletedSecretResponse, error)) *MockClientGetDeletedSecretCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -195,6 +273,44 @@ func (c *MockClientNewListSecretPropertiesPagerCall) DoAndReturn(f func(*azsecre
 	return c
 }
 
+// NewListSecretPropertiesVersionsPager mocks base method.
+func (m *MockClient) NewListSecretPropertiesVersionsPager(name string, options *azsecrets.ListSecretPropertiesVersionsOptions) *runtime.Pager[azsecrets.ListSecretPropertiesVersionsResponse] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewListSecretPropertiesVersionsPager", name, options)
+	ret0, _ := ret[0].(*runtime.Pager[azsecrets.ListSecretPropertiesVersionsResponse])
+	return ret0
+}
+
+// NewListSecretPropertiesVersionsPager indicates an expected call of NewListSecretPropertiesVersionsPager.
+func (mr *MockClientMockRecorder) NewListSecretPropertiesVersionsPager(name, options any) *MockClientNewListSecretPropertiesVersionsPagerCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewListSecretPropertiesVersionsPager", reflect.TypeOf((*MockClient)(nil).NewListSecretPropertiesVersionsPager), name, options)
+	return &MockClientNewListSecretPropertiesVersionsPagerCall{Call: call}
+}
+
+// MockClientNewListSecretPropertiesVersionsPagerCall wrap *gomock.Call
+type MockClientNewListSecretPropertiesVersionsPagerCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientNewListSecretPropertiesVersionsPagerCall) Return(arg0 *runtime.Pager[azsecrets.ListSecretPropertiesVersionsResponse]) *MockClientNewListSecretPropertiesVersionsPagerCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientNewListSecretPropertiesVersionsPagerCall) Do(f func(string, *azsecrets.ListSecretPropertiesVersionsOptions) *runtime.Pager[azsecrets.ListSecretPropertiesVersionsResponse]) *MockClientNewListSecretPropertiesVersionsPagerCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientNewListSecretPropertiesVersionsPagerCall) DoAndReturn(f func(string, *azsecrets.ListSecretPropertiesVersionsOptions) *runtime.Pager[azsecrets.ListSecretPropertiesVersionsResponse]) *MockClientNewListSecretPropertiesVersionsPagerCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // PurgeDeletedSecret mocks base method.
 func (m *MockClient) PurgeDeletedSecret(ctx context.Context, name string, options *azsecrets.PurgeDeletedSecretOptions) (azsecrets.PurgeDeletedSecretResponse, error) {
 	m.ctrl.T.Helper()
@@ -234,6 +350,84 @@ func (c *MockClientPurgeDeletedSecretCall) DoAndReturn(f func(context.Context, s
 	return c
 }
 
+// RecoverDeletedSecret mocks base method.
+func (m *MockClient) RecoverDeletedSecret(ctx context.Context, name string, options *azsecrets.RecoverDeletedSecretOptions) (azsecrets.RecoverDeletedSecretResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecoverDeletedSecret", ctx, name, options)
+	ret0, _ := ret[0].(azsecrets.RecoverDeletedSecretResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecoverDeletedSecret indicates an expected call of RecoverDeletedSecret.
+func (mr *MockClientMockRecorder) RecoverDeletedSecret(ctx, name, options any) *MockClientRecoverDeletedSecretCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecoverDeletedSecret", reflect.TypeOf((*MockClient)(nil).RecoverDeletedSecret), ctx, name, options)
+	return &MockClientRecoverDeletedSecretCall{Call: call}
+}
+
+// MockClientRecoverDeletedSecretCall wrap *gomock.Call
+type MockClientRecoverDeletedSecretCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientRecoverDeletedSecretCall) Return(arg0 azsecrets.RecoverDeletedSecretResponse, arg1 error) *MockClientRecoverDeletedSecretCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientRecoverDeletedSecretCall) Do(f func(context.Context, string, *azsecrets.RecoverDeletedSecretOptions) (azsecrets.RecoverDeletedSecretResponse, error)) *MockClientRecoverDeletedSecretCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientRecoverDeletedSecretCall) DoAndReturn(f func(context.Context, string, *azsecrets.RecoverDeletedSecretOptions) (azsecrets.RecoverDeletedSecretResponse, error)) *MockClientRecoverDeletedSecretCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// RestoreSecret mocks base method.
+func (m *MockClient) RestoreSecret(ctx context.Context, parameters azsecrets.RestoreSecretParameters, options *azsecrets.RestoreSecretOptions) (azsecrets.RestoreSecretResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestoreSecret", ctx, parameters, options)
+	ret0, _ := ret[0].(azsecrets.RestoreSecretResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RestoreSecret indicates an expected call of RestoreSecret.
+func (mr *MockClientMockRecorder) RestoreSecret(ctx, parameters, options any) *MockClientRestoreSecretCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreSecret", reflect.TypeOf((*MockClient)(nil).RestoreSecret), ctx, parameters, options)
+	return &MockClientRestoreSecretCall{Call: call}
+}
+
+// MockClientRestoreSecretCall wrap *gomock.Call
+type MockClientRestoreSecretCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientRestoreSecretCall) Return(arg0 azsecrets.RestoreSecretResponse, arg1 error) *MockClientRestoreSecretCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientRestoreSecretCall) Do(f func(context.Context, azsecrets.RestoreSecretParameters, *azsecrets.RestoreSecretOptions) (azsecrets.RestoreSecretResponse, error)) *MockClientRestoreSecretCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientRestoreSecretCall) DoAndReturn(f func(context.Context, azsecrets.RestoreSecretParameters, *azsecrets.RestoreSecretOptions) (azsecrets.RestoreSecretResponse, error)) *MockClientRestoreSecretCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // SetSecret mocks base method.
 func (m *MockClient) SetSecret(ctx context.Context, name string, parameters azsecrets.SetSecretParameters, options *azsecrets.SetSecretOptions) (azsecrets.SetSecretResponse, error) {
 	m.ctrl.T.Helper()
@@ -269,6 +463,45 @@ func (c *MockClientSetSecretCall) Do(f func(context.Context, string, azsecrets.S
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockClientSetSecretCall) DoAndReturn(f func(context.Context, string, azsecrets.SetSecretParameters, *azsecrets.SetSecretOptions) (azsecrets.SetSecretResponse, error)) *MockClientSetSecretCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// UpdateSecretProperties mocks base method.
+func (m *MockClient) UpdateSecretProperties(ctx context.Context, name, version string, parameters azsecrets.UpdateSecretPropertiesParameters, options *azsecrets.UpdateSecretPropertiesOptions) (azsecrets.UpdateSecretPropertiesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateSecretProperties", ctx, name, version, parameters, options)
+	ret0, _ := ret[0].(azsecrets.UpdateSecretPropertiesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateSecretProperties indicates an expected call of UpdateSecretProperties.
+func (mr *MockClientMockRecorder) UpdateSecretProperties(ctx, name, version, parameters, options any) *MockClientUpdateSecretPropertiesCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSecretProperties", reflect.TypeOf((*MockClient)(nil).UpdateSecretProperties), ctx, name, version, parameters, options)
+	return &MockClientUpdateSecretPropertiesCall{Call: call}
+}
+
+// MockClientUpdateSecretPropertiesCall wrap *gomock.Call
+type MockClientUpdateSecretPropertiesCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockClientUpdateSecretPropertiesCall) Return(arg0 azsecrets.UpdateSecretPropertiesResponse, arg1 error) *MockClientUpdateSecretPropertiesCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockClientUpdateSecretPropertiesCall) Do(f func(context.Context, string, string, azsecrets.UpdateSecretPropertiesParameters, *azsecrets.UpdateSecretPropertiesOptions) (azsecrets.UpdateSecretPropertiesResponse, error)) *MockClientUpdateSecretPropertiesCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockClientUpdateSecretPropertiesCall) DoAndReturn(f func(context.Context, string, string, azsecrets.UpdateSecretPropertiesParameters, *azsecrets.UpdateSecretPropertiesOptions) (azsecrets.UpdateSecretPropertiesResponse, error)) *MockClientUpdateSecretPropertiesCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

@@ -12,13 +12,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
-func EnsureTLSSecretFromKeyvault(ctx context.Context, kv keyvault.Manager, ch clienthelper.Writer, target types.NamespacedName, certificateName string) error {
-	bundle, err := kv.GetSecret(ctx, certificateName)
+func EnsureTLSSecretFromKeyvault(ctx context.Context, kv azsecrets.Client, ch clienthelper.Writer, target types.NamespacedName, certificateName string) error {
+	bundle, err := kv.GetSecret(ctx, certificateName, "", nil)
 	if err != nil {
 		return err
 	}

@@ -4,10 +4,12 @@ package tls
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"math/big"
 	"time"
@@ -15,6 +17,17 @@ import (
 
 func GenerateKeyAndCertificate(commonName string, parentKey *rsa.PrivateKey, parentCert *x509.Certificate, isCA bool, isClient bool) (*rsa.PrivateKey, []*x509.Certificate, error) {
 	return generateKeyAndCertificate(commonName, parentKey, parentCert, isCA, isClient, nil)
+}
+
+func MarshalKeyAndCertificate(key *rsa.PrivateKey, certs []*x509.Certificate) ([]byte, error) {
+	b := bytes.Buffer{}
+	b.Write(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}))
+	for _, cert := range certs {
+		if err := pem.Encode(&b, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}); err != nil {
+			return []byte{}, err
+		}
+	}
+	return b.Bytes(), nil
 }
 
 func GenerateTestKeyAndCertificate(commonName string, parentKey *rsa.PrivateKey, parentCert *x509.Certificate, isCA bool, isClient bool, tweakTemplate func(*x509.Certificate)) (*rsa.PrivateKey, []*x509.Certificate, error) {
