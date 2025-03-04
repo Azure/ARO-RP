@@ -1044,8 +1044,11 @@ exclude (
 	github.com/docker/docker-credential-helpers v0.6.3
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0
-	//github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153
-	//github.com/elazarl/goproxy v0.0.0-20190911111923-ecfe977594f1
+	// Remove old goproxy versions
+	github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153
+	github.com/elazarl/goproxy v0.0.0-20190911111923-ecfe977594f1
+	// Remove unneeded go-restful v2
+	github.com/emicklei/go-restful v2.15.0+incompatible
 	github.com/go-logr/logr v0.2.0
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/logr v1.2.0
@@ -1603,11 +1606,3 @@ replace (
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )
-
-replace github.com/emicklei/go-restful v2.15.0+incompatible => github.com/emicklei/go-restful v2.16.0+incompatible
-
-replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/distribution v2.8.2+incompatible
-
-replace github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153 => github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027
-
-replace go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.20.0 => go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.44.0
