@@ -410,8 +410,40 @@ This command adds the image to your cosmosDB. **openShiftPullspec** comes from [
 
   ```bash
   OCP_VERSION=<x.y.z>
-  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "'${OCP_VERSION}'", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release:'${OCP_VERSION}'-x86_64", "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'" } }'
-```
+  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '
+    {
+      "name": "'${OCP_VERSION}'",
+      "type": "Microsoft.RedHatOpenShift/OpenShiftVersion",
+      "properties":
+      {
+        "version": "'${OCP_VERSION}'",
+        "enabled": true,
+        "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release:'${OCP_VERSION}'-x86_64",
+        "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'"
+      }
+    }
+  '
+  ```
+
+If you want to run the installer version via hive and not in container, you will need to use sha instead of tag for OCP image, and you can use your docker connection for this:
+  ```bash
+  docker login quay.io                                                                                                                                                                                                                                                                              16:36:10
+  OCP_VERSION=<x.y.z>
+  docker pull quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64
+  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '
+    {
+      "name": "'${OCP_VERSION}'",
+      "type": "Microsoft.RedHatOpenShift/OpenShiftVersion",
+      "properties":
+      {
+        "version": "'${OCP_VERSION}'",
+        "enabled": true,
+        "openShiftPullspec": "'$(docker inspect --format='{{index .RepoDigests 0}}' quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64)'",
+        "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'"
+      }
+    }
+  '
+  ```
 
 - List the enabled OpenShift installation versions within a region
   ```bash
