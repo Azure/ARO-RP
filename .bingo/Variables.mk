@@ -89,6 +89,12 @@ $(GOTESTSUM): $(BINGO_DIR)/gotestsum.mod
 	@echo "(re)installing $(GOBIN)/gotestsum-v1.11.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gotestsum.mod -o=$(GOBIN)/gotestsum-v1.11.0 "gotest.tools/gotestsum"
 
+GOVULNCHECK := $(GOBIN)/govulncheck-v1.1.4
+$(GOVULNCHECK): $(BINGO_DIR)/govulncheck.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/govulncheck-v1.1.4"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=govulncheck.mod -o=$(GOBIN)/govulncheck-v1.1.4 "golang.org/x/vuln/cmd/govulncheck"
+
 MOCKGEN := $(GOBIN)/mockgen-v0.4.0
 $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
