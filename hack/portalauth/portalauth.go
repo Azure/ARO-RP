@@ -17,7 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -40,7 +40,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
+	tokenCredential, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return err
 	}
@@ -49,10 +49,18 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
-	portalKeyvaultURI := keyvault.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
-	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
+	portalKeyvaultURI := azsecrets.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
+	portalKeyvault, err := azsecrets.NewClient(portalKeyvaultURI, tokenCredential, _env.Environment().AzureClientOptions())
+	if err != nil {
+		return err
+	}
 
-	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName, "")
+	rawSessionKey, err := portalKeyvault.GetSecret(ctx, env.PortalServerSessionKeySecretName, "", nil)
+	if err != nil {
+		return err
+	}
+
+	sessionKey, err := azsecrets.ExtractBase64Value(rawSessionKey)
 	if err != nil {
 		return err
 	}

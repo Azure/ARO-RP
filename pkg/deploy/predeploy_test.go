@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	gofrsuuid "github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
@@ -24,10 +24,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
+	mock_azuresdk "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk"
+	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_msi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/msi"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -72,12 +74,23 @@ var (
 		},
 	}
 
-	nowUnixTime     = date.NewUnixTimeFromSeconds(float64(time.Now().Unix()))
-	newSecretBundle = azkeyvault.SecretBundle{
-		Attributes: &azkeyvault.SecretAttributes{Created: &nowUnixTime},
+	newSecretBundle = azsecretssdk.GetSecretResponse{
+		Secret: azsecretssdk.Secret{
+			Attributes: &azsecretssdk.SecretAttributes{Created: pointerutils.ToPtr(time.Now())},
+		},
 	}
 
-	secretItems = []azkeyvault.SecretItem{{ID: to.StringPtr("secretExists")}}
+	listForItems = func(items []*azsecretssdk.SecretProperties) []azsecretssdk.ListSecretPropertiesResponse {
+		return []azsecretssdk.ListSecretPropertiesResponse{{
+			SecretPropertiesListResult: azsecretssdk.SecretPropertiesListResult{
+				Value: items,
+			},
+		}}
+	}
+
+	secretItems = func(err error) *runtime.Pager[azsecretssdk.ListSecretPropertiesResponse] {
+		return mock_azuresdk.NewPager(listForItems([]*azsecretssdk.SecretProperties{{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/secretExists/whatever"))}}), []error{err})
+	}
 
 	vmsss        = []mgmtcompute.VirtualMachineScaleSet{{Name: to.StringPtr(vmssName)}}
 	invalidVMSSs = []mgmtcompute.VirtualMachineScaleSet{{Name: &invalidVMSSName}}
@@ -101,9 +114,9 @@ func TestPreDeploy(t *testing.T) {
 	deployment := mgmtfeatures.DeploymentExtended{}
 	vmsss := []mgmtcompute.VirtualMachineScaleSet{{Name: &vmssName}}
 	oneMissingSecrets := []string{env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
-	oneMissingSecretItems := []azkeyvault.SecretItem{}
+	oneMissingSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range oneMissingSecrets {
-		oneMissingSecretItems = append(oneMissingSecretItems, azkeyvault.SecretItem{ID: to.StringPtr(secret)})
+		oneMissingSecretItems = append(oneMissingSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
 	}
 
 	type resourceGroups struct {
@@ -122,56 +135,56 @@ func TestPreDeploy(t *testing.T) {
 		globalDevopsManagedIdentity string
 		acrReplicaDisabled          bool
 	}
-	type mock func(*mock_features.MockDeploymentsClient, *mock_features.MockResourceGroupsClient, *mock_msi.MockUserAssignedIdentitiesClient, *mock_keyvault.MockManager, *mock_compute.MockVirtualMachineScaleSetsClient, *mock_compute.MockVirtualMachineScaleSetVMsClient, testParams)
+	type mock func(*mock_features.MockDeploymentsClient, *mock_features.MockResourceGroupsClient, *mock_msi.MockUserAssignedIdentitiesClient, *mock_azsecrets.MockClient, *mock_compute.MockVirtualMachineScaleSetsClient, *mock_compute.MockVirtualMachineScaleSetVMsClient, testParams)
 	createOrUpdateAtSubscriptionScopeAndWaitMock := func(returnError error) mock {
-		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			d.EXPECT().CreateOrUpdateAtSubscriptionScopeAndWait(ctx, "rp-global-subscription-"+tp.location, gomock.Any()).Return(returnError)
 		}
 	}
 	createOrUpdateAndWaitMock := func(resourceGroup string, returnError error) mock {
-		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			d.EXPECT().CreateOrUpdateAndWait(ctx, resourceGroup, gomock.Any(), gomock.Any()).Return(returnError)
 		}
 	}
 	createOrUpdateMock := func(resourceGroup string, returnResourceGroup mgmtfeatures.ResourceGroup, returnError error) mock {
-		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			rg.EXPECT().CreateOrUpdate(ctx, resourceGroup, mgmtfeatures.ResourceGroup{Location: &tp.location}).Return(returnResourceGroup, returnError)
 		}
 	}
 	msiGetMock := func(resourceGroup string, returnError error) mock {
-		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			m.EXPECT().Get(ctx, resourceGroup, gomock.Any()).Return(msi, returnError)
 		}
 	}
 	getDeploymentMock := func(returnError error) mock {
-		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			d.EXPECT().Get(ctx, tp.resourceGroups.gatewayResourceGroupName, gomock.Any()).Return(deployment, returnError)
 		}
 	}
-	getSecretsMock := func(secretItems []azkeyvault.SecretItem, returnError error) mock {
-		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
-			k.EXPECT().GetSecrets(ctx).Return(secretItems, returnError)
+	getSecretsMock := func(items []*azsecretssdk.SecretProperties, returnError error) mock {
+		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+			k.EXPECT().NewListSecretPropertiesPager(nil).Return(mock_azuresdk.NewPager(listForItems(items), []error{returnError}))
 		}
 	}
-	getSecretMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
-		k.EXPECT().GetSecret(ctx, gomock.Any()).Return(newSecretBundle, nil)
+	getSecretMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		k.EXPECT().GetSecret(ctx, gomock.Any(), "", nil).Return(newSecretBundle, nil)
 	}
-	setSecretMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
-		k.EXPECT().SetSecret(ctx, gomock.Any(), gomock.Any()).Return(nil)
+	setSecretMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		k.EXPECT().SetSecret(ctx, gomock.Any(), gomock.Any(), nil).Return(azsecretssdk.SetSecretResponse{}, nil)
 	}
-	vmssListMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+	vmssListMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmss.EXPECT().List(ctx, gomock.Any()).Return(vmsss, nil)
 	}
-	vmssVMsListMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+	vmssVMsListMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().List(ctx, gomock.Any(), tp.vmssName, "", "", "").Return(vms, nil)
 	}
-	vmRestartMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+	vmRestartMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, gomock.Any(), tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
 			CommandID: to.StringPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
 		}).Return(nil)
 	}
-	instanceViewMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+	instanceViewMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().GetInstanceView(gomock.Any(), gomock.Any(), tp.vmssName, tp.instanceID).Return(healthyVMSS, nil)
 	}
 
@@ -496,7 +509,7 @@ func TestPreDeploy(t *testing.T) {
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 			mockResourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			mockMSIs := mock_msi.NewMockUserAssignedIdentitiesClient(controller)
-			mockKV := mock_keyvault.NewMockManager(controller)
+			mockKV := mock_azsecrets.NewMockClient(controller)
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 			mockVMSSVM := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
@@ -981,14 +994,14 @@ func TestDeployPreDeploy(t *testing.T) {
 func TestConfigureServiceSecrets(t *testing.T) {
 	ctx := context.Background()
 	oneMissingSecrets := []string{env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
-	oneMissingSecretItems := []azkeyvault.SecretItem{}
+	oneMissingSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range oneMissingSecrets {
-		oneMissingSecretItems = append(oneMissingSecretItems, azkeyvault.SecretItem{ID: to.StringPtr(secret)})
+		oneMissingSecretItems = append(oneMissingSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
 	}
 	allSecrets := []string{env.EncryptionSecretV2Name, env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
-	allSecretItems := []azkeyvault.SecretItem{}
+	allSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range allSecrets {
-		allSecretItems = append(allSecretItems, azkeyvault.SecretItem{ID: to.StringPtr(secret)})
+		allSecretItems = append(allSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
 	}
 
 	type testParams struct {
@@ -997,33 +1010,33 @@ func TestConfigureServiceSecrets(t *testing.T) {
 		resourceGroup string
 		restartScript string
 	}
-	type mock func(*mock_keyvault.MockManager, *mock_compute.MockVirtualMachineScaleSetsClient, *mock_compute.MockVirtualMachineScaleSetVMsClient, testParams)
-	getSecretsMock := func(secretItems []azkeyvault.SecretItem, returnError error) mock {
-		return func(k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
-			k.EXPECT().GetSecrets(ctx).Return(secretItems, returnError)
+	type mock func(*mock_azsecrets.MockClient, *mock_compute.MockVirtualMachineScaleSetsClient, *mock_compute.MockVirtualMachineScaleSetVMsClient, testParams)
+	getSecretsMock := func(items []*azsecretssdk.SecretProperties, returnError error) mock {
+		return func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+			k.EXPECT().NewListSecretPropertiesPager(nil).Return(mock_azuresdk.NewPager(listForItems(items), []error{returnError}))
 		}
 	}
-	getSecretMock := func(k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
-		k.EXPECT().GetSecret(ctx, gomock.Any()).Return(newSecretBundle, nil)
+	getSecretMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		k.EXPECT().GetSecret(ctx, gomock.Any(), "", nil).Return(newSecretBundle, nil)
 	}
-	setSecretMock := func(k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
-		k.EXPECT().SetSecret(ctx, gomock.Any(), gomock.Any()).Return(nil)
+	setSecretMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		k.EXPECT().SetSecret(ctx, gomock.Any(), gomock.Any(), nil).Return(azsecretssdk.SetSecretResponse{}, nil)
 	}
 	vmssListMock := func(returnError error) mock {
-		return func(k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		return func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			vmss.EXPECT().List(ctx, tp.resourceGroup).Return(vmsss, returnError).AnyTimes()
 		}
 	}
-	vmssVMsListMock := func(k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+	vmssVMsListMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().List(ctx, tp.resourceGroup, tp.vmssName, "", "", "").Return(vms, nil).AnyTimes()
 	}
-	vmRestartMock := func(k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+	vmRestartMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, tp.resourceGroup, tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
 			CommandID: to.StringPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
 		}).Return(nil).AnyTimes()
 	}
-	instanceViewMock := func(k *mock_keyvault.MockManager, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+	instanceViewMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().GetInstanceView(gomock.Any(), tp.resourceGroup, tp.vmssName, tp.instanceID).Return(healthyVMSS, nil).AnyTimes()
 	}
 
@@ -1097,7 +1110,7 @@ func TestConfigureServiceSecrets(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockKV := mock_keyvault.NewMockManager(controller)
+			mockKV := mock_azsecrets.NewMockClient(controller)
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 			mockVMSSVM := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
@@ -1125,28 +1138,29 @@ func TestConfigureServiceSecrets(t *testing.T) {
 
 func TestEnsureAndRotateSecret(t *testing.T) {
 	ctx := context.Background()
-	oldUnixTime := date.NewUnixTimeFromSeconds(float64(time.Now().Add(-rotateSecretAfter).Unix()))
-	oldSecretBundle := azkeyvault.SecretBundle{
-		Attributes: &azkeyvault.SecretAttributes{Created: &oldUnixTime},
+	oldSecretBundle := azsecretssdk.GetSecretResponse{
+		Secret: azsecretssdk.Secret{
+			Attributes: &azsecretssdk.SecretAttributes{Created: pointerutils.ToPtr(time.Now().Add(-rotateSecretAfter))},
+		},
 	}
 
 	type testParams struct {
 		secretToFind string
 	}
-	type mock func(*mock_keyvault.MockManager, testParams)
+	type mock func(*mock_azsecrets.MockClient, testParams)
 	getSecretsMock := func(returnError error) mock {
-		return func(k *mock_keyvault.MockManager, tp testParams) {
-			k.EXPECT().GetSecrets(ctx).Return(secretItems, returnError)
+		return func(k *mock_azsecrets.MockClient, tp testParams) {
+			k.EXPECT().NewListSecretPropertiesPager(nil).Return(secretItems(returnError))
 		}
 	}
-	getSecretMock := func(secretBundle azkeyvault.SecretBundle, returnError error) mock {
-		return func(k *mock_keyvault.MockManager, tp testParams) {
-			k.EXPECT().GetSecret(ctx, tp.secretToFind).Return(secretBundle, returnError)
+	getSecretMock := func(secretBundle azsecretssdk.GetSecretResponse, returnError error) mock {
+		return func(k *mock_azsecrets.MockClient, tp testParams) {
+			k.EXPECT().GetSecret(ctx, tp.secretToFind, "", nil).Return(secretBundle, returnError)
 		}
 	}
 	setSecretMock := func(returnError error) mock {
-		return func(k *mock_keyvault.MockManager, tp testParams) {
-			k.EXPECT().SetSecret(ctx, tp.secretToFind, gomock.Any()).Return(returnError)
+		return func(k *mock_azsecrets.MockClient, tp testParams) {
+			k.EXPECT().SetSecret(ctx, tp.secretToFind, gomock.Any(), nil).Return(azsecretssdk.SetSecretResponse{}, returnError)
 		}
 	}
 
@@ -1201,7 +1215,7 @@ func TestEnsureAndRotateSecret(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockKV := mock_keyvault.NewMockManager(controller)
+			mockKV := mock_azsecrets.NewMockClient(controller)
 
 			d := deployer{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -1226,15 +1240,15 @@ func TestEnsureSecret(t *testing.T) {
 	type testParams struct {
 		secretToFind string
 	}
-	type mock func(*mock_keyvault.MockManager, testParams)
+	type mock func(*mock_azsecrets.MockClient, testParams)
 	getSecretsMock := func(returnError error) mock {
-		return func(k *mock_keyvault.MockManager, tp testParams) {
-			k.EXPECT().GetSecrets(ctx).Return(secretItems, returnError)
+		return func(k *mock_azsecrets.MockClient, tp testParams) {
+			k.EXPECT().NewListSecretPropertiesPager(nil).Return(secretItems(returnError))
 		}
 	}
 	setSecretMock := func(returnError error) mock {
-		return func(k *mock_keyvault.MockManager, tp testParams) {
-			k.EXPECT().SetSecret(ctx, tp.secretToFind, gomock.Any()).Return(returnError)
+		return func(k *mock_azsecrets.MockClient, tp testParams) {
+			k.EXPECT().SetSecret(ctx, tp.secretToFind, gomock.Any(), nil).Return(azsecretssdk.SetSecretResponse{}, returnError)
 		}
 	}
 
@@ -1276,7 +1290,7 @@ func TestEnsureSecret(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockKV := mock_keyvault.NewMockManager(controller)
+			mockKV := mock_azsecrets.NewMockClient(controller)
 
 			d := deployer{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -1301,10 +1315,10 @@ func TestCreateSecret(t *testing.T) {
 	type testParams struct {
 		secretToCreate string
 	}
-	type mock func(*mock_keyvault.MockManager, testParams)
+	type mock func(*mock_azsecrets.MockClient, testParams)
 	setSecretMock := func(returnError error) mock {
-		return func(k *mock_keyvault.MockManager, tp testParams) {
-			k.EXPECT().SetSecret(ctx, tp.secretToCreate, gomock.Any()).Return(returnError)
+		return func(k *mock_azsecrets.MockClient, tp testParams) {
+			k.EXPECT().SetSecret(ctx, tp.secretToCreate, gomock.Any(), nil).Return(azsecretssdk.SetSecretResponse{}, returnError)
 		}
 	}
 
@@ -1334,7 +1348,7 @@ func TestCreateSecret(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockKV := mock_keyvault.NewMockManager(controller)
+			mockKV := mock_azsecrets.NewMockClient(controller)
 
 			d := deployer{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -1356,15 +1370,15 @@ func TestEnsureSecretKey(t *testing.T) {
 	type testParams struct {
 		secretToFind string
 	}
-	type mock func(*mock_keyvault.MockManager, testParams)
+	type mock func(*mock_azsecrets.MockClient, testParams)
 	getSecretsMock := func(returnError error) mock {
-		return func(k *mock_keyvault.MockManager, tp testParams) {
-			k.EXPECT().GetSecrets(ctx).Return(secretItems, returnError)
+		return func(k *mock_azsecrets.MockClient, tp testParams) {
+			k.EXPECT().NewListSecretPropertiesPager(nil).Return(secretItems(returnError))
 		}
 	}
 	setSecretMock := func(returnError error) mock {
-		return func(k *mock_keyvault.MockManager, tp testParams) {
-			k.EXPECT().SetSecret(ctx, tp.secretToFind, gomock.Any()).Return(returnError)
+		return func(k *mock_azsecrets.MockClient, tp testParams) {
+			k.EXPECT().SetSecret(ctx, tp.secretToFind, gomock.Any(), nil).Return(azsecretssdk.SetSecretResponse{}, returnError)
 		}
 	}
 
@@ -1406,7 +1420,7 @@ func TestEnsureSecretKey(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockKV := mock_keyvault.NewMockManager(controller)
+			mockKV := mock_azsecrets.NewMockClient(controller)
 
 			d := deployer{
 				log: logrus.NewEntry(logrus.StandardLogger()),

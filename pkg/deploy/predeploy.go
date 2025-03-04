@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -29,7 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 )
 
 const (
@@ -371,7 +371,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
 	isRotated := false
 	for _, s := range []struct {
-		kv         keyvault.Manager
+		kv         azsecrets.Client
 		secretName string
 		len        int
 	}{
@@ -388,7 +388,7 @@ func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWai
 
 	// don't rotate legacy secrets
 	for _, s := range []struct {
-		kv         keyvault.Manager
+		kv         azsecrets.Client
 		secretName string
 		len        int
 	}{
@@ -417,24 +417,49 @@ func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWai
 	return nil
 }
 
-func (d *deployer) ensureAndRotateSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) (isNew bool, err error) {
-	existingSecrets, err := kv.GetSecrets(ctx)
-	if err != nil {
-		return false, err
+func (d *deployer) ensureAndRotateSecret(ctx context.Context, kv azsecrets.Client, secretName string, len int) (isNew bool, err error) {
+	pager := kv.NewListSecretPropertiesPager(nil)
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return false, err
+		}
+		for _, item := range page.Value {
+			if item == nil || item.ID == nil {
+				continue
+			}
+			if filepath.Base((*item.ID).Name()) == secretName {
+				latestVersion, err := kv.GetSecret(ctx, secretName, "", nil)
+				if err != nil {
+					return false, err
+				}
+
+				updatedTime := latestVersion.Attributes.Created.Add(rotateSecretAfter)
+
+				// do not create a secret if rotateSecretAfter time has
+				// not elapsed since the secret version's creation timestamp
+				if time.Now().Before(updatedTime) {
+					return false, nil
+				}
+			}
+		}
 	}
 
-	for _, secret := range existingSecrets {
-		if filepath.Base(*secret.ID) == secretName {
-			latestVersion, err := kv.GetSecret(ctx, secretName)
-			if err != nil {
-				return false, err
+	return true, d.createSecret(ctx, kv, secretName, len)
+}
+
+func (d *deployer) ensureSecret(ctx context.Context, kv azsecrets.Client, secretName string, len int) (isNew bool, err error) {
+	pager := kv.NewListSecretPropertiesPager(nil)
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return false, err
+		}
+		for _, item := range page.Value {
+			if item == nil || item.ID == nil {
+				continue
 			}
-
-			updatedTime := time.Unix(0, latestVersion.Attributes.Created.Duration().Nanoseconds()).Add(rotateSecretAfter)
-
-			// do not create a secret if rotateSecretAfter time has
-			// not elapsed since the secret version's creation timestamp
-			if time.Now().Before(updatedTime) {
+			if filepath.Base((*item.ID).Name()) == secretName {
 				return false, nil
 			}
 		}
@@ -443,22 +468,7 @@ func (d *deployer) ensureAndRotateSecret(ctx context.Context, kv keyvault.Manage
 	return true, d.createSecret(ctx, kv, secretName, len)
 }
 
-func (d *deployer) ensureSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) (isNew bool, err error) {
-	existingSecrets, err := kv.GetSecrets(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	for _, secret := range existingSecrets {
-		if filepath.Base(*secret.ID) == secretName {
-			return false, nil
-		}
-	}
-
-	return true, d.createSecret(ctx, kv, secretName, len)
-}
-
-func (d *deployer) createSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) error {
+func (d *deployer) createSecret(ctx context.Context, kv azsecrets.Client, secretName string, len int) error {
 	key := make([]byte, len)
 	_, err := rand.Read(key)
 	if err != nil {
@@ -466,20 +476,26 @@ func (d *deployer) createSecret(ctx context.Context, kv keyvault.Manager, secret
 	}
 
 	d.log.Infof("setting %s", secretName)
-	return kv.SetSecret(ctx, secretName, azkeyvault.SecretSetParameters{
+	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
-	})
+	}, nil)
+	return err
 }
 
-func (d *deployer) ensureSecretKey(ctx context.Context, kv keyvault.Manager, secretName string) (isNew bool, err error) {
-	existingSecrets, err := kv.GetSecrets(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	for _, secret := range existingSecrets {
-		if filepath.Base(*secret.ID) == secretName {
-			return false, nil
+func (d *deployer) ensureSecretKey(ctx context.Context, kv azsecrets.Client, secretName string) (isNew bool, err error) {
+	pager := kv.NewListSecretPropertiesPager(nil)
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return false, err
+		}
+		for _, item := range page.Value {
+			if item == nil || item.ID == nil {
+				continue
+			}
+			if filepath.Base((*item.ID).Name()) == secretName {
+				return false, nil
+			}
 		}
 	}
 
@@ -489,9 +505,10 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv keyvault.Manager, sec
 	}
 
 	d.log.Infof("setting %s", secretName)
-	return true, kv.SetSecret(ctx, secretName, azkeyvault.SecretSetParameters{
+	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
-	})
+	}, nil)
+	return true, err
 }
 
 func (d *deployer) restartOldScalesets(ctx context.Context, lbHealthcheckWaitTimeSec int) error {

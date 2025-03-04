@@ -10,7 +10,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 const (
@@ -26,7 +25,7 @@ func NewAEADWithCore(ctx context.Context, _env env.Core, encryptionSecretV2Name 
 	}
 
 	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
+	serviceKeyvaultURI := azsecrets.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault, err := azsecrets.NewClient(serviceKeyvaultURI, msiCredential, _env.Environment().AzureClientOptions())
 	if err != nil {
 		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)
