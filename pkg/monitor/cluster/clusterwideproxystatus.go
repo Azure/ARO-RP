@@ -161,45 +161,54 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 			mon.log.Errorf("Error in getting cluster information: %v", err)
 			return err
 		}
-		clusterDomain := clusterdetails.Spec.Domain
-		clusterDomaincheck := noProxyMap[clusterDomain] || noProxyMap["."+clusterDomain]
-		if !(noProxyMap[".apps."+clusterDomain] || clusterDomaincheck) {
-			missing_no_proxy_list = append(missing_no_proxy_list, clusterDomain)
-		}
 		for _, gatewayDomain := range clusterdetails.Spec.GatewayDomains {
 			gatewayDomain = strings.ToLower(gatewayDomain)
 			if !noProxyMap[gatewayDomain] {
 				missing_no_proxy_list = append(missing_no_proxy_list, gatewayDomain)
 			}
 		}
+		clusterDomain := clusterdetails.Spec.Domain
+		clusterDomaincheck := noProxyMap[clusterDomain] || noProxyMap["."+clusterDomain]
+		// As per our OpenShift and ARO documentation, we expect customers to add api.clusterdomain, api-int.clusterdomain, and .apps.clusterdomain.
+		// However, for existing customers with CWP enabled, they have only included clusterDomain in their noProxy list,
+		// and these clusters are functioning as expected.
+		// Our SRE testing has also not identified any functionality issues with this configuration.
+		// Therefore, we will make this check optional if the clusterDomain is already included in the list.
+		// This check is not aligned with our documentation,
+		// but we are implementing it this way for the sake of code optimization.
+		if !clusterDomaincheck {
+			if !(noProxyMap[".apps."+clusterDomain]) {
+				missing_no_proxy_list = append(missing_no_proxy_list, clusterDomain)
+			}
 
-		// Infrastructure Configuration Check
-		infraConfig, err := mon.configcli.ConfigV1().Infrastructures().Get(ctx, cluster, metav1.GetOptions{})
-		if err != nil {
-			mon.log.Errorf("Error in getting Infrasturcture info: %v", err)
-			return err
-		}
+			// Infrastructure Configuration Check
+			infraConfig, err := mon.configcli.ConfigV1().Infrastructures().Get(ctx, cluster, metav1.GetOptions{})
+			if err != nil {
+				mon.log.Errorf("Error in getting Infrasturcture info: %v", err)
+				return err
+			}
 
-		// APIServerInternal URL Check
-		apiServerIntURL, err := url.Parse(infraConfig.Status.APIServerInternalURL)
-		if err != nil {
-			mon.log.Errorf("Error in parsing APIServerProfile: %v", err)
-			return err
-		}
-		apiServerIntdomain := strings.Split(apiServerIntURL.Host, ":")[0]
-		if !(noProxyMap[apiServerIntdomain] || clusterDomaincheck) {
-			missing_no_proxy_list = append(missing_no_proxy_list, apiServerIntdomain)
-		}
+			// APIServerInternal URL Check
+			apiServerIntURL, err := url.Parse(infraConfig.Status.APIServerInternalURL)
+			if err != nil {
+				mon.log.Errorf("Error in parsing APIServerProfile: %v", err)
+				return err
+			}
+			apiServerIntdomain := strings.Split(apiServerIntURL.Host, ":")[0]
+			if !(noProxyMap[apiServerIntdomain]) {
+				missing_no_proxy_list = append(missing_no_proxy_list, apiServerIntdomain)
+			}
 
-		// APIServerProfile URL Check
-		apiServerProfileURL, err := url.Parse(mon.oc.Properties.APIServerProfile.URL)
-		if err != nil {
-			mon.log.Errorf("Error in parsing APIServerProfile: %v", err)
-			return err
-		}
-		apiServerProfiledomain := strings.Split(apiServerProfileURL.Host, ":")[0]
-		if !(noProxyMap[apiServerProfiledomain] || clusterDomaincheck) {
-			missing_no_proxy_list = append(missing_no_proxy_list, apiServerProfiledomain)
+			// APIServerProfile URL Check
+			apiServerProfileURL, err := url.Parse(mon.oc.Properties.APIServerProfile.URL)
+			if err != nil {
+				mon.log.Errorf("Error in parsing APIServerProfile: %v", err)
+				return err
+			}
+			apiServerProfiledomain := strings.Split(apiServerProfileURL.Host, ":")[0]
+			if !(noProxyMap[apiServerProfiledomain]) {
+				missing_no_proxy_list = append(missing_no_proxy_list, apiServerProfiledomain)
+			}
 		}
 
 		if len(missing_no_proxy_list) > 0 {
