@@ -59,17 +59,14 @@ is_priv_namespace(ns) = true {
 exempted_user = {
   "system:kube-controller-manager",
   "system:kube-scheduler",
-  "system:admin" # comment out temporarily for testing in console
+  "system:admin"
 }
 
 exempted_groups = {
   # "system:cluster-admins", # dont allow kube:admin
-  "system:nodes", # eg, "username": "system:node:jeff-test-cluster-pcnp4-master-2"
-  "system:serviceaccounts", # to allow all system service account?
-  # "system:serviceaccounts:openshift-monitoring", # monitoring operator
-  # "system:serviceaccounts:openshift-network-operator", # network operator
-  # "system:serviceaccounts:openshift-machine-config-operator", # machine-config-operator, however the request provide correct sa name
-  "system:masters" # system:admin
+  "system:nodes",
+  "system:serviceaccounts", # allow all system service accounts
+  "system:masters"
 }
 privileged_ns = {
   # Kubernetes specific namespaces
@@ -116,7 +113,8 @@ privileged_ns = {
   "openshift-multus",
   "openshift-network-operator",
   "openshift-oauth-apiserver",
+  "openshift-ovn-kubernetes",
+  "openshift-sdn",
   "openshift-service-ca",
-  "openshift-service-ca-operator",
-  "openshift-sdn"
+  "openshift-service-ca-operator"
 }
