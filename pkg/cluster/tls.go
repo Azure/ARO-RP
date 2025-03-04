@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 
+	azcertificates_sdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,8 +16,8 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 const (
@@ -52,7 +54,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		m.log.Printf("creating certificate %s", c.certificateName)
-		err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, OneCertPublicIssuerName, c.certificateName, c.commonName, keyvault.EkuServerAuth)
+		_, err = m.env.ClusterCertificates().CreateCertificate(ctx, OneCertPublicIssuerName, azcertificates.SignedCertificateParameters(c.certificateName, c.commonName, azcertificates.EkuServerAuth), nil)
 		if err != nil {
 			return err
 		}
@@ -60,9 +62,14 @@ func (m *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		m.log.Printf("waiting for certificate %s", c.certificateName)
-		err = m.env.ClusterKeyvault().WaitForCertificateOperation(ctx, c.certificateName)
-		if err != nil {
-			m.log.Errorf("error when waiting for certificate %s: %s", c.certificateName, err.Error())
+		if err := azcertificates.WaitForCertificateOperation(ctx, func(ctx context.Context) (azcertificates_sdk.CertificateOperation, error) {
+			op, err := m.env.ClusterCertificates().GetCertificateOperation(ctx, c.certificateName, nil)
+			if err != nil {
+				return azcertificates_sdk.CertificateOperation{}, err
+			}
+			return op.CertificateOperation, err
+		}); err != nil {
+			m.log.Errorf("error when getting operation for certificate %s: %s", c.certificateName, err.Error())
 			return err
 		}
 	}

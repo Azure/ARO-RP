@@ -5,4 +5,4 @@ package azsecrets
 
 // Use source mode to prevent some issues related to generics being present in the interface.
 //go:generate rm -rf ../../../../../pkg/util/mocks/azureclient/azuresdk/$GOPACKAGE
-//go:generate mockgen -source ./client.go -destination=../../../mocks/azureclient/azuresdk/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/$GOPACKAGE Client
+//go:generate mockgen -typed -source ./client.go -destination=../../../mocks/azureclient/azuresdk/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/$GOPACKAGE Client

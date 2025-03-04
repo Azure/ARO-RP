@@ -1,6 +1,3 @@
-//go:build go1.18
-// +build go1.18
-
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
@@ -38,6 +35,10 @@ func NewClient(vaultURL string, credential azcore.TokenCredential, options *Clie
 		},
 	)
 	azcoreClient, err := azcore.NewClient(moduleName, version, runtime.PipelineOptions{
+		APIVersion: runtime.APIVersionOptions{
+			Location: runtime.APIVersionLocationQueryParam,
+			Name:     "api-version",
+		},
 		PerRetry: []policy.Policy{authPolicy},
 		Tracing: runtime.TracingOptions{
 			Namespace: "Microsoft.KeyVault",
@@ -46,7 +47,7 @@ func NewClient(vaultURL string, credential azcore.TokenCredential, options *Clie
 	if err != nil {
 		return nil, err
 	}
-	return &Client{endpoint: vaultURL, internal: azcoreClient}, nil
+	return &Client{vaultBaseUrl: vaultURL, internal: azcoreClient}, nil
 }
 
 // ID is a secret's unique ID, containing its name and version.

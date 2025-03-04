@@ -9,22 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
-	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-)
-
-const (
-	mockMsiCertValidityDays = 90
 )
 
 var (
@@ -36,12 +27,11 @@ var (
 // vault. It does not concern itself with whether an existing certificate is valid
 // or not; that can be left to the certificate refresher component.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
-	secretName := m.clusterMsiSecretName()
+	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
-	_, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
-	if err == nil {
+	if _, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
 		return nil
-	} else if err != nil && !azureerrors.IsNotFoundError(err) {
+	} else if !azureerrors.IsNotFoundError(err) {
 		return err
 	}
 
@@ -64,49 +54,21 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 		return err
 	}
 
-	now := time.Now()
-
-	var expirationDate time.Time
-	if m.env.FeatureIsSet(env.FeatureUseMockMsiRp) {
-		expirationDate = now.AddDate(0, 0, mockMsiCertValidityDays)
-	} else {
-		identity, err := getSingleExplicitIdentity(msiCredObj)
-		if err != nil {
-			return err
-		}
-		if identity.NotAfter == nil {
-			return errors.New("unable to pull NotAfter from the MSI CredentialsObject")
-		}
-
-		// The OpenAPI spec for the MI RP specifies that NotAfter will be "in the format 2017-03-01T14:11:00Z".
-		expirationDate, err = time.Parse(time.RFC3339, *identity.NotAfter)
-		if err != nil {
-			return err
-		}
-	}
-
-	raw, err := json.Marshal(msiCredObj)
+	name, parameters, err := dataplane.FormatManagedIdentityCredentialsForStorage(m.doc.ID, *msiCredObj)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to format managed identity credentials for storage: %w", err)
 	}
 
-	return m.clusterMsiKeyVaultStore.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
-		Value: pointerutils.ToPtr(string(raw)),
-		SecretAttributes: &keyvault.SecretAttributes{
-			Enabled:   pointerutils.ToPtr(true),
-			Expires:   pointerutils.ToPtr(date.UnixTime(expirationDate)),
-			NotBefore: pointerutils.ToPtr(date.UnixTime(expirationDate)),
-		},
-		Tags: nil,
-	})
+	_, err = m.clusterMsiKeyVaultStore.SetSecret(ctx, name, parameters, nil)
+	return err
 }
 
 // initializeClusterMsiClients intializes any Azure clients that use the cluster
 // MSI certificate.
 func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
-	secretName := m.clusterMsiSecretName()
+	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
-	kvSecretResponse, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName)
+	kvSecretResponse, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil)
 	if err != nil {
 		return err
 	}
@@ -155,12 +117,6 @@ func (m *manager) initializeClusterMsiClients(ctx context.Context) error {
 	m.clusterMsiFederatedIdentityCredentials = clusterMsiFederatedIdentityCredentials
 	m.userAssignedIdentities = userAssignedIdentities
 	return nil
-}
-
-// clusterMsiSecretName returns the name to store the cluster MSI certificate under in
-// the cluster MSI key vault.
-func (m *manager) clusterMsiSecretName() string {
-	return dataplane.ManagedIdentityCredentialsStoragePrefix + m.doc.ID
 }
 
 func (m *manager) clusterIdentityIDs(ctx context.Context) error {

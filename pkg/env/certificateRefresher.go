@@ -12,7 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 )
 
 type CertificateRefresher interface {
@@ -25,12 +25,12 @@ type refreshingCertificate struct {
 	certs     []*x509.Certificate
 	key       *rsa.PrivateKey
 	logger    *logrus.Entry
-	kv        keyvault.Manager
+	kv        azsecrets.Client
 	certName  string
 	newTicker func() (tick <-chan time.Time, stop func())
 }
 
-func newCertificateRefresher(logger *logrus.Entry, interval time.Duration, kv keyvault.Manager, certificateName string) CertificateRefresher {
+func newCertificateRefresher(logger *logrus.Entry, interval time.Duration, kv azsecrets.Client, certificateName string) CertificateRefresher {
 	return &refreshingCertificate{
 		logger:   logger,
 		kv:       kv,
@@ -67,7 +67,12 @@ func (r *refreshingCertificate) GetCertificates() (*rsa.PrivateKey, []*x509.Cert
 // in case of failure error is returned and old certificate is left in the
 // synced store
 func (r *refreshingCertificate) fetchCertificateOnce(ctx context.Context) error {
-	key, certs, err := r.kv.GetCertificateSecret(ctx, r.certName)
+	certificate, err := r.kv.GetSecret(ctx, r.certName, "", nil)
+	if err != nil {
+		return err
+	}
+
+	key, certs, err := azsecrets.ParseSecretAsCertificate(certificate)
 	if err != nil {
 		return err
 	}

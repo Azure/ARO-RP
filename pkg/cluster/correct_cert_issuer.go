@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 // if the cluster is using a managed domain and has a DigiCert-issued
@@ -49,9 +49,9 @@ func (m *manager) ensureCertificateIssuer(ctx context.Context, certificateName, 
 		return fmt.Errorf("%s is not a valid DNS name", dnsName)
 	}
 
-	clusterKeyvault := m.env.ClusterKeyvault()
+	clusterKeyvault := m.env.ClusterCertificates()
 
-	bundle, err := clusterKeyvault.GetCertificate(ctx, certificateName)
+	bundle, err := clusterKeyvault.GetCertificate(ctx, certificateName, "", nil)
 	if err != nil {
 		return err
 	}
@@ -67,18 +67,18 @@ func (m *manager) ensureCertificateIssuer(ctx context.Context, certificateName, 
 	}
 
 	if *bundle.Policy.IssuerParameters.Name != issuerName {
-		policy, err := clusterKeyvault.GetCertificatePolicy(ctx, certificateName)
+		policy, err := clusterKeyvault.GetCertificatePolicy(ctx, certificateName, nil)
 		if err != nil {
 			return err
 		}
 
 		policy.IssuerParameters.Name = &issuerName
-		err = clusterKeyvault.UpdateCertificatePolicy(ctx, certificateName, policy)
+		_, err = clusterKeyvault.UpdateCertificatePolicy(ctx, certificateName, policy.CertificatePolicy, nil)
 		if err != nil {
 			return err
 		}
 
-		err = clusterKeyvault.CreateSignedCertificate(ctx, issuerName, certificateName, dnsName, keyvault.EkuServerAuth)
+		_, err = clusterKeyvault.CreateCertificate(ctx, issuerName, azcertificates.SignedCertificateParameters(certificateName, dnsName, azcertificates.EkuServerAuth), nil)
 		if err != nil {
 			return err
 		}

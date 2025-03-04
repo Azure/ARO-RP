@@ -17,6 +17,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	azuresdkerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
@@ -365,9 +367,9 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	secretName := m.clusterMsiSecretName()
+	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
-	if _, err := m.clusterMsiKeyVaultStore.DeleteSecret(ctx, secretName); err != nil && !azureerrors.IsNotFoundError(err) {
+	if _, err := m.clusterMsiKeyVaultStore.DeleteSecret(ctx, secretName, nil); err != nil && !azureerrors.IsNotFoundError(err) {
 		return err
 	}
 
@@ -570,14 +572,14 @@ func (m *manager) Delete(ctx context.Context) error {
 
 		if managedDomain != "" {
 			m.log.Print("deleting signed apiserver certificate")
-			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.APICertName())
-			if err != nil {
+			_, err = m.env.ClusterCertificates().DeleteCertificate(ctx, m.APICertName(), nil)
+			if err != nil && !azcertificates.IsCertificateNotFoundError(err) {
 				return err
 			}
 
 			m.log.Print("deleting signed ingress certificate")
-			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.IngressCertName())
-			if err != nil {
+			_, err = m.env.ClusterCertificates().DeleteCertificate(ctx, m.IngressCertName(), nil)
+			if err != nil && !azcertificates.IsCertificateNotFoundError(err) {
 				return err
 			}
 		}

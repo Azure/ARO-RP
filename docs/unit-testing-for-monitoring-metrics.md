@@ -93,7 +93,7 @@ When starting the monitor , make sure to have your
   
 environment variables set to Geneva account and namespace where you metrics is supposed to land in Geneva INT (https://jarvis-west-int.cloudapp.net/)
 
-Use `go run ./cmd/aro monitor` to start the monitor. You want to check what the current directory of your monitor is, because that's the folder the monitor will use to search for the mdm_statds.socket file and that needs to match where your mdm container or the socat command creates it. Please note that in local dev mode the monitor will silently ignore if it can't connect to the socket.
+Use `go run ./cmd/aro monitor` or `make runlocal-monitor` to start the monitor. You want to check what the current directory of your monitor is, because that's the folder the monitor will use to search for the mdm_statds.socket file and that needs to match where your mdm container or the socat command creates it. Please note that in local dev mode the monitor will silently ignore if it can't connect to the socket.
 
 A VS Code launch config that does the same would look like.
 

@@ -31,6 +31,8 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
@@ -63,8 +65,9 @@ type prod struct {
 	fpCertificateRefresher CertificateRefresher
 	fpClientID             string
 
-	clusterKeyvault keyvault.Manager
-	serviceKeyvault keyvault.Manager
+	clusterKeyvault     azsecrets.Client
+	clusterCertificates azcertificates.Client
+	serviceKeyvault     azsecrets.Client
 
 	clusterGenevaLoggingCertificate   *x509.Certificate
 	clusterGenevaLoggingPrivateKey    *rsa.PrivateKey
@@ -142,7 +145,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	msiKVAuthorizer, err := p.NewMSIAuthorizer(p.Environment().KeyVaultScope)
+	msiCredential, err := p.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +155,11 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 	}
 	keyVaultPrefix := os.Getenv(KeyvaultPrefix)
 	serviceKeyvaultURI := keyvault.URI(p, ServiceKeyvaultSuffix, keyVaultPrefix)
-	p.serviceKeyvault = keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
+	serviceKeyvaultClient, err := azsecrets.NewClient(serviceKeyvaultURI, msiCredential, p.Environment().AzureClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)
+	}
+	p.serviceKeyvault = serviceKeyvaultClient
 
 	resourceSkusClient := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), msiAuthorizer)
 	err = p.populateVMSkus(ctx, resourceSkusClient)
@@ -166,15 +173,29 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), nil, p.Environment().KeyVaultScope)
+	localFPKVCredential, err := p.FPNewClientCertificateCredential(p.TenantID(), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	clusterKeyvaultURI := keyvault.URI(p, ClusterKeyvaultSuffix, keyVaultPrefix)
-	p.clusterKeyvault = keyvault.NewManager(localFPKVAuthorizer, clusterKeyvaultURI)
+	clusterKeyvaultClient, err := azsecrets.NewClient(clusterKeyvaultURI, localFPKVCredential, p.Environment().AzureClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)
+	}
+	p.clusterKeyvault = clusterKeyvaultClient
 
-	clusterGenevaLoggingPrivateKey, clusterGenevaLoggingCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)
+	clusterCertificatesClient, err := azcertificates.NewClient(clusterKeyvaultURI, localFPKVCredential, p.Environment().AzureClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("cannot create key vault certificates client: %w", err)
+	}
+	p.clusterCertificates = clusterCertificatesClient
+
+	genevaCertificate, err := p.serviceKeyvault.GetSecret(ctx, ClusterLoggingSecretName, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	clusterGenevaLoggingPrivateKey, clusterGenevaLoggingCertificates, err := azsecrets.ParseSecretAsCertificate(genevaCertificate)
 	if err != nil {
 		return nil, err
 	}
@@ -336,8 +357,12 @@ func (p *prod) ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	return p.clusterGenevaLoggingPrivateKey, p.clusterGenevaLoggingCertificate
 }
 
-func (p *prod) ClusterKeyvault() keyvault.Manager {
+func (p *prod) ClusterKeyvault() azsecrets.Client {
 	return p.clusterKeyvault
+}
+
+func (p *prod) ClusterCertificates() azcertificates.Client {
+	return p.clusterCertificates
 }
 
 func (p *prod) ClusterMsiKeyVaultName() string {
@@ -382,7 +407,7 @@ func (p *prod) GatewayResourceGroup() string {
 	return os.Getenv("GATEWAY_RESOURCEGROUP")
 }
 
-func (p *prod) ServiceKeyvault() keyvault.Manager {
+func (p *prod) ServiceKeyvault() azsecrets.Client {
 	return p.serviceKeyvault
 }
 
@@ -534,6 +559,10 @@ func (m *mockClient) GetSystemAssignedIdentityCredentials(ctx context.Context) (
 	panic("not yet implemented")
 }
 
+const (
+	mockMsiCertValidityDays = 90
+)
+
 func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, request dataplane.UserAssignedIdentitiesRequest) (*dataplane.ManagedIdentityCredentials, error) {
 	keysToValidate := []string{
 		"MOCK_MSI_CLIENT_ID",
@@ -546,6 +575,7 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 		return nil, err
 	}
 
+	now := time.Now()
 	placeholder := "placeholder"
 	return &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
@@ -556,12 +586,12 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 				ObjectID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
 				ResourceID:                 pointerutils.ToPtr(m.msiResourceId),
 				AuthenticationEndpoint:     pointerutils.ToPtr(m.aadHost),
-				CannotRenewAfter:           &placeholder,
+				CannotRenewAfter:           pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays*5).Format(time.RFC3339)),
 				ClientSecretURL:            &placeholder,
 				MtlsAuthenticationEndpoint: &placeholder,
-				NotAfter:                   &placeholder,
-				NotBefore:                  &placeholder,
-				RenewAfter:                 &placeholder,
+				NotAfter:                   pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays).Format(time.RFC3339)),
+				NotBefore:                  pointerutils.ToPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+				RenewAfter:                 pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays/2).Format(time.RFC3339)),
 				CustomClaims: &dataplane.CustomClaims{
 					XMSAzNwperimid: []string{placeholder},
 					XMSAzTm:        &placeholder,

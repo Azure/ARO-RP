@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
@@ -19,14 +20,17 @@ const (
 // NewAEADWithCore creates an AEAD encryption manager with resources available
 // from the Core env object.
 func NewAEADWithCore(ctx context.Context, _env env.Core, encryptionSecretV2Name string, encryptionSecretName string) (AEAD, error) {
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
+	msiCredential, err := _env.NewMSITokenCredential()
 	if err != nil {
-		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
+		return nil, err
 	}
 
 	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
+	serviceKeyvault, err := azsecrets.NewClient(serviceKeyvaultURI, msiCredential, _env.Environment().AzureClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)
+	}
 
 	return NewMulti(
 		ctx, serviceKeyvault, encryptionSecretV2Name, encryptionSecretName,

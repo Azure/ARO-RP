@@ -28,8 +28,9 @@ import (
 
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	azcertificates "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
+	azsecrets "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
@@ -126,6 +127,20 @@ func (mr *MockInterfaceMockRecorder) ArmClientAuthorizer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).ArmClientAuthorizer))
 }
 
+// ClusterCertificates mocks base method.
+func (m *MockInterface) ClusterCertificates() azcertificates.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterCertificates")
+	ret0, _ := ret[0].(azcertificates.Client)
+	return ret0
+}
+
+// ClusterCertificates indicates an expected call of ClusterCertificates.
+func (mr *MockInterfaceMockRecorder) ClusterCertificates() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterCertificates", reflect.TypeOf((*MockInterface)(nil).ClusterCertificates))
+}
+
 // ClusterGenevaLoggingAccount mocks base method.
 func (m *MockInterface) ClusterGenevaLoggingAccount() string {
 	m.ctrl.T.Helper()
@@ -198,10 +213,10 @@ func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingSecret() *gomock.Call {
 }
 
 // ClusterKeyvault mocks base method.
-func (m *MockInterface) ClusterKeyvault() keyvault.Manager {
+func (m *MockInterface) ClusterKeyvault() azsecrets.Client {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ClusterKeyvault")
-	ret0, _ := ret[0].(keyvault.Manager)
+	ret0, _ := ret[0].(azsecrets.Client)
 	return ret0
 }
 
@@ -660,10 +675,10 @@ func (mr *MockInterfaceMockRecorder) ResourceGroup() *gomock.Call {
 }
 
 // ServiceKeyvault mocks base method.
-func (m *MockInterface) ServiceKeyvault() keyvault.Manager {
+func (m *MockInterface) ServiceKeyvault() azsecrets.Client {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ServiceKeyvault")
-	ret0, _ := ret[0].(keyvault.Manager)
+	ret0, _ := ret[0].(azsecrets.Client)
 	return ret0
 }
 

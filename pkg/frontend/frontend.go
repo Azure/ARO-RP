@@ -30,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -195,7 +196,12 @@ func NewFrontend(ctx context.Context,
 		return nil, err
 	}
 
-	key, certs, err := f.env.ServiceKeyvault().GetCertificateSecret(ctx, env.RPServerSecretName)
+	certificate, err := f.env.ServiceKeyvault().GetSecret(ctx, env.RPServerSecretName, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	key, certs, err := azsecrets.ParseSecretAsCertificate(certificate)
 	if err != nil {
 		return nil, err
 	}

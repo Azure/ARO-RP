@@ -10,8 +10,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
-	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
@@ -19,10 +20,8 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
+	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -41,6 +40,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	}
 
 	placeholderString := "placeholder"
+	placeholderTime := time.Now().Format(time.RFC3339)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
@@ -49,12 +49,12 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				TenantID:                   &placeholderString,
 				ResourceID:                 &miResourceId,
 				AuthenticationEndpoint:     &placeholderString,
-				CannotRenewAfter:           &placeholderString,
+				CannotRenewAfter:           &placeholderTime,
 				ClientSecretURL:            &placeholderString,
 				MtlsAuthenticationEndpoint: &placeholderString,
-				NotAfter:                   &placeholderString,
-				NotBefore:                  &placeholderString,
-				RenewAfter:                 &placeholderString,
+				NotAfter:                   &placeholderTime,
+				NotBefore:                  &placeholderTime,
+				RenewAfter:                 &placeholderTime,
 				CustomClaims: &dataplane.CustomClaims{
 					XMSAzNwperimid: []string{placeholderString},
 					XMSAzTm:        &placeholderString,
@@ -68,8 +68,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 		name             string
 		doc              *api.OpenShiftClusterDocument
 		msiDataplaneStub func(*mock_msidataplane.MockClient)
-		envMocks         func(*mock_env.MockInterface)
-		kvClientMocks    func(*mock_keyvault.MockManager)
+		kvClientMocks    func(*mock_azsecrets.MockClient)
 		wantErr          string
 	}{
 		{
@@ -89,8 +88,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 					},
 				},
 			},
-			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, fmt.Errorf("error in GetSecret"))
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, fmt.Errorf("error in GetSecret")).Times(1)
 			},
 			wantErr: "error in GetSecret",
 		},
@@ -114,8 +113,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
 				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(&dataplane.ManagedIdentityCredentials{}, errors.New("error in msi"))
 			},
-			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, secretNotFoundError)
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, secretNotFoundError).Times(1)
 			},
 			wantErr: "error in msi",
 		},
@@ -136,17 +135,19 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 					},
 				},
 			},
-			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
 				credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
 				if err != nil {
 					panic(err)
 				}
 
 				credentialsObjectString := string(credentialsObjectBuffer)
-				getSecretResponse := azkeyvault.SecretBundle{
-					Value: &credentialsObjectString,
+				getSecretResponse := azsecrets.GetSecretResponse{
+					Secret: azsecrets.Secret{
+						Value: &credentialsObjectString,
+					},
 				}
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(getSecretResponse, nil)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
 			},
 		},
 		{
@@ -169,12 +170,9 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
 				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
 			},
-			envMocks: func(mockEnv *mock_env.MockInterface) {
-				mockEnv.EXPECT().FeatureIsSet(env.FeatureUseMockMsiRp).Return(true)
-			},
-			kvClientMocks: func(kvclient *mock_keyvault.MockManager) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName).Times(1).Return(azkeyvault.SecretBundle{}, secretNotFoundError)
-				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any()).Times(1).Return(nil)
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, secretNotFoundError).Times(1)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
 			},
 		},
 	}
@@ -184,16 +182,9 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockEnv := mock_env.NewMockInterface(controller)
-			if tt.envMocks != nil {
-				tt.envMocks(mockEnv)
-			}
-			mockEnv.EXPECT().FeatureIsSet(env.FeatureUseMockMsiRp).Return(false).AnyTimes()
-
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				doc: tt.doc,
-				env: mockEnv,
 			}
 
 			factory := mock_msidataplane.NewMockClientFactory(controller)
@@ -205,7 +196,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 			m.msiDataplane = factory
 
-			mockKvClient := mock_keyvault.NewMockManager(controller)
+			mockKvClient := mock_azsecrets.NewMockClient(controller)
 			if tt.kvClientMocks != nil {
 				tt.kvClientMocks(mockKvClient)
 			}
@@ -234,6 +225,7 @@ func TestClusterIdentityIDs(t *testing.T) {
 	miClientId := "ffffffff-ffff-ffff-ffff-ffffffffffff"
 	miObjectId := "99999999-9999-9999-9999-999999999999"
 	placeholderString := "placeholder"
+	placeholderTime := time.Now().Format(time.RFC3339)
 
 	msiDataPlaneValidStub := func(client *mock_msidataplane.MockClient) {
 		client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(&dataplane.ManagedIdentityCredentials{
@@ -246,12 +238,12 @@ func TestClusterIdentityIDs(t *testing.T) {
 					ClientSecret:               &placeholderString,
 					TenantID:                   &placeholderString,
 					AuthenticationEndpoint:     &placeholderString,
-					CannotRenewAfter:           &placeholderString,
+					CannotRenewAfter:           &placeholderTime,
 					ClientSecretURL:            &placeholderString,
 					MtlsAuthenticationEndpoint: &placeholderString,
-					NotAfter:                   &placeholderString,
-					NotBefore:                  &placeholderString,
-					RenewAfter:                 &placeholderString,
+					NotAfter:                   &placeholderTime,
+					NotBefore:                  &placeholderTime,
+					RenewAfter:                 &placeholderTime,
 					CustomClaims: &dataplane.CustomClaims{
 						XMSAzNwperimid: []string{placeholderString},
 						XMSAzTm:        &placeholderString,
@@ -441,18 +433,19 @@ func TestClusterIdentityIDs(t *testing.T) {
 
 func TestGetSingleExplicitIdentity(t *testing.T) {
 	placeholderString := "placeholder"
+	placeholderTime := time.Now().Format(time.RFC3339)
 	validIdentity := dataplane.UserAssignedIdentityCredentials{
 		ClientID:                   &placeholderString,
 		ClientSecret:               &placeholderString,
 		TenantID:                   &placeholderString,
 		ResourceID:                 &placeholderString,
 		AuthenticationEndpoint:     &placeholderString,
-		CannotRenewAfter:           &placeholderString,
+		CannotRenewAfter:           &placeholderTime,
 		ClientSecretURL:            &placeholderString,
 		MtlsAuthenticationEndpoint: &placeholderString,
-		NotAfter:                   &placeholderString,
-		NotBefore:                  &placeholderString,
-		RenewAfter:                 &placeholderString,
+		NotAfter:                   &placeholderTime,
+		NotBefore:                  &placeholderTime,
+		RenewAfter:                 &placeholderTime,
 		CustomClaims: &dataplane.CustomClaims{
 			XMSAzNwperimid: []string{placeholderString},
 			XMSAzTm:        &placeholderString,

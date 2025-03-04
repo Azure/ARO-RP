@@ -16,6 +16,7 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
@@ -74,7 +75,12 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 
 	var err error
 
-	key, certs, err := env.ServiceKeyvault().GetCertificateSecret(ctx, RPDevARMSecretName)
+	certificate, err := env.ServiceKeyvault().GetSecret(ctx, RPDevARMSecretName, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	key, certs, err := azsecrets.ParseSecretAsCertificate(certificate)
 	if err != nil {
 		return nil, err
 	}
