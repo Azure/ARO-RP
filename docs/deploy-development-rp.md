@@ -271,6 +271,8 @@ The env variables names defined in pkg/util/liveconfig/manager.go control the co
 
 After setting the above environment variables (using _export_ directly in the terminal or including them in the _env_ file), connect to the [VPN](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) (_Connect to the VPN_ section).
 
+**Warning:** Hive do not support OpenShift image referenced by tag (like installer in container does) but only with sha, so make sure version you are installing is defined with OpenShiftPullSpec defined with sha and not tag.
+
 Then proceed to [run](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) the ARO-RP as usual.
 
 After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) a cluster, you will be using Hive behind the scenes. You can check the created Hive objects following [Debugging OpenShift Cluster](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-openshift-cluster) and using the _oc_ command.
@@ -408,8 +410,40 @@ This command adds the image to your cosmosDB. **openShiftPullspec** comes from [
 
   ```bash
   OCP_VERSION=<x.y.z>
-  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "'${OCP_VERSION}'", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release:'${OCP_VERSION}'-x86_64", "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'" } }'
-```
+  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '
+    {
+      "name": "'${OCP_VERSION}'",
+      "type": "Microsoft.RedHatOpenShift/OpenShiftVersion",
+      "properties":
+      {
+        "version": "'${OCP_VERSION}'",
+        "enabled": true,
+        "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release:'${OCP_VERSION}'-x86_64",
+        "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'"
+      }
+    }
+  '
+  ```
+
+If you want to run the installer version via hive and not in container, you will need to use sha instead of tag for OCP image, and you can use your docker connection for this:
+  ```bash
+  docker login quay.io                                                                                                                                                                                                                                                                              16:36:10
+  OCP_VERSION=<x.y.z>
+  docker pull quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64
+  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '
+    {
+      "name": "'${OCP_VERSION}'",
+      "type": "Microsoft.RedHatOpenShift/OpenShiftVersion",
+      "properties":
+      {
+        "version": "'${OCP_VERSION}'",
+        "enabled": true,
+        "openShiftPullspec": "'$(docker inspect --format='{{index .RepoDigests 0}}' quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64)'",
+        "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'"
+      }
+    }
+  '
+  ```
 
 - List the enabled OpenShift installation versions within a region
   ```bash
