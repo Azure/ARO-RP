@@ -37,7 +37,7 @@ type Deployer interface {
 	DeployGateway(context.Context) error
 	UpgradeRP(context.Context) error
 	UpgradeGateway(context.Context) error
-	SaveVersion(context.Context) error
+	SaveVersion(context.Context, azcore.TokenCredential) error
 }
 
 type deployer struct {
