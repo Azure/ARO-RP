@@ -40,11 +40,16 @@ var (
 )
 
 func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
+	pullPolicy := os.Getenv("ARO_PODMAN_PULL_POLICY")
+	if pullPolicy == "" {
+		pullPolicy = "always"
+	}
+
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
 			options := (&images.PullOptions{}).
 				WithQuiet(true).
-				WithPolicy("always").
+				WithPolicy(pullPolicy).
 				WithUsername(m.pullSecret.Username).
 				WithPassword(m.pullSecret.Password)
 
