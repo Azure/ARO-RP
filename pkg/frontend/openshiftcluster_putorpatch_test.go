@@ -4725,8 +4725,8 @@ func getPlatformWorkloadIdentityRolesChangeFeed() map[string]*api.PlatformWorklo
 // api.OpenShiftCluster to the external admin.OpenShiftCluster preserves or
 // defaults the PreconfiguredNSG field correctly.
 func TestConversion_PreconfiguredNSG(t *testing.T) {
-	// 1. Grab the existing converter from the "admin" API version.
-	//    This is what actually does the internal->external conversion.
+	// Grab the existing converter from the "admin" API version.
+	// This is what actually does the internal->external conversion.
 	converter := api.APIs["admin"].OpenShiftClusterConverter
 
 	tests := []struct {
@@ -4756,16 +4756,11 @@ func TestConversion_PreconfiguredNSG(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 2. Convert from internal to external via the converter.
 			externalObj := converter.ToExternal(tt.input)
-
-			// 3. The returned object is interface{}, so cast it to *admin.OpenShiftCluster.
 			oc, ok := externalObj.(*admin.OpenShiftCluster)
 			if !ok {
 				t.Fatalf("expected *admin.OpenShiftCluster, got %T", externalObj)
 			}
-
-			// 4. Now check the PreconfiguredNSG value.
 			if oc.Properties.NetworkProfile.PreconfiguredNSG != tt.expected {
 				t.Errorf("expected %v, got %v",
 					tt.expected, oc.Properties.NetworkProfile.PreconfiguredNSG)
