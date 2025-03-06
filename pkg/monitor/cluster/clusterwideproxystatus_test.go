@@ -36,6 +36,8 @@ func TestEmitCWPStatus(t *testing.T) {
 	tests := []struct {
 		name          string
 		proxyConfig   *configv1.Proxy
+		infraConfig   *configv1.Infrastructure
+		apiServerURL  string
 		expectErr     bool
 		expectedError string
 		setupMocks    func(*mock_metrics.MockEmitter)
@@ -75,6 +77,65 @@ func TestEmitCWPStatus(t *testing.T) {
 			proxyConfig:   &configv1.Proxy{},
 			expectErr:     false,
 			expectedError: "",
+			setupMocks: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().
+					EmitGauge("clusterWideProxy.status", int64(1), gomock.Any()).
+					Times(1)
+			},
+		},
+		{
+			name: "missing clusterDomain and .apps.clusterDomain in no_proxy",
+			proxyConfig: &configv1.Proxy{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec: configv1.ProxySpec{
+					NoProxy: "localhost,.svc,.cluster.local",
+				},
+			},
+			infraConfig: &configv1.Infrastructure{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status: configv1.InfrastructureStatus{
+					APIServerInternalURL: "https://api-int.clusterDomain:6443",
+				},
+			},
+			apiServerURL:  "https://api.clusterDomain:6443",
+			expectErr:     false,
+			expectedError: "",
+			setupMocks: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().
+					EmitGauge("clusterWideProxy.status", int64(1), gomock.Any()).
+					Times(1)
+			},
+		},
+		{
+			name: "CWP enabled with complete no_proxy list",
+			proxyConfig: &configv1.Proxy{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec: configv1.ProxySpec{
+					NoProxy: "localhost,127.0.0.1,.svc,.cluster.local,169.254.169.254,168.63.129.16,.apps.clusterDomain,api.clusterDomain,api-int.clusterDomain",
+				},
+			},
+			infraConfig: &configv1.Infrastructure{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status: configv1.InfrastructureStatus{
+					APIServerInternalURL: "https://api-int.clusterDomain:6443",
+				},
+			},
+			expectErr: false,
+			setupMocks: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().
+					EmitGauge("clusterWideProxy.status", int64(1), gomock.Any()).
+					Times(1)
+			},
+		},
+		{
+			name: "CWP enabled with complete with clusterDomain (not having api or api-int or .apps.clusterDomain)int no_proxy list",
+			proxyConfig: &configv1.Proxy{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec: configv1.ProxySpec{
+					NoProxy: "localhost,127.0.0.1,.svc,.cluster.local,169.254.169.254,168.63.129.16,clusterDomain",
+				},
+			},
+			expectErr: false,
 			setupMocks: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().
 					EmitGauge("clusterWideProxy.status", int64(1), gomock.Any()).

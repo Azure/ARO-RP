@@ -175,7 +175,7 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 		// Our SRE testing has also not identified any functionality issues with this configuration.
 		// Therefore, we will make this check optional if the clusterDomain is already included in the list.
 		// This check is not aligned with our documentation,
-		// but we are implementing it this way for the sake of code optimization.
+		// but we are implementing it this way for code optimization.
 		if !clusterDomaincheck {
 			if !(noProxyMap[".apps."+clusterDomain]) {
 				missing_no_proxy_list = append(missing_no_proxy_list, clusterDomain)
