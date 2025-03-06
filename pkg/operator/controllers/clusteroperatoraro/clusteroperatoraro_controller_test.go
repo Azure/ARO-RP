@@ -233,6 +233,7 @@ func TestConditions(t *testing.T) {
 			}
 			clientFake := ctrlfake.NewClientBuilder().
 				WithObjects(cluster).
+				WithStatusSubresource(cluster).
 				Build()
 
 			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)

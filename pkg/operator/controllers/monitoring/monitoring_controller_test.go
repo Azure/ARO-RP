@@ -166,7 +166,7 @@ somethingElse:
 
 			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
 			if tt.configMap != nil {
-				clientBuilder.WithObjects(tt.configMap)
+				clientBuilder.WithObjects(tt.configMap).WithStatusSubresource(tt.configMap)
 			}
 
 			r := &MonitoringReconciler{
@@ -298,7 +298,7 @@ func TestReconcilePVC(t *testing.T) {
 				},
 			}
 
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithObjects(tt.pvcs...).Build()
+			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithStatusSubresource(instance).WithObjects(tt.pvcs...).Build()
 
 			r := &MonitoringReconciler{
 				AROController: base.AROController{

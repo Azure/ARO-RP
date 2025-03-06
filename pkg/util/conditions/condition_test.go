@@ -196,7 +196,7 @@ func TestSetCondition(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			clientFake := fake.NewClientBuilder().WithObjects(&tt.cluster).Build()
+			clientFake := fake.NewClientBuilder().WithObjects(&tt.cluster).WithStatusSubresource(&tt.cluster).Build()
 
 			err := SetCondition(ctx, clientFake, tt.input, role)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)

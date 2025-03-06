@@ -90,7 +90,7 @@ func TestReconcile(t *testing.T) {
 						instance.Spec.OperatorFlags[operator.CheckerEnabled] = operator.FlagFalse
 					}
 
-					clientFake := fake.NewClientBuilder().WithObjects(instance).Build()
+					clientFake := fake.NewClientBuilder().WithObjects(instance).WithStatusSubresource(instance).Build()
 
 					r := &Reconciler{
 						log:  utillog.GetLogger(),

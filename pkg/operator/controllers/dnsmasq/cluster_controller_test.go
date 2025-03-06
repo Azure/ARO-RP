@@ -345,6 +345,7 @@ func TestClusterReconciler(t *testing.T) {
 
 			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
 				WithObjects(tt.objects...).
+				WithStatusSubresource(tt.objects...).
 				Build()).WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
 			log := logrus.NewEntry(logrus.StandardLogger())
