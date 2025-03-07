@@ -124,9 +124,7 @@ func TestReconcile(t *testing.T) {
 					}
 					if condition == nil {
 						t.Fatal("no condition found")
-					}
-
-					if condition.Status != tt.wantCondition {
+					} else if condition.Status != tt.wantCondition {
 						t.Error(condition.Status)
 					}
 				})

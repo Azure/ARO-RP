@@ -19,12 +19,12 @@ type UserPass struct {
 func userPassFromBase64(secret string) (*UserPass, error) {
 	decoded, err := base64.StdEncoding.DecodeString(secret)
 	if err != nil {
-		return nil, errors.New("malformed auth token")
+		return nil, errors.New("invalid Base64")
 	}
 
-	split := strings.Split(string(decoded), ":")
+	split := strings.SplitN(string(decoded), ":", 2)
 	if len(split) != 2 {
-		return nil, errors.New("auth token not in format of username:password")
+		return nil, errors.New("not in format of username:password")
 	}
 
 	return &UserPass{
@@ -33,24 +33,27 @@ func userPassFromBase64(secret string) (*UserPass, error) {
 	}, nil
 }
 
-// Extract decodes a username and password for a given domain from a
-// JSON-encoded pull secret (e.g. from docker auth)
-func Extract(rawPullSecret, domain string) (*UserPass, error) {
+// Extract decodes into a map, usernames and corresponding password for
+// all domains from a JSON-encoded pull secret (e.g. from docker auth)
+func Extract(rawPullSecret string) (map[string]*UserPass, error) {
 	pullSecrets := &pullSecret{}
 	err := json.Unmarshal([]byte(rawPullSecret), pullSecrets)
 	if err != nil {
 		return nil, errors.New("malformed pullsecret (invalid JSON)")
 	}
 
-	auth, ok := pullSecrets.Auths[domain]
-	if !ok {
-		return nil, fmt.Errorf("missing '%s' key in pullsecret", domain)
+	pullSecretMap := make(map[string]*UserPass)
+	for key, auth := range pullSecrets.Auths {
+		token, ok := auth["auth"]
+		if !ok {
+			return nil, fmt.Errorf("malformed pullsecret (no auth key) for key %s", key)
+		}
+
+		pullSecretMap[key], err = userPassFromBase64(token.(string))
+		if err != nil {
+			return nil, fmt.Errorf("malformed auth token for key %s: %s", key, err)
+		}
 	}
 
-	token, ok := auth["auth"]
-	if !ok {
-		return nil, errors.New("malformed pullsecret (no auth key)")
-	}
-
-	return userPassFromBase64(token.(string))
+	return pullSecretMap, nil
 }

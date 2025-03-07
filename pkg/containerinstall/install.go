@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/containers/podman/v5/pkg/bindings/containers"
@@ -45,13 +46,22 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 		pullPolicy = "always"
 	}
 
+	domain, _, ok := strings.Cut(version.Properties.InstallerPullspec, "/")
+	if !ok {
+		return fmt.Errorf("failed to get domain from %s", version.Properties.InstallerPullspec)
+	}
+	pullSecret, ok := m.pullSecrets[domain]
+	if !ok {
+		return fmt.Errorf("failed to get pullSecret for domain %s", domain)
+	}
+
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
 			options := (&images.PullOptions{}).
 				WithQuiet(true).
 				WithPolicy(pullPolicy).
-				WithUsername(m.pullSecret.Username).
-				WithPassword(m.pullSecret.Password)
+				WithUsername(pullSecret.Username).
+				WithPassword(pullSecret.Password)
 
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
