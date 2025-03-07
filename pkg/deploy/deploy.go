@@ -6,6 +6,7 @@ package deploy
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
@@ -25,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 var _ Deployer = (*deployer)(nil)
@@ -58,9 +59,9 @@ type deployer struct {
 	vmss                         compute.VirtualMachineScaleSetsClient
 	vmssvms                      compute.VirtualMachineScaleSetVMsClient
 	zones                        dns.ZonesClient
-	clusterKeyvault              keyvault.Manager
-	portalKeyvault               keyvault.Manager
-	serviceKeyvault              keyvault.Manager
+	clusterKeyvault              azsecrets.Client
+	portalKeyvault               azsecrets.Client
+	serviceKeyvault              azsecrets.Client
 
 	config      *RPConfig
 	version     string
@@ -85,10 +86,21 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 	scopes := []string{_env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	scopes = []string{_env.Environment().KeyVaultScope}
-	kvAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
-
 	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)
+
+	var clusterKeyVault, portalKeyVault, serviceKeyVault azsecrets.Client
+	for suffix, into := range map[string]*azsecrets.Client{
+		env.ClusterKeyvaultSuffix: &clusterKeyVault,
+		env.PortalKeyvaultSuffix:  &portalKeyVault,
+		env.ServiceKeyvaultSuffix: &serviceKeyVault,
+	} {
+		uri := azsecrets.URI(_env, suffix, *config.Configuration.KeyvaultPrefix)
+		client, err := azsecrets.NewClient(uri, tokenCredential, _env.Environment().AzureClientOptions())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create keyvault client for %s: %w", uri, err)
+		}
+		*into = client
+	}
 
 	return &deployer{
 		log: log,
@@ -109,9 +121,9 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		vmss:                         vmssClient,
 		vmssvms:                      compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		zones:                        dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
-		clusterKeyvault:              keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ClusterKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
-		portalKeyvault:               keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.PortalKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
-		serviceKeyvault:              keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ServiceKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
+		clusterKeyvault:              clusterKeyVault,
+		portalKeyvault:               portalKeyVault,
+		serviceKeyvault:              serviceKeyVault,
 
 		config:      config,
 		version:     version,
