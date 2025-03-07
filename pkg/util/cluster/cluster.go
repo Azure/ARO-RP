@@ -408,13 +408,18 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 			}
 		}
 	}
+	fipsMode := true
+
+	// Don't install with FIPS in a local dev, non-CI environment
+	if !c.ci && env.IsLocalDevelopmentMode() {
+		fipsMode = false
+	}
 
 	apiMasterVmSize := api.VMSize(masterVmSize)
 	apiWorkerVmSize := api.VMSize(workerVmSize)
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, osClusterVersion, apiMasterVmSize, apiWorkerVmSize)
-
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, osClusterVersion, apiMasterVmSize, apiWorkerVmSize, fipsMode)
 	if err != nil {
 		return err
 	}
@@ -565,14 +570,19 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string, masterVmSize api.VMSize, workerVmSize api.VMSize) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string, masterVmSize api.VMSize, workerVmSize api.VMSize, fipsEnabled bool) error {
+	fipsMode := api.FipsValidatedModulesDisabled
+	if fipsEnabled {
+		fipsMode = api.FipsValidatedModulesEnabled
+	}
+
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain:               strings.ToLower(clusterName),
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
-				FipsValidatedModules: api.FipsValidatedModulesEnabled,
+				FipsValidatedModules: fipsMode,
 				Version:              osClusterVersion,
 				PullSecret:           api.SecureString(os.Getenv("USER_PULL_SECRET")),
 			},
