@@ -39,6 +39,7 @@ func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 		mon._emitPodConditions(ps)
 		mon._emitPodContainerStatuses(ps)
 		mon._emitPodContainerRestartCounter(ps)
+		mon._emitOOMKilledPods(ps)
 
 		cont = ps.Continue
 		if cont == "" {
@@ -157,6 +158,39 @@ func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 				"name":      p.Name,
 				"namespace": p.Namespace,
 			}).Print()
+		}
+	}
+}
+
+func (mon *Monitor) _emitOOMKilledPods(ps *corev1.PodList) {
+	for _, p := range ps.Items {
+		if !namespace.IsOpenShiftNamespace(p.Namespace) {
+			continue
+		}
+
+		// pod status doesn't matter because pod could be running but the container might be oomkilled
+		for _, cntrStatus := range p.Status.ContainerStatuses {
+			if cntrStatus.State.Terminated == nil {
+				continue
+			}
+			if cntrStatus.State.Terminated.Reason == "OOMKilled" {
+				mon.emitGauge("pod.oomkilled", 1, map[string]string{
+					"name":          p.Name,
+					"namespace":     p.Namespace,
+					"nodeName":      p.Spec.NodeName,
+					"containername": cntrStatus.Name,
+					"reason":        cntrStatus.State.Terminated.Reason,
+				})
+				if mon.hourlyRun {
+					mon.log.WithFields(logrus.Fields{
+						"name":          p.Name,
+						"namespace":     p.Namespace,
+						"nodeName":      p.Spec.NodeName,
+						"containername": cntrStatus.Name,
+						"reason":        cntrStatus.State.Terminated.Reason,
+					}).Print()
+				}
+			}
 		}
 	}
 }

@@ -303,3 +303,72 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	assert.NotEmpty(t, x.Data["namespace"])
 	assert.Equal(t, "pod.restartcounter", x.Data["metric"])
 }
+
+func TestEmitOOMKilledPods(t *testing.T) {
+	cli := fake.NewSimpleClientset(
+		&corev1.Pod{ // metrics expected, oomkilled pod
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "oom-killed-pod",
+				Namespace: "openshift",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name: "oom-killed-cntr",
+						State: corev1.ContainerState{
+							Terminated: &corev1.ContainerStateTerminated{
+								Reason:   "OOMKilled",
+								ExitCode: 137,
+							},
+						},
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // no metrics expected, unhealthy pod but not OOM killed
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "err-img-pod",
+				Namespace: "openshift",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name: "err-img-cntr",
+						State: corev1.ContainerState{
+							Waiting: &corev1.ContainerStateWaiting{
+								Reason: "ErrImagePull",
+							},
+						},
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+	)
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	m := mock_metrics.NewMockEmitter(controller)
+
+	mon := &Monitor{
+		cli: cli,
+		m:   m,
+	}
+
+	m.EXPECT().EmitGauge("pod.oomkilled", int64(1), map[string]string{
+		"name":          "oom-killed-pod",
+		"namespace":     "openshift",
+		"nodeName":      "fake-node-name",
+		"containername": "oom-killed-cntr",
+		"reason":        "OOMKilled",
+	})
+
+	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	mon._emitOOMKilledPods(ps)
+}
