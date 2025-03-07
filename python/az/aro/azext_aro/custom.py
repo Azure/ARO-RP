@@ -22,6 +22,7 @@ from azure.cli.core.azclierror import (
     UnauthorizedError,
     ValidationError
 )
+from azure.core.exceptions import ResourceNotFoundError as CoreResourceNotFoundError
 from azext_aro._aad import AADManager
 from azext_aro._rbac import (
     assign_role_to_resource,
@@ -521,11 +522,14 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail, oc):
                     Please retry, if issue persists: raise azure support ticket""")
             logger.info("Failed to validate subnet '%s'", sn)
 
-        subnet = subnet_show(cli_ctx=cli_ctx)(command_args={
-            "name": sid['resource_name'],
-            "vnet_name": sid['name'],
-            "resource_group": sid['resource_group']}
-        )
+        try:
+            subnet = subnet_show(cli_ctx=cli_ctx)(command_args={
+                "name": sid['resource_name'],
+                "vnet_name": sid['name'],
+                "resource_group": sid['resource_group']}
+            )
+        except CoreResourceNotFoundError:
+            continue
 
         if subnet.get("routeTable", None):
             subnet_resources.add(subnet['routeTable']['id'])
