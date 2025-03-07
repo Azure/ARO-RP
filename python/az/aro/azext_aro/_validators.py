@@ -42,7 +42,7 @@ def validate_client_id(isCreate):
     def _validate_client_id(namespace):
         if namespace.client_id is None:
             return
-        if namespace.enable_managed_identity is True:
+        if hasattr(namespace, 'enable_managed_identity') and namespace.enable_managed_identity is True:
             raise MutuallyExclusiveArgumentError('Must not specify --client-id when --enable-managed-identity is True')  # pylint: disable=line-too-long
         if namespace.platform_workload_identities is not None:
             raise MutuallyExclusiveArgumentError('Must not specify --client-id when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
@@ -62,7 +62,7 @@ def validate_client_secret(isCreate):
     def _validate_client_secret(namespace):
         if namespace.client_secret is None:
             return
-        if namespace.enable_managed_identity is True:
+        if hasattr(namespace, 'enable_managed_identity') and namespace.enable_managed_identity is True:
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --enable-managed-identity is True')  # pylint: disable=line-too-long
         if namespace.platform_workload_identities is not None:
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
