@@ -485,6 +485,14 @@ IPADDRESS='$ipaddress'"
     collection_interval: 20s
 processors:
   batch:
+  attributes/insert:
+    actions:
+      - key: \"location\"
+        action: insert
+        value: \"$LOCATION\"
+      - key: \"host\"
+        action: insert
+        value: \"$(hostname)\"
 extensions:
   health_check:
     endpoint: $ipaddress:13133
@@ -498,7 +506,7 @@ service:
   pipelines:
     metrics:
       receivers: [httpcheck]
-      processors: [batch]
+      processors: [batch, attributes/insert]
       exporters: [otlp]"
 
     write_file aro_otel_collector_appconfig_filename aro_otel_collector_appconfig_file true
