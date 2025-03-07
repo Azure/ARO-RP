@@ -72,6 +72,8 @@ func (m *manager) denyAssignment() *arm.Resource {
 							"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
 							"Microsoft.Network/networkSecurityGroups/join/action",
 							"Microsoft.Resources/tags/*", // Enable tagging for Resources RP only
+							"Microsoft.PolicyInsights/remediations/write",
+							"Microsoft.PolicyInsights/remediations/delete",
 						},
 					},
 				},
