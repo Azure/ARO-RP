@@ -154,7 +154,7 @@ func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan erro
 				timeout = true
 			}
 		default:
-			p.taskError(log, err, 1)
+			p.taskError(log.WithField("task", "waitForResults"), err, 1)
 		}
 	}
 }
@@ -169,22 +169,25 @@ func (p ParallelEnricher) initializeClients(ctx context.Context, log *logrus.Ent
 	if err != nil {
 		unsuccessfulEnrichers[servicePrincipal] = true
 		unsuccessfulEnrichers[ingressProfile] = true
-		p.taskError(log, err, 2)
+		p.taskError(log.WithField("task", "setupK8sClient"), err, 2)
 	}
 	machineclient, err = p.setupMachineClient(ctx, oc)
 	if err != nil {
 		unsuccessfulEnrichers[machineClient] = true
-		p.taskError(log, err, 1)
+		p.taskError(log.WithField("task", "setupMachineClient"), err, 1)
 	}
 	operatorclient, err = p.setupOperatorClient(ctx, oc)
 	if err != nil {
 		unsuccessfulEnrichers[ingressProfile] = true
-		p.taskError(log, err, 1)
+		p.taskError(log.WithField("task", "setupOperatorClient"), err, 1)
 	}
 	configclient, err = p.setupConfigClient(ctx, oc)
 	if err != nil {
 		unsuccessfulEnrichers[clusterVersion] = true
-		p.taskError(log, err, 1)
+		p.taskError(log.WithField("task", "setupConfigClient"), err, 1)
+	}
+	if len(unsuccessfulEnrichers) > 0 {
+		log.WithField("enrichers", unsuccessfulEnrichers).Error("one or more enrichers were unsuccessful")
 	}
 	return k8s, machineclient, operatorclient, configclient, unsuccessfulEnrichers
 }
