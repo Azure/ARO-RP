@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -78,7 +78,7 @@ func getValidSubnet() *armnetwork.Subnet {
 	for _, endpoint := range api.SubnetsEndpoints {
 		s.Properties.ServiceEndpoints = append(s.Properties.ServiceEndpoints, &armnetwork.ServiceEndpointPropertiesFormat{
 			Service:           to.StringPtr(endpoint),
-			ProvisioningState: ptr.To(armnetwork.ProvisioningStateSucceeded),
+			ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
 		})
 	}
 	return s
@@ -405,7 +405,7 @@ func TestReconcileManager(t *testing.T) {
 				subnetObjectMasterUpdate := getValidSubnet()
 				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
 				for i := range subnetObjectMasterUpdate.Properties.ServiceEndpoints {
-					subnetObjectMasterUpdate.Properties.ServiceEndpoints[i].Locations = []*string{ptr.To("*")}
+					subnetObjectMasterUpdate.Properties.ServiceEndpoints[i].Locations = []*string{pointerutils.ToPtr("*")}
 					subnetObjectMasterUpdate.Properties.ServiceEndpoints[i].ProvisioningState = nil
 				}
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectMasterUpdate, nil).Return(nil)
@@ -420,7 +420,7 @@ func TestReconcileManager(t *testing.T) {
 
 				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
 				for i := range subnetObjectWorkerUpdate.Properties.ServiceEndpoints {
-					subnetObjectWorkerUpdate.Properties.ServiceEndpoints[i].Locations = []*string{ptr.To("*")}
+					subnetObjectWorkerUpdate.Properties.ServiceEndpoints[i].Locations = []*string{pointerutils.ToPtr("*")}
 					subnetObjectWorkerUpdate.Properties.ServiceEndpoints[i].ProvisioningState = nil
 				}
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
