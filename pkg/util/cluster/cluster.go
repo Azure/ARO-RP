@@ -657,7 +657,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 	fipsMode := true
 
 	// Don't install with FIPS in a local dev, non-CI environment
-	if !c.ci && env.IsLocalDevelopmentMode() {
+	if !c.Config.IsCI && c.Config.IsLocalDevelopmentMode(){
 		fipsMode = false
 	}
 
