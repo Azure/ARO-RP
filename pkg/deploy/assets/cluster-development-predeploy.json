@@ -9,12 +9,6 @@
         "clusterName": {
             "type": "string"
         },
-        "clusterServicePrincipalId": {
-            "type": "string"
-        },
-        "fpServicePrincipalId": {
-            "type": "string"
-        },
         "kvName": {
             "type": "string"
         },

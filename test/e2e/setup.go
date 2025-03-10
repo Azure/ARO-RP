@@ -50,13 +50,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
+	redhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	utilcluster "github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/dynamic"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
@@ -78,8 +77,8 @@ var (
 )
 
 type clientSet struct {
-	Operations        redhatopenshift20231122.OperationsClient
-	OpenshiftClusters redhatopenshift20231122.OpenShiftClustersClient
+	Operations        redhatopenshift20240812preview.OperationsClient
+	OpenshiftClusters redhatopenshift20240812preview.OpenShiftClustersClient
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient
@@ -115,11 +114,9 @@ var (
 	_env              env.Core
 	vnetResourceGroup string
 	clusterName       string
-	osClusterVersion  string
-	masterVmSize      string
-	workerVmSize      string
 	clusterResourceID string
 	clients           *clientSet
+	isMiwi            bool
 )
 
 func skipIfNotInDevelopmentEnv() {
@@ -434,8 +431,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		Operations:        redhatopenshift20231122.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClusters: redhatopenshift20231122.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operations:        redhatopenshift20240812preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClusters: redhatopenshift20240812preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -485,43 +482,27 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	vnetResourceGroup = os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
-	if os.Getenv("CI") != "" {
-		vnetResourceGroup = os.Getenv("CLUSTER")
+	conf, err := utilcluster.NewClusterConfigFromEnv()
+	if err != nil {
+		return err
 	}
-	clusterName = os.Getenv("CLUSTER")
 
-	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
-
-	masterVmSize = os.Getenv("MASTER_VM_SIZE")
-
-	workerVmSize = os.Getenv("WORKER_VM_SIZE")
-
-	if os.Getenv("CI") != "" { // always create cluster in CI
-		cluster, err := utilcluster.New(log, _env, os.Getenv("CI") != "")
+	if conf.IsCI { // always create cluster in CI
+		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
 		}
 
-		if osClusterVersion == "" {
-			osClusterVersion = version.DefaultInstallStream.Version.String()
-		}
-
-		if masterVmSize == "" {
-			masterVmSize = utilcluster.DefaultMasterVmSize.String()
-		}
-
-		if workerVmSize == "" {
-			workerVmSize = utilcluster.DefaultWorkerVmSize.String()
-		}
-
-		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion, masterVmSize, workerVmSize)
+		err = cluster.Create(ctx)
 		if err != nil {
 			return err
 		}
 	}
 
+	vnetResourceGroup = conf.VnetResourceGroup
+	clusterName = conf.ClusterName
 	clusterResourceID = resourceIDFromEnv()
+	isMiwi = conf.UseWorkloadIdentity
 
 	clients, err = newClientSet(ctx)
 	if err != nil {
@@ -533,13 +514,18 @@ func setup(ctx context.Context) error {
 
 func done(ctx context.Context) error {
 	// terminate early if delete flag is set to false
-	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
-		cluster, err := utilcluster.New(log, _env, os.Getenv("CI") != "")
+	conf, err := utilcluster.NewClusterConfigFromEnv()
+	if err != nil {
+		return err
+	}
+
+	if conf.IsCI && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
+		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
 		}
 
-		err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
+		err = cluster.Delete(ctx, cluster.Config.VnetResourceGroup, cluster.Config.ClusterName)
 		if err != nil {
 			return err
 		}

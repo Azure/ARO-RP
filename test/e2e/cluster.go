@@ -22,7 +22,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
-	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"

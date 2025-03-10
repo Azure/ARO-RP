@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -29,19 +30,24 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	redhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -50,11 +56,37 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+type ClusterConfig struct {
+	ClusterName           string `mapstructure:"CLUSTER"`
+	SubscriptionID        string `mapstructure:"AZURE_SUBSCRIPTION_ID"`
+	TenantID              string `mapstructure:"AZURE_TENANT_ID"`
+	Location              string `mapstructure:"LOCATION"`
+	AzureEnvironment      string `mapstructure:"AZURE_ENVIRONMENT"`
+	UseWorkloadIdentity   bool   `mapstructure:"USE_WI"`
+	WorkloadIdentityRoles string `mapstructure:"PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"`
+	IsCI                  bool   `mapstructure:"CI"`
+	RpMode                string `mapstructure:"RP_MODE"`
+	VnetResourceGroup     string `mapstructure:"CLUSTER_RESOURCEGROUP"`
+	RPResourceGroup       string `mapstructure:"RESOURCEGROUP"`
+	OSClusterVersion      string `mapstructure:"OS_CLUSTER_VERSION"`
+	FPServicePrincipalID  string `mapstructure:"AZURE_FP_SERVICE_PRINCIPAL_ID"`
+	IsPrivate             bool   `mapstructure:"PRIVATE_CLUSTER"`
+	NoInternet            bool   `mapstructure:"NO_INTERNET"`
+	MockMSIObjectID       string `mapstructure:"MOCK_MSI_OBJECT_ID"`
+
+	MasterVMSize string `mapstructure:"MASTER_VM_SIZE"`
+	WorkerVMSize string `mapstructure:"WORKER_VM_SIZE"`
+}
+
+func (cc *ClusterConfig) IsLocalDevelopmentMode() bool {
+	return strings.EqualFold(cc.RpMode, "development")
+}
+
 type Cluster struct {
-	log          *logrus.Entry
-	env          env.Core
-	ci           bool
-	ciParentVnet string
+	log                *logrus.Entry
+	Config             *ClusterConfig
+	ciParentVnet       string
+	workloadIdentities map[string]api.PlatformWorkloadIdentity
 
 	spGraphClient            *utilgraph.GraphServiceClient
 	deployments              features.DeploymentsClient
@@ -64,9 +96,11 @@ type Cluster struct {
 	subnets                  armnetwork.SubnetsClient
 	routetables              armnetwork.RouteTablesClient
 	roleassignments          authorization.RoleAssignmentsClient
+	roledefinitions          authorization.RoleDefinitionsClient
 	peerings                 armnetwork.VirtualNetworkPeeringsClient
 	ciParentVnetPeerings     armnetwork.VirtualNetworkPeeringsClient
 	vaultsClient             armkeyvault.VaultsClient
+	msiClient                armmsi.UserAssignedIdentitiesClient
 	diskEncryptionSetsClient compute.DiskEncryptionSetsClient
 }
 
@@ -74,6 +108,8 @@ const GenerateSubnetMaxTries = 100
 const localDefaultURL string = "https://localhost:8443"
 const DefaultMasterVmSize = api.VMSizeStandardD8sV3
 const DefaultWorkerVmSize = api.VMSizeStandardD4sV3
+const diskCsiRoleMissingPermission = "Microsoft.Compute/diskEncryptionSets/read"
+const diskCsiRoleName = "tmpDiskCsiAdditionalPerm"
 
 func insecureLocalClient() *http.Client {
 	return &http.Client{
@@ -85,26 +121,80 @@ func insecureLocalClient() *http.Client {
 	}
 }
 
-func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
-	if env.IsLocalDevelopmentMode() {
-		if err := env.ValidateVars("AZURE_FP_CLIENT_ID"); err != nil {
-			return nil, err
-		}
+func NewClusterConfigFromEnv() (*ClusterConfig, error) {
+	var conf ClusterConfig
+	viper.AutomaticEnv()
+	viper.SetOptions(viper.ExperimentalBindStruct())
+	err := viper.Unmarshal(&conf)
+
+	if err != nil {
+		return nil, fmt.Errorf("error parsing env vars: %w", err)
 	}
 
-	options := environment.Environment().EnvironmentCredentialOptions()
+	if conf.ClusterName == "" {
+		return nil, fmt.Errorf("cluster Name must be set")
+	}
+
+	if conf.UseWorkloadIdentity && conf.WorkloadIdentityRoles == "" {
+		return nil, fmt.Errorf("workload Identity Role Set must be set")
+	}
+
+	if conf.RPResourceGroup == "" {
+		return nil, fmt.Errorf("resource group must be set")
+	}
+
+	if conf.FPServicePrincipalID == "" {
+		return nil, fmt.Errorf("fP Service Principal ID must be set")
+	}
+
+	if conf.IsCI {
+		conf.VnetResourceGroup = conf.ClusterName
+	} else {
+		conf.VnetResourceGroup = conf.RPResourceGroup
+	}
+
+	if !conf.IsCI && conf.VnetResourceGroup == "" {
+		return nil, fmt.Errorf("resource Group must be set")
+	}
+
+	if conf.OSClusterVersion == "" {
+		conf.OSClusterVersion = version.DefaultInstallStream.Version.String()
+	}
+
+	if conf.AzureEnvironment == "" {
+		conf.AzureEnvironment = "AZUREPUBLICCLOUD"
+	}
+
+	if conf.MasterVMSize == "" {
+		conf.MasterVMSize = DefaultMasterVmSize.String()
+	}
+	if conf.WorkerVMSize == "" {
+		conf.WorkerVMSize = DefaultWorkerVmSize.String()
+	}
+
+	return &conf, nil
+}
+
+func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
+	azEnvironment, err := azureclient.EnvironmentFromName(conf.AzureEnvironment)
+
+	if err != nil {
+		return nil, fmt.Errorf("can't parse Azure environment: %w", err)
+	}
+
+	options := azEnvironment.EnvironmentCredentialOptions()
 
 	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
 
-	spGraphClient, err := environment.Environment().NewGraphServiceClient(spTokenCredential)
+	spGraphClient, err := azEnvironment.NewGraphServiceClient(spTokenCredential)
 	if err != nil {
 		return nil, err
 	}
 
-	scopes := []string{environment.Environment().ResourceManagerScope}
+	scopes := []string{azEnvironment.ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
 	armOption := armsdk.ClientOptions{
@@ -113,56 +203,69 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		},
 	}
 
-	clientOptions := environment.Environment().ArmClientOptions()
+	clientOptions := azEnvironment.ArmClientOptions()
 
-	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
+	vaultClient, err := armkeyvault.NewVaultsClient(conf.SubscriptionID, spTokenCredential, &armOption)
 	if err != nil {
 		return nil, err
 	}
 
-	diskEncryptionSetsClient := compute.NewDiskEncryptionSetsClient(environment.SubscriptionID(), authorizer)
+	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	diskEncryptionSetsClient := compute.NewDiskEncryptionSetsClient(conf.SubscriptionID, authorizer)
 
-	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	subnetsClient, err := armnetwork.NewSubnetsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	subnetsClient, err := armnetwork.NewSubnetsClient(conf.SubscriptionID, spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	routeTablesClient, err := armnetwork.NewRouteTablesClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	routeTablesClient, err := armnetwork.NewRouteTablesClient(conf.SubscriptionID, spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	virtualNetworkPeeringsClient, err := armnetwork.NewVirtualNetworkPeeringsClient(environment.SubscriptionID(), spTokenCredential, clientOptions)
+	virtualNetworkPeeringsClient, err := armnetwork.NewVirtualNetworkPeeringsClient(conf.SubscriptionID, spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
+	}
+
+	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	clusterClient := &internalClient[mgmtredhatopenshift20240812preview.OpenShiftCluster, v20240812preview.OpenShiftCluster]{
+		externalClient: redhatopenshift20240812preview.NewOpenShiftClustersClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		converter:      api.APIs[v20240812preview.APIVersion].OpenShiftClusterConverter,
 	}
 
 	c := &Cluster{
-		log: log,
-		env: environment,
-		ci:  ci,
+		log:    log,
+		Config: conf,
+		//		env:                environment,
+		workloadIdentities: make(map[string]api.PlatformWorkloadIdentity),
 
 		spGraphClient:            spGraphClient,
-		deployments:              features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		groups:                   features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclusters:        NewInternalClient(log, environment, authorizer),
+		deployments:              features.NewDeploymentsClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		groups:                   features.NewResourceGroupsClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		openshiftclusters:        clusterClient,
 		securitygroups:           securityGroupsClient,
 		subnets:                  subnetsClient,
 		routetables:              routeTablesClient,
-		roleassignments:          authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		roleassignments:          authorization.NewRoleAssignmentsClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		roledefinitions:          authorization.NewRoleDefinitionsClient(&azEnvironment, conf.SubscriptionID, authorizer),
 		peerings:                 virtualNetworkPeeringsClient,
 		vaultsClient:             vaultClient,
+		msiClient:                *msiClient,
 		diskEncryptionSetsClient: diskEncryptionSetsClient,
 	}
 
-	if ci && env.IsLocalDevelopmentMode() {
+	if c.Config.IsCI && c.Config.IsLocalDevelopmentMode() {
 		// Only peer if CI=true and RP_MODE=development
-		c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vpn-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
+		c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vpn-vnet", c.Config.SubscriptionID, c.Config.RPResourceGroup)
 
 		r, err := azure.ParseResourceID(c.ciParentVnet)
 		if err != nil {
@@ -202,36 +305,215 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 	return appDetails{appID, appSecret, spID}, nil
 }
 
-func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string, masterVmSize string, workerVmSize string) error {
-	clusterGet, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
+func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, diskEncryptionSetID string, clusterServicePrincipalID string) error {
+	c.log.Info("creating role assignments")
+
+	for _, scope := range []struct{ resource, role string }{
+		{"/subscriptions/" + c.Config.SubscriptionID + "/resourceGroups/" + c.Config.VnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/dev-vnet", rbac.RoleNetworkContributor},
+		{"/subscriptions/" + c.Config.SubscriptionID + "/resourceGroups/" + c.Config.VnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + c.Config.ClusterName + "-rt", rbac.RoleNetworkContributor},
+		{diskEncryptionSetID, rbac.RoleReader},
+	} {
+		for _, principalID := range []string{clusterServicePrincipalID, c.Config.FPServicePrincipalID} {
+			for i := 0; i < 5; i++ {
+				_, err := c.roleassignments.Create(
+					ctx,
+					scope.resource,
+					uuid.DefaultGenerator.Generate(),
+					mgmtauthorization.RoleAssignmentCreateParameters{
+						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
+							PrincipalID:      &principalID,
+							PrincipalType:    mgmtauthorization.ServicePrincipal,
+						},
+					},
+				)
+
+				// Ignore if the role assignment already exists
+				if detailedError, ok := err.(autorest.DetailedError); ok {
+					if detailedError.StatusCode == http.StatusConflict {
+						err = nil
+					}
+				}
+
+				if err != nil && i < 4 {
+					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
+					// Retry a few times.
+					c.log.Print(err)
+					continue
+				}
+				if err != nil {
+					return err
+				}
+
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *Cluster) GetPlatformWIRoles() ([]api.PlatformWorkloadIdentityRole, error) {
+	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
+
+	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &wiRoleSets); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	for _, rs := range wiRoleSets {
+		if strings.HasPrefix(c.Config.OSClusterVersion, rs.OpenShiftVersion) {
+			return rs.PlatformWorkloadIdentityRoles, nil
+		}
+	}
+
+	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OSClusterVersion)
+}
+
+func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string) error {
+	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
+	if err != nil {
+		return fmt.Errorf("failed parsing platformWI Roles: %w", err)
+	}
+
+	platformWorkloadIdentityRoles = append(platformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
+		OperatorName:     "aro-Cluster",
+		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
+	})
+
+	c.log.Info("Assigning role to mock msi client")
+	c.roleassignments.Create(
+		ctx,
+		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
+		uuid.DefaultGenerator.Generate(),
+		mgmtauthorization.RoleAssignmentCreateParameters{
+			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+				RoleDefinitionID: to.StringPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
+				PrincipalID:      &c.Config.MockMSIObjectID,
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+	)
+
+	for _, wi := range platformWorkloadIdentityRoles {
+		c.log.Infof("creating WI: %s", wi.OperatorName)
+		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
+			Location: to.StringPtr(c.Config.Location),
+		}, nil)
+		if err != nil {
+			return err
+		}
+		_, err = c.roleassignments.Create(
+			ctx,
+			fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
+			uuid.DefaultGenerator.Generate(),
+			mgmtauthorization.RoleAssignmentCreateParameters{
+				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+					RoleDefinitionID: &wi.RoleDefinitionID,
+					PrincipalID:      resp.Properties.PrincipalID,
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		if wi.OperatorName != "aro-Cluster" {
+			c.workloadIdentities[wi.OperatorName] = api.PlatformWorkloadIdentity{
+				ResourceID: *resp.ID,
+			}
+		}
+		// TODO ARO-15117: Remove this once builtin roles for disk-csi-driver has
+		// `Microsoft.Compute/diskEncryptionSets/read` permission
+		if wi.OperatorName == "disk-csi-driver" {
+			c.log.Infof("Adding '%s' permission to disk-csi-driver wi.", diskCsiRoleMissingPermission)
+			if err = c.workaroundDiskCsiPermissions(ctx, resp.Properties.PrincipalID); err != nil {
+				c.log.Warnf("error applying disk-csi-driver permissions workaround. Ignoring: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *Cluster) workaroundDiskCsiPermissions(ctx context.Context, diskCsiDriverPrincipalID *string) error {
+	allRoledefs, err := c.roledefinitions.List(ctx, fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID), "")
+	if err != nil {
+		return fmt.Errorf("error getting existing roles: %w", err)
+	}
+
+	roleID := uuid.DefaultGenerator.Generate()
+	for _, rd := range allRoledefs {
+		if *rd.RoleName == diskCsiRoleName {
+			roleID = *rd.Name
+		}
+	}
+
+	workaroundRole, err := c.roledefinitions.CreateOrUpdate(ctx, fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID), roleID, mgmtauthorization.RoleDefinition{
+		RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
+			RoleName:    to.StringPtr(diskCsiRoleName),
+			Description: to.StringPtr("Tmp disk csi role"),
+			Permissions: &[]mgmtauthorization.Permission{
+				{
+					Actions: &[]string{diskCsiRoleMissingPermission},
+				},
+			},
+			AssignableScopes: &[]string{fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("error creating/updating workaround role: %w", err)
+	}
+	_, err = c.roleassignments.Create(
+		ctx,
+		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, c.Config.VnetResourceGroup),
+		uuid.DefaultGenerator.Generate(),
+		mgmtauthorization.RoleAssignmentCreateParameters{
+			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+				RoleDefinitionID: workaroundRole.ID,
+				PrincipalID:      diskCsiDriverPrincipalID,
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("error assigning workaround role to principal: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Cluster) Create(ctx context.Context) error {
+	c.log.Info("Creating cluster")
+	clusterGet, err := c.openshiftclusters.Get(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName)
+	c.log.Info("Got cluster ref")
 	if err == nil {
 		if clusterGet.Properties.ProvisioningState == api.ProvisioningStateFailed {
-			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
+			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry: %s, %s", clusterGet.ID, c.Config.VnetResourceGroup)
 		}
 		c.log.Print("cluster already exists, skipping create")
 		return nil
 	}
 
-	fpSPId := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
-	if fpSPId == "" {
-		return fmt.Errorf("fp service principal id is not found")
-	}
-
-	appDetails, err := c.createApp(ctx, clusterName)
-	if err != nil {
-		return err
+	appDetails := appDetails{}
+	if !c.Config.UseWorkloadIdentity {
+		c.log.Info("Creating app")
+		appDetails, err = c.createApp(ctx, c.Config.ClusterName)
+		if err != nil {
+			return err
+		}
 	}
 
 	visibility := api.VisibilityPublic
 
-	if os.Getenv("PRIVATE_CLUSTER") != "" || os.Getenv("NO_INTERNET") != "" {
+	if c.Config.IsPrivate || c.Config.NoInternet {
 		visibility = api.VisibilityPrivate
 	}
 
-	if c.ci {
+	if c.Config.IsCI {
 		c.log.Infof("creating resource group")
-		_, err = c.groups.CreateOrUpdate(ctx, vnetResourceGroup, mgmtfeatures.ResourceGroup{
-			Location: to.StringPtr(c.env.Location()),
+		_, err = c.groups.CreateOrUpdate(ctx, c.Config.VnetResourceGroup, mgmtfeatures.ResourceGroup{
+			Location: to.StringPtr(c.Config.Location),
 		})
 		if err != nil {
 			return err
@@ -257,24 +539,24 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	diskEncryptionSetName := fmt.Sprintf(
 		"%s%s",
-		vnetResourceGroup,
+		c.Config.VnetResourceGroup,
 		generator.SharedDiskEncryptionSetNameSuffix,
 	)
 
 	var kvName string
-	if !c.ci {
-		if len(vnetResourceGroup) > 10 {
+	if !c.Config.IsCI {
+		if len(c.Config.VnetResourceGroup) > 10 {
 			// keyvault names need to have a maximum length of 24,
 			// so we need to cut off some chars if the resource group name is too long
-			kvName = vnetResourceGroup[:10] + generator.SharedDiskEncryptionKeyVaultNameSuffix
+			kvName = c.Config.VnetResourceGroup[:10] + generator.SharedDiskEncryptionKeyVaultNameSuffix
 		} else {
-			kvName = vnetResourceGroup + generator.SharedDiskEncryptionKeyVaultNameSuffix
+			kvName = c.Config.VnetResourceGroup + generator.SharedDiskEncryptionKeyVaultNameSuffix
 		}
 	} else {
 		// if DES already exists in RG, then reuse KV hosting the key of this DES,
 		// otherwise, name is limited to 24 characters, but must be globally unique,
 		// so we generate a name randomly until it is available
-		diskEncryptionSet, err := c.diskEncryptionSetsClient.Get(ctx, vnetResourceGroup, diskEncryptionSetName)
+		diskEncryptionSet, err := c.diskEncryptionSetsClient.Get(ctx, c.Config.VnetResourceGroup, diskEncryptionSetName)
 		if err == nil {
 			if diskEncryptionSet.EncryptionSetProperties == nil ||
 				diskEncryptionSet.EncryptionSetProperties.ActiveKey == nil ||
@@ -318,14 +600,12 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	parameters := map[string]*arm.ParametersParameter{
-		"clusterName":               {Value: clusterName},
-		"ci":                        {Value: c.ci},
-		"clusterServicePrincipalId": {Value: appDetails.SPId},
-		"fpServicePrincipalId":      {Value: fpSPId},
-		"vnetAddressPrefix":         {Value: addressPrefix},
-		"masterAddressPrefix":       {Value: masterSubnet},
-		"workerAddressPrefix":       {Value: workerSubnet},
-		"kvName":                    {Value: kvName},
+		"clusterName":         {Value: c.Config.ClusterName},
+		"ci":                  {Value: c.Config.IsCI},
+		"vnetAddressPrefix":   {Value: addressPrefix},
+		"masterAddressPrefix": {Value: masterSubnet},
+		"workerAddressPrefix": {Value: workerSubnet},
+		"kvName":              {Value: kvName},
 	}
 
 	// TODO: ick
@@ -347,7 +627,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	defer cancel()
 
 	c.log.Info("predeploying ARM template")
-	err = c.deployments.CreateOrUpdateAndWait(armctx, vnetResourceGroup, clusterName, mgmtfeatures.Deployment{
+	err = c.deployments.CreateOrUpdateAndWait(armctx, c.Config.VnetResourceGroup, c.Config.ClusterName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Parameters: parameters,
@@ -360,80 +640,44 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	diskEncryptionSetID := fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s",
-		c.env.SubscriptionID(),
-		vnetResourceGroup,
+		c.Config.SubscriptionID,
+		c.Config.VnetResourceGroup,
 		diskEncryptionSetName,
 	)
 
-	c.log.Info("creating role assignments")
-	for _, scope := range []struct{ resource, role string }{
-		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/dev-vnet", rbac.RoleNetworkContributor},
-		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt", rbac.RoleNetworkContributor},
-		{diskEncryptionSetID, rbac.RoleReader},
-	} {
-		for _, principalID := range []string{appDetails.SPId, fpSPId} {
-			for i := 0; i < 5; i++ {
-				_, err = c.roleassignments.Create(
-					ctx,
-					scope.resource,
-					uuid.DefaultGenerator.Generate(),
-					mgmtauthorization.RoleAssignmentCreateParameters{
-						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
-							PrincipalID:      &principalID,
-							PrincipalType:    mgmtauthorization.ServicePrincipal,
-						},
-					},
-				)
-
-				// Ignore if the role assignment already exists
-				if detailedError, ok := err.(autorest.DetailedError); ok {
-					if detailedError.StatusCode == http.StatusConflict {
-						err = nil
-					}
-				}
-
-				// TODO: tighten this error check
-				if err != nil && i < 4 {
-					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
-					// Retry a few times.
-					c.log.Print(err)
-					continue
-				}
-				if err != nil {
-					return err
-				}
-
-				break
-			}
+	if c.Config.UseWorkloadIdentity {
+		c.log.Info("creating WIs")
+		if err := c.SetupWorkloadIdentity(ctx, c.Config.VnetResourceGroup); err != nil {
+			return fmt.Errorf("error setting up Workload Identity Roles: %w", err)
 		}
+	} else {
+		c.log.Info("creating Classic role assignments")
+		c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, appDetails.SPId)
 	}
 	fipsMode := true
 
 	// Don't install with FIPS in a local dev, non-CI environment
-	if !c.ci && env.IsLocalDevelopmentMode() {
+	if !c.Config.IsCI && c.Config.IsLocalDevelopmentMode() {
 		fipsMode = false
 	}
 
-	apiMasterVmSize := api.VMSize(masterVmSize)
-	apiWorkerVmSize := api.VMSize(workerVmSize)
-
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, osClusterVersion, apiMasterVmSize, apiWorkerVmSize, fipsMode)
+	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OSClusterVersion, fipsMode)
+
 	if err != nil {
 		return err
 	}
 
-	if c.ci {
+	if c.Config.IsCI {
 		c.log.Info("fixing up NSGs")
-		err = c.fixupNSGs(ctx, vnetResourceGroup, clusterName)
+		err = c.fixupNSGs(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName)
 		if err != nil {
 			return err
 		}
 
 		if env.IsLocalDevelopmentMode() {
 			c.log.Info("peering subnets to CI infra")
-			err = c.peerSubnetsToCI(ctx, vnetResourceGroup)
+			err = c.peerSubnetsToCI(ctx, c.Config.VnetResourceGroup)
 			if err != nil {
 				return err
 			}
@@ -492,7 +736,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
 	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
 
-	allSubnets, err := c.subnets.List(context.Background(), c.env.ResourceGroup(), "dev-vnet", nil)
+	allSubnets, err := c.subnets.List(context.Background(), c.Config.VnetResourceGroup, "dev-vnet", nil)
 	if err != nil {
 		c.log.Warnf("Error getting existing subnets. Continuing regardless: %v", err)
 	}
@@ -505,7 +749,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	for i := 1; i < GenerateSubnetMaxTries; i++ {
 		var x, y int
 		// Local Dev clusters are limited to /16 dev-vnet
-		if !c.ci {
+		if !c.Config.IsCI {
 			x, y = 0, 2*rand.Intn(128)
 		} else {
 			x, y = rand.Intn((124))+3, 2*rand.Intn(128)
@@ -515,7 +759,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 		masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
 		workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
 
-		masterSubnetOverlaps, err := ipRangesContainCIDR(ipRanges, workerSubnet)
+		masterSubnetOverlaps, err := ipRangesContainCIDR(ipRanges, masterSubnet)
 		if err != nil || masterSubnetOverlaps {
 			continue
 		}
@@ -525,6 +769,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 			continue
 		}
 
+		c.log.Infof("Generated subnets: vnet: %s, master: %s, worker: %s\n", vnetPrefix, masterSubnet, workerSubnet)
 		return vnetPrefix, masterSubnet, workerSubnet, nil
 	}
 
@@ -535,16 +780,23 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 	c.log.Infof("Deleting cluster %s in resource group %s", clusterName, vnetResourceGroup)
 	var errs []error
 
-	if c.ci {
+	if c.Config.IsCI {
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err != nil {
 			c.log.Errorf("CI E2E cluster %s not found in resource group %s", clusterName, vnetResourceGroup)
 			errs = append(errs, err)
 		}
+		if oc.Properties.ServicePrincipalProfile != nil {
+			errs = append(errs,
+				c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
+			)
+		}
+
 		errs = append(errs,
-			c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
+			c.deleteWimiRoleAssignments(ctx, vnetResourceGroup),
+			c.deleteWI(ctx, vnetResourceGroup),
 			c.ensureResourceGroupDeleted(ctx, clusterResourceGroup),
 			c.deleteResourceGroup(ctx, vnetResourceGroup),
 		)
@@ -558,6 +810,8 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		errs = append(errs,
 			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
+			c.deleteWimiRoleAssignments(ctx, vnetResourceGroup),
+			c.deleteWI(ctx, vnetResourceGroup),
 			c.deleteDeployment(ctx, vnetResourceGroup, clusterName), // Deleting the deployment does not clean up the associated resources
 			c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName),
 		)
@@ -567,10 +821,34 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 	return errors.Join(errs...)
 }
 
+func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
+	if !c.Config.UseWorkloadIdentity {
+		c.log.Info("Skipping deletion of workload identity roles")
+		return nil
+	}
+	c.log.Info("deleting WIs")
+	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
+	if err != nil {
+		return fmt.Errorf("failure parsing Platform WI Roles, unable to remove them: %w", err)
+	}
+	platformWorkloadIdentityRoles = append(platformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
+		OperatorName:     "aro-Cluster",
+		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
+	})
+	for _, wi := range platformWorkloadIdentityRoles {
+		c.log.Infof("deleting WI: %s", wi.OperatorName)
+		_, err := c.msiClient.Delete(ctx, resourceGroup, wi.OperatorName, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string, masterVmSize api.VMSize, workerVmSize api.VMSize, fipsEnabled bool) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string, fipsEnabled bool) error {
 	fipsMode := api.FipsValidatedModulesDisabled
 	if fipsEnabled {
 		fipsMode = api.FipsValidatedModulesEnabled
@@ -581,7 +859,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain:               strings.ToLower(clusterName),
-				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
+				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, "aro-"+clusterName),
 				FipsValidatedModules: fipsMode,
 				Version:              osClusterVersion,
 				PullSecret:           api.SecureString(os.Getenv("USER_PULL_SECRET")),
@@ -592,17 +870,17 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 			},
 			MasterProfile: api.MasterProfile{
-				VMSize:              masterVmSize,
-				SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+				VMSize:              api.VMSize(c.Config.MasterVMSize),
+				SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.Config.SubscriptionID, vnetResourceGroup, clusterName),
 				EncryptionAtHost:    api.EncryptionAtHostEnabled,
 				DiskEncryptionSetID: diskEncryptionSetID,
 			},
 			WorkerProfiles: []api.WorkerProfile{
 				{
 					Name:                "worker",
-					VMSize:              workerVmSize,
+					VMSize:              api.VMSize(c.Config.WorkerVMSize),
 					DiskSizeGB:          128,
-					SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+					SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.Config.SubscriptionID, vnetResourceGroup, clusterName),
 					Count:               3,
 					EncryptionAtHost:    api.EncryptionAtHostEnabled,
 					DiskEncryptionSetID: diskEncryptionSetID,
@@ -618,17 +896,31 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				},
 			},
 		},
-		Location: c.env.Location(),
+		Location: c.Config.Location,
 	}
 
-	if clientID != "" && clientSecret != "" {
-		oc.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{
-			ClientID:     clientID,
-			ClientSecret: api.SecureString(clientSecret),
+	if c.Config.UseWorkloadIdentity {
+		oc.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{
+			PlatformWorkloadIdentities: c.workloadIdentities,
+		}
+
+		oc.Identity = &api.ManagedServiceIdentity{
+			Type:     api.ManagedServiceIdentityUserAssigned,
+			TenantID: c.Config.TenantID,
+			UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+				fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.Config.SubscriptionID, vnetResourceGroup, "aro-Cluster"): {},
+			},
+		}
+	} else {
+		if clientID != "" && clientSecret != "" {
+			oc.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{
+				ClientID:     clientID,
+				ClientSecret: api.SecureString(clientSecret),
+			}
 		}
 	}
 
-	if c.env.IsLocalDevelopmentMode() {
+	if c.Config.IsLocalDevelopmentMode() {
 		err := c.registerSubscription()
 		if err != nil {
 			return err
@@ -639,7 +931,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
-		if workerVmSize == DefaultWorkerVmSize {
+		if c.Config.WorkerVMSize == DefaultWorkerVmSize.String() {
 			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 		}
 	}
@@ -651,7 +943,7 @@ func (c *Cluster) registerSubscription() error {
 	b, err := json.Marshal(&api.Subscription{
 		State: api.SubscriptionStateRegistered,
 		Properties: &api.SubscriptionProperties{
-			TenantID: c.env.TenantID(),
+			TenantID: c.Config.TenantID,
 			RegisteredFeatures: []api.RegisteredFeatureProfile{
 				{
 					Name:  "Microsoft.RedHatOpenShift/RedHatEngineering",
@@ -664,7 +956,7 @@ func (c *Cluster) registerSubscription() error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/subscriptions/"+c.env.SubscriptionID()+"?api-version=2.0", bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/subscriptions/"+c.Config.SubscriptionID+"?api-version=2.0", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
@@ -791,6 +1083,9 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 }
 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, clusterName string) error {
+	if c.Config.UseWorkloadIdentity {
+		c.log.Print("Skipping deletion of service principal role assignments")
+	}
 	c.log.Print("deleting role assignments")
 	oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 	if err != nil {
@@ -812,7 +1107,7 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	for _, roleAssignment := range roleAssignments {
 		if strings.HasPrefix(
 			strings.ToLower(*roleAssignment.Scope),
-			strings.ToLower("/subscriptions/"+c.env.SubscriptionID()+"/resourceGroups/"+vnetResourceGroup),
+			strings.ToLower("/subscriptions/"+c.Config.SubscriptionID+"/resourceGroups/"+vnetResourceGroup),
 		) {
 			// Don't delete inherited role assignments, only those resource group level or below
 			c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
@@ -823,6 +1118,47 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 		}
 	}
 
+	return nil
+}
+
+func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGroup string) error {
+	if !c.Config.UseWorkloadIdentity {
+		c.log.Print("Skipping deletion of wimi roleassignments")
+		return nil
+	}
+	c.log.Print("deleting wimi role assignments")
+
+	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
+	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &wiRoleSets); err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
+	}
+	platformWorkloadIdentityRoles := append(wiRoleSets[0].PlatformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
+		OperatorName:     "aro-Cluster",
+		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
+	})
+	for _, wi := range platformWorkloadIdentityRoles {
+		resp, err := c.msiClient.Get(ctx, vnetResourceGroup, wi.OperatorName, nil)
+		if err != nil {
+			return err
+		}
+		roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *resp.Properties.PrincipalID))
+		if err != nil {
+			return fmt.Errorf("error listing role assignments for service principal: %w", err)
+		}
+		for _, roleAssignment := range roleAssignments {
+			if strings.HasPrefix(
+				strings.ToLower(*roleAssignment.Scope),
+				strings.ToLower("/subscriptions/"+c.Config.SubscriptionID+"/resourceGroups/"+vnetResourceGroup),
+			) {
+				// Don't delete inherited role assignments, only those resource group level or below
+				c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
+				_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
+				if err != nil {
+					return fmt.Errorf("error deleting role assignment %s: %w", *roleAssignment.Name, err)
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -907,7 +1243,7 @@ func (c *Cluster) deleteVnetResources(ctx context.Context, resourceGroup, vnetNa
 }
 
 func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string) error {
-	cluster := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), vnetResourceGroup)
+	cluster := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.Config.SubscriptionID, vnetResourceGroup)
 
 	r, err := azure.ParseResourceID(c.ciParentVnet)
 	if err != nil {
