@@ -28,11 +28,9 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 	currentCopy := *current
 	ocCopy.Properties = oc.Properties
 	currentCopy.Properties = current.Properties
-	ocCopy.Properties.NetworkProfile = oc.Properties.NetworkProfile
-	currentCopy.Properties.NetworkProfile = current.Properties.NetworkProfile
 	ocCopy.Properties.NetworkProfile.PreconfiguredNSG = currentCopy.Properties.NetworkProfile.PreconfiguredNSG
 
-	// Run immutability validation, excluding PreconfiguredNSG
+	// Run immutability validation, excluding only PreconfiguredNSG
 	err := immutable.Validate("", &ocCopy, &currentCopy)
 	if err != nil {
 		if validationErr, ok := err.(*immutable.ValidationError); ok {
