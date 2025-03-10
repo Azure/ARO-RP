@@ -24,7 +24,6 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 
 func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
 	oc.Properties.NetworkProfile.PreconfiguredNSG = current.Properties.NetworkProfile.PreconfiguredNSG
-	// Run immutability validation
 	err := immutable.Validate("", oc, current)
 	if err != nil {
 		if validationErr, ok := err.(*immutable.ValidationError); ok {
