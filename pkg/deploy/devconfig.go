@@ -111,6 +111,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 					KeyvaultDNSSuffix:      &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:         &keyvaultPrefix,
 					OIDCStorageAccountName: pointerutils.ToPtr(oidcStorageAccountName),
+					OtelAuditQueueSize:     pointerutils.ToPtr("0"),
 				},
 			},
 		},
