@@ -54,7 +54,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		m.log.Printf("creating certificate %s", c.certificateName)
-		_, err = m.env.ClusterCertificates().CreateCertificate(ctx, OneCertPublicIssuerName, azcertificates.SignedCertificateParameters(c.certificateName, c.commonName, azcertificates.EkuServerAuth), nil)
+		_, err = m.env.ClusterCertificates().CreateCertificate(ctx, c.certificateName, azcertificates.SignedCertificateParameters(OneCertPublicIssuerName, c.commonName, azcertificates.EkuServerAuth), nil)
 		if err != nil {
 			return err
 		}
