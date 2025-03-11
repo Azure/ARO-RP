@@ -47,6 +47,8 @@ const (
 	OIDCAFDEndpoint        = "OIDC_AFD_ENDPOINT"
 	OIDCStorageAccountName = "OIDC_STORAGE_ACCOUNT_NAME"
 	OtelAuditQueueSize     = "OTEL_AUDIT_QUEUE_SIZE"
+	ARMCABundlePath        = "/etc/aro-rp/arm-ca-bundle.pem"
+	AdminCABundlePath      = "/etc/aro-rp/admin-ca-bundle.pem"
 )
 
 type prod struct {
@@ -272,7 +274,7 @@ func (p *prod) InitializeAuthorizers() error {
 		} else {
 			armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 				p.log,
-				"/etc/aro-rp/arm-ca-bundle.pem",
+				ARMCABundlePath,
 				os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
 			)
 			if err != nil {
@@ -285,7 +287,7 @@ func (p *prod) InitializeAuthorizers() error {
 
 	adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 		p.log,
-		"/etc/aro-rp/admin-ca-bundle.pem",
+		AdminCABundlePath,
 		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
 	)
 	if err != nil {

@@ -12,6 +12,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	SubjectTokenClaimPrefix        = "Subject-Token-Claim-"
+	ActorTokenClaimPrefix          = "Actor-Token-Claim-"
+	EncodedSubjectTokenClaimPrefix = "Subject-Token-Encoded-Claim-"
+	EncodedActorTokenClaimPrefix   = "Actor-Token-Encoded-Claim-"
+)
+
 type (
 	// Client can delegate token validation to the Mise container.
 	Client struct {
@@ -130,27 +137,22 @@ func parseResponseIntoResult(response *http.Response) (Result, error) {
 		ActorClaims:   map[string][]string{},
 	}
 
-	subjectTokenClaimPrefix := "Subject-Token-Claim-"
-	actorTokenClaimPrefix := "Actor-Token-Claim-"
-	encodedSubjectTokenClaimPrefix := "Subject-Token-Encoded-Claim-"
-	encodedActorTokenClaimPrefix := "Actor-Token-Encoded-Claim-"
-
 	if response.StatusCode == http.StatusOK {
 		for k, v := range response.Header {
-			if strings.HasPrefix(k, subjectTokenClaimPrefix) {
-				claim := k[len(subjectTokenClaimPrefix):]
+			if strings.HasPrefix(k, SubjectTokenClaimPrefix) {
+				claim := k[len(SubjectTokenClaimPrefix):]
 				// Header will come in from the container, for example, as Subject-Token-Claim-oid
 				// but go on parsing the response header will canonicalize the header to Subject-Token-Claim-Oid
 				// the name should always be lower case.
 				claim = strings.ToLower(claim)
 				res.SubjectClaims[claim] = append(res.SubjectClaims[claim], v...)
-			} else if strings.HasPrefix(k, actorTokenClaimPrefix) {
-				claim := k[len(actorTokenClaimPrefix):]
+			} else if strings.HasPrefix(k, ActorTokenClaimPrefix) {
+				claim := k[len(ActorTokenClaimPrefix):]
 				// See comment above above about casing for Subject token claims
 				claim = strings.ToLower(claim)
 				res.ActorClaims[claim] = append(res.ActorClaims[claim], v...)
-			} else if strings.HasPrefix(k, encodedSubjectTokenClaimPrefix) {
-				claim := k[len(encodedSubjectTokenClaimPrefix):]
+			} else if strings.HasPrefix(k, EncodedSubjectTokenClaimPrefix) {
+				claim := k[len(EncodedSubjectTokenClaimPrefix):]
 				// See comment above above about casing for Subject token claims
 				claim = strings.ToLower(claim)
 				decodedValues, err := decodeClaims(v)
@@ -158,8 +160,8 @@ func parseResponseIntoResult(response *http.Response) (Result, error) {
 					return res, err
 				}
 				res.SubjectClaims[claim] = append(res.SubjectClaims[claim], decodedValues...)
-			} else if strings.HasPrefix(k, encodedActorTokenClaimPrefix) {
-				claim := k[len(encodedActorTokenClaimPrefix):]
+			} else if strings.HasPrefix(k, EncodedActorTokenClaimPrefix) {
+				claim := k[len(EncodedActorTokenClaimPrefix):]
 				// See comment above above about casing for Subject token claims
 				claim = strings.ToLower(claim)
 				decodedValues, err := decodeClaims(v)
