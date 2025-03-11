@@ -43,3 +43,4 @@ megalinter-reports/
 /portalauth
 .kiota.log
 podmanlog
+.python-version
