@@ -22,7 +22,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_platformworkloadidentity "github.com/Azure/ARO-RP/pkg/util/mocks/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
@@ -57,9 +56,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 				"bar": {
 					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
-				pkgoperator.OperatorIdentityName: {
-					ClientID: "00d00d00-0d00-0d00-0d00-d00d00d00d00",
-				},
 			},
 			roles: []api.PlatformWorkloadIdentityRole{
 				{
@@ -73,13 +69,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					OperatorName: "bar",
 					SecretLocation: api.SecretLocation{
 						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
-					},
-				},
-				{
-					OperatorName: pkgoperator.OperatorIdentityName,
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-azure-operator",
 						Name:      "azure-cloud-credentials",
 					},
 				},
@@ -214,9 +203,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 				"bar": {
 					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
-				pkgoperator.OperatorIdentityName: {
-					ClientID: "00d00d00-0d00-0d00-0d00-d00d00d00d00",
-				},
 			},
 			roles: []api.PlatformWorkloadIdentityRole{
 				{
@@ -230,13 +216,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					OperatorName: "bar",
 					SecretLocation: api.SecretLocation{
 						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
-					},
-				},
-				{
-					OperatorName: pkgoperator.OperatorIdentityName,
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-azure-operator",
 						Name:      "azure-cloud-credentials",
 					},
 				},
@@ -274,25 +253,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					Type: corev1.SecretTypeOpaque,
 					StringData: map[string]string{
 						"azure_client_id":            "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
-						"azure_subscription_id":      subscriptionId,
-						"azure_tenant_id":            tenantId,
-						"azure_region":               location,
-						"azure_federated_token_file": azureFederatedTokenFileLocation,
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "openshift-azure-operator",
-						Name:            "azure-cloud-credentials",
-						ResourceVersion: "1",
-					},
-					Type: corev1.SecretTypeOpaque,
-					StringData: map[string]string{
-						"azure_client_id":            "00d00d00-0d00-0d00-0d00-d00d00d00d00",
 						"azure_subscription_id":      subscriptionId,
 						"azure_tenant_id":            tenantId,
 						"azure_region":               location,
@@ -560,7 +520,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					controller, tt.roles,
 				),
 			}
-			gotSecrets, gotNamespaces, err := m.generatePlatformWorkloadIdentitySecretsAndNamespaces(true)
+			gotSecrets, gotNamespaces, err := m.generatePlatformWorkloadIdentitySecretsAndNamespaces()
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			assert.ElementsMatch(t, gotSecrets, tt.wantSecrets)

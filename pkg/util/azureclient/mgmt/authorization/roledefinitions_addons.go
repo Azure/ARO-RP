@@ -12,7 +12,6 @@ import (
 // RoleDefinitionsClientAddons contains addons for RoleDefinitionsClient
 type RoleDefinitionsClientAddons interface {
 	List(ctx context.Context, scope string, filter string) ([]mgmtauthorization.RoleDefinition, error)
-	CreateOrUpdate(ctx context.Context, scope string, roleDefinitionID string, roleDefinition mgmtauthorization.RoleDefinition) (result mgmtauthorization.RoleDefinition, err error)
 }
 
 func (c *roleDefinitionsClient) List(ctx context.Context, scope string, filter string) (result []mgmtauthorization.RoleDefinition, err error) {
@@ -30,8 +29,4 @@ func (c *roleDefinitionsClient) List(ctx context.Context, scope string, filter s
 	}
 
 	return result, nil
-}
-
-func (c *roleDefinitionsClient) CreateOrUpdate(ctx context.Context, scope string, roleDefinitionID string, roleDefinition mgmtauthorization.RoleDefinition) (mgmtauthorization.RoleDefinition, error) {
-	return c.RoleDefinitionsClient.CreateOrUpdate(ctx, scope, roleDefinitionID, roleDefinition)
 }

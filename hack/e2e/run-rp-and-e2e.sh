@@ -13,7 +13,6 @@ if [[ $CI ]]; then
     HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
     HIVE_KUBE_CONFIG_PATH_1="secrets/aks.kubeconfig"
     CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    CLUSTER_RESOURCEGROUP="$CLUSTER"
     DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     PRIVATE_CLUSTER=true
     E2E_DELETE_CLUSTER=true # any value other than "false" ensures the cluster is deleted
@@ -214,10 +213,6 @@ delete_e2e_cluster() {
     else
         go run ./hack/cluster delete
     fi
-}
-
-update_role_sets() {
-  ./aro update-role-sets
 }
 
 # TODO: CLUSTER and is also recalculated in multiple places
