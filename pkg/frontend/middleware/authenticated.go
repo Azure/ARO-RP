@@ -56,6 +56,7 @@ func (a AuthMiddleware) Authenticate(h http.Handler) http.Handler {
 		}
 
 		if !authenticated {
+			a.Log.Errorf("Authentication Failed")
 			api.WriteError(w, http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Forbidden.")
 			return
 		}

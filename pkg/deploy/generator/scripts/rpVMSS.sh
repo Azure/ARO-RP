@@ -143,6 +143,7 @@ main() {
 
     # shellcheck disable=SC2034
     # use default podman network with range 10.88.0.0/16
+    # static IPs used for uniquely identifying services in monitors
     local -rA static_ip_addresses=(
         ["rp"]="10.88.0.2"
         ["monitor"]="10.88.0.3"
