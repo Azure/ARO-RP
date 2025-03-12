@@ -23,10 +23,13 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 }
 
 func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
+	oc.Properties.NetworkProfile.PreconfiguredNSG = current.Properties.NetworkProfile.PreconfiguredNSG
 	err := immutable.Validate("", oc, current)
 	if err != nil {
-		err := err.(*immutable.ValidationError)
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
+		if validationErr, ok := err.(*immutable.ValidationError); ok {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, validationErr.Target, validationErr.Message)
+		}
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "", err.Error())
 	}
 
 	return validateMaintenanceTask(oc.Properties.MaintenanceTask)

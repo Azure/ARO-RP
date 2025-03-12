@@ -82,6 +82,9 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: admin.OpenShiftClusterProperties{
 							ServicePrincipalProfile: &admin.ServicePrincipalProfile{},
+							NetworkProfile: admin.NetworkProfile{
+								PreconfiguredNSG: admin.PreconfiguredNSGDisabled, // ✅ Ensure expected value
+							},
 						},
 					},
 					{
@@ -90,6 +93,9 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: admin.OpenShiftClusterProperties{
 							ServicePrincipalProfile: &admin.ServicePrincipalProfile{},
+							NetworkProfile: admin.NetworkProfile{
+								PreconfiguredNSG: admin.PreconfiguredNSGDisabled, // ✅ Ensure expected value
+							},
 						},
 					},
 				},
