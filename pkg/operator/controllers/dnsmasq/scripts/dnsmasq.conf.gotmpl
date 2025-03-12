@@ -1,6 +1,6 @@
 {{ define "dnsmasq.conf" }}
 resolv-file=/etc/resolv.conf.dnsmasq
-strict-order
+dns-forward-max=10000
 address=/api.{{ .ClusterDomain }}/{{ .APIIntIP }}
 address=/api-int.{{ .ClusterDomain }}/{{ .APIIntIP }}
 address=/.apps.{{ .ClusterDomain }}/{{ .IngressIP }}
