@@ -177,6 +177,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"https://management.core.windows.net/",
 				_env.Environment().ResourceManagerEndpoint,
 			},
+			// Azure AD IDs for Apps authorised to send request for authentication via MISE
 			MiseValidAppIDs: []string{
 				"2187cde1-7e28-4645-9104-19edfa500053",
 			},
