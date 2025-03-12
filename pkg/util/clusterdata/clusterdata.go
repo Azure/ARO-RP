@@ -154,7 +154,7 @@ func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan erro
 				timeout = true
 			}
 		default:
-			p.taskError(log, err, 1)
+			p.taskError(log.WithError(err), fmt.Errorf("failed to get enrichment results"), 1)
 		}
 	}
 }
@@ -164,27 +164,32 @@ func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan erro
 // that we should skip because the clients they are using failed to instantiate
 func (p ParallelEnricher) initializeClients(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) (
 	k8s kubernetes.Interface, machineclient machineclient.Interface, operatorclient operatorclient.Interface, configclient configclient.Interface, unsuccessfulEnrichers map[string]bool) {
+	log = log.WithField("oc", oc)
+	log.Infoln("initializing clients")
 	unsuccessfulEnrichers = make(map[string]bool)
 	k8s, err := p.setupK8sClient(ctx, oc)
 	if err != nil {
 		unsuccessfulEnrichers[servicePrincipal] = true
 		unsuccessfulEnrichers[ingressProfile] = true
-		p.taskError(log, err, 2)
+		p.taskError(log.WithError(err), fmt.Errorf("failed to initialize k8s client"), 2)
 	}
 	machineclient, err = p.setupMachineClient(ctx, oc)
 	if err != nil {
 		unsuccessfulEnrichers[machineClient] = true
-		p.taskError(log, err, 1)
+		p.taskError(log.WithError(err), fmt.Errorf("failed to initialize machine client"), 2)
 	}
 	operatorclient, err = p.setupOperatorClient(ctx, oc)
 	if err != nil {
 		unsuccessfulEnrichers[ingressProfile] = true
-		p.taskError(log, err, 1)
+		p.taskError(log.WithError(err), fmt.Errorf("failed to initialize operator client"), 2)
 	}
 	configclient, err = p.setupConfigClient(ctx, oc)
 	if err != nil {
 		unsuccessfulEnrichers[clusterVersion] = true
-		p.taskError(log, err, 1)
+		p.taskError(log.WithError(err), fmt.Errorf("failed to initialize config client"), 2)
+	}
+	if len(unsuccessfulEnrichers) > 0 {
+		log.WithField("enrichers", unsuccessfulEnrichers).Error("one or more enrichers were unsuccessful")
 	}
 	return k8s, machineclient, operatorclient, configclient, unsuccessfulEnrichers
 }
