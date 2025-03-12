@@ -89,7 +89,6 @@ jobs:
       - script: |
           export CI=true
           export ARO_E2E_MIMO=true
-          export OS_CLUSTER_VERSION=4.15.35
           export USE_WI=true
           export ARO_INSTALL_VIA_HIVE="true"
           export ARO_ADOPT_BY_HIVE="true"
