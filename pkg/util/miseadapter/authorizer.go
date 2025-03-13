@@ -64,11 +64,16 @@ func (m *miseAdapter) IsReady() bool {
 	}
 	resp, respErr := m.client.httpClient.Do(req)
 	if respErr != nil {
-		m.log.Errorf("mise readyz failed, %s", err)
+		m.log.Errorf("mise readyz failed, %s", respErr)
 		return false
 	}
 
 	defer resp.Body.Close()
 
-	return resp.StatusCode == http.StatusOK
+	if resp.StatusCode == http.StatusOK {
+		return true
+	}
+
+	m.log.Errorf("mise readyz failed with %s status code", resp.StatusCode)
+	return false
 }
