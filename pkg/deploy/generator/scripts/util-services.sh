@@ -46,6 +46,8 @@ ROLE='${role,,}'"
     local -r aro_gateway_service_filename='/etc/systemd/system/aro-gateway.service'
 
     # shellcheck disable=SC2034
+    # below variable is in single quotes 
+    # as it is to be expanded at systemd start time (by systemd, not this script) 
     local -r aro_gateway_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -65,8 +67,8 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -m 2g \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
+  --network=$PODMAN_NETWORK \
+  --ip $IPADDRESS \
   -p 80:8080 \
   -p 8081:8081 \
   -p 443:8443 \
@@ -112,6 +114,8 @@ ROLE='${role,,}'"
     # shellcheck disable=SC2034
     local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
     # shellcheck disable=SC2034
+    # below variable is in single quotes 
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_rp_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -152,8 +156,8 @@ ExecStart=/usr/bin/podman run \
   -e OTEL_AUDIT_QUEUE_SIZE \
   -e MISE_ADDRESS \
   -m 2g \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
+  --network=$PODMAN_NETWORK \
+  --ip $IPADDRESS \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
@@ -211,6 +215,8 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
     # shellcheck disable=SC2034
+    # below variable is in single quotes 
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_monitor_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -223,8 +229,8 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
+  --network=$PODMAN_NETWORK \
+  --ip $IPADDRESS \
   -e AZURE_FP_CLIENT_ID \
   -e DOMAIN_NAME \
   -e CLUSTER_MDSD_ACCOUNT \
@@ -285,6 +291,8 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
     # shellcheck disable=SC2034
+    # below variable is in single quotes 
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_portal_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -298,8 +306,8 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
+  --network=$PODMAN_NETWORK \
+  --ip $IPADDRESS \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \
@@ -337,7 +345,7 @@ configure_service_aro_mise() {
     log "Configuring aro-mise service"
 
     LOGININSTANCE="https://login.microsoftonline.com"
-    if [[ $AZURECLOUDNAME == "AzureUSGovernment" ]]; then
+    if [[ $AZURECLOUDNAME == "$us_gov_cloud" ]]; then
         LOGININSTANCE="https://login.microsoftonline.us"
     fi
     # shellcheck disable=SC2034
@@ -417,6 +425,8 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r aro_mise_service_filename='/etc/systemd/system/aro-mise.service'
     # shellcheck disable=SC2034
+    # below variable is in single quotes 
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_mise_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -430,8 +440,8 @@ ExecStart=/usr/bin/podman run \
   -v /app/mise/appsettings.json:/app/appsettings.json:z \
   --hostname %H \
   --name %N \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
+  --network=$PODMAN_NETWORK \
+  --ip $IPADDRESS \
   --rm \
   $MISEIMAGE
 ExecStop=/usr/bin/podman stop %N
@@ -514,6 +524,8 @@ service:
     # shellcheck disable=SC2034
     local -r aro_otel_collector_service_filename='/etc/systemd/system/aro-otel-collector.service'
     # shellcheck disable=SC2034
+    # below variable is in single quotes 
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_otel_collector_service_file='[Unit]
 After=mdm.service
 Wants=mdm.service
@@ -526,7 +538,7 @@ ExecStart=/usr/bin/podman run \
   --hostname %H \
   --name %N \
   --rm \
-  --network=${PODMAN_NETWORK} \
+  --network=$PODMAN_NETWORK \
   --ip $IPADDRESS \
   -m 2g \
   -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml:z \
@@ -618,6 +630,8 @@ configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -r service_filename='/etc/systemd/system/fluentbit.service'
     # shellcheck disable=SC2034
+    # below variable is in single quotes 
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -843,6 +857,8 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r mdm_service_filename="/etc/systemd/system/mdm.service"
     # shellcheck disable=SC2034
+    # below variable is in single quotes 
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r mdm_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -856,8 +872,8 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
+  --network=$PODMAN_NETWORK \
+  --ip $IPADDRESS \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \

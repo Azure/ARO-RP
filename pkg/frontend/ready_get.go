@@ -28,11 +28,11 @@ func (f *frontend) checkReady() bool {
 	if f.authMiddleware.EnableMISE {
 		miseAuthReady = f.env.MISEAuthorizer().IsReady()
 	}
-	// skip ARM Authorizer is MISE is Enforcing
+	// skip ARM Authorizer if MISE is Enforcing
 	if !f.authMiddleware.EnforceMISE {
 		armAuthReady = f.env.ArmClientAuthorizer().IsReady()
 	}
-	authReady = miseAuthReady || armAuthReady
+	authReady = miseAuthReady && armAuthReady
 	return okOcpVersions && okPlatformWorkloadIdentityRoleSets &&
 		f.ready.Load().(bool) &&
 		authReady &&
