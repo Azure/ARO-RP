@@ -37,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -46,6 +47,8 @@ const (
 	OIDCAFDEndpoint        = "OIDC_AFD_ENDPOINT"
 	OIDCStorageAccountName = "OIDC_STORAGE_ACCOUNT_NAME"
 	OtelAuditQueueSize     = "OTEL_AUDIT_QUEUE_SIZE"
+	ARMCABundlePath        = "/etc/aro-rp/arm-ca-bundle.pem"
+	AdminCABundlePath      = "/etc/aro-rp/admin-ca-bundle.pem"
 )
 
 type prod struct {
@@ -57,6 +60,7 @@ type prod struct {
 
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
+	miseAuthorizer        miseadapter.MISEAdapter
 
 	acrDomain string
 	vmskus    map[string]*mgmtcompute.ResourceSku
@@ -249,25 +253,41 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 	return p, nil
 }
 
+func (p *prod) MISEAuthorizer() miseadapter.MISEAdapter {
+	return p.miseAuthorizer
+}
+
 func (p *prod) InitializeAuthorizers() error {
-	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
-		p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
-	} else {
-		armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
-			p.log,
-			"/etc/aro-rp/arm-ca-bundle.pem",
-			os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
+	if p.FeatureIsSet(FeatureEnableMISE) {
+		err := ValidateVars(
+			"MISE_ADDRESS",
 		)
 		if err != nil {
 			return err
 		}
+		p.miseAuthorizer = miseadapter.NewAuthorizer(os.Getenv("MISE_ADDRESS"), p.log)
+	}
 
-		p.armClientAuthorizer = armClientAuthorizer
+	if !p.FeatureIsSet(FeatureEnforceMISE) {
+		if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
+			p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
+		} else {
+			armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
+				p.log,
+				ARMCABundlePath,
+				os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
+			)
+			if err != nil {
+				return err
+			}
+
+			p.armClientAuthorizer = armClientAuthorizer
+		}
 	}
 
 	adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 		p.log,
-		"/etc/aro-rp/admin-ca-bundle.pem",
+		AdminCABundlePath,
 		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
 	)
 	if err != nil {
