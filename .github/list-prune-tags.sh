@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
+# in days
+declare -r MIN_TAG_AGE=60
+
 function help () {
-    echo "List non-production git tags"
+    echo
+    echo "List non-production git tags older than ${MIN_TAG_AGE} days"
     echo
     echo "USAGE:"
     echo "    list-prune-tags.sh [OPTIONS] [EXCLUDE_TAG ...]"
@@ -16,25 +20,54 @@ function help () {
 }
 
 function main () {
-    local -ar skip_tags=( $@ )
-    local -ar nonproduction_tags=( $(git tag -l | grep -v -E '^v[[:digit:]]{8}.[[:digit:]]{1,2}$') )
-    local -a output
+    local -r datef="%Y%m%d"
+
+    # FIXME: this will break once we enter the year 10,000.
+    local -ar persist_filters=(
+        "^v[0-9]{8}\.[0-9]{1,2}$"
+        "^azext-aro-v[0-9]{8}.*-[0-9]{1,2}$"
+    )
+
+    local -ar excluded_tags=( $@ )
+    local -ar all_tags=( $(git tag -l) )
+    local -a prune
 
     local tag
-    for tag in ${nonproduction_tags[*]}; do
-        if [ -n "${skip_tags[*]}" ] && [[ " ${skip_tags[*]} " =~ " $tag " ]]; then
+    for tag in ${all_tags[*]}; do
+        # excluded tags get skipped
+        if [ -n "${excluded_tags[*]}" ] && [[ " ${excluded_tags[*]} " =~ " $tag " ]]; then
             continue
         fi
 
-        output+=( $tag )
+        local filter match=false
+        for filter in ${persist_filters[*]}; do
+            [[ $tag =~ $filter ]] && match=true
+        done
+
+        [ "$match" == "true" ] && continue
+
+        # annotated tag date
+        local tag_date=$(git for-each-ref --format="%(taggerdate:format:$datef)" refs/tags/$tag)
+
+        # fallback: date from the commit (if this is a lightweight tag)
+        if [ -z "$tag_date" ]; then
+            tag_date=$(git for-each-ref --format="%(creatordate:format:$datef)" refs/tags/$tag)
+        fi
+
+        # is the tag older than MIN_TAG_AGE?
+        if [ ${tag_date} -lt $(date --date="${MIN_TAG_AGE} days ago" +$datef) ]; then
+            prune+=( $tag )
+        fi
+
+        # no-op
     done
 
     if [ "${NEWLINE:-true}" == "true" ]; then
-        for tag in ${output[*]}; do
+        for tag in ${prune[*]}; do
             printf $tag"\n"
         done
     else
-        echo ${output[*]}
+        echo ${prune[*]}
     fi
 }
 
