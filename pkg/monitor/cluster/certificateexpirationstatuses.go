@@ -78,7 +78,6 @@ func (mon *Monitor) emitIngressAndAPIServerCertificateExpiry(ctx context.Context
 				return err
 			}
 		}
-
 	}
 	return nil
 }
@@ -115,7 +114,6 @@ func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
 			}
 		}
 	}
-
 	return nil
 }
 
