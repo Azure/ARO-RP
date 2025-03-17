@@ -32,7 +32,7 @@ func (f *frontend) checkReady() bool {
 	if !f.authMiddleware.EnforceMISE {
 		armAuthReady = f.env.ArmClientAuthorizer().IsReady()
 	}
-	authReady = miseAuthReady && armAuthReady
+	authReady = miseAuthReady || armAuthReady
 	return okOcpVersions && okPlatformWorkloadIdentityRoleSets &&
 		f.ready.Load().(bool) &&
 		authReady &&

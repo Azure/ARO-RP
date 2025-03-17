@@ -74,6 +74,6 @@ func (m *miseAdapter) IsReady() bool {
 		return true
 	}
 
-	m.log.Errorf("mise readyz failed with %s status code", resp.StatusCode)
+	m.log.Errorf("mise readyz failed with %d status code", resp.StatusCode)
 	return false
 }
