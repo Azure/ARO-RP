@@ -80,6 +80,7 @@ const (
 	CloudErrorCodeResourceNotFound                                           = "ResourceNotFound"
 	CloudErrorCodeUnsupportedMediaType                                       = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet                                          = "InvalidLinkedVNet"
+	CloudErrorCodeInvalidLinkedSubnet                                        = "InvalidLinkedSubnet"
 	CloudErrorCodeInvalidLinkedRouteTable                                    = "InvalidLinkedRouteTable"
 	CloudErrorCodeInvalidLinkedNatGateway                                    = "InvalidLinkedNatGateway"
 	CloudErrorCodeInvalidLinkedDiskEncryptionSet                             = "InvalidLinkedDiskEncryptionSet"

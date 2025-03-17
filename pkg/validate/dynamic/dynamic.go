@@ -36,26 +36,28 @@ import (
 )
 
 var (
-	errMsgNSGAttached                       = "The provided subnet '%s' is invalid: must not have a network security group attached."
-	errMsgOriginalNSGNotAttached            = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
-	errMsgNSGNotAttached                    = "The provided subnet '%s' is invalid: must have a network security group attached."
-	errMsgNSGNotProperlyAttached            = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
-	errMsgSPHasNoRequiredPermissionsOnNSG   = "The %s service principal (Application ID: %s) does not have Network Contributor role on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
-	errMsgWIHasNoRequiredPermissionsOnNSG   = "The %s platform managed identity does not have required permissions on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
-	errMsgSubnetNotFound                    = "The provided subnet '%s' could not be found."
-	errMsgSubnetNotInSucceededState         = "The provided subnet '%s' is not in a Succeeded state"
-	errMsgSubnetInvalidSize                 = "The provided subnet '%s' is invalid: must be /27 or larger."
-	errMsgSPHasNoRequiredPermissionsOnVNet  = "The %s service principal (Application ID: %s) does not have Network Contributor role on vnet '%s'."
-	errMsgWIHasNoRequiredPermissionsOnVNet  = "The %s platform managed identity does not have required permissions on vnet '%s'."
-	errMsgVnetNotFound                      = "The vnet '%s' could not be found."
-	errMsgSPHasNoRequiredPermissionsOnRT    = "The %s service principal does not have Network Contributor role on route table '%s'."
-	errMsgWIHasNoRequiredPermissionsOnRT    = "The %s platform managed identity does not have required permissions on route table '%s'."
-	errMsgRTNotFound                        = "The route table '%s' could not be found."
-	errMsgSPHasNoRequiredPermissionsOnNatGW = "The %s service principal does not have Network Contributor role on nat gateway '%s'."
-	errMsgWIHasNoRequiredPermissionsOnNatGW = "The %s platform managed identity does not have required permissions on nat gateway '%s'."
-	errMsgNatGWNotFound                     = "The nat gateway '%s' could not be found."
-	errMsgCIDROverlaps                      = "The provided CIDRs must not overlap: '%s'."
-	errMsgInvalidVNetLocation               = "The vnet location '%s' must match the cluster location '%s'."
+	errMsgNSGAttached                        = "The provided subnet '%s' is invalid: must not have a network security group attached."
+	errMsgOriginalNSGNotAttached             = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
+	errMsgNSGNotAttached                     = "The provided subnet '%s' is invalid: must have a network security group attached."
+	errMsgNSGNotProperlyAttached             = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
+	errMsgSPHasNoRequiredPermissionsOnNSG    = "The %s service principal (Application ID: %s) does not have Network Contributor role on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
+	errMsgWIHasNoRequiredPermissionsOnNSG    = "The %s platform managed identity does not have required permissions on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
+	errMsgSubnetNotFound                     = "The provided subnet '%s' could not be found."
+	errMsgSPHasNoRequiredPermissionsOnSubnet = "The %s service principal (Application ID: %s) does not have Network Contributor role on subnet '%s'."
+	errMsgWIHasNoRequiredPermissionsOnSubnet = "The %s platform managed identity does not have required permissions on subnet '%s'."
+	errMsgSubnetNotInSucceededState          = "The provided subnet '%s' is not in a Succeeded state"
+	errMsgSubnetInvalidSize                  = "The provided subnet '%s' is invalid: must be /27 or larger."
+	errMsgSPHasNoRequiredPermissionsOnVNet   = "The %s service principal (Application ID: %s) does not have Network Contributor role on vnet '%s'."
+	errMsgWIHasNoRequiredPermissionsOnVNet   = "The %s platform managed identity does not have required permissions on vnet '%s'."
+	errMsgVnetNotFound                       = "The vnet '%s' could not be found."
+	errMsgSPHasNoRequiredPermissionsOnRT     = "The %s service principal does not have Network Contributor role on route table '%s'."
+	errMsgWIHasNoRequiredPermissionsOnRT     = "The %s platform managed identity does not have required permissions on route table '%s'."
+	errMsgRTNotFound                         = "The route table '%s' could not be found."
+	errMsgSPHasNoRequiredPermissionsOnNatGW  = "The %s service principal does not have Network Contributor role on nat gateway '%s'."
+	errMsgWIHasNoRequiredPermissionsOnNatGW  = "The %s platform managed identity does not have required permissions on nat gateway '%s'."
+	errMsgNatGWNotFound                      = "The nat gateway '%s' could not be found."
+	errMsgCIDROverlaps                       = "The provided CIDRs must not overlap: '%s'."
+	errMsgInvalidVNetLocation                = "The vnet location '%s' must match the cluster location '%s'."
 )
 
 const minimumSubnetMaskSize int = 27
@@ -219,6 +221,13 @@ func (dv *dynamic) ValidateVnet(
 
 	// validate at subnets level
 	for _, s := range subnets {
+		err := dv.validateSubnetPermissions(ctx, s)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, s := range subnets {
 		err := dv.validateRouteTablePermissions(ctx, s)
 		if err != nil {
 			return err
@@ -246,9 +255,6 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		"Microsoft.Network/virtualNetworks/join/action",
 		"Microsoft.Network/virtualNetworks/read",
 		"Microsoft.Network/virtualNetworks/write",
-		"Microsoft.Network/virtualNetworks/subnets/join/action",
-		"Microsoft.Network/virtualNetworks/subnets/read",
-		"Microsoft.Network/virtualNetworks/subnets/write",
 	})
 
 	var noPermissionsErr *api.CloudError
@@ -292,6 +298,95 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 				fmt.Sprintf(
 					errMsgVnetNotFound,
 					vnet.String(),
+				))
+		case http.StatusForbidden:
+			noPermissionsErr.Message = fmt.Sprintf(
+				"%s\nOriginal error message: %s",
+				noPermissionsErr.Message,
+				detailedErr.Message,
+			)
+			return noPermissionsErr
+		}
+	}
+	return err
+}
+
+func (dv *dynamic) validateSubnetPermissions(ctx context.Context, s Subnet) error {
+	dv.log.Printf("validateSubnetPermissions")
+
+	vnetID, _, err := apisubnet.Split(s.ID)
+	if err != nil {
+		return err
+	}
+
+	vnetr, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+
+	subnetr, err := azure.ParseResourceID(s.ID)
+	if err != nil {
+		return err
+	}
+
+	// we need to explicitly set the resource type to virtualNetworks/{vnetID}/subnets, as the
+	// ParseResourceID function does not properly handle parsing child resources (e.g.
+	// VNET = parent, subnet = child) and gives the incorrect resource type, effectively
+	// giving the incorrect resource ID which causes the validateActions method to fail.
+	subnetr.ResourceType = fmt.Sprintf("%s/%s/%s", vnetr.ResourceType, vnetr.ResourceName, "subnets")
+
+	errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
+	if dv.authorizerType == AuthorizerClusterServicePrincipal {
+		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
+	}
+
+	operatorName, err := dv.validateActions(ctx, &subnetr, []string{
+		"Microsoft.Network/virtualNetworks/subnets/join/action",
+		"Microsoft.Network/virtualNetworks/subnets/read",
+		"Microsoft.Network/virtualNetworks/subnets/write",
+	})
+
+	var noPermissionsErr *api.CloudError
+	if err != nil {
+		if dv.authorizerType == AuthorizerWorkloadIdentity {
+			noPermissionsErr = api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				"",
+				fmt.Sprintf(
+					errMsgWIHasNoRequiredPermissionsOnSubnet,
+					*operatorName,
+					subnetr.String(),
+				))
+		} else {
+			noPermissionsErr = api.NewCloudError(
+				http.StatusBadRequest,
+				errCode,
+				"",
+				fmt.Sprintf(
+					errMsgSPHasNoRequiredPermissionsOnSubnet,
+					dv.authorizerType,
+					*dv.appID,
+					subnetr.String(),
+				))
+		}
+	}
+
+	if err == wait.ErrWaitTimeout {
+		return noPermissionsErr
+	}
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		dv.log.Error(detailedErr)
+
+		switch detailedErr.StatusCode {
+		case http.StatusNotFound:
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedSubnet,
+				"",
+				fmt.Sprintf(
+					errMsgSubnetNotFound,
+					subnetr.String(),
 				))
 		case http.StatusForbidden:
 			noPermissionsErr.Message = fmt.Sprintf(
