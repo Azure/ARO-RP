@@ -37,8 +37,8 @@ var (
 	clusterID               = resourceGroupID + "/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + clusterName
 	vnetName                = "testVnet"
 	vnetID                  = resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
-	masterSubnet            = vnetID + "/subnet/masterSubnet"
-	workerSubnet            = vnetID + "/subnet/workerSubnet"
+	masterSubnet            = vnetID + "/subnets/masterSubnet"
+	workerSubnet            = vnetID + "/subnets/workerSubnet"
 	masterSubnetPath        = "properties.masterProfile.subnetId"
 	workerSubnetPath        = "properties.workerProfile.subnetId"
 	masterRtID              = resourceGroupID + "/providers/Microsoft.Network/routeTables/masterRt"
@@ -617,6 +617,7 @@ var (
 var (
 	platformIdentity1SubnetActions = []string{
 		"Microsoft.Network/virtualNetworks/read",
+		"Microsoft.Network/virtualNetworks/subnets/read",
 		"Microsoft.Network/routeTables/write",
 		"Microsoft.Network/natGateways/read",
 		"Microsoft.Network/networkSecurityGroups/join/action",
@@ -632,7 +633,7 @@ var (
 			ObjectID:   dummyObjectId,
 		},
 	}
-	validSubnetsAuthorizationDecisions = client.AuthorizationDecisionResponse{
+	validVnetAuthorizationDecisions = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
@@ -646,6 +647,11 @@ var (
 				ActionId:       "Microsoft.Network/virtualNetworks/write",
 				AccessDecision: client.Allowed,
 			},
+		},
+	}
+
+	validSubnetAuthorizationDecisions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
 				AccessDecision: client.Allowed,
@@ -656,6 +662,23 @@ var (
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/write",
+				AccessDecision: client.Allowed,
+			},
+		},
+	}
+
+	invalidVnetAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
+				AccessDecision: client.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/read",
+				AccessDecision: client.NotAllowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/write",
 				AccessDecision: client.Allowed,
 			},
 		},
@@ -664,24 +687,12 @@ var (
 	invalidSubnetsAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
-				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
-				AccessDecision: client.Allowed,
-			},
-			{
-				ActionId:       "Microsoft.Network/virtualNetworks/read",
-				AccessDecision: client.NotAllowed,
-			},
-			{
-				ActionId:       "Microsoft.Network/virtualNetworks/write",
-				AccessDecision: client.Allowed,
-			},
-			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
 				AccessDecision: client.Allowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/read",
-				AccessDecision: client.Allowed,
+				AccessDecision: client.NotAllowed,
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/write",
@@ -690,7 +701,7 @@ var (
 		},
 	}
 
-	invalidSubnetsAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
+	invalidVnetAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
@@ -698,12 +709,14 @@ var (
 			},
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/read",
-				AccessDecision: client.NotAllowed,
-			},
-			{
-				ActionId:       "Microsoft.Network/virtualNetworks/write",
 				AccessDecision: client.Allowed,
 			},
+			// deliberately missing vnets write
+		},
+	}
+
+	invalidSubnetsAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
 				AccessDecision: client.Allowed,
@@ -743,7 +756,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&validSubnetsAuthorizationDecisions, nil)
+					Return(&validVnetAuthorizationDecisions, nil)
 			},
 		},
 		{
@@ -756,11 +769,11 @@ func TestValidateVnetPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&validSubnetsAuthorizationDecisions, nil)
+					Return(&validVnetAuthorizationDecisions, nil)
 			},
 		},
 		{
-			name:               "Success - MIWI Cluster - No intersecting Subnet Actions",
+			name:               "Success - MIWI Cluster - No intersecting VNET Actions",
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActionsNoIntersect,
@@ -778,7 +791,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
+					Return(&invalidVnetAuthorizationDecisionsReadNotAllowed, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
 		},
@@ -795,7 +808,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
+					Return(&invalidVnetAuthorizationDecisionsReadNotAllowed, nil)
 			},
 			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet'.",
 		},
@@ -811,7 +824,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidSubnetsAuthorizationDecisionsMissingWrite, nil)
+					Return(&invalidVnetAuthorizationDecisionsMissingWrite, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
 		},
@@ -892,6 +905,176 @@ func TestValidateVnetPermissions(t *testing.T) {
 			}
 
 			err = dv.validateVnetPermissions(ctx, vnetr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateSubnetPermissions(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name                string
+		platformIdentities  map[string]api.PlatformWorkloadIdentity
+		platformIdentityMap map[string][]string
+		mocks               func(*mock_env.MockInterface, *mock_azcore.MockTokenCredential, *mock_checkaccess.MockRemotePDPClient, context.CancelFunc)
+		wantErr             string
+	}{
+		{
+			name: "pass",
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&validSubnetAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:               "pass - MIWI Cluster",
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&validSubnetAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:               "Success - MIWI Cluster - No intersecting Subnet Actions",
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActionsNoIntersect,
+			},
+		},
+		{
+			name: "fail: missing permissions",
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on subnet '" + masterSubnet + "'.",
+		},
+		{
+			name:               "Fail - MIWI Cluster - missing permissions",
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
+			},
+			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on subnet '" + masterSubnet + "'.",
+		},
+		{
+			name: "fail: CheckAccess Return less entries than requested",
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidSubnetsAuthorizationDecisionsMissingWrite, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on subnet '" + masterSubnet + "'.",
+		},
+		{
+			name: "fail: getting an invalid token from AAD",
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, _ *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).
+					Return(azcore.AccessToken{}, nil)
+			},
+			wantErr: "token contains an invalid number of segments",
+		},
+		{
+			name: "fail: getting an error when calling CheckAccessV2",
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
+			},
+			wantErr: "Unexpected failure calling CheckAccessV2",
+		},
+		{
+			name: "fail: getting a nil response from CheckAccessV2",
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(nil, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on subnet '" + masterSubnet + "'.",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			tokenCred := mock_azcore.NewMockTokenCredential(controller)
+			env := mock_env.NewMockInterface(controller)
+			pdpClient := mock_checkaccess.NewMockRemotePDPClient(controller)
+			if tt.mocks != nil {
+				tt.mocks(env, tokenCred, pdpClient, cancel)
+			}
+
+			dv := &dynamic{
+				env:                        env,
+				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				authorizerType:             AuthorizerClusterServicePrincipal,
+				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				pdpClient:                  pdpClient,
+				checkAccessSubjectInfoCred: tokenCred,
+			}
+
+			if tt.platformIdentities != nil {
+				dv.platformIdentities = tt.platformIdentities
+				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
+				dv.authorizerType = AuthorizerWorkloadIdentity
+			}
+
+			subnetr := Subnet{ID: masterSubnet}
+
+			err := dv.validateSubnetPermissions(ctx, subnetr)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
