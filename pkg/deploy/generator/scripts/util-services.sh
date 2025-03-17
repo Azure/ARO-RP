@@ -67,15 +67,15 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -m 2g \
-  --network=$PODMAN_NETWORK \
-  --ip $IPADDRESS \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
   -p 80:8080 \
   -p 8081:8081 \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $RPIMAGE \
-  $ROLE
+  ${RPIMAGE} \
+  ${ROLE}
 ExecStop=/usr/bin/podman stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
@@ -156,15 +156,15 @@ ExecStart=/usr/bin/podman run \
   -e OTEL_AUDIT_QUEUE_SIZE \
   -e MISE_ADDRESS \
   -m 2g \
-  --network=$PODMAN_NETWORK \
-  --ip $IPADDRESS \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
-  $RPIMAGE \
-  $ROLE
+  ${RPIMAGE} \
+  ${ROLE}
 ExecStop=/usr/bin/podman stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
@@ -229,8 +229,8 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$PODMAN_NETWORK \
-  --ip $IPADDRESS \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
   -e AZURE_FP_CLIENT_ID \
   -e DOMAIN_NAME \
   -e CLUSTER_MDSD_ACCOUNT \
@@ -248,7 +248,7 @@ ExecStart=/usr/bin/podman run \
   -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $RPIMAGE \
+  ${RPIMAGE} \
   monitor
 Restart=always
 RestartSec=1
@@ -306,8 +306,8 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$PODMAN_NETWORK \
-  --ip $IPADDRESS \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \
@@ -323,7 +323,7 @@ ExecStart=/usr/bin/podman run \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
-  $RPIMAGE \
+  ${RPIMAGE} \
   portal
 Restart=always
 RestartSec=1
@@ -440,10 +440,10 @@ ExecStart=/usr/bin/podman run \
   -v /app/mise/appsettings.json:/app/appsettings.json:z \
   --hostname %H \
   --name %N \
-  --network=$PODMAN_NETWORK \
-  --ip $IPADDRESS \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
   --rm \
-  $MISEIMAGE
+  ${MISEIMAGE}
 ExecStop=/usr/bin/podman stop %N
 Restart=always
 RestartSec=3
@@ -538,11 +538,11 @@ ExecStart=/usr/bin/podman run \
   --hostname %H \
   --name %N \
   --rm \
-  --network=$PODMAN_NETWORK \
-  --ip $IPADDRESS \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
   -m 2g \
   -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml:z \
-  $OTELIMAGE
+  ${OTELIMAGE}
 ExecStop=/usr/bin/podman stop %N
 Restart=always
 RestartSec=3
@@ -653,7 +653,7 @@ ExecStart=/usr/bin/podman run \
   -v /var/lib/fluent:/var/lib/fluent:z \
   -v /var/log/journal:/var/log/journal:ro \
   -v /etc/machine-id:/etc/machine-id:ro \
-  $FLUENTBITIMAGE \
+  ${FLUENTBITIMAGE} \
   -c /etc/fluentbit/fluentbit.conf
 
 ExecStop=/usr/bin/podman stop %N
@@ -872,23 +872,23 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$PODMAN_NETWORK \
-  --ip $IPADDRESS \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
-  $MDMIMAGE \
-  -Input $MDM_INPUT \
-  -MetricNamespace $MDM_NAMESPACE \
-  -MonitoringAccount $MDM_ACCOUNT \
+  ${MDMIMAGE} \
+  -Input ${MDM_INPUT} \
+  -MetricNamespace ${MDM_NAMESPACE} \
+  -MonitoringAccount ${MDM_ACCOUNT} \
   -CertFile /etc/mdm.pem \
-  -FrontEndUrl $MDMFRONTENDURL \
+  -FrontEndUrl ${MDMFRONTENDURL} \
   -Logger Console \
   -LogLevel Warning \
   -PrivateKeyFile /etc/mdm.pem \
-  -SourceEnvironment $MDMSOURCEENVIRONMENT \
-  -SourceRole $MDMSOURCEROLE \
-  -SourceRoleInstance $MDMSOURCEROLEINSTANCE
+  -SourceEnvironment ${MDMSOURCEENVIRONMENT} \
+  -SourceRole ${MDMSOURCEROLE} \
+  -SourceRoleInstance ${MDMSOURCEROLEINSTANCE}
 ExecStop=/usr/bin/podman stop %N
 Restart=always
 RestartSec=1
