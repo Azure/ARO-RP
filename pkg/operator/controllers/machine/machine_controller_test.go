@@ -162,7 +162,7 @@ func TestMachineReconciler(t *testing.T) {
 				},
 			}
 
-			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).WithObjects(tt.objects...).Build()
+			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).WithStatusSubresource(&baseCluster).WithObjects(tt.objects...).Build()
 
 			r := &Reconciler{
 				log:                    logrus.NewEntry(logrus.StandardLogger()),

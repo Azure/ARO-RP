@@ -75,8 +75,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		HealthProbeBindAddress: ":8080",
-		MetricsBindAddress:     "0", // disabled
-		Port:                   8443,
 	})
 	if err != nil {
 		return err
