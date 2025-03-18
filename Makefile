@@ -343,19 +343,9 @@ aks.kubeconfig:
 go-tidy: # Run go mod tidy - add missing and remove unused modules.
 	go mod tidy -compat=${GOLANG_VERSION}
 
-.PHONY: go-vendor
-go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies).
-	go mod vendor
-
 .PHONY: go-verify
-go-verify: go-tidy go-vendor # Run go mod verify - verify dependencies have expected content
+go-verify: go-tidy # Run go mod verify - verify dependencies have expected content
 	go mod verify
-
-.PHONY: vendor
-vendor:
-	# See comments in the script for background on why we need it
-	hack/update-go-module-dependencies.sh
-	$(MAKE) go-verify
 
 .PHONY: xmlcov
 xmlcov: $(GOCOV) $(GOCOV_XML)
@@ -418,7 +408,7 @@ ci-clean:
 	    image prune --all --filter="label=aro-*=true"
 
 .PHONY: ci-rp
-ci-rp: fix-macos-vendor
+ci-rp:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
@@ -434,7 +424,7 @@ ci-rp: fix-macos-vendor
 	docker rm extract_cover_out;
 
 .PHONY: aro-e2e
-aro-e2e: fix-macos-vendor
+aro-e2e:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.aro-e2e \
 		--ulimit=nofile=4096:4096 \
@@ -444,7 +434,7 @@ aro-e2e: fix-macos-vendor
 		-t ${LOCAL_E2E_IMAGE}:${VERSION}
 
 .PHONY: ci-tunnel
-ci-tunnel: fix-macos-vendor
+ci-tunnel:
 	podman $(PODMAN_REMOTE_ARGS) \
 	    build . \
 		-f Dockerfile.ci-tunnel \
@@ -453,14 +443,6 @@ ci-tunnel: fix-macos-vendor
 		--build-arg ARO_VERSION=$(VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_TUNNEL_IMAGE):$(VERSION)
-
-# MacOS is a case insensitive filesystem. Linux is case sensitive. This target
-# makes podman builds possible on MacOS.
-.PHONY: fix-macos-vendor
-fix-macos-vendor:
-ifeq ($(shell uname -s),Darwin)
-	mv ./vendor/github.com/Microsoft ./vendor/github.com/temp-microsoft && mv ./vendor/github.com/temp-microsoft ./vendor/github.com/microsoft || true
-endif
 
 .PHONY: run-portal
 run-portal:
