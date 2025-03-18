@@ -33,7 +33,7 @@ The desired instance types should be free of any restrictions. The subscription 
 
 ### CLI Method
 
-1) Comment out `FeatureRequireD2sV3Workers` from the range of features in `pkg/env/dev.go`. This will allow you to create development clusters with other VM sizes.
+1) Comment out `FeatureRequireD2sWorkers` from the range of features in `pkg/env/dev.go`. This will allow you to create development clusters with other VM sizes.
 
 > __NOTE:__ Please be responsible with your usage of larger VM sizes, as they incur additional cost.
 
@@ -49,13 +49,7 @@ az aro create   --resource-group $RESOURCEGROUP   --name $CLUSTER   --vnet aro-l
 
 ### Hack scripts method
 
-1) Comment out `FeatureRequireD2sV3Workers` from the range of features in `pkg/env/dev.go`, and if you want to use worker StandardD4sV3 (which is default version.DefaultInstallStream.WorkerVmSize), only for that specific worker size, comment out also in `createCluster()` at `pkg/util/cluster/cluster.go` the following block:
-~~~
-		// In LocalDev mode, if workerVmSize is not default one, then it means user requested a specific one we need to keep.
-		if workerVmSize == version.DefaultInstallStream.WorkerVmSize {
-			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
-		}
-~~~
+1) Comment out `FeatureRequireD2sWorkers` from the range of features in `pkg/env/dev.go`.
 
 2) Start your local RP. If it was already running, restart it to take into account commented lines.
 
