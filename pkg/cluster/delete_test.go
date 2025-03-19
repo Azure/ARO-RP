@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdk_to "github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
@@ -89,10 +90,10 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic no longer exists - do nothing",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				notFound := autorest.DetailedError{
+				notFound := azcore.ResponseError{
 					StatusCode: http.StatusNotFound,
 				}
-				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, notFound)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, &notFound)
 			},
 		},
 		{

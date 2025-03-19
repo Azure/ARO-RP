@@ -6,12 +6,14 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -48,10 +50,12 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 
 	nic, err := m.armInterfaces.Get(ctx, resourceGroup, nicName, nil)
 
+	var responseError *azcore.ResponseError
+
 	// nic is already gone which typically happens on PLS / PE nics
 	// as they are deleted in a different step
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
+	if ok := errors.As(err, &responseError); ok &&
+		responseError.StatusCode == http.StatusNotFound {
 		return nil
 	}
 	if err != nil {
@@ -196,6 +200,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 				m.log.Warnf("skipping resource %s", *resource.ID)
 				continue
 			}
+			m.log.Printf("deleting %s", *resource.ID)
 
 			switch strings.ToLower(*resource.Type) {
 			case "microsoft.network/networksecuritygroups":
@@ -219,7 +224,6 @@ func (m *manager) deleteResources(ctx context.Context) error {
 				}
 			}
 
-			m.log.Printf("deleting %s", *resource.ID)
 			future, err := m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
 			if err != nil {
 				return deleteByIdCloudError(err)
