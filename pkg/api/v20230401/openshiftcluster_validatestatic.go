@@ -21,19 +21,19 @@ import (
 )
 
 type openShiftClusterStaticValidator struct {
-	location            string
-	domain              string
-	requireD2sV3Workers bool
-	resourceID          string
+	location          string
+	domain            string
+	requireD2sWorkers bool
+	resourceID        string
 
 	r azure.Resource
 }
 
 // Validate validates an OpenShift cluster
-func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sV3Workers bool, resourceID string) error {
+func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sWorkers bool, resourceID string) error {
 	sv.location = location
 	sv.domain = domain
-	sv.requireD2sV3Workers = requireD2sV3Workers
+	sv.requireD2sWorkers = requireD2sWorkers
 	sv.resourceID = resourceID
 
 	oc := _oc.(*OpenShiftCluster)
@@ -263,7 +263,7 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 }
 
 func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
-	if !validate.VMSizeIsValid(api.VMSize(mp.VMSize), sv.requireD2sV3Workers, true) {
+	if !validate.VMSizeIsValid(api.VMSize(mp.VMSize), sv.requireD2sWorkers, true) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid.", mp.VMSize))
 	}
 	if !validate.RxSubnetID.MatchString(mp.SubnetID) {
@@ -301,7 +301,7 @@ func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp 
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", fmt.Sprintf("The provided worker name '%s' is invalid.", wp.Name))
 	}
-	if !validate.VMSizeIsValid(api.VMSize(wp.VMSize), sv.requireD2sV3Workers, false) {
+	if !validate.VMSizeIsValid(api.VMSize(wp.VMSize), sv.requireD2sWorkers, false) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided worker VM size '%s' is invalid.", wp.VMSize))
 	}
 	if !validate.DiskSizeIsValid(wp.DiskSizeGB) {

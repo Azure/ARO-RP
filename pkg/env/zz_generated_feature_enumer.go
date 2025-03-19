@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-const _FeatureName = "FeatureDisableDenyAssignmentsFeatureDisableSignedCertificatesFeatureEnableDevelopmentAuthorizerFeatureRequireD2sV3WorkersFeatureDisableReadinessDelayFeatureEnableOCMEndpointsFeatureRequireOIDCStorageWebEndpointFeatureUseMockMsiRp"
+const _FeatureName = "FeatureDisableDenyAssignmentsFeatureDisableSignedCertificatesFeatureEnableDevelopmentAuthorizerFeatureRequireD2sWorkersFeatureDisableReadinessDelayFeatureEnableOCMEndpointsFeatureRequireOIDCStorageWebEndpointFeatureUseMockMsiRp"
 
-var _FeatureIndex = [...]uint8{0, 29, 61, 95, 121, 149, 174, 210, 229}
+var _FeatureIndex = [...]uint8{0, 29, 61, 95, 119, 147, 172, 208, 227}
 
-const _FeatureLowerName = "featuredisabledenyassignmentsfeaturedisablesignedcertificatesfeatureenabledevelopmentauthorizerfeaturerequired2sv3workersfeaturedisablereadinessdelayfeatureenableocmendpointsfeaturerequireoidcstoragewebendpointfeatureusemockmsirp"
+const _FeatureLowerName = "featuredisabledenyassignmentsfeaturedisablesignedcertificatesfeatureenabledevelopmentauthorizerfeaturerequired2sworkersfeaturedisablereadinessdelayfeatureenableocmendpointsfeaturerequireoidcstoragewebendpointfeatureusemockmsirp"
 
 func (i Feature) String() string {
 	if i < 0 || i >= Feature(len(_FeatureIndex)-1) {
@@ -27,14 +27,14 @@ func _FeatureNoOp() {
 	_ = x[FeatureDisableDenyAssignments-(0)]
 	_ = x[FeatureDisableSignedCertificates-(1)]
 	_ = x[FeatureEnableDevelopmentAuthorizer-(2)]
-	_ = x[FeatureRequireD2sV3Workers-(3)]
+	_ = x[FeatureRequireD2sWorkers-(3)]
 	_ = x[FeatureDisableReadinessDelay-(4)]
 	_ = x[FeatureEnableOCMEndpoints-(5)]
 	_ = x[FeatureRequireOIDCStorageWebEndpoint-(6)]
 	_ = x[FeatureUseMockMsiRp-(7)]
 }
 
-var _FeatureValues = []Feature{FeatureDisableDenyAssignments, FeatureDisableSignedCertificates, FeatureEnableDevelopmentAuthorizer, FeatureRequireD2sV3Workers, FeatureDisableReadinessDelay, FeatureEnableOCMEndpoints, FeatureRequireOIDCStorageWebEndpoint, FeatureUseMockMsiRp}
+var _FeatureValues = []Feature{FeatureDisableDenyAssignments, FeatureDisableSignedCertificates, FeatureEnableDevelopmentAuthorizer, FeatureRequireD2sWorkers, FeatureDisableReadinessDelay, FeatureEnableOCMEndpoints, FeatureRequireOIDCStorageWebEndpoint, FeatureUseMockMsiRp}
 
 var _FeatureNameToValueMap = map[string]Feature{
 	_FeatureName[0:29]:         FeatureDisableDenyAssignments,
@@ -43,27 +43,27 @@ var _FeatureNameToValueMap = map[string]Feature{
 	_FeatureLowerName[29:61]:   FeatureDisableSignedCertificates,
 	_FeatureName[61:95]:        FeatureEnableDevelopmentAuthorizer,
 	_FeatureLowerName[61:95]:   FeatureEnableDevelopmentAuthorizer,
-	_FeatureName[95:121]:       FeatureRequireD2sV3Workers,
-	_FeatureLowerName[95:121]:  FeatureRequireD2sV3Workers,
-	_FeatureName[121:149]:      FeatureDisableReadinessDelay,
-	_FeatureLowerName[121:149]: FeatureDisableReadinessDelay,
-	_FeatureName[149:174]:      FeatureEnableOCMEndpoints,
-	_FeatureLowerName[149:174]: FeatureEnableOCMEndpoints,
-	_FeatureName[174:210]:      FeatureRequireOIDCStorageWebEndpoint,
-	_FeatureLowerName[174:210]: FeatureRequireOIDCStorageWebEndpoint,
-	_FeatureName[210:229]:      FeatureUseMockMsiRp,
-	_FeatureLowerName[210:229]: FeatureUseMockMsiRp,
+	_FeatureName[95:119]:       FeatureRequireD2sWorkers,
+	_FeatureLowerName[95:119]:  FeatureRequireD2sWorkers,
+	_FeatureName[119:147]:      FeatureDisableReadinessDelay,
+	_FeatureLowerName[119:147]: FeatureDisableReadinessDelay,
+	_FeatureName[147:172]:      FeatureEnableOCMEndpoints,
+	_FeatureLowerName[147:172]: FeatureEnableOCMEndpoints,
+	_FeatureName[172:208]:      FeatureRequireOIDCStorageWebEndpoint,
+	_FeatureLowerName[172:208]: FeatureRequireOIDCStorageWebEndpoint,
+	_FeatureName[208:227]:      FeatureUseMockMsiRp,
+	_FeatureLowerName[208:227]: FeatureUseMockMsiRp,
 }
 
 var _FeatureNames = []string{
 	_FeatureName[0:29],
 	_FeatureName[29:61],
 	_FeatureName[61:95],
-	_FeatureName[95:121],
-	_FeatureName[121:149],
-	_FeatureName[149:174],
-	_FeatureName[174:210],
-	_FeatureName[210:229],
+	_FeatureName[95:119],
+	_FeatureName[119:147],
+	_FeatureName[147:172],
+	_FeatureName[172:208],
+	_FeatureName[208:227],
 }
 
 // FeatureString retrieves an enum value from the enum constants string name.

@@ -99,7 +99,7 @@ type testInfra struct {
 }
 
 func newTestInfra(t *testing.T) *testInfra {
-	return newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sV3Workers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableOCMEndpoints: false})
+	return newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sWorkers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableOCMEndpoints: false})
 }
 
 func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *testInfra {

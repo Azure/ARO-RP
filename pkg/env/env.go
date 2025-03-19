@@ -36,7 +36,7 @@ const (
 	FeatureDisableDenyAssignments Feature = iota
 	FeatureDisableSignedCertificates
 	FeatureEnableDevelopmentAuthorizer
-	FeatureRequireD2sV3Workers
+	FeatureRequireD2sWorkers
 	FeatureDisableReadinessDelay
 	FeatureEnableOCMEndpoints
 	FeatureRequireOIDCStorageWebEndpoint
