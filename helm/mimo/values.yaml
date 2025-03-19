@@ -113,4 +113,189 @@ updateStrategy:
   type: RollingUpdate
   rollingUpdate:
     maxUnavailable: 1
-updateStrategy: RollingUpdate
+
+autoscaling:
+  enabled: false
+
+mimo:
+  command: ["aro"]
+  args: ["mimo-actuator"]
+
+configmap:
+  azure_fp_client_id: ""
+  azure_arm_client_id: ""
+  domain_name: ""
+  acr_resource_id: ""
+  database_account_name: ""
+  keyvault_prefix: ""
+  rp_features: ""
+  msi_rp_endpoint: ""
+
+  mdm_account: ""
+  mdm_namespace: ""
+  mdm_statsd_socket: ""
+
+  cluster_mdm_environment: ""
+  cluster_mdm_account: ""
+  cluster_mdm_namespace: ""
+
+  mdsd_environment: ""
+
+  cluster_mdsd_account: ""
+  cluster_mdsd_namespace: ""
+  cluster_mdsd_config_version: ""
+
+  gateway_resource_group: ""
+  gateway_domains: ""
+
+  oidc_afd_endpoint: ""
+  oidc_storage_account_name: ""
+
+  hive_status: "enabled"
+  hive_default_pullspec: ""
+  hive_adopt: "enabled"
+
+  certs_admin_api_common_name: ""
+  certs_arm_api_common_name: ""
+
+env:
+  # General Configs
+  - name: AZURE_FP_CLIENT_ID
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_fp_client_id
+  - name: DOMAIN_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: domain_name
+  - name: ADMIN_API_CLIENT_CERT_COMMON_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: certs_admin_api_common_name
+  - name: ARM_API_CLIENT_CERT_COMMON_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: certs_arm_api_common_name
+  - name: AZURE_ARM_CLIENT_ID
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_arm_client_id
+  - name: ACR_RESOURCE_ID
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: acr_resource_id
+  - name: DATABASE_ACCOUNT_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: database_account_name
+  - name: KEYVAULT_PREFIX
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: keyvault_prefix
+  - name: RP_FEATURES
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: rp_features
+  - name: MSI_RP_ENDPOINT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: msi_rp_endpoint
+
+  # Gateway configs
+  - name: GATEWAY_DOMAINS
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: gateway_domains
+  - name: GATEWAY_RESOURCEGROUP
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: gateway_resource_group
+
+  # MDM configs
+  - name: MDM_ACCOUNT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: mdm_account
+  - name: MDM_NAMESPACE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: mdm_namespace
+  
+  # MDSD configs
+  - name: MDSD_ENVIRONMENT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: mdsd_environment
+  
+  # Cluster MDM Configs
+  - name: CLUSTER_MDM_ACCOUNT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdm_account
+  - name: CLUSTER_MDM_NAMESPACE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdm_namespace
+  
+  # Cluster MDSD configs
+  - name: CLUSTER_MDSD_NAMESPACE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdsd_namespace
+  - name: CLUSTER_MDSD_ACCOUNT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdsd_account
+  - name: CLUSTER_MDSD_CONFIG_VERSION
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdsd_config_version
+  
+  # OIDC config
+  - name: OIDC_AFD_ENDPOINT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: oidc_afd_endpoint
+  - name: OIDC_STORAGE_ACCOUNT_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: oidc_storage_account_name
+
+  # Hive config
+  - name: ARO_INSTALL_VIA_HIVE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: hive_status
+  - name: ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: hive_default_pullspec
+  - name: ARO_ADOPT_BY_HIVE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: hive_adopt
