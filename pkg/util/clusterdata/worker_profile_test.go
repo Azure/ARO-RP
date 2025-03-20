@@ -82,6 +82,16 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			givenOc: getGivenOc(clusterID),
 		},
 		{
+			name: "machine set objects exist - machineset has no ready replicas",
+			client: machinefake.NewSimpleClientset(func() *machinev1beta1.MachineSet {
+				ms := createMachineSet("fake-worker-profile-1", validProvSpec())
+				ms.Status.ReadyReplicas = 0
+				return ms
+			}()),
+			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
 			name:    "machine set objects do not exist",
 			client:  machinefake.NewSimpleClientset(),
 			wantOc:  getWantOc(clusterID, emptyWorkerProfile),
@@ -146,6 +156,9 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 					ProviderSpec: ProvSpec,
 				},
 			},
+		},
+		Status: machinev1beta1.MachineSetStatus{
+			ReadyReplicas: 1,
 		},
 	}
 }

@@ -62,6 +62,11 @@ func (ce machineClientEnricher) Enrich(
 			Count: workerCount,
 		}
 
+		if machineset.Status.ReadyReplicas == 0 {
+			log.Infof("no ready replicas in machine set %q", machineset.Name)
+			continue
+		}
+
 		if machineset.Spec.Template.Spec.ProviderSpec.Value == nil {
 			log.Infof("provider spec is missing in the machine set %q", machineset.Name)
 			continue
