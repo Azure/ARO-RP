@@ -294,12 +294,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
-							Publisher: to.StringPtr("CblMariner.1P"),
 							// cbl-mariner-2-gen2-fips is not supported by Automatic OS Updates
 							// therefore the non fips image is used, and fips is configured manually
 							// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade
-							Sku:     to.StringPtr("cbl-mariner-2-gen2"),
-							Version: to.StringPtr("latest"),
 							// https://eng.ms/docs/cloud-ai-platform/azure-core/core-compute-and-host/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryimagereference#cbl-mariner-2-images
 							ID: to.StringPtr("/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"),
 						},

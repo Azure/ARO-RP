@@ -396,9 +396,6 @@
                     },
                     "storageProfile": {
                         "imageReference": {
-                            "publisher": "CblMariner.1P",
-                            "sku": "cbl-mariner-2-gen2",
-                            "version": "latest",
                             "id": "/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"
                         },
                         "osDisk": {
