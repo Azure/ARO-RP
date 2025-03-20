@@ -70,6 +70,8 @@ exempted_groups = {
 }
 privileged_ns = {
   # Kubernetes specific namespaces
+  "kube-node-lease",
+  "kube-public",
   "kube-system",
 
   # ARO specific namespaces
@@ -89,6 +91,7 @@ privileged_ns = {
   "openshift-cluster-machine-approver",
   "openshift-cluster-storage-operator",
   "openshift-cluster-version",
+  "openshift-config-managed",
   "openshift-config-operator",
   "openshift-console",
   "openshift-console-operator",
@@ -98,6 +101,7 @@ privileged_ns = {
   "openshift-dns-operator",
   "openshift-etcd",
   "openshift-etcd-operator",
+  "openshift-host-network",
   "openshift-image-registry",
   "openshift-ingress",
   "openshift-ingress-operator",
@@ -113,6 +117,7 @@ privileged_ns = {
   "openshift-multus",
   "openshift-network-operator",
   "openshift-oauth-apiserver",
+  "openshift-operator-lifecycle-manager",
   "openshift-ovn-kubernetes",
   "openshift-sdn",
   "openshift-service-ca",
