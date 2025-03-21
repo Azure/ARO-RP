@@ -5,7 +5,6 @@ package clusterdata
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -13,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -62,13 +63,17 @@ func (ce machineClientEnricher) Enrich(
 			Count: workerCount,
 		}
 
+		if machineset.Status.ReadyReplicas == 0 {
+			log.Infof("no ready replicas in machine set %q", machineset.Name)
+			continue
+		}
+
 		if machineset.Spec.Template.Spec.ProviderSpec.Value == nil {
 			log.Infof("provider spec is missing in the machine set %q", machineset.Name)
 			continue
 		}
 
-		machineProviderSpec := &machinev1beta1.AzureMachineProviderSpec{}
-		err := json.Unmarshal(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, machineProviderSpec)
+		machineProviderSpec, err := safeUnmarshalProviderSpec(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw)
 		if err != nil {
 			log.Infof("failed to read provider spec from the machine set %q: %v", machineset.Name, err)
 			continue
@@ -106,4 +111,30 @@ func (ce machineClientEnricher) Enrich(
 
 func (ce machineClientEnricher) SetDefaults(oc *api.OpenShiftCluster) {
 	oc.Properties.WorkerProfilesStatus = nil
+}
+
+// Azure availability zones are expected to be strings despite being numeric.
+// YAML conversion can cause these numeric values to be parsed as ints unless
+// they are explicitly wrapped with "". We forcibly convert the zone field
+// to a string on the unstructured object here before converting it to the
+// typed spec instance.
+func safeUnmarshalProviderSpec(raw []byte) (*machinev1beta1.AzureMachineProviderSpec, error) {
+	u := unstructured.Unstructured{}
+	if err := u.UnmarshalJSON(raw); err != nil {
+		return nil, err
+	}
+	zoneRaw, hasZone, err := unstructured.NestedFieldNoCopy(u.Object, "zone")
+	if err != nil {
+		return nil, err
+	}
+	if hasZone {
+		if err := unstructured.SetNestedField(u.Object, fmt.Sprintf("%v", zoneRaw), "zone"); err != nil {
+			return nil, err
+		}
+	}
+
+	providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
+	err = kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, providerSpec)
+
+	return providerSpec, err
 }
