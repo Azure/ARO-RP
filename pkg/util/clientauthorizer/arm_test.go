@@ -10,12 +10,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -24,11 +22,15 @@ import (
 )
 
 func TestARMRefreshOnce(t *testing.T) {
+	endpointPublicCloud := "https://admin.management.azure.com"
+	endpointUSGovernmentCloud := "https://admin.management.usgovcloudapi.net"
+
 	for _, tt := range []struct {
-		name     string
-		azureEnv azureclient.AROEnvironment
-		do       func(*http.Request) (*http.Response, error)
-		wantErr  string
+		name         string
+		azureEnv     azureclient.AROEnvironment
+		do           func(*http.Request) (*http.Response, error)
+		wantEndpoint string
+		wantErr      string
 	}{
 		{
 			name:     "valid public cloud",
@@ -51,9 +53,10 @@ func TestARMRefreshOnce(t *testing.T) {
 					)),
 				}, nil
 			},
+			wantEndpoint: endpointPublicCloud,
 		},
 		{
-			name:     "valid gov cloud",
+			name:     "valid us gov cloud",
 			azureEnv: azureclient.USGovernmentCloud,
 			do: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
@@ -73,6 +76,7 @@ func TestARMRefreshOnce(t *testing.T) {
 					)),
 				}, nil
 			},
+			wantEndpoint: endpointUSGovernmentCloud,
 		},
 		{
 			name:     "invalid - no certificate for now",
@@ -95,7 +99,8 @@ func TestARMRefreshOnce(t *testing.T) {
 					)),
 				}, nil
 			},
-			wantErr: "did not receive current certificate",
+			wantEndpoint: endpointPublicCloud,
+			wantErr:      "did not receive current certificate",
 		},
 		{
 			name:     "invalid JSON",
@@ -109,7 +114,8 @@ func TestARMRefreshOnce(t *testing.T) {
 					Body: io.NopCloser(strings.NewReader("not JSON")),
 				}, nil
 			},
-			wantErr: "invalid character 'o' in literal null (expecting 'u')",
+			wantEndpoint: endpointPublicCloud,
+			wantErr:      "invalid character 'o' in literal null (expecting 'u')",
 		},
 		{
 			name:     "invalid - error",
@@ -117,7 +123,8 @@ func TestARMRefreshOnce(t *testing.T) {
 			do: func(*http.Request) (*http.Response, error) {
 				return nil, errors.New("fake error")
 			},
-			wantErr: "fake error",
+			wantEndpoint: endpointPublicCloud,
+			wantErr:      "fake error",
 		},
 		{
 			name:     "invalid - status code",
@@ -128,7 +135,8 @@ func TestARMRefreshOnce(t *testing.T) {
 					Body:       io.NopCloser(nil),
 				}, nil
 			},
-			wantErr: "unexpected status code 502",
+			wantEndpoint: endpointPublicCloud,
+			wantErr:      "unexpected status code 502",
 		},
 		{
 			name:     "invalid - content type",
@@ -142,7 +150,8 @@ func TestARMRefreshOnce(t *testing.T) {
 					Body: io.NopCloser(nil),
 				}, nil
 			},
-			wantErr: `unexpected content type "text/plain"`,
+			wantEndpoint: endpointPublicCloud,
+			wantErr:      `unexpected content type "text/plain"`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -158,10 +167,7 @@ func TestARMRefreshOnce(t *testing.T) {
 					if req.Method != http.MethodGet {
 						return nil, fmt.Errorf("unexpected method %q", req.Method)
 					}
-					endpoint := strings.TrimSuffix(im.Environment().ResourceManagerEndpoint, "/") + ":24582"
-					if reflect.DeepEqual(im.Environment().Environment, azure.PublicCloud) {
-						endpoint = "https://admin.management.azure.com"
-					}
+					endpoint := tt.wantEndpoint
 					if req.URL.String() != endpoint+"/metadata/authentication?api-version=2015-01-01" {
 						return nil, fmt.Errorf("unexpected URL %q", req.URL.String())
 					}
