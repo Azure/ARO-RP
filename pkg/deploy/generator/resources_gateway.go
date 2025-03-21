@@ -383,6 +383,11 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 							Enabled: to.BoolPtr(true),
 						},
 					},
+					SecurityProfile: &mgmtcompute.SecurityProfile{
+						// Required for 1P Image Gallery Use
+						// https://eng.ms/docs/cloud-ai-platform/azure-core/azure-compute/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryusageinstructions#enable-trusted-launch-for-vmss
+						SecurityType: mgmtcompute.SecurityTypesTrustedLaunch,
+					},
 				},
 				Overprovision: to.BoolPtr(false),
 			},

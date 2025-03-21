@@ -280,6 +280,9 @@
                             }
                         ]
                     },
+                    "securityProfile": {
+                        "securityType": "TrustedLaunch"
+                    },
                     "diagnosticsProfile": {
                         "bootDiagnostics": {
                             "enabled": true
