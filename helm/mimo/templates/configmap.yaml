@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mimo-config
+data:
+  # property-like keys; each key maps to a simple value
+  {{- with .Values.configmap }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
