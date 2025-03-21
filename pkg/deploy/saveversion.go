@@ -35,17 +35,9 @@ func (d *deployer) SaveVersion(ctx context.Context, tokenCredential azcore.Token
 		return err
 	}
 
-	d.log.Infof("instantiating blobs client using SAS token to upload content")
-	containerUrl := fmt.Sprintf("https://%s.blob.%s/%s", *d.config.Configuration.RPVersionStorageAccountName, d.env.Environment().StorageEndpointSuffix, "$web")
-	uploadBlobsClient, err := azblob.NewBlobsClientUsingEntra(containerUrl, tokenCredential, d.env.Environment().ArmClientOptions())
-	if err != nil {
-		d.log.Errorf("failure to instantiate blobs client using SAS: %v", err)
-		return err
-	}
-
 	d.log.Infof("uploading RP version")
 	blobName := fmt.Sprintf("rpversion/%s", d.config.Location)
-	_, err = uploadBlobsClient.UploadBuffer(ctx, "$web", blobName, []byte(d.version), nil)
+	_, err = blobsClient.UploadBuffer(ctx, "$web", blobName, []byte(d.version), nil)
 	if err != nil {
 		d.log.Errorf("failure to upload version information: %v", err)
 		return err
