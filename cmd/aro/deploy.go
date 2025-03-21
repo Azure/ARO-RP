@@ -143,5 +143,5 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 
 	// Must be last step so we can be sure there are no RPs at older versions
 	// still serving
-	return deployer.SaveVersion(ctx)
+	return deployer.SaveVersion(ctx, tokenCredential)
 }
