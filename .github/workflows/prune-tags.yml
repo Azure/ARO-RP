@@ -1,0 +1,20 @@
+name: Prune non-production tags
+
+on:
+  push:
+    tags:
+      - '**'
+
+concurrency:
+  group: prune-tags
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git push origin --delete $(.github/list-prune-tags.sh -n ${{ github.ref_name }})
