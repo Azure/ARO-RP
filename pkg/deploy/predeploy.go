@@ -546,6 +546,13 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 	}
 
 	for _, vm := range scalesetVMs {
+		isCurrentlyReady := d.isVMInstanceHealthy(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID)
+
+		if !isCurrentlyReady {
+			d.log.Errorf("rp vmss %s, instance %s is currently unhealthy, skipping restart", vmssName, *vm.InstanceID)
+			continue
+		}
+
 		d.log.Printf("waiting for restart script to complete on older rp vmss %s, instance %s", vmssName, *vm.InstanceID)
 		err = d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
 			CommandID: to.StringPtr("RunShellScript"),

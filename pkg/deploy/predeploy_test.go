@@ -1546,6 +1546,9 @@ func TestRestartOldScaleset(t *testing.T) {
 	getInstanceViewMock := func(c *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		c.EXPECT().GetInstanceView(gomock.Any(), tp.resourceGroup, tp.vmssName, tp.instanceID).Return(healthyVMSS, nil)
 	}
+	getInstanceViewMockUnhealthy := func(c *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
+		c.EXPECT().GetInstanceView(gomock.Any(), tp.resourceGroup, tp.vmssName, tp.instanceID).Return(unhealthyVMSS, nil)
+	}
 	listVMSSVMMock := func(returnError error) mock {
 		return func(c *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			c.EXPECT().List(ctx, tp.resourceGroup, tp.vmssName, "", "", "").Return(vms, returnError)
@@ -1582,6 +1585,16 @@ func TestRestartOldScaleset(t *testing.T) {
 			wantErr: "generic error",
 		},
 		{
+			name: "vmss initially unhealthy, restart skipped",
+			testParams: testParams{
+				resourceGroup: rgName,
+				vmssName:      vmssName,
+				instanceID:    instanceID,
+				restartScript: rpRestartScript,
+			},
+			mocks: []mock{listVMSSVMMock(nil), getInstanceViewMockUnhealthy},
+		},
+		{
 			name: "rp restart script failed",
 			testParams: testParams{
 				resourceGroup: rgName,
@@ -1589,7 +1602,7 @@ func TestRestartOldScaleset(t *testing.T) {
 				instanceID:    instanceID,
 				restartScript: rpRestartScript,
 			},
-			mocks:   []mock{listVMSSVMMock(nil), vmRestartMock(errGeneric)},
+			mocks:   []mock{listVMSSVMMock(nil), getInstanceViewMock, vmRestartMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
@@ -1600,7 +1613,7 @@ func TestRestartOldScaleset(t *testing.T) {
 				instanceID:    instanceID,
 				restartScript: rpRestartScript,
 			},
-			mocks: []mock{listVMSSVMMock(nil), vmRestartMock(nil), getInstanceViewMock},
+			mocks: []mock{listVMSSVMMock(nil), getInstanceViewMock, vmRestartMock(nil), getInstanceViewMock},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
