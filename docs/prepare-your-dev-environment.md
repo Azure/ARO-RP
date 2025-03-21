@@ -53,6 +53,11 @@ If you'd like to run an RP instance as a golang process (via `go run`) locally -
             ```bash
             export ARO_PODMAN_SOCKET=unix://$HOME/.local/share/containers/podman/machine/qemu/podman.sock
             ```
+        For podman-machine on MacOS, you will need to export :
+
+            ```bash
+            export ARO_PODMAN_SOCKET='unix:///var/run/docker.sock'
+            ```
         
         You will also need to ensure that podman machine has enough resources::
 
