@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -153,7 +154,7 @@ func (k *kubeActions) KubeWatch(ctx context.Context, o *unstructured.Unstructure
 
 	listOpts := metav1.ListOptions{
 		Limit:         1000, // just in case
-		LabelSelector: o.GetLabels()[labelKey],
+		LabelSelector: fmt.Sprintf("%s=%s", labelKey, o.GetLabels()[labelKey]),
 	}
 
 	w, err := k.dyn.Resource(gvr).Namespace(o.GetNamespace()).Watch(ctx, listOpts)
