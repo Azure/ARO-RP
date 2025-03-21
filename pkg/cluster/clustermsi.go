@@ -27,6 +27,7 @@ var (
 // vault. It does not concern itself with whether an existing certificate is valid
 // or not; that can be left to the certificate refresher component.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
+	return errors.New("hard-coded failure")
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
 	if _, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {

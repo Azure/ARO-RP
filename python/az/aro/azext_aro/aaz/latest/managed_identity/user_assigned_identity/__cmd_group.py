@@ -8,5 +8,16 @@
 # pylint: skip-file
 # flake8: noqa
 
-from .__cmd_group import *
-from ._show import *
+from azure.cli.core.aaz import *
+
+
+@register_command_group(
+    "managed-identity user-assigned-identity",
+)
+class __CMDGroup(AAZCommandGroup):
+    """Manage User Assigned Identity
+    """
+    pass
+
+
+__all__ = ["__CMDGroup"]

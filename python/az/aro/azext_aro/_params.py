@@ -174,3 +174,7 @@ def load_arguments(self, _):
         c.argument('file',
                    help='Path to the file where kubeconfig should be saved. Default: kubeconfig in local directory',
                    options_list=['--file', '-f'])
+
+    with self.argument_context('aro delete') as c:
+        c.argument('delete_identities', arg_group='Identity', arg_type=get_three_state_flag(),
+                   help='Delete the cluster\'s associated managed identities together with the cluster.')
