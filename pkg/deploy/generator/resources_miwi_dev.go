@@ -19,6 +19,7 @@ import (
 var (
 	storageAccountName         string = "parameters('oidcStorageAccountName')"
 	resourceTypeStorageAccount string = "Microsoft.Storage/storageAccounts"
+	resourceTypeBlobContainer  string = "Microsoft.Storage/storageAccounts/blobServices/containers"
 
 	SharedMSIKeyVaultName = "concat(take(resourceGroup().name,10), '" + env.SharedMSIKeyVaultNameSuffix + "')"
 )
