@@ -6,6 +6,7 @@ import random
 import os
 from base64 import b64decode
 import textwrap
+import pprint
 
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2024_08_12_preview.models as openshiftcluster
 
@@ -17,6 +18,7 @@ from azure.cli.core.commands.client_factory import (
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
 from azure.cli.core.azclierror import (
+    CLIInternalError,
     FileOperationError,
     ResourceNotFoundError,
     InvalidArgumentValueError,
@@ -35,6 +37,7 @@ from azext_aro._rbac import (
 )
 from azext_aro._validators import validate_subnets
 from azext_aro._dynamic_validators import validate_cluster_create
+from azext_aro.aaz.latest.identity import Delete as identity_delete
 from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 
 from knack.log import get_logger
@@ -389,7 +392,7 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
              warnings_as_text=False)
 
 
-def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
+def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False, delete_identities=None):
     # TODO: clean up rbac
     rp_client_sp_id = None
 
@@ -402,6 +405,23 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     except HttpOperationError as e:
         logger.info(e.message)
 
+    managed_identities = []
+
+    if delete_identities and oc.service_principal_profile is not None:
+        raise InvalidArgumentValueError(
+            "Cannot delete managed identities for a non-managed identity cluster"
+        )
+    elif delete_identities:
+        managed_identities += [mi_user_assigned for mi_user_assigned in oc.identity.user_assigned_identities]
+        managed_identities += [pwi.resource_id for _, pwi in oc.platform_workload_identity_profile.platform_workload_identities.items()]
+
+        # Since we delete the managed identities only after deleting the cluster,
+        # it is critical that we log the list of managed identities while we're
+        # still able to get it from the cluster doc. This way, if the CLI fails in
+        # middle of cluster deletion, etc., the customer will still have access
+        # to the list in case they want to delete the identities themselves.
+        logger.warning(f"After deleting the ARO cluster, will delete the following set of managed identities that was associated with it:\n{pprint.pformat(managed_identities)}")
+ 
     aad = AADManager(cmd.cli_ctx)
 
     # Best effort - assume the role assignments on the SP exist if exception raised
@@ -417,10 +437,35 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     if rp_client_sp_id:
         ensure_resource_permissions(cmd.cli_ctx, oc, False, [rp_client_sp_id])
 
+    if delete_identities:
+        # Note that because we need to confirm the cluster's successful deletion before
+        # deleting the managed identities, we must wait for the asynchronous operation
+        # to complete here and handle the result rather than using sdk_no_wait.
+        result = client.open_shift_clusters.begin_delete(resource_group_name=resource_group_name,
+                                                         resource_name=resource_name,
+                                                         polling=True).result()
+        # TODO: properly handle cases where the result is invalid, times out, etc.
+        logger.warning("Successfully deleted ARO cluster; deleting managed identities...")
+        for mi in managed_identities:
+            rid = parse_resource_id(mi)
+            try:
+                identity_delete(cli_ctx=cmd.cli_ctx)(command_args={
+                    'resource_name': rid['name'],
+                    'resource_group': rid['resource_group'],
+                })
+                logger.warning(f"Successfully deleted managed identity {mi}")
+            except ResourceNotFoundError:
+                continue
+            except Exception as err:
+                # TODO: handle this more gracefully than with an early exit (?)
+                raise CLIInternalError(
+                    f"Unexpected error when deleting user_assigned_identity '{rid['name']}': {str(err)}") from err
+        return result
+
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_delete,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name)
-
+ 
 
 def aro_list(client, resource_group_name=None):
     if resource_group_name:
