@@ -396,7 +396,7 @@
                     },
                     "storageProfile": {
                         "imageReference": {
-                            "id": "/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"
+                            "sharedGalleryImageId": "/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"
                         },
                         "osDisk": {
                             "createOption": "FromImage",
