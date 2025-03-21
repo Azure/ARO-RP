@@ -17,6 +17,9 @@ declare -r role_rp="rp"
 # role_devproxy - constant; Is used to determine which VMSS is being bootstrapped
 # role_devproxy="devproxy"
 declare -r role_devproxy="devproxy"
+# us_gov_cloud - constant; Is the name of AZURECLOUDNAME for US government cloud
+# us_gov_cloud="AzureUSGovernment"
+declare -r us_gov_cloud="AzureUSGovernment"
 
 # log is a wrapper for echo that includes the function name
 # Args
