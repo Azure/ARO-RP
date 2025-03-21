@@ -12,11 +12,13 @@ locations.
    applications.
 
 1. Set the az account
+
    ```bash
    az account set -n "<your-azure-subscription>"
    ```
 
 1. You will need a resource group for global infrastructure
+
    ```bash
    GLOBAL_RESOURCEGROUP=global-infra
    az group create -n $GLOBAL_RESOURCEGROUP --location eastus
@@ -96,10 +98,12 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 ## AAD applications
 
 1. Set a prefix variable used for naming apps/sp
-```bash
-# for PR E2E Environment
-PREFIX=aro-v4-e2e
-```
+
+   ```bash
+   # for PR E2E Environment
+   PREFIX=aro-v4-e2e
+   ```
+
 1. Create an AAD application which will fake up the ARM layer:
 
    This application requires client certificate authentication to be enabled. A
@@ -265,127 +269,71 @@ PREFIX=aro-v4-e2e
 
 ## Certificates
 
-1. Create the VPN CA key/certificate. A suitable key/certificate file can be
-   generated using the following helper utility:
+Generate new key/certificate files using an helper utility, and when these files already exists (and they need to be recreated), then [rotate the certificates](#certificate-rotation).
+
+1. Create the VPN CA key/certificate:
 
    ```bash
    go run ./hack/genkey -ca vpn-ca
    mv vpn-ca.* secrets
    ```
 
-1. Create the VPN client key/certificate. A suitable key/certificate file can be
-   generated using the following helper utility:
+1. Create the VPN client key/certificate:
 
    ```bash
    go run ./hack/genkey -client -keyFile secrets/vpn-ca.key -certFile secrets/vpn-ca.crt vpn-client
    mv vpn-client.* secrets
    ```
 
-1. Create the proxy serving key/certificate. A suitable key/certificate file
-   can be generated using the following helper utility:
+1. Create the proxy serving key/certificate:
 
    ```bash
    go run ./hack/genkey proxy
    mv proxy.* secrets
    ```
 
-1. Create the proxy client key/certificate. A suitable key/certificate file can
-   be generated using the following helper utility:
+1. Create the proxy client key/certificate:
 
    ```bash
    go run ./hack/genkey -client proxy-client
    mv proxy-client.* secrets
    ```
 
-1. Create the proxy ssh key/certificate. A suitable key/certificate file can
-   be generated using the following helper utility:
+1. Create the proxy ssh key/certificate:
 
    ```bash
    ssh-keygen -f secrets/proxy_id_rsa -N ''
    ```
 
-1. Create an RP serving key/certificate. A suitable key/certificate file
-   can be generated using the following helper utility:
+1. Create an RP serving key/certificate:
 
    ```bash
    go run ./hack/genkey localhost
    mv localhost.* secrets
    ```
 
-1. Create the dev CA key/certificate. A suitable key/certificate file can be
-   generated using the following helper utility:
+1. Create the dev CA key/certificate:
 
    ```bash
    go run ./hack/genkey -ca dev-ca
    mv dev-ca.* secrets
    ```
 
-1. Create the dev client key/certificate. A suitable key/certificate file can
-   be generated using the following helper utility:
+1. Create the dev client key/certificate:
 
    ```bash
    go run ./hack/genkey -client -keyFile secrets/dev-ca.key -certFile secrets/dev-ca.crt dev-client
    mv dev-client.* secrets
    ```
 
-1. Create the  CA key/certificate.  A suitable key/certificate file can be
-   generated using the following helper utility:
+1. Create the  CA key/certificate:
 
    ```bash
    go run ./hack/genkey cluster-mdsd
    mv cluster-mdsd.* secrets
    ```
 
-## Certificate Rotation
-
-This section documents the steps taken to rotate certificates in dev and INT subscriptions
-
-1. Generate new certificates like we did in [AAD application](#aad-applications) and [certificate](#certificates) sections above
-
-2. Import newly generated certificates to keyvault. Note that this does not include firstparty certificates
-
-```bash
-source hack/devtools/deploy-shared-env.sh
-import_certs_secrets
-```
-
-3. Update the Azure VPN Gateway configuration. To do this, go to `Virtual Network Gateways` > `Point-to-site configuration` and the public cert data from `vpn-ca.pem`. Delete the old expired root certificate
-
-4. The OpenVPN configuration file needs to be manually updated. To achieve this, edit the `vpn-<region>.ovpn` file and add the `vpn-client` certificate and private key
-
-5. Next, we need to update certificates owned by FP Service Principal. Current configuration in DEV and INT is listed below. You can get the `AAD APP ID` from the `secrets/env` file
-
-| Variable               | Certificate Client | Subscription Type | AAD App Name             | Key Vault Name     |
-| ---------------------- | ------------------ | ----------------- | ------------------------ | ------------------ |
-| AZURE_FP_CLIENT_ID     | firstparty         | DEV               | aro-v4-fp-shared-dev     | v4-eastus-dev-svc  |
-| AZURE_ARM_CLIENT_ID    | arm                | DEV               | aro-v4-arm-shared-dev    | v4-eastus-dev-svc  |
-| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV               | aro-v4-portal-shared-dev | v4-eastus-dev-svc  |
-| AZURE_FP_CLIENT_ID     | firstparty         | INT               | aro-int-sp               | aro-int-eastus-svc |
-
-```bash
-# Import firstparty.pem to keyvault v4-eastus-svc
-az keyvault certificate import --vault-name <kv_name>  --name rp-firstparty --file firstparty.pem
-
-# Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable)
-az ad app credential reset \
-   --id "$AZURE_ARM_CLIENT_ID" \
-   --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
-
-az ad app credential reset \
-   --id "$AZURE_FP_CLIENT_ID" \
-   --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
-
-az ad app credential reset \
-   --id "$AZURE_PORTAL_CLIENT_ID" \
-   --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
-```
-
-5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
-
-6. Run `[rharosecretsdev|e2earosecrets|e2earoclassicsecrets] make secrets-update` to upload it to your
-   storage account so other people on your team can access it via `make secrets`
-
-# Environment file
+## Environment file
 
 1. Choose the resource group prefix. The resource group location will be
    The resource group location will be appended to the prefix to make the resource group name. If a v4-prefixed environment exists in the subscription already, use a unique prefix.
@@ -401,41 +349,48 @@ az ad app credential reset \
    PROXY_DOMAIN_NAME_LABEL=<your-proxy-domain-name-label>
    ```
 
+1. Export resourceGroup
+
+   ```bash
+   export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
+   ```
+
 1. Create the secrets/env file:
 
    ```bash
    # use a unique prefix for Azure resources when it is set, otherwise use your user's name
    cat >secrets/env <<EOF
+   ######## Prior to sourcing the file the following env vars must be set:    ########
+   ######## AZURE_PREFIX, LOCATION, ADMIN_OBJECT_ID, RESOURCEGROUP, and PARENT_DOMAIN_NAME   ########
    export AZURE_PREFIX="${AZURE_PREFIX:-$USER}"
-   export AZURE_TENANT_ID='$AZURE_TENANT_ID'
-   export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
-   export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
-   export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
-   export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
-   export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
-   export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
-   export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
-   export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
-   export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'
-   export AZURE_RP_CLIENT_SECRET='$AZURE_RP_CLIENT_SECRET'
-   export AZURE_GATEWAY_CLIENT_ID='$AZURE_GATEWAY_CLIENT_ID'
-   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_GATEWAY_CLIENT_SECRET='$AZURE_GATEWAY_CLIENT_SECRET'
-   export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
+   export ADMIN_OBJECT_ID="$ADMIN_OBJECT_ID"
+   export AZURE_TENANT_ID="$AZURE_TENANT_ID"
+   export AZURE_SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID"
+   export AZURE_ARM_CLIENT_ID="$AZURE_ARM_CLIENT_ID"
+   export AZURE_FP_CLIENT_ID="$AZURE_FP_CLIENT_ID"
+   export AZURE_FP_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_PORTAL_CLIENT_ID="$AZURE_PORTAL_CLIENT_ID"
+   export AZURE_PORTAL_ACCESS_GROUP_IDS="$ADMIN_OBJECT_ID"
+   export AZURE_PORTAL_ELEVATED_GROUP_IDS="$ADMIN_OBJECT_ID"
+   export AZURE_CLIENT_ID="$AZURE_CLIENT_ID"
+   export AZURE_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_CLIENT_SECRET="$AZURE_CLIENT_SECRET"
+   export AZURE_RP_CLIENT_ID="$AZURE_RP_CLIENT_ID"
+   export AZURE_RP_CLIENT_SECRET="$AZURE_RP_CLIENT_SECRET"
+   export AZURE_GATEWAY_CLIENT_ID="$AZURE_GATEWAY_CLIENT_ID"
+   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID="$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)"
+   export AZURE_GATEWAY_CLIENT_SECRET="$AZURE_GATEWAY_CLIENT_SECRET"
    export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
    export DATABASE_NAME="\$AZURE_PREFIX"
-   export RP_MODE='development'
-   export PULL_SECRET='$PULL_SECRET'
-   export SECRET_SA_ACCOUNT_NAME='$SECRET_SA_ACCOUNT_NAME'
+   export RP_MODE="development"
+   export PULL_SECRET="$PULL_SECRET"
+   export SECRET_SA_ACCOUNT_NAME="$SECRET_SA_ACCOUNT_NAME"
    export DATABASE_ACCOUNT_NAME="\$RESOURCEGROUP"
    export KEYVAULT_PREFIX="\$RESOURCEGROUP"
-   export ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
-   export PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
-   PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
+   export PARENT_DOMAIN_NAME="$PARENT_DOMAIN_NAME"
+   export PARENT_DOMAIN_RESOURCEGROUP="$PARENT_DOMAIN_RESOURCEGROUP"
    export DOMAIN_NAME="\$LOCATION.\$PARENT_DOMAIN_NAME"
-   export AZURE_ENVIRONMENT='AzurePublicCloud'
+   export AZURE_ENVIRONMENT="AzurePublicCloud"
    export OIDC_STORAGE_ACCOUNT_NAME="\${RESOURCEGROUP//-}oic"
    EOF
    ```
@@ -461,9 +416,11 @@ each of the bash functions below.
      `eastus`).
 1. Create AzSecPack managed Identity https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/234249/AzSecPack-AutoConfig-UserAssigned-Managed-Identity (required for `deploy_env_dev`)
 1. Enable EncryptionAtHost for subscription.
+
    ```bash
    az feature register --namespace Microsoft.Compute --name EncryptionAtHost 
    ```
+
 1. Create the resource group and deploy the RP resources:
 
    ```bash
@@ -554,16 +511,18 @@ each of the bash functions below.
 1. In pre-production (int, e2e) certain certificates are provisioned via keyvault
    integration. These should be rotated and generated in the keyvault itself:
 
-```
-Vault Name: "$KEYVAULT_PREFIX-svc"
-Certificate: rp-firstparty
-Development value: secrets/firstparty.pem
+   ``` bash
+   Vault Name: "$KEYVAULT_PREFIX-svc"
+   Certificate: rp-firstparty
+   Development value: secrets/firstparty.pem
 
-Vault Name: "$KEYVAULT_PREFIX-svc"
-Certificate: cluster-mdsd
-Development value: secrets/cluster-logging-int.pem
-```
+   Vault Name: "$KEYVAULT_PREFIX-svc"
+   Certificate: cluster-mdsd
+   Development value: secrets/cluster-logging-int.pem
+   ```
+
    > __NOTE:__: in the new tenant OneCert is not available, therefore firstparty and cluster-mdsd are self signed.
+
    ```bash
       az keyvault certificate import \
          --vault-name "$KEYVAULT_PREFIX-svc" \
@@ -588,41 +547,104 @@ Development value: secrets/cluster-logging-int.pem
    vpn_configuration
    ```
 
-## PR E2E Only - Create the global keyvault, ADO Library Variable Group
+## Non-required Shared RP Procedures
+
+Below are non-required Shared RP procedures that might be needed (e.g., only for PR E2E or to rotate old certs).
+
+### Certificate Rotation
+
+This section documents the steps taken to rotate certificates in dev and INT subscriptions
+
+1. Generate new certificates like we did in [AAD application](#aad-applications) and [certificate](#certificates) sections above
+
+1. Import newly generated certificates to keyvault. Note that this does not include firstparty certificates
+
+   ```bash
+   source hack/devtools/deploy-shared-env.sh
+   import_certs_secrets
+   ```
+
+1. Update the Azure VPN Gateway configuration. To do this, go to `Virtual Network Gateways` > `Point-to-site configuration` and the public cert data from `vpn-ca.pem`. Delete the old expired root certificate
+
+1. The OpenVPN configuration file needs to be manually updated. To achieve this, edit the `vpn-<region>.ovpn` file and add the `vpn-client` certificate and private key
+
+1. Next, we need to update certificates owned by FP Service Principal. Current configuration in DEV and INT is listed below. You can get the `AAD APP ID` from the `secrets/env` file
+
+   | Variable               | Certificate Client | Subscription Type | AAD App Name             | Key Vault Name     |
+   | ---------------------- | ------------------ | ----------------- | ------------------------ | ------------------ |
+   | AZURE_FP_CLIENT_ID     | firstparty         | DEV               | aro-v4-fp-shared-dev     | v4-eastus-dev-svc  |
+   | AZURE_ARM_CLIENT_ID    | arm                | DEV               | aro-v4-arm-shared-dev    | v4-eastus-dev-svc  |
+   | AZURE_PORTAL_CLIENT_ID | portal-client      | DEV               | aro-v4-portal-shared-dev | v4-eastus-dev-svc  |
+   | AZURE_FP_CLIENT_ID     | firstparty         | INT               | aro-int-sp               | aro-int-eastus-svc |
+
+   ```bash
+   # Import firstparty.pem to keyvault v4-eastus-svc
+   az keyvault certificate import --vault-name <kv_name>  --name rp-firstparty --file firstparty.pem
+
+   # Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable)
+   az ad app credential reset \
+      --id "$AZURE_ARM_CLIENT_ID" \
+      --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
+
+   az ad app credential reset \
+      --id "$AZURE_FP_CLIENT_ID" \
+      --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
+
+   az ad app credential reset \
+      --id "$AZURE_PORTAL_CLIENT_ID" \
+      --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
+   ```
+
+1. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
+
+1. Run `[rharosecretsdev|e2earosecrets|e2earoclassicsecrets] make secrets-update` to upload it to your
+   storage account so other people on your team can access it via `make secrets`
+
+### Append Resource Group to Subscription Cleaner DenyList
+
+- We have subscription pruning that takes place routinely and need to add our resource group for the shared rp environment to the `denylist` of the cleaner:
+  - [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29)
+
+### PR E2E Only - Create the global keyvault, ADO Library Variable Group
 
 1. Create E2E global keyvault
+
    ```bash
    AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
    ARO_E2E_GLOBAL_VAULT_NAME=<your-global-keyvault>
 
    deploy_aro_e2e_global_keyvault
-   ``` 
+   ```
+
 1. Upload Keyvault Secrets and Certificates
 1. Give List/Get permissions to Azure DevOps Connection SPN
 1. Set up Library Variable group in ADO and connect it to keyvault
 
 ## PR E2E Only - Setup ACR Credentials
+
 Due to cross tenant ACR access, token credentials must be generated for arointsvc
+
 1. Login to MSIT tenant and navigate to arointsvc
+
 1. Under "Repository permissions -> Tokens" add a new token and generate a password
+
 1. Add username and password to json file formatted like below and convert it to base64
-```
-{
-    "username": "<username>",
-    "password": "<Password>"
-}
-```
+
+   ```bash
+   {
+      "username": "<username>",
+      "password": "<Password>"
+   }
+   ```
+
 1. convert to base 64, copy the output and add it to aro-e2e-global keyvault
-```
-cat <my-acr-cred-file>.json | base64 -w0
-```
+
+   ```bash
+   cat <my-acr-cred-file>.json | base64 -w0
+   ```
+
 1. Add the secret to the Libary variable group that is connected to the global keyvault
 
-## PR E2E Only - Add keyvault permissions to aro-v4-e2e-devops-spn
+### PR E2E Only - Add keyvault permissions to aro-v4-e2e-devops-spn
+
 - assign 'Keyvault Secrets User' to aro-v4-e2e-devops-spn
-
-
-## Append Resource Group to Subscription Cleaner DenyList
-
-- We have subscription pruning that takes place routinely and need to add our resource group for the shared rp environment to the `denylist` of the cleaner:
-  - [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29)
