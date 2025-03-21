@@ -1564,7 +1564,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleStorageBlobDataContributor,
 			"parameters('globalDevopsServicePrincipalId')",
-			resourceTypeBlobContainer,
+			fmt.Sprintf("%s/%s/%s", resourceTypeStorageAccount, storageAccountName, resourceTypeBlobContainer),
 			"$web",
 			fmt.Sprintf("concat(%s, '/Microsoft.Authorization/', guid(%s))", storageAccountName, storageAccountName),
 		),
