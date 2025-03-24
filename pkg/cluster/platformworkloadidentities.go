@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
@@ -42,7 +43,7 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 
 		identityDetails, err := m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
 		if err != nil {
-			return fmt.Errorf("error occured when retrieving platform workload identity '%s' details: %w", operatorName, err)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, operatorName, fmt.Sprintf("error occured when retrieving platform workload identity '%s'", operatorName))
 		}
 
 		updatedIdentities[operatorName] = api.PlatformWorkloadIdentity{

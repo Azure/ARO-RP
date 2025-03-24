@@ -120,7 +120,7 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
 					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, fmt.Errorf("some error occurred"))
 			},
-			wantErr: "error occured when retrieving platform workload identity 'foo' details: some error occurred",
+			wantErr: "400: InvalidPlatformWorkloadIdentity: foo: error occured when retrieving platform workload identity 'foo'",
 		},
 		{
 			name: "success - all clientIDs and objectIDs updated in clusterdoc",
