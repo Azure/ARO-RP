@@ -59,17 +59,14 @@ is_priv_namespace(ns) = true {
 exempted_user = {
   "system:kube-controller-manager",
   "system:kube-scheduler",
-  "system:admin" # comment out temporarily for testing in console
+  "system:admin"
 }
 
 exempted_groups = {
   # "system:cluster-admins", # dont allow kube:admin
-  "system:nodes", # eg, "username": "system:node:jeff-test-cluster-pcnp4-master-2"
-  "system:serviceaccounts", # to allow all system service account?
-  # "system:serviceaccounts:openshift-monitoring", # monitoring operator
-  # "system:serviceaccounts:openshift-network-operator", # network operator
-  # "system:serviceaccounts:openshift-machine-config-operator", # machine-config-operator, however the request provide correct sa name
-  "system:masters" # system:admin
+  "system:nodes",
+  "system:serviceaccounts", # allow all system service accounts
+  "system:masters"
 }
 privileged_ns = {
   # Kubernetes specific namespaces
@@ -98,7 +95,6 @@ privileged_ns = {
   "openshift-config-operator",
   "openshift-console",
   "openshift-console-operator",
-  "openshift-console-user-settings",
   "openshift-controller-manager",
   "openshift-controller-manager-operator",
   "openshift-dns",
@@ -121,22 +117,9 @@ privileged_ns = {
   "openshift-multus",
   "openshift-network-operator",
   "openshift-oauth-apiserver",
-  "openshift-operators",
   "openshift-operator-lifecycle-manager",
+  "openshift-ovn-kubernetes",
+  "openshift-sdn",
   "openshift-service-ca",
-  "openshift-service-ca-operator",
-  # "openshift-kube-storage-version-migrator",
-  # "openshift-kube-storage-version-migrator-operator",
-  # "openshift-network-diagnostics",
-  # "openshift-openstack-infra",
-  # "openshift-marketplace",
-  # "openshift-ingress-canary",
-  # "openshift-insights",
-  # "openshift-kni-infra",
-  # "openshift-cluster-csi-drivers",
-  # "openshift-cluster-node-tuning-operator",
-  # "openshift-cluster-samples-operator",
-  # "openshift-config",
-  # "openshift-ovirt-infra",
-  "openshift-sdn"
+  "openshift-service-ca-operator"
 }
