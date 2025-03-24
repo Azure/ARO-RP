@@ -120,7 +120,8 @@
                 "southafricanorth",
                 "northcentralus",
                 "uaenorth",
-                "westus"
+                "westus",
+                "japanwest"
             ]
         },
         "oidcStorageAccountName": {
