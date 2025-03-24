@@ -106,8 +106,8 @@ type Cluster struct {
 
 const GenerateSubnetMaxTries = 100
 const localDefaultURL string = "https://localhost:8443"
-const DefaultMasterVmSize = api.VMSizeStandardD8sV3
-const DefaultWorkerVmSize = api.VMSizeStandardD4sV3
+const DefaultMasterVmSize = api.VMSizeStandardD8sV5
+const DefaultWorkerVmSize = api.VMSizeStandardD4sV5
 const diskCsiRoleMissingPermission = "Microsoft.Compute/diskEncryptionSets/read"
 const diskCsiRoleName = "tmpDiskCsiAdditionalPerm"
 
