@@ -12,6 +12,8 @@ func (g *generator) clusterPredeploy() *arm.Template {
 
 	params := []string{
 		"clusterName",
+		"clusterServicePrincipalId",
+		"fpServicePrincipalId",
 		"ci",
 		"routes",
 		"vnetAddressPrefix",
