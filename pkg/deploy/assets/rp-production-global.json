@@ -132,16 +132,16 @@
         },
         {
             "name": "[concat(parameters('rpVersionStorageAccountName'), '/Microsoft.Authorization/', guid(parameters('rpVersionStorageAccountName')))]",
-            "type": "Microsoft.Storage/storageAccounts/parameters('rpVersionStorageAccountName')/blobServices/containers/providers/roleAssignments",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers/providers/roleAssignments",
             "properties": {
-                "scope": "[resourceId('Microsoft.Storage/storageAccounts/parameters('rpVersionStorageAccountName')/blobServices/containers', $web)]",
+                "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('rpVersionStorageAccountName'), 'default', '$web')]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
                 "principalId": "[parameters('globalDevopsServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts/parameters('rpVersionStorageAccountName')/blobServices/containers', $web)]"
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('rpVersionStorageAccountName'), 'default', '$web')]"
             ]
         }
     ]
