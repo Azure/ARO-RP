@@ -105,6 +105,17 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 	}
 }
 
+func (g *generator) storageAccountBlobContainer(name string, containerProperties *mgmtstorage.ContainerProperties) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtstorage.BlobContainer{
+			Name:                &name,
+			Type:                to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+			ContainerProperties: containerProperties,
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
+	}
+}
+
 func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtnetwork.Subnet, condition interface{}, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetwork{
