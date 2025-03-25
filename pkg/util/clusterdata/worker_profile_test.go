@@ -8,9 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	gocmp "github.com/google/go-cmp/cmp"
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,6 +66,12 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			givenOc: getGivenOc(clusterID),
 		},
 		{
+			name:    "machine set objects exist - invalid provider spec JSON - zone as int",
+			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", validProvSpec()), createMachineSet("fake-worker-profile-2", invalidProvSpecZoneAsInt())),
+			wantOc:  getWantOc(clusterID, validWorkerProfile()),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
 			name:    "machine set objects exist - invalid provider spec JSON",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", invalidProvSpec)),
 			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
@@ -78,6 +86,16 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name:    "machine set objects exist - provider spec is missing raw value",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", noRawProvSpec)),
+			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name: "machine set objects exist - machineset has no ready replicas",
+			client: machinefake.NewSimpleClientset(func() *machinev1beta1.MachineSet {
+				ms := createMachineSet("fake-worker-profile-1", validProvSpec())
+				ms.Status.ReadyReplicas = 0
+				return ms
+			}()),
 			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
@@ -123,7 +141,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			errorHandling.AssertErrorMessage(t, err, tc.wantErr)
 
 			if !reflect.DeepEqual(tc.givenOc, tc.wantOc) {
-				t.Error(cmp.Diff(tc.givenOc, tc.wantOc))
+				t.Error(cmp.Diff(tc.givenOc, tc.wantOc, gocmp.AllowUnexported(sync.Mutex{})))
 			}
 		})
 	}
@@ -147,6 +165,9 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 				},
 			},
 		},
+		Status: machinev1beta1.MachineSetStatus{
+			ReadyReplicas: 1,
+		},
 	}
 }
 
@@ -163,7 +184,30 @@ func validProvSpec() machinev1beta1.ProviderSpec {
     "vmSize": "Standard_D4s_v3",
     "networkResourceGroup": "%s",
     "vnet": "%s",
-    "subnet": "%s"
+    "subnet": "%s",
+    "zone": "1"
+}`,
+				mockVnetRG, mockVnetName, mockSubnetName,
+			)),
+		},
+	}
+}
+
+// This func returns a ProviderSpec object that represents a valid provider-specific configuration for a machine.
+func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
+	return machinev1beta1.ProviderSpec{
+		Value: &kruntime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{
+    "apiVersion": "machine.openshift.io/v1beta1",
+    "kind": "AzureMachineProviderSpec",
+    "osDisk": {
+        "diskSizeGB": 512
+    },
+    "vmSize": "Standard_D4s_v3",
+    "networkResourceGroup": "%s",
+    "vnet": "%s",
+    "subnet": "%s",
+    "zone": 1
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
 			)),
