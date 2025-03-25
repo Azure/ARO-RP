@@ -131,7 +131,7 @@
             ]
         },
         {
-            "name": "[concat(parameters('rpVersionStorageAccountName'), '/Microsoft.Authorization/', guid(parameters('rpVersionStorageAccountName')))]",
+            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/$web/Microsoft.Authorization/', guid(parameters('rpVersionStorageAccountName')))]",
             "type": "Microsoft.Storage/storageAccounts/blobServices/containers/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('rpVersionStorageAccountName'), 'default', '$web')]",
