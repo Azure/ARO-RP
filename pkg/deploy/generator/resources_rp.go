@@ -1566,7 +1566,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			"parameters('globalDevopsServicePrincipalId')",
 			fmt.Sprintf("%s/%s", resourceTypeStorageAccount, resourceTypeBlobContainer),
 			[]string{storageAccountName, "'default'", "'$web'"},
-			fmt.Sprintf("concat(%s, '/Microsoft.Authorization/', guid(%s))", storageAccountName, storageAccountName),
+			fmt.Sprintf("concat(%s, '/default/$web/Microsoft.Authorization/', guid(%s))", storageAccountName, storageAccountName),
 		),
 	}
 }
