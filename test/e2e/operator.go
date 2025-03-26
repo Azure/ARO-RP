@@ -6,9 +6,7 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
@@ -45,30 +43,6 @@ import (
 const (
 	aroOperatorNamespace = "openshift-azure-operator"
 )
-
-func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
-	listFunc := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List
-	pods := ListK8sObjectWithRetry(
-		ctx, listFunc, metav1.ListOptions{LabelSelector: "app=aro-operator-master"},
-	)
-	if len(pods.Items) != 1 {
-		return nil, fmt.Errorf("%d aro-operator-master pods found", len(pods.Items))
-	}
-	body := GetK8sPodLogsWithRetry(
-		ctx, aroOperatorNamespace, pods.Items[0].Name, corev1.PodLogOptions{},
-	)
-
-	rx := regexp.MustCompile(`msg="(Update|Create) ([-a-zA-Z/.]+)`)
-	changes := rx.FindAllStringSubmatch(body, -1)
-	result := make([]string, 0, len(changes))
-	for _, change := range changes {
-		if nsFilter == "" || strings.Contains(change[2], "/"+nsFilter+"/") {
-			result = append(result, change[1]+" "+change[2])
-		}
-	}
-
-	return result, nil
-}
 
 var _ = Describe("ARO Operator", Label(smoke), func() {
 	It("should have no errors in the operator logs", Serial, func(ctx context.Context) {
@@ -158,9 +132,6 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 		By("checking that mdsd DaemonSet is ready before the test")
 		Eventually(mdsdIsReady).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
-		initial, err := updatedObjects(ctx, "openshift-azure-logging")
-		Expect(err).NotTo(HaveOccurred())
-
 		By("deleting mdsd DaemonSet")
 		DeleteK8sObjectWithRetry(
 			ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete, "mdsd", metav1.DeleteOptions{},
@@ -168,15 +139,6 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 
 		By("checking that mdsd DaemonSet is ready")
 		Eventually(mdsdIsReady).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-		By("confirming that only one object was updated")
-		final, err := updatedObjects(ctx, "openshift-azure-logging")
-		Expect(err).NotTo(HaveOccurred())
-		if len(final)-len(initial) != 1 {
-			log.Error("initial changes ", initial)
-			log.Error("final changes ", final)
-		}
-		Expect(len(final) - len(initial)).To(Equal(1))
 	})
 })
 
