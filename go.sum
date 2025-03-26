@@ -162,8 +162,8 @@ github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 h1:Qzk5C6cYgle
 github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01/go.mod h1:9rfv8iPl1ZP7aqh9YA68wnZv2NUDbXdcdPHVz0pFbPY=
 github.com/containers/ocicrypt v1.2.0 h1:X14EgRK3xNFvJEfI5O4Qn4T3E25ANudSOZz/sirVuPM=
 github.com/containers/ocicrypt v1.2.0/go.mod h1:ZNviigQajtdlxIZGibvblVuIFBKIuUI2M0QM12SD31U=
-github.com/containers/podman/v5 v5.2.4 h1:BqqgugaPpxb+O80TTAv/gN9+TFCEBT35t0jp6u2Wkec=
-github.com/containers/podman/v5 v5.2.4/go.mod h1:/zayx9OsnD9GDQ5RjBu+0bx3OLdmPjcXe4igfLdCeWo=
+github.com/containers/podman/v5 v5.3.2 h1:Ra3p0bgG/5GITWZ+iiNzamj9FrAM4Ef75bxI+85q3Sg=
+github.com/containers/podman/v5 v5.3.2/go.mod h1:ambYZUB3ioJWt3SZ9Kg29DyXm5Dy8aFtc7OugGvYGPk=
 github.com/containers/psgo v1.9.0 h1:eJ74jzSaCHnWt26OlKZROSyUyRcGDf+gYBdXnxrMW4g=
 github.com/containers/psgo v1.9.0/go.mod h1:0YoluUm43Mz2UnBIh1P+6V6NWcbpTL5uRtXyOcH0B5A=
 github.com/containers/storage v1.56.1 h1:gDZj/S6Zxus4Xx42X6iNB3ODXuh0qoOdH/BABfrvcKo=
@@ -299,8 +299,8 @@ github.com/go-viper/mapstructure/v2 v2.0.0 h1:dhn8MZ1gZ0mzeodTG3jt5Vj/o87xZKuNAp
 github.com/go-viper/mapstructure/v2 v2.0.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
 github.com/godbus/dbus/v5 v5.0.3/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/godbus/dbus/v5 v5.1.0/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
-github.com/godbus/dbus/v5 v5.1.1-0.20230522191255-76236955d466 h1:sQspH8M4niEijh3PFscJRLDnkL547IeP7kpPe3uUhEg=
-github.com/godbus/dbus/v5 v5.1.1-0.20230522191255-76236955d466/go.mod h1:ZiQxhyQ+bbbfxUKVvjfO498oPYvtYhZzycal3G/NHmU=
+github.com/godbus/dbus/v5 v5.1.1-0.20240921181615-a817f3cc4a9e h1:znsZ+BW06LsAtZwQvY/rgWQ3o1q0mnR4SG4q8HCP+3Q=
+github.com/godbus/dbus/v5 v5.1.1-0.20240921181615-a817f3cc4a9e/go.mod h1:nRJ+j259aT/CW6otoGCHPa1K/lNHLO+UGmW133FNj9s=
 github.com/gofrs/uuid v4.4.0+incompatible h1:3qXRTX8/NbyulANqlc0lchS1gqAVxRgsuW1YrTJupqA=
 github.com/gofrs/uuid v4.4.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
 github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
@@ -397,6 +397,8 @@ github.com/jpillora/backoff v1.0.0 h1:uvFg412JmmHBHw7iwprIxkPMI+sGQ4kzOWsMeHnm2E
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
+github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=
+github.com/kevinburke/ssh_config v1.2.0/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
 github.com/keybase/go-keychain v0.0.0-20231219164618-57a3676c3af6 h1:IsMZxCuZqKuao2vNdfD82fjjgPLfyHLpR41Z88viRWs=
 github.com/keybase/go-keychain v0.0.0-20231219164618-57a3676c3af6/go.mod h1:3VeWNIJaW+O5xpRQbPp0Ybqu1vJd/pm7s2F473HRrkw=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=

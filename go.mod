@@ -28,7 +28,7 @@ require (
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
 	github.com/containers/image/v5 v5.33.1
-	github.com/containers/podman/v5 v5.2.4
+	github.com/containers/podman/v5 v5.3.2
 	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd/v22 v22.5.1-0.20231103132048-7d375ecc2b09
@@ -172,7 +172,7 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.0.0 // indirect
-	github.com/godbus/dbus/v5 v5.1.1-0.20230522191255-76236955d466 // indirect
+	github.com/godbus/dbus/v5 v5.1.1-0.20240921181615-a817f3cc4a9e // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -195,6 +195,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/fs v0.1.0 // indirect
