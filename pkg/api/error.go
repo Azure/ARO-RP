@@ -109,7 +109,6 @@ const (
 	CloudErrorCodePlatformWorkloadIdentityMismatch                           = "PlatformWorkloadIdentityMismatch"
 	CloudErrorCodePlatformWorkloadIdentityContainsInvalidFederatedCredential = "PlatformWorkloadIdentityContainsInvalidCredential"
 	CloudErrorCodeInvalidClusterMSICount                                     = "InvalidClusterMSICount"
-	CloudErrorCodeInvalidPlatformWorkloadIdentity                            = "InvalidPlatformWorkloadIdentity"
 )
 
 // NewCloudError returns a new CloudError

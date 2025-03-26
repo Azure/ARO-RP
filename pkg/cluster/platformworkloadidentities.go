@@ -43,7 +43,7 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 
 		identityDetails, err := m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
 		if err != nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, operatorName, fmt.Sprintf("error occured when retrieving platform workload identity '%s'", operatorName))
+			return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, operatorName, fmt.Sprintf("platform workload identity '%s' not found", operatorName))
 		}
 
 		updatedIdentities[operatorName] = api.PlatformWorkloadIdentity{
