@@ -134,8 +134,8 @@
             "properties": {
                 "metadata": null
             },
-            "name": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('rpVersionStorageAccountName'), 'default', '$web')]",
-            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "name": "default/$web'",
+            "type": "blobServices/containers",
             "apiVersion": "2021-09-01"
         },
         {

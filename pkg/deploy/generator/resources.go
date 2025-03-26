@@ -109,7 +109,7 @@ func (g *generator) storageAccountBlobContainer(name string, containerProperties
 	return &arm.Resource{
 		Resource: &mgmtstorage.BlobContainer{
 			Name:                &name,
-			Type:                to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+			Type:                to.StringPtr("blobServices/containers"),
 			ContainerProperties: containerProperties,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),

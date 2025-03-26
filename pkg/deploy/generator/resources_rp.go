@@ -1537,7 +1537,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			fmt.Sprintf("concat(%s, '/Microsoft.Authorization/', guid(resourceId('%s', %s)))", storageAccountName, resourceTypeStorageAccount, storageAccountName),
 		),
 		g.storageAccountBlobContainer(
-			fmt.Sprintf("[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', %s, 'default', '$web')]", storageAccountName),
+			"default/$web'",
 			&mgmtstorage.ContainerProperties{},
 		),
 		rbac.ResourceRoleAssignmentWithNameAndNestedResources(
