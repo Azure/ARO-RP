@@ -44,10 +44,18 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 		})
 	} else {
 		// Create the noProxy map for efficient lookups
-		no_proxy_list := strings.Split(proxyConfig.Spec.NoProxy, ",")
+		no_proxy_list := strings.Split(proxyConfig.Status.NoProxy, ",")
+		if proxyConfig.Status.NoProxy == "" {
+			mon.emitGauge(cwp, 1, map[string]string{
+				"status":  strconv.FormatBool(true),
+				"Message": "CWP NOT Enabled Successfully. Check the network operator status or review the noProxy items ",
+			})
+			no_proxy_list = strings.Split(proxyConfig.Spec.NoProxy, ",")
+		}
 		noProxyMap := make(map[string]bool)
 		var missing_no_proxy_list []string
 		for _, proxy := range no_proxy_list {
+			proxy = strings.TrimSpace(proxy)
 			noProxyMap[proxy] = true
 		}
 
@@ -105,7 +113,7 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 
 		if res.Properties.AddressPrefix != nil {
 			if !noProxyMap[*res.Properties.AddressPrefix] {
-				missing_no_proxy_list = append(missing_no_proxy_list, "machineCIDR:"+*res.Properties.AddressPrefix)
+				missing_no_proxy_list = append(missing_no_proxy_list, *res.Properties.AddressPrefix)
 			}
 		}
 
@@ -146,12 +154,12 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 		}
 		for _, network := range networkConfig.Spec.ClusterNetwork {
 			if !noProxyMap[network.CIDR] {
-				missing_no_proxy_list = append(missing_no_proxy_list, "PodCIDR:"+network.CIDR)
+				missing_no_proxy_list = append(missing_no_proxy_list, network.CIDR)
 			}
 		}
 		for _, network := range networkConfig.Spec.ServiceNetwork {
 			if !noProxyMap[network] {
-				missing_no_proxy_list = append(missing_no_proxy_list, "ServiceCIDR:"+network)
+				missing_no_proxy_list = append(missing_no_proxy_list, network)
 			}
 		}
 
@@ -164,7 +172,24 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 		for _, gatewayDomain := range clusterdetails.Spec.GatewayDomains {
 			gatewayDomain = strings.ToLower(gatewayDomain)
 			if !noProxyMap[gatewayDomain] {
-				missing_no_proxy_list = append(missing_no_proxy_list, gatewayDomain)
+				parts := strings.Split(gatewayDomain, ".")
+				domainfound := false
+				// Loop until there are at least 3 parts
+				for len(parts) >= 3 {
+					//  skipping the first part of the domain
+					remainingParts := strings.Join(parts[1:], ".")
+					// If remaining parts are found in the noProxyMap, stop checking further
+					if noProxyMap[remainingParts] {
+						domainfound = true
+						break
+					}
+					// Otherwise, remove the first part and continue the check
+					parts = parts[1:]
+				}
+				// If no valid domain was found, add the original domain to the missing list
+				if !domainfound {
+					missing_no_proxy_list = append(missing_no_proxy_list, gatewayDomain)
+				}
 			}
 		}
 		clusterDomain := clusterdetails.Spec.Domain
