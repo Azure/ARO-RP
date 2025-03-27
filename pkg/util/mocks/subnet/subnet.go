@@ -23,6 +23,7 @@ import (
 type MockManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockManagerMockRecorder is the mock recorder for MockManager.
@@ -43,53 +44,54 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // CreateOrUpdate mocks base method.
-func (m *MockManager) CreateOrUpdate(arg0 context.Context, arg1 string, arg2 *network.Subnet) error {
+func (m *MockManager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *network.Subnet) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", ctx, subnetID, subnet)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockManagerMockRecorder) CreateOrUpdate(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) CreateOrUpdate(ctx, subnetID, subnet any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockManager)(nil).CreateOrUpdate), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockManager)(nil).CreateOrUpdate), ctx, subnetID, subnet)
 }
 
 // Get mocks base method.
-func (m *MockManager) Get(arg0 context.Context, arg1 string) (*network.Subnet, error) {
+func (m *MockManager) Get(ctx context.Context, subnetID string) (*network.Subnet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", ctx, subnetID)
 	ret0, _ := ret[0].(*network.Subnet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockManagerMockRecorder) Get(arg0, arg1 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) Get(ctx, subnetID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockManager)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockManager)(nil).Get), ctx, subnetID)
 }
 
 // GetAll mocks base method.
-func (m *MockManager) GetAll(arg0 context.Context, arg1 []string) ([]*network.Subnet, error) {
+func (m *MockManager) GetAll(ctx context.Context, subnetIds []string) ([]*network.Subnet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAll", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetAll", ctx, subnetIds)
 	ret0, _ := ret[0].([]*network.Subnet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAll indicates an expected call of GetAll.
-func (mr *MockManagerMockRecorder) GetAll(arg0, arg1 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) GetAll(ctx, subnetIds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockManager)(nil).GetAll), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockManager)(nil).GetAll), ctx, subnetIds)
 }
 
 // MockKubeManager is a mock of KubeManager interface.
 type MockKubeManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockKubeManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockKubeManagerMockRecorder is the mock recorder for MockKubeManager.
@@ -110,16 +112,16 @@ func (m *MockKubeManager) EXPECT() *MockKubeManagerMockRecorder {
 }
 
 // List mocks base method.
-func (m *MockKubeManager) List(arg0 context.Context) ([]subnet.Subnet, error) {
+func (m *MockKubeManager) List(ctx context.Context) ([]subnet.Subnet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0)
+	ret := m.ctrl.Call(m, "List", ctx)
 	ret0, _ := ret[0].([]subnet.Subnet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockKubeManagerMockRecorder) List(arg0 any) *gomock.Call {
+func (mr *MockKubeManagerMockRecorder) List(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockKubeManager)(nil).List), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockKubeManager)(nil).List), ctx)
 }

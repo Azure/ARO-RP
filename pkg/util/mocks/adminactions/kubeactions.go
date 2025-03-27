@@ -25,6 +25,7 @@ import (
 type MockKubeActions struct {
 	ctrl     *gomock.Controller
 	recorder *MockKubeActionsMockRecorder
+	isgomock struct{}
 }
 
 // MockKubeActionsMockRecorder is the mock recorder for MockKubeActions.

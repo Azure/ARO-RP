@@ -23,6 +23,7 @@ import (
 type MockUserAssignedIdentitiesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockUserAssignedIdentitiesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockUserAssignedIdentitiesClientMockRecorder is the mock recorder for MockUserAssignedIdentitiesClient.

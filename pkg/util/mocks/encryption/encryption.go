@@ -19,6 +19,7 @@ import (
 type MockAEAD struct {
 	ctrl     *gomock.Controller
 	recorder *MockAEADMockRecorder
+	isgomock struct{}
 }
 
 // MockAEADMockRecorder is the mock recorder for MockAEAD.
