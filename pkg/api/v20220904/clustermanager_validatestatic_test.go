@@ -6,11 +6,11 @@ package v20220904
 import (
 	"testing"
 
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	apitesterror "github.com/Azure/ARO-RP/pkg/api/test/error"
 )
 
 var ocmResource = string(`
-{ 
+{
 "apiVersion": "hive.openshift.io/v1",
 "kind": "SyncSet",
 "metadata": {
@@ -73,7 +73,7 @@ func TestStatic(t *testing.T) {
 			c := &clusterManagerStaticValidator{}
 
 			err := c.Static(tt.ocmResource, tt.ocmResourceType)
-			utilerror.AssertErrorMessage(t, err, tt.err)
+			apitesterror.AssertErrorMessage(t, err, tt.err)
 		})
 	}
 }
