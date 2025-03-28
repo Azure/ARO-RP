@@ -5,19 +5,13 @@ package uuid
 
 import (
 	gofrsuuid "github.com/gofrs/uuid"
+
+	apiuuid "github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
-type Generator interface {
-	Generate() string
-}
+var DefaultGenerator apiuuid.Generator = apiuuid.DefaultGenerator
 
-type defaultGenerator struct{}
-
-func (d defaultGenerator) Generate() string {
-	return gofrsuuid.Must(gofrsuuid.DefaultGenerator.NewV4()).String()
-}
-
-var DefaultGenerator Generator = defaultGenerator{}
+type Generator = apiuuid.Generator
 
 func FromString(u string) (gofrsuuid.UUID, error) {
 	return gofrsuuid.FromString(u)
@@ -28,6 +22,5 @@ func MustFromString(u string) gofrsuuid.UUID {
 }
 
 func IsValid(u string) bool {
-	_, err := gofrsuuid.FromString(u)
-	return err == nil
+	return apiuuid.IsValid(u)
 }

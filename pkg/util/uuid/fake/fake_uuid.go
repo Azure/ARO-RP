@@ -6,7 +6,7 @@ package fake
 import (
 	"sync"
 
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	apiuuid "github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
 type fakeGenerator struct {
@@ -15,7 +15,7 @@ type fakeGenerator struct {
 	mu         *sync.Mutex
 }
 
-func NewGenerator(predefinedWords []string) uuid.Generator {
+func NewGenerator(predefinedWords []string) apiuuid.Generator {
 	return &fakeGenerator{
 		words: predefinedWords,
 		mu:    &sync.Mutex{},
