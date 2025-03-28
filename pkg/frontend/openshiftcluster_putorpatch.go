@@ -202,7 +202,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			// OperatorFlagsMergeStrategy==reset will place the default flags in
 			// the external object and then merge in the body's flags when the
 			// request is unmarshaled below.
-			err = admin.OperatorFlagsMergeStrategy(doc.OpenShiftCluster, putOrPatchClusterParameters.body)
+			err = admin.OperatorFlagsMergeStrategy(doc.OpenShiftCluster, putOrPatchClusterParameters.body, operator.DefaultOperatorFlags())
 			if err != nil {
 				// OperatorFlagsMergeStrategy returns CloudErrors
 				return nil, err
