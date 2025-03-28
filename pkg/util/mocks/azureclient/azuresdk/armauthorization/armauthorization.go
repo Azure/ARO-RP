@@ -21,6 +21,7 @@ import (
 type MockRoleDefinitionsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRoleDefinitionsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockRoleDefinitionsClientMockRecorder is the mock recorder for MockRoleDefinitionsClient.
@@ -41,31 +42,31 @@ func (m *MockRoleDefinitionsClient) EXPECT() *MockRoleDefinitionsClientMockRecor
 }
 
 // Get mocks base method.
-func (m *MockRoleDefinitionsClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armauthorization.RoleDefinitionsClientGetOptions) (armauthorization.RoleDefinitionsClientGetResponse, error) {
+func (m *MockRoleDefinitionsClient) Get(ctx context.Context, scope, roleDefinitionID string, options *armauthorization.RoleDefinitionsClientGetOptions) (armauthorization.RoleDefinitionsClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, scope, roleDefinitionID, options)
 	ret0, _ := ret[0].(armauthorization.RoleDefinitionsClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockRoleDefinitionsClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockRoleDefinitionsClientMockRecorder) Get(ctx, scope, roleDefinitionID, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).Get), ctx, scope, roleDefinitionID, options)
 }
 
 // GetByID mocks base method.
-func (m *MockRoleDefinitionsClient) GetByID(arg0 context.Context, arg1 string, arg2 *armauthorization.RoleDefinitionsClientGetByIDOptions) (armauthorization.RoleDefinitionsClientGetByIDResponse, error) {
+func (m *MockRoleDefinitionsClient) GetByID(ctx context.Context, roleID string, options *armauthorization.RoleDefinitionsClientGetByIDOptions) (armauthorization.RoleDefinitionsClientGetByIDResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetByID", ctx, roleID, options)
 	ret0, _ := ret[0].(armauthorization.RoleDefinitionsClientGetByIDResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockRoleDefinitionsClientMockRecorder) GetByID(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockRoleDefinitionsClientMockRecorder) GetByID(ctx, roleID, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).GetByID), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).GetByID), ctx, roleID, options)
 }

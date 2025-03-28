@@ -21,6 +21,7 @@ import (
 type MockTokensClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockTokensClientMockRecorder
+	isgomock struct{}
 }
 
 // MockTokensClientMockRecorder is the mock recorder for MockTokensClient.
@@ -41,52 +42,53 @@ func (m *MockTokensClient) EXPECT() *MockTokensClientMockRecorder {
 }
 
 // CreateAndWait mocks base method.
-func (m *MockTokensClient) CreateAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 containerregistry.Token) error {
+func (m *MockTokensClient) CreateAndWait(ctx context.Context, resourceGroupName, registryName, tokenName string, tokenCreateParameters containerregistry.Token) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "CreateAndWait", ctx, resourceGroupName, registryName, tokenName, tokenCreateParameters)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndWait indicates an expected call of CreateAndWait.
-func (mr *MockTokensClientMockRecorder) CreateAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockTokensClientMockRecorder) CreateAndWait(ctx, resourceGroupName, registryName, tokenName, tokenCreateParameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndWait", reflect.TypeOf((*MockTokensClient)(nil).CreateAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndWait", reflect.TypeOf((*MockTokensClient)(nil).CreateAndWait), ctx, resourceGroupName, registryName, tokenName, tokenCreateParameters)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockTokensClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string) error {
+func (m *MockTokensClient) DeleteAndWait(ctx context.Context, resourceGroupName, registryName, tokenName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, registryName, tokenName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockTokensClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockTokensClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, registryName, tokenName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockTokensClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockTokensClient)(nil).DeleteAndWait), ctx, resourceGroupName, registryName, tokenName)
 }
 
 // GetTokenProperties mocks base method.
-func (m *MockTokensClient) GetTokenProperties(arg0 context.Context, arg1, arg2, arg3 string) (containerregistry.TokenProperties, error) {
+func (m *MockTokensClient) GetTokenProperties(ctx context.Context, resourceGroupName, registryName, tokenName string) (containerregistry.TokenProperties, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTokenProperties", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetTokenProperties", ctx, resourceGroupName, registryName, tokenName)
 	ret0, _ := ret[0].(containerregistry.TokenProperties)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTokenProperties indicates an expected call of GetTokenProperties.
-func (mr *MockTokensClientMockRecorder) GetTokenProperties(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockTokensClientMockRecorder) GetTokenProperties(ctx, resourceGroupName, registryName, tokenName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTokenProperties", reflect.TypeOf((*MockTokensClient)(nil).GetTokenProperties), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTokenProperties", reflect.TypeOf((*MockTokensClient)(nil).GetTokenProperties), ctx, resourceGroupName, registryName, tokenName)
 }
 
 // MockRegistriesClient is a mock of RegistriesClient interface.
 type MockRegistriesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRegistriesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockRegistriesClientMockRecorder is the mock recorder for MockRegistriesClient.
@@ -107,16 +109,16 @@ func (m *MockRegistriesClient) EXPECT() *MockRegistriesClientMockRecorder {
 }
 
 // GenerateCredentials mocks base method.
-func (m *MockRegistriesClient) GenerateCredentials(arg0 context.Context, arg1, arg2 string, arg3 containerregistry.GenerateCredentialsParameters) (containerregistry.GenerateCredentialsResult, error) {
+func (m *MockRegistriesClient) GenerateCredentials(ctx context.Context, resourceGroupName, registryName string, generateCredentialsParameters containerregistry.GenerateCredentialsParameters) (containerregistry.GenerateCredentialsResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateCredentials", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GenerateCredentials", ctx, resourceGroupName, registryName, generateCredentialsParameters)
 	ret0, _ := ret[0].(containerregistry.GenerateCredentialsResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GenerateCredentials indicates an expected call of GenerateCredentials.
-func (mr *MockRegistriesClientMockRecorder) GenerateCredentials(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockRegistriesClientMockRecorder) GenerateCredentials(ctx, resourceGroupName, registryName, generateCredentialsParameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCredentials", reflect.TypeOf((*MockRegistriesClient)(nil).GenerateCredentials), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCredentials", reflect.TypeOf((*MockRegistriesClient)(nil).GenerateCredentials), ctx, resourceGroupName, registryName, generateCredentialsParameters)
 }

@@ -20,6 +20,7 @@ import (
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -40,15 +41,15 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // RemoveFailedNewScaleset mocks base method.
-func (m *MockInterface) RemoveFailedNewScaleset(arg0 context.Context, arg1, arg2 string) bool {
+func (m *MockInterface) RemoveFailedNewScaleset(ctx context.Context, rgName, vmssToDelete string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveFailedNewScaleset", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "RemoveFailedNewScaleset", ctx, rgName, vmssToDelete)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // RemoveFailedNewScaleset indicates an expected call of RemoveFailedNewScaleset.
-func (mr *MockInterfaceMockRecorder) RemoveFailedNewScaleset(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) RemoveFailedNewScaleset(ctx, rgName, vmssToDelete any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFailedNewScaleset", reflect.TypeOf((*MockInterface)(nil).RemoveFailedNewScaleset), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFailedNewScaleset", reflect.TypeOf((*MockInterface)(nil).RemoveFailedNewScaleset), ctx, rgName, vmssToDelete)
 }

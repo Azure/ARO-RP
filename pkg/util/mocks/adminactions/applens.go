@@ -20,6 +20,7 @@ import (
 type MockAppLensActions struct {
 	ctrl     *gomock.Controller
 	recorder *MockAppLensActionsMockRecorder
+	isgomock struct{}
 }
 
 // MockAppLensActionsMockRecorder is the mock recorder for MockAppLensActions.

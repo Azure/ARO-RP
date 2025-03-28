@@ -23,6 +23,7 @@ import (
 type MockManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockManagerMockRecorder is the mock recorder for MockManager.
@@ -43,16 +44,16 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // BlobService mocks base method.
-func (m *MockManager) BlobService(arg0 context.Context, arg1, arg2 string, arg3 armstorage.Permissions, arg4 armstorage.SignedResourceTypes) (azblob.BlobsClient, error) {
+func (m *MockManager) BlobService(ctx context.Context, resourceGroup, account string, p armstorage.Permissions, r armstorage.SignedResourceTypes) (azblob.BlobsClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlobService", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "BlobService", ctx, resourceGroup, account, p, r)
 	ret0, _ := ret[0].(azblob.BlobsClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BlobService indicates an expected call of BlobService.
-func (mr *MockManagerMockRecorder) BlobService(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) BlobService(ctx, resourceGroup, account, p, r any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlobService", reflect.TypeOf((*MockManager)(nil).BlobService), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlobService", reflect.TypeOf((*MockManager)(nil).BlobService), ctx, resourceGroup, account, p, r)
 }

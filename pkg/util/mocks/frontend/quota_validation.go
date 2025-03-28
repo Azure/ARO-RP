@@ -24,6 +24,7 @@ import (
 type MockQuotaValidator struct {
 	ctrl     *gomock.Controller
 	recorder *MockQuotaValidatorMockRecorder
+	isgomock struct{}
 }
 
 // MockQuotaValidatorMockRecorder is the mock recorder for MockQuotaValidator.

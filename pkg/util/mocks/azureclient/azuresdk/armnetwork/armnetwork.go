@@ -21,6 +21,7 @@ import (
 type MockFlowLogsClientInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockFlowLogsClientInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockFlowLogsClientInterfaceMockRecorder is the mock recorder for MockFlowLogsClientInterface.
@@ -41,52 +42,53 @@ func (m *MockFlowLogsClientInterface) EXPECT() *MockFlowLogsClientInterfaceMockR
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockFlowLogsClientInterface) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 armnetwork.FlowLog, arg5 *armnetwork.FlowLogsClientBeginCreateOrUpdateOptions) error {
+func (m *MockFlowLogsClientInterface) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, networkWatcherName, flowLogName string, parameters armnetwork.FlowLog, options *armnetwork.FlowLogsClientBeginCreateOrUpdateOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, networkWatcherName, flowLogName, parameters, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockFlowLogsClientInterfaceMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockFlowLogsClientInterfaceMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, networkWatcherName, flowLogName, parameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockFlowLogsClientInterface)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockFlowLogsClientInterface)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, networkWatcherName, flowLogName, parameters, options)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockFlowLogsClientInterface) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 *armnetwork.FlowLogsClientBeginDeleteOptions) error {
+func (m *MockFlowLogsClientInterface) DeleteAndWait(ctx context.Context, resourceGroupName, networkWatcherName, flowLogName string, options *armnetwork.FlowLogsClientBeginDeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, networkWatcherName, flowLogName, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockFlowLogsClientInterfaceMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockFlowLogsClientInterfaceMockRecorder) DeleteAndWait(ctx, resourceGroupName, networkWatcherName, flowLogName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockFlowLogsClientInterface)(nil).DeleteAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockFlowLogsClientInterface)(nil).DeleteAndWait), ctx, resourceGroupName, networkWatcherName, flowLogName, options)
 }
 
 // Get mocks base method.
-func (m *MockFlowLogsClientInterface) Get(arg0 context.Context, arg1, arg2, arg3 string, arg4 *armnetwork.FlowLogsClientGetOptions) (armnetwork.FlowLogsClientGetResponse, error) {
+func (m *MockFlowLogsClientInterface) Get(ctx context.Context, resourceGroupName, networkWatcherName, flowLogName string, options *armnetwork.FlowLogsClientGetOptions) (armnetwork.FlowLogsClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, networkWatcherName, flowLogName, options)
 	ret0, _ := ret[0].(armnetwork.FlowLogsClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockFlowLogsClientInterfaceMockRecorder) Get(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockFlowLogsClientInterfaceMockRecorder) Get(ctx, resourceGroupName, networkWatcherName, flowLogName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockFlowLogsClientInterface)(nil).Get), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockFlowLogsClientInterface)(nil).Get), ctx, resourceGroupName, networkWatcherName, flowLogName, options)
 }
 
 // MockInterfacesClient is a mock of InterfacesClient interface.
 type MockInterfacesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfacesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfacesClientMockRecorder is the mock recorder for MockInterfacesClient.
@@ -107,52 +109,53 @@ func (m *MockInterfacesClient) EXPECT() *MockInterfacesClientMockRecorder {
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockInterfacesClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 armnetwork.Interface, arg4 *armnetwork.InterfacesClientBeginCreateOrUpdateOptions) error {
+func (m *MockInterfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, networkInterfaceName string, parameters armnetwork.Interface, options *armnetwork.InterfacesClientBeginCreateOrUpdateOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, networkInterfaceName, parameters, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockInterfacesClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockInterfacesClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, networkInterfaceName, parameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockInterfacesClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockInterfacesClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, networkInterfaceName, parameters, options)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockInterfacesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.InterfacesClientBeginDeleteOptions) error {
+func (m *MockInterfacesClient) DeleteAndWait(ctx context.Context, resourceGroupName, networkInterfaceName string, options *armnetwork.InterfacesClientBeginDeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, networkInterfaceName, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockInterfacesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockInterfacesClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, networkInterfaceName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockInterfacesClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockInterfacesClient)(nil).DeleteAndWait), ctx, resourceGroupName, networkInterfaceName, options)
 }
 
 // Get mocks base method.
-func (m *MockInterfacesClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.InterfacesClientGetOptions) (armnetwork.InterfacesClientGetResponse, error) {
+func (m *MockInterfacesClient) Get(ctx context.Context, resourceGroupName, networkInterfaceName string, options *armnetwork.InterfacesClientGetOptions) (armnetwork.InterfacesClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, networkInterfaceName, options)
 	ret0, _ := ret[0].(armnetwork.InterfacesClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockInterfacesClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockInterfacesClientMockRecorder) Get(ctx, resourceGroupName, networkInterfaceName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterfacesClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterfacesClient)(nil).Get), ctx, resourceGroupName, networkInterfaceName, options)
 }
 
 // MockLoadBalancersClient is a mock of LoadBalancersClient interface.
 type MockLoadBalancersClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLoadBalancersClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLoadBalancersClientMockRecorder is the mock recorder for MockLoadBalancersClient.
@@ -173,38 +176,39 @@ func (m *MockLoadBalancersClient) EXPECT() *MockLoadBalancersClientMockRecorder 
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockLoadBalancersClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 armnetwork.LoadBalancer, arg4 *armnetwork.LoadBalancersClientBeginCreateOrUpdateOptions) error {
+func (m *MockLoadBalancersClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, loadBalancerName string, parameters armnetwork.LoadBalancer, options *armnetwork.LoadBalancersClientBeginCreateOrUpdateOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, loadBalancerName, parameters, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockLoadBalancersClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockLoadBalancersClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, loadBalancerName, parameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockLoadBalancersClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockLoadBalancersClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, loadBalancerName, parameters, options)
 }
 
 // Get mocks base method.
-func (m *MockLoadBalancersClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.LoadBalancersClientGetOptions) (armnetwork.LoadBalancersClientGetResponse, error) {
+func (m *MockLoadBalancersClient) Get(ctx context.Context, resourceGroupName, loadBalancerName string, options *armnetwork.LoadBalancersClientGetOptions) (armnetwork.LoadBalancersClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, loadBalancerName, options)
 	ret0, _ := ret[0].(armnetwork.LoadBalancersClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockLoadBalancersClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockLoadBalancersClientMockRecorder) Get(ctx, resourceGroupName, loadBalancerName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockLoadBalancersClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockLoadBalancersClient)(nil).Get), ctx, resourceGroupName, loadBalancerName, options)
 }
 
 // MockLoadBalancerBackendAddressPoolsClient is a mock of LoadBalancerBackendAddressPoolsClient interface.
 type MockLoadBalancerBackendAddressPoolsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLoadBalancerBackendAddressPoolsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLoadBalancerBackendAddressPoolsClientMockRecorder is the mock recorder for MockLoadBalancerBackendAddressPoolsClient.
@@ -225,24 +229,25 @@ func (m *MockLoadBalancerBackendAddressPoolsClient) EXPECT() *MockLoadBalancerBa
 }
 
 // Get mocks base method.
-func (m *MockLoadBalancerBackendAddressPoolsClient) Get(arg0 context.Context, arg1, arg2, arg3 string, arg4 *armnetwork.LoadBalancerBackendAddressPoolsClientGetOptions) (armnetwork.LoadBalancerBackendAddressPoolsClientGetResponse, error) {
+func (m *MockLoadBalancerBackendAddressPoolsClient) Get(ctx context.Context, resourceGroupName, loadBalancerName, backendAddressPoolName string, options *armnetwork.LoadBalancerBackendAddressPoolsClientGetOptions) (armnetwork.LoadBalancerBackendAddressPoolsClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, loadBalancerName, backendAddressPoolName, options)
 	ret0, _ := ret[0].(armnetwork.LoadBalancerBackendAddressPoolsClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockLoadBalancerBackendAddressPoolsClientMockRecorder) Get(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockLoadBalancerBackendAddressPoolsClientMockRecorder) Get(ctx, resourceGroupName, loadBalancerName, backendAddressPoolName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockLoadBalancerBackendAddressPoolsClient)(nil).Get), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockLoadBalancerBackendAddressPoolsClient)(nil).Get), ctx, resourceGroupName, loadBalancerName, backendAddressPoolName, options)
 }
 
 // MockPrivateEndpointsClient is a mock of PrivateEndpointsClient interface.
 type MockPrivateEndpointsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockPrivateEndpointsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockPrivateEndpointsClientMockRecorder is the mock recorder for MockPrivateEndpointsClient.
@@ -263,52 +268,53 @@ func (m *MockPrivateEndpointsClient) EXPECT() *MockPrivateEndpointsClientMockRec
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockPrivateEndpointsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 armnetwork.PrivateEndpoint, arg4 *armnetwork.PrivateEndpointsClientBeginCreateOrUpdateOptions) error {
+func (m *MockPrivateEndpointsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, privateEndpointName string, parameters armnetwork.PrivateEndpoint, options *armnetwork.PrivateEndpointsClientBeginCreateOrUpdateOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, privateEndpointName, parameters, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockPrivateEndpointsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockPrivateEndpointsClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, privateEndpointName, parameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockPrivateEndpointsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockPrivateEndpointsClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, privateEndpointName, parameters, options)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockPrivateEndpointsClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.PrivateEndpointsClientBeginDeleteOptions) error {
+func (m *MockPrivateEndpointsClient) DeleteAndWait(ctx context.Context, resourceGroupName, publicIPAddressName string, options *armnetwork.PrivateEndpointsClientBeginDeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, publicIPAddressName, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockPrivateEndpointsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockPrivateEndpointsClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, publicIPAddressName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockPrivateEndpointsClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockPrivateEndpointsClient)(nil).DeleteAndWait), ctx, resourceGroupName, publicIPAddressName, options)
 }
 
 // Get mocks base method.
-func (m *MockPrivateEndpointsClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.PrivateEndpointsClientGetOptions) (armnetwork.PrivateEndpointsClientGetResponse, error) {
+func (m *MockPrivateEndpointsClient) Get(ctx context.Context, resourceGroupName, privateEndpointName string, options *armnetwork.PrivateEndpointsClientGetOptions) (armnetwork.PrivateEndpointsClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, privateEndpointName, options)
 	ret0, _ := ret[0].(armnetwork.PrivateEndpointsClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockPrivateEndpointsClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockPrivateEndpointsClientMockRecorder) Get(ctx, resourceGroupName, privateEndpointName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPrivateEndpointsClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPrivateEndpointsClient)(nil).Get), ctx, resourceGroupName, privateEndpointName, options)
 }
 
 // MockPrivateLinkServicesClient is a mock of PrivateLinkServicesClient interface.
 type MockPrivateLinkServicesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockPrivateLinkServicesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockPrivateLinkServicesClientMockRecorder is the mock recorder for MockPrivateLinkServicesClient.
@@ -329,68 +335,69 @@ func (m *MockPrivateLinkServicesClient) EXPECT() *MockPrivateLinkServicesClientM
 }
 
 // DeletePrivateEndpointConnectionAndWait mocks base method.
-func (m *MockPrivateLinkServicesClient) DeletePrivateEndpointConnectionAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 *armnetwork.PrivateLinkServicesClientBeginDeletePrivateEndpointConnectionOptions) error {
+func (m *MockPrivateLinkServicesClient) DeletePrivateEndpointConnectionAndWait(ctx context.Context, resourceGroupName, serviceName, peConnectionName string, options *armnetwork.PrivateLinkServicesClientBeginDeletePrivateEndpointConnectionOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePrivateEndpointConnectionAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "DeletePrivateEndpointConnectionAndWait", ctx, resourceGroupName, serviceName, peConnectionName, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeletePrivateEndpointConnectionAndWait indicates an expected call of DeletePrivateEndpointConnectionAndWait.
-func (mr *MockPrivateLinkServicesClientMockRecorder) DeletePrivateEndpointConnectionAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockPrivateLinkServicesClientMockRecorder) DeletePrivateEndpointConnectionAndWait(ctx, resourceGroupName, serviceName, peConnectionName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePrivateEndpointConnectionAndWait", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).DeletePrivateEndpointConnectionAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePrivateEndpointConnectionAndWait", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).DeletePrivateEndpointConnectionAndWait), ctx, resourceGroupName, serviceName, peConnectionName, options)
 }
 
 // Get mocks base method.
-func (m *MockPrivateLinkServicesClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.PrivateLinkServicesClientGetOptions) (armnetwork.PrivateLinkServicesClientGetResponse, error) {
+func (m *MockPrivateLinkServicesClient) Get(ctx context.Context, resourceGroupName, serviceName string, options *armnetwork.PrivateLinkServicesClientGetOptions) (armnetwork.PrivateLinkServicesClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, serviceName, options)
 	ret0, _ := ret[0].(armnetwork.PrivateLinkServicesClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockPrivateLinkServicesClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockPrivateLinkServicesClientMockRecorder) Get(ctx, resourceGroupName, serviceName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).Get), ctx, resourceGroupName, serviceName, options)
 }
 
 // List mocks base method.
-func (m *MockPrivateLinkServicesClient) List(arg0 context.Context, arg1 string, arg2 *armnetwork.PrivateLinkServicesClientListOptions) ([]*armnetwork.PrivateLinkService, error) {
+func (m *MockPrivateLinkServicesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.PrivateLinkServicesClientListOptions) ([]*armnetwork.PrivateLinkService, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, options)
 	ret0, _ := ret[0].([]*armnetwork.PrivateLinkService)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockPrivateLinkServicesClientMockRecorder) List(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPrivateLinkServicesClientMockRecorder) List(ctx, resourceGroupName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).List), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).List), ctx, resourceGroupName, options)
 }
 
 // UpdatePrivateEndpointConnection mocks base method.
-func (m *MockPrivateLinkServicesClient) UpdatePrivateEndpointConnection(arg0 context.Context, arg1, arg2, arg3 string, arg4 armnetwork.PrivateEndpointConnection, arg5 *armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionOptions) (armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionResponse, error) {
+func (m *MockPrivateLinkServicesClient) UpdatePrivateEndpointConnection(ctx context.Context, resourceGroupName, serviceName, peConnectionName string, parameters armnetwork.PrivateEndpointConnection, options *armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionOptions) (armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdatePrivateEndpointConnection", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "UpdatePrivateEndpointConnection", ctx, resourceGroupName, serviceName, peConnectionName, parameters, options)
 	ret0, _ := ret[0].(armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdatePrivateEndpointConnection indicates an expected call of UpdatePrivateEndpointConnection.
-func (mr *MockPrivateLinkServicesClientMockRecorder) UpdatePrivateEndpointConnection(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockPrivateLinkServicesClientMockRecorder) UpdatePrivateEndpointConnection(ctx, resourceGroupName, serviceName, peConnectionName, parameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePrivateEndpointConnection", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).UpdatePrivateEndpointConnection), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePrivateEndpointConnection", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).UpdatePrivateEndpointConnection), ctx, resourceGroupName, serviceName, peConnectionName, parameters, options)
 }
 
 // MockPublicIPAddressesClient is a mock of PublicIPAddressesClient interface.
 type MockPublicIPAddressesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockPublicIPAddressesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockPublicIPAddressesClientMockRecorder is the mock recorder for MockPublicIPAddressesClient.
@@ -411,67 +418,68 @@ func (m *MockPublicIPAddressesClient) EXPECT() *MockPublicIPAddressesClientMockR
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockPublicIPAddressesClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 armnetwork.PublicIPAddress, arg4 *armnetwork.PublicIPAddressesClientBeginCreateOrUpdateOptions) error {
+func (m *MockPublicIPAddressesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, publicIPAddressName string, parameters armnetwork.PublicIPAddress, options *armnetwork.PublicIPAddressesClientBeginCreateOrUpdateOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, publicIPAddressName, parameters, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockPublicIPAddressesClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockPublicIPAddressesClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, publicIPAddressName, parameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, publicIPAddressName, parameters, options)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockPublicIPAddressesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.PublicIPAddressesClientBeginDeleteOptions) error {
+func (m *MockPublicIPAddressesClient) DeleteAndWait(ctx context.Context, resourceGroupName, publicIPAddressName string, options *armnetwork.PublicIPAddressesClientBeginDeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, publicIPAddressName, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockPublicIPAddressesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockPublicIPAddressesClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, publicIPAddressName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).DeleteAndWait), ctx, resourceGroupName, publicIPAddressName, options)
 }
 
 // Get mocks base method.
-func (m *MockPublicIPAddressesClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.PublicIPAddressesClientGetOptions) (armnetwork.PublicIPAddressesClientGetResponse, error) {
+func (m *MockPublicIPAddressesClient) Get(ctx context.Context, resourceGroupName, publicIPAddressName string, options *armnetwork.PublicIPAddressesClientGetOptions) (armnetwork.PublicIPAddressesClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, publicIPAddressName, options)
 	ret0, _ := ret[0].(armnetwork.PublicIPAddressesClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockPublicIPAddressesClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockPublicIPAddressesClientMockRecorder) Get(ctx, resourceGroupName, publicIPAddressName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).Get), ctx, resourceGroupName, publicIPAddressName, options)
 }
 
 // List mocks base method.
-func (m *MockPublicIPAddressesClient) List(arg0 context.Context, arg1 string, arg2 *armnetwork.PublicIPAddressesClientListOptions) ([]*armnetwork.PublicIPAddress, error) {
+func (m *MockPublicIPAddressesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.PublicIPAddressesClientListOptions) ([]*armnetwork.PublicIPAddress, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, options)
 	ret0, _ := ret[0].([]*armnetwork.PublicIPAddress)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockPublicIPAddressesClientMockRecorder) List(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPublicIPAddressesClientMockRecorder) List(ctx, resourceGroupName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).List), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).List), ctx, resourceGroupName, options)
 }
 
 // MockRouteTablesClient is a mock of RouteTablesClient interface.
 type MockRouteTablesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRouteTablesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockRouteTablesClientMockRecorder is the mock recorder for MockRouteTablesClient.
@@ -492,38 +500,39 @@ func (m *MockRouteTablesClient) EXPECT() *MockRouteTablesClientMockRecorder {
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockRouteTablesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.RouteTablesClientBeginDeleteOptions) error {
+func (m *MockRouteTablesClient) DeleteAndWait(ctx context.Context, resourceGroupName, routeTableName string, options *armnetwork.RouteTablesClientBeginDeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, routeTableName, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockRouteTablesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockRouteTablesClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, routeTableName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockRouteTablesClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockRouteTablesClient)(nil).DeleteAndWait), ctx, resourceGroupName, routeTableName, options)
 }
 
 // Get mocks base method.
-func (m *MockRouteTablesClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.RouteTablesClientGetOptions) (armnetwork.RouteTablesClientGetResponse, error) {
+func (m *MockRouteTablesClient) Get(ctx context.Context, resourceGroupName, routeTableName string, options *armnetwork.RouteTablesClientGetOptions) (armnetwork.RouteTablesClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, routeTableName, options)
 	ret0, _ := ret[0].(armnetwork.RouteTablesClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockRouteTablesClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockRouteTablesClientMockRecorder) Get(ctx, resourceGroupName, routeTableName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRouteTablesClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRouteTablesClient)(nil).Get), ctx, resourceGroupName, routeTableName, options)
 }
 
 // MockSecurityGroupsClient is a mock of SecurityGroupsClient interface.
 type MockSecurityGroupsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockSecurityGroupsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockSecurityGroupsClientMockRecorder is the mock recorder for MockSecurityGroupsClient.
@@ -544,67 +553,68 @@ func (m *MockSecurityGroupsClient) EXPECT() *MockSecurityGroupsClientMockRecorde
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockSecurityGroupsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 armnetwork.SecurityGroup, arg4 *armnetwork.SecurityGroupsClientBeginCreateOrUpdateOptions) error {
+func (m *MockSecurityGroupsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, networkSecurityGroupName string, parameters armnetwork.SecurityGroup, options *armnetwork.SecurityGroupsClientBeginCreateOrUpdateOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, networkSecurityGroupName, parameters, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockSecurityGroupsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockSecurityGroupsClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, networkSecurityGroupName, parameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSecurityGroupsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSecurityGroupsClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, networkSecurityGroupName, parameters, options)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockSecurityGroupsClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.SecurityGroupsClientBeginDeleteOptions) error {
+func (m *MockSecurityGroupsClient) DeleteAndWait(ctx context.Context, resourceGroupName, networkSecurityGroupName string, options *armnetwork.SecurityGroupsClientBeginDeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, networkSecurityGroupName, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockSecurityGroupsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockSecurityGroupsClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, networkSecurityGroupName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockSecurityGroupsClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockSecurityGroupsClient)(nil).DeleteAndWait), ctx, resourceGroupName, networkSecurityGroupName, options)
 }
 
 // Get mocks base method.
-func (m *MockSecurityGroupsClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.SecurityGroupsClientGetOptions) (armnetwork.SecurityGroupsClientGetResponse, error) {
+func (m *MockSecurityGroupsClient) Get(ctx context.Context, resourceGroupName, networkSecurityGroupName string, options *armnetwork.SecurityGroupsClientGetOptions) (armnetwork.SecurityGroupsClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, networkSecurityGroupName, options)
 	ret0, _ := ret[0].(armnetwork.SecurityGroupsClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockSecurityGroupsClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockSecurityGroupsClientMockRecorder) Get(ctx, resourceGroupName, networkSecurityGroupName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSecurityGroupsClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSecurityGroupsClient)(nil).Get), ctx, resourceGroupName, networkSecurityGroupName, options)
 }
 
 // List mocks base method.
-func (m *MockSecurityGroupsClient) List(arg0 context.Context, arg1 string, arg2 *armnetwork.SecurityGroupsClientListOptions) ([]*armnetwork.SecurityGroup, error) {
+func (m *MockSecurityGroupsClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.SecurityGroupsClientListOptions) ([]*armnetwork.SecurityGroup, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, options)
 	ret0, _ := ret[0].([]*armnetwork.SecurityGroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockSecurityGroupsClientMockRecorder) List(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockSecurityGroupsClientMockRecorder) List(ctx, resourceGroupName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSecurityGroupsClient)(nil).List), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSecurityGroupsClient)(nil).List), ctx, resourceGroupName, options)
 }
 
 // MockSubnetsClient is a mock of SubnetsClient interface.
 type MockSubnetsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockSubnetsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockSubnetsClientMockRecorder is the mock recorder for MockSubnetsClient.
@@ -625,67 +635,68 @@ func (m *MockSubnetsClient) EXPECT() *MockSubnetsClientMockRecorder {
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockSubnetsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 armnetwork.Subnet, arg5 *armnetwork.SubnetsClientBeginCreateOrUpdateOptions) error {
+func (m *MockSubnetsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, subnetParameters armnetwork.Subnet, options *armnetwork.SubnetsClientBeginCreateOrUpdateOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, virtualNetworkName, subnetName, subnetParameters, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockSubnetsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockSubnetsClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, virtualNetworkName, subnetName, subnetParameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSubnetsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSubnetsClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, virtualNetworkName, subnetName, subnetParameters, options)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockSubnetsClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 *armnetwork.SubnetsClientBeginDeleteOptions) error {
+func (m *MockSubnetsClient) DeleteAndWait(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, options *armnetwork.SubnetsClientBeginDeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, virtualNetworkName, subnetName, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockSubnetsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockSubnetsClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, virtualNetworkName, subnetName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockSubnetsClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockSubnetsClient)(nil).DeleteAndWait), ctx, resourceGroupName, virtualNetworkName, subnetName, options)
 }
 
 // Get mocks base method.
-func (m *MockSubnetsClient) Get(arg0 context.Context, arg1, arg2, arg3 string, arg4 *armnetwork.SubnetsClientGetOptions) (armnetwork.SubnetsClientGetResponse, error) {
+func (m *MockSubnetsClient) Get(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, options *armnetwork.SubnetsClientGetOptions) (armnetwork.SubnetsClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, virtualNetworkName, subnetName, options)
 	ret0, _ := ret[0].(armnetwork.SubnetsClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockSubnetsClientMockRecorder) Get(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockSubnetsClientMockRecorder) Get(ctx, resourceGroupName, virtualNetworkName, subnetName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSubnetsClient)(nil).Get), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSubnetsClient)(nil).Get), ctx, resourceGroupName, virtualNetworkName, subnetName, options)
 }
 
 // List mocks base method.
-func (m *MockSubnetsClient) List(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.SubnetsClientListOptions) ([]*armnetwork.Subnet, error) {
+func (m *MockSubnetsClient) List(ctx context.Context, resourceGroupName, virtualNetworkName string, options *armnetwork.SubnetsClientListOptions) ([]*armnetwork.Subnet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, virtualNetworkName, options)
 	ret0, _ := ret[0].([]*armnetwork.Subnet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockSubnetsClientMockRecorder) List(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockSubnetsClientMockRecorder) List(ctx, resourceGroupName, virtualNetworkName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSubnetsClient)(nil).List), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSubnetsClient)(nil).List), ctx, resourceGroupName, virtualNetworkName, options)
 }
 
 // MockUsagesClient is a mock of UsagesClient interface.
 type MockUsagesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockUsagesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockUsagesClientMockRecorder is the mock recorder for MockUsagesClient.
@@ -706,24 +717,25 @@ func (m *MockUsagesClient) EXPECT() *MockUsagesClientMockRecorder {
 }
 
 // List mocks base method.
-func (m *MockUsagesClient) List(arg0 context.Context, arg1 string, arg2 *armnetwork.UsagesClientListOptions) ([]*armnetwork.Usage, error) {
+func (m *MockUsagesClient) List(ctx context.Context, location string, options *armnetwork.UsagesClientListOptions) ([]*armnetwork.Usage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "List", ctx, location, options)
 	ret0, _ := ret[0].([]*armnetwork.Usage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockUsagesClientMockRecorder) List(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockUsagesClientMockRecorder) List(ctx, location, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockUsagesClient)(nil).List), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockUsagesClient)(nil).List), ctx, location, options)
 }
 
 // MockVirtualNetworksClient is a mock of VirtualNetworksClient interface.
 type MockVirtualNetworksClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockVirtualNetworksClientMockRecorder
+	isgomock struct{}
 }
 
 // MockVirtualNetworksClientMockRecorder is the mock recorder for MockVirtualNetworksClient.
@@ -744,16 +756,16 @@ func (m *MockVirtualNetworksClient) EXPECT() *MockVirtualNetworksClientMockRecor
 }
 
 // Get mocks base method.
-func (m *MockVirtualNetworksClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armnetwork.VirtualNetworksClientGetOptions) (armnetwork.VirtualNetworksClientGetResponse, error) {
+func (m *MockVirtualNetworksClient) Get(ctx context.Context, resourceGroupName, virtualNetworkName string, options *armnetwork.VirtualNetworksClientGetOptions) (armnetwork.VirtualNetworksClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, virtualNetworkName, options)
 	ret0, _ := ret[0].(armnetwork.VirtualNetworksClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockVirtualNetworksClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockVirtualNetworksClientMockRecorder) Get(ctx, resourceGroupName, virtualNetworkName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualNetworksClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualNetworksClient)(nil).Get), ctx, resourceGroupName, virtualNetworkName, options)
 }

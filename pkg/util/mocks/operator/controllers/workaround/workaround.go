@@ -23,6 +23,7 @@ import (
 type MockWorkaround struct {
 	ctrl     *gomock.Controller
 	recorder *MockWorkaroundMockRecorder
+	isgomock struct{}
 }
 
 // MockWorkaroundMockRecorder is the mock recorder for MockWorkaround.
@@ -57,17 +58,17 @@ func (mr *MockWorkaroundMockRecorder) Ensure(arg0 any) *gomock.Call {
 }
 
 // IsRequired mocks base method.
-func (m *MockWorkaround) IsRequired(arg0 *version.Version, arg1 *v1alpha1.Cluster) bool {
+func (m *MockWorkaround) IsRequired(clusterVersion *version.Version, cluster *v1alpha1.Cluster) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsRequired", arg0, arg1)
+	ret := m.ctrl.Call(m, "IsRequired", clusterVersion, cluster)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsRequired indicates an expected call of IsRequired.
-func (mr *MockWorkaroundMockRecorder) IsRequired(arg0, arg1 any) *gomock.Call {
+func (mr *MockWorkaroundMockRecorder) IsRequired(clusterVersion, cluster any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRequired", reflect.TypeOf((*MockWorkaround)(nil).IsRequired), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRequired", reflect.TypeOf((*MockWorkaround)(nil).IsRequired), clusterVersion, cluster)
 }
 
 // Name mocks base method.

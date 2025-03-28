@@ -26,6 +26,7 @@ import (
 type MockServicePrincipalValidator struct {
 	ctrl     *gomock.Controller
 	recorder *MockServicePrincipalValidatorMockRecorder
+	isgomock struct{}
 }
 
 // MockServicePrincipalValidatorMockRecorder is the mock recorder for MockServicePrincipalValidator.
@@ -63,6 +64,7 @@ func (mr *MockServicePrincipalValidatorMockRecorder) ValidateServicePrincipal(ct
 type MockDynamic struct {
 	ctrl     *gomock.Controller
 	recorder *MockDynamicMockRecorder
+	isgomock struct{}
 }
 
 // MockDynamicMockRecorder is the mock recorder for MockDynamic.

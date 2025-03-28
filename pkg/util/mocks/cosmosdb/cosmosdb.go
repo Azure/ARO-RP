@@ -22,6 +22,7 @@ import (
 type MockPermissionClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockPermissionClientMockRecorder
+	isgomock struct{}
 }
 
 // MockPermissionClientMockRecorder is the mock recorder for MockPermissionClient.

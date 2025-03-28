@@ -22,6 +22,7 @@ import (
 type MockFederatedIdentityCredentialsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockFederatedIdentityCredentialsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockFederatedIdentityCredentialsClientMockRecorder is the mock recorder for MockFederatedIdentityCredentialsClient.

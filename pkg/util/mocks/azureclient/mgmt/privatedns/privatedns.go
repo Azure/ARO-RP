@@ -21,6 +21,7 @@ import (
 type MockPrivateZonesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockPrivateZonesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockPrivateZonesClientMockRecorder is the mock recorder for MockPrivateZonesClient.
@@ -41,38 +42,39 @@ func (m *MockPrivateZonesClient) EXPECT() *MockPrivateZonesClientMockRecorder {
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockPrivateZonesClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string) error {
+func (m *MockPrivateZonesClient) DeleteAndWait(ctx context.Context, resourceGroupName, privateZoneName, ifMatch string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, privateZoneName, ifMatch)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockPrivateZonesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockPrivateZonesClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, privateZoneName, ifMatch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockPrivateZonesClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockPrivateZonesClient)(nil).DeleteAndWait), ctx, resourceGroupName, privateZoneName, ifMatch)
 }
 
 // ListByResourceGroup mocks base method.
-func (m *MockPrivateZonesClient) ListByResourceGroup(arg0 context.Context, arg1 string, arg2 *int32) ([]privatedns.PrivateZone, error) {
+func (m *MockPrivateZonesClient) ListByResourceGroup(ctx context.Context, resourceGroupName string, top *int32) ([]privatedns.PrivateZone, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByResourceGroup", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ListByResourceGroup", ctx, resourceGroupName, top)
 	ret0, _ := ret[0].([]privatedns.PrivateZone)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListByResourceGroup indicates an expected call of ListByResourceGroup.
-func (mr *MockPrivateZonesClientMockRecorder) ListByResourceGroup(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPrivateZonesClientMockRecorder) ListByResourceGroup(ctx, resourceGroupName, top any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResourceGroup", reflect.TypeOf((*MockPrivateZonesClient)(nil).ListByResourceGroup), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResourceGroup", reflect.TypeOf((*MockPrivateZonesClient)(nil).ListByResourceGroup), ctx, resourceGroupName, top)
 }
 
 // MockVirtualNetworkLinksClient is a mock of VirtualNetworkLinksClient interface.
 type MockVirtualNetworkLinksClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockVirtualNetworkLinksClientMockRecorder
+	isgomock struct{}
 }
 
 // MockVirtualNetworkLinksClientMockRecorder is the mock recorder for MockVirtualNetworkLinksClient.
@@ -93,30 +95,30 @@ func (m *MockVirtualNetworkLinksClient) EXPECT() *MockVirtualNetworkLinksClientM
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockVirtualNetworkLinksClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3, arg4 string) error {
+func (m *MockVirtualNetworkLinksClient) DeleteAndWait(ctx context.Context, resourceGroupName, privateZoneName, virtualNetworkLinkName, ifMatch string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, privateZoneName, virtualNetworkLinkName, ifMatch)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockVirtualNetworkLinksClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockVirtualNetworkLinksClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, privateZoneName, virtualNetworkLinkName, ifMatch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualNetworkLinksClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualNetworkLinksClient)(nil).DeleteAndWait), ctx, resourceGroupName, privateZoneName, virtualNetworkLinkName, ifMatch)
 }
 
 // List mocks base method.
-func (m *MockVirtualNetworkLinksClient) List(arg0 context.Context, arg1, arg2 string, arg3 *int32) ([]privatedns.VirtualNetworkLink, error) {
+func (m *MockVirtualNetworkLinksClient) List(ctx context.Context, resourceGroupName, privateZoneName string, top *int32) ([]privatedns.VirtualNetworkLink, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, privateZoneName, top)
 	ret0, _ := ret[0].([]privatedns.VirtualNetworkLink)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockVirtualNetworkLinksClientMockRecorder) List(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockVirtualNetworkLinksClientMockRecorder) List(ctx, resourceGroupName, privateZoneName, top any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualNetworkLinksClient)(nil).List), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualNetworkLinksClient)(nil).List), ctx, resourceGroupName, privateZoneName, top)
 }

@@ -95,11 +95,11 @@ $(GOVULNCHECK): $(BINGO_DIR)/govulncheck.mod
 	@echo "(re)installing $(GOBIN)/govulncheck-v1.1.4"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=govulncheck.mod -o=$(GOBIN)/govulncheck-v1.1.4 "golang.org/x/vuln/cmd/govulncheck"
 
-MOCKGEN := $(GOBIN)/mockgen-v0.4.0
+MOCKGEN := $(GOBIN)/mockgen-v0.5.0
 $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/mockgen-v0.4.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.4.0 "go.uber.org/mock/mockgen"
+	@echo "(re)installing $(GOBIN)/mockgen-v0.5.0"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.5.0 "go.uber.org/mock/mockgen"
 
 OPENSHIFT_GOIMPORTS := $(GOBIN)/openshift-goimports-v0.0.0-20230304234052-c70783e636f2
 $(OPENSHIFT_GOIMPORTS): $(BINGO_DIR)/openshift-goimports.mod

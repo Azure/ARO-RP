@@ -21,6 +21,7 @@ import (
 type MockAccountsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockAccountsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockAccountsClientMockRecorder is the mock recorder for MockAccountsClient.
@@ -41,31 +42,31 @@ func (m *MockAccountsClient) EXPECT() *MockAccountsClientMockRecorder {
 }
 
 // GetProperties mocks base method.
-func (m *MockAccountsClient) GetProperties(arg0 context.Context, arg1, arg2 string, arg3 *armstorage.AccountsClientGetPropertiesOptions) (armstorage.AccountsClientGetPropertiesResponse, error) {
+func (m *MockAccountsClient) GetProperties(ctx context.Context, resourceGroupName, accountName string, options *armstorage.AccountsClientGetPropertiesOptions) (armstorage.AccountsClientGetPropertiesResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProperties", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetProperties", ctx, resourceGroupName, accountName, options)
 	ret0, _ := ret[0].(armstorage.AccountsClientGetPropertiesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetProperties indicates an expected call of GetProperties.
-func (mr *MockAccountsClientMockRecorder) GetProperties(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockAccountsClientMockRecorder) GetProperties(ctx, resourceGroupName, accountName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProperties", reflect.TypeOf((*MockAccountsClient)(nil).GetProperties), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProperties", reflect.TypeOf((*MockAccountsClient)(nil).GetProperties), ctx, resourceGroupName, accountName, options)
 }
 
 // ListAccountSAS mocks base method.
-func (m *MockAccountsClient) ListAccountSAS(arg0 context.Context, arg1, arg2 string, arg3 armstorage.AccountSasParameters, arg4 *armstorage.AccountsClientListAccountSASOptions) (armstorage.AccountsClientListAccountSASResponse, error) {
+func (m *MockAccountsClient) ListAccountSAS(ctx context.Context, resourceGroupName, accountName string, parameters armstorage.AccountSasParameters, options *armstorage.AccountsClientListAccountSASOptions) (armstorage.AccountsClientListAccountSASResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAccountSAS", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "ListAccountSAS", ctx, resourceGroupName, accountName, parameters, options)
 	ret0, _ := ret[0].(armstorage.AccountsClientListAccountSASResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListAccountSAS indicates an expected call of ListAccountSAS.
-func (mr *MockAccountsClientMockRecorder) ListAccountSAS(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockAccountsClientMockRecorder) ListAccountSAS(ctx, resourceGroupName, accountName, parameters, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccountSAS", reflect.TypeOf((*MockAccountsClient)(nil).ListAccountSAS), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccountSAS", reflect.TypeOf((*MockAccountsClient)(nil).ListAccountSAS), ctx, resourceGroupName, accountName, parameters, options)
 }

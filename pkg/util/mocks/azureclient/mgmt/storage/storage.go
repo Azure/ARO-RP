@@ -21,6 +21,7 @@ import (
 type MockAccountsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockAccountsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockAccountsClientMockRecorder is the mock recorder for MockAccountsClient.
@@ -41,61 +42,61 @@ func (m *MockAccountsClient) EXPECT() *MockAccountsClientMockRecorder {
 }
 
 // GetProperties mocks base method.
-func (m *MockAccountsClient) GetProperties(arg0 context.Context, arg1, arg2 string, arg3 storage.AccountExpand) (storage.Account, error) {
+func (m *MockAccountsClient) GetProperties(ctx context.Context, resourceGroupName, accountName string, expand storage.AccountExpand) (storage.Account, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProperties", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetProperties", ctx, resourceGroupName, accountName, expand)
 	ret0, _ := ret[0].(storage.Account)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetProperties indicates an expected call of GetProperties.
-func (mr *MockAccountsClientMockRecorder) GetProperties(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockAccountsClientMockRecorder) GetProperties(ctx, resourceGroupName, accountName, expand any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProperties", reflect.TypeOf((*MockAccountsClient)(nil).GetProperties), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProperties", reflect.TypeOf((*MockAccountsClient)(nil).GetProperties), ctx, resourceGroupName, accountName, expand)
 }
 
 // ListAccountSAS mocks base method.
-func (m *MockAccountsClient) ListAccountSAS(arg0 context.Context, arg1, arg2 string, arg3 storage.AccountSasParameters) (storage.ListAccountSasResponse, error) {
+func (m *MockAccountsClient) ListAccountSAS(ctx context.Context, resourceGroupName, accountName string, parameters storage.AccountSasParameters) (storage.ListAccountSasResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAccountSAS", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "ListAccountSAS", ctx, resourceGroupName, accountName, parameters)
 	ret0, _ := ret[0].(storage.ListAccountSasResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListAccountSAS indicates an expected call of ListAccountSAS.
-func (mr *MockAccountsClientMockRecorder) ListAccountSAS(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockAccountsClientMockRecorder) ListAccountSAS(ctx, resourceGroupName, accountName, parameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccountSAS", reflect.TypeOf((*MockAccountsClient)(nil).ListAccountSAS), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccountSAS", reflect.TypeOf((*MockAccountsClient)(nil).ListAccountSAS), ctx, resourceGroupName, accountName, parameters)
 }
 
 // ListKeys mocks base method.
-func (m *MockAccountsClient) ListKeys(arg0 context.Context, arg1, arg2 string, arg3 storage.ListKeyExpand) (storage.AccountListKeysResult, error) {
+func (m *MockAccountsClient) ListKeys(ctx context.Context, resourceGroupName, accountName string, expand storage.ListKeyExpand) (storage.AccountListKeysResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListKeys", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "ListKeys", ctx, resourceGroupName, accountName, expand)
 	ret0, _ := ret[0].(storage.AccountListKeysResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListKeys indicates an expected call of ListKeys.
-func (mr *MockAccountsClientMockRecorder) ListKeys(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockAccountsClientMockRecorder) ListKeys(ctx, resourceGroupName, accountName, expand any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKeys", reflect.TypeOf((*MockAccountsClient)(nil).ListKeys), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKeys", reflect.TypeOf((*MockAccountsClient)(nil).ListKeys), ctx, resourceGroupName, accountName, expand)
 }
 
 // Update mocks base method.
-func (m *MockAccountsClient) Update(arg0 context.Context, arg1, arg2 string, arg3 storage.AccountUpdateParameters) (storage.Account, error) {
+func (m *MockAccountsClient) Update(ctx context.Context, resourceGroupName, accountName string, parameters storage.AccountUpdateParameters) (storage.Account, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Update", ctx, resourceGroupName, accountName, parameters)
 	ret0, _ := ret[0].(storage.Account)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockAccountsClientMockRecorder) Update(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockAccountsClientMockRecorder) Update(ctx, resourceGroupName, accountName, parameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAccountsClient)(nil).Update), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAccountsClient)(nil).Update), ctx, resourceGroupName, accountName, parameters)
 }

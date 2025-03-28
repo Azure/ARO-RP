@@ -28,6 +28,7 @@ import (
 type MockClusterManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockClusterManagerMockRecorder is the mock recorder for MockClusterManager.
@@ -48,140 +49,141 @@ func (m *MockClusterManager) EXPECT() *MockClusterManagerMockRecorder {
 }
 
 // CreateNamespace mocks base method.
-func (m *MockClusterManager) CreateNamespace(arg0 context.Context, arg1 string) (*v10.Namespace, error) {
+func (m *MockClusterManager) CreateNamespace(ctx context.Context, docID string) (*v10.Namespace, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateNamespace", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateNamespace", ctx, docID)
 	ret0, _ := ret[0].(*v10.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateNamespace indicates an expected call of CreateNamespace.
-func (mr *MockClusterManagerMockRecorder) CreateNamespace(arg0, arg1 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) CreateNamespace(ctx, docID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNamespace", reflect.TypeOf((*MockClusterManager)(nil).CreateNamespace), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNamespace", reflect.TypeOf((*MockClusterManager)(nil).CreateNamespace), ctx, docID)
 }
 
 // CreateOrUpdate mocks base method.
-func (m *MockClusterManager) CreateOrUpdate(arg0 context.Context, arg1 *api.SubscriptionDocument, arg2 *api.OpenShiftClusterDocument) error {
+func (m *MockClusterManager) CreateOrUpdate(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", ctx, sub, doc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockClusterManagerMockRecorder) CreateOrUpdate(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) CreateOrUpdate(ctx, sub, doc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockClusterManager)(nil).CreateOrUpdate), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockClusterManager)(nil).CreateOrUpdate), ctx, sub, doc)
 }
 
 // Delete mocks base method.
-func (m *MockClusterManager) Delete(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
+func (m *MockClusterManager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret := m.ctrl.Call(m, "Delete", ctx, doc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockClusterManagerMockRecorder) Delete(arg0, arg1 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) Delete(ctx, doc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClusterManager)(nil).Delete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClusterManager)(nil).Delete), ctx, doc)
 }
 
 // GetClusterDeployment mocks base method.
-func (m *MockClusterManager) GetClusterDeployment(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*v1.ClusterDeployment, error) {
+func (m *MockClusterManager) GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1.ClusterDeployment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterDeployment", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetClusterDeployment", ctx, doc)
 	ret0, _ := ret[0].(*v1.ClusterDeployment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClusterDeployment indicates an expected call of GetClusterDeployment.
-func (mr *MockClusterManagerMockRecorder) GetClusterDeployment(arg0, arg1 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) GetClusterDeployment(ctx, doc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterDeployment", reflect.TypeOf((*MockClusterManager)(nil).GetClusterDeployment), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterDeployment", reflect.TypeOf((*MockClusterManager)(nil).GetClusterDeployment), ctx, doc)
 }
 
 // GetClusterSync mocks base method.
-func (m *MockClusterManager) GetClusterSync(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSync, error) {
+func (m *MockClusterManager) GetClusterSync(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSync, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterSync", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetClusterSync", ctx, doc)
 	ret0, _ := ret[0].(*v1alpha1.ClusterSync)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClusterSync indicates an expected call of GetClusterSync.
-func (mr *MockClusterManagerMockRecorder) GetClusterSync(arg0, arg1 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) GetClusterSync(ctx, doc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSync", reflect.TypeOf((*MockClusterManager)(nil).GetClusterSync), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSync", reflect.TypeOf((*MockClusterManager)(nil).GetClusterSync), ctx, doc)
 }
 
 // Install mocks base method.
-func (m *MockClusterManager) Install(arg0 context.Context, arg1 *api.SubscriptionDocument, arg2 *api.OpenShiftClusterDocument, arg3 *api.OpenShiftVersion, arg4 map[string]runtime.Object) error {
+func (m *MockClusterManager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]runtime.Object) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Install", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "Install", ctx, sub, doc, version, customManifests)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Install indicates an expected call of Install.
-func (mr *MockClusterManagerMockRecorder) Install(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) Install(ctx, sub, doc, version, customManifests any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockClusterManager)(nil).Install), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockClusterManager)(nil).Install), ctx, sub, doc, version, customManifests)
 }
 
 // IsClusterDeploymentReady mocks base method.
-func (m *MockClusterManager) IsClusterDeploymentReady(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (bool, error) {
+func (m *MockClusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsClusterDeploymentReady", arg0, arg1)
+	ret := m.ctrl.Call(m, "IsClusterDeploymentReady", ctx, doc)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsClusterDeploymentReady indicates an expected call of IsClusterDeploymentReady.
-func (mr *MockClusterManagerMockRecorder) IsClusterDeploymentReady(arg0, arg1 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) IsClusterDeploymentReady(ctx, doc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterDeploymentReady", reflect.TypeOf((*MockClusterManager)(nil).IsClusterDeploymentReady), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterDeploymentReady", reflect.TypeOf((*MockClusterManager)(nil).IsClusterDeploymentReady), ctx, doc)
 }
 
 // IsClusterInstallationComplete mocks base method.
-func (m *MockClusterManager) IsClusterInstallationComplete(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (bool, error) {
+func (m *MockClusterManager) IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsClusterInstallationComplete", arg0, arg1)
+	ret := m.ctrl.Call(m, "IsClusterInstallationComplete", ctx, doc)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsClusterInstallationComplete indicates an expected call of IsClusterInstallationComplete.
-func (mr *MockClusterManagerMockRecorder) IsClusterInstallationComplete(arg0, arg1 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) IsClusterInstallationComplete(ctx, doc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterInstallationComplete", reflect.TypeOf((*MockClusterManager)(nil).IsClusterInstallationComplete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterInstallationComplete", reflect.TypeOf((*MockClusterManager)(nil).IsClusterInstallationComplete), ctx, doc)
 }
 
 // ResetCorrelationData mocks base method.
-func (m *MockClusterManager) ResetCorrelationData(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
+func (m *MockClusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResetCorrelationData", arg0, arg1)
+	ret := m.ctrl.Call(m, "ResetCorrelationData", ctx, doc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ResetCorrelationData indicates an expected call of ResetCorrelationData.
-func (mr *MockClusterManagerMockRecorder) ResetCorrelationData(arg0, arg1 any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) ResetCorrelationData(ctx, doc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetCorrelationData", reflect.TypeOf((*MockClusterManager)(nil).ResetCorrelationData), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetCorrelationData", reflect.TypeOf((*MockClusterManager)(nil).ResetCorrelationData), ctx, doc)
 }
 
 // MockSyncSetManager is a mock of SyncSetManager interface.
 type MockSyncSetManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockSyncSetManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockSyncSetManagerMockRecorder is the mock recorder for MockSyncSetManager.
@@ -202,31 +204,31 @@ func (m *MockSyncSetManager) EXPECT() *MockSyncSetManagerMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockSyncSetManager) Get(arg0 context.Context, arg1, arg2 string, arg3 reflect.Type) (any, error) {
+func (m *MockSyncSetManager) Get(ctx context.Context, namespace, name string, getType reflect.Type) (any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, namespace, name, getType)
 	ret0, _ := ret[0].(any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockSyncSetManagerMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockSyncSetManagerMockRecorder) Get(ctx, namespace, name, getType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSyncSetManager)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSyncSetManager)(nil).Get), ctx, namespace, name, getType)
 }
 
 // List mocks base method.
-func (m *MockSyncSetManager) List(arg0 context.Context, arg1, arg2 string, arg3 reflect.Type) (any, error) {
+func (m *MockSyncSetManager) List(ctx context.Context, namespace, label string, listType reflect.Type) (any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "List", ctx, namespace, label, listType)
 	ret0, _ := ret[0].(any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockSyncSetManagerMockRecorder) List(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockSyncSetManagerMockRecorder) List(ctx, namespace, label, listType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSyncSetManager)(nil).List), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSyncSetManager)(nil).List), ctx, namespace, label, listType)
 }

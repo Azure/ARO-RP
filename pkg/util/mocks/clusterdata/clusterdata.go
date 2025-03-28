@@ -29,6 +29,7 @@ import (
 type MockClusterEnricher struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterEnricherMockRecorder
+	isgomock struct{}
 }
 
 // MockClusterEnricherMockRecorder is the mock recorder for MockClusterEnricher.
@@ -78,6 +79,7 @@ func (mr *MockClusterEnricherMockRecorder) SetDefaults(arg0 any) *gomock.Call {
 type MockBestEffortEnricher struct {
 	ctrl     *gomock.Controller
 	recorder *MockBestEffortEnricherMockRecorder
+	isgomock struct{}
 }
 
 // MockBestEffortEnricherMockRecorder is the mock recorder for MockBestEffortEnricher.
@@ -98,18 +100,18 @@ func (m *MockBestEffortEnricher) EXPECT() *MockBestEffortEnricherMockRecorder {
 }
 
 // Enrich mocks base method.
-func (m *MockBestEffortEnricher) Enrich(arg0 context.Context, arg1 *logrus.Entry, arg2 ...*api.OpenShiftCluster) {
+func (m *MockBestEffortEnricher) Enrich(ctx context.Context, log *logrus.Entry, ocs ...*api.OpenShiftCluster) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, log}
+	for _, a := range ocs {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "Enrich", varargs...)
 }
 
 // Enrich indicates an expected call of Enrich.
-func (mr *MockBestEffortEnricherMockRecorder) Enrich(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockBestEffortEnricherMockRecorder) Enrich(ctx, log any, ocs ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, log}, ocs...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enrich", reflect.TypeOf((*MockBestEffortEnricher)(nil).Enrich), varargs...)
 }

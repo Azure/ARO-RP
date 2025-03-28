@@ -19,6 +19,7 @@ import (
 type MockEmitter struct {
 	ctrl     *gomock.Controller
 	recorder *MockEmitterMockRecorder
+	isgomock struct{}
 }
 
 // MockEmitterMockRecorder is the mock recorder for MockEmitter.
@@ -39,25 +40,25 @@ func (m *MockEmitter) EXPECT() *MockEmitterMockRecorder {
 }
 
 // EmitFloat mocks base method.
-func (m *MockEmitter) EmitFloat(arg0 string, arg1 float64, arg2 map[string]string) {
+func (m *MockEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitFloat", arg0, arg1, arg2)
+	m.ctrl.Call(m, "EmitFloat", metricName, metricValue, dimensions)
 }
 
 // EmitFloat indicates an expected call of EmitFloat.
-func (mr *MockEmitterMockRecorder) EmitFloat(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockEmitterMockRecorder) EmitFloat(metricName, metricValue, dimensions any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitFloat", reflect.TypeOf((*MockEmitter)(nil).EmitFloat), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitFloat", reflect.TypeOf((*MockEmitter)(nil).EmitFloat), metricName, metricValue, dimensions)
 }
 
 // EmitGauge mocks base method.
-func (m *MockEmitter) EmitGauge(arg0 string, arg1 int64, arg2 map[string]string) {
+func (m *MockEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitGauge", arg0, arg1, arg2)
+	m.ctrl.Call(m, "EmitGauge", metricName, metricValue, dimensions)
 }
 
 // EmitGauge indicates an expected call of EmitGauge.
-func (mr *MockEmitterMockRecorder) EmitGauge(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockEmitterMockRecorder) EmitGauge(metricName, metricValue, dimensions any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitGauge", reflect.TypeOf((*MockEmitter)(nil).EmitGauge), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitGauge", reflect.TypeOf((*MockEmitter)(nil).EmitGauge), metricName, metricValue, dimensions)
 }
