@@ -16,5 +16,10 @@ jobs:
   main:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: git push origin --delete $(.github/list-prune-tags.sh -n ${{ github.ref_name }})
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Gather tags
+        id: gather_tags
+        run: .github/list-prune-tags.sh -n ${{ github.ref_name }} >> $GITHUB_OUTPUT
+      - name: Prune tags
+        run: git push origin --delete ${{ steps.gather_tags.output }}
