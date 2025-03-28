@@ -225,7 +225,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 	} else {
-		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), putOrPatchClusterParameters.path)
+		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, putOrPatchClusterParameters.path)
 		if err != nil {
 			return nil, err
 		}
@@ -399,7 +399,7 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 }
 
 func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext interface{}, path string) error {
-	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), path)
+	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, path)
 	if err != nil {
 		return err
 	}

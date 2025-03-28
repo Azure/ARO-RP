@@ -13,8 +13,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/date"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/test/validate"
 )
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
