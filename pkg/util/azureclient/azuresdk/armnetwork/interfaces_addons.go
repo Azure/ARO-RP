@@ -6,7 +6,7 @@ package armnetwork
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 // InterfacesClientAddons contains addons for InterfacesClient
