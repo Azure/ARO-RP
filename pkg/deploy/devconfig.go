@@ -193,7 +193,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"DisableDenyAssignments",
 				"DisableSignedCertificates",
 				"EnableDevelopmentAuthorizer",
-				"RequireD2sV3Workers",
+				"RequireD2sWorkers",
 				"DisableReadinessDelay",
 				"EnableOCMEndpoints",
 				"RequireOIDCStorageWebEndpoint",
