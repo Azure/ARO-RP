@@ -6,11 +6,13 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
 func (m *manager) persistPlatformWorkloadIdentityIDs(ctx context.Context) (err error) {
@@ -42,7 +44,11 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 
 		identityDetails, err := m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
 		if err != nil {
-			return fmt.Errorf("error occured when retrieving platform workload identity '%s' details: %w", operatorName, err)
+			if azureerrors.IsNotFoundError(err) {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, operatorName, fmt.Sprintf("platform workload identity '%s' not found", resourceId.Name))
+			} else {
+				return fmt.Errorf("error occured when retrieving platform workload identity '%s' details: %w", resourceId.Name, err)
+			}
 		}
 
 		updatedIdentities[operatorName] = api.PlatformWorkloadIdentity{
