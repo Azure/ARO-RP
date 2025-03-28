@@ -6,21 +6,32 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	azfake "github.com/Azure/azure-sdk-for-go/sdk/azcore/fake"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	fake_armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6/fake"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 )
 
 var (
-	resourceGroup = "rg"
-	infraID       = "infra"
-	ipc           = "internal-lb-ip-v4"
+	resourceGroup     = "rg"
+	infraID           = "infra"
+	ipc               = "internal-lb-ip-v4"
+	dummySubscription = "/fake/resource/id"
+	masterSubnetID    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
 )
 
 func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
@@ -136,180 +147,369 @@ func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 	}
 }
 
-func ifBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbBackendPool string) *mgmtnetwork.Interface {
-	return &mgmtnetwork.Interface{
-		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-			VirtualMachine: &mgmtnetwork.SubResource{
-				ID: to.StringPtr(fmt.Sprintf("master-%d", i)),
-			},
-			IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
-				{
-					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{},
-					},
-				},
-			},
-		},
+func configureInterface(backendPools []string,
+	subnet string,
+	name string,
+	addVM bool,
+	addIPConfig bool) *armnetwork.InterfacesClientGetResponse {
+	iface := armnetwork.Interface{
+		Name:       to.StringPtr(name),
+		Properties: &armnetwork.InterfacePropertiesFormat{},
 	}
+
+	if addVM {
+		iface.Properties.VirtualMachine = &armnetwork.SubResource{ID: to.StringPtr(strings.Replace(name, "-nic", "", -1))}
+	} else {
+		iface.Properties.VirtualMachine = nil
+	}
+
+	if addIPConfig {
+		ipConfigurations := []*armnetwork.InterfaceIPConfiguration{}
+		ipConfig := armnetwork.InterfaceIPConfiguration{Name: to.StringPtr(name)}
+		ipConfig.Properties = &armnetwork.InterfaceIPConfigurationPropertiesFormat{}
+		if backendPools != nil {
+			nicBackendPools := []*armnetwork.BackendAddressPool{}
+			for _, backendPool := range backendPools {
+				nicBackendPools = append(nicBackendPools, &armnetwork.BackendAddressPool{ID: to.StringPtr(backendPool)})
+			}
+			ipConfig.Properties.LoadBalancerBackendAddressPools = nicBackendPools
+		}
+		if subnet != "" {
+			ipConfig.Properties.Subnet = &armnetwork.Subnet{ID: to.StringPtr(subnet)}
+		}
+		ipConfigurations = append(ipConfigurations, &ipConfig)
+		iface.Properties.IPConfigurations = ipConfigurations
+	} else {
+		iface.Properties.IPConfigurations = nil
+	}
+
+	return &armnetwork.InterfacesClientGetResponse{Interface: iface}
 }
 
-func ifNoVmBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbBackendPool string) *mgmtnetwork.Interface {
-	return &mgmtnetwork.Interface{
-		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-			VirtualMachine: nil,
-			IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
-				{
-					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
-							{
-								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
-							},
-						},
-					},
-				},
-			},
-		},
+// Return the pager response that mocks the state of a newly created cluster (no previous CPMS updates)
+// 7 NICs total: 3 for masters, 1 for the private link service and 3 workers
+func ifListNewCluster(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
+	ifList := []*armnetwork.Interface{}
+	// 3 master NICs with VM attachments, still in the SSH backend pools
+	for i := range 3 {
+		backendPools := []string{}
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", ilbID, infraID, "-internal-controlplane-v4"))
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", elbID, infraID, "-public-lb-control-plane-v4"))
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/ssh-%d", ilbID, i))
+		nicName := fmt.Sprintf("%s-master%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(backendPools, masterSubnetID, nicName, true, true).Interface)
 	}
+	// 1 NIC in the master subnet with a name that does not match the master NIC name regex, ie the private link service NIC
+	ifList = append(ifList, &configureInterface(nil, masterSubnetID, "infra-pls-nic", false, true).Interface)
+	// 3 NICs in the worker subnet, don't need to add backend pools, these get skipped anyway
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-worker-east%d-12345-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, "worker-subnet", nicName, true, false).Interface)
+	}
+
+	return ifList
 }
 
-func ifNoVmAfter(nic *mgmtnetwork.Interface) *mgmtnetwork.Interface {
-	emptyAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
-	(*nic.InterfacePropertiesFormat.IPConfigurations)[0].InterfaceIPConfigurationPropertiesFormat.LoadBalancerBackendAddressPools = &emptyAddressPool
-	return nic
+// Return the pager response that mocks the state after the first successful CPMS update of a new cluster
+// 10 NICs total: 3 for the old masters, 3 for the new masters, 3 workers and 1 for the private link service
+func ifListAfterFirstCPMSUpdate(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
+	ifList := []*armnetwork.Interface{}
+	// 3 NICs with VM attachments, not in SSH backend pools, the new NICs for the new VMs
+	for i := range 3 {
+		backendPools := []string{}
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", ilbID, infraID, "-internal-controlplane-v4"))
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", elbID, infraID, "-public-lb-control-plane-v4"))
+		if withSSHBackendPool {
+			backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/ssh-%d", ilbID, i))
+		}
+		nicName := fmt.Sprintf("%s-master-12345-%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(backendPools, masterSubnetID, nicName, true, true).Interface)
+	}
+	// 3 NICs with no VM attachment, the orphaned NICs from the deleted VMs
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-master%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, masterSubnetID, nicName, false, true).Interface)
+	}
+	// 1 NIC in the master subnet with a name that does not match the master NIC name regex, ie the private link service NIC
+	ifList = append(ifList, &configureInterface(nil, masterSubnetID, "infra-pls-nic", false, true).Interface)
+	// 3 NICs in the worker subnet, don't need to add backend pools, these get skipped anyway
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-worker-east%d-12345-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, "worker-subnet", nicName, true, false).Interface)
+	}
+
+	return ifList
 }
 
-func ifAfter(ilbID string, elbID string, i int, ilbBackendPool string, elbBackendPool string) *mgmtnetwork.Interface {
-	return &mgmtnetwork.Interface{
-		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-			VirtualMachine: &mgmtnetwork.SubResource{
-				ID: to.StringPtr(fmt.Sprintf("master-%d", i)),
-			},
-			IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
-				{
-					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
-							{
-								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
-							},
-							{
-								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/%s", ilbBackendPool)),
-							},
-							{
-								ID: to.StringPtr(fmt.Sprintf(elbID+"/backendAddressPools/%s", elbBackendPool)),
-							},
-						},
-					},
+// Return the pager response that mocks the state after the first successful CPMS update of a new private cluster
+// 10 NICs total: 3 for the old masters, 3 for the new masters all in the ssh-0 backend pool, 3 workers and 1 for the private link service
+func ifListAfterFirstCPMSUpdatePrivateCluster(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
+	ifList := []*armnetwork.Interface{}
+	// 3 NICs with VM attachments, all in ssh-0 backend pool or corrected, the new NICs for the new VMs
+	for i := range 3 {
+		backendPools := []string{}
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", ilbID, infraID, "-internal-controlplane-v4"))
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", elbID, infraID, "-public-lb-control-plane-v4"))
+		if withSSHBackendPool {
+			backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/ssh-%d", ilbID, i))
+		} else {
+			backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/ssh-%d", ilbID, 0))
+		}
+		nicName := fmt.Sprintf("%s-master-12345-%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(backendPools, masterSubnetID, nicName, true, true).Interface)
+	}
+	// 3 NICs with no VM attachment, the orphaned NICs from the deleted VMs
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-master%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, masterSubnetID, nicName, false, true).Interface)
+	}
+	// 1 NIC in the master subnet with a name that does not match the master NIC name regex, ie the private link service NIC
+	ifList = append(ifList, &configureInterface(nil, masterSubnetID, "infra-pls-nic", false, true).Interface)
+	// 3 NICs in the worker subnet, don't need to add backend pools, these get skipped anyway
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-worker-east%d-12345-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, "worker-subnet", nicName, true, false).Interface)
+	}
+
+	return ifList
+}
+
+// Return the pager response that mocks the state after multiple successful CPMS updates of a cluster
+// 7 NICs total: 3 for the masters, 1 for the private link service, 3 workers
+func ifListAfterMultipleCPMSUpdates(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
+	ifList := []*armnetwork.Interface{}
+	// 3 NICs with VM attachments, not in SSH backend pools
+	for i := range 3 {
+		backendPools := []string{}
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", ilbID, infraID, "-internal-controlplane-v4"))
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", elbID, infraID, "-public-lb-control-plane-v4"))
+		if withSSHBackendPool {
+			backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/ssh-%d", ilbID, i))
+		}
+		nicName := fmt.Sprintf("%s-master-12345-%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(backendPools, masterSubnetID, nicName, true, true).Interface)
+	}
+	// 1 NIC in the master subnet with a name that does not match the master NIC name regex, ie the private link service NIC
+	ifList = append(ifList, &configureInterface(nil, masterSubnetID, "infra-pls-nic", false, true).Interface)
+	// 3 NICs in the worker subnet, don't need to add ILB backend pools, these get skipped anyway
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-worker-east%d-12345-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, "worker-subnet", nicName, true, false).Interface)
+	}
+
+	return ifList
+}
+
+func ifListOrphanedNIC(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
+	ifList := []*armnetwork.Interface{}
+	nicName := fmt.Sprintf("%s-master%d-nic", infraID, 0)
+	ifList = append(ifList, &configureInterface(nil, masterSubnetID, nicName, false, true).Interface)
+
+	return ifList
+}
+
+func ifListPager(f func(string, string, bool) []*armnetwork.Interface, ilbID string, elbID string, withSSHBackendPool bool) *runtime.Pager[armnetwork.InterfacesClientListResponse] {
+	ifServer := fake_armnetwork.InterfacesServer{
+		NewListPager: func(resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (resp azfake.PagerResponder[armnetwork.InterfacesClientListResponse]) {
+			ifList := f(ilbID, elbID, withSSHBackendPool)
+			pagerResponse := azfake.PagerResponder[armnetwork.InterfacesClientListResponse]{}
+			pagerResponse.AddPage(http.StatusOK, armnetwork.InterfacesClientListResponse{
+				InterfaceListResult: armnetwork.InterfaceListResult{
+					Value: ifList,
 				},
-			},
+			}, nil)
+
+			return pagerResponse
 		},
 	}
+
+	ifTransporter := fake_armnetwork.NewInterfacesServerTransport(&ifServer)
+	options := &arm.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Transport: ifTransporter,
+		},
+	}
+
+	ifaceClient, err := armnetwork.NewInterfacesClient(dummySubscription, &azfake.TokenCredential{}, options)
+	if err != nil {
+		fmt.Println("Error creating NewInterfacesClient")
+	}
+
+	return ifaceClient.NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{})
+}
+
+func ifListPagerWithError() *runtime.Pager[armnetwork.InterfacesClientListResponse] {
+	ifServer := fake_armnetwork.InterfacesServer{
+		NewListPager: func(resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (resp azfake.PagerResponder[armnetwork.InterfacesClientListResponse]) {
+			pagerResponse := azfake.PagerResponder[armnetwork.InterfacesClientListResponse]{}
+			pagerResponse.AddResponseError(http.StatusForbidden, "fake pager API auth error")
+			//pagerResponse.AddError()
+
+			return pagerResponse
+		},
+	}
+
+	ifTransporter := fake_armnetwork.NewInterfacesServerTransport(&ifServer)
+	options := &arm.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Transport: ifTransporter,
+		},
+	}
+
+	ifaceClient, err := armnetwork.NewInterfacesClient(dummySubscription, &azfake.TokenCredential{}, options)
+	if err != nil {
+		fmt.Println("Error creating NewInterfacesClient")
+	}
+
+	return ifaceClient.NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{})
+}
+
+func ifListPagerNoResults() *runtime.Pager[armnetwork.InterfacesClientListResponse] {
+	ifServer := fake_armnetwork.InterfacesServer{
+		NewListPager: func(resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (resp azfake.PagerResponder[armnetwork.InterfacesClientListResponse]) {
+			pagerResponse := azfake.PagerResponder[armnetwork.InterfacesClientListResponse]{}
+
+			return pagerResponse
+		},
+	}
+
+	ifTransporter := fake_armnetwork.NewInterfacesServerTransport(&ifServer)
+	options := &arm.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Transport: ifTransporter,
+		},
+	}
+
+	ifaceClient, err := armnetwork.NewInterfacesClient(dummySubscription, &azfake.TokenCredential{}, options)
+	if err != nil {
+		fmt.Println("Error creating NewInterfacesClient")
+	}
+
+	return ifaceClient.NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{})
 }
 
 func TestFixSSH(t *testing.T) {
 	for _, tt := range []struct {
-		name                string
-		architectureVersion api.ArchitectureVersion
-		ilb                 string
-		ilbID               string
-		elb                 string
-		elbID               string
-		elbV1ID             string
-		loadbalancer        func(string) *mgmtnetwork.LoadBalancer
-		iface               func(string, string, int, string, string) *mgmtnetwork.Interface
-		iNameF              string
-		ifaceNoVmAttached   bool // create the NIC without a master VM attached, to simulate a master node replacement
-		lbErrorExpected     bool
-		writeExpected       bool // do we expect write to happen as part of this test
-		fallbackExpected    bool // do we expect fallback nic.Get as part of this test
-		nicErrorExpected    bool
-		noOperationExpected bool
-		wantError           string
-		ilbBackendPool      string
-		elbBackendPool      string
+		name                               string
+		architectureVersion                api.ArchitectureVersion
+		ilb                                string
+		ilbID                              string
+		elb                                string
+		elbID                              string
+		elbV1ID                            string
+		loadbalancer                       func(string) *mgmtnetwork.LoadBalancer
+		interfaces                         func(string, string, bool) []*armnetwork.Interface
+		iNameNewF                          string
+		iNameOldF                          string
+		newCluster                         bool
+		afterFirstCPMSUpdate               bool
+		afterFirstCPMSUpdatePrivateCluster bool
+		afterMultipleCPMSUpdates           bool
+		pagerError                         bool
+		pagerNoResults                     bool
+		deleteNICError                     bool
+		lbErrorExpected                    bool
+		writeExpected                      bool // do we expect write to happen as part of this test
+		nicErrorExpected                   bool
+		wantError                          string
+		ilbBackendPool                     string
+		elbBackendPool                     string
 	}{
 		{
-			name:          "updates v1 resources correctly",
+			name:          "Updates resources correctly for newly created cluster",
 			ilb:           infraID + "-internal-lb",
 			ilbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
 			loadbalancer:  lbBefore,
-			iface:         ifBefore,
-			iNameF:        "%s-master%d-nic",
+			interfaces:    ifListNewCluster,
+			iNameOldF:     "%s-master%d-nic",
+			newCluster:    true,
 			writeExpected: true,
 			elb:           infraID + "-public-lb",
 			elbV1ID:       "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
 			elbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 		},
 		{
-			name:                "v1 noop",
-			ilb:                 infraID + "-internal-lb",
-			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
-			loadbalancer:        lbAfter,
-			iface:               ifAfter,
-			iNameF:              "%s-master%d-nic",
-			elb:                 infraID + "-public-lb",
-			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
-			ilbBackendPool:      infraID + "-internal-controlplane-v4",
-			elbBackendPool:      infraID + "-public-lb-control-plane-v4",
-			noOperationExpected: true,
+			name:                 "Updates public cluster resources correctly after first CPMS update",
+			ilb:                  infraID + "-internal-lb",
+			ilbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:         lbBefore,
+			iNameNewF:            "%s-master-12345-%d-nic",
+			iNameOldF:            "%s-master%d-nic",
+			afterFirstCPMSUpdate: true,
+			writeExpected:        true,
+			elb:                  infraID + "-public-lb",
+			elbV1ID:              "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 		},
 		{
-			name:                "updates v2 resources correctly",
-			architectureVersion: api.ArchitectureVersionV2,
-			ilb:                 infraID + "-internal",
-			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
-			loadbalancer:        lbBefore,
-			iface:               ifBefore,
-			iNameF:              "%s-master%d-nic",
-			writeExpected:       true,
-			elb:                 infraID,
-			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
-			ilbBackendPool:      infraID,
-			elbBackendPool:      infraID,
+			name:                               "Updates private cluster resources correctly after first CPMS update",
+			ilb:                                infraID + "-internal-lb",
+			ilbID:                              "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:                       lbBefore,
+			interfaces:                         ifListAfterFirstCPMSUpdatePrivateCluster,
+			iNameNewF:                          "%s-master-12345-%d-nic",
+			iNameOldF:                          "%s-master%d-nic",
+			afterFirstCPMSUpdatePrivateCluster: true,
+			writeExpected:                      true,
+			elb:                                infraID + "-public-lb",
+			elbV1ID:                            "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:                              "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 		},
 		{
-			name:                "v2 noop",
-			architectureVersion: api.ArchitectureVersionV2,
-			ilb:                 infraID + "-internal",
-			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
-			loadbalancer:        lbAfter,
-			iface:               ifAfter,
-			iNameF:              "%s-master%d-nic",
-			elb:                 infraID,
-			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
-			ilbBackendPool:      infraID,
-			elbBackendPool:      infraID,
-			noOperationExpected: true,
+			name:                     "Updates resources correctly after multiple CPMS updates",
+			ilb:                      infraID + "-internal-lb",
+			ilbID:                    "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:             lbBefore,
+			interfaces:               ifListAfterMultipleCPMSUpdates,
+			iNameNewF:                "%s-master-12345-%d-nic",
+			iNameOldF:                "%s-master%d-nic",
+			afterMultipleCPMSUpdates: true,
+			writeExpected:            true,
+			elb:                      infraID + "-public-lb",
+			elbV1ID:                  "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:                    "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 		},
 		{
-			name:                "updates v2 resources correctly with masters recreated",
-			architectureVersion: api.ArchitectureVersionV2,
-			ilb:                 infraID + "-internal",
-			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
-			loadbalancer:        lbBefore,
-			iface:               ifBefore,
-			iNameF:              "%s-master-%d-nic",
-			writeExpected:       true,
-			fallbackExpected:    true,
-			elb:                 infraID,
-			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
-			ilbBackendPool:      infraID,
-			elbBackendPool:      infraID,
+			name:          "Pager error expected",
+			ilb:           infraID + "-internal-lb",
+			ilbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:  lbBefore,
+			iNameNewF:     "%s-master-12345-%d-nic",
+			iNameOldF:     "%s-master%d-nic",
+			pagerError:    true,
+			writeExpected: true,
+			elb:           infraID + "-public-lb",
+			elbV1ID:       "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
+			wantError:     "fake pager API auth error",
 		},
 		{
-			name:                "updates v2 resources correctly with masters recreated and no VM attached to the installer NIC",
-			architectureVersion: api.ArchitectureVersionV2,
-			ilb:                 infraID + "-internal",
-			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
-			loadbalancer:        lbBefore,
-			iface:               ifNoVmBefore,
-			iNameF:              "%s-master-%d-nic",
-			ifaceNoVmAttached:   true,
-			writeExpected:       true,
-			fallbackExpected:    true,
-			elb:                 infraID,
-			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
-			ilbBackendPool:      infraID,
-			elbBackendPool:      infraID,
+			name:           "Pager no results",
+			ilb:            infraID + "-internal-lb",
+			ilbID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:   lbBefore,
+			iNameNewF:      "%s-master-12345-%d-nic",
+			iNameOldF:      "%s-master%d-nic",
+			pagerNoResults: true,
+			writeExpected:  true,
+			elb:            infraID + "-public-lb",
+			elbV1ID:        "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
+			wantError:      "fake paged response is empty",
+		},
+		{
+			name:           "Failed to delete orphaned NIC",
+			ilb:            infraID + "-internal-lb",
+			ilbID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:   lbBefore,
+			interfaces:     ifListOrphanedNIC,
+			iNameOldF:      "%s-master%d-nic",
+			deleteNICError: true,
+			writeExpected:  true,
+			elb:            infraID + "-public-lb",
+			elbV1ID:        "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
+			wantError:      "Failed to delete orphaned NIC",
 		},
 		{
 			name:                "FixSSH function returns an error while Fetching LB",
@@ -317,35 +517,18 @@ func TestFixSSH(t *testing.T) {
 			ilb:                 infraID + "-internal",
 			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbBefore,
-			iface:               ifNoVmBefore,
-			iNameF:              "%s-master%d-nic",
-			writeExpected:       false,
-			fallbackExpected:    false,
 			lbErrorExpected:     true,
 			nicErrorExpected:    false,
 			wantError:           "Loadbalancer not found",
-		},
-		{
-			name:                "FixSSH function returns an error while Fetching NIC",
-			architectureVersion: api.ArchitectureVersionV2,
-			ilb:                 infraID + "-internal",
-			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
-			loadbalancer:        lbBefore,
-			iface:               ifNoVmBefore,
-			iNameF:              "%s-master-%d-nic",
-			writeExpected:       true,
-			fallbackExpected:    false,
-			lbErrorExpected:     false,
-			nicErrorExpected:    true,
-			wantError:           "Interface not found",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			interfaces := mock_network.NewMockInterfacesClient(ctrl)
 			loadBalancers := mock_network.NewMockLoadBalancersClient(ctrl)
+			armInterfaces := mock_armnetwork.NewMockInterfacesClient(ctrl)
+			createOrUpdateOptions := &armnetwork.InterfacesClientBeginCreateOrUpdateOptions{ResumeToken: ""}
 
 			if tt.lbErrorExpected {
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.ilb, "").Return(mgmtnetwork.LoadBalancer{}, fmt.Errorf("Loadbalancer not found"))
@@ -356,52 +539,74 @@ func TestFixSSH(t *testing.T) {
 				}
 			}
 
-			for i := 0; i < 3; i++ {
-				vmNicBefore := tt.iface(tt.ilbID, tt.elbID, i, tt.ilbBackendPool, tt.elbBackendPool)
+			if tt.newCluster {
+				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(tt.interfaces, tt.ilbID, tt.elbID, false))
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+			}
 
-				if tt.fallbackExpected { // bit of hack to check fallback.
-					if tt.ifaceNoVmAttached {
-						vmNicBefore = ifNoVmBefore(tt.ilbID, tt.elbID, i, tt.ilbBackendPool, tt.elbBackendPool)
-						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(*vmNicBefore, nil)
-					} else {
-						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("nic not found"))
-					}
-				}
+			if tt.afterFirstCPMSUpdate {
+				ifList := ifListAfterFirstCPMSUpdate(tt.ilbID, tt.elbID, true)
+				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(ifListAfterFirstCPMSUpdate, tt.ilbID, tt.elbID, false))
+				// New interfaces post CPMS update
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 0), *ifList[0], createOrUpdateOptions)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 1), *ifList[1], createOrUpdateOptions)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 2), *ifList[2], createOrUpdateOptions)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				// Old interfaces from origin cluster install, orphaned and expected to be deleted
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), *ifList[3], createOrUpdateOptions)
+				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 1), *ifList[4], createOrUpdateOptions)
+				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 1), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 2), *ifList[5], createOrUpdateOptions)
+				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 2), nil)
+			}
 
-				if tt.nicErrorExpected {
-					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("Interface not found"))
-					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("Interface not found"))
-					break
-				} else if tt.lbErrorExpected {
-					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Times(0)
-				} else if tt.architectureVersion == api.ArchitectureVersionV2 && tt.noOperationExpected {
-					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
-					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
-				} else if tt.noOperationExpected {
-					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
-					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, infraID, "").Return(*tt.loadbalancer(tt.elbV1ID), nil)
-					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
-				} else {
-					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
-				}
+			if tt.afterFirstCPMSUpdatePrivateCluster {
+				ifList := ifListAfterFirstCPMSUpdatePrivateCluster(tt.ilbID, tt.elbID, true)
+				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(ifListAfterFirstCPMSUpdatePrivateCluster, tt.ilbID, tt.elbID, false))
+				// New interfaces post CPMS update
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 1), *ifList[1], createOrUpdateOptions)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 2), *ifList[2], createOrUpdateOptions)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				// Old interfaces from origin cluster install, orphaned and expected to be deleted
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), *ifList[3], createOrUpdateOptions)
+				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 1), *ifList[4], createOrUpdateOptions)
+				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 1), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 2), *ifList[5], createOrUpdateOptions)
+				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 2), nil)
+			}
 
-				if tt.writeExpected {
-					if tt.ifaceNoVmAttached {
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), *vmNicBefore)
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifNoVmAfter(vmNicBefore))
-						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifNoVmAfter(vmNicBefore))
-					} else if tt.architectureVersion == api.ArchitectureVersionV2 {
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
-						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
-					} else {
-						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, infraID, "").Return(*tt.loadbalancer(tt.elbV1ID), nil)
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
-						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
-					}
-				}
+			if tt.afterMultipleCPMSUpdates {
+				ifList := ifListAfterMultipleCPMSUpdates(tt.ilbID, tt.elbID, true)
+				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(tt.interfaces, tt.ilbID, tt.elbID, false))
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 0), *ifList[0], createOrUpdateOptions)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 1), *ifList[1], createOrUpdateOptions)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 2), *ifList[2], createOrUpdateOptions)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+			}
+
+			if tt.pagerError {
+				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPagerWithError())
+			}
+
+			if tt.pagerNoResults {
+				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPagerNoResults())
+			}
+
+			if tt.deleteNICError {
+				ifList := tt.interfaces(tt.ilbID, tt.elbID, false)
+				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(tt.interfaces, tt.ilbID, tt.elbID, false))
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), *ifList[0], createOrUpdateOptions)
+				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), nil).Return(fmt.Errorf("Failed to delete orphaned NIC"))
 			}
 
 			m := &manager{
@@ -413,16 +618,17 @@ func TestFixSSH(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup,
 							},
-							InfraID: infraID,
+							MasterProfile: api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.MasterProfile,
+							InfraID:       infraID,
 						},
 					},
 				},
-				interfaces:    interfaces,
+				armInterfaces: armInterfaces,
 				loadBalancers: loadBalancers,
 			}
 
 			err := m.fixSSH(context.Background())
-			if err != nil && err.Error() != tt.wantError ||
+			if err != nil && !strings.Contains(err.Error(), tt.wantError) ||
 				err == nil && tt.wantError != "" {
 				t.Error(err)
 			}
