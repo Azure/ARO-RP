@@ -108,8 +108,6 @@ const GenerateSubnetMaxTries = 100
 const localDefaultURL string = "https://localhost:8443"
 const DefaultMasterVmSize = api.VMSizeStandardD8sV5
 const DefaultWorkerVmSize = api.VMSizeStandardD4sV5
-const diskCsiRoleMissingPermission = "Microsoft.Compute/diskEncryptionSets/read"
-const diskCsiRoleName = "tmpDiskCsiAdditionalPerm"
 
 func insecureLocalClient() *http.Client {
 	return &http.Client{
@@ -423,53 +421,6 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 				ResourceID: *resp.ID,
 			}
 		}
-	}
-
-	return nil
-}
-
-func (c *Cluster) workaroundDiskCsiPermissions(ctx context.Context, diskCsiDriverPrincipalID *string) error {
-	allRoledefs, err := c.roledefinitions.List(ctx, fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID), "")
-	if err != nil {
-		return fmt.Errorf("error getting existing roles: %w", err)
-	}
-
-	roleID := uuid.DefaultGenerator.Generate()
-	for _, rd := range allRoledefs {
-		if *rd.RoleName == diskCsiRoleName {
-			roleID = *rd.Name
-		}
-	}
-
-	workaroundRole, err := c.roledefinitions.CreateOrUpdate(ctx, fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID), roleID, mgmtauthorization.RoleDefinition{
-		RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-			RoleName:    to.StringPtr(diskCsiRoleName),
-			Description: to.StringPtr("Tmp disk csi role"),
-			Permissions: &[]mgmtauthorization.Permission{
-				{
-					Actions: &[]string{diskCsiRoleMissingPermission},
-				},
-			},
-			AssignableScopes: &[]string{fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("error creating/updating workaround role: %w", err)
-	}
-	_, err = c.roleassignments.Create(
-		ctx,
-		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, c.Config.VnetResourceGroup),
-		uuid.DefaultGenerator.Generate(),
-		mgmtauthorization.RoleAssignmentCreateParameters{
-			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: workaroundRole.ID,
-				PrincipalID:      diskCsiDriverPrincipalID,
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
-			},
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("error assigning workaround role to principal: %w", err)
 	}
 
 	return nil
