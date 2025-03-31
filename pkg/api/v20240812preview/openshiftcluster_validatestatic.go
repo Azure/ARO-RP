@@ -447,14 +447,11 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 	}
 
 	if current.UsesWorkloadIdentity() {
-		for name, currentIdentity := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			updateIdentity, present := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name]
+		for name := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			_, present := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name]
 			// this also validates that existing identities' names haven't changed
 			if !present {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity cannot be removed or have its name changed.")
-			}
-			if currentIdentity.ResourceID != updateIdentity.ResourceID {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.platformWorkloadIdentityProfile.platformWorkloadIdentities", "Operator identity resource ID cannot be changed.")
 			}
 		}
 	}
