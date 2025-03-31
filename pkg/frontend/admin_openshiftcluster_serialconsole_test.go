@@ -27,25 +27,25 @@ import (
 )
 
 const (
-	mockSubID    = "00000000-0000-0000-0000-000000000000"
-	mockTenantID = "00000000-0000-0000-0000-000000000000"
+	mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
+	mockTenantID       = "00000000-0000-0000-0000-000000000000"
 )
 
-func databaseFixture(f *testdatabase.Fixture) {
-	f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-		Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+func databaseFixture(dbFixture *testdatabase.Fixture) {
+	dbFixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+		Key: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
 		OpenShiftCluster: &api.OpenShiftCluster{
-			ID: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			ID: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
 			Properties: api.OpenShiftClusterProperties{
 				ClusterProfile: api.ClusterProfile{
-					ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+					ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubscriptionID),
 				},
 			},
 		},
 	})
 
-	f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-		ID: mockSubID,
+	dbFixture.AddSubscriptionDocuments(&api.SubscriptionDocument{
+		ID: mockSubscriptionID,
 		Subscription: &api.Subscription{
 			State: api.SubscriptionStateRegistered,
 			Properties: &api.SubscriptionProperties{
@@ -64,26 +64,28 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 		mocks          func(*mock_adminactions.MockAzureActions)
 		wantStatusCode int
 		wantError      string
+		wantResponse   string
 	}{
 		{
 			name:       "valid request returns console output",
 			vmName:     "master-0",
-			resourceID: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			resourceID: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
 			fixture:    databaseFixture,
 			mocks: func(mockActions *mock_adminactions.MockAzureActions) {
 				mockActions.EXPECT().
 					VMSerialConsole(gomock.Any(), gomock.Any(), "master-0", gomock.Any()).
-					DoAndReturn(func(ctx context.Context, log *logrus.Entry, vmName string, w io.Writer) error {
-						_, err := w.Write([]byte("console output"))
+					DoAndReturn(func(ctx context.Context, log *logrus.Entry, vmName string, writer io.Writer) error {
+						_, err := writer.Write([]byte("console output"))
 						return err
 					})
 			},
 			wantStatusCode: http.StatusOK,
+			wantResponse:   "console output",
 		},
 		{
 			name:       "invalid vm name returns error",
 			vmName:     "invalid-vm",
-			resourceID: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			resourceID: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
 			fixture:    databaseFixture,
 			mocks: func(mockActions *mock_adminactions.MockAzureActions) {
 				mockActions.EXPECT().
@@ -98,37 +100,52 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "invalid VM name",
 		},
+		{
+			name:           "missing vm name parameter returns error",
+			vmName:         "",
+			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
+			fixture:        databaseFixture,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "The provided vmName '' is invalid",
+		},
+		{
+			name:           "cluster not found returns error",
+			vmName:         "master-0",
+			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "nonexistent-cluster")),
+			fixture:        databaseFixture,
+			wantStatusCode: http.StatusNotFound,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
-			defer ti.done()
+			testInfra := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
+			defer testInfra.done()
 
-			a := mock_adminactions.NewMockAzureActions(ti.controller)
+			a := mock_adminactions.NewMockAzureActions(testInfra.controller)
 			if tt.mocks != nil {
 				tt.mocks(a)
 			}
 
-			err := ti.buildFixtures(tt.fixture)
+			err := testInfra.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(context.Background(), ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
+			frontend, err := NewFrontend(context.Background(), testInfra.auditLog, testInfra.log, testInfra.otelAudit, testInfra.env, testInfra.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 				return a, nil
 			}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest(http.MethodGet, "/admin"+tt.resourceID+"/serialconsole?vmName="+tt.vmName, nil)
-			r = r.WithContext(context.WithValue(r.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger())))
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/admin"+tt.resourceID+"/serialconsole?vmName="+tt.vmName, nil)
+			request = request.WithContext(context.WithValue(request.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger())))
 
-			f.getAdminOpenShiftClusterSerialConsole(w, r)
+			frontend.getAdminOpenShiftClusterSerialConsole(recorder, request)
 
-			response := w.Result()
+			response := recorder.Result()
 			require.Equal(t, tt.wantStatusCode, response.StatusCode)
 
 			if tt.wantError != "" {
