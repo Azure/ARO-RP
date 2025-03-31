@@ -112,7 +112,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.1202-g118c178",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
 		"quay.io/app-sre/hive:5d3f4d77dc",
