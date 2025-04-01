@@ -19,6 +19,9 @@ import (
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	watch "k8s.io/apimachinery/pkg/watch"
+	rest "k8s.io/client-go/rest"
+
+	adminactions "github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 )
 
 // MockKubeActions is a mock of KubeActions interface.
@@ -202,4 +205,34 @@ func (m *MockKubeActions) ResolveGVR(groupKind, optionalVersion string) (schema.
 func (mr *MockKubeActionsMockRecorder) ResolveGVR(groupKind, optionalVersion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveGVR", reflect.TypeOf((*MockKubeActions)(nil).ResolveGVR), groupKind, optionalVersion)
+}
+
+// TopNodes mocks base method.
+func (m *MockKubeActions) TopNodes(ctx context.Context, restConfig *rest.Config) ([]adminactions.NodeMetrics, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TopNodes", ctx, restConfig)
+	ret0, _ := ret[0].([]adminactions.NodeMetrics)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TopNodes indicates an expected call of TopNodes.
+func (mr *MockKubeActionsMockRecorder) TopNodes(ctx, restConfig any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TopNodes", reflect.TypeOf((*MockKubeActions)(nil).TopNodes), ctx, restConfig)
+}
+
+// TopPods mocks base method.
+func (m *MockKubeActions) TopPods(ctx context.Context, restConfig *rest.Config, allNamespaces bool) ([]adminactions.PodMetrics, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TopPods", ctx, restConfig, allNamespaces)
+	ret0, _ := ret[0].([]adminactions.PodMetrics)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TopPods indicates an expected call of TopPods.
+func (mr *MockKubeActionsMockRecorder) TopPods(ctx, restConfig, allNamespaces any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TopPods", reflect.TypeOf((*MockKubeActions)(nil).TopPods), ctx, restConfig, allNamespaces)
 }

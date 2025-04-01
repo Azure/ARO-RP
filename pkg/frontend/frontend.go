@@ -318,6 +318,11 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
 			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
+				// Top pods metrics endpoint
+				r.Get("/top/pods", f.getAdminTopPods)
+				// Top nodes metrics endpoint
+				r.Get("/top/nodes", f.getAdminTopNodes)
+
 				// Etcd recovery
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdrecovery", f.postAdminOpenShiftClusterEtcdRecovery)
 
