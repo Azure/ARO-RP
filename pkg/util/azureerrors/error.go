@@ -151,12 +151,6 @@ func ResourceGroupNotFound(err error) bool {
 }
 
 func IsInvalidIdentityUserError(err error) bool {
-	var detailedErr autorest.DetailedError
-	if errors.As(err, &detailedErr) {
-		if statusCode, ok := detailedErr.StatusCode.(int); ok {
-			return statusCode >= 400 && statusCode < 500
-		}
-	}
 	var responseError *azcore.ResponseError
 	if errors.As(err, &responseError) {
 		return responseError.StatusCode >= 400 && responseError.StatusCode < 500
