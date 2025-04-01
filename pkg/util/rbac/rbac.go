@@ -67,22 +67,13 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 	return r
 }
 
-func ResourceRoleAssignmentWithNameAndNestedResources(roleID, spID, resourceType string, resourceNames []string, names string, condition ...interface{}) *arm.Resource {
-	resourceID := "resourceId('" + resourceType + "', "
-	for i, n := range resourceNames {
-		resourceID += n
-		if i < len(resourceNames)-1 {
-			resourceID += ", "
-		}
-	}
-	resourceID += ")"
-
+func ResourceRoleAssignmentWithScope(roleID, spID, resourceType string, scope string, names string, condition ...interface{}) *arm.Resource {
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
 			Name: to.StringPtr("[" + names + "]"),
 			Type: to.StringPtr(resourceType + "/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[" + resourceID + "]"),
+				Scope:            to.StringPtr("[" + scope + "]"),
 				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
 				PrincipalID:      to.StringPtr("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
@@ -90,7 +81,7 @@ func ResourceRoleAssignmentWithNameAndNestedResources(roleID, spID, resourceType
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
 		DependsOn: []string{
-			"[" + resourceID + "]",
+			"[" + scope + "]",
 		},
 	}
 
