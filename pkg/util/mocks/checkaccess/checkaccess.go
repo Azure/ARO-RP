@@ -21,6 +21,7 @@ import (
 type MockRemotePDPClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRemotePDPClientMockRecorder
+	isgomock struct{}
 }
 
 // MockRemotePDPClientMockRecorder is the mock recorder for MockRemotePDPClient.

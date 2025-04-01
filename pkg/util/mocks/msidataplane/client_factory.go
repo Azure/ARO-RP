@@ -20,6 +20,7 @@ import (
 type MockClientFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientFactoryMockRecorder
+	isgomock struct{}
 }
 
 // MockClientFactoryMockRecorder is the mock recorder for MockClientFactory.
@@ -40,16 +41,16 @@ func (m *MockClientFactory) EXPECT() *MockClientFactoryMockRecorder {
 }
 
 // NewClient mocks base method.
-func (m *MockClientFactory) NewClient(arg0 string) (dataplane.Client, error) {
+func (m *MockClientFactory) NewClient(identityURL string) (dataplane.Client, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewClient", arg0)
+	ret := m.ctrl.Call(m, "NewClient", identityURL)
 	ret0, _ := ret[0].(dataplane.Client)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewClient indicates an expected call of NewClient.
-func (mr *MockClientFactoryMockRecorder) NewClient(arg0 any) *gomock.Call {
+func (mr *MockClientFactoryMockRecorder) NewClient(identityURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockClientFactory)(nil).NewClient), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockClientFactory)(nil).NewClient), identityURL)
 }

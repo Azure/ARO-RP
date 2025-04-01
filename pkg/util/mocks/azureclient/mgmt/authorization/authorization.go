@@ -21,6 +21,7 @@ import (
 type MockRoleAssignmentsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRoleAssignmentsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockRoleAssignmentsClientMockRecorder is the mock recorder for MockRoleAssignmentsClient.
@@ -41,69 +42,70 @@ func (m *MockRoleAssignmentsClient) EXPECT() *MockRoleAssignmentsClientMockRecor
 }
 
 // Create mocks base method.
-func (m *MockRoleAssignmentsClient) Create(arg0 context.Context, arg1, arg2 string, arg3 authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
+func (m *MockRoleAssignmentsClient) Create(ctx context.Context, scope, roleAssignmentName string, parameters authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Create", ctx, scope, roleAssignmentName, parameters)
 	ret0, _ := ret[0].(authorization.RoleAssignment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockRoleAssignmentsClientMockRecorder) Create(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockRoleAssignmentsClientMockRecorder) Create(ctx, scope, roleAssignmentName, parameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).Create), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).Create), ctx, scope, roleAssignmentName, parameters)
 }
 
 // Delete mocks base method.
-func (m *MockRoleAssignmentsClient) Delete(arg0 context.Context, arg1, arg2 string) (authorization.RoleAssignment, error) {
+func (m *MockRoleAssignmentsClient) Delete(ctx context.Context, scope, roleAssignmentName string) (authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", ctx, scope, roleAssignmentName)
 	ret0, _ := ret[0].(authorization.RoleAssignment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockRoleAssignmentsClientMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockRoleAssignmentsClientMockRecorder) Delete(ctx, scope, roleAssignmentName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).Delete), ctx, scope, roleAssignmentName)
 }
 
 // ListForResource mocks base method.
-func (m *MockRoleAssignmentsClient) ListForResource(arg0 context.Context, arg1, arg2, arg3, arg4, arg5, arg6 string) ([]authorization.RoleAssignment, error) {
+func (m *MockRoleAssignmentsClient) ListForResource(ctx context.Context, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, filter string) ([]authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListForResource", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	ret := m.ctrl.Call(m, "ListForResource", ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, filter)
 	ret0, _ := ret[0].([]authorization.RoleAssignment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListForResource indicates an expected call of ListForResource.
-func (mr *MockRoleAssignmentsClientMockRecorder) ListForResource(arg0, arg1, arg2, arg3, arg4, arg5, arg6 any) *gomock.Call {
+func (mr *MockRoleAssignmentsClientMockRecorder) ListForResource(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, filter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResource", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).ListForResource), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResource", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).ListForResource), ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, filter)
 }
 
 // ListForResourceGroup mocks base method.
-func (m *MockRoleAssignmentsClient) ListForResourceGroup(arg0 context.Context, arg1, arg2 string) ([]authorization.RoleAssignment, error) {
+func (m *MockRoleAssignmentsClient) ListForResourceGroup(ctx context.Context, resourceGroupName, filter string) ([]authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListForResourceGroup", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ListForResourceGroup", ctx, resourceGroupName, filter)
 	ret0, _ := ret[0].([]authorization.RoleAssignment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListForResourceGroup indicates an expected call of ListForResourceGroup.
-func (mr *MockRoleAssignmentsClientMockRecorder) ListForResourceGroup(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockRoleAssignmentsClientMockRecorder) ListForResourceGroup(ctx, resourceGroupName, filter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResourceGroup", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).ListForResourceGroup), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResourceGroup", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).ListForResourceGroup), ctx, resourceGroupName, filter)
 }
 
 // MockDenyAssignmentClient is a mock of DenyAssignmentClient interface.
 type MockDenyAssignmentClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDenyAssignmentClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDenyAssignmentClientMockRecorder is the mock recorder for MockDenyAssignmentClient.
@@ -124,24 +126,25 @@ func (m *MockDenyAssignmentClient) EXPECT() *MockDenyAssignmentClientMockRecorde
 }
 
 // ListForResourceGroup mocks base method.
-func (m *MockDenyAssignmentClient) ListForResourceGroup(arg0 context.Context, arg1, arg2 string) ([]authorization.DenyAssignment, error) {
+func (m *MockDenyAssignmentClient) ListForResourceGroup(ctx context.Context, resourceGroupName, filter string) ([]authorization.DenyAssignment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListForResourceGroup", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ListForResourceGroup", ctx, resourceGroupName, filter)
 	ret0, _ := ret[0].([]authorization.DenyAssignment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListForResourceGroup indicates an expected call of ListForResourceGroup.
-func (mr *MockDenyAssignmentClientMockRecorder) ListForResourceGroup(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDenyAssignmentClientMockRecorder) ListForResourceGroup(ctx, resourceGroupName, filter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResourceGroup", reflect.TypeOf((*MockDenyAssignmentClient)(nil).ListForResourceGroup), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResourceGroup", reflect.TypeOf((*MockDenyAssignmentClient)(nil).ListForResourceGroup), ctx, resourceGroupName, filter)
 }
 
 // MockRoleDefinitionsClient is a mock of RoleDefinitionsClient interface.
 type MockRoleDefinitionsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRoleDefinitionsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockRoleDefinitionsClientMockRecorder is the mock recorder for MockRoleDefinitionsClient.
@@ -162,46 +165,46 @@ func (m *MockRoleDefinitionsClient) EXPECT() *MockRoleDefinitionsClientMockRecor
 }
 
 // CreateOrUpdate mocks base method.
-func (m *MockRoleDefinitionsClient) CreateOrUpdate(arg0 context.Context, arg1, arg2 string, arg3 authorization.RoleDefinition) (authorization.RoleDefinition, error) {
+func (m *MockRoleDefinitionsClient) CreateOrUpdate(ctx context.Context, scope, roleDefinitionID string, roleDefinition authorization.RoleDefinition) (authorization.RoleDefinition, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", ctx, scope, roleDefinitionID, roleDefinition)
 	ret0, _ := ret[0].(authorization.RoleDefinition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockRoleDefinitionsClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockRoleDefinitionsClientMockRecorder) CreateOrUpdate(ctx, scope, roleDefinitionID, roleDefinition any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).CreateOrUpdate), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).CreateOrUpdate), ctx, scope, roleDefinitionID, roleDefinition)
 }
 
 // Delete mocks base method.
-func (m *MockRoleDefinitionsClient) Delete(arg0 context.Context, arg1, arg2 string) (authorization.RoleDefinition, error) {
+func (m *MockRoleDefinitionsClient) Delete(ctx context.Context, scope, roleDefinitionID string) (authorization.RoleDefinition, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", ctx, scope, roleDefinitionID)
 	ret0, _ := ret[0].(authorization.RoleDefinition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockRoleDefinitionsClientMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockRoleDefinitionsClientMockRecorder) Delete(ctx, scope, roleDefinitionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).Delete), ctx, scope, roleDefinitionID)
 }
 
 // List mocks base method.
-func (m *MockRoleDefinitionsClient) List(arg0 context.Context, arg1, arg2 string) ([]authorization.RoleDefinition, error) {
+func (m *MockRoleDefinitionsClient) List(ctx context.Context, scope, filter string) ([]authorization.RoleDefinition, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "List", ctx, scope, filter)
 	ret0, _ := ret[0].([]authorization.RoleDefinition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockRoleDefinitionsClientMockRecorder) List(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockRoleDefinitionsClientMockRecorder) List(ctx, scope, filter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).List), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).List), ctx, scope, filter)
 }

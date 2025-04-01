@@ -22,6 +22,7 @@ import (
 type MockDisksClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDisksClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDisksClientMockRecorder is the mock recorder for MockDisksClient.
@@ -42,38 +43,39 @@ func (m *MockDisksClient) EXPECT() *MockDisksClientMockRecorder {
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockDisksClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockDisksClient) DeleteAndWait(ctx context.Context, resourceGroupName, diskName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, diskName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockDisksClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDisksClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, diskName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockDisksClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockDisksClient)(nil).DeleteAndWait), ctx, resourceGroupName, diskName)
 }
 
 // Get mocks base method.
-func (m *MockDisksClient) Get(arg0 context.Context, arg1, arg2 string) (compute.Disk, error) {
+func (m *MockDisksClient) Get(ctx context.Context, resourceGroupName, diskName string) (compute.Disk, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, diskName)
 	ret0, _ := ret[0].(compute.Disk)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockDisksClientMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDisksClientMockRecorder) Get(ctx, resourceGroupName, diskName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDisksClient)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDisksClient)(nil).Get), ctx, resourceGroupName, diskName)
 }
 
 // MockResourceSkusClient is a mock of ResourceSkusClient interface.
 type MockResourceSkusClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockResourceSkusClientMockRecorder
+	isgomock struct{}
 }
 
 // MockResourceSkusClientMockRecorder is the mock recorder for MockResourceSkusClient.
@@ -94,24 +96,25 @@ func (m *MockResourceSkusClient) EXPECT() *MockResourceSkusClientMockRecorder {
 }
 
 // List mocks base method.
-func (m *MockResourceSkusClient) List(arg0 context.Context, arg1 string) ([]compute.ResourceSku, error) {
+func (m *MockResourceSkusClient) List(ctx context.Context, filter string) ([]compute.ResourceSku, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, filter)
 	ret0, _ := ret[0].([]compute.ResourceSku)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockResourceSkusClientMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockResourceSkusClientMockRecorder) List(ctx, filter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceSkusClient)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceSkusClient)(nil).List), ctx, filter)
 }
 
 // MockVirtualMachinesClient is a mock of VirtualMachinesClient interface.
 type MockVirtualMachinesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockVirtualMachinesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockVirtualMachinesClientMockRecorder is the mock recorder for MockVirtualMachinesClient.
@@ -132,123 +135,124 @@ func (m *MockVirtualMachinesClient) EXPECT() *MockVirtualMachinesClientMockRecor
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockVirtualMachinesClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 compute.VirtualMachine) error {
+func (m *MockVirtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, VMName string, parameters compute.VirtualMachine) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, VMName, parameters)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockVirtualMachinesClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, VMName, parameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, VMName, parameters)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockVirtualMachinesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string, arg3 *bool) error {
+func (m *MockVirtualMachinesClient) DeleteAndWait(ctx context.Context, resourceGroupName, VMName string, forceDeletion *bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, VMName, forceDeletion)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockVirtualMachinesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, VMName, forceDeletion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).DeleteAndWait), ctx, resourceGroupName, VMName, forceDeletion)
 }
 
 // Get mocks base method.
-func (m *MockVirtualMachinesClient) Get(arg0 context.Context, arg1, arg2 string, arg3 compute.InstanceViewTypes) (compute.VirtualMachine, error) {
+func (m *MockVirtualMachinesClient) Get(ctx context.Context, resourceGroupName, VMName string, expand compute.InstanceViewTypes) (compute.VirtualMachine, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, VMName, expand)
 	ret0, _ := ret[0].(compute.VirtualMachine)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockVirtualMachinesClientMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) Get(ctx, resourceGroupName, VMName, expand any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualMachinesClient)(nil).Get), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualMachinesClient)(nil).Get), ctx, resourceGroupName, VMName, expand)
 }
 
 // GetSerialConsoleForVM mocks base method.
-func (m *MockVirtualMachinesClient) GetSerialConsoleForVM(arg0 context.Context, arg1, arg2 string, arg3 io.Writer) error {
+func (m *MockVirtualMachinesClient) GetSerialConsoleForVM(ctx context.Context, resourceGroupName, VMName string, target io.Writer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSerialConsoleForVM", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetSerialConsoleForVM", ctx, resourceGroupName, VMName, target)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GetSerialConsoleForVM indicates an expected call of GetSerialConsoleForVM.
-func (mr *MockVirtualMachinesClientMockRecorder) GetSerialConsoleForVM(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) GetSerialConsoleForVM(ctx, resourceGroupName, VMName, target any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSerialConsoleForVM", reflect.TypeOf((*MockVirtualMachinesClient)(nil).GetSerialConsoleForVM), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSerialConsoleForVM", reflect.TypeOf((*MockVirtualMachinesClient)(nil).GetSerialConsoleForVM), ctx, resourceGroupName, VMName, target)
 }
 
 // List mocks base method.
-func (m *MockVirtualMachinesClient) List(arg0 context.Context, arg1 string) ([]compute.VirtualMachine, error) {
+func (m *MockVirtualMachinesClient) List(ctx context.Context, resourceGroupName string) ([]compute.VirtualMachine, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName)
 	ret0, _ := ret[0].([]compute.VirtualMachine)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockVirtualMachinesClientMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) List(ctx, resourceGroupName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachinesClient)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachinesClient)(nil).List), ctx, resourceGroupName)
 }
 
 // RedeployAndWait mocks base method.
-func (m *MockVirtualMachinesClient) RedeployAndWait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockVirtualMachinesClient) RedeployAndWait(ctx context.Context, resourceGroupName, VMName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RedeployAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "RedeployAndWait", ctx, resourceGroupName, VMName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RedeployAndWait indicates an expected call of RedeployAndWait.
-func (mr *MockVirtualMachinesClientMockRecorder) RedeployAndWait(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) RedeployAndWait(ctx, resourceGroupName, VMName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedeployAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).RedeployAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedeployAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).RedeployAndWait), ctx, resourceGroupName, VMName)
 }
 
 // StartAndWait mocks base method.
-func (m *MockVirtualMachinesClient) StartAndWait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockVirtualMachinesClient) StartAndWait(ctx context.Context, resourceGroupName, VMName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "StartAndWait", ctx, resourceGroupName, VMName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StartAndWait indicates an expected call of StartAndWait.
-func (mr *MockVirtualMachinesClientMockRecorder) StartAndWait(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) StartAndWait(ctx, resourceGroupName, VMName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StartAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StartAndWait), ctx, resourceGroupName, VMName)
 }
 
 // StopAndWait mocks base method.
-func (m *MockVirtualMachinesClient) StopAndWait(arg0 context.Context, arg1, arg2 string, arg3 bool) error {
+func (m *MockVirtualMachinesClient) StopAndWait(ctx context.Context, resourceGroupName, VMName string, deallocateVM bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StopAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "StopAndWait", ctx, resourceGroupName, VMName, deallocateVM)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StopAndWait indicates an expected call of StopAndWait.
-func (mr *MockVirtualMachinesClientMockRecorder) StopAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) StopAndWait(ctx, resourceGroupName, VMName, deallocateVM any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StopAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StopAndWait), ctx, resourceGroupName, VMName, deallocateVM)
 }
 
 // MockUsageClient is a mock of UsageClient interface.
 type MockUsageClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockUsageClientMockRecorder
+	isgomock struct{}
 }
 
 // MockUsageClientMockRecorder is the mock recorder for MockUsageClient.
@@ -269,24 +273,25 @@ func (m *MockUsageClient) EXPECT() *MockUsageClientMockRecorder {
 }
 
 // List mocks base method.
-func (m *MockUsageClient) List(arg0 context.Context, arg1 string) ([]compute.Usage, error) {
+func (m *MockUsageClient) List(ctx context.Context, location string) ([]compute.Usage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, location)
 	ret0, _ := ret[0].([]compute.Usage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockUsageClientMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockUsageClientMockRecorder) List(ctx, location any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockUsageClient)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockUsageClient)(nil).List), ctx, location)
 }
 
 // MockVirtualMachineScaleSetVMsClient is a mock of VirtualMachineScaleSetVMsClient interface.
 type MockVirtualMachineScaleSetVMsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockVirtualMachineScaleSetVMsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockVirtualMachineScaleSetVMsClientMockRecorder is the mock recorder for MockVirtualMachineScaleSetVMsClient.
@@ -307,53 +312,54 @@ func (m *MockVirtualMachineScaleSetVMsClient) EXPECT() *MockVirtualMachineScaleS
 }
 
 // GetInstanceView mocks base method.
-func (m *MockVirtualMachineScaleSetVMsClient) GetInstanceView(arg0 context.Context, arg1, arg2, arg3 string) (compute.VirtualMachineScaleSetVMInstanceView, error) {
+func (m *MockVirtualMachineScaleSetVMsClient) GetInstanceView(ctx context.Context, resourceGroupName, VMScaleSetName, instanceID string) (compute.VirtualMachineScaleSetVMInstanceView, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInstanceView", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetInstanceView", ctx, resourceGroupName, VMScaleSetName, instanceID)
 	ret0, _ := ret[0].(compute.VirtualMachineScaleSetVMInstanceView)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetInstanceView indicates an expected call of GetInstanceView.
-func (mr *MockVirtualMachineScaleSetVMsClientMockRecorder) GetInstanceView(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockVirtualMachineScaleSetVMsClientMockRecorder) GetInstanceView(ctx, resourceGroupName, VMScaleSetName, instanceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceView", reflect.TypeOf((*MockVirtualMachineScaleSetVMsClient)(nil).GetInstanceView), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceView", reflect.TypeOf((*MockVirtualMachineScaleSetVMsClient)(nil).GetInstanceView), ctx, resourceGroupName, VMScaleSetName, instanceID)
 }
 
 // List mocks base method.
-func (m *MockVirtualMachineScaleSetVMsClient) List(arg0 context.Context, arg1, arg2, arg3, arg4, arg5 string) ([]compute.VirtualMachineScaleSetVM, error) {
+func (m *MockVirtualMachineScaleSetVMsClient) List(ctx context.Context, resourceGroupName, virtualMachineScaleSetName, filter, selectParameter, expand string) ([]compute.VirtualMachineScaleSetVM, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, virtualMachineScaleSetName, filter, selectParameter, expand)
 	ret0, _ := ret[0].([]compute.VirtualMachineScaleSetVM)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockVirtualMachineScaleSetVMsClientMockRecorder) List(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockVirtualMachineScaleSetVMsClientMockRecorder) List(ctx, resourceGroupName, virtualMachineScaleSetName, filter, selectParameter, expand any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachineScaleSetVMsClient)(nil).List), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachineScaleSetVMsClient)(nil).List), ctx, resourceGroupName, virtualMachineScaleSetName, filter, selectParameter, expand)
 }
 
 // RunCommandAndWait mocks base method.
-func (m *MockVirtualMachineScaleSetVMsClient) RunCommandAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 compute.RunCommandInput) error {
+func (m *MockVirtualMachineScaleSetVMsClient) RunCommandAndWait(ctx context.Context, resourceGroupName, VMScaleSetName, instanceID string, parameters compute.RunCommandInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunCommandAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "RunCommandAndWait", ctx, resourceGroupName, VMScaleSetName, instanceID, parameters)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RunCommandAndWait indicates an expected call of RunCommandAndWait.
-func (mr *MockVirtualMachineScaleSetVMsClientMockRecorder) RunCommandAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockVirtualMachineScaleSetVMsClientMockRecorder) RunCommandAndWait(ctx, resourceGroupName, VMScaleSetName, instanceID, parameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunCommandAndWait", reflect.TypeOf((*MockVirtualMachineScaleSetVMsClient)(nil).RunCommandAndWait), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunCommandAndWait", reflect.TypeOf((*MockVirtualMachineScaleSetVMsClient)(nil).RunCommandAndWait), ctx, resourceGroupName, VMScaleSetName, instanceID, parameters)
 }
 
 // MockVirtualMachineScaleSetsClient is a mock of VirtualMachineScaleSetsClient interface.
 type MockVirtualMachineScaleSetsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockVirtualMachineScaleSetsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockVirtualMachineScaleSetsClientMockRecorder is the mock recorder for MockVirtualMachineScaleSetsClient.
@@ -374,38 +380,39 @@ func (m *MockVirtualMachineScaleSetsClient) EXPECT() *MockVirtualMachineScaleSet
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockVirtualMachineScaleSetsClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockVirtualMachineScaleSetsClient) DeleteAndWait(ctx context.Context, resourceGroupName, vmScaleSetName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, vmScaleSetName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockVirtualMachineScaleSetsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockVirtualMachineScaleSetsClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, vmScaleSetName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).DeleteAndWait), ctx, resourceGroupName, vmScaleSetName)
 }
 
 // List mocks base method.
-func (m *MockVirtualMachineScaleSetsClient) List(arg0 context.Context, arg1 string) ([]compute.VirtualMachineScaleSet, error) {
+func (m *MockVirtualMachineScaleSetsClient) List(ctx context.Context, resourceGroupName string) ([]compute.VirtualMachineScaleSet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName)
 	ret0, _ := ret[0].([]compute.VirtualMachineScaleSet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockVirtualMachineScaleSetsClientMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockVirtualMachineScaleSetsClientMockRecorder) List(ctx, resourceGroupName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).List), ctx, resourceGroupName)
 }
 
 // MockDiskEncryptionSetsClient is a mock of DiskEncryptionSetsClient interface.
 type MockDiskEncryptionSetsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDiskEncryptionSetsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDiskEncryptionSetsClientMockRecorder is the mock recorder for MockDiskEncryptionSetsClient.
@@ -426,16 +433,16 @@ func (m *MockDiskEncryptionSetsClient) EXPECT() *MockDiskEncryptionSetsClientMoc
 }
 
 // Get mocks base method.
-func (m *MockDiskEncryptionSetsClient) Get(arg0 context.Context, arg1, arg2 string) (compute.DiskEncryptionSet, error) {
+func (m *MockDiskEncryptionSetsClient) Get(ctx context.Context, resourceGroupName, diskEncryptionSetName string) (compute.DiskEncryptionSet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, diskEncryptionSetName)
 	ret0, _ := ret[0].(compute.DiskEncryptionSet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockDiskEncryptionSetsClientMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDiskEncryptionSetsClientMockRecorder) Get(ctx, resourceGroupName, diskEncryptionSetName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDiskEncryptionSetsClient)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDiskEncryptionSetsClient)(nil).Get), ctx, resourceGroupName, diskEncryptionSetName)
 }

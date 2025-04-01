@@ -21,6 +21,7 @@ import (
 type MockSyncSetConverter struct {
 	ctrl     *gomock.Controller
 	recorder *MockSyncSetConverterMockRecorder
+	isgomock struct{}
 }
 
 // MockSyncSetConverterMockRecorder is the mock recorder for MockSyncSetConverter.
@@ -84,6 +85,7 @@ func (mr *MockSyncSetConverterMockRecorder) ToInternal(arg0, arg1 any) *gomock.C
 type MockMachinePoolConverter struct {
 	ctrl     *gomock.Controller
 	recorder *MockMachinePoolConverterMockRecorder
+	isgomock struct{}
 }
 
 // MockMachinePoolConverterMockRecorder is the mock recorder for MockMachinePoolConverter.
@@ -147,6 +149,7 @@ func (mr *MockMachinePoolConverterMockRecorder) ToInternal(arg0, arg1 any) *gomo
 type MockSyncIdentityProviderConverter struct {
 	ctrl     *gomock.Controller
 	recorder *MockSyncIdentityProviderConverterMockRecorder
+	isgomock struct{}
 }
 
 // MockSyncIdentityProviderConverterMockRecorder is the mock recorder for MockSyncIdentityProviderConverter.
@@ -210,6 +213,7 @@ func (mr *MockSyncIdentityProviderConverterMockRecorder) ToInternal(arg0, arg1 a
 type MockSecretConverter struct {
 	ctrl     *gomock.Controller
 	recorder *MockSecretConverterMockRecorder
+	isgomock struct{}
 }
 
 // MockSecretConverterMockRecorder is the mock recorder for MockSecretConverter.

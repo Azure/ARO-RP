@@ -27,6 +27,7 @@ import (
 type MockDNSIClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDNSIClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDNSIClientMockRecorder is the mock recorder for MockDNSIClient.
@@ -47,113 +48,113 @@ func (m *MockDNSIClient) EXPECT() *MockDNSIClientMockRecorder {
 }
 
 // Apply mocks base method.
-func (m *MockDNSIClient) Apply(arg0 context.Context, arg1 *v10.DNSApplyConfiguration, arg2 v11.ApplyOptions) (*v1.DNS, error) {
+func (m *MockDNSIClient) Apply(ctx context.Context, dNS *v10.DNSApplyConfiguration, opts v11.ApplyOptions) (*v1.DNS, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Apply", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Apply", ctx, dNS, opts)
 	ret0, _ := ret[0].(*v1.DNS)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Apply indicates an expected call of Apply.
-func (mr *MockDNSIClientMockRecorder) Apply(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) Apply(ctx, dNS, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockDNSIClient)(nil).Apply), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockDNSIClient)(nil).Apply), ctx, dNS, opts)
 }
 
 // ApplyStatus mocks base method.
-func (m *MockDNSIClient) ApplyStatus(arg0 context.Context, arg1 *v10.DNSApplyConfiguration, arg2 v11.ApplyOptions) (*v1.DNS, error) {
+func (m *MockDNSIClient) ApplyStatus(ctx context.Context, dNS *v10.DNSApplyConfiguration, opts v11.ApplyOptions) (*v1.DNS, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ApplyStatus", ctx, dNS, opts)
 	ret0, _ := ret[0].(*v1.DNS)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ApplyStatus indicates an expected call of ApplyStatus.
-func (mr *MockDNSIClientMockRecorder) ApplyStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) ApplyStatus(ctx, dNS, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockDNSIClient)(nil).ApplyStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockDNSIClient)(nil).ApplyStatus), ctx, dNS, opts)
 }
 
 // Create mocks base method.
-func (m *MockDNSIClient) Create(arg0 context.Context, arg1 *v1.DNS, arg2 v11.CreateOptions) (*v1.DNS, error) {
+func (m *MockDNSIClient) Create(ctx context.Context, dNS *v1.DNS, opts v11.CreateOptions) (*v1.DNS, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Create", ctx, dNS, opts)
 	ret0, _ := ret[0].(*v1.DNS)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockDNSIClientMockRecorder) Create(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) Create(ctx, dNS, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDNSIClient)(nil).Create), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDNSIClient)(nil).Create), ctx, dNS, opts)
 }
 
 // Delete mocks base method.
-func (m *MockDNSIClient) Delete(arg0 context.Context, arg1 string, arg2 v11.DeleteOptions) error {
+func (m *MockDNSIClient) Delete(ctx context.Context, name string, opts v11.DeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", ctx, name, opts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockDNSIClientMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) Delete(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDNSIClient)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDNSIClient)(nil).Delete), ctx, name, opts)
 }
 
 // DeleteCollection mocks base method.
-func (m *MockDNSIClient) DeleteCollection(arg0 context.Context, arg1 v11.DeleteOptions, arg2 v11.ListOptions) error {
+func (m *MockDNSIClient) DeleteCollection(ctx context.Context, opts v11.DeleteOptions, listOpts v11.ListOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteCollection", ctx, opts, listOpts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteCollection indicates an expected call of DeleteCollection.
-func (mr *MockDNSIClientMockRecorder) DeleteCollection(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) DeleteCollection(ctx, opts, listOpts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockDNSIClient)(nil).DeleteCollection), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockDNSIClient)(nil).DeleteCollection), ctx, opts, listOpts)
 }
 
 // Get mocks base method.
-func (m *MockDNSIClient) Get(arg0 context.Context, arg1 string, arg2 v11.GetOptions) (*v1.DNS, error) {
+func (m *MockDNSIClient) Get(ctx context.Context, name string, opts v11.GetOptions) (*v1.DNS, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, name, opts)
 	ret0, _ := ret[0].(*v1.DNS)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockDNSIClientMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) Get(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDNSIClient)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDNSIClient)(nil).Get), ctx, name, opts)
 }
 
 // List mocks base method.
-func (m *MockDNSIClient) List(arg0 context.Context, arg1 v11.ListOptions) (*v1.DNSList, error) {
+func (m *MockDNSIClient) List(ctx context.Context, opts v11.ListOptions) (*v1.DNSList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, opts)
 	ret0, _ := ret[0].(*v1.DNSList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockDNSIClientMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) List(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDNSIClient)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDNSIClient)(nil).List), ctx, opts)
 }
 
 // Patch mocks base method.
-func (m *MockDNSIClient) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v11.PatchOptions, arg5 ...string) (*v1.DNS, error) {
+func (m *MockDNSIClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v11.PatchOptions, subresources ...string) (*v1.DNS, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3, arg4}
-	for _, a := range arg5 {
+	varargs := []any{ctx, name, pt, data, opts}
+	for _, a := range subresources {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Patch", varargs...)
@@ -163,53 +164,53 @@ func (m *MockDNSIClient) Patch(arg0 context.Context, arg1 string, arg2 types.Pat
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockDNSIClientMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 any, arg5 ...any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) Patch(ctx, name, pt, data, opts any, subresources ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	varargs := append([]any{ctx, name, pt, data, opts}, subresources...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockDNSIClient)(nil).Patch), varargs...)
 }
 
 // Update mocks base method.
-func (m *MockDNSIClient) Update(arg0 context.Context, arg1 *v1.DNS, arg2 v11.UpdateOptions) (*v1.DNS, error) {
+func (m *MockDNSIClient) Update(ctx context.Context, dNS *v1.DNS, opts v11.UpdateOptions) (*v1.DNS, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Update", ctx, dNS, opts)
 	ret0, _ := ret[0].(*v1.DNS)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockDNSIClientMockRecorder) Update(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) Update(ctx, dNS, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockDNSIClient)(nil).Update), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockDNSIClient)(nil).Update), ctx, dNS, opts)
 }
 
 // UpdateStatus mocks base method.
-func (m *MockDNSIClient) UpdateStatus(arg0 context.Context, arg1 *v1.DNS, arg2 v11.UpdateOptions) (*v1.DNS, error) {
+func (m *MockDNSIClient) UpdateStatus(ctx context.Context, dNS *v1.DNS, opts v11.UpdateOptions) (*v1.DNS, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, dNS, opts)
 	ret0, _ := ret[0].(*v1.DNS)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateStatus indicates an expected call of UpdateStatus.
-func (mr *MockDNSIClientMockRecorder) UpdateStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) UpdateStatus(ctx, dNS, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockDNSIClient)(nil).UpdateStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockDNSIClient)(nil).UpdateStatus), ctx, dNS, opts)
 }
 
 // Watch mocks base method.
-func (m *MockDNSIClient) Watch(arg0 context.Context, arg1 v11.ListOptions) (watch.Interface, error) {
+func (m *MockDNSIClient) Watch(ctx context.Context, opts v11.ListOptions) (watch.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
+	ret := m.ctrl.Call(m, "Watch", ctx, opts)
 	ret0, _ := ret[0].(watch.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Watch indicates an expected call of Watch.
-func (mr *MockDNSIClientMockRecorder) Watch(arg0, arg1 any) *gomock.Call {
+func (mr *MockDNSIClientMockRecorder) Watch(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockDNSIClient)(nil).Watch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockDNSIClient)(nil).Watch), ctx, opts)
 }

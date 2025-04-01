@@ -22,6 +22,7 @@ import (
 type MockDeploymentsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeploymentsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDeploymentsClientMockRecorder is the mock recorder for MockDeploymentsClient.
@@ -42,80 +43,81 @@ func (m *MockDeploymentsClient) EXPECT() *MockDeploymentsClientMockRecorder {
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockDeploymentsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 features.Deployment) error {
+func (m *MockDeploymentsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, deploymentName string, parameters features.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, deploymentName, parameters)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, deploymentName, parameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, deploymentName, parameters)
 }
 
 // CreateOrUpdateAtSubscriptionScopeAndWait mocks base method.
-func (m *MockDeploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(arg0 context.Context, arg1 string, arg2 features.Deployment) error {
+func (m *MockDeploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters features.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAtSubscriptionScopeAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CreateOrUpdateAtSubscriptionScopeAndWait", ctx, deploymentName, parameters)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdateAtSubscriptionScopeAndWait indicates an expected call of CreateOrUpdateAtSubscriptionScopeAndWait.
-func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAtSubscriptionScopeAndWait(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, parameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAtSubscriptionScopeAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAtSubscriptionScopeAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAtSubscriptionScopeAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAtSubscriptionScopeAndWait), ctx, deploymentName, parameters)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockDeploymentsClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockDeploymentsClient) DeleteAndWait(ctx context.Context, resourceGroupName, deploymentName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, deploymentName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockDeploymentsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDeploymentsClientMockRecorder) DeleteAndWait(ctx, resourceGroupName, deploymentName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).DeleteAndWait), ctx, resourceGroupName, deploymentName)
 }
 
 // Get mocks base method.
-func (m *MockDeploymentsClient) Get(arg0 context.Context, arg1, arg2 string) (features.DeploymentExtended, error) {
+func (m *MockDeploymentsClient) Get(ctx context.Context, resourceGroupName, deploymentName string) (features.DeploymentExtended, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, deploymentName)
 	ret0, _ := ret[0].(features.DeploymentExtended)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockDeploymentsClientMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDeploymentsClientMockRecorder) Get(ctx, resourceGroupName, deploymentName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDeploymentsClient)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDeploymentsClient)(nil).Get), ctx, resourceGroupName, deploymentName)
 }
 
 // Wait mocks base method.
-func (m *MockDeploymentsClient) Wait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockDeploymentsClient) Wait(ctx context.Context, resourceGroupName, deploymentName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Wait", ctx, resourceGroupName, deploymentName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockDeploymentsClientMockRecorder) Wait(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockDeploymentsClientMockRecorder) Wait(ctx, resourceGroupName, deploymentName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeploymentsClient)(nil).Wait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeploymentsClient)(nil).Wait), ctx, resourceGroupName, deploymentName)
 }
 
 // MockProvidersClient is a mock of ProvidersClient interface.
 type MockProvidersClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockProvidersClientMockRecorder
+	isgomock struct{}
 }
 
 // MockProvidersClientMockRecorder is the mock recorder for MockProvidersClient.
@@ -136,24 +138,25 @@ func (m *MockProvidersClient) EXPECT() *MockProvidersClientMockRecorder {
 }
 
 // List mocks base method.
-func (m *MockProvidersClient) List(arg0 context.Context, arg1 *int32, arg2 string) ([]features.Provider, error) {
+func (m *MockProvidersClient) List(ctx context.Context, top *int32, expand string) ([]features.Provider, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "List", ctx, top, expand)
 	ret0, _ := ret[0].([]features.Provider)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockProvidersClientMockRecorder) List(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockProvidersClientMockRecorder) List(ctx, top, expand any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockProvidersClient)(nil).List), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockProvidersClient)(nil).List), ctx, top, expand)
 }
 
 // MockResourceGroupsClient is a mock of ResourceGroupsClient interface.
 type MockResourceGroupsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockResourceGroupsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockResourceGroupsClientMockRecorder is the mock recorder for MockResourceGroupsClient.
@@ -174,83 +177,84 @@ func (m *MockResourceGroupsClient) EXPECT() *MockResourceGroupsClientMockRecorde
 }
 
 // CreateOrUpdate mocks base method.
-func (m *MockResourceGroupsClient) CreateOrUpdate(arg0 context.Context, arg1 string, arg2 features.ResourceGroup) (features.ResourceGroup, error) {
+func (m *MockResourceGroupsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, parameters features.ResourceGroup) (features.ResourceGroup, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", ctx, resourceGroupName, parameters)
 	ret0, _ := ret[0].(features.ResourceGroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockResourceGroupsClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockResourceGroupsClientMockRecorder) CreateOrUpdate(ctx, resourceGroupName, parameters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockResourceGroupsClient)(nil).CreateOrUpdate), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockResourceGroupsClient)(nil).CreateOrUpdate), ctx, resourceGroupName, parameters)
 }
 
 // Delete mocks base method.
-func (m *MockResourceGroupsClient) Delete(arg0 context.Context, arg1 string) (features.ResourceGroupsDeleteFuture, error) {
+func (m *MockResourceGroupsClient) Delete(ctx context.Context, resourceGroupName string) (features.ResourceGroupsDeleteFuture, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret := m.ctrl.Call(m, "Delete", ctx, resourceGroupName)
 	ret0, _ := ret[0].(features.ResourceGroupsDeleteFuture)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockResourceGroupsClientMockRecorder) Delete(arg0, arg1 any) *gomock.Call {
+func (mr *MockResourceGroupsClientMockRecorder) Delete(ctx, resourceGroupName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockResourceGroupsClient)(nil).Delete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockResourceGroupsClient)(nil).Delete), ctx, resourceGroupName)
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockResourceGroupsClient) DeleteAndWait(arg0 context.Context, arg1 string) error {
+func (m *MockResourceGroupsClient) DeleteAndWait(ctx context.Context, resourceGroupName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait.
-func (mr *MockResourceGroupsClientMockRecorder) DeleteAndWait(arg0, arg1 any) *gomock.Call {
+func (mr *MockResourceGroupsClientMockRecorder) DeleteAndWait(ctx, resourceGroupName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockResourceGroupsClient)(nil).DeleteAndWait), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockResourceGroupsClient)(nil).DeleteAndWait), ctx, resourceGroupName)
 }
 
 // Get mocks base method.
-func (m *MockResourceGroupsClient) Get(arg0 context.Context, arg1 string) (features.ResourceGroup, error) {
+func (m *MockResourceGroupsClient) Get(ctx context.Context, resourceGroupName string) (features.ResourceGroup, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName)
 	ret0, _ := ret[0].(features.ResourceGroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockResourceGroupsClientMockRecorder) Get(arg0, arg1 any) *gomock.Call {
+func (mr *MockResourceGroupsClientMockRecorder) Get(ctx, resourceGroupName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockResourceGroupsClient)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockResourceGroupsClient)(nil).Get), ctx, resourceGroupName)
 }
 
 // List mocks base method.
-func (m *MockResourceGroupsClient) List(arg0 context.Context, arg1 string, arg2 *int32) ([]features.ResourceGroup, error) {
+func (m *MockResourceGroupsClient) List(ctx context.Context, filter string, top *int32) ([]features.ResourceGroup, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "List", ctx, filter, top)
 	ret0, _ := ret[0].([]features.ResourceGroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockResourceGroupsClientMockRecorder) List(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockResourceGroupsClientMockRecorder) List(ctx, filter, top any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceGroupsClient)(nil).List), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceGroupsClient)(nil).List), ctx, filter, top)
 }
 
 // MockResourcesClient is a mock of ResourcesClient interface.
 type MockResourcesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockResourcesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockResourcesClientMockRecorder is the mock recorder for MockResourcesClient.
@@ -285,60 +289,60 @@ func (mr *MockResourcesClientMockRecorder) Client() *gomock.Call {
 }
 
 // DeleteByID mocks base method.
-func (m *MockResourcesClient) DeleteByID(arg0 context.Context, arg1, arg2 string) (features.ResourcesDeleteByIDFuture, error) {
+func (m *MockResourcesClient) DeleteByID(ctx context.Context, resourceID, APIVersion string) (features.ResourcesDeleteByIDFuture, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteByID", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteByID", ctx, resourceID, APIVersion)
 	ret0, _ := ret[0].(features.ResourcesDeleteByIDFuture)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DeleteByID indicates an expected call of DeleteByID.
-func (mr *MockResourcesClientMockRecorder) DeleteByID(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockResourcesClientMockRecorder) DeleteByID(ctx, resourceID, APIVersion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByID", reflect.TypeOf((*MockResourcesClient)(nil).DeleteByID), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByID", reflect.TypeOf((*MockResourcesClient)(nil).DeleteByID), ctx, resourceID, APIVersion)
 }
 
 // DeleteByIDAndWait mocks base method.
-func (m *MockResourcesClient) DeleteByIDAndWait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockResourcesClient) DeleteByIDAndWait(ctx context.Context, resourceID, apiVersion string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteByIDAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteByIDAndWait", ctx, resourceID, apiVersion)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteByIDAndWait indicates an expected call of DeleteByIDAndWait.
-func (mr *MockResourcesClientMockRecorder) DeleteByIDAndWait(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockResourcesClientMockRecorder) DeleteByIDAndWait(ctx, resourceID, apiVersion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByIDAndWait", reflect.TypeOf((*MockResourcesClient)(nil).DeleteByIDAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByIDAndWait", reflect.TypeOf((*MockResourcesClient)(nil).DeleteByIDAndWait), ctx, resourceID, apiVersion)
 }
 
 // GetByID mocks base method.
-func (m *MockResourcesClient) GetByID(arg0 context.Context, arg1, arg2 string) (features.GenericResource, error) {
+func (m *MockResourcesClient) GetByID(ctx context.Context, resourceID, APIVersion string) (features.GenericResource, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetByID", ctx, resourceID, APIVersion)
 	ret0, _ := ret[0].(features.GenericResource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockResourcesClientMockRecorder) GetByID(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockResourcesClientMockRecorder) GetByID(ctx, resourceID, APIVersion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResourcesClient)(nil).GetByID), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResourcesClient)(nil).GetByID), ctx, resourceID, APIVersion)
 }
 
 // ListByResourceGroup mocks base method.
-func (m *MockResourcesClient) ListByResourceGroup(arg0 context.Context, arg1, arg2, arg3 string, arg4 *int32) ([]features.GenericResourceExpanded, error) {
+func (m *MockResourcesClient) ListByResourceGroup(ctx context.Context, resourceGroupName, filter, expand string, top *int32) ([]features.GenericResourceExpanded, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByResourceGroup", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "ListByResourceGroup", ctx, resourceGroupName, filter, expand, top)
 	ret0, _ := ret[0].([]features.GenericResourceExpanded)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListByResourceGroup indicates an expected call of ListByResourceGroup.
-func (mr *MockResourcesClientMockRecorder) ListByResourceGroup(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockResourcesClientMockRecorder) ListByResourceGroup(ctx, resourceGroupName, filter, expand, top any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResourceGroup", reflect.TypeOf((*MockResourcesClient)(nil).ListByResourceGroup), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResourceGroup", reflect.TypeOf((*MockResourcesClient)(nil).ListByResourceGroup), ctx, resourceGroupName, filter, expand, top)
 }

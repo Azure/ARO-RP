@@ -23,6 +23,7 @@ import (
 type MockManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockManagerMockRecorder is the mock recorder for MockManager.
@@ -43,31 +44,31 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // GetBlobsClient mocks base method.
-func (m *MockManager) GetBlobsClient(arg0 string) (azblob.BlobsClient, error) {
+func (m *MockManager) GetBlobsClient(blobContainerURL string) (azblob.BlobsClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlobsClient", arg0)
+	ret := m.ctrl.Call(m, "GetBlobsClient", blobContainerURL)
 	ret0, _ := ret[0].(azblob.BlobsClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetBlobsClient indicates an expected call of GetBlobsClient.
-func (mr *MockManagerMockRecorder) GetBlobsClient(arg0 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) GetBlobsClient(blobContainerURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobsClient", reflect.TypeOf((*MockManager)(nil).GetBlobsClient), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobsClient", reflect.TypeOf((*MockManager)(nil).GetBlobsClient), blobContainerURL)
 }
 
 // GetContainerProperties mocks base method.
-func (m *MockManager) GetContainerProperties(arg0 context.Context, arg1, arg2, arg3 string) (armstorage.AccountsClientGetPropertiesResponse, error) {
+func (m *MockManager) GetContainerProperties(ctx context.Context, resourceGroupName, accountName, containerName string) (armstorage.AccountsClientGetPropertiesResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetContainerProperties", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetContainerProperties", ctx, resourceGroupName, accountName, containerName)
 	ret0, _ := ret[0].(armstorage.AccountsClientGetPropertiesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetContainerProperties indicates an expected call of GetContainerProperties.
-func (mr *MockManagerMockRecorder) GetContainerProperties(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) GetContainerProperties(ctx, resourceGroupName, accountName, containerName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerProperties", reflect.TypeOf((*MockManager)(nil).GetContainerProperties), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerProperties", reflect.TypeOf((*MockManager)(nil).GetContainerProperties), ctx, resourceGroupName, accountName, containerName)
 }

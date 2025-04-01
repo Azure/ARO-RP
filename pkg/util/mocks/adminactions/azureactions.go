@@ -24,6 +24,7 @@ import (
 type MockAzureActions struct {
 	ctrl     *gomock.Controller
 	recorder *MockAzureActionsMockRecorder
+	isgomock struct{}
 }
 
 // MockAzureActionsMockRecorder is the mock recorder for MockAzureActions.

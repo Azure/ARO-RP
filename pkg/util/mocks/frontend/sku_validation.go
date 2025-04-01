@@ -24,6 +24,7 @@ import (
 type MockSkuValidator struct {
 	ctrl     *gomock.Controller
 	recorder *MockSkuValidatorMockRecorder
+	isgomock struct{}
 }
 
 // MockSkuValidatorMockRecorder is the mock recorder for MockSkuValidator.

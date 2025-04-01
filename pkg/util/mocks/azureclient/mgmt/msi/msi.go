@@ -21,6 +21,7 @@ import (
 type MockUserAssignedIdentitiesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockUserAssignedIdentitiesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockUserAssignedIdentitiesClientMockRecorder is the mock recorder for MockUserAssignedIdentitiesClient.
@@ -41,16 +42,16 @@ func (m *MockUserAssignedIdentitiesClient) EXPECT() *MockUserAssignedIdentitiesC
 }
 
 // Get mocks base method.
-func (m *MockUserAssignedIdentitiesClient) Get(arg0 context.Context, arg1, arg2 string) (msi.Identity, error) {
+func (m *MockUserAssignedIdentitiesClient) Get(ctx context.Context, resourceGroupName, resourceName string) (msi.Identity, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, resourceName)
 	ret0, _ := ret[0].(msi.Identity)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockUserAssignedIdentitiesClientMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockUserAssignedIdentitiesClientMockRecorder) Get(ctx, resourceGroupName, resourceName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).Get), ctx, resourceGroupName, resourceName)
 }

@@ -21,6 +21,7 @@ import (
 type MockDatabaseAccountsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDatabaseAccountsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDatabaseAccountsClientMockRecorder is the mock recorder for MockDatabaseAccountsClient.
@@ -41,16 +42,16 @@ func (m *MockDatabaseAccountsClient) EXPECT() *MockDatabaseAccountsClientMockRec
 }
 
 // ListKeys mocks base method.
-func (m *MockDatabaseAccountsClient) ListKeys(arg0 context.Context, arg1, arg2 string, arg3 *armcosmos.DatabaseAccountsClientListKeysOptions) (armcosmos.DatabaseAccountsClientListKeysResponse, error) {
+func (m *MockDatabaseAccountsClient) ListKeys(ctx context.Context, resourceGroupName, accountName string, options *armcosmos.DatabaseAccountsClientListKeysOptions) (armcosmos.DatabaseAccountsClientListKeysResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListKeys", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "ListKeys", ctx, resourceGroupName, accountName, options)
 	ret0, _ := ret[0].(armcosmos.DatabaseAccountsClientListKeysResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListKeys indicates an expected call of ListKeys.
-func (mr *MockDatabaseAccountsClientMockRecorder) ListKeys(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockDatabaseAccountsClientMockRecorder) ListKeys(ctx, resourceGroupName, accountName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKeys", reflect.TypeOf((*MockDatabaseAccountsClient)(nil).ListKeys), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKeys", reflect.TypeOf((*MockDatabaseAccountsClient)(nil).ListKeys), ctx, resourceGroupName, accountName, options)
 }
