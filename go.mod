@@ -95,6 +95,7 @@ require (
 	k8s.io/client-go v0.27.3
 	k8s.io/kubectl v0.24.17
 	k8s.io/kubernetes v1.28.4
+	k8s.io/metrics v0.25.16
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/controller-runtime v0.15.0
 	sigs.k8s.io/yaml v1.4.0

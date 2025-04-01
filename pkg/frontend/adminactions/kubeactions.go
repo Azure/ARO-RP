@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -40,6 +41,9 @@ type KubeActions interface {
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
 	// kubeWatch returns a watch object for the provided label selector key
 	KubeWatch(ctx context.Context, o *unstructured.Unstructured, label string) (watch.Interface, error)
+	// Fetch top pods and nodes metrics
+	TopPods(ctx context.Context, restConfig *restclient.Config, allNamespaces bool) ([]PodMetrics, error)
+	TopNodes(ctx context.Context, restConfig *restclient.Config) ([]NodeMetrics, error)
 }
 
 type kubeActions struct {
