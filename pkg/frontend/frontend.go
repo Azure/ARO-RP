@@ -38,6 +38,8 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	restclient "k8s.io/client-go/rest"
 )
 
 type statusCodeError int
@@ -62,9 +64,10 @@ type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluste
 type appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error)
 
 type frontend struct {
-	auditLog *logrus.Entry
-	baseLog  *logrus.Entry
-	env      env.Interface
+	auditLog   *logrus.Entry
+	baseLog    *logrus.Entry
+	env        env.Interface
+	restConfig *restclient.Config
 
 	logMiddleware         middleware.LogMiddleware
 	validateMiddleware    middleware.ValidateMiddleware
@@ -194,6 +197,11 @@ func NewFrontend(ctx context.Context,
 
 		streamResponder: defaultResponder{},
 	}
+	restConfig, err := restconfig.RestConfig(_env, nil)
+	if err != nil {
+		return nil, err
+	}
+	f.restConfig = restConfig
 
 	l, err := f.env.Listen()
 	if err != nil {
@@ -318,6 +326,11 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
 			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
+				// Top pods metrics endpoint
+				r.Get("/toppods", f.getAdminTopPods)
+				// Top nodes metrics endpoint
+				r.Get("/topnodes", f.getAdminTopNodes)
+
 				// Etcd recovery
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdrecovery", f.postAdminOpenShiftClusterEtcdRecovery)
 

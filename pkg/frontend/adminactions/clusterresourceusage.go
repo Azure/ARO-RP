@@ -1,0 +1,129 @@
+package adminactions
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	restclient "k8s.io/client-go/rest"
+	metricsv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned"
+)
+
+// ContainerMetrics is used to store metrics for containers
+type ContainerMetrics struct {
+	Name   string `json:"name"`
+	CPU    string `json:"cpu"`
+	Memory string `json:"memory"`
+}
+
+// PodMetrics represents the metrics for a pod
+type PodMetrics struct {
+	Namespace  string             `json:"namespace"`
+	PodName    string             `json:"podName"`
+	Containers []ContainerMetrics `json:"containers"`
+}
+
+// NodeMetrics represents the metrics for a node
+type NodeMetrics struct {
+	NodeName         string  `json:"nodeName"`
+	CPUUsage         string  `json:"cpuUsage"`
+	MemoryUsage      string  `json:"memoryUsage"`
+	CPUPercentage    float64 `json:"cpuPercentage"`
+	MemoryPercentage float64 `json:"memoryPercentage"`
+}
+
+// calculatePercentage calculates the percentage of resource usage.
+func calculatePercentage(usage string, total int64) float64 {
+	usageInt, _ := resource.ParseQuantity(usage)
+	usageInt64 := usageInt.Value()
+	return float64(usageInt64) / float64(total) * 100
+}
+
+// TopPods fetches the resource usage for all pods (or across namespaces) and calculates their usage.
+func (k *kubeActions) TopPods(ctx context.Context, restConfig *restclient.Config, allNamespaces bool) ([]PodMetrics, error) {
+	ns := ""
+	if !allNamespaces {
+		ns = "default"
+	}
+
+	client, err := metricsv1beta1.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	podMetrics, err := client.MetricsV1beta1().PodMetricses(ns).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []PodMetrics
+	for _, item := range podMetrics.Items {
+		var containers []ContainerMetrics
+		for _, c := range item.Containers {
+			containers = append(containers, ContainerMetrics{
+				Name:   c.Name,
+				CPU:    c.Usage.Cpu().String(),
+				Memory: c.Usage.Memory().String(),
+			})
+		}
+
+		result = append(result, PodMetrics{
+			Namespace:  item.Namespace,
+			PodName:    item.Name,
+			Containers: containers,
+		})
+	}
+
+	return result, nil
+}
+
+// TopNodes fetches the resource usage for all nodes in the cluster and calculates their usage percentage.
+func (k *kubeActions) TopNodes(ctx context.Context, restConfig *restclient.Config) ([]NodeMetrics, error) {
+	client, err := metricsv1beta1.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeMetrics, err := client.MetricsV1beta1().NodeMetricses().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []NodeMetrics
+	for _, item := range nodeMetrics.Items {
+		// Get total CPU and memory from the node's status capacity
+		node, err := k.kubecli.CoreV1().Nodes().Get(ctx, item.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		// Get total CPU and memory capacity from node
+		totalCPUQuantity := node.Status.Capacity["cpu"]
+		totalMemoryQuantity := node.Status.Capacity["memory"]
+
+		// Convert Quantity to an int64 value
+		totalCPU, _ := totalCPUQuantity.AsInt64()
+		totalMemory, _ := totalMemoryQuantity.AsInt64()
+
+		// Calculate percentage usage
+		usageCPU := item.Usage.Cpu().String()
+		usageMemory := item.Usage.Memory().String()
+
+		percentageCPU := calculatePercentage(usageCPU, totalCPU)
+		percentageMemory := calculatePercentage(usageMemory, totalMemory)
+
+		// Append node metrics to result
+		result = append(result, NodeMetrics{
+			NodeName:         item.Name,
+			CPUUsage:         usageCPU,
+			MemoryUsage:      usageMemory,
+			CPUPercentage:    percentageCPU,
+			MemoryPercentage: percentageMemory,
+		})
+	}
+
+	return result, nil
+}
