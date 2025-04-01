@@ -10,7 +10,7 @@ import (
 	"slices"
 	"strings"
 
-	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	masterNICRegex               = regexp.MustCompile(`.*(master).*([0-2])\-nic`)
+	masterNICRegex               = regexp.MustCompile(`.*(master).*([0-2])-nic`)
 	interfacesCreateOrUpdateOpts = &armnetwork.InterfacesClientBeginCreateOrUpdateOptions{ResumeToken: ""}
 )
 
@@ -153,12 +153,12 @@ func (m *manager) updateILBBackendPools(ipc armnetwork.InterfaceIPConfiguration,
 	// Check for NICs that are in the wrong SSH backend pool and remove them.
 	// This covers the case for the bad NIC backend pool placements for CPMS updates to a private cluster
 	ipc.Properties.LoadBalancerBackendAddressPools = slices.DeleteFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {
-		delete := *backendPool.ID != *sshBackendPool.ID && strings.Contains(*backendPool.ID, "ssh-")
-		if delete {
+		remove := *backendPool.ID != *sshBackendPool.ID && strings.Contains(*backendPool.ID, "ssh-")
+		if remove {
 			m.log.Infof("Removing NIC %s from Internal Load Balancer API Address Pool %s", nicName, *backendPool.ID)
 			updated = true
 		}
-		return delete
+		return remove
 	})
 
 	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {
