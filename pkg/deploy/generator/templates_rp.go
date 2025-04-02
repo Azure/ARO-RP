@@ -49,7 +49,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"disableCosmosDBFirewall",
 			"fluentbitImage",
 			"fpClientId",
-			"fpTenantId",
 			"fpServicePrincipalId",
 			"ipRules",
 			"keyvaultPrefix",
@@ -61,8 +60,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"ipRules",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
-			"miseValidAudiences",
-			"miseValidAppIDs",
 			"nonZonalRegions",
 			"portalAccessGroupIds",
 			"portalClientId",
@@ -120,10 +117,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "rpVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3
-		case "miseValidAudiences":
-			p.Type = "array"
-		case "miseValidAppIDs":
-			p.Type = "array"
 		case "nonZonalRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{

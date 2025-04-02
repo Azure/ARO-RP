@@ -75,9 +75,6 @@
         "fpServicePrincipalId": {
             "value": ""
         },
-        "fpTenantId": {
-            "value": ""
-        },
         "gatewayDomains": {
             "value": ""
         },
@@ -103,12 +100,6 @@
             "value": ""
         },
         "mdsdEnvironment": {
-            "value": ""
-        },
-        "miseValidAppIDs": {
-            "value": ""
-        },
-        "miseValidAudiences": {
             "value": ""
         },
         "msiRpEndpoint": {

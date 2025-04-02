@@ -191,18 +191,6 @@
         fluentbit_image_tag=$(get_digest_tag "FluentbitImage")
         copy_digest_tag $PULL_SECRET "arointsvc" $DST_ACR_NAME $fluentbit_image_tag
         ```
-    1. Copy the Mise image from arointsvc ACR to your ACR
-
-        > Mise is not enabled as of now for dev or full rp service but
-        > its image is required in your acr for the deploy to not fail
-        > while trying to pull it as required by systemd service. 
-
-        ```bash
-        source hack/devtools/rp_dev_helper.sh
-        mise_image_tag=$(get_digest_tag "MiseImage")
-        copy_digest_tag $PULL_SECRET "arointsvc" $DST_ACR_NAME $mise_image_tag
-        ```
-    
 
 1. Update the DNS Child Domains
     ```bash

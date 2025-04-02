@@ -25,35 +25,27 @@ enable_services() {
 # 1) image - nameref, string; container image
 # 2) role - nameref, string; VMSS role
 # 3) conf_file - nameref, string; aro gateway environment file
-# 4) ipaddress - nameref, string; static ip of podman network to be attached
 configure_service_aro_gateway() {
     local -n image="$1"
     local -n role="$2"
     local -n conf_file="$3"
-    local -n ipaddress="$4"
     log "starting"
     log "Configuring aro-gateway service"
 
     local -r aro_gateway_conf_filename='/etc/sysconfig/aro-gateway'
-    local -r add_conf_file="PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'
-ROLE='${role,,}'"
 
     write_file aro_gateway_conf_filename conf_file true
-    write_file aro_gateway_conf_filename add_conf_file false
 
     # shellcheck disable=SC2034
     local -r aro_gateway_service_filename='/etc/systemd/system/aro-gateway.service'
 
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script) 
-    local -r aro_gateway_service_file='[Unit]
+    local -r aro_gateway_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-EnvironmentFile=/etc/sysconfig/aro-gateway
+EnvironmentFile=${aro_gateway_conf_filename}
 ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --hostname %H \
@@ -67,15 +59,13 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -m 2g \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
   -p 80:8080 \
   -p 8081:8081 \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  ${RPIMAGE} \
-  ${ROLE}
+  $image \
+  ${role,,}
 ExecStop=/usr/bin/podman stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
@@ -84,7 +74,7 @@ StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target
-    '
+    "
 
     write_file aro_gateway_service_filename aro_gateway_service_file true
 }
@@ -94,34 +84,26 @@ WantedBy=multi-user.target
 # 1) image - nameref, string; RP container image
 # 2) role - nameref, string; VMSS role
 # 3) conf_file - nameref, string; aro rp environment file
-# 4) ipaddress - nameref, string; static ip of podman network to be attached
 configure_service_aro_rp() {
     local -n image="$1"
     local -n role="$2"
     local -n conf_file="$3"
-    local -n ipaddress="$4"
     log "starting"
     log "Configuring aro-rp service"
 
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
-    local -r add_conf_file="PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'
-ROLE='${role,,}'"
 
     write_file aro_rp_conf_filename conf_file true
-    write_file aro_rp_conf_filename add_conf_file false
 
     # shellcheck disable=SC2034
     local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script)
-    local -r aro_rp_service_file='[Unit]
+    local -r aro_rp_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-EnvironmentFile=/etc/sysconfig/aro-rp
+EnvironmentFile=${aro_rp_conf_filename}
 ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --hostname %H \
@@ -154,17 +136,14 @@ ExecStart=/usr/bin/podman run \
   -e OIDC_STORAGE_ACCOUNT_NAME \
   -e MSI_RP_ENDPOINT \
   -e OTEL_AUDIT_QUEUE_SIZE \
-  -e MISE_ADDRESS \
   -m 2g \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
-  ${RPIMAGE} \
-  ${ROLE}
+  $image \
+  ${role,,}
 ExecStop=/usr/bin/podman stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
@@ -172,7 +151,7 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target'
+WantedBy=multi-user.target"
 
     write_file aro_rp_service_filename aro_rp_service_file true
 }
@@ -180,10 +159,8 @@ WantedBy=multi-user.target'
 # configure_service_aro_monitor
 # args:
 # 1) image - nameref, string; RP container image
-# 2) ipaddress - nameref, string; static ip of podman network to be attached
 configure_service_aro_monitor() {
     local -n image="$1"
-    local -n ipaddress="$2"
     log "starting"
     log "Configuring aro-monitor service"
 
@@ -206,18 +183,14 @@ DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
-RPIMAGE='$image'
-PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+RPIMAGE='$image'"
 
     write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
 
     # shellcheck disable=SC2034
     local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script)
-    local -r aro_monitor_service_file='[Unit]
+    local -r aro_monitor_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -229,8 +202,6 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
   -e AZURE_FP_CLIENT_ID \
   -e DOMAIN_NAME \
   -e CLUSTER_MDSD_ACCOUNT \
@@ -248,14 +219,14 @@ ExecStart=/usr/bin/podman run \
   -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  ${RPIMAGE} \
+  $image \
   monitor
 Restart=always
 RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target'
+WantedBy=multi-user.target"
 
     write_file aro_monitor_service_filename aro_monitor_service_file true
 }
@@ -263,10 +234,8 @@ WantedBy=multi-user.target'
 # configure_service_aro_portal
 # args:
 # 1) image - nameref, string; RP container image
-# 2) ipaddress - nameref, string; static ip of podman network to be attached
 configure_service_aro_portal() {
     local -n image="$1"
-    local -n ipaddress="$2"
     log "starting"
     log "Configuring aro portal service"
 
@@ -282,18 +251,14 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
 OTEL_AUDIT_QUEUE_SIZE='$OTELAUDITQUEUESIZE'
-RPIMAGE='$image'
-PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+RPIMAGE='$image'"
 
     write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 
     # shellcheck disable=SC2034
     local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script)
-    local -r aro_portal_service_file='[Unit]
+    local -r aro_portal_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitInterval=0
@@ -306,8 +271,6 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \
@@ -323,234 +286,15 @@ ExecStart=/usr/bin/podman run \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
-  ${RPIMAGE} \
+  $image \
   portal
 Restart=always
 RestartSec=1
 
 [Install]
-WantedBy=multi-user.target'
+WantedBy=multi-user.target"
 
     write_file aro_portal_service_filename aro_portal_service_file true
-}
-
-# configure_service_aro_mise
-# args:
-# 1) image - nameref, string; MISE container image
-# 2) ipaddress - nameref, string; static ip of podman network to be attached
-configure_service_aro_mise() {
-    local -n image="$1"
-    local -n ipaddress="$2"
-    log "starting"
-    log "Configuring aro-mise service"
-
-    LOGININSTANCE="https://login.microsoftonline.com"
-    if [[ $AZURECLOUDNAME == "$us_gov_cloud" ]]; then
-        LOGININSTANCE="https://login.microsoftonline.us"
-    fi
-    # shellcheck disable=SC2034
-    local -r aro_mise_service_conf_filename='/etc/sysconfig/aro-mise'
-    # shellcheck disable=SC2034
-    local -r aro_mise_service_conf_file="FPCLIENTID='$FPCLIENTID'
-FPTENANTID='$FPTENANTID'
-MISEIMAGE='$image'
-MISEVALIDAUDIENCES='$MISEVALIDAUDIENCES'
-MISEVALIDAPPIDS='$MISEVALIDAPPIDS'
-LOGININSTANCE='$LOGININSTANCE'
-PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
-
-    write_file aro_mise_service_conf_filename aro_mise_service_conf_file true
-
-    mkdir -p /app/mise
-    # shellcheck disable=SC2034
-    local -r aro_mise_appsettings_filename='/app/mise/appsettings.json'
-    # shellcheck disable=SC2034
-    local -r aro_mise_appsettings_file="{
-    \"Version\": \"1\",
-    \"HeartbeatIntervalMs\": 5000,
-    \"AzureAd\": {
-        \"Instance\": \"$LOGININSTANCE\",
-        \"ClientId\": \"$FPCLIENTID\",
-        \"TenantId\": \"$FPTENANTID\",
-        \"Audience\": \"api://$FPCLIENTID\",
-        \"ShowPII\": false,
-        \"InboundPolicies\": [
-            {
-                \"Label\": \"arorp-arm-inbound-policy\",
-                \"Authority\": \"$LOGININSTANCE/$FPTENANTID/\"
-,
-                \"AuthenticationSchemes\": [
-                    \"PoP\"
-                ],
-                \"ValidAudiences\": $MISEVALIDAUDIENCES,
-                \"SignedHttpRequestValidationPolicy\": {
-                    \"ValidateTs\": true,
-                    \"ValidateM\": true,
-                    \"ValidateU\": true,
-                    \"ValidateP\": true
-                },
-                \"ValidApplicationIds\": $MISEVALIDAPPIDS
-            }
-        ],
-        \"Logging\": {
-            \"LogLevel\": \"Information\"
-        },
-        \"Modules\": {
-            \"TrV2\": {
-                \"ModuleType\": \"TrV2Module\",
-                \"Enabled\": true
-            }
-        }
-    },
-    \"AllowedHosts\": \"*\",
-    \"Kestrel\": {
-        \"Endpoints\": {
-            \"Http\": {
-                \"Url\": \"http://$ipaddress:5000\"
-            }
-        }
-    },
-    \"Logging\": {
-        \"LogLevel\": {
-            \"Default\": \"Information\",
-            \"Microsoft\": \"Information\",
-            \"Microsoft.Hosting.Lifetime\": \"Information\"
-        }
-    }
-}"
-
-    write_file aro_mise_appsettings_filename aro_mise_appsettings_file true
-
-    # shellcheck disable=SC2034
-    local -r aro_mise_service_filename='/etc/systemd/system/aro-mise.service'
-    # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script)
-    local -r aro_mise_service_file='[Unit]
-After=network-online.target
-Wants=network-online.target
-StartLimitIntervalSec=0
-[Service]
-RestartSec=1s
-EnvironmentFile=/etc/sysconfig/aro-mise
-ExecStartPre=-/usr/bin/podman rm -f %N
-ExecStart=/usr/bin/podman run \
-  -p 5000:5000 \
-  -v /app/mise/appsettings.json:/app/appsettings.json:z \
-  --hostname %H \
-  --name %N \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
-  --rm \
-  ${MISEIMAGE}
-ExecStop=/usr/bin/podman stop %N
-Restart=always
-RestartSec=3
-StartLimitInterval=0
-[Install]
-WantedBy=multi-user.target'
-
-    write_file aro_mise_service_filename aro_mise_service_file true
-}
-# configure_service_aro_otel_collector
-# args:
-# 1) image - nameref, string; OTEL container image
-# 2) static_ip_address - nameref, array; static ips of all services
-# 3) ipaddress - nameref, string; static ip of podman network to be attached
-configure_service_aro_otel_collector() {
-    local -n image="$1"
-    local -n static_ip_address="$2"
-    local -n ipaddress="$3"
-    log "starting"
-    log "Configuring aro-otel-collector service"
-
-    # shellcheck disable=SC2034
-    local -r aro_otel_collector_service_conf_filename='/etc/sysconfig/aro-otel-collector'
-    # shellcheck disable=SC2034
-    local -r aro_otel_collector_service_conf_file="GOMEMLIMIT=1000MiB
-OTELIMAGE='$image'
-PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
-
-    write_file aro_otel_collector_service_conf_filename aro_otel_collector_service_conf_file true
-
-    mkdir -p /app/otel
-    # shellcheck disable=SC2034
-    local -r aro_otel_collector_appconfig_filename='/app/otel/config.yaml'
-    # shellcheck disable=SC2034
-    local -r aro_otel_collector_appconfig_file="receivers:
-  httpcheck:
-    targets:
-    # MISE Endpoints
-      - endpoint: http://${static_ip_address["mise"]}:5000/healthz
-        method: GET
-      - endpoint: http://${static_ip_address["mise"]}:5000/readyz
-        method: GET
-    # OTELs own Endpoints
-      - endpoint: http://$ipaddress:13133/healthz
-        method: GET
-      - endpoint: http://$ipaddress:13133/readyz
-        method: GET
-    collection_interval: 20s
-processors:
-  batch:
-  attributes/insert:
-    actions:
-      - key: \"location\"
-        action: insert
-        value: \"$LOCATION\"
-      - key: \"host\"
-        action: insert
-        value: \"$(hostname)\"
-extensions:
-  health_check:
-    endpoint: $ipaddress:13133
-exporters:
-  otlp:
-    endpoint: ${static_ip_address["mdm"]}:4317
-    tls:
-      insecure: true
-service:
-  extensions: [health_check]
-  pipelines:
-    metrics:
-      receivers: [httpcheck]
-      processors: [batch, attributes/insert]
-      exporters: [otlp]"
-
-    write_file aro_otel_collector_appconfig_filename aro_otel_collector_appconfig_file true
-
-    # shellcheck disable=SC2034
-    local -r aro_otel_collector_service_filename='/etc/systemd/system/aro-otel-collector.service'
-    # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script)
-    local -r aro_otel_collector_service_file='[Unit]
-After=mdm.service
-Wants=mdm.service
-StartLimitIntervalSec=0
-[Service]
-RestartSec=1s
-EnvironmentFile=/etc/sysconfig/aro-otel-collector
-ExecStartPre=-/usr/bin/podman rm -f %N
-ExecStart=/usr/bin/podman run \
-  --hostname %H \
-  --name %N \
-  --rm \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
-  -m 2g \
-  -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml:z \
-  ${OTELIMAGE}
-ExecStop=/usr/bin/podman stop %N
-Restart=always
-RestartSec=3
-StartLimitInterval=0
-[Install]
-WantedBy=multi-user.target'
-
-    write_file aro_otel_collector_service_filename aro_otel_collector_service_file true
 }
 
 # configure_service_mdsd
@@ -605,7 +349,6 @@ export MDSD_MSGPACK_SORT_COLUMNS=\"1\""
 # args:
 # 1) conf_file - string; fluenbit configuration file
 # 2) image - string; fluentbit container image to run
-# 3) ipaddress - nameref, string; static ip of podman network to be attached
 configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -n conf_file="$1"
@@ -630,9 +373,7 @@ configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -r service_filename='/etc/systemd/system/fluentbit.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script)
-    local -r service_file='[Unit]
+    local -r service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
@@ -653,7 +394,7 @@ ExecStart=/usr/bin/podman run \
   -v /var/lib/fluent:/var/lib/fluent:z \
   -v /var/log/journal:/var/log/journal:ro \
   -v /etc/machine-id:/etc/machine-id:ro \
-  ${FLUENTBITIMAGE} \
+  $image \
   -c /etc/fluentbit/fluentbit.conf
 
 ExecStop=/usr/bin/podman stop %N
@@ -662,7 +403,7 @@ RestartSec=5
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target'
+WantedBy=multi-user.target"
 
     write_file service_filename service_file true
 }
@@ -827,11 +568,9 @@ WantedBy=multi-user.target'
 # args:
 # 1) role - nameref, string; can be "gateway" or "rp"
 # 2) image - nameref, string; mdm container image to run
-# 3) ipaddress - nameref, string; static ip of podman network to be attached
 configure_service_mdm() {
     local -n role="$1"
     local -n image="$2"
-    local -n ipaddress="$3"
     log "starting"
     log "Configuring mdm service"
 
@@ -844,12 +583,7 @@ configure_service_mdm() {
 MDMIMAGE='$image'
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE='$role'
-MDMSOURCEROLEINSTANCE=\"$(hostname)\"
-MDM_INPUT=statsd_local,otlp_grpc
-MDM_NAMESPACE='OTEL'
-MDM_ACCOUNT='AzureRedHatOpenShiftRP'
-PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+MDMSOURCEROLEINSTANCE=\"$(hostname)\""
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
 
@@ -857,9 +591,7 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r mdm_service_filename="/etc/systemd/system/mdm.service"
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script)
-    local -r mdm_service_file='[Unit]
+    local -r mdm_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -872,30 +604,25 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
-  ${MDMIMAGE} \
-  -Input ${MDM_INPUT} \
-  -MetricNamespace ${MDM_NAMESPACE} \
-  -MonitoringAccount ${MDM_ACCOUNT} \
+  $image \
   -CertFile /etc/mdm.pem \
-  -FrontEndUrl ${MDMFRONTENDURL} \
+  -FrontEndUrl $MDMFRONTENDURL \
   -Logger Console \
   -LogLevel Warning \
   -PrivateKeyFile /etc/mdm.pem \
-  -SourceEnvironment ${MDMSOURCEENVIRONMENT} \
-  -SourceRole ${MDMSOURCEROLE} \
-  -SourceRoleInstance ${MDMSOURCEROLEINSTANCE}
+  -SourceEnvironment $LOCATION \
+  -SourceRole $role \
+  -SourceRoleInstance $HOSTNAME
 ExecStop=/usr/bin/podman stop %N
 Restart=always
 RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target'
+WantedBy=multi-user.target"
 
     write_file mdm_service_filename mdm_service_file true
 }
@@ -914,20 +641,18 @@ configure_vmss_aro_services() {
     verify_role "$1"
 
     if [ "$r" == "$role_gateway" ]; then
-        configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}" "${configs["static_ip_address"]}["gateway"]"
+        configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
-        configure_service_aro_rp "${images["rp"]}" "$1" "${configs["rp_config"]}" "${configs["static_ip_address"]}["rp"]"
-        configure_service_aro_monitor "${images["rp"]}" "${configs["static_ip_address"]}["monitor"]"
-        configure_service_aro_portal "${images["rp"]}" "${configs["static_ip_address"]}["portal"]"
-        configure_service_aro_mise "${images["mise"]}" "${configs["static_ip_address"]}["mise"]"
-        configure_service_aro_otel_collector "${images["otel"]}" "${configs["static_ip_address"]}" "${configs["static_ip_address"]}["otel_collector"]"
+        configure_service_aro_rp "${images["rp"]}" "$1" "${configs["rp_config"]}"
+        configure_service_aro_monitor "${images["rp"]}"
+        configure_service_aro_portal "${images["rp"]}"
         configure_certs_rp
     fi
 
     configure_service_fluentbit "${configs["fluentbit"]}" "${images["fluentbit"]}"
     configure_timers_mdm_mdsd "$1"
-    configure_service_mdm "$1" "${images["mdm"]}" "${configs["static_ip_address"]}["mdm"]"
+    configure_service_mdm "$1" "${images["mdm"]}"
     configure_service_mdsd "$1" "${configs["mdsd"]}"
     run_azsecd_config_scan
 }
