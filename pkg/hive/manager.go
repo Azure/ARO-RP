@@ -76,7 +76,7 @@ type syncSetManager struct {
 // and we do not want to restrict the frontend from starting up successfully.
 // It has the caveat of requiring a nil check on any operations performed with the returned ClusterManager
 // until this conditional return is removed (we have hive everywhere).
-func NewFromEnvCLusterManager(ctx context.Context, log *logrus.Entry, env env.Interface) (ClusterManager, error) {
+func NewFromEnvClusterManager(ctx context.Context, log *logrus.Entry, env env.Interface) (ClusterManager, error) {
 	adoptByHive, err := env.LiveConfig().AdoptByHive(ctx)
 	if err != nil {
 		return nil, err

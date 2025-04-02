@@ -162,7 +162,7 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, log, _env)
+	hiveClusterManager, err := hive.NewFromEnvClusterManager(ctx, log, _env)
 	if err != nil {
 		return err
 	}
