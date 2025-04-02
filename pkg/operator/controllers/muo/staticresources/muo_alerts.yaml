@@ -29,8 +29,8 @@ spec:
         severity: critical
         namespace: openshift-monitoring
       annotations:
-        summary: "Controlplane upgrade timeout for {{ $labels.version }}"
-        description: "controlplane upgrade for {{ $labels.version }} cannot be finished in the given time period"
+        summary: "Controlplane upgrade timeout for {{`{{ $labels.version }}`}}"
+        description: "controlplane upgrade for {{`{{ $labels.version }}`}} cannot be finished in the given time period"
     - alert: UpgradeNodeUpgradeTimeoutSRE
       # Alert if the worker node upgrade timeout metric has been set for a ten-minute average window
       expr: avg_over_time(upgradeoperator_worker_timeout[10m]) == 1
@@ -39,8 +39,8 @@ spec:
         severity: critical
         namespace: openshift-monitoring
       annotations:
-        summary: "Nodes upgrade timeout for {{ $labels.version }}"
-        description: "nodes upgrade for {{ $labels.version }} cannot be finished after the silence expired"
+        summary: "Nodes upgrade timeout for {{`{{ $labels.version }}`}}"
+        description: "nodes upgrade for {{`{{ $labels.version }}`}} cannot be finished after the silence expired"
     - alert: UpgradeNodeDrainFailedSRE
       # Alert if the node drain failure metric has been set for a ten-minute average window
       expr: avg_over_time(upgradeoperator_node_drain_timeout[10m]) == 1

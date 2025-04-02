@@ -28,9 +28,6 @@ import (
 //go:embed test_files/local.yaml
 var expectedLocalConfig []byte
 
-//go:embed test_files/connected.yaml
-var expectedConnectedConfig []byte
-
 func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -116,13 +113,8 @@ func TestDeployConfig(t *testing.T) {
 	}{
 		{
 			name:             "local",
-			deploymentConfig: &config.MUODeploymentConfig{EnableConnected: false},
+			deploymentConfig: &config.MUODeploymentConfig{},
 			expected:         expectedLocalConfig,
-		},
-		{
-			name:             "connected",
-			deploymentConfig: &config.MUODeploymentConfig{EnableConnected: true, OCMBaseURL: "https://example.com"},
-			expected:         expectedConnectedConfig,
 		},
 	}
 	for _, tt := range tests {
