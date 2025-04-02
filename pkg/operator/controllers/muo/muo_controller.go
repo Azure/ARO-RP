@@ -29,29 +29,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
-	ControllerName                   = "ManagedUpgradeOperator"
-	controllerPullSpec               = "rh.srep.muo.deploy.pullspec"
-	controllerForceLocalOnly         = "rh.srep.muo.deploy.forceLocalOnly"
-	controllerOcmBaseURL             = "rh.srep.muo.deploy.ocmBaseUrl"
-	controllerOcmBaseURLDefaultValue = "https://api.openshift.com"
-
-	pullSecretOCMKey = "cloud.openshift.com"
+	ControllerName     = "ManagedUpgradeOperator"
+	controllerPullSpec = "rh.srep.muo.deploy.pullspec"
 )
 
 //go:embed staticresources
 var staticFiles embed.FS
 
-var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
-
 type MUODeploymentConfig struct {
-	Pullspec     string
-	ConnectToOCM bool
-	OCMBaseURL   string
+	Pullspec string
 }
 
 type Reconciler struct {
@@ -112,36 +102,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		config := &config.MUODeploymentConfig{
 			SupportsPodSecurityAdmission: usePodSecurityAdmission,
 			Pullspec:                     pullSpec,
-		}
-
-		disableOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerForceLocalOnly)
-		if !disableOCM {
-			useOCM := func() bool {
-				userSecret := &corev1.Secret{}
-				err = r.client.Get(ctx, pullSecretName, userSecret)
-				if err != nil {
-					// if a pullsecret doesn't exist/etc, fallback to local
-					return false
-				}
-
-				parsedKeys, err := pullsecret.UnmarshalSecretData(userSecret)
-				if err != nil {
-					// if we can't parse the pullsecret, fallback to local
-					return false
-				}
-
-				// check for the key that connects the cluster to OCM (since
-				// clusters may have a RH registry pull secret but not the OCM
-				// one if they choose)
-				_, foundKey := parsedKeys[pullSecretOCMKey]
-				return foundKey
-			}()
-
-			// if we have a valid pullsecret, enable connected MUO
-			if useOCM {
-				config.EnableConnected = true
-				config.OCMBaseURL = instance.Spec.OperatorFlags.GetWithDefault(controllerOcmBaseURL, controllerOcmBaseURLDefaultValue)
-			}
 		}
 
 		// Deploy the MUO manifests and config
