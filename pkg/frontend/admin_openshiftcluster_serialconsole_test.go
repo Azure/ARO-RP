@@ -117,6 +117,24 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			wantError:      "The provided vmName 'master#0' is invalid",
 		},
 		{
+			name:       "vm not found returns error",
+			vmName:     "nonexistent-vm",
+			resourceID: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
+			fixture:    databaseFixture,
+			mocks: func(mockActions *mock_adminactions.MockAzureActions) {
+				mockActions.EXPECT().
+					VMSerialConsole(gomock.Any(), gomock.Any(), "nonexistent-vm", gomock.Any()).
+					Return(&api.CloudError{
+						StatusCode: http.StatusNotFound,
+						CloudErrorBody: &api.CloudErrorBody{
+							Message: "The VM 'nonexistent-vm' was not found",
+						},
+					})
+			},
+			wantStatusCode: http.StatusNotFound,
+			wantError:      "The VM 'nonexistent-vm' was not found",
+		},
+		{
 			name:           "cluster not found returns error",
 			vmName:         "master-0",
 			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "nonexistent-cluster")),
