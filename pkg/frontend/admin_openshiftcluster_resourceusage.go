@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 // getAdminTopPods retrieves the top pod metrics and sends the response.
@@ -32,13 +33,21 @@ func (f *frontend) getAdminTopPods(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 🔁 Create restConfig on demand
+	restConfig, err := restconfig.RestConfig(f.env, nil)
+	if err != nil {
+		log.WithError(err).Error("failed to create restConfig")
+		replyInternalServerError(w)
+		return
+	}
+
 	ka, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		replyInternalServerError(w)
 		return
 	}
 
-	result, err := ka.TopPods(ctx, f.restConfig, true)
+	result, err := ka.TopPods(ctx, restConfig, true)
 	if err != nil {
 		replyInternalServerError(w)
 		return
@@ -66,13 +75,21 @@ func (f *frontend) getAdminTopNodes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 🔁 Create restConfig on demand
+	restConfig, err := restconfig.RestConfig(f.env, nil)
+	if err != nil {
+		log.WithError(err).Error("failed to create restConfig")
+		replyInternalServerError(w)
+		return
+	}
+
 	ka, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		replyInternalServerError(w)
 		return
 	}
 
-	result, err := ka.TopNodes(ctx, f.restConfig)
+	result, err := ka.TopNodes(ctx, restConfig)
 	if err != nil {
 		replyInternalServerError(w)
 		return
