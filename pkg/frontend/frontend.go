@@ -22,7 +22,6 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	restclient "k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -39,7 +38,6 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 type statusCodeError int
@@ -64,10 +62,9 @@ type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluste
 type appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error)
 
 type frontend struct {
-	auditLog   *logrus.Entry
-	baseLog    *logrus.Entry
-	env        env.Interface
-	restConfig *restclient.Config
+	auditLog *logrus.Entry
+	baseLog  *logrus.Entry
+	env      env.Interface
 
 	logMiddleware         middleware.LogMiddleware
 	validateMiddleware    middleware.ValidateMiddleware
@@ -197,11 +194,6 @@ func NewFrontend(ctx context.Context,
 
 		streamResponder: defaultResponder{},
 	}
-	restConfig, err := restconfig.RestConfig(_env, nil)
-	if err != nil {
-		return nil, err
-	}
-	f.restConfig = restConfig
 
 	l, err := f.env.Listen()
 	if err != nil {
