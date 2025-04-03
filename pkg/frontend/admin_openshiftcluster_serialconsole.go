@@ -41,6 +41,9 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	vmName := r.URL.Query().Get("vmName")
+	if vmName == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The vmName parameter is required.")
+	}
 	err := validateAdminVMName(vmName)
 	if err != nil {
 		return err

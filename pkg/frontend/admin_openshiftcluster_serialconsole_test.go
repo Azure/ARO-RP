@@ -106,7 +106,15 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
 			fixture:        databaseFixture,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "The provided vmName '' is invalid",
+			wantError:      "The vmName parameter is required",
+		},
+		{
+			name:           "invalid vm name characters returns validation error",
+			vmName:         "master#0",
+			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
+			fixture:        databaseFixture,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "The provided vmName 'master#0' is invalid",
 		},
 		{
 			name:           "cluster not found returns error",
