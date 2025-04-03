@@ -5,11 +5,13 @@ package frontend
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
@@ -23,33 +25,37 @@ func (f *frontend) getAdminTopPods(w http.ResponseWriter, r *http.Request) {
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Failed to access OpenShiftClusters DB: %v", err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
 		return
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("OpenShiftCluster resource %q not found in DB", resourceID)
+		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", msg)
 		return
 	}
 
-	// 🔁 Create restConfig on demand
 	restConfig, err := restconfig.RestConfig(f.env, nil)
 	if err != nil {
 		log.WithError(err).Error("failed to create restConfig")
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Failed to create restConfig: %v", err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
 		return
 	}
 
 	ka, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Failed to create kubeActions: %v", err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
 		return
 	}
 
 	result, err := ka.TopPods(ctx, restConfig, true)
 	if err != nil {
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Failed to retrieve pod metrics: %v", err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
 		return
 	}
 
@@ -65,44 +71,44 @@ func (f *frontend) getAdminTopNodes(w http.ResponseWriter, r *http.Request) {
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Failed to access OpenShiftClusters DB: %v", err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
 		return
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Resource not found: %v", err)
+		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", msg)
 		return
 	}
 
-	// 🔁 Create restConfig on demand
 	restConfig, err := restconfig.RestConfig(f.env, nil)
 	if err != nil {
 		log.WithError(err).Error("failed to create restConfig")
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Failed to create restConfig: %v", err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
 		return
 	}
 
 	ka, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Failed to create kubeActions: %v", err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
 		return
 	}
 
 	result, err := ka.TopNodes(ctx, restConfig)
 	if err != nil {
-		replyInternalServerError(w)
+		msg := fmt.Sprintf("Failed to retrieve node metrics: %v", err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
 		return
 	}
 
 	replyJSON(w, http.StatusOK, result)
 }
 
-// fallback helpers if util not imported
-func replyInternalServerError(w http.ResponseWriter) {
-	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-}
-
+// replyJSON sends a JSON response.
 func replyJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

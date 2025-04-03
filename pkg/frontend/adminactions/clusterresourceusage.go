@@ -63,10 +63,18 @@ func (k *kubeActions) TopPods(ctx context.Context, restConfig *restclient.Config
 	for _, item := range podMetrics.Items {
 		var containers []ContainerMetrics
 		for _, c := range item.Containers {
+			var cpu, memory string
+			if c.Usage.Cpu() != nil {
+				cpu = c.Usage.Cpu().String()
+			}
+			if c.Usage.Memory() != nil {
+				memory = c.Usage.Memory().String()
+			}
+
 			containers = append(containers, ContainerMetrics{
 				Name:   c.Name,
-				CPU:    c.Usage.Cpu().String(),
-				Memory: c.Usage.Memory().String(),
+				CPU:    cpu,
+				Memory: memory,
 			})
 		}
 
@@ -94,28 +102,28 @@ func (k *kubeActions) TopNodes(ctx context.Context, restConfig *restclient.Confi
 
 	var result []NodeMetrics
 	for _, item := range nodeMetrics.Items {
-		// Get total CPU and memory from the node's status capacity
 		node, err := k.kubecli.CoreV1().Nodes().Get(ctx, item.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
 
-		// Get total CPU and memory capacity from node
 		totalCPUQuantity := node.Status.Capacity["cpu"]
 		totalMemoryQuantity := node.Status.Capacity["memory"]
 
-		// Convert Quantity to an int64 value
 		totalCPU, _ := totalCPUQuantity.AsInt64()
 		totalMemory, _ := totalMemoryQuantity.AsInt64()
 
-		// Calculate percentage usage
-		usageCPU := item.Usage.Cpu().String()
-		usageMemory := item.Usage.Memory().String()
+		var usageCPU, usageMemory string
+		if item.Usage.Cpu() != nil {
+			usageCPU = item.Usage.Cpu().String()
+		}
+		if item.Usage.Memory() != nil {
+			usageMemory = item.Usage.Memory().String()
+		}
 
 		percentageCPU := calculatePercentage(usageCPU, totalCPU)
 		percentageMemory := calculatePercentage(usageMemory, totalMemory)
 
-		// Append node metrics to result
 		result = append(result, NodeMetrics{
 			NodeName:         item.Name,
 			CPUUsage:         usageCPU,
