@@ -122,6 +122,33 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 				NodeName: "fake-node-name",
 			},
 		},
+		&corev1.Pod{ // oomkilled pod
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "oomkilled-pod1",
+				Namespace: "openshift",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name: "oom-killed-cntr",
+						State: corev1.ContainerState{
+							Waiting: &corev1.ContainerStateWaiting{
+								Reason: "CrashLoopBackOff",
+							},
+						},
+						LastTerminationState: corev1.ContainerState{
+							Terminated: &corev1.ContainerStateTerminated{
+								Reason:   "OOMKilled",
+								ExitCode: 137,
+							},
+						},
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
 	)
 
 	controller := gomock.NewController(t)
@@ -140,6 +167,14 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		"nodeName":      "fake-node-name",
 		"containername": "containername",
 		"reason":        "ImagePullBackOff",
+	})
+	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
+		"name":                "oomkilled-pod1",
+		"namespace":           "openshift",
+		"nodeName":            "fake-node-name",
+		"containername":       "oom-killed-cntr",
+		"reason":              "CrashLoopBackOff",
+		"lastTerminatedState": "OOMKilled",
 	})
 
 	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
