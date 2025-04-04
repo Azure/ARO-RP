@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -73,6 +74,9 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			fixture:    databaseFixture,
 			mocks: func(mockActions *mock_adminactions.MockAzureActions) {
 				mockActions.EXPECT().
+					ResourceGroupHasVM(gomock.Any(), "master-0").
+					Return(true, nil)
+				mockActions.EXPECT().
 					VMSerialConsole(gomock.Any(), gomock.Any(), "master-0", gomock.Any()).
 					DoAndReturn(func(ctx context.Context, log *logrus.Entry, vmName string, writer io.Writer) error {
 						_, err := writer.Write([]byte("console output"))
@@ -83,24 +87,6 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			wantResponse:   "console output",
 		},
 		{
-			name:       "invalid vm name returns error",
-			vmName:     "invalid-vm",
-			resourceID: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
-			fixture:    databaseFixture,
-			mocks: func(mockActions *mock_adminactions.MockAzureActions) {
-				mockActions.EXPECT().
-					VMSerialConsole(gomock.Any(), gomock.Any(), "invalid-vm", gomock.Any()).
-					Return(&api.CloudError{
-						StatusCode: http.StatusBadRequest,
-						CloudErrorBody: &api.CloudErrorBody{
-							Message: "invalid VM name",
-						},
-					})
-			},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      "invalid VM name",
-		},
-		{
 			name:           "missing vm name parameter returns error",
 			vmName:         "",
 			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
@@ -109,7 +95,7 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			wantError:      "The vmName parameter is required",
 		},
 		{
-			name:           "invalid vm name characters returns validation error",
+			name:           "invalid characters in vm name returns validation error",
 			vmName:         "master#0",
 			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
 			fixture:        databaseFixture,
@@ -117,22 +103,17 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			wantError:      "The provided vmName 'master#0' is invalid",
 		},
 		{
-			name:       "vm not found returns error",
+			name:       "non-existent vm returns not found error",
 			vmName:     "nonexistent-vm",
 			resourceID: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionID, "resourceName")),
 			fixture:    databaseFixture,
 			mocks: func(mockActions *mock_adminactions.MockAzureActions) {
 				mockActions.EXPECT().
-					VMSerialConsole(gomock.Any(), gomock.Any(), "nonexistent-vm", gomock.Any()).
-					Return(&api.CloudError{
-						StatusCode: http.StatusNotFound,
-						CloudErrorBody: &api.CloudErrorBody{
-							Message: "The VM 'nonexistent-vm' was not found",
-						},
-					})
+					ResourceGroupHasVM(gomock.Any(), "nonexistent-vm").
+					Return(false, nil)
 			},
 			wantStatusCode: http.StatusNotFound,
-			wantError:      "The VM 'nonexistent-vm' was not found",
+			wantError:      "The VirtualMachine 'nonexistent-vm' under resource group 'test-cluster' was not found.",
 		},
 		{
 			name:           "cluster not found returns error",
@@ -167,7 +148,15 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/admin"+tt.resourceID+"/serialconsole?vmName="+tt.vmName, nil)
-			request = request.WithContext(context.WithValue(request.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger())))
+
+			ctx := context.WithValue(request.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger()))
+			ctx = context.WithValue(ctx, chi.RouteCtxKey, &chi.Context{
+				URLParams: chi.RouteParams{
+					Keys:   []string{"resourceType", "resourceName", "resourceGroupName"},
+					Values: []string{"openshiftcluster", "resourceName", "test-cluster"},
+				},
+			})
+			request = request.WithContext(ctx)
 
 			frontend.getAdminOpenShiftClusterSerialConsole(recorder, request)
 
