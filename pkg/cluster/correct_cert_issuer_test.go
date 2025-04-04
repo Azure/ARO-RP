@@ -73,7 +73,7 @@ func TestEnsureCertificateIssuer(t *testing.T) {
 					}}, nil)
 
 					clusterKeyvault.EXPECT().UpdateCertificatePolicy(gomock.Any(), test.CertificateName, gomock.Any(), nil).Return(azcertificates.UpdateCertificatePolicyResponse{}, nil)
-					clusterKeyvault.EXPECT().CreateCertificate(gomock.Any(), test.NewIssuerName, azcertificates_wrapper.SignedCertificateParameters(test.CertificateName, test.DNSName, azcertificates_wrapper.EkuServerAuth), nil).Return(azcertificates.CreateCertificateResponse{}, nil)
+					clusterKeyvault.EXPECT().CreateCertificate(gomock.Any(), test.CertificateName, azcertificates_wrapper.SignedCertificateParameters(test.NewIssuerName, test.DNSName, azcertificates_wrapper.EkuServerAuth), nil).Return(azcertificates.CreateCertificateResponse{}, nil)
 				}
 
 				env.EXPECT().ClusterCertificates().AnyTimes().Return(clusterKeyvault)
