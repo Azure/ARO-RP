@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"sort"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,7 +86,37 @@ func (k *kubeActions) TopPods(ctx context.Context, restConfig *restclient.Config
 		})
 	}
 
-	return result, nil
+	// Filter out pods with 0 CPU and 0 Memory
+	var filtered []PodMetrics
+	for _, pod := range result {
+		hasUsage := false
+		for _, c := range pod.Containers {
+			if c.CPU != "0" && c.Memory != "0" {
+				hasUsage = true
+				break
+			}
+		}
+		if hasUsage {
+			filtered = append(filtered, pod)
+		}
+	}
+
+	// Sort by total CPU usage (descending)
+	sort.Slice(filtered, func(i, j int) bool {
+		sumCPU := func(containers []ContainerMetrics) int64 {
+			var total int64
+			for _, c := range containers {
+				q, err := resource.ParseQuantity(c.CPU)
+				if err == nil {
+					total += q.MilliValue()
+				}
+			}
+			return total
+		}
+		return sumCPU(filtered[i].Containers) > sumCPU(filtered[j].Containers)
+	})
+
+	return filtered, nil
 }
 
 // TopNodes fetches the resource usage for all nodes in the cluster and calculates their usage percentage.
@@ -132,6 +163,11 @@ func (k *kubeActions) TopNodes(ctx context.Context, restConfig *restclient.Confi
 			MemoryPercentage: percentageMemory,
 		})
 	}
+
+	// Sort by CPU usage percentage descending
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CPUPercentage > result[j].CPUPercentage
+	})
 
 	return result, nil
 }
