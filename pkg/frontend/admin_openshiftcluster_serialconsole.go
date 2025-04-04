@@ -74,5 +74,14 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r
 		return err
 	}
 
+	exists, err := a.ResourceGroupHasVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "",
+			fmt.Sprintf("The VirtualMachine '%s' under resource group '%s' was not found.", vmName, resGroupName))
+	}
+
 	return a.VMSerialConsole(ctx, log, vmName, w)
 }
