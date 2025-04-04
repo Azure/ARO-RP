@@ -49,6 +49,8 @@ linters-settings:
     alias:
       - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
         alias: apiuuid
+      - pkg: github.com/Azure/ARO-RP/pkg/api/test/error
+        alias: apitesterror
       - pkg: github.com/Azure/ARO-RP/pkg/frontend/middleware
         alias: frontendmiddleware
       - pkg: github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb
