@@ -22,6 +22,7 @@ func (f *frontend) getAdminTopPods(w http.ResponseWriter, r *http.Request) {
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+	resourceID = strings.TrimSuffix(resourceID, "/toppods")
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
@@ -37,7 +38,7 @@ func (f *frontend) getAdminTopPods(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	restConfig, err := restconfig.RestConfig(f.env, nil)
+	restConfig, err := restconfig.RestConfig(f.env, doc.OpenShiftCluster)
 	if err != nil {
 		log.WithError(err).Error("failed to create restConfig")
 		msg := fmt.Sprintf("Failed to create restConfig: %v", err)
@@ -68,6 +69,7 @@ func (f *frontend) getAdminTopNodes(w http.ResponseWriter, r *http.Request) {
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+	resourceID = strings.TrimSuffix(resourceID, "/topnodes")
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
@@ -83,7 +85,7 @@ func (f *frontend) getAdminTopNodes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	restConfig, err := restconfig.RestConfig(f.env, nil)
+	restConfig, err := restconfig.RestConfig(f.env, doc.OpenShiftCluster)
 	if err != nil {
 		log.WithError(err).Error("failed to create restConfig")
 		msg := fmt.Sprintf("Failed to create restConfig: %v", err)
