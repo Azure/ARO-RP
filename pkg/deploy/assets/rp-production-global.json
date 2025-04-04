@@ -107,7 +107,8 @@
             "kind": "StorageV2",
             "properties": {
                 "allowBlobPublicAccess": false,
-                "minimumTlsVersion": "TLS1_2"
+                "minimumTlsVersion": "TLS1_2",
+                "allowSharedKeyAccess": false
             },
             "tags": {},
             "location": "[resourceGroup().location]",
@@ -127,6 +128,31 @@
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "metadata": null
+            },
+            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default', '/$web')]",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2021-09-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/$web/Microsoft.Authorization/', guid(parameters('rpVersionStorageAccountName')))]",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers/providers/roleAssignments",
+            "properties": {
+                "scope": "[concat(resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName')), '/blobServices/default/containers/$web')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+                "principalId": "[parameters('globalDevopsServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[concat(resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName')), '/blobServices/default/containers/$web')]"
             ]
         }
     ]

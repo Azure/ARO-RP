@@ -67,6 +67,31 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 	return r
 }
 
+func ResourceRoleAssignmentWithScope(roleID, spID, resourceType string, scope string, names string, condition ...interface{}) *arm.Resource {
+	r := &arm.Resource{
+		Resource: mgmtauthorization.RoleAssignment{
+			Name: to.StringPtr("[" + names + "]"),
+			Type: to.StringPtr(resourceType + "/providers/roleAssignments"),
+			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            to.StringPtr("[" + scope + "]"),
+				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
+				PrincipalID:      to.StringPtr("[" + spID + "]"),
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
+		DependsOn: []string{
+			"[" + scope + "]",
+		},
+	}
+
+	if len(condition) > 0 {
+		r.Condition = condition[0]
+	}
+
+	return r
+}
+
 // ResourceGroupRoleAssignment returns a Resource granting roleID on the current
 // resource group to spID.  Argument spID must be a valid ARM expression, e.g.
 // "'foo'" or "concat('foo')".  Use this function in new ARM templates.
