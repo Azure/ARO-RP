@@ -128,6 +128,7 @@ configmap:
   acr_resource_id: ""
   database_account_name: ""
   keyvault_prefix: ""
+  keyvault_rp_workload_identity: ""
   rp_features: ""
   msi_rp_endpoint: ""
 
@@ -299,3 +300,10 @@ env:
       configMapKeyRef:
         name: mimo-config
         key: hive_adopt
+
+  # Keyvault config
+  - name: ARO_RP_WORKLOAD_IDENTITY
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: keyvault_rp_workload_identity
