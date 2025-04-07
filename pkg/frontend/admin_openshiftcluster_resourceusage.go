@@ -22,7 +22,7 @@ func (f *frontend) getAdminTopPods(w http.ResponseWriter, r *http.Request) {
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
-	resourceID = strings.TrimSuffix(resourceID, "/toppods")
+	resourceID = strings.TrimSuffix(resourceID, "/top/pods")
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
@@ -69,7 +69,7 @@ func (f *frontend) getAdminTopNodes(w http.ResponseWriter, r *http.Request) {
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
-	resourceID = strings.TrimSuffix(resourceID, "/topnodes")
+	resourceID = strings.TrimSuffix(resourceID, "/top/nodes")
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
