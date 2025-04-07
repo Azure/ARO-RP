@@ -59,7 +59,7 @@
 1. General dependencies
 
     ```sh
-    sudo dnf install gpgme-devel libassuan-devel openssl podman
+    sudo dnf install gpgme-devel libassuan-devel openssl
     ```
 2. Dependencies for Fedora 37+
 
@@ -168,7 +168,7 @@
 > export ARO_PODMAN_SOCKET=unix://$HOME/.local/share/containers/podman/machine/qemu/podman.sock
 > ```
 >
-> You will also need to ensure that podman machine has enough resources:
+> You will also need to ensure that `podman-machine` has enough resources:
 >
 > ```sh
 > podman machine stop
@@ -259,15 +259,15 @@ sudo dnf install yamllint
 > [!TIP]
 > The following steps ***may*** be applicable where you symlink `docker` to `podman` location.
 
-    ```sh
-    ### CHECK SYMLINK ###
-    ls -la $(whereis -q docker)
+```sh
+### CHECK SYMLINK ###
+ls -la $(whereis -q docker)
 
-    # Example Output: /Users/<USER>/.local/bin/docker -> /opt/homebrew/bin/podman
+# Example Output: /Users/<USER>/.local/bin/docker -> /opt/homebrew/bin/podman
 
-    ### LOGIN TO ACR ###
-    az acr login --name <TARGET_ACR>
-    ```
+### LOGIN TO ACR ###
+az acr login --name <TARGET_ACR>
+```
 
 ## Getting Started
 
