@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	service "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -98,6 +99,20 @@ func (m *MockBlobsClient) DownloadStream(ctx context.Context, containerName, blo
 func (mr *MockBlobsClientMockRecorder) DownloadStream(ctx, containerName, blobName, o any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadStream", reflect.TypeOf((*MockBlobsClient)(nil).DownloadStream), ctx, containerName, blobName, o)
+}
+
+// ServiceClient mocks base method.
+func (m *MockBlobsClient) ServiceClient() *service.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceClient")
+	ret0, _ := ret[0].(*service.Client)
+	return ret0
+}
+
+// ServiceClient indicates an expected call of ServiceClient.
+func (mr *MockBlobsClientMockRecorder) ServiceClient() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceClient", reflect.TypeOf((*MockBlobsClient)(nil).ServiceClient))
 }
 
 // UploadBuffer mocks base method.
