@@ -227,9 +227,6 @@ outer:
 		roleDefinitionId := fmt.Sprintf("/subscriptions/%s%s", m.subscriptionDoc.ID, role.RoleDefinitionID)
 
 		for _, existingRoleAssignment := range roleAssignmentsForManagedResourceGroup {
-			if !strings.EqualFold(*existingRoleAssignment.Scope, resourceGroupID) {
-				continue
-			}
 			if strings.EqualFold(*existingRoleAssignment.RoleDefinitionID, roleDefinitionId) {
 				if !strings.EqualFold(*existingRoleAssignment.PrincipalID, identity.ObjectID) {
 					toDelete = append(toDelete, existingRoleAssignment)
