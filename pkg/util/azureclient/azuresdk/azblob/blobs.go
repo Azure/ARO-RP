@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 )
 
 // BlobsClient is a minimal interface for Azure BlobsClient
@@ -16,14 +17,13 @@ type BlobsClient interface {
 	DownloadStream(ctx context.Context, containerName string, blobName string, o *azblob.DownloadStreamOptions) (azblob.DownloadStreamResponse, error)
 	UploadBuffer(ctx context.Context, containerName string, blobName string, buffer []byte, o *azblob.UploadBufferOptions) (azblob.UploadBufferResponse, error)
 	DeleteBlob(ctx context.Context, containerName string, blobName string, o *azblob.DeleteBlobOptions) (azblob.DeleteBlobResponse, error)
+	ServiceClient() *service.Client
 	BlobsClientAddons
 }
 
 type blobsClient struct {
 	*azblob.Client
 }
-
-var _ BlobsClient = &blobsClient{}
 
 // NewBlobsClientUsingSAS creates a new BlobsClient using SAS
 func NewBlobsClientUsingSAS(sasURL string, options *arm.ClientOptions) (*blobsClient, error) {
