@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -45,9 +46,12 @@ func calculatePercentage(usage string, total int64) float64 {
 
 // TopPods fetches the resource usage for all pods (or across namespaces) and calculates their usage.
 func (k *kubeActions) TopPods(ctx context.Context, restConfig *restclient.Config, allNamespaces bool) ([]PodMetrics, error) {
-	ns := ""
-	if !allNamespaces {
-		ns = "default"
+	var ns string
+	if allNamespaces {
+		ns = ""
+	} else {
+		// prevent unsafe defaulting to "default"
+		return nil, fmt.Errorf("explicit namespace must be provided when allNamespaces is false")
 	}
 
 	client, err := metricsv1beta1.NewForConfig(restConfig)
