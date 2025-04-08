@@ -25,6 +25,8 @@ type blobsClient struct {
 	*azblob.Client
 }
 
+var _ BlobsClient = &blobsClient{}
+
 // NewBlobsClientUsingSAS creates a new BlobsClient using SAS
 func NewBlobsClientUsingSAS(sasURL string, options *arm.ClientOptions) (*blobsClient, error) {
 	azBlobOptions := &azblob.ClientOptions{
