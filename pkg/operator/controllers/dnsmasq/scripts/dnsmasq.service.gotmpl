@@ -11,8 +11,10 @@ Before=bootkube.service
 # resolv.conf.dnsmasq upstream customer dns.
 ExecStartPre=/bin/bash /usr/local/bin/aro-dnsmasq-pre.sh
 ExecStart=/usr/sbin/dnsmasq -k
-ExecStopPost=/bin/bash -c '/bin/mv /etc/resolv.conf.dnsmasq /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
+ExecStopPost=/bin/bash -c '/bin/rm /etc/NetworkManager/conf.d/aro-dns.conf && /usr/bin/nmcli general reload conf && /usr/bin/nmcli general reload dns-rc'
 Restart=always
+StandardOutput=journal+console
+StandardError=journal+console
 
 [Install]
 WantedBy=multi-user.target
