@@ -411,10 +411,10 @@ func (m *manager) bootstrap() []steps.Step {
 
 	s = append(s,
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.attachNSGs),
-		steps.Action(m.updateAPIIPEarly),
-		steps.Action(m.createOrUpdateRouterIPEarly),
-		steps.Action(m.ensureGatewayCreate),
-		steps.Action(m.createAPIServerPrivateEndpoint),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.updateAPIIPEarly),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createOrUpdateRouterIPEarly),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.ensureGatewayCreate),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
 	)
 
