@@ -319,6 +319,12 @@ shared-cluster-login:
 		-u kubeadmin \
 		-p $(shell az aro list-credentials -g sre-shared-cluster -n sre-shared-cluster  -ojson --query "kubeadminPassword")
 
+.PHONY: shared-miwi-cluster-login
+shared-miwi-cluster-login:
+	@oc login $(shell az aro show -g sre-shared-miwi-cluster -n sre-shared-miwi-cluster -ojson --query apiserverProfile.url) \
+		-u kubeadmin \
+		-p $(shell az aro list-credentials -g sre-shared-miwi-cluster -n sre-shared-miwi-cluster  -ojson --query "kubeadminPassword")
+
 .PHONY: shared-cluster-create
 shared-cluster-create:
 	./hack/shared-cluster.sh create
