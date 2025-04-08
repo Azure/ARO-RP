@@ -52,6 +52,13 @@ rules:
   - update
   - watch
 - apiGroups:
+  - config.openshift.io
+  resources:
+  - infrastructures
+  verbs:
+  - get
+  - list
+- apiGroups:
   - machine.openshift.io
   resources:
   - machines
@@ -93,3 +100,10 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - "fileintegrity.openshift.io"
+  resources:
+  - fileintegrities
+  verbs:
+  - get
+  - update
