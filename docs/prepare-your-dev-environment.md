@@ -311,8 +311,14 @@ az acr login --name <TARGET_ACR>
 6. Configure local `git`
 
     ```sh
+    # Set pre-commit hook
     make init-contrib
-    git config --global github.user <USERNAME>
+
+    # Set GitHub username globally
+    git config --global github.user "<USERNAME>"
+
+    # OR: Set GitHub username locally to repo
+    git config github.user "<USERNAME>"
     ```
 
 > [!IMPORTANT]
