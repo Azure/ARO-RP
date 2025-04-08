@@ -44,7 +44,7 @@ type etcHostsAROScriptTemplateData struct {
 }
 
 var aroConfTemplate = template.Must(template.New("etchosts").Parse(`{{ .APIIntIP }}	api.{{ .ClusterDomain }} api-int.{{ .ClusterDomain }}
-{{ $.GatewayPrivateEndpointIP }}	{{ range $GatewayDomain := .GatewayDomains }}{{ $GatewayDomain }} {{ end }}
+{{ $.GatewayPrivateEndpointIP }}	{{ range $i, $GatewayDomain := .GatewayDomains }}{{ if (gt $i 0) }} {{ end }}{{ $GatewayDomain }}{{ end }}
 `))
 
 var aroScriptTemplate = template.Must(template.New("etchostscript").Parse(`#!/bin/bash
