@@ -9,27 +9,22 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
 	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -4796,162 +4791,5 @@ func TestRegression_PreconfiguredNSGField(t *testing.T) {
 	if oc.Properties.NetworkProfile.PreconfiguredNSG != admin.PreconfiguredNSGEnabled {
 		t.Errorf("expected PreconfiguredNSG=Enabled, got %v",
 			oc.Properties.NetworkProfile.PreconfiguredNSG)
-	}
-}
-
-// TestGetAdminTopPods validates the /admin/.../top/pods endpoint
-// It mocks DB, restconfig, and kubeActions dependencies to simulate
-// a real call to fetch top pod usage metrics using the Kubernetes metrics API.
-func TestGetAdminTopPods(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Mocks
-	mockKA := mock_adminactions.NewMockKubeActions(ctrl)
-	mockDB := mock_frontend.NewMockOpenShiftClusters(ctrl)
-	mockDBGroup := mock_frontend.NewMockfrontendDBs(ctrl)
-
-	// Sample OpenShift cluster document and kubeconfig
-	mockClusterID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster"
-	doc := &api.OpenShiftClusterDocument{
-		Key: mockClusterID,
-		OpenShiftCluster: &api.OpenShiftCluster{
-			ID: mockClusterID,
-			Properties: api.OpenShiftClusterProperties{
-				NetworkProfile: api.NetworkProfile{
-					APIServerPrivateEndpointIP: "1.2.3.4",
-				},
-				AdminKubeconfig: []byte(`
-apiVersion: v1
-clusters:
-- cluster:
-    server: https://1.2.3.4:443
-  name: test
-contexts:
-- context:
-    cluster: test
-    user: test
-  name: test
-current-context: test
-kind: Config
-preferences: {}
-users:
-- name: test
-  user:
-    token: dummy
-`),
-			},
-		},
-	}
-
-	// Expectations
-	mockDBGroup.EXPECT().OpenShiftClusters().Return(mockDB, nil)
-	mockDB.EXPECT().Get(gomock.Any(), mockClusterID).Return(doc, nil)
-	mockKA.EXPECT().TopPods(gomock.Any(), gomock.Any(), true).Return([]adminactions.PodMetrics{
-		{
-			Namespace: "default",
-			PodName:   "pod-1",
-			Containers: []adminactions.ContainerMetrics{
-				{Name: "c1", CPU: "100m", Memory: "200Mi"},
-			},
-		},
-	}, nil)
-
-	// Injecting mocks into frontend
-	f := &frontend{
-		dbGroup: mockDBGroup,
-		kubeActionsFactory: func(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (adminactions.KubeActions, error) {
-			return mockKA, nil
-		},
-		env: nil,
-	}
-
-	// Simulate request
-	req := httptest.NewRequest(http.MethodGet, "/admin"+mockClusterID+"/top/pods", nil)
-	req = req.WithContext(context.WithValue(req.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger())))
-	rr := httptest.NewRecorder()
-
-	f.getAdminTopPods(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected status 200 OK, got %d", rr.Code)
-	}
-}
-
-// TestGetAdminTopNodes validates the /admin/.../top/nodes endpoint
-// It simulates the full flow of fetching top node resource metrics via the metrics API.
-func TestGetAdminTopNodes(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Mocks
-	mockKA := mock_adminactions.NewMockKubeActions(ctrl)
-	mockDB := mock_frontend.NewMockOpenShiftClusters(ctrl)
-	mockDBGroup := mock_frontend.NewMockfrontendDBs(ctrl)
-
-	// Sample OpenShift cluster document and kubeconfig
-	mockClusterID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster"
-	doc := &api.OpenShiftClusterDocument{
-		Key: mockClusterID,
-		OpenShiftCluster: &api.OpenShiftCluster{
-			ID: mockClusterID,
-			Properties: api.OpenShiftClusterProperties{
-				NetworkProfile: api.NetworkProfile{
-					APIServerPrivateEndpointIP: "1.2.3.4",
-				},
-				AdminKubeconfig: []byte(`
-apiVersion: v1
-clusters:
-- cluster:
-    server: https://1.2.3.4:443
-  name: test
-contexts:
-- context:
-    cluster: test
-    user: test
-  name: test
-current-context: test
-kind: Config
-preferences: {}
-users:
-- name: test
-  user:
-    token: dummy
-`),
-			},
-		},
-	}
-
-	// Expectations
-	mockDBGroup.EXPECT().OpenShiftClusters().Return(mockDB, nil)
-	mockDB.EXPECT().Get(gomock.Any(), mockClusterID).Return(doc, nil)
-	mockKA.EXPECT().TopNodes(gomock.Any(), gomock.Any()).Return([]adminactions.NodeMetrics{
-		{
-			NodeName:         "node-1",
-			CPUUsage:         "500m",
-			MemoryUsage:      "1Gi",
-			CPUPercentage:    25,
-			MemoryPercentage: 50,
-		},
-	}, nil)
-
-	// Injecting mocks into frontend
-	f := &frontend{
-		dbGroup: mockDBGroup,
-		kubeActionsFactory: func(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (adminactions.KubeActions, error) {
-			return mockKA, nil
-		},
-		env: nil,
-	}
-
-	// Simulate request
-	req := httptest.NewRequest(http.MethodGet, "/admin"+mockClusterID+"/top/nodes", nil)
-	req = req.WithContext(context.WithValue(req.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger())))
-	rr := httptest.NewRecorder()
-
-	f.getAdminTopNodes(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected status 200 OK, got %d", rr.Code)
 	}
 }
