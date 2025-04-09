@@ -29,7 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	mock_kubeactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -4807,7 +4807,7 @@ func TestGetAdminTopPods(t *testing.T) {
 	defer ctrl.Finish()
 
 	// Mocks
-	mockKA := mock_kubeactions.NewMockKubeActions(ctrl)
+	mockKA := mock_adminactions.NewMockKubeActions(ctrl)
 	mockDB := mock_frontend.NewMockOpenShiftClusters(ctrl)
 	mockDBGroup := mock_frontend.NewMockfrontendDBs(ctrl)
 
@@ -4885,7 +4885,7 @@ func TestGetAdminTopNodes(t *testing.T) {
 	defer ctrl.Finish()
 
 	// Mocks
-	mockKA := mock_kubeactions.NewMockKubeActions(ctrl)
+	mockKA := mock_adminactions.NewMockKubeActions(ctrl)
 	mockDB := mock_frontend.NewMockOpenShiftClusters(ctrl)
 	mockDBGroup := mock_frontend.NewMockfrontendDBs(ctrl)
 
