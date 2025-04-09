@@ -129,12 +129,11 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	if group.ManagedBy == nil || !strings.EqualFold(*group.ManagedBy, m.doc.OpenShiftCluster.ID) {
 		return resourceGroupAlreadyExistsError
 	}
-
+	// Tag all resource groups so isntaller won't exit if the RG in't empty
+	group.Tags = map[string]*string{}
+	group.Tags["openshift-allow-install"] = to.StringPtr("true")
 	// HACK: set purge=true on dev clusters so our purger wipes them out since there is not deny assignment in place
 	if m.env.IsLocalDevelopmentMode() {
-		if group.Tags == nil {
-			group.Tags = map[string]*string{}
-		}
 		group.Tags["purge"] = to.StringPtr("true")
 	}
 
