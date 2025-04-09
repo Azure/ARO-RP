@@ -12,8 +12,9 @@ package mock_frontend
 import (
 	reflect "reflect"
 
-	database "github.com/Azure/ARO-RP/pkg/database"
 	gomock "go.uber.org/mock/gomock"
+
+	database "github.com/Azure/ARO-RP/pkg/database"
 )
 
 // MockfrontendDBs is a mock of frontendDBs interface.

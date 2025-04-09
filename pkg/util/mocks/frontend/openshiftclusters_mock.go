@@ -13,10 +13,11 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	api "github.com/Azure/ARO-RP/pkg/api"
 	database "github.com/Azure/ARO-RP/pkg/database"
 	cosmosdb "github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockOpenShiftClusters is a mock of OpenShiftClusters interface.
