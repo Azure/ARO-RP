@@ -64,11 +64,13 @@ users:
 	mockDB.EXPECT().Get(gomock.Any(), mockClusterID).Return(doc, nil)
 	mockKA.EXPECT().TopPods(gomock.Any(), gomock.Any(), true).Return([]adminactions.PodMetrics{
 		{
-			Namespace: "default",
-			PodName:   "pod-1",
-			Containers: []adminactions.ContainerMetrics{
-				{Name: "c1", CPU: "100m", Memory: "200Mi"},
-			},
+			Namespace:        "default",
+			PodName:          "pod-1",
+			NodeName:         "node-1",
+			CPUUsage:         "100m",
+			MemoryUsage:      "200Mi",
+			CPUPercentage:    10.0,
+			MemoryPercentage: 20.0,
 		},
 	}, nil)
 
