@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # pin@v4
 
     - name: yamllint
-      uses: oxsecurity/megalinter/flavors/ci_light@v8
+      uses: oxsecurity/megalinter/flavors/ci_light@ec124f7998718d79379a3c5b39f5359952baf21d # pin@v8
