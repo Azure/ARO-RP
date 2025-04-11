@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -24,7 +25,12 @@ const (
 func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet) error {
 	architectureVersion := api.ArchitectureVersion(r.instance.Spec.ArchitectureVersion)
 
-	subnetObject, err := r.subnets.Get(ctx, s.ResourceID)
+	subnetID, err := arm.ParseResourceID(s.ResourceID)
+	if err != nil {
+		return err
+	}
+
+	subnetObject, err := r.subnets.Get(ctx, subnetID.ResourceGroupName, subnetID.Parent.Name, subnetID.Name, nil)
 	if err != nil {
 		if azureerrors.IsNotFoundError(err) {
 			r.log.Infof("Subnet %s not found, skipping", s.ResourceID)
@@ -32,7 +38,7 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 		}
 		return err
 	}
-	if subnetObject.SubnetPropertiesFormat == nil {
+	if subnetObject.Properties == nil {
 		return fmt.Errorf("received nil, expected a value in subnetProperties when trying to Get subnet %s", s.ResourceID)
 	}
 
@@ -42,18 +48,18 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	}
 
 	// if the NSG is assigned && it's the correct NSG - do nothing
-	if subnetObject.SubnetPropertiesFormat.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
+	if subnetObject.Properties.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.Properties.NetworkSecurityGroup.ID, correctNSGResourceID) {
 		return nil
 	}
 
 	// else the NSG assignment needs to be corrected
 	oldNSG := "nil"
-	if subnetObject.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-		oldNSG = *subnetObject.NetworkSecurityGroup.ID
+	if subnetObject.Properties.NetworkSecurityGroup != nil {
+		oldNSG = *subnetObject.Properties.NetworkSecurityGroup.ID
 	}
 	r.log.Infof("Fixing NSG from %s to %s", oldNSG, correctNSGResourceID)
-	subnetObject.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{ID: &correctNSGResourceID}
-	err = r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject)
+	subnetObject.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{ID: &correctNSGResourceID}
+	err = r.subnets.CreateOrUpdateAndWait(ctx, subnetID.ResourceGroupName, subnetID.Parent.Name, subnetID.Name, subnetObject.Subnet, nil)
 	if err != nil {
 		return err
 	}
