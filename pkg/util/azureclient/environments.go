@@ -149,6 +149,12 @@ func (e *AROEnvironment) ManagedIdentityCredentialOptions() *azidentity.ManagedI
 	}
 }
 
+func (e *AROEnvironment) WorkloadIdentityCredentialOptions() *azidentity.WorkloadIdentityCredentialOptions {
+	return &azidentity.WorkloadIdentityCredentialOptions{
+		ClientOptions: e.AzureClientOptions(),
+	}
+}
+
 func (e *AROEnvironment) AzureClientOptions() azcore.ClientOptions {
 	return azcore.ClientOptions{
 		Cloud: e.Cloud,
