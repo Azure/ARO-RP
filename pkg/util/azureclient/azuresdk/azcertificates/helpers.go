@@ -128,6 +128,13 @@ func checkOperation(op azcertificates.CertificateOperation) (bool, error) {
 	case "completed":
 		return true, nil
 
+	case "failed":
+		// consider failed operation that can retry as not an error, but as if inProgress
+		if op.Error != nil && strings.Contains(op.Error.Error(), "[Status:FailedCanRetry]") {
+			return false, nil
+		}
+		fallthrough
+
 	default:
 		if op.StatusDetails != nil {
 			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, op.Error)
