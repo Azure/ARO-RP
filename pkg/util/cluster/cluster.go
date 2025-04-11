@@ -996,11 +996,11 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 	// very occasionally c.securitygroups.List returns an empty list in
 	// production.  No idea why.  Let's try retrying it...
 	var nsgs []*sdknetwork.SecurityGroup
-	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	err := wait.PollUntilContextCancel(timeoutCtx, 10*time.Second, true, func(ctx context.Context) (bool, error) {
 		var err error
 		nsgs, err = c.securitygroups.List(ctx, "aro-"+clusterName, nil)
 		return len(nsgs) > 0, err
-	}, timeoutCtx.Done())
+	})
 	if err != nil {
 		return err
 	}
@@ -1118,14 +1118,14 @@ func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupN
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+	return wait.PollUntilContextCancel(timeoutCtx, 5*time.Second, true, func(ctx context.Context) (bool, error) {
 		_, err := c.groups.Get(ctx, resourceGroupName)
 		if azureerrors.ResourceGroupNotFound(err) {
 			c.log.Infof("finished deleting resource group %s", resourceGroupName)
 			return true, nil
 		}
 		return false, fmt.Errorf("failed to delete resource group %s with %s", resourceGroupName, err)
-	}, timeoutCtx.Done())
+	})
 }
 
 func (c *Cluster) deleteResourceGroup(ctx context.Context, resourceGroup string) error {
