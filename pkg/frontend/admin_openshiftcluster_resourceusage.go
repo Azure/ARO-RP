@@ -53,7 +53,13 @@ func (f *frontend) getAdminTopPods(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := ka.TopPods(ctx, restConfig, true)
+	// Parse allNamespaces query param (default: true)
+	allNamespaces := true
+	if nsFlag := r.URL.Query().Get("allNamespaces"); nsFlag == "false" {
+		allNamespaces = false
+	}
+
+	result, err := ka.TopPods(ctx, restConfig, allNamespaces)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to retrieve pod metrics: %v", err)
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", msg)
