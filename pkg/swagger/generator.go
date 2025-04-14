@@ -16,6 +16,7 @@ import (
 	v20230904 "github.com/Azure/ARO-RP/pkg/api/v20230904"
 	v20231122 "github.com/Azure/ARO-RP/pkg/api/v20231122"
 	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
@@ -27,6 +28,7 @@ const apiv20230701previewPath = "github.com/Azure/ARO-RP/pkg/api/v20230701previe
 const apiv20230904Path = "github.com/Azure/ARO-RP/pkg/api/v20230904"
 const apiv20231122Path = "github.com/Azure/ARO-RP/pkg/api/v20231122"
 const apiv20240812previewPath = "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+const apiv20250725Path = "github.com/Azure/ARO-RP/pkg/api/v20250725"
 
 type generator struct {
 	exampleSyncSetPutParameter                         func() interface{}
@@ -323,6 +325,48 @@ var apis = map[string]*generator{
 		exampleOpenShiftVersionResponse:                    v20240812preview.ExampleOpenShiftVersionResponse,
 		examplePlatformWorkloadIdentityRoleSetListResponse: v20240812preview.ExamplePlatformWorkloadIdentityRoleSetListResponse,
 		examplePlatformWorkloadIdentityRoleSetResponse:     v20240812preview.ExamplePlatformWorkloadIdentityRoleSetResponse,
+		exampleOperationListResponse:                       api.ExampleOperationListResponse,
+
+		xmsEnum:                []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType", "ManagedServiceIdentityType"},
+		xmsSecretList:          []string{"kubeconfig", "kubeadminPassword", "secretResources"},
+		xmsIdentifiers:         []string{},
+		commonTypesVersion:     "v6",
+		managedServiceIdentity: true,
+		systemData:             true,
+		installVersionList:     true,
+		installVersionGet:      true,
+		kubeConfig:             true,
+		workerProfilesStatus:   true,
+		roleSetList:            true,
+	},
+	apiv20250725Path: {
+		exampleSyncSetPutParameter:                         v20250725.ExampleSyncSetPutParameter,
+		exampleSyncSetPatchParameter:                       v20250725.ExampleSyncSetPatchParameter,
+		exampleSyncSetResponse:                             v20250725.ExampleSyncSetResponse,
+		exampleSyncSetListResponse:                         v20250725.ExampleSyncSetListResponse,
+		exampleMachinePoolPutParameter:                     v20250725.ExampleMachinePoolPutParameter,
+		exampleMachinePoolPatchParameter:                   v20250725.ExampleMachinePoolPatchParameter,
+		exampleMachinePoolResponse:                         v20250725.ExampleMachinePoolResponse,
+		exampleMachinePoolListResponse:                     v20250725.ExampleMachinePoolListResponse,
+		exampleSyncIdentityProviderPutParameter:            v20250725.ExampleSyncIdentityProviderPutParameter,
+		exampleSyncIdentityProviderPatchParameter:          v20250725.ExampleSyncIdentityProviderPatchParameter,
+		exampleSyncIdentityProviderResponse:                v20250725.ExampleSyncIdentityProviderResponse,
+		exampleSyncIdentityProviderListResponse:            v20250725.ExampleSyncIdentityProviderListResponse,
+		exampleSecretPutParameter:                          v20250725.ExampleSecretPutParameter,
+		exampleSecretPatchParameter:                        v20250725.ExampleSecretPatchParameter,
+		exampleSecretResponse:                              v20250725.ExampleSecretResponse,
+		exampleSecretListResponse:                          v20250725.ExampleSecretListResponse,
+		exampleOpenShiftClusterPutParameter:                v20250725.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:              v20250725.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterGetResponse:                 v20250725.ExampleOpenShiftClusterGetResponse,
+		exampleOpenShiftClusterPutOrPatchResponse:          v20250725.ExampleOpenShiftClusterPutOrPatchResponse,
+		exampleOpenShiftClusterCredentialsResponse:         v20250725.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:                v20250725.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse:     v20250725.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOpenShiftVersionListResponse:                v20250725.ExampleOpenShiftVersionListResponse,
+		exampleOpenShiftVersionResponse:                    v20250725.ExampleOpenShiftVersionResponse,
+		examplePlatformWorkloadIdentityRoleSetListResponse: v20250725.ExamplePlatformWorkloadIdentityRoleSetListResponse,
+		examplePlatformWorkloadIdentityRoleSetResponse:     v20250725.ExamplePlatformWorkloadIdentityRoleSetResponse,
 		exampleOperationListResponse:                       api.ExampleOperationListResponse,
 
 		xmsEnum:                []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType", "ManagedServiceIdentityType"},
