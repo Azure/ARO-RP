@@ -115,7 +115,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.1202-g118c178",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
-		"quay.io/app-sre/hive:5d3f4d77dc",
+		"quay.io/app-sre/hive:87bff5947f",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 

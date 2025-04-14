@@ -9,7 +9,7 @@ main() {
     trap "cleanup $tmpdir" EXIT
 
     # This is the commit sha that the image was built from and ensures we use the correct configs for the release
-    local -r default_commit="5d3f4d77dc"
+    local -r default_commit="87bff5947f"
     local -r hive_image_commit_hash="${1:-$default_commit}"
     log "Using hive commit: $hive_image_commit_hash"
     # shellcheck disable=SC2034
