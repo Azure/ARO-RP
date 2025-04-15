@@ -1,5 +1,6 @@
 ARG REGISTRY
-FROM ${REGISTRY}/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19 AS builder
+ARG BUILDER_REGISTRY
+FROM ${BUILDER_REGISTRY}/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19 AS builder
 ARG GATEKEEPER_VERSION
 ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
 

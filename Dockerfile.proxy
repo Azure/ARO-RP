@@ -1,7 +1,8 @@
 # Uses a multi-stage container build to build the proxy
 #
 ARG REGISTRY
-FROM ${REGISTRY}/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19 AS builder
+ARG BUILDER_REGISTRY
+FROM ${BUILDER_REGISTRY}/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19 AS builder
 USER root
 ENV GOPATH=/root/go
 RUN mkdir -p /app
