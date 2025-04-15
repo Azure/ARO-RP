@@ -16,7 +16,9 @@ variables:
   - name: CI
     value: true
   - name: REGISTRY
-    value: registry.access.redhat.com
+    value: arointsvc.azurecr.io
+  - name: BUILDER_REGISTRY
+    value: arointsvc.azurecr.io
   - name: LOCAL_ARO_RP_IMAGE
     value: arosvcdev.azurecr.io/aro
   - name: LOCAL_ARO_AZEXT_IMAGE
