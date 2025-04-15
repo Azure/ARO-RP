@@ -44,7 +44,7 @@ func newProd(ctx context.Context) (InstanceMetadata, error) {
 }
 
 func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
-	options := p.Environment().ManagedIdentityCredentialOptions()
+	options := p.Environment().ManagedIdentityCredentialOptions("")
 	msiTokenCredential, err := azidentity.NewManagedIdentityCredential(options)
 	if err != nil {
 		return err
