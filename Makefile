@@ -430,11 +430,11 @@ ci-rp:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=${REGISTRY} \
-		--build-arg BUILDER_REGISTRY=${BUILDER_REGISTRY	} \
-		--build-arg ARO_VERSION=${VERSION} \
-		--no-cache=${NO_CACHE} \
-		-t ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
 
 	# Extract test coverage files from build to local filesystem
 	docker create --name extract_cover_out ${LOCAL_ARO_RP_IMAGE}:${VERSION}; \
@@ -447,10 +447,11 @@ aro-e2e:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.aro-e2e \
 		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=${REGISTRY} \
-		--build-arg ARO_VERSION=${VERSION} \
-		--no-cache=${NO_CACHE} \
-		-t ${LOCAL_E2E_IMAGE}:${VERSION}
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_E2E_IMAGE):$(VERSION)
 
 .PHONY: ci-tunnel
 ci-tunnel:
