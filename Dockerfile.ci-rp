@@ -23,7 +23,7 @@ RUN npm run lint && npm run build
 ###############################################################################
 # Stage 2: Compile the Golang RP code
 ###############################################################################
-FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
+FROM ${REGISTRY}/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19 AS builder
 ARG ARO_VERSION
 LABEL aro-builder=true
 USER root
@@ -67,7 +67,7 @@ RUN hack/fips/validate-fips.sh ./aro
 ###############################################################################
 # Stage 3: final is our slim image with minimal layers and tools
 ###############################################################################
-FROM ${REGISTRY}/ubi8/ubi-minimal AS final
+FROM ${REGISTRY}/ubi9/ubi-minimal AS final
 LABEL aro-final=true
 RUN microdnf update && microdnf clean all
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/

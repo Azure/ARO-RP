@@ -26,7 +26,7 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-const TEST_PULLSPEC = "registry.access.redhat.com/ubi8/go-toolset:1.22.9-2"
+const TEST_PULLSPEC = "registry.access.redhat.com/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19"
 
 var _ = Describe("Podman", Ordered, func() {
 	var err error

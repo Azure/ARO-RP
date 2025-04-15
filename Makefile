@@ -163,7 +163,7 @@ image-fluentbit:
 
 .PHONY: image-proxy
 image-proxy:
-	docker pull $(REGISTRY)/ubi8/ubi-minimal
+	docker pull $(REGISTRY)/ubi9/ubi-minimal
 	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
 .PHONY: image-gatekeeper

@@ -1,5 +1,5 @@
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
+FROM ${REGISTRY}/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19 AS builder
 ARG GATEKEEPER_VERSION
 ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
 
@@ -17,7 +17,7 @@ RUN curl -Lq $DOWNLOAD_URL | tar -xz --strip-components=1
 RUN go build -mod vendor -a -ldflags "-X github.com/open-policy-agent/gatekeeper/pkg/version.Version=$GATEKEEPER_VERSION" -o manager
 
 #### Runtime container
-FROM ${REGISTRY}/ubi8/ubi-minimal:latest
+FROM ${REGISTRY}/ubi9/ubi-minimal:latest
 
 ENV USER_UID=1001 \
     USER_NAME=guardrails-operator
