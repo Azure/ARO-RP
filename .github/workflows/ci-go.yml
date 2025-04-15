@@ -15,60 +15,86 @@ jobs:
   vendor-check:
     runs-on: ubuntu-latest
     container:
-      image: registry.access.redhat.com/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19
+      image: http://mcr.microsoft.com/azurelinux/base/core:3.0
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Add GOBIN to PATH
-      run: |
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - run: |
-        make go-verify
-        hack/ci-utils/isClean.sh
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        with:
+          fetch-depth: 0
+      - name: Set up Golang
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: go.mod
+      - run: |
+          make go-verify
+          hack/ci-utils/isClean.sh
 
   generate-check:
     runs-on: ubuntu-latest
     container:
-      image: registry.access.redhat.com/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19
+      image: http://mcr.microsoft.com/azurelinux/base/core:3.0
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Add GOBIN to PATH
-      run: |
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Run make generate
-      run: |
-        make generate
-        hack/ci-utils/isClean.sh
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        with:
+          fetch-depth: 0
+      - name: Set up Golang
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: go.mod
+      - name: Run make generate
+        run: |
+          make generate
+          hack/ci-utils/isClean.sh
 
   golangci:
     name: golangci-lint
     runs-on: ubuntu-latest
+    container:
+      image: http://mcr.microsoft.com/azurelinux/base/core:3.0
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
-
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v6
-      with:
-        version: v1.64.5
-        args: -v --timeout 15m
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        with:
+          fetch-depth: 0
+      - name: Set up Golang
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: go.mod
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.5
+          args: -v --timeout 15m
 
   validate-go:
     name: validate-go
     runs-on: ubuntu-latest
+    container:
+      image: http://mcr.microsoft.com/azurelinux/base/core:3.0
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
-
-    - run: make validate-go-action
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        with:
+          fetch-depth: 0
+      - name: Set up Golang
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: go.mod
+      - run: make validate-go-action
