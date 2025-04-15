@@ -46,7 +46,12 @@ type NodeMetrics struct {
 // calculatePercentage returns usage as a percentage of total resources.
 func calculatePercentage(usage string, total int64) float64 {
 	usageInt, _ := resource.ParseQuantity(usage)
-	usageInt64 := usageInt.Value()
+	var usageInt64 int64
+	if strings.HasSuffix(usage, "m") && !strings.HasSuffix(usage, "Mi") {
+		usageInt64 = usageInt.MilliValue()
+	} else {
+		usageInt64 = usageInt.Value()
+	}
 	return float64(usageInt64) / float64(total) * 100
 }
 
@@ -194,8 +199,8 @@ func (k *kubeActions) TopNodes(ctx context.Context, restConfig *restclient.Confi
 		totalCPUQuantity := node.Status.Capacity["cpu"]
 		totalMemoryQuantity := node.Status.Capacity["memory"]
 
-		totalCPU, _ := totalCPUQuantity.AsInt64()
-		totalMemory, _ := totalMemoryQuantity.AsInt64()
+		totalCPU, _ := totalCPUQuantity.AsInt64()       // in cores
+		totalMemory, _ := totalMemoryQuantity.AsInt64() // in bytes
 
 		var usageCPU, usageMemory string
 		if item.Usage.Cpu() != nil {
@@ -205,8 +210,8 @@ func (k *kubeActions) TopNodes(ctx context.Context, restConfig *restclient.Confi
 			usageMemory = item.Usage.Memory().String()
 		}
 
-		// Compute usage percentages
-		percentageCPU := calculatePercentage(usageCPU, totalCPU)
+		// Compute usage percentages; convert node CPU capacity to millicores
+		percentageCPU := calculatePercentage(usageCPU, totalCPU*1000)
 		percentageMemory := calculatePercentage(usageMemory, totalMemory)
 
 		// Append node metrics
