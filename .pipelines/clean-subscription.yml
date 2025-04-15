@@ -9,7 +9,7 @@ parameters:
 resources:
   containers:
     - container: golang
-      image: registry.access.redhat.com/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19
+      image: arointsvc.azurecr.io/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19
       options: --user=0
 
 variables:
