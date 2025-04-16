@@ -208,16 +208,16 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 	if err != nil {
 		return err
 	}
-	var roleAssignmentsForManagedResourceGroup []mgmtauthorization.RoleAssignment
+
+	roleAssignmentsForManagedResourceGroup := map[string]mgmtauthorization.RoleAssignment{}
 	for _, roleAssignment := range allExistingRoleAssignments {
 		if strings.EqualFold(*roleAssignment.Scope, resourceGroupID) {
-			roleAssignmentsForManagedResourceGroup = append(roleAssignmentsForManagedResourceGroup, roleAssignment)
+			roleAssignmentsForManagedResourceGroup[*roleAssignment.RoleDefinitionID] = roleAssignment
 		}
 	}
 
 	platformWorkloadIdentityRoles := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 
-outer:
 	for roleName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 		role, ok := platformWorkloadIdentityRoles[roleName]
 		if !ok {
@@ -226,15 +226,12 @@ outer:
 
 		roleDefinitionId := fmt.Sprintf("/subscriptions/%s%s", m.subscriptionDoc.ID, role.RoleDefinitionID)
 
-		for _, existingRoleAssignment := range roleAssignmentsForManagedResourceGroup {
-			if strings.EqualFold(*existingRoleAssignment.RoleDefinitionID, roleDefinitionId) {
-				if !strings.EqualFold(*existingRoleAssignment.PrincipalID, identity.ObjectID) {
-					toDelete = append(toDelete, existingRoleAssignment)
-					toAdd = append(toAdd, m.workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(role.RoleDefinitionID, '/'), identity.ObjectID))
-				}
-
-				continue outer
+		if existingRoleAssignment, ok := roleAssignmentsForManagedResourceGroup[roleDefinitionId]; ok {
+			if strings.EqualFold(*existingRoleAssignment.PrincipalID, identity.ObjectID) {
+				continue
 			}
+
+			toDelete = append(toDelete, existingRoleAssignment)
 		}
 
 		toAdd = append(toAdd, m.workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(role.RoleDefinitionID, '/'), identity.ObjectID))
