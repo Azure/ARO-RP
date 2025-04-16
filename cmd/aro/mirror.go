@@ -113,6 +113,10 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
 		"quay.io/app-sre/hive:87bff5947f",
+
+		// ART partner images
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19",
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.23-openshift-4.19",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 
