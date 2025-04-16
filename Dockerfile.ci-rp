@@ -5,7 +5,7 @@ ARG ARO_VERSION
 ###############################################################################
 # Stage 1: Build the SRE Portal Assets
 ###############################################################################
-FROM ${REGISTRY}/ubi8/nodejs-16  AS portal-build
+FROM ${REGISTRY}/ubi8/nodejs-18  AS portal-build
 LABEL aro-portal-build=true
 WORKDIR /build/portal/v2
 USER root
