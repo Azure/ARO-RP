@@ -76,6 +76,10 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - checkout: self
+          - task: Docker@2
+            inputs:
+              command: 'login'
+              containerRegistry: arointsvc #service connection name
 
           # Build and Test Az ARO Extension
           - script: |
@@ -97,6 +101,10 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - template: ./templates/template-checkout.yml
+          - task: Docker@2
+            inputs:
+              command: 'login'
+              containerRegistry: arointsvc #service connection name
 
           # Build and test RP and Portal
           - script: |
@@ -133,6 +141,10 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - template: ./templates/template-checkout.yml
+          - task: Docker@2
+            inputs:
+              command: 'login'
+              containerRegistry: arointsvc #service connection name
 
           # Build the E2E image
           - script: |
@@ -166,6 +178,10 @@ stages:
               . ./hack/e2e/utils.sh
               install_docker_dependencies
             displayName: Install Docker and Docker Compose
+          - task: Docker@2
+            inputs:
+              command: 'login'
+              containerRegistry: arointsvc #service connection name
 
           # AZ CLI Login
           - template: ./templates/template-az-cli-login.yml
