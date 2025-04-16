@@ -70,7 +70,7 @@ func Test_listAdminHiveSyncSet(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:           "selectorSyncSets are not namespaced",
+			name:           "Trying to get a SelectorSyncSet with a namespace specified results in 400",
 			namespace:      "aro-" + fakeUUID,
 			syncsetname:    "syncsetTest",
 			isSyncSet:      false,
