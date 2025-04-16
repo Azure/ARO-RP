@@ -32,6 +32,8 @@ jobs:
       - run: |
           make go-verify
           hack/ci-utils/isClean.sh
+        env:
+          GO_COMPLIANCE_INFO: "0"
 
   generate-check:
     runs-on: ubuntu-latest
@@ -54,6 +56,8 @@ jobs:
         run: |
           make generate
           hack/ci-utils/isClean.sh
+        env:
+          GO_COMPLIANCE_INFO: "0"
 
   golangci:
     name: golangci-lint
@@ -98,3 +102,5 @@ jobs:
         with:
           go-version-file: go.mod
       - run: make validate-go-action
+        env:
+          GO_COMPLIANCE_INFO: "0"

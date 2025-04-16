@@ -4,6 +4,7 @@ ARG REGISTRY
 ARG BUILDER_REGISTRY
 FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19 AS builder
 
+ENV GO_COMPLIANCE_INFO=0
 USER root
 ENV GOPATH=/root/go
 ENV PATH=$PATH:${GOPATH}/bin/

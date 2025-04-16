@@ -9,6 +9,7 @@ WORKDIR /app
 
 # golang config and build steps
 ENV GOPATH=/root/go
+ENV GO_COMPLIANCE_INFO=0
 
 # Copy dependencies and source files
 COPY go.mod go.sum ./
