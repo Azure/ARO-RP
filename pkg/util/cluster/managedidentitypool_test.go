@@ -217,6 +217,67 @@ var _ = Describe("Managed Identites Pool", func() {
 		mockController.Finish()
 	})
 
+	When("The identity pool is full", func() {
+		It("Can't create additional identities", func() {
+			// add 1000 identities
+			identities := []*armmsi.Identity{}
+			validUntil := time.Now().Add(defaultTimeout).Format(time.RFC3339)
+			for i := 0; i < MaximumIdentitiesInPool; i++ {
+				identities = append(identities, &armmsi.Identity{
+					Location: &defaultLocation,
+					Tags: map[string]*string{
+						ClaimedResourceGroupTagKey: &defaultClusterResourceGroup,
+						ClaimedClusterTagKey:       &defaultClusterName,
+						ClaimedUntilTagKey:         &validUntil,
+					},
+					ID:   to.Ptr(IdentityId(defaultResourceGroup, fmt.Sprintf("identity-%d", i))),
+					Name: to.Ptr(fmt.Sprintf("identity-%d", i)),
+					Type: to.Ptr(UserAssignedIdentityType),
+				})
+			}
+			client.EXPECT().NewListByResourceGroupPager(defaultResourceGroup, gomock.Any()).Return(identityListToPagerResult(identities))
+			pool := NewManagedIdentityPool(client, defaultResourceGroup)
+			createdIdentities, err := pool.ClaimIdentities(context.Background(), 10, defaultClusterResourceGroup, defaultClusterName, defaultTimeout)
+			Expect(err).To(HaveOccurred())
+			Expect(createdIdentities).To(BeEmpty())
+		})
+		It("Doesn't assign unassigned identities", func() {
+			// add 999 identities
+			identities := []*armmsi.Identity{}
+			validUntil := time.Now().Add(defaultTimeout).Format(time.RFC3339)
+			for i := 0; i < MaximumIdentitiesInPool-1; i++ {
+				identities = append(identities, &armmsi.Identity{
+					Location: &defaultLocation,
+					Tags: map[string]*string{
+						ClaimedResourceGroupTagKey: &defaultClusterResourceGroup,
+						ClaimedClusterTagKey:       &defaultClusterName,
+						ClaimedUntilTagKey:         &validUntil,
+					},
+					ID:   to.Ptr(IdentityId(defaultResourceGroup, fmt.Sprintf("identity-%d", i))),
+					Name: to.Ptr(fmt.Sprintf("identity-%d", i)),
+					Type: to.Ptr(UserAssignedIdentityType),
+				})
+			}
+			identities = append(identities, &armmsi.Identity{
+				Location: &defaultLocation,
+				Tags: map[string]*string{
+					ClaimedResourceGroupTagKey: to.Ptr(""),
+					ClaimedClusterTagKey:       to.Ptr(""),
+					ClaimedUntilTagKey:         to.Ptr(""),
+				},
+				ID:   to.Ptr(IdentityId(defaultResourceGroup, "identity-1000")),
+				Name: to.Ptr("identity-1000"),
+				Type: to.Ptr(UserAssignedIdentityType),
+			})
+			client.EXPECT().NewListByResourceGroupPager(defaultResourceGroup, gomock.Any()).Return(identityListToPagerResult(identities))
+			pool := NewManagedIdentityPool(client, defaultResourceGroup)
+			createdIdentities, err := pool.ClaimIdentities(context.Background(), 10, defaultClusterResourceGroup, defaultClusterName, defaultTimeout)
+			Expect(err).To(HaveOccurred())
+			Expect(createdIdentities).To(BeEmpty())
+			Expect(isIdentityClaimed(*identities[999])).To(BeFalse())
+		})
+	})
+
 	When("the Identitity pool is empty", func() {
 		It("Lists All Identities", func() {
 			client.EXPECT().NewListByResourceGroupPager(defaultResourceGroup, gomock.Any()).Return(identityListToPagerResult([]*armmsi.Identity{}))
