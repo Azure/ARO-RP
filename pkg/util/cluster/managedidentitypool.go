@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -20,6 +21,8 @@ const UserAssignedIdentityType = "Microsoft.ManagedIdentity/userAssignedIdentiti
 const ClaimedResourceGroupTagKey = "CLAIMED_BY_RG"
 const ClaimedClusterTagKey = "CLAIMED_BY_CLUSTER"
 const ClaimedUntilTagKey = "CLAIMED_UNTIL"
+
+const MaximumIdentitiesInPool = 1000
 
 type ManagedIdentityPool struct {
 	uaiClient         armmsiclient.UserAssignedIdentitiesClient
@@ -93,13 +96,17 @@ func (pool *ManagedIdentityPool) ClaimIdentities(ctx context.Context, desiredNum
 		return nil, err
 	}
 
-	for _, identity := range allIdentities {
+	unclaimedIdentities := slices.DeleteFunc(allIdentities, func(id *armmsi.Identity) bool {
+		return isIdentityClaimed(*id)
+	})
+
+	if len(allIdentities)-len(unclaimedIdentities)+desiredNumberOfIdentities > MaximumIdentitiesInPool {
+		return nil, fmt.Errorf("identity pool can not create additional identities - currently claimed: %d , maximum identities: %d, desired identities: %d", len(allIdentities)-len(unclaimedIdentities), MaximumIdentitiesInPool, desiredNumberOfIdentities)
+	}
+
+	for _, identity := range unclaimedIdentities {
 		if len(claimedIdentites) == desiredNumberOfIdentities {
 			return claimedIdentites, nil
-		}
-
-		if isIdentityClaimed(*identity) {
-			continue
 		}
 		// try claiming this identity
 		updatedIdentity, err := pool.ClaimIdentity(ctx, *identity, clusterResourceGroup, clusterName, timeout)
