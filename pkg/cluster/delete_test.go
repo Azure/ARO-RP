@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	sdk_to "github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
@@ -64,7 +63,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic is in succeeded provisioning state",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Interface.Properties.ProvisioningState = sdk_to.Ptr(armnetwork.ProvisioningStateSucceeded)
+				nic.Interface.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
 			},
@@ -72,7 +71,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic is in failed provisioning state",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Properties.ProvisioningState = sdk_to.Ptr(armnetwork.ProvisioningStateFailed)
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateFailed)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic.Interface, nil).Return(nil)
 				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
@@ -81,7 +80,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "provisioning state is failed and CreateOrUpdateAndWait returns error",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Properties.ProvisioningState = sdk_to.Ptr(armnetwork.ProvisioningStateFailed)
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateFailed)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic.Interface, nil).Return(fmt.Errorf("Failed to update"))
 			},
@@ -99,7 +98,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "DeleteAndWait returns error",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Properties.ProvisioningState = sdk_to.Ptr(armnetwork.ProvisioningStateSucceeded)
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(fmt.Errorf("Failed to delete"))
 			},

@@ -6,14 +6,12 @@ package cluster
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -50,12 +48,9 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 
 	nic, err := m.armInterfaces.Get(ctx, resourceGroup, nicName, nil)
 
-	var responseError *azcore.ResponseError
-
 	// nic is already gone which typically happens on PLS / PE nics
 	// as they are deleted in a different step
-	if ok := errors.As(err, &responseError); ok &&
-		responseError.StatusCode == http.StatusNotFound {
+	if azuresdkerrors.IsNotFoundError(err) {
 		return nil
 	}
 	if err != nil {
