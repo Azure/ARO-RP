@@ -58,6 +58,44 @@ else
 endif
 endif
 
+.PHONY: help
+help:
+	@echo "Available targets:"
+	@echo "  aks.kubeconfig        - Get admin AKS kubeconfig"
+	@echo "  aro                   - Build the aro binary"
+	@echo "  build                 - Build binaries"
+	@echo "  build-all             - Build all binaries"
+	@echo "  check-release         - Check if the VERSION is a valid tag for release builds"
+	@echo "  ci-azext-aro          - Build the ci-azext-aro Docker image"
+	@echo "  ci-clean              - Clean up container images and buildah containers"
+	@echo "  ci-rp                 - Build the ci-rp Docker image"
+	@echo "  e2e.test              - Build the end-to-end test binary"
+	@echo "  e2etools              - Build end-to-end test tools"
+	@echo "  generate              - Generate code"
+	@echo "  generate-kiota        - Generate graphsdk code using kiota"
+	@echo "  go-tidy               - Add missing and remove unused modules in go.mod"
+	@echo "  go-verify             - Verify dependencies have expected content"
+	@echo "  help                  - Show this help message"
+	@echo "  image-aro-multistage  - Build the aro multi-stage Docker image"
+	@echo "  image-autorest        - Build the autorest Docker image"
+	@echo "  image-fluentbit       - Build the fluentbit Docker image"
+	@echo "  image-proxy           - Build the proxy Docker image"
+	@echo "  imports               - Update import statements"
+	@echo "  init-contrib          - Install git hooks"
+	@echo "  lint-go               - Lint go code"
+	@echo "  run-portal            - Run the portal using Docker Compose"
+	@echo "  run-rp                - Run the resource provider using Docker Compose"
+	@echo "  run-selenium          - Start selenium using docker compose"
+	@echo "  runlocal-monitor      - Run the monitor locally"
+	@echo "  runlocal-rp           - Run the resource provider locally"
+	@echo "  test-e2e              - Run end-to-end tests"
+	@echo "  test-go               - Run all go tests (unit, lint, vet, etc.)"
+	@echo "  unit-test-go          - Run unit tests"
+	@echo "  validate-go           - Validate go code"
+	@echo "  validate-roledef      - Validate role definitions"
+	@echo "  validate-imports      - Validate import statements"
+	@echo "  xmlcov                - Convert coverage output to XML"
+
 .PHONY: build-all
 build-all:
 	go build ./...
