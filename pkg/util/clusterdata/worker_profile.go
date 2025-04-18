@@ -133,6 +133,20 @@ func safeUnmarshalProviderSpec(raw []byte) (*machinev1beta1.AzureMachineProvider
 		}
 	}
 
+	tagsRaw, hasTags, err := unstructured.NestedMap(u.Object, "tags")
+	if err != nil {
+		return nil, err
+	}
+	if hasTags {
+		tagsAsString := map[string]any{}
+		for k, v := range tagsRaw {
+			tagsAsString[k] = fmt.Sprintf("%v", v)
+		}
+		if err := unstructured.SetNestedMap(u.Object, tagsAsString, "tags"); err != nil {
+			return nil, err
+		}
+	}
+
 	providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
 	err = kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, providerSpec)
 
