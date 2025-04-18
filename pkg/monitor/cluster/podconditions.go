@@ -108,23 +108,29 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 				continue
 			}
 
-			mon.emitGauge("pod.containerstatuses", 1, map[string]string{
+			containerStatus := map[string]string{
 				"name":          p.Name,
 				"namespace":     p.Namespace,
 				"nodeName":      p.Spec.NodeName,
 				"containername": cs.Name,
 				"reason":        cs.State.Waiting.Reason,
-			})
+			}
+
+			if cs.LastTerminationState.Terminated != nil {
+				containerStatus["lastTerminatedState"] = cs.LastTerminationState.Terminated.Reason
+			}
+
+			mon.emitGauge("pod.containerstatuses", 1, containerStatus)
 
 			if mon.hourlyRun {
-				mon.log.WithFields(logrus.Fields{
-					"metric":        "pod.containerstatuses",
-					"name":          p.Name,
-					"namespace":     p.Namespace,
-					"containername": cs.Name,
-					"reason":        cs.State.Waiting.Reason,
-					"message":       cs.State.Waiting.Message,
-				}).Print()
+				logFields := logrus.Fields{
+					"metric":  "pod.containerstatuses",
+					"message": cs.State.Waiting.Message,
+				}
+				for label, labelVal := range containerStatus {
+					logFields[label] = labelVal
+				}
+				mon.log.WithFields(logFields).Print()
 			}
 		}
 	}
