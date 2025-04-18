@@ -11,12 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20231122 "github.com/Azure/ARO-RP/pkg/api/v20231122"
 	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
-	mgmtredhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
 	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
-	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	redhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2024-08-12-preview/redhatopenshift"
 )
 
@@ -27,11 +24,11 @@ type InternalClient interface {
 }
 
 type clientCluster interface {
-	mgmtredhatopenshift20231122.OpenShiftCluster | mgmtredhatopenshift20240812preview.OpenShiftCluster
+	mgmtredhatopenshift20240812preview.OpenShiftCluster
 }
 
 type apiCluster interface {
-	v20231122.OpenShiftCluster | v20240812preview.OpenShiftCluster
+	v20240812preview.OpenShiftCluster
 }
 
 type externalClient[ClientCluster clientCluster] interface {
@@ -46,18 +43,10 @@ type internalClient[ClientCluster clientCluster, ApiCluster apiCluster] struct {
 }
 
 func NewInternalClient(log *logrus.Entry, environment env.Core, authorizer autorest.Authorizer) InternalClient {
-	if env.IsLocalDevelopmentMode() {
-		log.Infof("Using ARO API version [%s]", v20240812preview.APIVersion)
-		return &internalClient[mgmtredhatopenshift20240812preview.OpenShiftCluster, v20240812preview.OpenShiftCluster]{
-			externalClient: redhatopenshift20240812preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-			converter:      api.APIs[v20240812preview.APIVersion].OpenShiftClusterConverter,
-		}
-	}
-
-	log.Infof("Using ARO API version [%s]", v20231122.APIVersion)
-	return &internalClient[mgmtredhatopenshift20231122.OpenShiftCluster, v20231122.OpenShiftCluster]{
-		externalClient: redhatopenshift20231122.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		converter:      api.APIs[v20231122.APIVersion].OpenShiftClusterConverter,
+	log.Infof("Using ARO API version [%s]", v20240812preview.APIVersion)
+	return &internalClient[mgmtredhatopenshift20240812preview.OpenShiftCluster, v20240812preview.OpenShiftCluster]{
+		externalClient: redhatopenshift20240812preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		converter:      api.APIs[v20240812preview.APIVersion].OpenShiftClusterConverter,
 	}
 }
 
