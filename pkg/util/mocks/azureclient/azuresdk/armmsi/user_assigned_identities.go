@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	runtime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	armmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	gomock "go.uber.org/mock/gomock"
 
@@ -43,6 +44,36 @@ func (m *MockUserAssignedIdentitiesClient) EXPECT() *MockUserAssignedIdentitiesC
 	return m.recorder
 }
 
+// CreateOrUpdate mocks base method.
+func (m *MockUserAssignedIdentitiesClient) CreateOrUpdate(ctx context.Context, resourceGroupName, resourceName string, parameters armmsi.Identity, options *armmsi.UserAssignedIdentitiesClientCreateOrUpdateOptions) (armmsi.UserAssignedIdentitiesClientCreateOrUpdateResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdate", ctx, resourceGroupName, resourceName, parameters, options)
+	ret0, _ := ret[0].(armmsi.UserAssignedIdentitiesClientCreateOrUpdateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateOrUpdate indicates an expected call of CreateOrUpdate.
+func (mr *MockUserAssignedIdentitiesClientMockRecorder) CreateOrUpdate(ctx, resourceGroupName, resourceName, parameters, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).CreateOrUpdate), ctx, resourceGroupName, resourceName, parameters, options)
+}
+
+// Delete mocks base method.
+func (m *MockUserAssignedIdentitiesClient) Delete(ctx context.Context, resourceGroupName, resourceName string, options *armmsi.UserAssignedIdentitiesClientDeleteOptions) (armmsi.UserAssignedIdentitiesClientDeleteResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, resourceGroupName, resourceName, options)
+	ret0, _ := ret[0].(armmsi.UserAssignedIdentitiesClientDeleteResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockUserAssignedIdentitiesClientMockRecorder) Delete(ctx, resourceGroupName, resourceName, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).Delete), ctx, resourceGroupName, resourceName, options)
+}
+
 // Get mocks base method.
 func (m *MockUserAssignedIdentitiesClient) Get(ctx context.Context, resourceGroupName, resourceName string, options *armmsi.UserAssignedIdentitiesClientGetOptions) (armmsi.UserAssignedIdentitiesClientGetResponse, error) {
 	m.ctrl.T.Helper()
@@ -70,4 +101,33 @@ func (m *MockUserAssignedIdentitiesClient) GetClusterMSICredential() azcore.Toke
 func (mr *MockUserAssignedIdentitiesClientMockRecorder) GetClusterMSICredential() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterMSICredential", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).GetClusterMSICredential))
+}
+
+// NewListByResourceGroupPager mocks base method.
+func (m *MockUserAssignedIdentitiesClient) NewListByResourceGroupPager(resourceGroupName string, options *armmsi.UserAssignedIdentitiesClientListByResourceGroupOptions) *runtime.Pager[armmsi.UserAssignedIdentitiesClientListByResourceGroupResponse] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewListByResourceGroupPager", resourceGroupName, options)
+	ret0, _ := ret[0].(*runtime.Pager[armmsi.UserAssignedIdentitiesClientListByResourceGroupResponse])
+	return ret0
+}
+
+// NewListByResourceGroupPager indicates an expected call of NewListByResourceGroupPager.
+func (mr *MockUserAssignedIdentitiesClientMockRecorder) NewListByResourceGroupPager(resourceGroupName, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewListByResourceGroupPager", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).NewListByResourceGroupPager), resourceGroupName, options)
+}
+
+// Update mocks base method.
+func (m *MockUserAssignedIdentitiesClient) Update(ctx context.Context, resourceGroupName, resourceName string, parameters armmsi.IdentityUpdate, options *armmsi.UserAssignedIdentitiesClientUpdateOptions) (armmsi.UserAssignedIdentitiesClientUpdateResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, resourceGroupName, resourceName, parameters, options)
+	ret0, _ := ret[0].(armmsi.UserAssignedIdentitiesClientUpdateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockUserAssignedIdentitiesClientMockRecorder) Update(ctx, resourceGroupName, resourceName, parameters, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUserAssignedIdentitiesClient)(nil).Update), ctx, resourceGroupName, resourceName, parameters, options)
 }
