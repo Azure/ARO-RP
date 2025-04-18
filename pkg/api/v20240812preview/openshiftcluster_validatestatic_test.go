@@ -1529,7 +1529,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity cannot be removed or have its name changed.",
 		},
 		{
-			name: "invalid change of operator identity resource ID",
+			name: "valid change of operator identity resource ID",
 			current: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
@@ -1546,7 +1546,6 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["FAKE-OPERATOR"] = platformIdentity2
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: Operator identity resource ID cannot be changed.",
 		},
 		{
 			name: "change of operator identity order",

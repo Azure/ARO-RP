@@ -249,6 +249,7 @@ func (m *manager) Update(ctx context.Context) error {
 		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
+			steps.Action(m.ensurePlatformWorkloadIdentityRBAC),
 			steps.Action(m.federateIdentityCredentials),
 		)
 	} else {
