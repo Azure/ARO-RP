@@ -29,22 +29,6 @@ const apiv20231122Path = "github.com/Azure/ARO-RP/pkg/api/v20231122"
 const apiv20240812previewPath = "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
 
 type generator struct {
-	exampleSyncSetPutParameter                         func() interface{}
-	exampleSyncSetPatchParameter                       func() interface{}
-	exampleSyncSetResponse                             func() interface{}
-	exampleSyncSetListResponse                         func() interface{}
-	exampleMachinePoolPutParameter                     func() interface{}
-	exampleMachinePoolPatchParameter                   func() interface{}
-	exampleMachinePoolResponse                         func() interface{}
-	exampleMachinePoolListResponse                     func() interface{}
-	exampleSyncIdentityProviderPutParameter            func() interface{}
-	exampleSyncIdentityProviderPatchParameter          func() interface{}
-	exampleSyncIdentityProviderResponse                func() interface{}
-	exampleSyncIdentityProviderListResponse            func() interface{}
-	exampleSecretPutParameter                          func() interface{}
-	exampleSecretPatchParameter                        func() interface{}
-	exampleSecretResponse                              func() interface{}
-	exampleSecretListResponse                          func() interface{}
 	exampleOpenShiftClusterPutParameter                func() interface{}
 	exampleOpenShiftClusterPatchParameter              func() interface{}
 	exampleOpenShiftClusterResponse                    func() interface{}
@@ -63,7 +47,6 @@ type generator struct {
 	kubeConfig             bool
 	installVersionList     bool
 	installVersionGet      bool
-	clusterManager         bool
 	workerProfilesStatus   bool
 	roleSetList            bool
 	managedServiceIdentity bool
@@ -117,22 +100,6 @@ var apis = map[string]*generator{
 		kubeConfig:         true,
 	},
 	apiv20220904Path: {
-		exampleSyncSetPutParameter:                     v20220904.ExampleSyncSetPutParameter,
-		exampleSyncSetPatchParameter:                   v20220904.ExampleSyncSetPatchParameter,
-		exampleSyncSetResponse:                         v20220904.ExampleSyncSetResponse,
-		exampleSyncSetListResponse:                     v20220904.ExampleSyncSetListResponse,
-		exampleMachinePoolPutParameter:                 v20220904.ExampleMachinePoolPutParameter,
-		exampleMachinePoolPatchParameter:               v20220904.ExampleMachinePoolPatchParameter,
-		exampleMachinePoolResponse:                     v20220904.ExampleMachinePoolResponse,
-		exampleMachinePoolListResponse:                 v20220904.ExampleMachinePoolListResponse,
-		exampleSyncIdentityProviderPutParameter:        v20220904.ExampleSyncIdentityProviderPutParameter,
-		exampleSyncIdentityProviderPatchParameter:      v20220904.ExampleSyncIdentityProviderPatchParameter,
-		exampleSyncIdentityProviderResponse:            v20220904.ExampleSyncIdentityProviderResponse,
-		exampleSyncIdentityProviderListResponse:        v20220904.ExampleSyncIdentityProviderListResponse,
-		exampleSecretPutParameter:                      v20220904.ExampleSecretPutParameter,
-		exampleSecretPatchParameter:                    v20220904.ExampleSecretPatchParameter,
-		exampleSecretResponse:                          v20220904.ExampleSecretResponse,
-		exampleSecretListResponse:                      v20220904.ExampleSecretListResponse,
 		exampleOpenShiftClusterPutParameter:            v20220904.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20220904.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterResponse:                v20220904.ExampleOpenShiftClusterResponse,
@@ -147,27 +114,10 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
 	apiv20230401Path: {
-		exampleSyncSetPutParameter:                     v20230401.ExampleSyncSetPutParameter,
-		exampleSyncSetPatchParameter:                   v20230401.ExampleSyncSetPatchParameter,
-		exampleSyncSetResponse:                         v20230401.ExampleSyncSetResponse,
-		exampleSyncSetListResponse:                     v20230401.ExampleSyncSetListResponse,
-		exampleMachinePoolPutParameter:                 v20230401.ExampleMachinePoolPutParameter,
-		exampleMachinePoolPatchParameter:               v20230401.ExampleMachinePoolPatchParameter,
-		exampleMachinePoolResponse:                     v20230401.ExampleMachinePoolResponse,
-		exampleMachinePoolListResponse:                 v20230401.ExampleMachinePoolListResponse,
-		exampleSyncIdentityProviderPutParameter:        v20230401.ExampleSyncIdentityProviderPutParameter,
-		exampleSyncIdentityProviderPatchParameter:      v20230401.ExampleSyncIdentityProviderPatchParameter,
-		exampleSyncIdentityProviderResponse:            v20230401.ExampleSyncIdentityProviderResponse,
-		exampleSyncIdentityProviderListResponse:        v20230401.ExampleSyncIdentityProviderListResponse,
-		exampleSecretPutParameter:                      v20230401.ExampleSecretPutParameter,
-		exampleSecretPatchParameter:                    v20230401.ExampleSecretPatchParameter,
-		exampleSecretResponse:                          v20230401.ExampleSecretResponse,
-		exampleSecretListResponse:                      v20230401.ExampleSecretListResponse,
 		exampleOpenShiftClusterPutParameter:            v20230401.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20230401.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterResponse:                v20230401.ExampleOpenShiftClusterResponse,
@@ -182,27 +132,10 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
 	apiv20230701previewPath: {
-		exampleSyncSetPutParameter:                     v20230701preview.ExampleSyncSetPutParameter,
-		exampleSyncSetPatchParameter:                   v20230701preview.ExampleSyncSetPatchParameter,
-		exampleSyncSetResponse:                         v20230701preview.ExampleSyncSetResponse,
-		exampleSyncSetListResponse:                     v20230701preview.ExampleSyncSetListResponse,
-		exampleMachinePoolPutParameter:                 v20230701preview.ExampleMachinePoolPutParameter,
-		exampleMachinePoolPatchParameter:               v20230701preview.ExampleMachinePoolPatchParameter,
-		exampleMachinePoolResponse:                     v20230701preview.ExampleMachinePoolResponse,
-		exampleMachinePoolListResponse:                 v20230701preview.ExampleMachinePoolListResponse,
-		exampleSyncIdentityProviderPutParameter:        v20230701preview.ExampleSyncIdentityProviderPutParameter,
-		exampleSyncIdentityProviderPatchParameter:      v20230701preview.ExampleSyncIdentityProviderPatchParameter,
-		exampleSyncIdentityProviderResponse:            v20230701preview.ExampleSyncIdentityProviderResponse,
-		exampleSyncIdentityProviderListResponse:        v20230701preview.ExampleSyncIdentityProviderListResponse,
-		exampleSecretPutParameter:                      v20230701preview.ExampleSecretPutParameter,
-		exampleSecretPatchParameter:                    v20230701preview.ExampleSecretPatchParameter,
-		exampleSecretResponse:                          v20230701preview.ExampleSecretResponse,
-		exampleSecretListResponse:                      v20230701preview.ExampleSecretListResponse,
 		exampleOpenShiftClusterPutParameter:            v20230701preview.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20230701preview.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterResponse:                v20230701preview.ExampleOpenShiftClusterResponse,
@@ -217,27 +150,10 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
 	apiv20230904Path: {
-		exampleSyncSetPutParameter:                     v20230904.ExampleSyncSetPutParameter,
-		exampleSyncSetPatchParameter:                   v20230904.ExampleSyncSetPatchParameter,
-		exampleSyncSetResponse:                         v20230904.ExampleSyncSetResponse,
-		exampleSyncSetListResponse:                     v20230904.ExampleSyncSetListResponse,
-		exampleMachinePoolPutParameter:                 v20230904.ExampleMachinePoolPutParameter,
-		exampleMachinePoolPatchParameter:               v20230904.ExampleMachinePoolPatchParameter,
-		exampleMachinePoolResponse:                     v20230904.ExampleMachinePoolResponse,
-		exampleMachinePoolListResponse:                 v20230904.ExampleMachinePoolListResponse,
-		exampleSyncIdentityProviderPutParameter:        v20230904.ExampleSyncIdentityProviderPutParameter,
-		exampleSyncIdentityProviderPatchParameter:      v20230904.ExampleSyncIdentityProviderPatchParameter,
-		exampleSyncIdentityProviderResponse:            v20230904.ExampleSyncIdentityProviderResponse,
-		exampleSyncIdentityProviderListResponse:        v20230904.ExampleSyncIdentityProviderListResponse,
-		exampleSecretPutParameter:                      v20230904.ExampleSecretPutParameter,
-		exampleSecretPatchParameter:                    v20230904.ExampleSecretPatchParameter,
-		exampleSecretResponse:                          v20230904.ExampleSecretResponse,
-		exampleSecretListResponse:                      v20230904.ExampleSecretListResponse,
 		exampleOpenShiftClusterPutParameter:            v20230904.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20230904.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterGetResponse:             v20230904.ExampleOpenShiftClusterGetResponse,
@@ -253,28 +169,11 @@ var apis = map[string]*generator{
 		xmsIdentifiers:       []string{},
 		commonTypesVersion:   "v3",
 		systemData:           true,
-		clusterManager:       true,
 		installVersionList:   true,
 		kubeConfig:           true,
 		workerProfilesStatus: true,
 	},
 	apiv20231122Path: {
-		exampleSyncSetPutParameter:                     v20231122.ExampleSyncSetPutParameter,
-		exampleSyncSetPatchParameter:                   v20231122.ExampleSyncSetPatchParameter,
-		exampleSyncSetResponse:                         v20231122.ExampleSyncSetResponse,
-		exampleSyncSetListResponse:                     v20231122.ExampleSyncSetListResponse,
-		exampleMachinePoolPutParameter:                 v20231122.ExampleMachinePoolPutParameter,
-		exampleMachinePoolPatchParameter:               v20231122.ExampleMachinePoolPatchParameter,
-		exampleMachinePoolResponse:                     v20231122.ExampleMachinePoolResponse,
-		exampleMachinePoolListResponse:                 v20231122.ExampleMachinePoolListResponse,
-		exampleSyncIdentityProviderPutParameter:        v20231122.ExampleSyncIdentityProviderPutParameter,
-		exampleSyncIdentityProviderPatchParameter:      v20231122.ExampleSyncIdentityProviderPatchParameter,
-		exampleSyncIdentityProviderResponse:            v20231122.ExampleSyncIdentityProviderResponse,
-		exampleSyncIdentityProviderListResponse:        v20231122.ExampleSyncIdentityProviderListResponse,
-		exampleSecretPutParameter:                      v20231122.ExampleSecretPutParameter,
-		exampleSecretPatchParameter:                    v20231122.ExampleSecretPatchParameter,
-		exampleSecretResponse:                          v20231122.ExampleSecretResponse,
-		exampleSecretListResponse:                      v20231122.ExampleSecretListResponse,
 		exampleOpenShiftClusterPutParameter:            v20231122.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20231122.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterGetResponse:             v20231122.ExampleOpenShiftClusterGetResponse,
@@ -290,28 +189,11 @@ var apis = map[string]*generator{
 		xmsIdentifiers:       []string{},
 		commonTypesVersion:   "v3",
 		systemData:           true,
-		clusterManager:       true,
 		installVersionList:   true,
 		kubeConfig:           true,
 		workerProfilesStatus: true,
 	},
 	apiv20240812previewPath: {
-		exampleSyncSetPutParameter:                         v20240812preview.ExampleSyncSetPutParameter,
-		exampleSyncSetPatchParameter:                       v20240812preview.ExampleSyncSetPatchParameter,
-		exampleSyncSetResponse:                             v20240812preview.ExampleSyncSetResponse,
-		exampleSyncSetListResponse:                         v20240812preview.ExampleSyncSetListResponse,
-		exampleMachinePoolPutParameter:                     v20240812preview.ExampleMachinePoolPutParameter,
-		exampleMachinePoolPatchParameter:                   v20240812preview.ExampleMachinePoolPatchParameter,
-		exampleMachinePoolResponse:                         v20240812preview.ExampleMachinePoolResponse,
-		exampleMachinePoolListResponse:                     v20240812preview.ExampleMachinePoolListResponse,
-		exampleSyncIdentityProviderPutParameter:            v20240812preview.ExampleSyncIdentityProviderPutParameter,
-		exampleSyncIdentityProviderPatchParameter:          v20240812preview.ExampleSyncIdentityProviderPatchParameter,
-		exampleSyncIdentityProviderResponse:                v20240812preview.ExampleSyncIdentityProviderResponse,
-		exampleSyncIdentityProviderListResponse:            v20240812preview.ExampleSyncIdentityProviderListResponse,
-		exampleSecretPutParameter:                          v20240812preview.ExampleSecretPutParameter,
-		exampleSecretPatchParameter:                        v20240812preview.ExampleSecretPatchParameter,
-		exampleSecretResponse:                              v20240812preview.ExampleSecretResponse,
-		exampleSecretListResponse:                          v20240812preview.ExampleSecretListResponse,
 		exampleOpenShiftClusterPutParameter:                v20240812preview.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:              v20240812preview.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterGetResponse:                 v20240812preview.ExampleOpenShiftClusterGetResponse,
