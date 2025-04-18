@@ -71,7 +71,7 @@ RUN hack/fips/validate-fips.sh ./aro
 ###############################################################################
 FROM ${REGISTRY}/ubi9/ubi-minimal AS final
 LABEL aro-final=true
-RUN microdnf update && microdnf clean all
+RUN microdnf update -y && microdnf clean all -y
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 COPY --from=builder /app/report.xml /app/coverage.xml /app/
 ENTRYPOINT ["aro"]

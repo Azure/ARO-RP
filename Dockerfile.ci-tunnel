@@ -20,7 +20,7 @@ COPY pkg pkg
 RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./hack/tunnel
 
 FROM ${REGISTRY}/ubi9/ubi-minimal AS final
-RUN microdnf update && microdnf clean all
+RUN microdnf update -y && microdnf clean all -y
 COPY --from=builder /app/tunnel /usr/local/bin/
 ENTRYPOINT ["tunnel"]
 EXPOSE 8443/tcp

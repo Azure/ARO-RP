@@ -13,7 +13,7 @@ COPY . /app
 RUN make proxy
 
 FROM ${REGISTRY}/ubi9/ubi-minimal
-RUN microdnf update && microdnf clean all
+RUN microdnf update -y && microdnf clean all -y
 COPY --from=builder /app/proxy /usr/local/bin/
 ENTRYPOINT ["proxy"]
 EXPOSE 8443/tcp
