@@ -333,6 +333,14 @@ shared-cluster-create:
 shared-cluster-delete:
 	./hack/shared-cluster.sh delete
 
+.PHONY: shared-miwi-cluster-create
+shared-miwi-cluster-create:
+	./hack/shared-miwi-cluster.sh create
+
+.PHONY: shared-miwi-cluster-delete
+shared-miwi-cluster-delete:
+	./hack/shared-miwi-cluster.sh delete
+
 .PHONY: unit-test-python
 unit-test-python:
 	hack/unit-test-python.sh
