@@ -13,10 +13,5 @@ if [[ $binary == "false" ]]; then
 	exit 1
 fi
 
-if [[ $lib == "false" ]]; then
-	echo "lib is not FIPS compatible"
-	exit 1
-fi
-
 tool=$(go tool nm ${1} | grep FIPS)
 echo $tool

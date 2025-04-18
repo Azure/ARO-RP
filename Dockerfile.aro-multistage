@@ -1,8 +1,10 @@
 # Uses a multi-stage container build to build the RP.
 #
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
+ARG BUILDER_REGISTRY
+FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19 AS builder
 
+ENV GO_COMPLIANCE_INFO=0
 USER root
 ENV GOPATH=/root/go
 ENV PATH=$PATH:${GOPATH}/bin/
@@ -13,8 +15,8 @@ COPY . /app
 
 RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make validate-fips && make e2e.test
 
-FROM ${REGISTRY}/ubi8/ubi-minimal
-RUN microdnf update && microdnf clean all
+FROM ${REGISTRY}/ubi9/ubi-minimal
+RUN microdnf update -y && microdnf clean all -y
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
