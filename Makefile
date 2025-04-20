@@ -392,14 +392,12 @@ shared-miwi-cluster-delete:
 unit-test-python:
 	hack/unit-test-python.sh
 
-## admin.kubeconfig : Get cluster admin kubeconfig
 .PHONY: admin.kubeconfig
-admin.kubeconfig:
+admin.kubeconfig: ## Get cluster admin kubeconfig
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
-## aks.kubeconfig: Get AKS admin kubeconfig
 .PHONY: aks.kubeconfig
-aks.kubeconfig:
+aks.kubeconfig: ## Get AKS admin kubeconfig
 	hack/get-admin-aks-kubeconfig.sh
 
 .PHONY: go-tidy
