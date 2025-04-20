@@ -52,9 +52,12 @@ endif
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
 
+
+help:  ## Show help message
+	@awk 'BEGIN {FS = ": .*##"; printf "\nUsage:\n  make \033[36m\033[0m\n"} /^[$$()% 0-9a-zA-Z_-]+(\\:[$$()% 0-9a-zA-Z_-]+)*:.*?##/ { gsub(/\\:/,":", $$1); printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
 .PHONY: check-release
-check-release:
-# Check that VERSION is a valid tag when building an official release (when RELEASE=true).
+check-release: ## Check that VERSION is a valid tag when building an official release (when RELEASE=true)
 ifeq ($(RELEASE), true)
 ifeq ($(TAG), $(VERSION))
 	@echo Building release version $(VERSION)
@@ -63,62 +66,24 @@ else
 endif
 endif
 
-.PHONY: help
-help:
-	@echo "Available targets:"
-	@echo "  aks.kubeconfig        - Get admin AKS kubeconfig"
-	@echo "  aro                   - Build the aro binary"
-	@echo "  build                 - Build binaries"
-	@echo "  build-all             - Build all binaries"
-	@echo "  check-release         - Check if the VERSION is a valid tag for release builds"
-	@echo "  ci-azext-aro          - Build the ci-azext-aro Docker image"
-	@echo "  ci-clean              - Clean up container images and buildah containers"
-	@echo "  ci-rp                 - Build the ci-rp Docker image"
-	@echo "  e2e.test              - Build the end-to-end test binary"
-	@echo "  e2etools              - Build end-to-end test tools"
-	@echo "  generate              - Generate code"
-	@echo "  generate-kiota        - Generate graphsdk code using kiota"
-	@echo "  go-tidy               - Add missing and remove unused modules in go.mod"
-	@echo "  go-verify             - Verify dependencies have expected content"
-	@echo "  help                  - Show this help message"
-	@echo "  image-aro-multistage  - Build the aro multi-stage Docker image"
-	@echo "  image-autorest        - Build the autorest Docker image"
-	@echo "  image-fluentbit       - Build the fluentbit Docker image"
-	@echo "  image-proxy           - Build the proxy Docker image"
-	@echo "  imports               - Update import statements"
-	@echo "  init-contrib          - Install git hooks"
-	@echo "  lint-go               - Lint go code"
-	@echo "  run-portal            - Run the portal using Docker Compose"
-	@echo "  run-rp                - Run the resource provider using Docker Compose"
-	@echo "  run-selenium          - Start selenium using docker compose"
-	@echo "  runlocal-monitor      - Run the monitor locally"
-	@echo "  runlocal-rp           - Run the resource provider locally"
-	@echo "  test-e2e              - Run end-to-end tests"
-	@echo "  test-go               - Run all go tests (unit, lint, vet, etc.)"
-	@echo "  unit-test-go          - Run unit tests"
-	@echo "  validate-go           - Validate go code"
-	@echo "  validate-roledef      - Validate role definitions"
-	@echo "  validate-imports      - Validate import statements"
-	@echo "  xmlcov                - Convert coverage output to XML"
-
 .PHONY: build-all
-build-all:
+build-all: ## Build all Go binaries
 	go build ./...
 
 .PHONY: aro
-aro: check-release generate
+aro: check-release generate ## Build the ARO RP binary
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
 .PHONY: runlocal-rp
-runlocal-rp:
+runlocal-rp: ## Run RP resource provider locally
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} rp
 
 .PHONY: runlocal-monitor
-runlocal-monitor:
+runlocal-monitor: ## Run the monitor locally
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} monitor
 
 .PHONY: az
-az: pyenv
+az: pyenv ## Building development az aro extension
 	. pyenv/bin/activate && \
 	cd python/az/aro && \
 	python3 ./setup.py bdist_egg && \
@@ -133,7 +98,7 @@ az-freeze:
 	pip freeze > requirements.txt
 
 .PHONY: clean
-clean:
+clean: ## Remove build artifacts
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
 	find python -type f -name '*.pyc' -delete
 	find python -type d -name __pycache__ -delete
@@ -143,7 +108,7 @@ clean:
 client: generate client-generate lint-go-fix lint-go
 
 .PHONY: client-generate
-client-generate:
+client-generate: ## Fix stale client library
 	hack/apiclients/generate-swagger-checksum.sh 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25
 # Only generate the clients we use in our dev Python extension or in e2e clients
 	hack/apiclients/build-dev-api-clients.sh "${AUTOREST_IMAGE}" 2024-08-12-preview 2025-07-25
@@ -151,21 +116,21 @@ client-generate:
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
-deploy:
+deploy: ## Deploy RP resources on Azure
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml
-dev-config.yaml:
+dev-config.yaml: ## Generate  dev-config.yaml file
 	go run ./hack/gendevconfig >dev-config.yaml
 
 .PHONY: discoverycache
-discoverycache:
+discoverycache: ## Fix out-of-date discovery cache
 	$(MAKE) admin.kubeconfig
 	KUBECONFIG=admin.kubeconfig go run ./hack/gendiscoverycache
 	$(MAKE) generate
 
 .PHONY: generate
-generate: install-tools generate-swagger
+generate: install-tools generate-swagger ## Generate files & content for serving ARO-RP
 	go generate ./...
 	$(MAKE) imports
 
@@ -427,10 +392,12 @@ shared-miwi-cluster-delete:
 unit-test-python:
 	hack/unit-test-python.sh
 
+## admin.kubeconfig : Get cluster admin kubeconfig
 .PHONY: admin.kubeconfig
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
+## aks.kubeconfig: Get AKS admin kubeconfig
 .PHONY: aks.kubeconfig
 aks.kubeconfig:
 	hack/get-admin-aks-kubeconfig.sh
