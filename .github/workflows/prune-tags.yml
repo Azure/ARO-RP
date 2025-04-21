@@ -24,4 +24,4 @@ jobs:
         run: echo "TAGS=$(.github/list-prune-tags.sh -n ${{ github.ref_name }})" >> $GITHUB_OUTPUT
 
       - name: Prune tags
-        run: git push origin --delete ${{ steps.gather_tags.output.TAGS }}
+        run: git push origin --delete ${{ steps.gather_tags.outputs.TAGS }}
