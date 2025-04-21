@@ -66,8 +66,14 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			givenOc: getGivenOc(clusterID),
 		},
 		{
-			name:    "machine set objects exist - invalid provider spec JSON - zone as int",
+			name:    "machine set objects exist - invalid provider spec JSON - zone as int - treated as valid",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", validProvSpec()), createMachineSet("fake-worker-profile-2", invalidProvSpecZoneAsInt())),
+			wantOc:  getWantOc(clusterID, validWorkerProfile()),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name:    "machine set objects exist - invalid provider spec JSON - tag as int - treated as valid",
+			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", validProvSpec()), createMachineSet("fake-worker-profile-2", invalidProvSpecTagsAsInt())),
 			wantOc:  getWantOc(clusterID, validWorkerProfile()),
 			givenOc: getGivenOc(clusterID),
 		},
@@ -176,16 +182,20 @@ func validProvSpec() machinev1beta1.ProviderSpec {
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
 			Raw: []byte(fmt.Sprintf(`{
-    "apiVersion": "machine.openshift.io/v1beta1",
-    "kind": "AzureMachineProviderSpec",
-    "osDisk": {
-        "diskSizeGB": 512
-    },
-    "vmSize": "Standard_D4s_v3",
-    "networkResourceGroup": "%s",
-    "vnet": "%s",
-    "subnet": "%s",
-    "zone": "1"
+	"apiVersion": "machine.openshift.io/v1beta1",
+	"kind": "AzureMachineProviderSpec",
+	"tags": {
+		"field1": "value1",
+		"field2": "value2"
+	},
+	"osDisk": {
+		"diskSizeGB": 512
+	},
+	"vmSize": "Standard_D4s_v3",
+	"networkResourceGroup": "%s",
+	"vnet": "%s",
+	"subnet": "%s",
+	"zone": "1"
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
 			)),
@@ -193,21 +203,49 @@ func validProvSpec() machinev1beta1.ProviderSpec {
 	}
 }
 
-// This func returns a ProviderSpec object that represents a valid provider-specific configuration for a machine.
 func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
 			Raw: []byte(fmt.Sprintf(`{
-    "apiVersion": "machine.openshift.io/v1beta1",
-    "kind": "AzureMachineProviderSpec",
-    "osDisk": {
-        "diskSizeGB": 512
-    },
-    "vmSize": "Standard_D4s_v3",
-    "networkResourceGroup": "%s",
-    "vnet": "%s",
-    "subnet": "%s",
-    "zone": 1
+	"apiVersion": "machine.openshift.io/v1beta1",
+	"kind": "AzureMachineProviderSpec",
+	"tags": {
+		"field1": "value1",
+		"field2": "value2"
+	},
+	"osDisk": {
+		"diskSizeGB": 512
+	},
+	"vmSize": "Standard_D4s_v3",
+	"networkResourceGroup": "%s",
+	"vnet": "%s",
+	"subnet": "%s",
+	"zone": 1
+}`,
+				mockVnetRG, mockVnetName, mockSubnetName,
+			)),
+		},
+	}
+}
+
+func invalidProvSpecTagsAsInt() machinev1beta1.ProviderSpec {
+	return machinev1beta1.ProviderSpec{
+		Value: &kruntime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{
+	"apiVersion": "machine.openshift.io/v1beta1",
+	"kind": "AzureMachineProviderSpec",
+	"tags": {
+		"field1": "value1",
+		"field2": 2
+	},
+	"osDisk": {
+		"diskSizeGB": 512
+	},
+	"vmSize": "Standard_D4s_v3",
+	"networkResourceGroup": "%s",
+	"vnet": "%s",
+	"subnet": "%s",
+	"zone": "1"
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
 			)),
