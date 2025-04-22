@@ -450,16 +450,6 @@ If you want to run the installer version via hive and not in container, you will
   curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/locations/$LOCATION/openshiftversions?api-version=2022-09-04"
   ```
 
-## OpenShift Cluster Manager (OCM) Configuration API Actions
-
-- Create a new OCM configuration
-
-  - You can find example payloads in the projects `./hack/ocm` folder.
-
-  ```bash
-  curl -X PUT -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/syncsets/mySyncSet?api-version=2022-09-04" --header "Content-Type: application/json" -d @./hack/ocm/syncset.b64
-  ```
-
 ## Debugging OpenShift Cluster
 
 - SSH to the bootstrap node:
