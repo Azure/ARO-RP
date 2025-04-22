@@ -247,7 +247,7 @@ func TestIsRestricted(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsRestricted(tt.sku, tt.location, tt.vmsize)
+			result := IsRestricted(tt.sku[tt.vmsize], tt.location)
 
 			if result != tt.wantResult {
 				t.Error(result)
