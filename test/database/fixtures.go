@@ -20,7 +20,6 @@ type Fixture struct {
 	gatewayDocuments                         []*api.GatewayDocument
 	openShiftVersionDocuments                []*api.OpenShiftVersionDocument
 	platformWorkloadIdentityRoleSetDocuments []*api.PlatformWorkloadIdentityRoleSetDocument
-	clusterManagerConfigurationDocuments     []*api.ClusterManagerConfigurationDocument
 	maintenanceManifestDocuments             []*api.MaintenanceManifestDocument
 
 	openShiftClustersDatabase                database.OpenShiftClusters
@@ -31,7 +30,6 @@ type Fixture struct {
 	gatewayDatabase                          database.Gateway
 	openShiftVersionsDatabase                database.OpenShiftVersions
 	platformWorkloadIdentityRoleSetsDatabase database.PlatformWorkloadIdentityRoleSets
-	clusterManagerConfigurationsDatabase     database.ClusterManagerConfigurations
 	maintenanceManifestsDatabase             database.MaintenanceManifests
 
 	openShiftVersionsUUID                uuid.Generator
@@ -50,14 +48,8 @@ func (f *Fixture) Clear() {
 	f.portalDocuments = []*api.PortalDocument{}
 	f.gatewayDocuments = []*api.GatewayDocument{}
 	f.openShiftVersionDocuments = []*api.OpenShiftVersionDocument{}
-	f.clusterManagerConfigurationDocuments = []*api.ClusterManagerConfigurationDocument{}
 	f.platformWorkloadIdentityRoleSetDocuments = []*api.PlatformWorkloadIdentityRoleSetDocument{}
 	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
-}
-
-func (f *Fixture) WithClusterManagerConfigurations(db database.ClusterManagerConfigurations) *Fixture {
-	f.clusterManagerConfigurationsDatabase = db
-	return f
 }
 
 func (f *Fixture) WithOpenShiftClusters(db database.OpenShiftClusters) *Fixture {
@@ -195,17 +187,6 @@ func (f *Fixture) AddPlatformWorkloadIdentityRoleSetDocuments(docs ...*api.Platf
 	}
 }
 
-func (f *Fixture) AddClusterManagerConfigurationDocuments(docs ...*api.ClusterManagerConfigurationDocument) {
-	for _, doc := range docs {
-		docCopy, err := deepCopy(doc)
-		if err != nil {
-			panic(err)
-		}
-
-		f.clusterManagerConfigurationDocuments = append(f.clusterManagerConfigurationDocuments, docCopy.(*api.ClusterManagerConfigurationDocument))
-	}
-}
-
 func (f *Fixture) AddMaintenanceManifestDocuments(docs ...*api.MaintenanceManifestDocument) {
 	for _, doc := range docs {
 		docCopy, err := deepCopy(doc)
@@ -280,16 +261,6 @@ func (f *Fixture) Create() error {
 			i.ID = f.platformWorkloadIdentityRoleSetsDatabase.NewUUID()
 		}
 		_, err := f.platformWorkloadIdentityRoleSetsDatabase.Create(ctx, i)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, i := range f.clusterManagerConfigurationDocuments {
-		if i.ID == "" {
-			i.ID = f.clusterManagerConfigurationsDatabase.NewUUID()
-		}
-		_, err := f.clusterManagerConfigurationsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}

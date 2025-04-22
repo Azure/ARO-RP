@@ -87,8 +87,6 @@ type testInfra struct {
 	asyncOperationsDatabase                  database.AsyncOperations
 	billingClient                            *cosmosdb.FakeBillingDocumentClient
 	billingDatabase                          database.Billing
-	clusterManagerClient                     *cosmosdb.FakeClusterManagerConfigurationDocumentClient
-	clusterManagerDatabase                   database.ClusterManagerConfigurations
 	subscriptionsClient                      *cosmosdb.FakeSubscriptionDocumentClient
 	subscriptionsDatabase                    database.Subscriptions
 	openShiftVersionsClient                  *cosmosdb.FakeOpenShiftVersionDocumentClient
@@ -213,12 +211,6 @@ func (ti *testInfra) WithPlatformWorkloadIdentityRoleSets() *testInfra {
 	ti.platformWorkloadIdentityRoleSetsDatabase, ti.platformWorkloadIdentityRoleSetsClient = testdatabase.NewFakePlatformWorkloadIdentityRoleSets(uuid)
 	ti.fixture.WithPlatformWorkloadIdentityRoleSets(ti.platformWorkloadIdentityRoleSetsDatabase, uuid)
 	ti.dbGroup.WithPlatformWorkloadIdentityRoleSets(ti.platformWorkloadIdentityRoleSetsDatabase)
-	return ti
-}
-
-func (ti *testInfra) WithClusterManagerConfigurations() *testInfra {
-	ti.clusterManagerDatabase, ti.clusterManagerClient = testdatabase.NewFakeClusterManager()
-	ti.fixture.WithClusterManagerConfigurations(ti.clusterManagerDatabase)
 	return ti
 }
 

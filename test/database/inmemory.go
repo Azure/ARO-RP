@@ -80,15 +80,6 @@ func NewFakePlatformWorkloadIdentityRoleSets(uuid uuid.Generator) (db database.P
 	return db, client
 }
 
-func NewFakeClusterManager() (db database.ClusterManagerConfigurations, client *cosmosdb.FakeClusterManagerConfigurationDocumentClient) {
-	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.CLUSTERMANAGER)
-	client = cosmosdb.NewFakeClusterManagerConfigurationDocumentClient(jsonHandle)
-	injectClusterManager(client)
-	coll := &fakeCollectionClient{}
-	db = database.NewClusterManagerConfigurationsWithProvidedClient(client, coll, "", uuid)
-	return db, client
-}
-
 func NewFakeMaintenanceManifests(now func() time.Time) (db database.MaintenanceManifests, client *cosmosdb.FakeMaintenanceManifestDocumentClient) {
 	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.MAINTENANCE_MANIFESTS)
 	coll := &fakeCollectionClient{}
