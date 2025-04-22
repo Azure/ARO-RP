@@ -165,7 +165,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		})
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location+*d.config.Configuration.EnvironmentSuffix+*d.config.Configuration.EnvironmentSuffix, mgmtdns.NS, mgmtdns.RecordSet{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location+*d.config.Configuration.EnvironmentSuffix, mgmtdns.NS, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL:       to.Int64Ptr(3600),
 			NsRecords: &nsRecords,
