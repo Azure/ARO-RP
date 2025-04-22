@@ -67,6 +67,7 @@ func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusCl
 
 	// In case there are multiple WorkerProfiles listed in the cluster document (such as post-install),
 	// compare VMSize in each WorkerProfile to the resourceSkusClient call above to ensure that the sku is available in region.
+	// XXX: Will this ever be called post-install?
 	for i, workerprofile := range workerProfiles {
 		workerProfileSku := string(workerprofile.VMSize)
 
