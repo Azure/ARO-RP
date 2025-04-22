@@ -20,10 +20,6 @@ var resourceName = "OpenShiftCluster"
 // proxyResources represent the list of proxy resources - these are resources with operations, but do not exist in the Azure Portal
 // https://github.com/Azure/azure-resource-manager-rpc/blob/master/v1.0/proxy-api-reference.md
 var proxyResources = []string{
-	"SyncSet",
-	"SyncIdentityProvider",
-	"MachinePool",
-	"Secret",
 	"OpenShiftVersion",
 	"PlatformWorkloadIdentityRoleSet",
 }
