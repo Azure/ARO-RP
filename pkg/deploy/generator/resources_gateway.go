@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -294,13 +294,12 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
-							Publisher: to.StringPtr("MicrosoftCBLMariner"),
-							Offer:     to.StringPtr("cbl-mariner"),
 							// cbl-mariner-2-gen2-fips is not supported by Automatic OS Updates
 							// therefore the non fips image is used, and fips is configured manually
 							// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade
-							Sku:     to.StringPtr("cbl-mariner-2-gen2"),
-							Version: to.StringPtr("latest"),
+							// https://eng.ms/docs/cloud-ai-platform/azure-core/azure-compute/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryusageinstructions#vmss-deployment-with-1p-image-galleryarm-template
+							// https://eng.ms/docs/cloud-ai-platform/azure-core/core-compute-and-host/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryimagereference#cbl-mariner-2-images
+							SharedGalleryImageID: to.StringPtr("/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
@@ -383,6 +382,11 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 						BootDiagnostics: &mgmtcompute.BootDiagnostics{
 							Enabled: to.BoolPtr(true),
 						},
+					},
+					SecurityProfile: &mgmtcompute.SecurityProfile{
+						// Required for 1P Image Gallery Use
+						// https://eng.ms/docs/cloud-ai-platform/azure-core/azure-compute/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryusageinstructions#enable-trusted-launch-for-vmss
+						SecurityType: mgmtcompute.SecurityTypesTrustedLaunch,
 					},
 				},
 				Overprovision: to.BoolPtr(false),
