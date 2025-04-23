@@ -290,7 +290,7 @@ def dyn_validate_cidr_ranges():
     return _validate_cidr_ranges
 
 
-def dyn_validate_resource_permissions(service_principle_ids, resources):
+def dyn_validate_resource_permissions(service_principal_ids, resources):
     prog = get_progress_tracker("Validating resource permissions")
 
     @prog
@@ -298,7 +298,7 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
                                        _namespace):
         errors = []
 
-        for sp_id in service_principle_ids:
+        for sp_id in service_principal_ids:
             for role in sorted(resources):
                 for resource in resources[role]:
                     try:
