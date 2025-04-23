@@ -23,6 +23,7 @@ from azext_aro._validators import (
     validate_enable_managed_identity,
     validate_platform_workload_identities,
     validate_cluster_identity,
+    validate_delete_identities,
     validate_upgradeable_to_format,
 )
 from azure.cli.core.commands.parameters import (
@@ -174,3 +175,10 @@ def load_arguments(self, _):
         c.argument('file',
                    help='Path to the file where kubeconfig should be saved. Default: kubeconfig in local directory',
                    options_list=['--file', '-f'])
+
+    with self.argument_context('aro delete') as c:
+        c.argument('delete_identities',
+                   arg_group='Identity',
+                   arg_type=get_three_state_flag(),
+                   validator=validate_delete_identities,
+                   help='Delete the cluster\'s associated managed identities together with the cluster.')
