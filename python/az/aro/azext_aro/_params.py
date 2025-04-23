@@ -178,6 +178,7 @@ def load_arguments(self, _):
 
     with self.argument_context('aro delete') as c:
         c.argument('delete_identities',
+                   is_preview=True,
                    arg_group='Identity',
                    arg_type=get_three_state_flag(),
                    validator=validate_delete_identities,
