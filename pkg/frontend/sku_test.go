@@ -20,91 +20,113 @@ import (
 
 func TestValidateVMSku(t *testing.T) {
 	for _, tt := range []struct {
-		name                  string
-		restrictions          mgmtcompute.ResourceSkuRestrictionsReasonCode
-		restrictionLocation   *[]string
-		restrictedZones       []string
-		workerProfile1Sku     string
-		workerProfile2Sku     string
-		masterProfileSku      string
-		availableSku          string
-		availableSku2         string
-		restrictedSku         string
-		resourceSkusClientErr error
-		wpStatus              bool
-		wantErr               string
+		name                       string
+		restrictions               mgmtcompute.ResourceSkuRestrictionsReasonCode
+		restrictionLocation        *[]string
+		restrictedZones            []string
+		workerProfile1Sku          string
+		workerProfile2Sku          string
+		masterProfileSku           string
+		availableSku               string
+		availableSkuHasEncryption  bool
+		availableSku2              string
+		availableSku2HasEncryption bool
+		restrictedSku              string
+		masterEncryptionAtHost     api.EncryptionAtHost
+		workerEncryptionAtHost     api.EncryptionAtHost
+		resourceSkusClientErr      error
+		wpStatus                   bool
+		wantErr                    string
 	}{
 		{
-			name:              "worker and master skus are valid",
-			workerProfile1Sku: "Standard_D4s_v2",
-			workerProfile2Sku: "Standard_D4s_v2",
-			masterProfileSku:  "Standard_D4s_v2",
-			availableSku:      "Standard_D4s_v2",
+			name:                   "worker and master skus are valid",
+			workerProfile1Sku:      "Standard_D4s_v2",
+			workerProfile2Sku:      "Standard_D4s_v2",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_D4s_v2",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
-			name:              "worker profile is enriched and skus are valid",
-			workerProfile1Sku: "Standard_D4s_v2",
-			workerProfile2Sku: "Standard_D4s_v2",
-			masterProfileSku:  "Standard_D4s_v2",
-			availableSku:      "Standard_D4s_v2",
-			wpStatus:          true,
+			name:                   "worker profile is enriched and skus are valid",
+			workerProfile1Sku:      "Standard_D4s_v2",
+			workerProfile2Sku:      "Standard_D4s_v2",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_D4s_v2",
+			wpStatus:               true,
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
-			name:              "worker and master skus are distinct, both valid",
-			workerProfile1Sku: "Standard_E104i_v5",
-			workerProfile2Sku: "Standard_E104i_v5",
-			masterProfileSku:  "Standard_D4s_v2",
-			availableSku:      "Standard_E104i_v5",
-			availableSku2:     "Standard_D4s_v2",
+			name:                   "worker and master skus are distinct, both valid",
+			workerProfile1Sku:      "Standard_E104i_v5",
+			workerProfile2Sku:      "Standard_E104i_v5",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_E104i_v5",
+			availableSku2:          "Standard_D4s_v2",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
-			name:              "worker and master skus are distinct, one invalid",
-			workerProfile1Sku: "Standard_E104i_v5",
-			workerProfile2Sku: "Standard_E104i_v5",
-			masterProfileSku:  "Standard_D4s_v2",
-			availableSku:      "Standard_E104i_v5",
-			availableSku2:     "Standard_E104i_v5",
-			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_D4s_v2' is unavailable in region 'eastus'",
+			name:                   "worker and master skus are distinct, one invalid",
+			workerProfile1Sku:      "Standard_E104i_v5",
+			workerProfile2Sku:      "Standard_E104i_v5",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_E104i_v5",
+			availableSku2:          "Standard_E104i_v5",
+			wantErr:                "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_D4s_v2' is unavailable in region 'eastus'",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
-			name:              "worker and master skus are distinct, both invalid",
-			workerProfile1Sku: "Standard_E104i_v5",
-			workerProfile2Sku: "Standard_E104i_v5",
-			masterProfileSku:  "Standard_D4s_v2",
-			availableSku:      "Standard_L8s_v2",
-			availableSku2:     "Standard_L16s_v2",
-			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_D4s_v2' is unavailable in region 'eastus'",
+			name:                   "worker and master skus are distinct, both invalid",
+			workerProfile1Sku:      "Standard_E104i_v5",
+			workerProfile2Sku:      "Standard_E104i_v5",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_L8s_v2",
+			availableSku2:          "Standard_L16s_v2",
+			wantErr:                "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_D4s_v2' is unavailable in region 'eastus'",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
-			name:                  "unable to retrieve skus information",
-			workerProfile1Sku:     "Standard_D4s_v2",
-			workerProfile2Sku:     "Standard_D4s_v2",
-			resourceSkusClientErr: errors.New("unable to retrieve skus information"),
-			wantErr:               "unable to retrieve skus information",
+			name:                   "unable to retrieve skus information",
+			workerProfile1Sku:      "Standard_D4s_v2",
+			workerProfile2Sku:      "Standard_D4s_v2",
+			resourceSkusClientErr:  errors.New("unable to retrieve skus information"),
+			wantErr:                "unable to retrieve skus information",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
-			name:              "desired worker sku doesn't exist in the target region",
-			workerProfile1Sku: "Standard_L80",
-			workerProfile2Sku: "Standard_L80",
-			masterProfileSku:  "Standard_D4s_v2",
-			availableSku:      "Standard_D4s_v2",
-			wantErr:           "400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected SKU 'Standard_L80' is unavailable in region 'eastus'",
+			name:                   "desired worker sku doesn't exist in the target region",
+			workerProfile1Sku:      "Standard_L80",
+			workerProfile2Sku:      "Standard_L80",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_D4s_v2",
+			wantErr:                "400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected SKU 'Standard_L80' is unavailable in region 'eastus'",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
-			name:              "desired master sku doesn't exist in the target region",
-			workerProfile1Sku: "Standard_D4s_v2",
-			workerProfile2Sku: "Standard_D4s_v2",
-			masterProfileSku:  "Standard_L80",
-			availableSku:      "Standard_D4s_v2",
-			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is unavailable in region 'eastus'",
+			name:                   "desired master sku doesn't exist in the target region",
+			workerProfile1Sku:      "Standard_D4s_v2",
+			workerProfile2Sku:      "Standard_D4s_v2",
+			masterProfileSku:       "Standard_L80",
+			availableSku:           "Standard_D4s_v2",
+			wantErr:                "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is unavailable in region 'eastus'",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
-			name:              "one valid workerprofile and one invalid workerprofile",
-			workerProfile1Sku: "Standard_L80",
-			workerProfile2Sku: "Standard_D4s_v2",
-			masterProfileSku:  "Standard_D4s_v2",
-			availableSku:      "Standard_D4s_v2",
-			wantErr:           "400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected SKU 'Standard_L80' is unavailable in region 'eastus'",
+			name:                   "one valid workerprofile and one invalid workerprofile",
+			workerProfile1Sku:      "Standard_L80",
+			workerProfile2Sku:      "Standard_D4s_v2",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_D4s_v2",
+			wantErr:                "400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected SKU 'Standard_L80' is unavailable in region 'eastus'",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
 		{
 			name:         "worker sku exists in region but is not available in subscription",
@@ -112,12 +134,14 @@ func TestValidateVMSku(t *testing.T) {
 			restrictionLocation: &[]string{
 				"eastus",
 			},
-			workerProfile1Sku: "Standard_L80",
-			workerProfile2Sku: "Standard_L80",
-			masterProfileSku:  "Standard_D4s_v2",
-			availableSku:      "Standard_D4s_v2",
-			restrictedSku:     "Standard_L80",
-			wantErr:           "400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
+			workerProfile1Sku:      "Standard_L80",
+			workerProfile2Sku:      "Standard_L80",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_D4s_v2",
+			restrictedSku:          "Standard_L80",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
+			wantErr:                "400: InvalidParameter: properties.workerProfiles[0].VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
 		},
 		{
 			name:         "master sku exists in region but is not available in subscription",
@@ -125,12 +149,14 @@ func TestValidateVMSku(t *testing.T) {
 			restrictionLocation: &[]string{
 				"eastus",
 			},
-			workerProfile1Sku: "Standard_D4s_v2",
-			workerProfile2Sku: "Standard_D4s_v2",
-			masterProfileSku:  "Standard_L80",
-			availableSku:      "Standard_D4s_v2",
-			restrictedSku:     "Standard_L80",
-			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
+			workerProfile1Sku:      "Standard_D4s_v2",
+			workerProfile2Sku:      "Standard_D4s_v2",
+			masterProfileSku:       "Standard_L80",
+			availableSku:           "Standard_D4s_v2",
+			restrictedSku:          "Standard_L80",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
+			wantErr:                "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
 		},
 		{
 			name:         "sku is restricted in a single zone",
@@ -138,13 +164,59 @@ func TestValidateVMSku(t *testing.T) {
 			restrictionLocation: &[]string{
 				"eastus",
 			},
-			restrictedZones:   []string{"3"},
-			workerProfile1Sku: "Standard_D4s_v2",
-			workerProfile2Sku: "Standard_D4s_v2",
-			masterProfileSku:  "Standard_L80",
-			availableSku:      "Standard_D4s_v2",
-			restrictedSku:     "Standard_L80",
-			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
+			restrictedZones:        []string{"3"},
+			workerProfile1Sku:      "Standard_D4s_v2",
+			workerProfile2Sku:      "Standard_D4s_v2",
+			masterProfileSku:       "Standard_L80",
+			availableSku:           "Standard_D4s_v2",
+			restrictedSku:          "Standard_L80",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
+			wantErr:                "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
+		},
+		{
+			name:                   "worker SKU does not have encryptionAtHost",
+			workerProfile1Sku:      "Standard_E104i_v5",
+			workerProfile2Sku:      "Standard_E104i_v5",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_E104i_v5",
+			availableSku2:          "Standard_D4s_v2",
+			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost: api.EncryptionAtHostEnabled,
+			wantErr:                "400: InvalidParameter: properties.workerProfiles[0].encryptionAtHost: The selected SKU 'Standard_E104i_v5' does not support encryption at host.",
+		},
+		{
+			name:                   "master SKU does not have encryptionAtHost",
+			workerProfile1Sku:      "Standard_E104i_v5",
+			workerProfile2Sku:      "Standard_E104i_v5",
+			masterProfileSku:       "Standard_D4s_v2",
+			availableSku:           "Standard_E104i_v5",
+			availableSku2:          "Standard_D4s_v2",
+			masterEncryptionAtHost: api.EncryptionAtHostEnabled,
+			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
+			wantErr:                "400: InvalidParameter: properties.masterProfile.encryptionAtHost: The selected SKU 'Standard_D4s_v2' does not support encryption at host.",
+		},
+		{
+			name:                      "worker SKU has encryptionAtHost",
+			workerProfile1Sku:         "Standard_E104i_v5",
+			workerProfile2Sku:         "Standard_E104i_v5",
+			masterProfileSku:          "Standard_D4s_v2",
+			availableSku:              "Standard_E104i_v5",
+			availableSku2:             "Standard_D4s_v2",
+			masterEncryptionAtHost:    api.EncryptionAtHostDisabled,
+			workerEncryptionAtHost:    api.EncryptionAtHostEnabled,
+			availableSkuHasEncryption: true,
+		},
+		{
+			name:                       "master SKU has encryptionAtHost",
+			workerProfile1Sku:          "Standard_E104i_v5",
+			workerProfile2Sku:          "Standard_E104i_v5",
+			masterProfileSku:           "Standard_D4s_v2",
+			availableSku:               "Standard_E104i_v5",
+			availableSku2:              "Standard_D4s_v2",
+			masterEncryptionAtHost:     api.EncryptionAtHostEnabled,
+			workerEncryptionAtHost:     api.EncryptionAtHostDisabled,
+			availableSku2HasEncryption: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -160,16 +232,26 @@ func TestValidateVMSku(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					WorkerProfiles: []api.WorkerProfile{
 						{
-							VMSize: api.VMSize(tt.workerProfile1Sku),
+							VMSize:           api.VMSize(tt.workerProfile1Sku),
+							EncryptionAtHost: tt.workerEncryptionAtHost,
 						},
 						{
-							VMSize: api.VMSize(tt.workerProfile2Sku),
+							VMSize:           api.VMSize(tt.workerProfile2Sku),
+							EncryptionAtHost: tt.workerEncryptionAtHost,
 						},
 					},
 					MasterProfile: api.MasterProfile{
-						VMSize: api.VMSize(tt.masterProfileSku),
+						VMSize:           api.VMSize(tt.masterProfileSku),
+						EncryptionAtHost: tt.masterEncryptionAtHost,
 					},
 				},
+			}
+
+			encryptionAtHost := func(enabled bool) *string {
+				if enabled {
+					return to.StringPtr("True")
+				}
+				return to.StringPtr("False")
 			}
 
 			skus := []mgmtcompute.ResourceSku{
@@ -180,7 +262,12 @@ func TestValidateVMSku(t *testing.T) {
 						{Zones: &[]string{"1, 2, 3"}},
 					},
 					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
-					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{},
+					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
+						{
+							Name:  to.StringPtr("EncryptionAtHostSupported"),
+							Value: encryptionAtHost(tt.availableSkuHasEncryption),
+						},
+					},
 					ResourceType: to.StringPtr("virtualMachines"),
 				},
 				{
@@ -190,7 +277,12 @@ func TestValidateVMSku(t *testing.T) {
 						{Zones: &[]string{"1, 2, 3"}},
 					},
 					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
-					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{},
+					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
+						{
+							Name:  to.StringPtr("EncryptionAtHostSupported"),
+							Value: encryptionAtHost(tt.availableSku2HasEncryption),
+						},
+					},
 					ResourceType: to.StringPtr("virtualMachines"),
 				},
 				{

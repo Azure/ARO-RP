@@ -45,41 +45,74 @@ func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusCl
 	}
 
 	filteredSkus := computeskus.FilterVMSizes(skus, location)
-	masterProfileSku := string(oc.Properties.MasterProfile.VMSize)
 
-	err = checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", masterProfileSku)
+	controlPlaneSKU, err := checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", string(oc.Properties.MasterProfile.VMSize))
 	if err != nil {
 		return err
+	}
+
+	err = checkSKURestriction(controlPlaneSKU, location, "properties.masterProfile.VMSize")
+	if err != nil {
+		return err
+	}
+
+	if oc.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled {
+		err = checkSKUEncryptionAtHostSupport(controlPlaneSKU, "properties.masterProfile.encryptionAtHost")
+		if err != nil {
+			return err
+		}
 	}
 
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
 
 	// In case there are multiple WorkerProfiles listed in the cluster document (such as post-install),
 	// compare VMSize in each WorkerProfile to the resourceSkusClient call above to ensure that the sku is available in region.
+	// XXX: Will this ever be called post-install?
 	for i, workerprofile := range workerProfiles {
 		workerProfileSku := string(workerprofile.VMSize)
 
-		err = checkSKUAvailability(filteredSkus, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i), workerProfileSku)
+		workerSKU, err := checkSKUAvailability(filteredSkus, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i), workerProfileSku)
 		if err != nil {
 			return err
+		}
+
+		err = checkSKURestriction(workerSKU, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i))
+		if err != nil {
+			return err
+		}
+
+		if workerprofile.EncryptionAtHost == api.EncryptionAtHostEnabled {
+			err = checkSKUEncryptionAtHostSupport(workerSKU, fmt.Sprintf("properties.workerProfiles[%d].encryptionAtHost", i))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func checkSKUAvailability(skus map[string]*mgmtcompute.ResourceSku, location, path, vmsize string) error {
+func checkSKUAvailability(skus map[string]*mgmtcompute.ResourceSku, location, path, vmsize string) (*mgmtcompute.ResourceSku, error) {
 	// Ensure desired sku exists in target region
-	if skus[vmsize] == nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' is unavailable in region '%v'", vmsize, location))
+	sku, ok := skus[vmsize]
+	if !ok {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' is unavailable in region '%v'", vmsize, location))
 	}
+	return sku, nil
+}
 
+func checkSKURestriction(sku *mgmtcompute.ResourceSku, location, path string) error {
 	// Fail if sku is available, but restricted within the subscription. Restrictions are subscription-specific.
 	// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/error-sku-not-available
-	isRestricted := computeskus.IsRestricted(skus, location, vmsize)
-	if isRestricted {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' is restricted in region '%v' for selected subscription", vmsize, location))
+	if computeskus.IsRestricted(sku, location) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' is restricted in region '%v' for selected subscription", *sku.Name, location))
 	}
+	return nil
+}
 
+func checkSKUEncryptionAtHostSupport(sku *mgmtcompute.ResourceSku, path string) error {
+	if !computeskus.HasCapability(sku, "EncryptionAtHostSupported") {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' does not support encryption at host.", *sku.Name))
+	}
 	return nil
 }
