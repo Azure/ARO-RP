@@ -380,7 +380,7 @@ def validate_cluster_identity(cmd, namespace):
         raise InvalidArgumentValueError(f"Resource {namespace.mi_user_assigned} used for cluster user assigned identity is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
 
 
-def validate_delete_identities(cmd, namespace):
+def validate_delete_identities(namespace):
     if namespace.delete_identities is None:
         return
 

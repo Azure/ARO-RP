@@ -416,9 +416,9 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False, d
     # to the list in case they want to know which identities to delete.
     managed_identities = []
     if oc.identity is not None and oc.identity.user_assigned_identities is not None:
-        managed_identities += [mi_user_assigned for mi_user_assigned in oc.identity.user_assigned_identities]
+        managed_identities += list(oc.identity.user_assigned_identities)
     if oc.platform_workload_identity_profile is not None:
-        managed_identities += [pwi.resource_id for _, pwi in oc.platform_workload_identity_profile.platform_workload_identities.items()]
+        managed_identities += [pwi.resource_id for _, pwi in oc.platform_workload_identity_profile.platform_workload_identities.items()]  # pylint: disable=line-too-long
 
     errors = validate_cluster_delete(cmd, delete_identities, managed_identities)
     if errors:
@@ -427,10 +427,10 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False, d
 
     if delete_identities:
         bulleted_mi_list = "\n".join([f"- {mi}" for mi in managed_identities])
-        logger.warning(f"After deleting the ARO cluster, will delete the following set of managed identities that was associated with it:\n{bulleted_mi_list}")
+        logger.warning("After deleting the ARO cluster, will delete the following set of managed identities that was associated with it:\n%s", bulleted_mi_list)  # pylint: disable=line-too-long
     elif oc.platform_workload_identity_profile is not None:
-        bulleted_delete_command_list = "\n".join([f"- az identity delete -g {parse_resource_id(mi)['resource_group']} -n {parse_resource_id(mi)['name']}" for mi in managed_identities])
-        logger.warning(f"The cluster's managed identities will still need to be deleted once cluster deletion completes. You can use the following commands to delete them:\n{bulleted_delete_command_list}")
+        bulleted_delete_command_list = "\n".join([f"- az identity delete -g {parse_resource_id(mi)['resource_group']} -n {parse_resource_id(mi)['name']}" for mi in managed_identities])  # pylint: disable=line-too-long
+        logger.warning("The cluster's managed identities will still need to be deleted once cluster deletion completes. You can use the following commands to delete them:\n%s", bulleted_delete_command_list)  # pylint: disable=line-too-long
 
     aad = AADManager(cmd.cli_ctx)
 
@@ -451,7 +451,7 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False, d
         # Note that because we need to confirm the cluster's successful deletion before
         # deleting the managed identities, we must wait for the asynchronous operation
         # to complete here and handle the result rather than using sdk_no_wait.
-        result = LongRunningOperation(cmd.cli_ctx)(client.open_shift_clusters.begin_delete(resource_group_name=resource_group_name,
+        result = LongRunningOperation(cmd.cli_ctx)(client.open_shift_clusters.begin_delete(resource_group_name=resource_group_name,  # pylint: disable=line-too-long
                                                    resource_name=resource_name,
                                                    polling=True))
         logger.warning("Successfully deleted ARO cluster; deleting managed identities...")
@@ -466,7 +466,7 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False, d
                 'resource_name': mi_resource_id['name'],
                 'resource_group': mi_resource_id['resource_group'],
             })
-            logger.warning(f"Successfully deleted managed identity {mi}")
+            logger.warning("Successfully deleted managed identity %s", mi)
         return result
 
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_delete,

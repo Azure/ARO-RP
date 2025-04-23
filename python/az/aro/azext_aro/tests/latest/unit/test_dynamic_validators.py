@@ -546,6 +546,7 @@ def test_validate_version(
         if (errors[0][3] != expected_errors):
             raise Exception(f"Error returned was not expected\n Expected : {expected_errors}\n Actual   : {errors[0][3]}")
 
+
 test_dyn_validate_managed_identity_delete_permissions_data = [
     (
         "should not return missing permissions when actions are permitted",
@@ -587,6 +588,7 @@ test_dyn_validate_managed_identity_delete_permissions_data = [
         "Microsoft.ManagedIdentity/userAssignedIdentities/delete permission is missing over /subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity1"
     )
 ]
+
 
 @pytest.mark.parametrize(
     "test_description, cmd_mock, namespace_mock, auth_client_mock, parse_resource_id_mock_return_value, expected_missing_perms",
