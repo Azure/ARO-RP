@@ -18,7 +18,7 @@ import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
 import { ToolIcons } from "./ToolIcons"
 import { MemoisedClusterDetailListComponent } from "./ClusterDetailList"
 import React from "react"
-import { useLinkClickHandler, useNavigate, useParams } from "react-router-dom"
+import { useLinkClickHandler, useNavigate, useParams } from "react-router"
 
 const navStyles: Partial<INavStyles> = {
   root: {
