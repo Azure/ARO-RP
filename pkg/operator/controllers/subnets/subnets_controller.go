@@ -104,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	options := azEnv.ArmClientOptions()
 
-	subnetGroupsClient, err := armnetwork.NewSubnetsClient(resource.SubscriptionID, credential, options)
+	subnetClient, err := armnetwork.NewSubnetsClient(resource.SubscriptionID, credential, options)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -115,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
 		kubeSubnets:    subnet.NewKubeManager(r.client, resource.SubscriptionID),
-		subnets:        subnetGroupsClient,
+		subnets:        subnetClient,
 	}
 
 	return reconcile.Result{}, manager.reconcileSubnets(ctx)
