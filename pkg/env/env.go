@@ -38,7 +38,6 @@ const (
 	FeatureEnableDevelopmentAuthorizer
 	FeatureRequireD2sWorkers
 	FeatureDisableReadinessDelay
-	FeatureEnableOCMEndpoints
 	FeatureRequireOIDCStorageWebEndpoint
 	FeatureUseMockMsiRp
 	FeatureEnableMISE

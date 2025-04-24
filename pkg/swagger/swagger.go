@@ -20,10 +20,6 @@ var resourceName = "OpenShiftCluster"
 // proxyResources represent the list of proxy resources - these are resources with operations, but do not exist in the Azure Portal
 // https://github.com/Azure/azure-resource-manager-rpc/blob/master/v1.0/proxy-api-reference.md
 var proxyResources = []string{
-	"SyncSet",
-	"SyncIdentityProvider",
-	"MachinePool",
-	"Secret",
 	"OpenShiftVersion",
 	"PlatformWorkloadIdentityRoleSet",
 }
@@ -172,12 +168,6 @@ func Run(api, outputDir string) error {
 		}
 	}
 
-	if g.clusterManager {
-		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "syncSet", "SyncSet")
-		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "machinePool", "MachinePool")
-		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "syncIdentityProvider", "SyncIdentityProvider")
-		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "secret", "Secret")
-	}
 	populateExamples(s.Paths)
 
 	// This begins to define definitions required for the paths, parameters, and responses defined above
@@ -198,12 +188,6 @@ func Run(api, outputDir string) error {
 		names = append(names, "PlatformWorkloadIdentityRoleSet")
 	}
 
-	if g.clusterManager {
-		// This needs to be the top level struct
-		// in most cases, the "list" struct (a collection of resources)
-		names = append(names, "SyncSetList", "MachinePoolList", "SyncIdentityProviderList", "SecretList")
-	}
-
 	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, g.commonTypesVersion, names...)
 	if err != nil {
 		return err
@@ -218,10 +202,6 @@ func Run(api, outputDir string) error {
 	// This begins the ARM / Azure Resources definition generation
 	azureResources := []string{
 		resourceName,
-	}
-
-	if g.clusterManager {
-		azureResources = append(azureResources, "SyncSet", "MachinePool", "SyncIdentityProvider", "Secret")
 	}
 
 	if g.installVersionList {
