@@ -48,7 +48,9 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	}
 
 	// if the NSG is assigned && it's the correct NSG - do nothing
-	if subnetObject.Properties.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.Properties.NetworkSecurityGroup.ID, correctNSGResourceID) {
+	if subnetObject.Properties.NetworkSecurityGroup != nil &&
+		subnetObject.Properties.NetworkSecurityGroup.ID != nil &&
+		strings.EqualFold(*subnetObject.Properties.NetworkSecurityGroup.ID, correctNSGResourceID) {
 		return nil
 	}
 
