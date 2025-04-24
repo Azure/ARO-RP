@@ -143,7 +143,6 @@ func TestReconcileManager(t *testing.T) {
 
 				subnetObjectMaster := getValidSubnet()
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
-				//mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
