@@ -118,6 +118,10 @@ func WaitForCertificateOperation(parent context.Context, log *logrus.Entry, oper
 	return err
 }
 
+var errorInfoContains = func(e *azcertificates.ErrorInfo, substr string) bool {
+	return e != nil && strings.Contains(e.Error(), "[Status:FailedCanRetry]")
+}
+
 func checkOperation(op azcertificates.CertificateOperation, log *logrus.Entry) (bool, error) {
 	if op.Status == nil {
 		return false, fmt.Errorf("operation status is nil")
@@ -131,7 +135,7 @@ func checkOperation(op azcertificates.CertificateOperation, log *logrus.Entry) (
 
 	case "failed":
 		// consider failed operation that can retry as not an error, but as if inProgress
-		if op.Error != nil && strings.Contains(op.Error.Error(), "[Status:FailedCanRetry]") {
+		if errorInfoContains(op.Error, "[Status:FailedCanRetry]") {
 			if op.StatusDetails != nil {
 				log.Warningf("certificateOperation FailedCanRetry %s (%s): Error %v", *op.Status, *op.StatusDetails, op.Error)
 			}
