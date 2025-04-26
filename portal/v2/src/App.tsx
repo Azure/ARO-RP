@@ -309,7 +309,7 @@ function App() {
           <Stack.Item grow>
             <Routes>
               <Route
-                path="/subscriptions/:subscriptionId/resourcegroups/:resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/:resourceName/*?"
+                path="/subscriptions/:subscriptionId/resourcegroups/:resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/:resourceName/*"
                 element={
                   <ClusterDetailPanel
                     csrfToken={csrfRef}

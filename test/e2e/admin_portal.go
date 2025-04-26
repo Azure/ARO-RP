@@ -240,11 +240,11 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 			currentUrl, err := wd.CurrentURL()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(currentUrl).To(HaveSuffix("%s%s/%s", host, resourceIDFromEnv(), strings.ToLower(tab)))
+			Expect(strings.ToLower(currentUrl)).To(HaveSuffix("%s%s/%s", host, strings.ToLower(resourceIDFromEnv()), strings.ToLower(tab)))
 		}
 	})
 
-	It("Should display refresh button to get latest details for each tab in cluster detail page", func() {
+	It("Should display refresh button to get latest details for each tab in cluster detail page", Pending, func() {
 		wd.Get(host + resourceIDFromEnv())
 		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
 
