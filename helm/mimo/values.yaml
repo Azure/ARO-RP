@@ -9,7 +9,7 @@ replicaCount: 1
 image:
   repository: nginx # TODO replace repository
   # This sets the pull policy for images.
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
@@ -19,7 +19,6 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# TODO: Do I need this?
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -29,7 +28,8 @@ serviceAccount:
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  name: "aro-mimo-sa"
+  workloadClientId: ""
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ 
@@ -124,11 +124,16 @@ mimo:
 configmap:
   azure_fp_client_id: ""
   azure_arm_client_id: ""
+  azure_subscription_id: ""
+  azure_environment: "AzurePublicCloud"
+  azure_location: ""
+  azure_resource_group: ""
   domain_name: ""
   acr_resource_id: ""
   database_account_name: ""
   keyvault_prefix: ""
   keyvault_rp_workload_identity: ""
+  keyvault_rp_workload_client_id: ""
   rp_features: ""
   msi_rp_endpoint: ""
 
@@ -307,3 +312,32 @@ env:
       configMapKeyRef:
         name: mimo-config
         key: keyvault_rp_workload_identity
+  # - name: AZURE_CLIENT_ID
+  #   valueFrom:
+  #     configMapKeyRef:
+  #       name: mimo-config
+  #       key: keyvault_rp_workload_client_id
+  # # Despite it's name, this is needed to work with MSI
+  - name: AZURE_EV2
+    value: "Use MSI"
+  - name: AZURE_ENVIRONMENT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_environment
+  - name: AZURE_SUBSCRIPTION_ID
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_subscription_id
+  - name: LOCATION
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_location
+  - name: RESOURCEGROUP
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_resource_group
+
