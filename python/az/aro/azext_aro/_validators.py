@@ -380,6 +380,14 @@ def validate_cluster_identity(cmd, namespace):
         raise InvalidArgumentValueError(f"Resource {namespace.mi_user_assigned} used for cluster user assigned identity is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
 
 
+def validate_delete_identities(namespace):
+    if namespace.delete_identities is None:
+        return
+
+    if namespace.delete_identities and namespace.no_wait:
+        raise MutuallyExclusiveArgumentError('Must not specify --no-wait when --delete-identities is used')
+
+
 def identity_name_to_resource_id(cmd, namespace, name):
     return resource_id(
         subscription=get_subscription_id(cmd.cli_ctx),

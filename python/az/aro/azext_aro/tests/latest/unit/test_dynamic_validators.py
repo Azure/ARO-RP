@@ -8,7 +8,8 @@ from azext_aro._dynamic_validators import (
     dyn_validate_subnet_and_route_tables,
     dyn_validate_vnet,
     dyn_validate_resource_permissions,
-    dyn_validate_version
+    dyn_validate_version,
+    dyn_validate_managed_identity_delete_permissions
 )
 
 from azure.mgmt.authorization.models import Permission
@@ -544,3 +545,72 @@ def test_validate_version(
 
         if (errors[0][3] != expected_errors):
             raise Exception(f"Error returned was not expected\n Expected : {expected_errors}\n Actual   : {errors[0][3]}")
+
+
+test_dyn_validate_managed_identity_delete_permissions_data = [
+    (
+        "should not return missing permissions when actions are permitted",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(managed_identities=["/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity1"]),
+        Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.ManagedIdentity/userAssignedIdentities/delete"], not_actions=[])]}),
+        {
+            "resource_group": "rg",
+            "name": "identity1",
+            "namespace": "Microsoft.ManagedIdentity",
+            "type": "userAssignedIdentities"
+        },
+        None
+    ),
+    (
+        "should return missing permissions when actions are not permitted",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(managed_identities=["/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity1"]),
+        Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=["Microsoft.ManagedIdentity/userAssignedIdentities/delete"])]}),
+        {
+            "resource_group": "rg",
+            "name": "identity1",
+            "namespace": "Microsoft.ManagedIdentity",
+            "type": "userAssignedIdentities"
+        },
+        "Microsoft.ManagedIdentity/userAssignedIdentities/delete permission is missing over /subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity1"
+    ),
+    (
+        "should return missing permissions when actions are missing",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(managed_identities=["/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity1"]),
+        Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=[])]}),
+        {
+            "resource_group": "rg",
+            "name": "identity1",
+            "namespace": "Microsoft.ManagedIdentity",
+            "type": "userAssignedIdentities"
+        },
+        "Microsoft.ManagedIdentity/userAssignedIdentities/delete permission is missing over /subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity1"
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, cmd_mock, namespace_mock, auth_client_mock, parse_resource_id_mock_return_value, expected_missing_perms",
+    test_dyn_validate_managed_identity_delete_permissions_data,
+    ids=[i[0] for i in test_dyn_validate_managed_identity_delete_permissions_data]
+)
+@patch("azext_aro._dynamic_validators.get_mgmt_service_client")
+@patch("azext_aro._dynamic_validators.parse_resource_id")
+def test_dyn_validate_managed_identity_delete_permissions(
+    # Mocked functions:
+    parse_resource_id_mock, get_mgmt_service_client_mock,
+    # Test cases parameters:
+    test_description, cmd_mock, namespace_mock, auth_client_mock, parse_resource_id_mock_return_value, expected_missing_perms
+):
+    parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
+    get_mgmt_service_client_mock.side_effect = [auth_client_mock]
+
+    validate_fn = dyn_validate_managed_identity_delete_permissions()
+    missing_perms = validate_fn(cmd_mock, namespace_mock)
+
+    if expected_missing_perms is None:
+        assert len(missing_perms) == 0, f"Unexpected errors: {missing_perms}"
+    else:
+        assert len(missing_perms) > 0, "Expected errors but got none"
+        assert expected_missing_perms in missing_perms[0], f"Expected error '{expected_missing_perms}' but got '{missing_perms[0]}'"
