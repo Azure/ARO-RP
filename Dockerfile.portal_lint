@@ -1,5 +1,5 @@
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/nodejs-16
+FROM ${REGISTRY}/ubi8/nodejs-18
 WORKDIR /data
 USER root
 
