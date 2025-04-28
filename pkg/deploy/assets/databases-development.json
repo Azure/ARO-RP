@@ -98,27 +98,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
             ],
             "location": "[resourceGroup().location]",
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/ClusterManagerConfigurations')]",
-            "properties": {
-                "options": {},
-                "resource": {
-                    "id": "ClusterManagerConfigurations",
-                    "partitionKey": {
-                        "kind": "Hash",
-                        "paths": [
-                            "/partitionKey"
-                        ]
-                    }
-                }
-            },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
-        },
-        {
-            "apiVersion": "2023-04-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing')]",
             "properties": {
                 "options": {},
