@@ -60,15 +60,15 @@ func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resour
 	rg := idParts[4]
 	lbName := idParts[8]
 
-	lb, err := a.loadBalancers.Get(ctx, rg, lbName, "")
+	lb, err := a.loadBalancers.Get(ctx, rg, lbName, nil)
 	if err != nil {
 		return err
 	}
 
-	err = loadbalancer.RemoveFrontendIPConfiguration(&lb, resourceID)
+	err = loadbalancer.RemoveFrontendIPConfiguration(&lb.LoadBalancer, resourceID)
 	if err != nil {
 		return err
 	}
 
-	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, lbName, lb)
+	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, lbName, lb.LoadBalancer, nil)
 }
