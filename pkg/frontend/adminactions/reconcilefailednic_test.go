@@ -14,7 +14,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -39,12 +39,12 @@ func TestReconcileFailedNic(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		mocks   func(*mock_network.MockInterfacesClient)
+		mocks   func(*mock_armnetwork.MockInterfacesClient)
 		wantErr string
 	}{
 		{
 			name: "successfully reconcile nic",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
+			mocks: func(networkInterfaces *mock_armnetwork.MockInterfacesClient) {
 				nic := getNic(subscription, clusterRG, location, nicName)
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{Interface: nic}, nil)
 				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic, nil).Return(nil)
@@ -52,7 +52,7 @@ func TestReconcileFailedNic(t *testing.T) {
 		},
 		{
 			name: "nic not in failed provisioning state",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
+			mocks: func(networkInterfaces *mock_armnetwork.MockInterfacesClient) {
 				nic := getNic(subscription, clusterRG, location, nicName)
 				nic.Properties.ProvisioningState = to.Ptr(armnetwork.ProvisioningStateSucceeded)
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{Interface: nic}, nil)
@@ -69,7 +69,7 @@ func TestReconcileFailedNic(t *testing.T) {
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
 
-			networkInterfaces := mock_network.NewMockInterfacesClient(controller)
+			networkInterfaces := mock_armnetwork.NewMockInterfacesClient(controller)
 
 			tt.mocks(networkInterfaces)
 
