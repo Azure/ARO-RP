@@ -10,7 +10,7 @@ WORKDIR /build/portal/v2
 USER root
 
 # test
-RUN microdnf update && microdnf clean all
+RUN dnf update -y && dnf clean all --enablerepo=\*
 
 # Copying package files and installing dependencies
 COPY portal/v2/package*.json ./
