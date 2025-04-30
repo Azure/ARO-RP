@@ -52,7 +52,7 @@ type azureActions struct {
 	routeTables        armnetwork.RouteTablesClient
 	storageAccounts    storage.AccountsClient
 	networkInterfaces  network.InterfacesClient
-	loadBalancers      network.LoadBalancersClient
+	loadBalancers      armnetwork.LoadBalancersClient
 	securityGroups     armnetwork.SecurityGroupsClient
 }
 
@@ -87,6 +87,11 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	loadBalancers, err := armnetwork.NewLoadBalancersClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
@@ -100,7 +105,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		routeTables:        routeTables,
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		loadBalancers:      network.NewLoadBalancersClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		loadBalancers:      loadBalancers,
 		securityGroups:     securityGroups,
 	}, nil
 }

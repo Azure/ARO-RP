@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 )
 
-func RemoveFrontendIPConfiguration(lb *mgmtnetwork.LoadBalancer, resourceID string) error {
-	newFrontendIPConfig := make([]mgmtnetwork.FrontendIPConfiguration, 0, len(*lb.FrontendIPConfigurations))
-	for _, fipConfig := range *lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations {
+func RemoveFrontendIPConfiguration(lb *armnetwork.LoadBalancer, resourceID string) error {
+	newFrontendIPConfig := make([]*armnetwork.FrontendIPConfiguration, 0, len(lb.Properties.FrontendIPConfigurations))
+	for _, fipConfig := range lb.Properties.FrontendIPConfigurations {
 		if strings.EqualFold(*fipConfig.ID, resourceID) {
 			if isFrontendIPConfigReferenced(fipConfig) {
 				return fmt.Errorf("frontend IP Configuration %s has external references, remove the external references prior to removing the frontend IP configuration", resourceID)
@@ -21,10 +21,10 @@ func RemoveFrontendIPConfiguration(lb *mgmtnetwork.LoadBalancer, resourceID stri
 		}
 		newFrontendIPConfig = append(newFrontendIPConfig, fipConfig)
 	}
-	lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations = &newFrontendIPConfig
+	lb.Properties.FrontendIPConfigurations = newFrontendIPConfig
 	return nil
 }
 
-func isFrontendIPConfigReferenced(fipConfig mgmtnetwork.FrontendIPConfiguration) bool {
-	return fipConfig.LoadBalancingRules != nil || fipConfig.InboundNatPools != nil || fipConfig.InboundNatRules != nil || fipConfig.OutboundRules != nil
+func isFrontendIPConfigReferenced(fipConfig *armnetwork.FrontendIPConfiguration) bool {
+	return fipConfig.Properties.LoadBalancingRules != nil || fipConfig.Properties.InboundNatPools != nil || fipConfig.Properties.InboundNatRules != nil || fipConfig.Properties.OutboundRules != nil
 }
