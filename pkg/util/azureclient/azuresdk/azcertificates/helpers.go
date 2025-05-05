@@ -119,7 +119,7 @@ func WaitForCertificateOperation(parent context.Context, log *logrus.Entry, oper
 }
 
 var errorInfoContains = func(e *azcertificates.ErrorInfo, substr string) bool {
-	return e != nil && strings.Contains(e.Error(), "[Status:FailedCanRetry]")
+	return e != nil && strings.Contains(e.Error(), substr)
 }
 
 func checkOperation(op azcertificates.CertificateOperation, log *logrus.Entry) (bool, error) {
