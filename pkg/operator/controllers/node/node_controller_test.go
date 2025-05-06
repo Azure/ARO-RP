@@ -418,7 +418,7 @@ func TestReconciler(t *testing.T) {
 				if len(tt.startConditions) > 0 {
 					cluster.Status.Conditions = append(cluster.Status.Conditions, tt.startConditions...)
 				}
-				clientBuilder = clientBuilder.WithObjects(cluster)
+				clientBuilder = clientBuilder.WithObjects(cluster).WithStatusSubresource(cluster)
 			}
 
 			if tt.nodeObject != nil {

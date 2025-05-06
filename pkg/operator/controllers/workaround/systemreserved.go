@@ -80,6 +80,10 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 
 	//   Step 2. Create KubeletConfig CRD with appropriate limits.
 	kc := &mcv1.KubeletConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KubeletConfig",
+			APIVersion: "machineconfiguration.openshift.io/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeletConfigName,
 		},
@@ -138,6 +142,10 @@ func (sr *systemreserved) Remove(ctx context.Context) error {
 	}
 
 	kc := &mcv1.KubeletConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KubeletConfig",
+			APIVersion: "machineconfiguration.openshift.io/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeletConfigName,
 		},
