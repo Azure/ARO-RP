@@ -45,19 +45,16 @@ extends:
         break: true # always break the build on policheck issues. You can disable it by setting to 'false'
       # suppression:
       #   suppressionFile: $(Build.SourcesDirectory)\.gdn\global.gdnsuppress
-    
     ev2ManagedSdpRolloutConfig:
       rolloutType: normal # SDP rollout type, values: normal, emergency, globaloutage
       overrideManagedValidationDuration: false # Override standard SDP duration?
       managedValidationOverrideDurationInHours: 0 # Override standard SDP duration (in hours). Set it to 0 if you want to use default values and not overriding them
       icmIncidentId: 0 # For emergency rollouts it is optional.Set it to 0 if you are not specififying an incident ID for normal/emergency rollouts
-    
     stages:
       - template: ../templates/Ev2Build.yaml
         parameters:
           buildPath: ${{ variables.buildPath }}
-          ev2Config: ${{ variables.ev2Config }}
-      
+          ev2Config: ${{ variables.ev2Config }}     
       - template: ../templates/Test.yaml
         parameters:
           buildPath: ${{ variables.buildPath }}

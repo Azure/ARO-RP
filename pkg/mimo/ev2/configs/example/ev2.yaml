@@ -9,7 +9,6 @@ resourceGroups:
     template: templates/mimo.msi.outputs.bicep
     parameters: parameters/mimo.msi.bicepparam
     deploymentLevel: ResourceGroup
-  
   - name: shellExample
     action: Shell
     dependsOn:
