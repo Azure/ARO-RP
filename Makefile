@@ -91,7 +91,7 @@ clean:
 
 .PHONY: client
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
