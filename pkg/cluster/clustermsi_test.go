@@ -41,6 +41,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 	placeholderString := "placeholder"
 	placeholderTime := time.Now().Format(time.RFC3339)
+	placeholderExpiredTime := time.Now().Add(-1 * time.Hour)
+	placeholderValidTime := time.Now().Add(1 * time.Hour)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
@@ -119,7 +121,46 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			wantErr: "error in msi",
 		},
 		{
-			name: "success - exit early because there is already a certificate in the key vault",
+			name: "success - refresh expired certificate in keyvault",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.ManagedServiceIdentity{
+						IdentityURL: middleware.MockIdentityURL,
+						TenantID:    mockGuid,
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
+								ClientID:    mockGuid,
+								PrincipalID: mockGuid,
+							},
+						},
+					},
+				},
+			},
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
+				if err != nil {
+					panic(err)
+				}
+
+				credentialsObjectString := string(credentialsObjectBuffer)
+				getSecretResponse := azsecrets.GetSecretResponse{
+					Secret: azsecrets.Secret{
+						Value: &credentialsObjectString,
+						Attributes: &azsecrets.SecretAttributes{
+							Expires: &placeholderExpiredTime,
+						},
+					},
+				}
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
+			},
+		},
+		{
+			name: "success - don't refresh valid certificate in keyvault",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -145,6 +186,9 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				getSecretResponse := azsecrets.GetSecretResponse{
 					Secret: azsecrets.Secret{
 						Value: &credentialsObjectString,
+						Attributes: &azsecrets.SecretAttributes{
+							Expires: &placeholderValidTime,
+						},
 					},
 				}
 				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)

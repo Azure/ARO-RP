@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
@@ -24,13 +25,18 @@ var (
 
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
 // backing certificate (if needed) and store the certificate in the cluster MSI key
-// vault. It does not concern itself with whether an existing certificate is valid
-// or not; that can be left to the certificate refresher component.
+// vault. If the certificate stored in keyvault is invalid, it will request and persist
+// a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
-	if _, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
-		return nil
+	if existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
+		if existingMsiCertificate.Secret.Attributes != nil {
+			expiry := existingMsiCertificate.Secret.Attributes.Expires
+			if time.Now().Before(*expiry) {
+				return nil
+			}
+		}
 	} else if !azureerrors.IsNotFoundError(err) {
 		return err
 	}
