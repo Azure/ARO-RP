@@ -54,7 +54,7 @@ extends:
       - template: ../templates/Ev2Build.yaml
         parameters:
           buildPath: ${{ variables.buildPath }}
-          ev2Config: ${{ variables.ev2Config }}     
+          ev2Config: ${{ variables.ev2Config }}   
       - template: ../templates/Test.yaml
         parameters:
           buildPath: ${{ variables.buildPath }}
