@@ -142,7 +142,9 @@ func checkOperation(op azcertificates.CertificateOperation, log *logrus.Entry) (
 			log.Warningf("certificateOperation FailedCanRetry %s: Error %v", *op.Status, op.Error)
 			return false, nil
 		}
+		// in case the failure is not retriable, then fallthrough and continue the switch to next (default) case
 		fallthrough
+		// no code after fallthrough
 
 	default:
 		if op.StatusDetails != nil {
