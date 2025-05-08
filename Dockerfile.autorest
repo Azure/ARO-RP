@@ -1,0 +1,22 @@
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/nodejs-18
+
+LABEL MAINTAINER="aos-azure"
+
+ARG AUTOREST_VERSION
+
+USER 0
+
+# Autorest prerequisites
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
+    dnf update -y && \
+    dnf install -y libunwind-devel libicu && \
+    dnf install -y python3-pip && \
+    dnf clean all --enablerepo=\*
+
+# Autorest
+RUN npm install -g autorest@${AUTOREST_VERSION} && \
+    autorest --reset && \
+    npm cache clean -f
+
+ENTRYPOINT ["autorest"]

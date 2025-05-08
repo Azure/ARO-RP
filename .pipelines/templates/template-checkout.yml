@@ -1,0 +1,6 @@
+steps:
+  - checkout: self
+    path: go/src/github.com/Azure/ARO-RP
+    fetchDepth: 1
+    fetchTags: false
+    displayName: ⚙️ Check-out

@@ -1,0 +1,25 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: deny-master-toleration-taint
+tests:
+- name: deny-master-toleration-taint-pods-in-nonprivileged-namespaces
+  template: ../../gktemplates/aro-deny-master-toleration-taints.yaml
+  constraint: ../../gkconstraints-test/aro-master-toleration-pod-deny.yaml
+  cases:
+  - name: create-not-allowed-in-nonprivileged-namespaces
+    object: gator-test/not_allowed_create_pod_in_non_privileged_ns.yaml
+    assertions:
+    - violations: yes
+  - name: create-allowed-in-privileged-namespaces
+    object: gator-test/allowed_create_pod_in_privileged_ns.yaml
+    assertions:
+    - violations: no
+  - name: update-not-allowed-in-nonprivileged-namespaces
+    object: gator-test/not_allowed_update_pod_in_non_privileged_ns.yaml
+    assertions:
+    - violations: yes
+  - name: deletion-allowed-in-nonprivileged-namespaces
+    object: gator-test/allowed_delete_pod_in_non_privileged_ns.yaml
+    assertions:
+    - violations: no

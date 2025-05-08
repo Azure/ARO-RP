@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: aro-operator-master
+    version: "{{ .Version }}"
+  name: aro-operator-master
+  namespace: openshift-azure-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aro-operator-master
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: aro-operator-master
+    spec:
+      containers:
+      - command:
+        - aro
+        args:
+        - operator
+        - master
+        image: "{{ .Image }}"
+        name: aro-operator
+        env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-cloud-credentials
+              key: azure_client_id
+        {{ if .UsesWorkloadIdentity }}
+        - name: AZURE_FEDERATED_TOKEN_FILE
+          value: "{{ .FederatedTokenFilePath }}"
+        {{ else }}
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-cloud-credentials
+              key: azure_client_secret
+        {{ end }}
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-cloud-credentials
+              key: azure_tenant_id
+        {{ if .IsLocalDevelopment}}
+        - name: "RP_MODE"
+          value: "development"
+        {{ end }}
+        ports:
+        - containerPort: 8080
+          name: http
+        livenessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 8080
+        {{ if .SupportsPodSecurityAdmission }} 
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true  
+        {{ end }}            
+        {{ if .UsesWorkloadIdentity }}
+        volumeMounts:
+        - mountPath: "{{ .TokenVolumeMountPath }}"
+          name: bound-sa-token
+          readOnly: true
+        {{ end }}
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      {{ if .SupportsPodSecurityAdmission }}
+      securityContext:
+        runAsNonRoot: true        
+        seccompProfile: 
+          type: RuntimeDefault
+      {{ end }}         
+      serviceAccountName: aro-operator-master
+      serviceAccount: aro-operator-master
+      priorityClassName: system-cluster-critical
+      tolerations:
+      - effect: NoExecute
+        operator: Exists
+      - effect: NoSchedule
+        operator: Exists
+      {{ if .UsesWorkloadIdentity }}
+      volumes:
+      - name: bound-sa-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: openshift
+              expirationSeconds: 3600
+              path: token
+      {{ end }}

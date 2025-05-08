@@ -1,0 +1,153 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "console.openshift.io/v1",
+    "resources": [
+        {
+            "name": "consoleclidownloads",
+            "singularName": "consoleclidownload",
+            "namespaced": false,
+            "kind": "ConsoleCLIDownload",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "hTsPKGVbEc0="
+        },
+        {
+            "name": "consoleclidownloads/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ConsoleCLIDownload",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "consoleexternalloglinks",
+            "singularName": "consoleexternalloglink",
+            "namespaced": false,
+            "kind": "ConsoleExternalLogLink",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "JNNWRK5+6qk="
+        },
+        {
+            "name": "consoleexternalloglinks/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ConsoleExternalLogLink",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "consolelinks",
+            "singularName": "consolelink",
+            "namespaced": false,
+            "kind": "ConsoleLink",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "QMa1yrz2A1Q="
+        },
+        {
+            "name": "consolelinks/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ConsoleLink",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "consolenotifications",
+            "singularName": "consolenotification",
+            "namespaced": false,
+            "kind": "ConsoleNotification",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "fjLb6xIjTp8="
+        },
+        {
+            "name": "consolenotifications/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ConsoleNotification",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "consolequickstarts",
+            "singularName": "consolequickstart",
+            "namespaced": false,
+            "kind": "ConsoleQuickStart",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "jjkxMYsy4hY="
+        },
+        {
+            "name": "consoleyamlsamples",
+            "singularName": "consoleyamlsample",
+            "namespaced": false,
+            "kind": "ConsoleYAMLSample",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "/0X4p1qvFq0="
+        }
+    ]
+}

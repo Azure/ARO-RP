@@ -1,0 +1,83 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    gatekeeper.sh/system: "yes"
+  name: gatekeeper-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: gatekeeper-webhook-service
+      namespace: {{.Namespace}}
+      path: /v1/admit
+  failurePolicy: {{.ValidatingWebhookFailurePolicy}}
+  matchPolicy: Exact
+  name: validation.gatekeeper.sh
+  namespaceSelector:
+    matchExpressions:
+    - key: admission.gatekeeper.sh/ignore
+      operator: DoesNotExist
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - {{.Namespace}}
+  rules:
+  - apiGroups:
+    - '*'
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - '*'
+    - pods/ephemeralcontainers
+    - pods/exec
+    - pods/log
+    - pods/eviction
+    - pods/portforward
+    - pods/proxy
+    - pods/attach
+    - pods/binding
+    - deployments/scale
+    - replicasets/scale
+    - statefulsets/scale
+    - replicationcontrollers/scale
+    - services/proxy
+    - nodes/proxy
+    - services/status
+  sideEffects: None
+  timeoutSeconds: {{.ValidatingWebhookTimeout}}
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: gatekeeper-webhook-service
+      namespace: {{.Namespace}}
+      path: /v1/admitlabel
+  failurePolicy: {{.ValidatingWebhookFailurePolicy}}
+  matchPolicy: Exact
+  name: check-ignore-label.gatekeeper.sh
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - {{.Namespace}}
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - namespaces
+  sideEffects: None
+  timeoutSeconds: {{.ValidatingWebhookTimeout}}

@@ -1,0 +1,35 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "cloud.network.openshift.io/v1",
+    "resources": [
+        {
+            "name": "cloudprivateipconfigs",
+            "singularName": "cloudprivateipconfig",
+            "namespaced": false,
+            "kind": "CloudPrivateIPConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "3V8Fv1Bu3Jo="
+        },
+        {
+            "name": "cloudprivateipconfigs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "CloudPrivateIPConfig",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

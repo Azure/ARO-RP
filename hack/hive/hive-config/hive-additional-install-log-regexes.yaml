@@ -1,0 +1,24 @@
+apiVersion: v1
+data:
+  regexes: |
+    - installFailingMessage: Deployment failed due to RequestDisallowedByPolicy. Please
+        see details for more information.
+      installFailingReason: AzureRequestDisallowedByPolicy
+      name: AzureRequestDisallowedByPolicy
+      searchRegexStrings:
+      - '"code":\w?"InvalidTemplateDeployment".*"code":\w?"RequestDisallowedByPolicy"'
+    - installFailingMessage: Deployment failed. Please see details for more information.
+      installFailingReason: AzureInvalidTemplateDeployment
+      name: AzureInvalidTemplateDeployment
+      searchRegexStrings:
+      - '"code":\w?"InvalidTemplateDeployment"'
+    - installFailingMessage: Deployment failed. Please see details for more information.
+      installFailingReason: AzureZonalAllocationFailed
+      name: AzureZonalAllocationFailed
+      searchRegexStrings:
+      - '"code\W*":\W*"ZonalAllocationFailed\W*"'
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: additional-install-log-regexes
+  namespace: hive

@@ -1,0 +1,63 @@
+name: "CodeQL"
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+  schedule:
+    - cron: '30 0 * * 6'
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+env:
+  GOFLAGS: -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ${{ matrix.runs-on }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: 'go'
+            runs-on: ['self-hosted', '1ES.Pool=ubuntu2204']
+          - language: 'javascript'
+            runs-on: ['ubuntu-latest']
+          - language: 'python'
+            runs-on: ['ubuntu-latest']
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      if: matrix.language == 'go'
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - name: Go Mod Download
+      run: |
+        go mod download
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        config-file: ./.github/codeql/codeql-config-${{matrix.language}}.yml
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"

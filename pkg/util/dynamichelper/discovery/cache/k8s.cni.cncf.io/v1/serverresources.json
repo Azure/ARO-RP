@@ -1,0 +1,27 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "k8s.cni.cncf.io/v1",
+    "resources": [
+        {
+            "name": "network-attachment-definitions",
+            "singularName": "network-attachment-definition",
+            "namespaced": true,
+            "kind": "NetworkAttachmentDefinition",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "net-attach-def"
+            ],
+            "storageVersionHash": "BNF/SJ3/If4="
+        }
+    ]
+}

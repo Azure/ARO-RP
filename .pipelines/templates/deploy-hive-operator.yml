@@ -1,0 +1,40 @@
+# Azure DevOps Pipeline for deploying Hive Operator
+trigger: none
+pr: none
+
+variables:
+  - template: vars.yml
+
+stages:
+  - stage: Deploy_Hive_Operator
+    jobs:
+      - job: Deploy_Hive_Operator
+        pool:
+          name: 1es-aro-ci-pool
+
+        steps:
+          # Checkout the code
+          - template: ./templates/template-checkout.yml
+
+          # AZ CLI Login
+          - template: ./templates/template-az-cli-login.yml
+            parameters:
+              azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+
+          # Deploy Hive Operator
+          - bash: |
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
+              docker compose -f docker-compose.yml up -d vpn
+              while [ "$(docker inspect --format '{{.State.Health.Status}}' vpn)" != "healthy" ]; do
+                echo "Waiting for VPN to be healthy..."
+                sleep 10
+              done
+              docker ps
+              kubectl get nodes
+              ./hack/hive/hive-dev-install.sh
+            displayName: Deploy Hive Operator
+
+          # AZ CLI Logout
+          - template: ./templates/template-az-cli-logout.yml

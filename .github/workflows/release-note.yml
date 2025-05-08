@@ -1,0 +1,33 @@
+name: release-note
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+        fetch-depth: 0
+        # ref and fetch-depth: 0 are required to retrieve tag annotations.
+        # (see https://github.com/actions/runner-images/issues/1717)
+
+    - name: Generate Changelog
+      run: ./.github/generate_release_note.sh ${{ github.workspace }}/CHANGELOG.txt
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        body_path: ${{ github.workspace }}/CHANGELOG.txt
+        name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false

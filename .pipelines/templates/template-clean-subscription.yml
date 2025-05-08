@@ -1,0 +1,43 @@
+parameters:
+  dryRun: ""
+  purgeTTL: ""
+  purgeCreatedTag: ""
+  resourceGroupDeletePrefixes: ""
+  subscriptionCredentialsJSON: ""
+  subscriptionId: ""
+
+steps:
+  - script: |
+      echo "##vso[task.prependpath]$(go env GOPATH)/bin"
+    displayName: Add GOBIN to path
+    target: golang
+  - script: |
+      set -e
+      export GOCACHE=/tmp
+
+      # build gojq via bingo
+      source .bingo/variables.env && make -f .bingo/Variables.mk ${GOJQ}
+
+      go build ./hack/clean
+    displayName: Build tools
+    target: golang
+  - script: |
+      set -e
+
+      source .bingo/variables.env
+
+      trap 'rm -f spn.json' EXIT
+      base64 -d >spn.json <<<${{ parameters.subscriptionCredentialsJSON }}
+      export AZURE_CLIENT_ID=$(${GOJQ} -r .clientId <spn.json)
+      export AZURE_CLIENT_SECRET=$(${GOJQ} -r .clientSecret <spn.json)
+      export AZURE_TENANT_ID=$(${GOJQ} -r .tenantId <spn.json)
+
+      export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
+
+      export AZURE_PURGE_TTL="${{ parameters.purgeTTL }}"
+      export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
+      export AZURE_PURGE_RESOURCEGROUP_PREFIXES="${{ parameters.resourceGroupDeletePrefixes }}"
+
+      ./clean -dryRun=${{ parameters.dryRun }}
+    displayName: 🧹 Clean subscription
+    target: golang

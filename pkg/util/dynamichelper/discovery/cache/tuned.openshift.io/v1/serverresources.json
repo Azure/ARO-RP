@@ -1,0 +1,41 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "tuned.openshift.io/v1",
+    "resources": [
+        {
+            "name": "profiles",
+            "singularName": "profile",
+            "namespaced": true,
+            "kind": "Profile",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "Ymd5utw2PCg="
+        },
+        {
+            "name": "tuneds",
+            "singularName": "tuned",
+            "namespaced": true,
+            "kind": "Tuned",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "UFSFmIApyE0="
+        }
+    ]
+}

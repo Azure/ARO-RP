@@ -1,0 +1,19 @@
+# if you include this template, also include template-az-cli-logout.yml to
+# remove the credentials from the CI VM.
+parameters:
+  azureDevOpsJSONSPN: ""
+steps:
+  - script: |
+      set -e
+
+      trap 'rm -f devops-spn.json' EXIT
+      echo "${{ parameters.azureDevOpsJSONSPN }}" | base64 -d > devops-spn.json
+
+      az login --service-principal \
+        -u "$(jq -r .clientId <devops-spn.json)" \
+        -p "$(jq -r .clientSecret <devops-spn.json)" \
+        -t "$(jq -r .tenantId <devops-spn.json)" --allow-no-subscriptions >/dev/null
+
+      # Cleanup
+      rm -f devops-spn.json
+    displayName: 🗝 AZ Login

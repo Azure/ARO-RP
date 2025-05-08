@@ -1,0 +1,52 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "network.operator.openshift.io/v1",
+    "resources": [
+        {
+            "name": "egressrouters",
+            "singularName": "egressrouter",
+            "namespaced": true,
+            "kind": "EgressRouter",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "whcNhkpRCxc="
+        },
+        {
+            "name": "egressrouters/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "EgressRouter",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "operatorpkis",
+            "singularName": "operatorpki",
+            "namespaced": true,
+            "kind": "OperatorPKI",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "05e+cURVIcw="
+        }
+    ]
+}

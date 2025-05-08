@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: managed-upgrade-operator
+  namespace: openshift-managed-upgrade-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: managed-upgrade-operator
+  template:
+    metadata:
+      labels:
+        name: managed-upgrade-operator
+    spec:
+      serviceAccountName: managed-upgrade-operator
+      containers:
+        - name: managed-upgrade-operator
+          image: "{{ .Pullspec }}"
+          command:
+          - managed-upgrade-operator
+          imagePullPolicy: Always

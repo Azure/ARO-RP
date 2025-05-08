@@ -1,0 +1,29 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: deny-cluster-machineconfig-modification
+tests:
+- name: deny-cluster-machineconfig-modification-tests
+  template: ../../gktemplates/aro-deny-machine-config.yaml
+  constraint: ../../gkconstraints-test/aro-machine-config-deny.yaml
+  cases:
+  - name: not-allow-create-cluster-machine-config
+    object: gator-test/not_allow_create_cluster_machine_config.yaml
+    assertions:
+    - violations: yes
+  - name: not-allow-delete-cluster-machine-config
+    object: gator-test/not_allow_delete_cluster_machine_config.yaml
+    assertions:
+    - violations: yes
+  - name: not-allow-update-cluster-machine-config
+    object: gator-test/not_allow_update_cluster_machine_config.yaml
+    assertions:
+    - violations: yes
+  - name: allow-create-custom-machine-config
+    object: gator-test/allow_create_custom_machine_config.yaml
+    assertions:
+    - violations: no
+  - name: allow-delete-custom-machine-config
+    object: gator-test/allow_delete_custom_machine_config.yaml
+    assertions:
+    - violations: no

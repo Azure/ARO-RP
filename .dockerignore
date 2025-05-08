@@ -1,0 +1,17 @@
+__pycache__
+gomock_reflect_*
+/.vscode
+/*.kubeconfig
+/dev-config.yaml
+/id_rsa
+/pyenv*
+/mdm_statsd.socket
+/uts.txt
+/cover.out
+/coverage.*
+/report.xml
+**/*.swp
+.idea*
+cmd/aro/__debug_bin
+python/az/aro/build
+python/az/aro/dist

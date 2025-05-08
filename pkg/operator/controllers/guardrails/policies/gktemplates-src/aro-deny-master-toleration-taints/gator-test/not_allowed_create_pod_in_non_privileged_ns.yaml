@@ -1,0 +1,46 @@
+kind: AdmissionReview
+apiVersion: admission.k8s.io/v1
+request:
+  uid: 46cf42b9-c413-4e04-ab23-777dac840bf5
+  kind:
+    group: ''
+    version: v1
+    kind: Pod
+  resource:
+    group: ''
+    version: v1
+    resource: pods
+  requestKind:
+    group: ''
+    version: v1
+    kind: Pod
+  requestResource:
+    group: ''
+    version: v1
+    resource: pods
+  name: demo-pod
+  operation: CREATE
+  userInfo:
+    username: kube-review
+    uid: eede9e7b-1854-4635-b5c0-029598ec6865
+  object:
+    kind: Pod
+    apiVersion: v1
+    metadata:
+      name: demo-pod
+      namespace: customer-namespace
+      creationTimestamp:
+    spec:
+      containers:
+      - name: demo-container
+        image: nginx
+        resources: {}
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane=
+        operator: Exists
+        effect: NoSchedule
+    status: {}
+  oldObject:
+  options:
+    kind: CreateOptions
+    apiVersion: meta.k8s.io/v1

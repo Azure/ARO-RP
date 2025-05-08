@@ -1,0 +1,38 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "upgrade.managed.openshift.io/v1alpha1",
+    "resources": [
+        {
+            "name": "upgradeconfigs",
+            "singularName": "upgradeconfig",
+            "namespaced": true,
+            "kind": "UpgradeConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "upgrade"
+            ],
+            "storageVersionHash": "W9ykISSHSUw="
+        },
+        {
+            "name": "upgradeconfigs/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "UpgradeConfig",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

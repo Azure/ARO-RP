@@ -1,0 +1,194 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "acrResourceId": {
+            "value": ""
+        },
+        "adminApiCaBundle": {
+            "value": ""
+        },
+        "adminApiClientCertCommonName": {
+            "value": ""
+        },
+        "armApiCaBundle": {
+            "value": ""
+        },
+        "armApiClientCertCommonName": {
+            "value": ""
+        },
+        "armClientId": {
+            "value": ""
+        },
+        "azureCloudName": {
+            "value": ""
+        },
+        "azureSecPackQualysUrl": {
+            "value": ""
+        },
+        "azureSecPackVSATenantId": {
+            "value": ""
+        },
+        "clusterDefaultInstallerPullspec": {
+            "value": ""
+        },
+        "clusterMdmAccount": {
+            "value": ""
+        },
+        "clusterMdsdAccount": {
+            "value": ""
+        },
+        "clusterMdsdConfigVersion": {
+            "value": ""
+        },
+        "clusterMdsdNamespace": {
+            "value": ""
+        },
+        "clusterParentDomainName": {
+            "value": ""
+        },
+        "clustersAdoptByHive": {
+            "value": ""
+        },
+        "clustersInstallViaHive": {
+            "value": ""
+        },
+        "cosmosDB": {
+            "value": {
+                "gatewayProvisionedThroughput": 400,
+                "portalProvisionedThroughput": 400,
+                "standardProvisionedThroughput": 1000
+            }
+        },
+        "databaseAccountName": {
+            "value": ""
+        },
+        "disableCosmosDBFirewall": {
+            "value": false
+        },
+        "fluentbitImage": {
+            "value": ""
+        },
+        "fpClientId": {
+            "value": ""
+        },
+        "fpServicePrincipalId": {
+            "value": ""
+        },
+        "fpTenantId": {
+            "value": ""
+        },
+        "gatewayDomains": {
+            "value": ""
+        },
+        "gatewayResourceGroupName": {
+            "value": ""
+        },
+        "gatewayServicePrincipalId": {
+            "value": ""
+        },
+        "globalDevopsServicePrincipalId": {
+            "value": ""
+        },
+        "ipRules": {
+            "value": ""
+        },
+        "keyvaultDNSSuffix": {
+            "value": ""
+        },
+        "keyvaultPrefix": {
+            "value": ""
+        },
+        "mdmFrontendUrl": {
+            "value": ""
+        },
+        "mdsdEnvironment": {
+            "value": ""
+        },
+        "miseValidAppIDs": {
+            "value": ""
+        },
+        "miseValidAudiences": {
+            "value": ""
+        },
+        "msiRpEndpoint": {
+            "value": ""
+        },
+        "nonZonalRegions": {
+            "value": [
+                "eastasia",
+                "centralindia",
+                "centraluseuap",
+                "koreacentral",
+                "southcentralus",
+                "canadacentral",
+                "germanywestcentral",
+                "norwayeast",
+                "switzerlandnorth",
+                "brazilsouth",
+                "southafricanorth",
+                "northcentralus",
+                "uaenorth",
+                "westus",
+                "japanwest"
+            ]
+        },
+        "oidcStorageAccountName": {
+            "value": ""
+        },
+        "otelAuditQueueSize": {
+            "value": ""
+        },
+        "portalAccessGroupIds": {
+            "value": ""
+        },
+        "portalClientId": {
+            "value": ""
+        },
+        "portalElevatedGroupIds": {
+            "value": ""
+        },
+        "rpFeatures": {
+            "value": ""
+        },
+        "rpImage": {
+            "value": ""
+        },
+        "rpMdmAccount": {
+            "value": ""
+        },
+        "rpMdsdAccount": {
+            "value": ""
+        },
+        "rpMdsdConfigVersion": {
+            "value": ""
+        },
+        "rpMdsdNamespace": {
+            "value": ""
+        },
+        "rpParentDomainName": {
+            "value": ""
+        },
+        "rpServicePrincipalId": {
+            "value": ""
+        },
+        "rpVmssCapacity": {
+            "value": 3
+        },
+        "sshPublicKey": {
+            "value": ""
+        },
+        "subscriptionResourceGroupName": {
+            "value": ""
+        },
+        "vmSize": {
+            "value": "Standard_D2s_v3"
+        },
+        "vmssCleanupEnabled": {
+            "value": true
+        },
+        "vmssName": {
+            "value": ""
+        }
+    }
+}

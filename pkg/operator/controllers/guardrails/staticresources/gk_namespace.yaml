@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    # admission.gatekeeper.sh/ignore: no-self-managing # remove this line to allow policy to be enforced in the ns
+    control-plane: controller-manager
+    gatekeeper.sh/system: "yes"
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.24
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    openshift.io/cluster-monitoring: "true"
+  annotations:
+    openshift.io/node-selector: ""
+  name: {{.Namespace}}

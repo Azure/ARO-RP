@@ -1,0 +1,165 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterParentDomainName": {
+            "type": "string"
+        },
+        "databaseAccountName": {
+            "type": "string"
+        },
+        "fpServicePrincipalId": {
+            "type": "string"
+        },
+        "rpServicePrincipalId": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "properties": {},
+            "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]",
+            "type": "Microsoft.Network/dnsZones",
+            "location": "global",
+            "apiVersion": "2018-05-01"
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
+                }
+            },
+            "name": "rp-vnet/peering-rp-pe-vnet-001",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+                }
+            },
+            "name": "rp-pe-vnet-001/peering-rp-vnet",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "kind": "GlobalDocumentDB",
+            "location": "[resourceGroup().location]",
+            "name": "[parameters('databaseAccountName')]",
+            "properties": {
+                "backupPolicy": {
+                    "periodicModeProperties": {
+                        "backupIntervalInMinutes": 240,
+                        "backupRetentionIntervalInHours": 720
+                    },
+                    "type": "Periodic"
+                },
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Strong"
+                },
+                "databaseAccountOfferType": "Standard",
+                "disableLocalAuth": true,
+                "locations": [
+                    {
+                        "locationName": "[resourceGroup().location]"
+                    }
+                ],
+                "minimalTlsVersion": "Tls12"
+            },
+            "tags": {
+                "defaultExperience": "Core (SQL)"
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts"
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'DocumentDB Data Contributor'))]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName'))]",
+                "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '00000000-0000-0000-0000-000000000002')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('globalDevopsServicePrincipalId'), 'DocumentDB Data Contributor'))]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName'))]",
+                "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '00000000-0000-0000-0000-000000000002')]",
+                "principalId": "[parameters('globalDevopsServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "name": "[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "properties": {
+                "scope": "[resourceGroup().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        },
+        {
+            "name": "[guid(resourceGroup().id, 'FP / Network Contributor')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "properties": {
+                "scope": "[resourceGroup().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))]",
+            "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')))]"
+            ]
+        }
+    ]
+}

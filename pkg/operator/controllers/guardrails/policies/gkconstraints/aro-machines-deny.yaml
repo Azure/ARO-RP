@@ -1,0 +1,15 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyLabels
+metadata:
+  name: aro-machines-deny
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    namespaces: ["openshift-machine-api"]
+    kinds:
+      - apiGroups: ["machine.openshift.io"]
+        kinds: ["Machine"]
+  parameters:
+    labels:
+      - key: "machine.openshift.io/cluster-api-machine-role"
+        denyRegex: "master"

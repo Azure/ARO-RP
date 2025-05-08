@@ -1,0 +1,205 @@
+# These environment variables are used by ARO components. Supplying unused
+# environment variables to components is harmless, so keep the reasonably common
+# ones here to reduce duplication.
+x-aro-common-env:
+  environment: &common-env
+    ARO_ADOPT_BY_HIVE: "true"
+    ARO_IMAGE:
+    ARO_INSTALL_VIA_HIVE: "true"
+    AZURE_ARM_CLIENT_ID:
+    AZURE_CLIENT_ID:
+    AZURE_CLIENT_SECRET:
+    AZURE_ENVIRONMENT:
+    AZURE_FP_CLIENT_ID:
+    AZURE_FP_SERVICE_PRINCIPAL_ID:
+    AZURE_PORTAL_ACCESS_GROUP_IDS:
+    AZURE_PORTAL_CLIENT_ID:
+    AZURE_PORTAL_ELEVATED_GROUP_IDS:
+    AZURE_RP_CLIENT_ID:
+    AZURE_RP_CLIENT_SECRET:
+    AZURE_SERVICE_PRINCIPAL_ID:
+    AZURE_SUBSCRIPTION_ID:
+    AZURE_TENANT_ID:
+    CI:
+    DATABASE_ACCOUNT_NAME:
+    DATABASE_NAME:
+    DOMAIN_NAME:
+    KEYVAULT_PREFIX:
+    LOCATION:
+    PARENT_DOMAIN_NAME:
+    PARENT_DOMAIN_RESOURCEGROUP:
+    PROXY_HOSTNAME:
+    PULL_SECRET:
+    RESOURCEGROUP:
+    RP_MODE:
+    STORAGE_ACCOUNT_DOMAIN:
+    USER_PULL_SECRET:
+
+services:
+  vpn:
+    image: ${LOCAL_VPN_IMAGE}:${VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile.vpn
+    container_name: vpn
+    privileged: true
+    network_mode: host
+    volumes:
+      - ${PWD}/secrets:/secrets:z
+    devices:
+      - /dev/net/tun # required to modify VPN on host
+    entrypoint: "openvpn"
+    command: ["/secrets/vpn-eastus.ovpn"]
+    ports:
+      - "443:443"
+    healthcheck:
+      test: ["CMD", "pidof", "openvpn"]
+      start_period: 20s
+      interval: 20s
+      timeout: 3s
+      retries: 3
+
+  selenium:
+    image: selenium/standalone-edge:4.10.0-20230607
+    container_name: selenium-container
+    network_mode: host
+    ports:
+      - "4444:4444"
+    healthcheck:
+      test: ["CMD", "curl", "-sS", "-f", "http://localhost:4444"]
+      interval: 20s
+      timeout: 20s
+      retries: 3
+
+  rp:
+    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION} # Using localhost/aro for local image
+    build:
+      context: .
+      dockerfile: Dockerfile.ci-rp
+      args:
+        - REGISTRY=${REGISTRY}
+        - ARO_VERSION=${VERSION}
+      ulimits:
+        nofile:
+          soft: 4096
+          hard: 4096
+    container_name: aro-rp
+    depends_on:
+      vpn:
+        condition: service_healthy
+    command: ["rp"]
+    secrets:
+      - source: proxy-client-key
+        target: /app/secrets/proxy-client.key
+      - source: proxy-client-crt
+        target: /app/secrets/proxy-client.crt
+      - source: proxy-crt
+        target: /app/secrets/proxy.crt
+      - source: hive-kubeconfig
+        target: /app/secrets/aks.kubeconfig
+    environment:
+      <<: *common-env
+      ADMIN_OBJECT_ID:
+      ARO_CHECKOUT_PATH: /app
+      AZURE_GATEWAY_CLIENT_ID:
+      AZURE_GATEWAY_CLIENT_SECRET:
+      AZURE_GATEWAY_SERVICE_PRINCIPAL_ID:
+      HIVE_KUBE_CONFIG_PATH: /app/secrets/aks.kubeconfig
+      KUBECONFIG: /app/secrets/aks.kubeconfig
+      MOCK_MSI_CERT:
+      MOCK_MSI_CLIENT_ID:
+      MOCK_MSI_OBJECT_ID:
+      MOCK_MSI_TENANT_ID:
+      OIDC_STORAGE_ACCOUNT_NAME:
+    ports:
+      - "8443:8443"
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8443/healthz/ready"]
+      interval: 90s
+      timeout: 30s
+      retries: 3
+    restart: on-failure:3
+
+  portal:
+    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+    container_name: aro-portal
+    network_mode: host
+    depends_on:
+      rp:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      NO_NPM: 1
+    ports:
+      - "8444:8444"
+      - "2222:2222"
+    secrets:
+      - source: proxy-client-key
+        target: /app/secrets/proxy-client.key
+      - source: proxy-client-crt
+        target: /app/secrets/proxy-client.crt
+      - source: proxy-crt
+        target: /app/secrets/proxy.crt
+    cap_drop:
+      - NET_RAW
+    command: ["portal"]
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8444/healthz/ready"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  e2e:
+    image: ${LOCAL_E2E_IMAGE}:${VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile.aro-e2e
+      args:
+        - REGISTRY=${REGISTRY}
+      ulimits:
+        nofile:
+          soft: 4096
+          hard: 4096
+    container_name: run-e2e
+    network_mode: host
+    depends_on:
+      vpn:
+        condition: service_healthy
+      rp:
+        condition: service_healthy
+      portal:
+        condition: service_healthy
+      selenium:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      ARO_SELENIUM_HOSTNAME:
+      CLUSTER:
+      E2E_DELETE_CLUSTER:
+      E2E_LABEL:
+      OS_CLUSTER_VERSION:
+      MASTER_VM_SIZE:
+      WORKER_VM_SIZE:
+      PORTAL_HOSTNAME: "https://localhost:8444"
+      RP_BASE_URL: "https://localhost:8443"
+    entrypoint: "/usr/local/bin/e2e.test"
+    command:
+      [
+        "-test.v",
+        "--ginkgo.v",
+        "--ginkgo.timeout=180m",
+        "--ginkgo.flake-attempts=2",
+        "--ginkgo.junit-report=/tmp/e2e-report.xml",
+        "--ginkgo.label-filter=${E2E_LABEL}",
+      ]
+
+secrets:
+  proxy-client-key:
+    file: ./secrets/proxy-client.key
+  proxy-client-crt:
+    file: ./secrets/proxy-client.crt
+  proxy-crt:
+    file: ./secrets/proxy.crt
+  hive-kubeconfig:
+    file: ./secrets/aks.kubeconfig

@@ -1,0 +1,88 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "armServicePrincipalId": {
+            "type": "string"
+        },
+        "fpServicePrincipalId": {
+            "type": "string"
+        },
+        "fpRoleDefinitionId": {
+            "type": "string",
+            "defaultValue": "79ed474a-7267-4ff8-b226-96140be062a2"
+        },
+        "devServicePrincipalId":{
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "name": "[parameters('fpRoleDefinitionId')]",
+            "type": "Microsoft.Authorization/roleDefinitions",
+            "properties": {
+                "roleName": "ARO v4 Development First Party Subscription (DEV)",
+                "permissions": [
+                    {
+                        "actions": [
+                            "Microsoft.Resources/subscriptions/resourceGroups/read",
+                            "Microsoft.Resources/subscriptions/resourceGroups/write",
+                            "Microsoft.Authorization/*/action"
+                        ]
+                    }
+                ],
+                "assignableScopes": [
+                    "[subscription().id]"
+                ]
+            },
+            "apiVersion": "2018-01-01-preview"
+        },
+        {
+            "name": "[guid(subscription().id, 'FP / ARO v4 FP Subscription')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "dependsOn": [
+                "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('fpRoleDefinitionId'))]"
+            ],
+            "properties": {
+                "scope": "[subscription().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('fpRoleDefinitionId'))]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        },
+        {
+            "name": "[guid(subscription().id, 'ARM / User Access Administrator')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "properties": {
+                "scope": "[subscription().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '18d7d88d-d35e-4fb5-a5c3-7773c20a72d9')]",
+                "principalId": "[parameters('armServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        },
+        {
+            "name": "[guid(subscription().id, 'Dev / Contributor')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "properties": {
+                "scope": "[subscription().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[parameters('devServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        },
+        {
+            "name": "[guid(subscription().id, 'Dev / User Access Administrator')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "properties": {
+                "scope": "[subscription().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '18d7d88d-d35e-4fb5-a5c3-7773c20a72d9')]",
+                "principalId": "[parameters('devServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        }
+    ]
+}

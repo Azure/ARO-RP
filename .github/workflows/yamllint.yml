@@ -1,0 +1,21 @@
+---
+# MegaLinter GitHub Action configuration file
+# More info at https://oxsecurity.github.io/megalinter
+name: mega-linter-yaml
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: mega-linter-yaml
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: yamllint
+      uses: oxsecurity/megalinter/flavors/ci_light@v8

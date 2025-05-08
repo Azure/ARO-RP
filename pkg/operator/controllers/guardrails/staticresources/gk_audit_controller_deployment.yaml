@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: audit-controller
+    gatekeeper.sh/operation: audit
+    gatekeeper.sh/system: "yes"
+  name: gatekeeper-audit
+  namespace: {{.Namespace}}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: audit-controller
+      gatekeeper.sh/operation: audit
+      gatekeeper.sh/system: "yes"
+  template:
+    metadata:
+      labels:
+        control-plane: audit-controller
+        gatekeeper.sh/operation: audit
+        gatekeeper.sh/system: "yes"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: In
+                values:
+                - ""
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - effect: NoExecute
+        key: node-role.kubernetes.io/master
+      automountServiceAccountToken: true
+      containers:
+      - args:
+        - --operation=audit
+        - --operation=status
+        - --operation=mutation-status
+        - --log-denies=true
+        - --logtostderr
+        - --disable-opa-builtin={http.send}
+        - --disable-cert-rotation
+        - --constraint-violations-limit=100
+        - --audit-interval=600
+        - --emit-audit-events=true # flag is in alpha stage and set to false by default
+        - --audit-match-kind-only=true
+        - --audit-from-cache=true
+        command:
+        - /manager
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: CONTAINER_NAME
+          value: manager
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(NAMESPACE),k8s.container.name=$(CONTAINER_NAME)
+        image: {{.Pullspec}}
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9090
+        name: manager
+        ports:
+        - containerPort: 8888
+          name: metrics
+          protocol: TCP
+        - containerPort: 9090
+          name: healthz
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9090
+        resources:
+          limits:
+            memory: {{.AuditLimitMem}}
+          requests:
+            cpu: {{.AuditRequestsCPU}}
+            memory: {{.AuditRequestsMem}}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          # seccompProfile: #intended deviation from upstream
+          #   type: RuntimeDefault
+        volumeMounts:
+        - mountPath: /certs
+          name: cert
+          readOnly: true
+        - mountPath: /tmp/audit
+          name: tmp-volume
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-cluster-critical
+      serviceAccountName: gatekeeper-admin
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: gatekeeper-webhook-server-cert
+      - emptyDir: {}
+        name: tmp-volume

@@ -1,0 +1,725 @@
+{
+    "apiVersion": "machine.openshift.io/v1beta1",
+    "items": [
+        {
+            "apiVersion": "machine.openshift.io/v1beta1",
+            "kind": "MachineSet",
+            "metadata": {
+                "annotations": {
+                    "machine.openshift.io/GPU": "0",
+                    "machine.openshift.io/memoryMb": "16384",
+                    "machine.openshift.io/vCPU": "4"
+                },
+                "creationTimestamp": "2021-03-09T13:48:16Z",
+                "generation": 2,
+                "labels": {
+                    "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                    "machine.openshift.io/cluster-api-machine-role": "infra",
+                    "machine.openshift.io/cluster-api-machine-type": "infra"
+                },
+                "managedFields": [
+                    {
+                        "apiVersion": "machine.openshift.io/v1beta1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:metadata": {
+                                "f:annotations": {
+                                    ".": {},
+                                    "f:machine.openshift.io/GPU": {},
+                                    "f:machine.openshift.io/memoryMb": {},
+                                    "f:machine.openshift.io/vCPU": {}
+                                }
+                            }
+                        },
+                        "manager": "machine-controller-manager",
+                        "operation": "Update",
+                        "time": "2021-03-09T13:48:16Z"
+                    },
+                    {
+                        "apiVersion": "machine.openshift.io/v1beta1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:metadata": {
+                                "f:labels": {
+                                    ".": {},
+                                    "f:machine.openshift.io/cluster-api-cluster": {},
+                                    "f:machine.openshift.io/cluster-api-machine-role": {},
+                                    "f:machine.openshift.io/cluster-api-machine-type": {}
+                                }
+                            },
+                            "f:spec": {
+                                ".": {},
+                                "f:replicas": {},
+                                "f:selector": {
+                                    ".": {},
+                                    "f:matchLabels": {
+                                        ".": {},
+                                        "f:machine.openshift.io/cluster-api-cluster": {},
+                                        "f:machine.openshift.io/cluster-api-machineset": {}
+                                    }
+                                },
+                                "f:template": {
+                                    ".": {},
+                                    "f:metadata": {
+                                        ".": {},
+                                        "f:labels": {
+                                            ".": {},
+                                            "f:machine.openshift.io/cluster-api-cluster": {},
+                                            "f:machine.openshift.io/cluster-api-machine-role": {},
+                                            "f:machine.openshift.io/cluster-api-machine-type": {},
+                                            "f:machine.openshift.io/cluster-api-machineset": {}
+                                        }
+                                    },
+                                    "f:spec": {
+                                        ".": {},
+                                        "f:metadata": {
+                                            ".": {},
+                                            "f:labels": {
+                                                ".": {},
+                                                "f:node-role.kubernetes.io/infra": {}
+                                            }
+                                        },
+                                        "f:providerSpec": {
+                                            ".": {},
+                                            "f:value": {
+                                                ".": {},
+                                                "f:apiVersion": {},
+                                                "f:credentialsSecret": {},
+                                                "f:image": {},
+                                                "f:kind": {},
+                                                "f:location": {},
+                                                "f:metadata": {},
+                                                "f:networkResourceGroup": {},
+                                                "f:osDisk": {},
+                                                "f:publicIP": {},
+                                                "f:publicLoadBalancer": {},
+                                                "f:resourceGroup": {},
+                                                "f:subnet": {},
+                                                "f:userDataSecret": {},
+                                                "f:vmSize": {},
+                                                "f:vnet": {},
+                                                "f:zone": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "manager": "oc",
+                        "operation": "Update",
+                        "time": "2021-03-09T13:48:16Z"
+                    },
+                    {
+                        "apiVersion": "machine.openshift.io/v1beta1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:status": {
+                                ".": {},
+                                "f:observedGeneration": {},
+                                "f:replicas": {}
+                            }
+                        },
+                        "manager": "machineset-controller",
+                        "operation": "Update",
+                        "time": "2021-08-11T15:57:21Z"
+                    }
+                ],
+                "name": "aro-v4-shared-gxqb4-infra-eastus1",
+                "namespace": "openshift-machine-api",
+                "resourceVersion": "189387124",
+                "selfLink": "/apis/machine.openshift.io/v1beta1/namespaces/openshift-machine-api/machinesets/aro-v4-shared-gxqb4-infra-eastus1",
+                "uid": "3b7a3ea9-6709-4091-ac3e-0187fca4f0b3"
+            },
+            "spec": {
+                "replicas": 0,
+                "selector": {
+                    "matchLabels": {
+                        "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                        "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-infra-eastus1"
+                    }
+                },
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                            "machine.openshift.io/cluster-api-machine-role": "infra",
+                            "machine.openshift.io/cluster-api-machine-type": "infra",
+                            "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-infra-eastus1"
+                        }
+                    },
+                    "spec": {
+                        "metadata": {
+                            "labels": {
+                                "node-role.kubernetes.io/infra": ""
+                            }
+                        },
+                        "providerSpec": {
+                            "value": {
+                                "apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+                                "credentialsSecret": {
+                                    "name": "azure-cloud-credentials",
+                                    "namespace": "openshift-machine-api"
+                                },
+                                "image": {
+                                    "offer": "aro4",
+                                    "publisher": "azureopenshift",
+                                    "resourceID": "",
+                                    "sku": "aro_43",
+                                    "version": "43.81.20200311"
+                                },
+                                "kind": "AzureMachineProviderSpec",
+                                "location": "eastus",
+                                "metadata": {
+                                    "creationTimestamp": null
+                                },
+                                "networkResourceGroup": "aro-v4-shared",
+                                "osDisk": {
+                                    "diskSizeGB": 128,
+                                    "managedDisk": {
+                                        "storageAccountType": "Premium_LRS"
+                                    },
+                                    "osType": "Linux"
+                                },
+                                "publicIP": false,
+                                "publicLoadBalancer": "aro-v4-shared-gxqb4",
+                                "resourceGroup": "aro-v4-shared-cluster",
+                                "subnet": "worker-subnet",
+                                "userDataSecret": {
+                                    "name": "worker-user-data"
+                                },
+                                "vmSize": "Standard_D4s_v3",
+                                "vnet": "vnet",
+                                "zone": "1"
+                            }
+                        }
+                    }
+                }
+            },
+            "status": {
+                "observedGeneration": 2,
+                "replicas": 0
+            }
+        },
+        {
+            "apiVersion": "machine.openshift.io/v1beta1",
+            "kind": "MachineSet",
+            "metadata": {
+                "annotations": {
+                    "machine.openshift.io/GPU": "0",
+                    "machine.openshift.io/memoryMb": "16384",
+                    "machine.openshift.io/vCPU": "4"
+                },
+                "creationTimestamp": "2021-08-04T21:02:00Z",
+                "generation": 25,
+                "labels": {
+                    "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                    "machine.openshift.io/cluster-api-machine-role": "worker",
+                    "machine.openshift.io/cluster-api-machine-type": "worker"
+                },
+                "managedFields": [
+                    {
+                        "apiVersion": "machine.openshift.io/v1beta1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:metadata": {
+                                "f:labels": {
+                                    ".": {},
+                                    "f:machine.openshift.io/cluster-api-cluster": {}
+                                }
+                            },
+                            "f:spec": {
+                                ".": {},
+                                "f:selector": {
+                                    ".": {},
+                                    "f:matchLabels": {
+                                        ".": {},
+                                        "f:machine.openshift.io/cluster-api-cluster": {},
+                                        "f:machine.openshift.io/cluster-api-machineset": {}
+                                    }
+                                },
+                                "f:template": {
+                                    ".": {},
+                                    "f:metadata": {
+                                        ".": {},
+                                        "f:labels": {
+                                            ".": {},
+                                            "f:machine.openshift.io/cluster-api-cluster": {},
+                                            "f:machine.openshift.io/cluster-api-machineset": {}
+                                        }
+                                    },
+                                    "f:spec": {
+                                        ".": {},
+                                        "f:metadata": {
+                                            ".": {},
+                                            "f:labels": {
+                                                ".": {},
+                                                "f:node-role.kubernetes.io/worker": {},
+                                                "f:spot": {}
+                                            }
+                                        },
+                                        "f:providerSpec": {
+                                            ".": {},
+                                            "f:value": {
+                                                ".": {},
+                                                "f:apiVersion": {},
+                                                "f:credentialsSecret": {},
+                                                "f:kind": {},
+                                                "f:metadata": {},
+                                                "f:osDisk": {},
+                                                "f:publicIP": {},
+                                                "f:spotVMOptions": {},
+                                                "f:sshPublicKey": {},
+                                                "f:userDataSecret": {},
+                                                "f:zone": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "manager": "oc",
+                        "operation": "Update",
+                        "time": "2021-08-04T21:02:00Z"
+                    },
+                    {
+                        "apiVersion": "machine.openshift.io/v1beta1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:metadata": {
+                                "f:annotations": {
+                                    ".": {},
+                                    "f:machine.openshift.io/GPU": {},
+                                    "f:machine.openshift.io/memoryMb": {},
+                                    "f:machine.openshift.io/vCPU": {}
+                                },
+                                "f:labels": {
+                                    "f:machine.openshift.io/cluster-api-machine-role": {},
+                                    "f:machine.openshift.io/cluster-api-machine-type": {}
+                                }
+                            },
+                            "f:spec": {
+                                "f:template": {
+                                    "f:metadata": {
+                                        "f:labels": {
+                                            "f:machine.openshift.io/cluster-api-machine-role": {},
+                                            "f:machine.openshift.io/cluster-api-machine-type": {}
+                                        }
+                                    },
+                                    "f:spec": {
+                                        "f:metadata": {
+                                            "f:labels": {
+                                                "f:node-role.kubernetes.io/worker": {},
+                                                "f:spot": {}
+                                            }
+                                        },
+                                        "f:providerSpec": {
+                                            "f:value": {
+                                                "f:image": {},
+                                                "f:location": {},
+                                                "f:networkResourceGroup": {},
+                                                "f:publicLoadBalancer": {},
+                                                "f:resourceGroup": {},
+                                                "f:subnet": {},
+                                                "f:vmSize": {},
+                                                "f:vnet": {}
+                                            }
+                                        },
+                                        "f:taints": {}
+                                    }
+                                }
+                            }
+                        },
+                        "manager": "Mozilla",
+                        "operation": "Update",
+                        "time": "2021-08-19T19:22:35Z"
+                    },
+                    {
+                        "apiVersion": "machine.openshift.io/v1beta1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:spec": {
+                                "f:replicas": {}
+                            }
+                        },
+                        "manager": "kubectl-edit",
+                        "operation": "Update",
+                        "time": "2021-10-04T14:02:47Z"
+                    },
+                    {
+                        "apiVersion": "machine.openshift.io/v1beta1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:status": {
+                                "f:observedGeneration": {},
+                                "f:replicas": {}
+                            }
+                        },
+                        "manager": "machineset-controller",
+                        "operation": "Update",
+                        "time": "2021-10-04T14:02:48Z"
+                    }
+                ],
+                "name": "aro-v4-shared-gxqb4-spot-eastus",
+                "namespace": "openshift-machine-api",
+                "resourceVersion": "213815832",
+                "selfLink": "/apis/machine.openshift.io/v1beta1/namespaces/openshift-machine-api/machinesets/aro-v4-shared-gxqb4-spot-eastus",
+                "uid": "3480c665-5090-48cd-9d39-7c29c26402ef"
+            },
+            "spec": {
+                "replicas": 0,
+                "selector": {
+                    "matchLabels": {
+                        "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                        "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-spot-eastus"
+                    }
+                },
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                            "machine.openshift.io/cluster-api-machine-role": "worker",
+                            "machine.openshift.io/cluster-api-machine-type": "worker",
+                            "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-spot-eastus"
+                        }
+                    },
+                    "spec": {
+                        "metadata": {
+                            "labels": {
+                                "node-role.kubernetes.io/worker": "",
+                                "spot": "true"
+                            }
+                        },
+                        "providerSpec": {
+                            "value": {
+                                "apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+                                "credentialsSecret": {
+                                    "name": "azure-cloud-credentials",
+                                    "namespace": "openshift-machine-api"
+                                },
+                                "image": {
+                                    "offer": "aro4",
+                                    "publisher": "azureopenshift",
+                                    "resourceID": "",
+                                    "sku": "aro_43",
+                                    "version": "43.81.20200311"
+                                },
+                                "kind": "AzureMachineProviderSpec",
+                                "location": "eastus",
+                                "metadata": {
+                                    "creationTimestamp": null
+                                },
+                                "networkResourceGroup": "aro-v4-shared",
+                                "osDisk": {
+                                    "diskSizeGB": 128,
+                                    "managedDisk": {
+                                        "storageAccountType": "Premium_LRS"
+                                    },
+                                    "osType": "Linux"
+                                },
+                                "publicIP": false,
+                                "publicLoadBalancer": "aro-v4-shared-gxqb4",
+                                "resourceGroup": "aro-v4-shared-cluster",
+                                "spotVMOptions": {},
+                                "subnet": "worker-subnet",
+                                "userDataSecret": {
+                                    "name": "worker-user-data"
+                                },
+                                "vmSize": "Standard_D4s_v3",
+                                "vnet": "vnet",
+                                "zone": "1"
+                            }
+                        },
+                        "taints": [
+                            {
+                                "effect": "NoExecute",
+                                "key": "spot",
+                                "value": "true"
+                            }
+                        ]
+                    }
+                }
+            },
+            "status": {
+                "observedGeneration": 25,
+                "replicas": 0
+            }
+        },
+        {
+            "apiVersion": "machine.openshift.io/v1beta1",
+            "kind": "MachineSet",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"machine.openshift.io/v1beta1\",\"kind\":\"MachineSet\",\"metadata\":{\"annotations\":{\"machine.openshift.io/GPU\":\"0\",\"machine.openshift.io/memoryMb\":\"16384\",\"machine.openshift.io/vCPU\":\"4\"},\"creationTimestamp\":\"2020-05-05T22:42:46Z\",\"generation\":16,\"labels\":{\"machine.openshift.io/cluster-api-cluster\":\"aro-v4-shared-gxqb4\",\"machine.openshift.io/cluster-api-machine-role\":\"worker\",\"machine.openshift.io/cluster-api-machine-type\":\"worker\"},\"name\":\"aro-v4-shared-gxqb4-worker-eastus1\",\"namespace\":\"openshift-machine-api\",\"resourceVersion\":\"106123369\",\"selfLink\":\"/apis/machine.openshift.io/v1beta1/namespaces/openshift-machine-api/machinesets/aro-v4-shared-gxqb4-worker-eastus1\",\"uid\":\"3f77c6ec-975c-49e4-944d-0a58e30be390\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"machine.openshift.io/cluster-api-cluster\":\"aro-v4-shared-gxqb4\",\"machine.openshift.io/cluster-api-machineset\":\"aro-v4-shared-gxqb4-worker-eastus1\"}},\"template\":{\"metadata\":{\"labels\":{\"machine.openshift.io/cluster-api-cluster\":\"aro-v4-shared-gxqb4\",\"machine.openshift.io/cluster-api-machine-role\":\"worker\",\"machine.openshift.io/cluster-api-machine-type\":\"worker\",\"machine.openshift.io/cluster-api-machineset\":\"aro-v4-shared-gxqb4-worker-eastus1\"}},\"spec\":{\"metadata\":{},\"providerSpec\":{\"value\":{\"apiVersion\":\"azureproviderconfig.openshift.io/v1beta1\",\"credentialsSecret\":{\"name\":\"azure-cloud-credentials\",\"namespace\":\"openshift-machine-api\"},\"image\":{\"offer\":\"aro4\",\"publisher\":\"azureopenshift\",\"resourceID\":\"\",\"sku\":\"aro_43\",\"version\":\"43.81.20200311\"},\"kind\":\"AzureMachineProviderSpec\",\"location\":\"eastus\",\"managedIdentity\":\"aro-v4-shared-gxqb4-identity\",\"metadata\":{\"creationTimestamp\":null},\"networkResourceGroup\":\"aro-v4-shared\",\"osDisk\":{\"diskSizeGB\":128,\"managedDisk\":{\"storageAccountType\":\"Premium_LRS\"},\"osType\":\"Linux\"},\"publicIP\":false,\"publicLoadBalancer\":\"aro-v4-shared-gxqb4\",\"resourceGroup\":\"aro-v4-shared-cluster\",\"subnet\":\"worker-subnet\",\"userDataSecret\":{\"name\":\"worker-user-data\"},\"vmSize\":\"Standard_D4s_v3\",\"vnet\":\"vnet\",\"zone\":\"1\"}}}}},\"status\":{\"availableReplicas\":1,\"fullyLabeledReplicas\":1,\"observedGeneration\":16,\"readyReplicas\":1,\"replicas\":1}}\n",
+                    "machine.openshift.io/GPU": "0",
+                    "machine.openshift.io/memoryMb": "16384",
+                    "machine.openshift.io/vCPU": "4"
+                },
+                "creationTimestamp": "2020-05-05T22:42:46Z",
+                "generation": 20,
+                "labels": {
+                    "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                    "machine.openshift.io/cluster-api-machine-role": "worker",
+                    "machine.openshift.io/cluster-api-machine-type": "worker"
+                },
+                "name": "aro-v4-shared-gxqb4-worker-eastus1",
+                "namespace": "openshift-machine-api",
+                "resourceVersion": "218361971",
+                "selfLink": "/apis/machine.openshift.io/v1beta1/namespaces/openshift-machine-api/machinesets/aro-v4-shared-gxqb4-worker-eastus1",
+                "uid": "3f77c6ec-975c-49e4-944d-0a58e30be390"
+            },
+            "spec": {
+                "replicas": 1,
+                "selector": {
+                    "matchLabels": {
+                        "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                        "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-worker-eastus1"
+                    }
+                },
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                            "machine.openshift.io/cluster-api-machine-role": "worker",
+                            "machine.openshift.io/cluster-api-machine-type": "worker",
+                            "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-worker-eastus1"
+                        }
+                    },
+                    "spec": {
+                        "metadata": {},
+                        "providerSpec": {
+                            "value": {
+                                "apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+                                "credentialsSecret": {
+                                    "name": "azure-cloud-credentials",
+                                    "namespace": "openshift-machine-api"
+                                },
+                                "image": {
+                                    "offer": "aro4",
+                                    "publisher": "azureopenshift",
+                                    "resourceID": "",
+                                    "sku": "aro_43",
+                                    "version": "43.81.20200311"
+                                },
+                                "kind": "AzureMachineProviderSpec",
+                                "location": "eastus",
+                                "metadata": {},
+                                "networkResourceGroup": "aro-v4-shared",
+                                "osDisk": {
+                                    "diskSizeGB": 128,
+                                    "managedDisk": {
+                                        "storageAccountType": "Premium_LRS"
+                                    },
+                                    "osType": "Linux"
+                                },
+                                "publicIP": false,
+                                "publicLoadBalancer": "aro-v4-shared-gxqb4",
+                                "resourceGroup": "aro-v4-shared-cluster",
+                                "subnet": "worker-subnet",
+                                "userDataSecret": {
+                                    "name": "worker-user-data"
+                                },
+                                "vmSize": "Standard_D4s_v3",
+                                "vnet": "vnet",
+                                "zone": "1"
+                            }
+                        }
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "fullyLabeledReplicas": 1,
+                "observedGeneration": 20,
+                "readyReplicas": 1,
+                "replicas": 1
+            }
+        },
+        {
+            "apiVersion": "machine.openshift.io/v1beta1",
+            "kind": "MachineSet",
+            "metadata": {
+                "annotations": {
+                    "machine.openshift.io/GPU": "0",
+                    "machine.openshift.io/memoryMb": "16384",
+                    "machine.openshift.io/vCPU": "4"
+                },
+                "creationTimestamp": "2020-05-05T22:42:46Z",
+                "generation": 3,
+                "labels": {
+                    "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                    "machine.openshift.io/cluster-api-machine-role": "worker",
+                    "machine.openshift.io/cluster-api-machine-type": "worker"
+                },
+                "name": "aro-v4-shared-gxqb4-worker-eastus2",
+                "namespace": "openshift-machine-api",
+                "resourceVersion": "218363792",
+                "selfLink": "/apis/machine.openshift.io/v1beta1/namespaces/openshift-machine-api/machinesets/aro-v4-shared-gxqb4-worker-eastus2",
+                "uid": "5a61ce63-6c82-45ca-b2ae-b84ca471de7e"
+            },
+            "spec": {
+                "replicas": 1,
+                "selector": {
+                    "matchLabels": {
+                        "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                        "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-worker-eastus2"
+                    }
+                },
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                            "machine.openshift.io/cluster-api-machine-role": "worker",
+                            "machine.openshift.io/cluster-api-machine-type": "worker",
+                            "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-worker-eastus2"
+                        }
+                    },
+                    "spec": {
+                        "metadata": {},
+                        "providerSpec": {
+                            "value": {
+                                "apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+                                "credentialsSecret": {
+                                    "name": "azure-cloud-credentials",
+                                    "namespace": "openshift-machine-api"
+                                },
+                                "image": {
+                                    "offer": "aro4",
+                                    "publisher": "azureopenshift",
+                                    "resourceID": "",
+                                    "sku": "aro_43",
+                                    "version": "43.81.20200311"
+                                },
+                                "kind": "AzureMachineProviderSpec",
+                                "location": "eastus",
+                                "metadata": {
+                                    "creationTimestamp": null
+                                },
+                                "networkResourceGroup": "aro-v4-shared",
+                                "osDisk": {
+                                    "diskSizeGB": 128,
+                                    "managedDisk": {
+                                        "storageAccountType": "Premium_LRS"
+                                    },
+                                    "osType": "Linux"
+                                },
+                                "publicIP": false,
+                                "publicLoadBalancer": "aro-v4-shared-gxqb4",
+                                "resourceGroup": "aro-v4-shared-cluster",
+                                "subnet": "worker-subnet",
+                                "userDataSecret": {
+                                    "name": "worker-user-data"
+                                },
+                                "vmSize": "Standard_D4s_v3",
+                                "vnet": "vnet",
+                                "zone": "2"
+                            }
+                        }
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "fullyLabeledReplicas": 1,
+                "observedGeneration": 3,
+                "readyReplicas": 1,
+                "replicas": 1
+            }
+        },
+        {
+            "apiVersion": "machine.openshift.io/v1beta1",
+            "kind": "MachineSet",
+            "metadata": {
+                "annotations": {
+                    "machine.openshift.io/GPU": "0",
+                    "machine.openshift.io/memoryMb": "16384",
+                    "machine.openshift.io/vCPU": "4"
+                },
+                "creationTimestamp": "2020-05-05T22:42:46Z",
+                "generation": 7,
+                "labels": {
+                    "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                    "machine.openshift.io/cluster-api-machine-role": "worker",
+                    "machine.openshift.io/cluster-api-machine-type": "worker"
+                },
+                "name": "aro-v4-shared-gxqb4-worker-eastus3",
+                "namespace": "openshift-machine-api",
+                "resourceVersion": "218360062",
+                "selfLink": "/apis/machine.openshift.io/v1beta1/namespaces/openshift-machine-api/machinesets/aro-v4-shared-gxqb4-worker-eastus3",
+                "uid": "194e3936-21d9-4f81-97d1-400f1767d2a8"
+            },
+            "spec": {
+                "replicas": 1,
+                "selector": {
+                    "matchLabels": {
+                        "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                        "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-worker-eastus3"
+                    }
+                },
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "machine.openshift.io/cluster-api-cluster": "aro-v4-shared-gxqb4",
+                            "machine.openshift.io/cluster-api-machine-role": "worker",
+                            "machine.openshift.io/cluster-api-machine-type": "worker",
+                            "machine.openshift.io/cluster-api-machineset": "aro-v4-shared-gxqb4-worker-eastus3"
+                        }
+                    },
+                    "spec": {
+                        "metadata": {},
+                        "providerSpec": {
+                            "value": {
+                                "apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+                                "credentialsSecret": {
+                                    "name": "azure-cloud-credentials",
+                                    "namespace": "openshift-machine-api"
+                                },
+                                "image": {
+                                    "offer": "aro4",
+                                    "publisher": "azureopenshift",
+                                    "resourceID": "",
+                                    "sku": "aro_43",
+                                    "version": "43.81.20200311"
+                                },
+                                "kind": "AzureMachineProviderSpec",
+                                "location": "eastus",
+                                "metadata": {
+                                    "creationTimestamp": null
+                                },
+                                "networkResourceGroup": "aro-v4-shared",
+                                "osDisk": {
+                                    "diskSizeGB": 128,
+                                    "managedDisk": {
+                                        "storageAccountType": "Premium_LRS"
+                                    },
+                                    "osType": "Linux"
+                                },
+                                "publicIP": false,
+                                "publicLoadBalancer": "aro-v4-shared-gxqb4",
+                                "resourceGroup": "aro-v4-shared-cluster",
+                                "subnet": "worker-subnet",
+                                "userDataSecret": {
+                                    "name": "worker-user-data"
+                                },
+                                "vmSize": "Standard_D4s_v3",
+                                "vnet": "vnet",
+                                "zone": "3"
+                            }
+                        }
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "fullyLabeledReplicas": 1,
+                "observedGeneration": 7,
+                "readyReplicas": 1,
+                "replicas": 1
+            }
+        }
+    ],
+    "kind": "MachineSetList",
+    "metadata": {
+        "resourceVersion": "",
+        "selfLink": ""
+    }
+}

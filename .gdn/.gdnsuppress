@@ -1,0 +1,913 @@
+{
+  "version": "latest",
+  "suppressionSets": {
+    "default": {
+      "name": "default",
+      "createdDate": "2022-07-14 16:28:44Z",
+      "lastUpdatedDate": "2023-07-13 16:24:38Z"
+    }
+  },
+  "results": {
+    "9d0e60cccd9461c6197f73baf0990a8f1b33e3493ce1f92ece8c707da7b89a3c": {
+      "signature": "9d0e60cccd9461c6197f73baf0990a8f1b33e3493ce1f92ece8c707da7b89a3c",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "5c43ff980c3abb905d081be3a862ea1b8cf0c87a7ded5936e04992a199c5a008": {
+      "signature": "5c43ff980c3abb905d081be3a862ea1b8cf0c87a7ded5936e04992a199c5a008",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "da40ed344fb042493e3a94ff2e51b633a5bb930161c4b3cf23a771e0829c99f9": {
+      "signature": "da40ed344fb042493e3a94ff2e51b633a5bb930161c4b3cf23a771e0829c99f9",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "ac45307b7f52c6a06cd1e2e15f2d88367c6d7ea42beb3bd6e1741f2f1b56d342": {
+      "signature": "ac45307b7f52c6a06cd1e2e15f2d88367c6d7ea42beb3bd6e1741f2f1b56d342",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "2a68c8dc1d3015bfe61590c7621a18b94100b0a0e2659c145119645ea442b315": {
+      "signature": "2a68c8dc1d3015bfe61590c7621a18b94100b0a0e2659c145119645ea442b315",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "775141e92fe2259e553aa812e28afcf5071ebf559e75db0c9f265009ce42724e": {
+      "signature": "775141e92fe2259e553aa812e28afcf5071ebf559e75db0c9f265009ce42724e",
+      "target": "vendor/github.com/docker/docker/api/swagger.yaml",
+      "tool": "credscan",
+      "ruleId": "GENERAL0060",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "695885d9ee1c577f798f2a823b249247918b49351a9e80b683e4c43d01188283": {
+      "signature": "695885d9ee1c577f798f2a823b249247918b49351a9e80b683e4c43d01188283",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "858ac1cf11ed2a806a8d9effc6389393e230a57b584fe3bcc0168924c6c36c10": {
+      "signature": "858ac1cf11ed2a806a8d9effc6389393e230a57b584fe3bcc0168924c6c36c10",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "aaf6c5746c0d036b7e5f2aa7573038ec0c02273aa71b134de25916d8e3529dfe": {
+      "signature": "aaf6c5746c0d036b7e5f2aa7573038ec0c02273aa71b134de25916d8e3529dfe",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "6b1db1d93b66ebc4c57e9a044bcefeaad877f689ef7b41b3bb6b43274e5590c2": {
+      "signature": "6b1db1d93b66ebc4c57e9a044bcefeaad877f689ef7b41b3bb6b43274e5590c2",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "1c46623690cdcecc2a16062cba6c7180f5a4743800502068f0b6bebf9f08588a": {
+      "signature": "1c46623690cdcecc2a16062cba6c7180f5a4743800502068f0b6bebf9f08588a",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "5bb66a0f259d32cab1b388b2877e5fd5b00878c56eedb687a97022604bc9aa7d": {
+      "signature": "5bb66a0f259d32cab1b388b2877e5fd5b00878c56eedb687a97022604bc9aa7d",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "2d7a79e3100ae222ecc2bc565db6c062bec8198e0b1860a2bff1f04cc811c3d8": {
+      "signature": "2d7a79e3100ae222ecc2bc565db6c062bec8198e0b1860a2bff1f04cc811c3d8",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "6d205f8ba3db93c9b67acfc6bd24fbe563228aedf84eafb9b7d256c66d1ab65c": {
+      "signature": "6d205f8ba3db93c9b67acfc6bd24fbe563228aedf84eafb9b7d256c66d1ab65c",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "83be820c45bcb060ba1767fbd0e21f7e005bfafdc3887eef98e098b3392e82ab": {
+      "signature": "83be820c45bcb060ba1767fbd0e21f7e005bfafdc3887eef98e098b3392e82ab",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "47ea1c58d8afd46f92d9ba1f84983dcfc6aacb2f1c7506c08ddcfa9f69cbbe61": {
+      "signature": "47ea1c58d8afd46f92d9ba1f84983dcfc6aacb2f1c7506c08ddcfa9f69cbbe61",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "8f798268a0ff7469696f2c43b0d3e4ff70bdd2a7f676430651b44628a76648b9": {
+      "signature": "8f798268a0ff7469696f2c43b0d3e4ff70bdd2a7f676430651b44628a76648b9",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "ad62bb8858c3213271808f0ca500a7db9c8d4ef255505a6e49abd719858dd3e0": {
+      "signature": "ad62bb8858c3213271808f0ca500a7db9c8d4ef255505a6e49abd719858dd3e0",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "414c3b9ad4698adab39969de21fb210f816932d24b9703ef1b90ca6fa39fbf44": {
+      "signature": "414c3b9ad4698adab39969de21fb210f816932d24b9703ef1b90ca6fa39fbf44",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "d34941658bdb9de609b5ae06265930fb205f3e70b7577b5ef9f2015720af1c30": {
+      "signature": "d34941658bdb9de609b5ae06265930fb205f3e70b7577b5ef9f2015720af1c30",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "400474d51d001a936eb43d2d8f812cbcdb11f28345063712daa37b50dc477b50": {
+      "signature": "400474d51d001a936eb43d2d8f812cbcdb11f28345063712daa37b50dc477b50",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "1e3c19a427f43ef60025c981c68b1157c3e6732b91880543351d872230047cc3": {
+      "signature": "1e3c19a427f43ef60025c981c68b1157c3e6732b91880543351d872230047cc3",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "f76f01fc675eaf004343f0e103e1420a993c123bb37c8636662dc6e8b6d56223": {
+      "signature": "f76f01fc675eaf004343f0e103e1420a993c123bb37c8636662dc6e8b6d56223",
+      "alternativeSignatures": [],
+      "memberOf": [
+        "default"
+      ],
+      "createdDate": "2023-07-13 16:24:38Z"
+    },
+    "861b4aa509be8ba632fa51b7edc89b06021fe38246af50f7744cfdba79009ba9": {
+      "signature": "861b4aa509be8ba632fa51b7edc89b06021fe38246af50f7744cfdba79009ba9",
+      "alternativeSignatures": [],
+      "target": ".golangci.yml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "7fe8eb850d966c7157870b76b3daefddc5d13efda37a2a1754b42adbf712f9dc": {
+      "signature": "7fe8eb850d966c7157870b76b3daefddc5d13efda37a2a1754b42adbf712f9dc",
+      "alternativeSignatures": [
+        "97fd815fc2d19c45b93451b95d6debf2fdb8ab3d31ee3f6ba2974e72ce8a0c90"
+      ],
+      "target": "pkg/deploy/assets/cluster-development-predeploy.json",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "armory",
+      "ruleId": "ARM1005",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "9c277a79f4467e0f7fc8eaeac774f9680776f80a1acfee7a0e3331dde2f7ef6d": {
+      "signature": "9c277a79f4467e0f7fc8eaeac774f9680776f80a1acfee7a0e3331dde2f7ef6d",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/asaskevich/govalidator/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79459",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "033b12764a7474c4b0e0775244f1774754312cd4b37caae4d96d7d0f60c81b55": {
+      "signature": "033b12764a7474c4b0e0775244f1774754312cd4b37caae4d96d7d0f60c81b55",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/asaskevich/govalidator/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "56ea41a001318274027593ae463cf7f89a94dbb37f4e3d6cd59c975ed10f8ca7": {
+      "signature": "56ea41a001318274027593ae463cf7f89a94dbb37f4e3d6cd59c975ed10f8ca7",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/asaskevich/govalidator/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "efd9a0f857cc60ccb6cbf3b97bcfe286f2a07819a1904d8c10c98974779546ce": {
+      "signature": "efd9a0f857cc60ccb6cbf3b97bcfe286f2a07819a1904d8c10c98974779546ce",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/asaskevich/govalidator/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "01d0a3bcf228c06095ea6a3a665ced7c68f4f87b6afc8f58e4631b5d1e0f13c1": {
+      "signature": "01d0a3bcf228c06095ea6a3a665ced7c68f4f87b6afc8f58e4631b5d1e0f13c1",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/ldez/gomoddirectives/.golangci.yml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79459",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "18e0d865d4ca610fb4dd8fb939425585c673ee1bf2d2974a9d4861c369b972cf": {
+      "signature": "18e0d865d4ca610fb4dd8fb939425585c673ee1bf2d2974a9d4861c369b972cf",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/ldez/tagliatelle/.golangci.yml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79459",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "bcf0d595874103b0303c18810a5b6921e1f0c2e292aa9968f2595831292e0188": {
+      "signature": "bcf0d595874103b0303c18810a5b6921e1f0c2e292aa9968f2595831292e0188",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/tetafro/godot/.godot.yaml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79515",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "e58fd3a21c5864db0b4afce3b13b11e3a03726b1d0bfdeea68f13d9f5d4fbba1": {
+      "signature": "e58fd3a21c5864db0b4afce3b13b11e3a03726b1d0bfdeea68f13d9f5d4fbba1",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/tetafro/godot/.godot.yaml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79515",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "67b36f68ca9ddd3debfac35de23e26b10e0496293be31a3978d74285887a6dab": {
+      "signature": "67b36f68ca9ddd3debfac35de23e26b10e0496293be31a3978d74285887a6dab",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/tetafro/godot/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79515",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "7ad4f25bce65c245e144e625c417de6fb3b39f52e79aa5f09f56fc651c499852": {
+      "signature": "7ad4f25bce65c245e144e625c417de6fb3b39f52e79aa5f09f56fc651c499852",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/tetafro/godot/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79515",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "e081ab90cede04cbe5c547e2dc33d1382e15c5ed071b74933f80a63fcf79e4e6": {
+      "signature": "e081ab90cede04cbe5c547e2dc33d1382e15c5ed071b74933f80a63fcf79e4e6",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/vmware/govmomi/CHANGELOG.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "5cfcd07fd15820a45711536ae88ff0a18b0d42c9f591e572b06a6aa849353a84": {
+      "signature": "5cfcd07fd15820a45711536ae88ff0a18b0d42c9f591e572b06a6aa849353a84",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/vmware/govmomi/CHANGELOG.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "036f96ebeebed991d72808efc3637a87005904c81fae88afa9abf44f3eda9902": {
+      "signature": "036f96ebeebed991d72808efc3637a87005904c81fae88afa9abf44f3eda9902",
+      "alternativeSignatures": [
+        "d5e095bbdc97eaae1249a6aae9c9eccd75257525920be7d5d3b833298a37738f"
+      ],
+      "target": "portal/v2/build/static/js/2.fc3140a1.chunk.js",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-insecure-url",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "0ed9d90db1e93e934fd0a70e87014cca029c2c7d828f47e04ab6a9c6b4e9c713": {
+      "signature": "0ed9d90db1e93e934fd0a70e87014cca029c2c7d828f47e04ab6a9c6b4e9c713",
+      "alternativeSignatures": [
+        "294b83352c4a587a0b6eb6e1090c2fc6272d31f6554a25b1d0ca7c69d41aa486"
+      ],
+      "target": "portal/v2/build/static/js/2.fc3140a1.chunk.js",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-msapp-exec-unsafe",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "8af52481386984b25bdb4beba32302408a94e27f1aec31a53bc047575bf01973": {
+      "signature": "8af52481386984b25bdb4beba32302408a94e27f1aec31a53bc047575bf01973",
+      "alternativeSignatures": [
+        "84c0b8a4ff0e737ff8788aa03d4598fb491d780981318a493bf79f26c19ac855"
+      ],
+      "target": "portal/v2/build/static/js/2.fc3140a1.chunk.js",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-inner-html",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "8bdfb16ce30c0025e4311b5912cfe7ddc70f6a889212c48a048981da708b982f": {
+      "signature": "8bdfb16ce30c0025e4311b5912cfe7ddc70f6a889212c48a048981da708b982f",
+      "alternativeSignatures": [
+        "17b202d0ef148405a4403212a9b0e54578e3e516342fb757f425b0b1d6fe7286"
+      ],
+      "target": "portal/v2/build/static/js/2.fc3140a1.chunk.js",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "c3657327e17be3d453f4cb3b3a6492f030bdd1dfad59069b4957696f27e9eeca": {
+      "signature": "c3657327e17be3d453f4cb3b3a6492f030bdd1dfad59069b4957696f27e9eeca",
+      "alternativeSignatures": [
+        "b3c5e5e72a74a7501a6cc376d8a031252110e6eca9560d619828da9cdace2aec"
+      ],
+      "target": "portal/v2/build/static/js/2.fc3140a1.chunk.js",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-cookies",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "72de73b024bf65926c0777313084aa8a3fd64319c67e795951cd98cad6c24895": {
+      "signature": "72de73b024bf65926c0777313084aa8a3fd64319c67e795951cd98cad6c24895",
+      "alternativeSignatures": [
+        "915a97470416fea596a8aa4214f52b22fdc1e2d65e5ceac8aa84b3a66bf8aba8"
+      ],
+      "target": "portal/v2/build/static/js/main.fd2b18d9.chunk.js",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-insecure-url",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "30149bb02aa791fd719db24cd5e8618527f72cee0a9f15fc148fb2349aaa1e7b": {
+      "signature": "30149bb02aa791fd719db24cd5e8618527f72cee0a9f15fc148fb2349aaa1e7b",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/go-playground/validator/v10/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79570",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "3a7444d1a22704c9362a3f351f04511675d8730c427407657b4534b35c6ee6b1": {
+      "signature": "3a7444d1a22704c9362a3f351f04511675d8730c427407657b4534b35c6ee6b1",
+      "alternativeSignatures": [],
+      "target": "vendor/honnef.co/go/tools/config/example.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "759ed87029d993b9464f41cb798bc44332bfcc8836fcc402f7e738e8b923aa64": {
+      "signature": "759ed87029d993b9464f41cb798bc44332bfcc8836fcc402f7e738e8b923aa64",
+      "alternativeSignatures": [],
+      "target": "vendor/honnef.co/go/tools/config/example.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "1f4818b0297632065ff8b0b92b645311e4ef07362d71496362e82ac0a233fd37": {
+      "signature": "1f4818b0297632065ff8b0b92b645311e4ef07362d71496362e82ac0a233fd37",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/admission/v1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79459",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "ca4d8c83cf39c13598e3496f00d89c093aaf577024bba1f7ffd1a0d77db3ca0b": {
+      "signature": "ca4d8c83cf39c13598e3496f00d89c093aaf577024bba1f7ffd1a0d77db3ca0b",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/admission/v1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79459",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "86ca1172f17702412c68c08bde05cf0de9e4a6129a99279bc9af68717ca7cef4": {
+      "signature": "86ca1172f17702412c68c08bde05cf0de9e4a6129a99279bc9af68717ca7cef4",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/admission/v1beta1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79459",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "f9de626f2b64bf6f6ce3d26e73af18c340d338642aef8c2f17fd2c1603591cd4": {
+      "signature": "f9de626f2b64bf6f6ce3d26e73af18c340d338642aef8c2f17fd2c1603591cd4",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/admission/v1beta1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "79459",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "e3b1c384080e6cfa348808f8bec8d3e9e0496c4ab172ca0d30655ce570bb2816": {
+      "signature": "e3b1c384080e6cfa348808f8bec8d3e9e0496c4ab172ca0d30655ce570bb2816",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/authorization/v1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "37dd1ee487ade1adeb56aaa6fb0f68274171a3414af098373fcd9a0dfe549d49": {
+      "signature": "37dd1ee487ade1adeb56aaa6fb0f68274171a3414af098373fcd9a0dfe549d49",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/authorization/v1beta1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "9763f3157c33267458f9ef942aed9b684037aa6fde1e548f38ee51f75648755c": {
+      "signature": "9763f3157c33267458f9ef942aed9b684037aa6fde1e548f38ee51f75648755c",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/rbac/v1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "afc91461f704db95822457ff9f18dc6dcdef0b230e95c9dac907e4d19f71e2fc": {
+      "signature": "afc91461f704db95822457ff9f18dc6dcdef0b230e95c9dac907e4d19f71e2fc",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/rbac/v1alpha1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "5ed8e7e1080e7e5bf1de036ec8a2d2e4f5f0132c4b2e3eb566af74aa8022a5b7": {
+      "signature": "5ed8e7e1080e7e5bf1de036ec8a2d2e4f5f0132c4b2e3eb566af74aa8022a5b7",
+      "alternativeSignatures": [],
+      "target": "vendor/k8s.io/api/rbac/v1beta1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "09de897f81319118b46c12ad1f7a65abe83b038b2afcb0e93d08368396d0d733": {
+      "signature": "09de897f81319118b46c12ad1f7a65abe83b038b2afcb0e93d08368396d0d733",
+      "alternativeSignatures": [],
+      "target": "vendor/sigs.k8s.io/kustomize/kyaml/openapi/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80034",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "3298ccf1cacd6e6d73eac44b636574976c862be8669b957452842cce77bfcc22": {
+      "signature": "3298ccf1cacd6e6d73eac44b636574976c862be8669b957452842cce77bfcc22",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/openshift/api/security/v1/0000_03_security-openshift_01_scc.crd.yaml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "7940b437c1e77119dedd93bd0168f2070146b9bdfef0ef9b936c972f01d33cf8": {
+      "signature": "7940b437c1e77119dedd93bd0168f2070146b9bdfef0ef9b936c972f01d33cf8",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/openshift/api/security/v1/0000_03_security-openshift_01_scc.crd.yaml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "b6b511f839b1dd9b671fe3e061a8ad47a9e28f9e186e9fb5c56b864ea31c3d02": {
+      "signature": "b6b511f839b1dd9b671fe3e061a8ad47a9e28f9e186e9fb5c56b864ea31c3d02",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/openshift/api/security/v1/0000_03_security-openshift_01_scc.crd.yaml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "601bab09849dacecd7ff3f5ed7495730ffb528c437ba1bcac19723b1332dd086": {
+      "signature": "601bab09849dacecd7ff3f5ed7495730ffb528c437ba1bcac19723b1332dd086",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/openshift/api/security/v1/0000_03_security-openshift_01_scc.crd.yaml",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "227d5c85d1d530a412d5e7b455e0a3548408df5c79bc9868cc183e12c4a301c0": {
+      "signature": "227d5c85d1d530a412d5e7b455e0a3548408df5c79bc9868cc183e12c4a301c0",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/openshift/api/security/v1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "9961c607a3966899f8182b1fb87ab7af8ef9bc989c25e55b4d9b8a94415d9e35": {
+      "signature": "9961c607a3966899f8182b1fb87ab7af8ef9bc989c25e55b4d9b8a94415d9e35",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/openshift/api/security/v1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "4142b832048612cf68e29ae2160c33622224d0299726ff95e92b216c49120c0f": {
+      "signature": "4142b832048612cf68e29ae2160c33622224d0299726ff95e92b216c49120c0f",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/openshift/api/security/v1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "8b285e0e33e33734f67cedcce8cf8f8eeeaa363cadb7a9de3cf1554856e5cd0d": {
+      "signature": "8b285e0e33e33734f67cedcce8cf8f8eeeaa363cadb7a9de3cf1554856e5cd0d",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/openshift/api/security/v1/generated.proto",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80411",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "453b5af8bf0414402f81f5b7369f63e263c9f72c8dcf904f401ad789d97aad20": {
+      "signature": "453b5af8bf0414402f81f5b7369f63e263c9f72c8dcf904f401ad789d97aad20",
+      "alternativeSignatures": [],
+      "target": "vendor/sigs.k8s.io/kustomize/kyaml/openapi/kubernetesapi/v1212/swagger.json",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "policheck",
+      "ruleId": "80409",
+      "justification": null,
+      "createdDate": "2022-07-14 16:28:44Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "0d25875cb0c9f37740eca695737b1f2bb6b0715edf8f20ab6e8e8854e845cdb4": {
+      "signature": "0d25875cb0c9f37740eca695737b1f2bb6b0715edf8f20ab6e8e8854e845cdb4",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/docker/distribution/vendor.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0130",
+      "justification": null,
+      "createdDate": "2023-02-27 11:58:21Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "969fee47f4d90a4beee525158d672b752c8a0a90bd238159848de1d314649774": {
+      "signature": "969fee47f4d90a4beee525158d672b752c8a0a90bd238159848de1d314649774",
+      "alternativeSignatures": [],
+      "target": "python/az/aro/azext_aro/tests/latest/unit/test_validators.py",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2023-02-27 11:58:21Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "685563c13f6659c00fe00ac7acb11fac653f4953d69e36c4730992d3bee90c8a": {
+      "signature": "685563c13f6659c00fe00ac7acb11fac653f4953d69e36c4730992d3bee90c8a",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/docker/distribution/vendor.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0130",
+      "justification": null,
+      "createdDate": "2023-03-06 16:36:34Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "ae2e477973e797648c59faf872f1009b49755578d609642d98525b64281ad748": {
+      "signature": "ae2e477973e797648c59faf872f1009b49755578d609642d98525b64281ad748",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/docker/distribution/vendor.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0130",
+      "justification": null,
+      "createdDate": "2023-03-06 16:36:34Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "32ae02640d8c47426274e2bdf59a6a8b3ff4b4b637e62b547bce05547833fb24": {
+      "signature": "32ae02640d8c47426274e2bdf59a6a8b3ff4b4b637e62b547bce05547833fb24",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/docker/distribution/vendor.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0130",
+      "justification": null,
+      "createdDate": "2023-03-06 16:36:34Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "faa16e544300aa8a0f12a26ecf30aef50e1d01bbe4c5cfe750acfa76a25de68b": {
+      "signature": "faa16e544300aa8a0f12a26ecf30aef50e1d01bbe4c5cfe750acfa76a25de68b",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/docker/distribution/vendor.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0130",
+      "justification": null,
+      "createdDate": "2023-03-06 16:36:34Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "2e4e70377d0ecd78468f37d78081cb6e62d76e596fddfe7cc0ab4cbb9d9bd27c": {
+      "signature": "2e4e70377d0ecd78468f37d78081cb6e62d76e596fddfe7cc0ab4cbb9d9bd27c",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/docker/distribution/vendor.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0130",
+      "justification": null,
+      "createdDate": "2023-03-06 16:36:34Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "01053ebcf93a7900ed0bb0bc23f4352c5f072b113d0427fcaead2b3092157d98": {
+      "signature": "01053ebcf93a7900ed0bb0bc23f4352c5f072b113d0427fcaead2b3092157d98",
+      "alternativeSignatures": [],
+      "target": "vendor/github.com/docker/distribution/vendor.conf",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0130",
+      "justification": null,
+      "createdDate": "2023-03-06 16:36:34Z",
+      "expirationDate": null,
+      "type": null
+    }
+  }
+}

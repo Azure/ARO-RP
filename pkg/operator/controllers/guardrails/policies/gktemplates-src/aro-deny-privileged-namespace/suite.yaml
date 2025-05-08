@@ -1,0 +1,27 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: privileged-namespace
+tests:
+- name: privileged-namespace
+  template: ../../gktemplates/aro-deny-privileged-namespace.yaml
+  constraint: ../../gkconstraints-test/aro-privileged-namespace-deny.yaml
+  cases:
+  - name: ns-allowed-pod
+    object: gator-test/ns_allowed_pod.yaml
+    assertions:
+    - violations: no
+  - name: ns-disallowed-pod
+    object: gator-test/ns_disallowed_pod.yaml
+    assertions:
+    - violations: yes
+      message: user test-user not allowed to CREATE demo in namespace openshift-etcd
+  - name: ns-disallowed-deploy
+    object: gator-test/ns_disallowed_deploy.yaml
+    assertions:
+    - violations: yes
+      message: user testuser not allowed to CREATE demo in namespace openshift-azure-guardrails
+  - name: ns-allowed-deploy
+    object: gator-test/ns_allowed_deploy.yaml
+    assertions:
+    - violations: no

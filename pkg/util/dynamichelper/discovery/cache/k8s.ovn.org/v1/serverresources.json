@@ -1,0 +1,72 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "k8s.ovn.org/v1",
+    "resources": [
+        {
+            "name": "egressfirewalls",
+            "singularName": "egressfirewall",
+            "namespaced": true,
+            "kind": "EgressFirewall",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "AElnPxlhG7g="
+        },
+        {
+            "name": "egressips",
+            "singularName": "egressip",
+            "namespaced": false,
+            "kind": "EgressIP",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "eip"
+            ],
+            "storageVersionHash": "3ItexM2Q0e8="
+        },
+        {
+            "name": "egressqoses",
+            "singularName": "egressqos",
+            "namespaced": true,
+            "kind": "EgressQoS",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "De2N4yHJLWg="
+        },
+        {
+            "name": "egressqoses/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "EgressQoS",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

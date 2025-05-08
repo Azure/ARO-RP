@@ -1,0 +1,41 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "whereabouts.cni.cncf.io/v1alpha1",
+    "resources": [
+        {
+            "name": "ippools",
+            "singularName": "ippool",
+            "namespaced": true,
+            "kind": "IPPool",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "XbcZnDfxtSo="
+        },
+        {
+            "name": "overlappingrangeipreservations",
+            "singularName": "overlappingrangeipreservation",
+            "namespaced": true,
+            "kind": "OverlappingRangeIPReservation",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "QAFn0NjLYV0="
+        }
+    ]
+}

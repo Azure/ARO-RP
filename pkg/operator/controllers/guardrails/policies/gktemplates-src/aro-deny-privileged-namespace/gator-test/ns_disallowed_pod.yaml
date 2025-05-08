@@ -1,0 +1,43 @@
+apiVersion: admission.k8s.io/v1
+kind: AdmissionReview
+request:
+  dryRun: true
+  name: demo
+  kind:
+    group: ""
+    kind: Pod
+    version: v1
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: allowed
+      namespace: openshift-etcd
+    spec:
+      containers:
+      - args:
+        - run
+        - --server
+        - --addr=localhost:8080
+        image: openpolicyagent/opa:0.9.2
+        name: test
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+      serviceAccountName: test-user
+  oldObject: null
+  operation: CREATE
+  options: null
+  requestKind:
+    group: ""
+    kind: Pod
+    version: v1
+  resource:
+    group: ""
+    resource: Pod
+    version: v1
+  uid: 7ec7e318-9050-48da-ab47-57f7146115d7
+  userInfo:
+    uid: 645c3023-3e99-4dbe-be9e-887be38ebed0
+    username: test-user

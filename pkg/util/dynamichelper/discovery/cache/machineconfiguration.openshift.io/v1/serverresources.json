@@ -1,0 +1,145 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "machineconfiguration.openshift.io/v1",
+    "resources": [
+        {
+            "name": "containerruntimeconfigs",
+            "singularName": "containerruntimeconfig",
+            "namespaced": false,
+            "kind": "ContainerRuntimeConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "ctrcfg"
+            ],
+            "storageVersionHash": "zQKIZo2axmg="
+        },
+        {
+            "name": "containerruntimeconfigs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ContainerRuntimeConfig",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "controllerconfigs",
+            "singularName": "controllerconfig",
+            "namespaced": false,
+            "kind": "ControllerConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "pooMJA5+L2U="
+        },
+        {
+            "name": "controllerconfigs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ControllerConfig",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "kubeletconfigs",
+            "singularName": "kubeletconfig",
+            "namespaced": false,
+            "kind": "KubeletConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "d0/BkupJ0L0="
+        },
+        {
+            "name": "kubeletconfigs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "KubeletConfig",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "machineconfigpools",
+            "singularName": "machineconfigpool",
+            "namespaced": false,
+            "kind": "MachineConfigPool",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "mcp"
+            ],
+            "storageVersionHash": "hxLDUtTOjtU="
+        },
+        {
+            "name": "machineconfigpools/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "MachineConfigPool",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "machineconfigs",
+            "singularName": "machineconfig",
+            "namespaced": false,
+            "kind": "MachineConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "mc"
+            ],
+            "storageVersionHash": "BDX8m3QUIEc="
+        }
+    ]
+}

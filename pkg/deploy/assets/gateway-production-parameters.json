@@ -1,0 +1,94 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "acrResourceId": {
+            "value": ""
+        },
+        "azureCloudName": {
+            "value": ""
+        },
+        "azureSecPackQualysUrl": {
+            "value": ""
+        },
+        "azureSecPackVSATenantId": {
+            "value": ""
+        },
+        "databaseAccountName": {
+            "value": ""
+        },
+        "fluentbitImage": {
+            "value": ""
+        },
+        "gatewayDomains": {
+            "value": ""
+        },
+        "gatewayFeatures": {
+            "value": ""
+        },
+        "gatewayMdsdConfigVersion": {
+            "value": ""
+        },
+        "gatewayServicePrincipalId": {
+            "value": ""
+        },
+        "gatewayVmSize": {
+            "value": "Standard_D4s_v3"
+        },
+        "gatewayVmssCapacity": {
+            "value": 3
+        },
+        "keyvaultDNSSuffix": {
+            "value": ""
+        },
+        "keyvaultPrefix": {
+            "value": ""
+        },
+        "mdmFrontendUrl": {
+            "value": ""
+        },
+        "mdsdEnvironment": {
+            "value": ""
+        },
+        "nonZonalRegions": {
+            "value": [
+                "eastasia",
+                "centralindia",
+                "centraluseuap",
+                "koreacentral",
+                "switzerlandnorth",
+                "northcentralus",
+                "uaenorth",
+                "westus",
+                "japanwest"
+            ]
+        },
+        "rpImage": {
+            "value": ""
+        },
+        "rpMdmAccount": {
+            "value": ""
+        },
+        "rpMdsdAccount": {
+            "value": ""
+        },
+        "rpMdsdNamespace": {
+            "value": ""
+        },
+        "rpResourceGroupName": {
+            "value": ""
+        },
+        "rpServicePrincipalId": {
+            "value": ""
+        },
+        "sshPublicKey": {
+            "value": ""
+        },
+        "vmssCleanupEnabled": {
+            "value": true
+        },
+        "vmssName": {
+            "value": ""
+        }
+    }
+}

@@ -1,0 +1,60 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: arodenylabels
+  annotations:
+    description: >-
+      Prevents changes in resources that contain specified labels, with values
+      optionally matching a provided regular expression.
+spec:
+  crd:
+    spec:
+      names:
+        kind: ARODenyLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            message:
+              type: string
+            labels:
+              type: array
+              description: >-
+                A list of labels and optional value regex the object must specify.
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    description: >-
+                      The required label.
+                  denyRegex:
+                    type: string
+                    description: >-
+                      If specified, a regular expression the label's value
+                      must match.
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package arodenylabels
+
+        violation[{"msg": msg}] {
+          input.review.operation == "DELETE"
+          label_value := input.review.object.metadata.labels[key]
+          deny_label := input.parameters.labels[_]
+          deny_label.key == key
+          # An undefined denyRegex, should have the same effect as an empty denyRegex
+          deny_regex := object.get(deny_label, "denyRegex", "")
+          re_match(deny_regex, label_value)
+          def_msg := sprintf("Operation not allowed. Label <%v: %v> matches deny regex: <%v>", [key, label_value, deny_regex])
+          msg := get_message(input.parameters, def_msg)
+        }
+
+        get_message(parameters, _default) = msg {
+          not parameters.message
+          msg := _default
+        }
+
+        get_message(parameters, _default) = msg {
+          msg := parameters.message
+        }

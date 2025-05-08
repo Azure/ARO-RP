@@ -1,0 +1,27 @@
+parameters:
+  - name: generationType
+    type: string
+    default: deployment
+    values:
+      - bootstrapper
+      - geneva
+      - geneva-bootstrapper
+      - kusto
+
+steps:
+  - checkout: rhado
+  - checkout: rpconfig
+  - task: Bash@3
+    inputs:
+      targetType: inline
+      script: |
+        cd $(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/
+        go run . ${{ parameters.generationType }}
+    env:
+      RP_CONFIG_PATH: $(Build.SourcesDirectory)/RP-Config/deploy
+    displayName: ⚙️ Generate Ev2 Deployment Manifests
+  - task: Bash@3
+    displayName: ⚙️ Copy to ob_outputDirectory
+    inputs:
+      targetType: filePath
+      filePath: .pipelines/onebranch/scripts/${{ parameters.generationType }}.sh

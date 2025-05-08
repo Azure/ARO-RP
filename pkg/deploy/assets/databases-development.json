@@ -1,0 +1,392 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "databaseAccountName": {
+            "type": "string"
+        },
+        "databaseName": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'))]",
+            "properties": {
+                "options": {
+                    "autoscaleSettings": {
+                        "maxThroughput": 1000
+                    }
+                },
+                "resource": {
+                    "id": "[parameters('databaseName')]"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/AsyncOperations')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": 604800,
+                    "id": "AsyncOperations",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftVersions')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "OpenShiftVersions",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/PlatformWorkloadIdentityRoleSets')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "PlatformWorkloadIdentityRoleSets",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "id": "Billing",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Gateway')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "Gateway",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "Monitors",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftClusters')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "id": "OpenShiftClusters",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/partitionKey"
+                        ]
+                    },
+                    "uniqueKeyPolicy": {
+                        "uniqueKeys": [
+                            {
+                                "paths": [
+                                    "/key"
+                                ]
+                            },
+                            {
+                                "paths": [
+                                    "/clusterResourceGroupIdKey"
+                                ]
+                            },
+                            {
+                                "paths": [
+                                    "/clientIdKey"
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Portal')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "Portal",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Subscriptions')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "id": "Subscriptions",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Subscriptions')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Subscriptions/renewLease')]",
+            "properties": {
+                "resource": {
+                    "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "id": "renewLease",
+                    "triggerOperation": "All",
+                    "triggerType": "Pre"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Subscriptions')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Subscriptions/retryLater')]",
+            "properties": {
+                "resource": {
+                    "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 600;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "id": "retryLater",
+                    "triggerOperation": "All",
+                    "triggerType": "Pre"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Billing')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing/setCreationBillingTimeStamp')]",
+            "properties": {
+                "resource": {
+                    "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tvar now = Math.floor(date.getTime() / 1000);\n\t\t\t\tvar billingBody = body[\"billing\"];\n\t\t\t\tif (!billingBody[\"creationTime\"]) {\n\t\t\t\t\tbillingBody[\"creationTime\"] = now;\n\t\t\t\t}\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "id": "setCreationBillingTimeStamp",
+                    "triggerOperation": "Create",
+                    "triggerType": "Pre"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Billing')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing/setDeletionBillingTimeStamp')]",
+            "properties": {
+                "resource": {
+                    "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tvar now = Math.floor(date.getTime() / 1000);\n\t\t\t\tvar billingBody = body[\"billing\"];\n\t\t\t\tif (!billingBody[\"creationTime\"]) {\n\t\t\t\t\tbillingBody[\"creationTime\"] = now;\n\t\t\t\t}\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "id": "setDeletionBillingTimeStamp",
+                    "triggerOperation": "Replace",
+                    "triggerType": "Pre"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'OpenShiftClusters')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftClusters/renewLease')]",
+            "properties": {
+                "resource": {
+                    "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "id": "renewLease",
+                    "triggerOperation": "All",
+                    "triggerType": "Pre"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Monitors')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors/renewLease')]",
+            "properties": {
+                "resource": {
+                    "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "id": "renewLease",
+                    "triggerOperation": "All",
+                    "triggerType": "Pre"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/MaintenanceManifests')]",
+            "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "MaintenanceManifests",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/clusterResourceID"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'MaintenanceManifests')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/MaintenanceManifests/renewLease')]",
+            "properties": {
+                "resource": {
+                    "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "id": "renewLease",
+                    "triggerOperation": "All",
+                    "triggerType": "Pre"
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        }
+    ]
+}

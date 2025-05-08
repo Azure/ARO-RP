@@ -1,0 +1,145 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "operators.coreos.com/v1alpha1",
+    "resources": [
+        {
+            "name": "catalogsources",
+            "singularName": "catalogsource",
+            "namespaced": true,
+            "kind": "CatalogSource",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "catsrc"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "58Nwkl8WW7w="
+        },
+        {
+            "name": "catalogsources/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "CatalogSource",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "clusterserviceversions",
+            "singularName": "clusterserviceversion",
+            "namespaced": true,
+            "kind": "ClusterServiceVersion",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "csv",
+                "csvs"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "bafXBXMPCeY="
+        },
+        {
+            "name": "clusterserviceversions/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "ClusterServiceVersion",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "installplans",
+            "singularName": "installplan",
+            "namespaced": true,
+            "kind": "InstallPlan",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "ip"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "6gw8IwttiW4="
+        },
+        {
+            "name": "installplans/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "InstallPlan",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "subscriptions",
+            "singularName": "subscription",
+            "namespaced": true,
+            "kind": "Subscription",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "sub",
+                "subs"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "cJUAl67Y7C4="
+        },
+        {
+            "name": "subscriptions/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "Subscription",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,108 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "machine.openshift.io/v1beta1",
+    "resources": [
+        {
+            "name": "machinehealthchecks",
+            "singularName": "machinehealthcheck",
+            "namespaced": true,
+            "kind": "MachineHealthCheck",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "mhc",
+                "mhcs"
+            ],
+            "storageVersionHash": "qvQyPZn5SE8="
+        },
+        {
+            "name": "machinehealthchecks/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "MachineHealthCheck",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "machines",
+            "singularName": "machine",
+            "namespaced": true,
+            "kind": "Machine",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "GLEf6/W/4xY="
+        },
+        {
+            "name": "machines/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "Machine",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "machinesets",
+            "singularName": "machineset",
+            "namespaced": true,
+            "kind": "MachineSet",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "p7ZEIilFKZ0="
+        },
+        {
+            "name": "machinesets/scale",
+            "singularName": "",
+            "namespaced": true,
+            "group": "autoscaling",
+            "version": "v1",
+            "kind": "Scale",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "machinesets/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "MachineSet",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

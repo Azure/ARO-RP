@@ -1,0 +1,38 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "autoscaling.openshift.io/v1",
+    "resources": [
+        {
+            "name": "clusterautoscalers",
+            "singularName": "clusterautoscaler",
+            "namespaced": false,
+            "kind": "ClusterAutoscaler",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "ca"
+            ],
+            "storageVersionHash": "zBaLBLdlZGk="
+        },
+        {
+            "name": "clusterautoscalers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ClusterAutoscaler",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

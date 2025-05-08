@@ -1,0 +1,79 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "oidcStorageAccountName": {
+            "type": "string"
+        },
+        "rpServicePrincipalId": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "accessTier": "Hot",
+                "supportsHttpsTrafficOnly": true,
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "allowSharedKeyAccess": false
+            },
+            "tags": {
+                "Az.Sec.AnonymousBlobAccessEnforcement::Skip": "PublicRelease"
+            },
+            "location": "[resourceGroup().location]",
+            "name": "[parameters('oidcStorageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-09-01"
+        },
+        {
+            "name": "[concat(parameters('oidcStorageAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('oidcStorageAccountName'))))]",
+            "type": "Microsoft.Storage/storageAccounts/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('oidcStorageAccountName'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('oidcStorageAccountName'))]"
+            ]
+        },
+        {
+            "name": "[concat(take(resourceGroup().name,10), '-dev-msi')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [],
+                "enabledForDiskEncryption": true,
+                "enableRbacAuthorization": true,
+                "enablePurgeProtection": true
+            },
+            "apiVersion": "2019-09-01"
+        },
+        {
+            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-msi'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi')), parameters('rpServicePrincipalId'), 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'))]",
+            "type": "Microsoft.KeyVault/vaults/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi'))]"
+            ]
+        }
+    ]
+}

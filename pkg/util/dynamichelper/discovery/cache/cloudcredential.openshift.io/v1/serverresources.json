@@ -1,0 +1,35 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "cloudcredential.openshift.io/v1",
+    "resources": [
+        {
+            "name": "credentialsrequests",
+            "singularName": "credentialsrequest",
+            "namespaced": true,
+            "kind": "CredentialsRequest",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "Y1KpLs3mWDk="
+        },
+        {
+            "name": "credentialsrequests/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "CredentialsRequest",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

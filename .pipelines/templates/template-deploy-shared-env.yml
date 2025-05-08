@@ -1,0 +1,28 @@
+parameters:
+  azureDevOpsJSONSPN: ""
+  subscriptionID: ""
+
+steps:
+  - script: |
+      set -e
+
+      . secrets/env
+      . ./hack/devtools/deploy-shared-env.sh
+      trap 'rm -f devops-spn.json' EXIT
+      base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsJSONSPN }}
+
+      az account set -s ${{ parameters.subscriptionID }}
+
+      create_infra_rg
+      deploy_rp_dev_predeploy
+      validate_arm_template_state "rp-development-predeploy"
+      deploy_rp_dev
+      validate_arm_template_state "rp-development"
+      deploy_env_dev_ci
+      validate_arm_template_state "env-development"
+      az keyvault set-policy --spn $(jq -r .clientId <devops-spn.json) -n $KEYVAULT_PREFIX-svc --certificate-permissions import --secret-permissions set
+      az keyvault set-policy --spn $(jq -r .clientId <devops-spn.json) -n $KEYVAULT_PREFIX-cls --certificate-permissions import --secret-permissions set
+      import_certs_secrets
+      update_parent_domain_dns_zone
+      vpn_configuration
+    displayName: 🚀 Deploy shared env

@@ -1,0 +1,36 @@
+name: ci-guardrailpolicies
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  opa-guardrail-policies-check:
+    name: opa-guardrail-policies-check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install opa binary
+      run: |
+        curl -L -o opa https://openpolicyagent.org/downloads/v0.70.0/opa_linux_amd64
+        chmod 755 opa; cp opa /usr/local/bin/
+
+    - name: Install gator cli
+      run: |
+        go install github.com/open-policy-agent/gatekeeper/v3/cmd/gator@master
+
+    - name: run opa & guardrails policies test.sh
+      run: |
+        export PATH=$PATH:/home/runner/go/bin
+        cd ${GITHUB_WORKSPACE}/pkg/operator/controllers/guardrails/policies
+        bash ./scripts/test.sh
+      shell: bash

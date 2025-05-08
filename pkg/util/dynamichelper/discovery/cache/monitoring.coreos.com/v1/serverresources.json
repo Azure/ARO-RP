@@ -1,0 +1,179 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "monitoring.coreos.com/v1",
+    "resources": [
+        {
+            "name": "alertmanagers",
+            "singularName": "alertmanager",
+            "namespaced": true,
+            "kind": "Alertmanager",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "am"
+            ],
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "NshW3zg1K7o="
+        },
+        {
+            "name": "podmonitors",
+            "singularName": "podmonitor",
+            "namespaced": true,
+            "kind": "PodMonitor",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "pmon"
+            ],
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "t6BHpUAzPig="
+        },
+        {
+            "name": "probes",
+            "singularName": "probe",
+            "namespaced": true,
+            "kind": "Probe",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "prb"
+            ],
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "x4d99qNb5YI="
+        },
+        {
+            "name": "prometheuses",
+            "singularName": "prometheus",
+            "namespaced": true,
+            "kind": "Prometheus",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "prom"
+            ],
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "C8naPY4eojU="
+        },
+        {
+            "name": "prometheuses/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "Prometheus",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "prometheusrules",
+            "singularName": "prometheusrule",
+            "namespaced": true,
+            "kind": "PrometheusRule",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "promrule"
+            ],
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "RSJ8iG+KDOo="
+        },
+        {
+            "name": "servicemonitors",
+            "singularName": "servicemonitor",
+            "namespaced": true,
+            "kind": "ServiceMonitor",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "smon"
+            ],
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "JLhPcfa+5xE="
+        },
+        {
+            "name": "thanosrulers",
+            "singularName": "thanosruler",
+            "namespaced": true,
+            "kind": "ThanosRuler",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "ruler"
+            ],
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "YBxpg/kA6UI="
+        }
+    ]
+}

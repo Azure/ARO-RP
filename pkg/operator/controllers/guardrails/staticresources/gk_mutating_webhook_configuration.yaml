@@ -1,0 +1,38 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  labels:
+    gatekeeper.sh/system: "yes"
+  name: gatekeeper-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: gatekeeper-webhook-service
+      namespace: {{.Namespace}}
+      path: /v1/mutate
+  matchPolicy: Exact
+  name: mutation.gatekeeper.sh
+  failurePolicy: {{.MutatingWebhookFailurePolicy}}
+  namespaceSelector:
+    matchExpressions:
+    - key: admission.gatekeeper.sh/ignore
+      operator: DoesNotExist
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - {{.Namespace}}
+  rules:
+  - apiGroups:
+    - '*'
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - '*'
+  sideEffects: None
+  timeoutSeconds: {{.MutatingWebhookTimeout}}

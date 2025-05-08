@@ -1,0 +1,22 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aro-operator-worker
+rules:
+- apiGroups:
+  - aro.openshift.io
+  resources:
+  - clusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - aro.openshift.io
+  resources:
+  - clusters/status
+  verbs:
+  - get
+  - patch
+  - update

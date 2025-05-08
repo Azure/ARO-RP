@@ -1,0 +1,49 @@
+parameters:
+    rpResourceGroup: ""
+    rpVmssName: ""
+    gwyResourceGroup: ""
+    gwyVmssName: ""
+
+steps:
+  - script: |
+      set -e
+      export PARENT_DOMAIN_NAME=osadev.cloud
+      export PARENT_DOMAIN_RESOURCEGROUP=dns
+      export GLOBAL_RESOURCEGROUP=${AZURE_PREFIX}-global
+
+      for DOMAIN_NAME in ${AZURE_PREFIX}-clusters.$PARENT_DOMAIN_NAME ${AZURE_PREFIX}-rp.$PARENT_DOMAIN_NAME; do
+          CHILD_DOMAIN_PREFIX="$(cut -d. -f1 <<<$DOMAIN_NAME)"
+          echo "########## Creating NS record to DNS Zone $CHILD_DOMAIN_PREFIX ##########"
+          az network dns record-set ns create \
+              --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
+              --zone "$PARENT_DOMAIN_NAME" \
+              --name "$CHILD_DOMAIN_PREFIX" >/dev/null
+          for ns in $(az network dns zone show \
+              --resource-group "$GLOBAL_RESOURCEGROUP" \
+              --name "$DOMAIN_NAME" \
+              --query nameServers -o tsv); do
+              az network dns record-set ns add-record \
+              --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
+              --zone "$PARENT_DOMAIN_NAME" \
+              --record-set-name "$CHILD_DOMAIN_PREFIX" \
+              --nsdname "$ns" >/dev/null
+          done
+      done
+    name: dns-domain-and-certificate-keyvault
+    displayName: ⚙️ Update the DNS Child Domains and the certificates in keyvault
+
+  - script: |
+      set -e
+      gitCommit=$(git rev-parse --short=7 HEAD)
+      az vmss delete -g ${{ parameters.rpResourceGroup }} --name ${{ parameters.rpVmssName }}-$gitCommit  --force-deletion
+    name: delete-rp-vmss
+    displayName: ⚙️ Delete RP VMSS
+    continueOnError: false
+
+  - script: |
+      set -e
+      gitCommit=$(git rev-parse --short=7 HEAD)
+      az vmss delete -g ${{ parameters.gwyResourceGroup }} --name ${{ parameters.gwyVmssName }}-$gitCommit  --force-deletion
+    name: delete-gwy-vmss
+    displayName: ⚙️ Delete GWY VMSS
+    continueOnError: false

@@ -1,0 +1,35 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "aro.openshift.io/v1alpha1",
+    "resources": [
+        {
+            "name": "clusters",
+            "singularName": "cluster",
+            "namespaced": false,
+            "kind": "Cluster",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "rWX11L+EHcU="
+        },
+        {
+            "name": "clusters/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Cluster",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

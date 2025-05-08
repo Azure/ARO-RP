@@ -1,0 +1,120 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "variables": {
+        "gatewayKeyvaultAccessPolicies": [
+            {
+                "tenantId": "[subscription().tenantId]",
+                "objectId": "[parameters('gatewayServicePrincipalId')]",
+                "permissions": {
+                    "secrets": [
+                        "get"
+                    ]
+                }
+            }
+        ]
+    },
+    "parameters": {
+        "deployNSGs": {
+            "type": "bool",
+            "defaultValue": false
+        },
+        "extraGatewayKeyvaultAccessPolicies": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "gatewayServicePrincipalId": {
+            "type": "string"
+        },
+        "keyvaultPrefix": {
+            "type": "string",
+            "maxLength": 20
+        }
+    },
+    "resources": [
+        {
+            "properties": {},
+            "name": "gateway-nsg",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[resourceGroup().location]",
+            "condition": "[parameters('deployNSGs')]",
+            "apiVersion": "2020-08-01"
+        },
+        {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.8.0/24"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.8.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]",
+                                "tags": null
+                            },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.AzureCosmosDB",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "service": "Microsoft.ContainerRegistry",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "service": "Microsoft.EventHub",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "service": "Microsoft.KeyVault",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                }
+                            ],
+                            "privateLinkServiceNetworkPolicies": "Disabled"
+                        },
+                        "name": "gateway-subnet"
+                    }
+                ]
+            },
+            "name": "gateway-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('keyvaultPrefix'), '-gwy')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": "[concat(variables('gatewayKeyvaultAccessPolicies'), parameters('extraGatewayKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
+            },
+            "apiVersion": "2019-09-01"
+        }
+    ]
+}

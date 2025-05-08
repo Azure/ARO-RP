@@ -1,0 +1,879 @@
+{
+    "apiVersion": "v1",
+    "groups": [
+        {
+            "name": "",
+            "preferredVersion": {
+                "groupVersion": "v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "apiregistration.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "apiregistration.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "apiregistration.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "apps",
+            "preferredVersion": {
+                "groupVersion": "apps/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "apps/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "events.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "events.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "events.k8s.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "events.k8s.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "authentication.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "authentication.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "authentication.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "authorization.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "authorization.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "authorization.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "autoscaling",
+            "preferredVersion": {
+                "groupVersion": "autoscaling/v2",
+                "version": "v2"
+            },
+            "versions": [
+                {
+                    "groupVersion": "autoscaling/v2",
+                    "version": "v2"
+                },
+                {
+                    "groupVersion": "autoscaling/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "autoscaling/v2beta1",
+                    "version": "v2beta1"
+                },
+                {
+                    "groupVersion": "autoscaling/v2beta2",
+                    "version": "v2beta2"
+                }
+            ]
+        },
+        {
+            "name": "batch",
+            "preferredVersion": {
+                "groupVersion": "batch/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "batch/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "batch/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "certificates.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "certificates.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "certificates.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "networking.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "networking.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "networking.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "policy",
+            "preferredVersion": {
+                "groupVersion": "policy/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "policy/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "policy/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "rbac.authorization.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "rbac.authorization.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "rbac.authorization.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "storage.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "storage.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "storage.k8s.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "storage.k8s.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "admissionregistration.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "admissionregistration.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "admissionregistration.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "apiextensions.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "apiextensions.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "apiextensions.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "scheduling.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "scheduling.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "scheduling.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "coordination.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "coordination.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "coordination.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "node.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "node.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "node.k8s.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "node.k8s.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "discovery.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "discovery.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "discovery.k8s.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "discovery.k8s.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "flowcontrol.apiserver.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta2",
+                "version": "v1beta2"
+            },
+            "versions": [
+                {
+                    "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta2",
+                    "version": "v1beta2"
+                },
+                {
+                    "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "apps.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "apps.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "apps.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "authorization.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "authorization.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "authorization.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "build.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "build.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "build.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "image.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "image.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "image.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "oauth.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "oauth.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "oauth.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "project.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "project.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "project.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "quota.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "quota.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "quota.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "route.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "route.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "route.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "security.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "security.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "security.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "template.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "template.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "template.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "user.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "user.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "user.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "packages.operators.coreos.com",
+            "preferredVersion": {
+                "groupVersion": "packages.operators.coreos.com/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "packages.operators.coreos.com/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "config.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "config.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "config.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "operator.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "operator.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "operator.openshift.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "operator.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "apiserver.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "apiserver.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "apiserver.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "autoscaling.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "autoscaling.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "autoscaling.openshift.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "autoscaling.openshift.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "cloud.network.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "cloud.network.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "cloud.network.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "cloudcredential.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "cloudcredential.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "cloudcredential.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "console.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "console.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "console.openshift.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "console.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "imageregistry.operator.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "imageregistry.operator.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "imageregistry.operator.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "ingress.operator.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "ingress.operator.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "ingress.operator.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "k8s.cni.cncf.io",
+            "preferredVersion": {
+                "groupVersion": "k8s.cni.cncf.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "k8s.cni.cncf.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "k8s.ovn.org",
+            "preferredVersion": {
+                "groupVersion": "k8s.ovn.org/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "k8s.ovn.org/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "machineconfiguration.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "machineconfiguration.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "machineconfiguration.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "monitoring.coreos.com",
+            "preferredVersion": {
+                "groupVersion": "monitoring.coreos.com/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "monitoring.coreos.com/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "monitoring.coreos.com/v1beta1",
+                    "version": "v1beta1"
+                },
+                {
+                    "groupVersion": "monitoring.coreos.com/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "network.operator.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "network.operator.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "network.operator.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "operators.coreos.com",
+            "preferredVersion": {
+                "groupVersion": "operators.coreos.com/v2",
+                "version": "v2"
+            },
+            "versions": [
+                {
+                    "groupVersion": "operators.coreos.com/v2",
+                    "version": "v2"
+                },
+                {
+                    "groupVersion": "operators.coreos.com/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "operators.coreos.com/v1alpha2",
+                    "version": "v1alpha2"
+                },
+                {
+                    "groupVersion": "operators.coreos.com/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "performance.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "performance.openshift.io/v2",
+                "version": "v2"
+            },
+            "versions": [
+                {
+                    "groupVersion": "performance.openshift.io/v2",
+                    "version": "v2"
+                },
+                {
+                    "groupVersion": "performance.openshift.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "performance.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "samples.operator.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "samples.operator.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "samples.operator.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "security.internal.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "security.internal.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "security.internal.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "snapshot.storage.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "snapshot.storage.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "snapshot.storage.k8s.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "tuned.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "tuned.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "tuned.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
+            "name": "aro.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "aro.openshift.io/v1alpha1",
+                "version": "v1alpha1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "aro.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "controlplane.operator.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "controlplane.operator.openshift.io/v1alpha1",
+                "version": "v1alpha1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "controlplane.operator.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "migration.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "migration.k8s.io/v1alpha1",
+                "version": "v1alpha1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "migration.k8s.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "preview.aro.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "preview.aro.openshift.io/v1alpha1",
+                "version": "v1alpha1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "preview.aro.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "upgrade.managed.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "upgrade.managed.openshift.io/v1alpha1",
+                "version": "v1alpha1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "upgrade.managed.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "whereabouts.cni.cncf.io",
+            "preferredVersion": {
+                "groupVersion": "whereabouts.cni.cncf.io/v1alpha1",
+                "version": "v1alpha1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "whereabouts.cni.cncf.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "helm.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "helm.openshift.io/v1beta1",
+                "version": "v1beta1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "helm.openshift.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "machine.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "machine.openshift.io/v1beta1",
+                "version": "v1beta1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "machine.openshift.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "metrics.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "metrics.k8s.io/v1beta1",
+                "version": "v1beta1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "metrics.k8s.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        }
+    ],
+    "kind": "APIGroupList"
+}

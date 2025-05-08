@@ -1,0 +1,32 @@
+trigger: none
+pr: none
+
+parameters:
+  - name: dryRun
+    type: boolean
+    default: false
+
+resources:
+  containers:
+    - container: golang
+      image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
+      options: --user=0
+
+variables:
+  - template: vars.yml
+
+jobs:
+  - job: Clean_subscription
+    pool:
+      name: 1es-aro-ci-pool
+
+    steps:
+      - template: ./templates/template-checkout.yml
+      - template: ./templates/template-clean-subscription.yml
+        parameters:
+          dryRun: ${{ parameters.dryRun }}
+          subscriptionCredentialsJSON: $(aro-v4-e2e-devops-spn)
+          subscriptionId: $(subscriptionId)
+          purgeCreatedTag: $(purgeCreatedTag)
+          resourceGroupDeletePrefixes: $(resourceGroupDeletePrefixes)
+          purgeTTL: $(purgeTTL)

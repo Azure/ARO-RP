@@ -1,0 +1,63 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "helm.openshift.io/v1beta1",
+    "resources": [
+        {
+            "name": "helmchartrepositories",
+            "singularName": "helmchartrepository",
+            "namespaced": false,
+            "kind": "HelmChartRepository",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "ufyXG8CiCus="
+        },
+        {
+            "name": "helmchartrepositories/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "HelmChartRepository",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "projecthelmchartrepositories",
+            "singularName": "projecthelmchartrepository",
+            "namespaced": true,
+            "kind": "ProjectHelmChartRepository",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "u99qLV2ifAE="
+        },
+        {
+            "name": "projecthelmchartrepositories/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "ProjectHelmChartRepository",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

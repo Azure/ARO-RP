@@ -1,0 +1,10 @@
+*aro.openshift.io*.yaml
+/pkg/**/staticresources/
+/pkg/deploy/assets/
+/pkg/operator/controllers/muo/test_files/
+/pkg/portal/assets/
+/pkg/portal/cluster/testdocs/
+/pkg/util/dynamichelper/discovery/
+/portal/v2/node_modules/
+/swagger/
+/vendor/

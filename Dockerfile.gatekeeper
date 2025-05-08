@@ -1,0 +1,32 @@
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
+ARG GATEKEEPER_VERSION
+ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
+
+ARG BUILDKIT_SBOM_SCAN_STAGE=true
+
+ENV GO111MODULE=on \
+    GOOS=linux \
+    GOPATH=/go/ \
+    GOARCH=amd64
+
+WORKDIR ${GOPATH}/src/github.com/open-policy-agent/gatekeeper
+USER root
+RUN curl -Lq $DOWNLOAD_URL | tar -xz --strip-components=1
+
+RUN go build -mod vendor -a -ldflags "-X github.com/open-policy-agent/gatekeeper/pkg/version.Version=$GATEKEEPER_VERSION" -o manager
+
+#### Runtime container
+FROM ${REGISTRY}/ubi8/ubi-minimal:latest
+
+ENV USER_UID=1001 \
+    USER_NAME=guardrails-operator
+
+WORKDIR /
+RUN microdnf update && microdnf clean all
+COPY --from=builder /go/src/github.com/open-policy-agent/gatekeeper/manager .
+ENTRYPOINT ["/manager"]
+
+USER ${USER_UID}
+LABEL io.openshift.managed.name="guardrails-operator" \
+    io.openshift.managed.description="Operator to enforce guardrails policies for Openshift version 4 clusters"

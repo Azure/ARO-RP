@@ -1,0 +1,78 @@
+ARG REGISTRY
+ARG ARO_VERSION
+
+###############################################################################
+# Stage 1: Build the SRE Portal Assets
+###############################################################################
+FROM ${REGISTRY}/ubi8/nodejs-16  AS portal-build
+LABEL aro-portal-build=true
+WORKDIR /build/portal/v2
+USER root
+
+# Copying package files and installing dependencies
+COPY portal/v2/package*.json ./
+
+# Combine npm install and audit in one step to reduce layers and clean cache
+RUN npm ci \
+    && npm audit --audit-level high --omit=dev
+
+# Copying the rest of the source and build
+COPY --chown=root:root portal/v2/ ./
+RUN npm run lint && npm run build
+
+###############################################################################
+# Stage 2: Compile the Golang RP code
+###############################################################################
+FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
+ARG ARO_VERSION
+LABEL aro-builder=true
+USER root
+WORKDIR /app
+
+# golang config and build steps
+ENV GOPATH=/root/go
+ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
+
+COPY .bingo .bingo
+RUN source .bingo/variables.env \
+    # install bingo itself
+    && make -f .bingo/Variables.mk ${BINGO} \
+    # and all the tools it manages
+    && ${BINGO} get -l
+ENV PATH=$PATH:${GOPATH}/bin/
+
+# Copy dependencies and source files
+COPY go.mod go.sum ./
+COPY swagger swagger
+COPY hack hack
+COPY cmd cmd
+COPY pkg pkg
+COPY test test
+
+# Ensure JS assets are available before generating Go code
+COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build
+
+# Build RP and E2E test suite bins
+RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./cmd/aro
+
+RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
+
+# Additional tests
+RUN gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... \
+    && gocov convert cover.out | gocov-xml > coverage.xml
+
+# Validate FIPS
+RUN hack/fips/validate-fips.sh ./aro
+
+###############################################################################
+# Stage 3: final is our slim image with minimal layers and tools
+###############################################################################
+FROM ${REGISTRY}/ubi8/ubi-minimal AS final
+LABEL aro-final=true
+RUN microdnf update && microdnf clean all
+COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+COPY --from=builder /app/report.xml /app/coverage.xml /app/
+ENTRYPOINT ["aro"]
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
+USER 1000
+ENV HOME=/tmp

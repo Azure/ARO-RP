@@ -1,0 +1,75 @@
+# This template is used to authenticate to Azure and push Docker images across Azure tenants.
+# We cannot use the simpler Docker@2 push command because MSI does not support cross-tenant authentication.
+
+parameters:
+  - name: acrFQDN
+    type: string
+  - name: repository  # This is both the ACR and local repository name
+    type: string  # The local and ACR image repository name
+  - name: tag  # The tag for the image
+    type: string
+  - name: pushLatest
+    type: boolean
+    default: false
+
+steps:
+  - task: AzureCLI@2
+    displayName: 'Authenticate to Azure and Push Docker Image'
+    inputs:
+      azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
+      scriptType: bash
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        set -xe
+
+        # Install Docker dependencies
+        echo "Installing Docker and Docker Compose Plugin..."
+        sudo apt-get update
+        sudo apt-get install -y ca-certificates curl gnupg
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc
+        sudo chmod a+r /etc/apt/keyrings/docker.asc
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        sudo systemctl start docker
+        sudo systemctl enable docker
+
+        # Authenticate to Azure and ACR
+        echo "Authenticating to Azure and ACR..."
+        ACR_FQDN="${{ parameters.acrFQDN }}"
+        REGISTRY_NAME=$(echo $ACR_FQDN | cut -d'.' -f1)
+
+        # Login to ACR
+        az acr login --name $REGISTRY_NAME
+
+        # List Docker images to verify the built image exists
+        echo "Listing Docker images..."
+        docker images
+
+        # Define the full repository image name
+        IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:${{ parameters.tag }}"
+
+        # Check if the local image exists
+        echo "Checking for image ${IMAGE_NAME}..."
+        if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
+          echo "Error: Image $IMAGE_NAME not found locally. Exiting."
+          exit 1
+        else
+          echo "Image $IMAGE_NAME found locally. Proceeding to push..."
+        fi
+
+        # Push the Docker image to ACR with the specified tag
+        echo "Pushing image ${IMAGE_NAME} to ACR..."
+        docker push $IMAGE_NAME
+
+        # Optionally push the image as 'latest'
+        if [ "${{ parameters.pushLatest }}" == "true" ]; then
+          IMAGE_LATEST="${ACR_FQDN}/${{ parameters.repository }}:latest"
+          echo "Tagging image with 'latest' and pushing..."
+          docker tag $IMAGE_NAME $IMAGE_LATEST
+          docker push $IMAGE_LATEST
+        fi

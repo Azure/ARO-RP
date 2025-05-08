@@ -1,0 +1,57 @@
+{
+    "tool": "Credential Scanner",
+    "suppressions": [
+        {
+            "file": "pkg/portal/kubeconfig/kubeconfig_test.go",
+            "_justification": "password used for testing"
+        },
+        {
+            "file": "pkg/portal/ssh/ssh_test.go",
+            "_justification": "passwords used for testing"
+        },
+        {
+            "file": "pkg/env/certificateRefresher_test.go",
+            "_justification": "sample cert for testing"
+        },
+        {
+            "file": "proxy_test.go",
+            "_justification": "sample login for testing"
+        },
+        {
+            "file": "pullsecret_test.go",
+            "_justification": "sample login for testing"
+        },
+        {
+            "file": "viper.go",
+            "_justification": "example login from comments"
+        },
+        {
+            "file": "README.md",
+            "_justification": "example login from comments"
+        },
+        {
+            "file": "api.go",
+            "_justification": "example secret in comment"
+        },
+        {
+            "file": "machine_webhook.go",
+            "_justification": "false positive"
+        },
+        {
+            "file": "doc.go",
+            "_justification": "examples in comments"
+        },
+        {
+            "file": "verify_test_dsa.go",
+            "_justification": "sample login for testing"
+        },
+        {
+            "file": "vendor/google.golang.org/api/compute/v1/compute-api.json",
+            "_justification": "example secret in comment on line 33112"
+        },
+        {
+            "file": "vendor/google.golang.org/api/compute/v1/compute-gen.go",
+            "_justification": "example secret in comment on line 8048"
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: arodenyprivilegednamespace
+  annotations:
+    metadata.gatekeeper.sh/title: "Privileged Namespace"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Disallows creating, updating or deleting resources in privileged namespaces.
+spec:
+  crd:
+    spec:
+      names:
+        kind: ARODenyPrivilegedNamespace
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Disallows creating, updating or deleting resources in privileged namespaces.
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+{{ file.Read "gktemplates-src/aro-deny-privileged-namespace/src.rego" | strings.Indent 8 | strings.TrimSuffix "\n" }}
+      libs:
+        - |
+{{ file.Read "gktemplates-src/library/common.rego" | strings.Indent 10 | strings.TrimSuffix "\n" }}

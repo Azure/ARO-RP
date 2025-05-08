@@ -1,0 +1,531 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "config.openshift.io/v1",
+    "resources": [
+        {
+            "name": "apiservers",
+            "singularName": "apiserver",
+            "namespaced": false,
+            "kind": "APIServer",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "yr4VqIMvOkg="
+        },
+        {
+            "name": "apiservers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "APIServer",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "authentications",
+            "singularName": "authentication",
+            "namespaced": false,
+            "kind": "Authentication",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "GY8wWr8iSHA="
+        },
+        {
+            "name": "authentications/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Authentication",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "builds",
+            "singularName": "build",
+            "namespaced": false,
+            "kind": "Build",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "OCpV5nXxruQ="
+        },
+        {
+            "name": "builds/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Build",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "clusteroperators",
+            "singularName": "clusteroperator",
+            "namespaced": false,
+            "kind": "ClusterOperator",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "co"
+            ],
+            "storageVersionHash": "hIXM1ouzyag="
+        },
+        {
+            "name": "clusteroperators/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ClusterOperator",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "clusterversions",
+            "singularName": "clusterversion",
+            "namespaced": false,
+            "kind": "ClusterVersion",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "jfyZTemckiE="
+        },
+        {
+            "name": "clusterversions/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ClusterVersion",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "consoles",
+            "singularName": "console",
+            "namespaced": false,
+            "kind": "Console",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "0HpeDULnQWY="
+        },
+        {
+            "name": "consoles/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Console",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "dnses",
+            "singularName": "dns",
+            "namespaced": false,
+            "kind": "DNS",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "SAHetG08gBY="
+        },
+        {
+            "name": "dnses/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "DNS",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "featuregates",
+            "singularName": "featuregate",
+            "namespaced": false,
+            "kind": "FeatureGate",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "HSu6crTvi5E="
+        },
+        {
+            "name": "featuregates/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "FeatureGate",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "imagecontentpolicies",
+            "singularName": "imagecontentpolicy",
+            "namespaced": false,
+            "kind": "ImageContentPolicy",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "4sS3ccaNRA4="
+        },
+        {
+            "name": "imagecontentpolicies/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ImageContentPolicy",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "images",
+            "singularName": "image",
+            "namespaced": false,
+            "kind": "Image",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "6sMalKeq6tY="
+        },
+        {
+            "name": "images/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Image",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "infrastructures",
+            "singularName": "infrastructure",
+            "namespaced": false,
+            "kind": "Infrastructure",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "s/S0qwLEaK4="
+        },
+        {
+            "name": "infrastructures/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Infrastructure",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "ingresses",
+            "singularName": "ingress",
+            "namespaced": false,
+            "kind": "Ingress",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "PHiQOptbYkg="
+        },
+        {
+            "name": "ingresses/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Ingress",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "networks",
+            "singularName": "network",
+            "namespaced": false,
+            "kind": "Network",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "gAEoywwmFz4="
+        },
+        {
+            "name": "nodes",
+            "singularName": "node",
+            "namespaced": false,
+            "kind": "Node",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "QOl4Ml/XMag="
+        },
+        {
+            "name": "nodes/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Node",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "oauths",
+            "singularName": "oauth",
+            "namespaced": false,
+            "kind": "OAuth",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "4BZS3Rc6+4g="
+        },
+        {
+            "name": "oauths/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OAuth",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "operatorhubs",
+            "singularName": "operatorhub",
+            "namespaced": false,
+            "kind": "OperatorHub",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "O7bQeZSTFtM="
+        },
+        {
+            "name": "operatorhubs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OperatorHub",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "projects",
+            "singularName": "project",
+            "namespaced": false,
+            "kind": "Project",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "q4gdBJZsxYc="
+        },
+        {
+            "name": "projects/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Project",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "proxies",
+            "singularName": "proxy",
+            "namespaced": false,
+            "kind": "Proxy",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "2I4SQ6PshRY="
+        },
+        {
+            "name": "proxies/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Proxy",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "schedulers",
+            "singularName": "scheduler",
+            "namespaced": false,
+            "kind": "Scheduler",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "ptedUcY9aMg="
+        },
+        {
+            "name": "schedulers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Scheduler",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyMachineConfig
+metadata:
+  name: aro-machine-config-deny
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: ["machineconfiguration.openshift.io"]
+        kinds: ["MachineConfig"]

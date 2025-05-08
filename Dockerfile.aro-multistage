@@ -1,0 +1,22 @@
+# Uses a multi-stage container build to build the RP.
+#
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
+
+USER root
+ENV GOPATH=/root/go
+ENV PATH=$PATH:${GOPATH}/bin/
+RUN mkdir -p /app
+WORKDIR /app
+
+COPY . /app
+
+RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make validate-fips && make e2e.test
+
+FROM ${REGISTRY}/ubi8/ubi-minimal
+RUN microdnf update && microdnf clean all
+COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+ENTRYPOINT ["aro"]
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
+USER 1000
+ENV HOME=/tmp

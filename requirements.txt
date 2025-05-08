@@ -1,0 +1,5 @@
+autopep8==1.6.0
+azdev==0.1.71
+azure-mgmt-loganalytics==0.2.0
+colorama==0.4.5
+ruamel.yaml==0.17.21

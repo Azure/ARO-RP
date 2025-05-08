@@ -1,0 +1,531 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "operator.openshift.io/v1",
+    "resources": [
+        {
+            "name": "authentications",
+            "singularName": "authentication",
+            "namespaced": false,
+            "kind": "Authentication",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "0+ezrHhttAw="
+        },
+        {
+            "name": "authentications/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Authentication",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "cloudcredentials",
+            "singularName": "cloudcredential",
+            "namespaced": false,
+            "kind": "CloudCredential",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "rJ9MVOyFQKo="
+        },
+        {
+            "name": "cloudcredentials/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "CloudCredential",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "clustercsidrivers",
+            "singularName": "clustercsidriver",
+            "namespaced": false,
+            "kind": "ClusterCSIDriver",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "/WO1MfazznM="
+        },
+        {
+            "name": "clustercsidrivers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ClusterCSIDriver",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "configs",
+            "singularName": "config",
+            "namespaced": false,
+            "kind": "Config",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "coreoperators"
+            ],
+            "storageVersionHash": "Bt48MmgSCbA="
+        },
+        {
+            "name": "configs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Config",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "consoles",
+            "singularName": "console",
+            "namespaced": false,
+            "kind": "Console",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "pq3HXY/v/IM="
+        },
+        {
+            "name": "consoles/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Console",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "csisnapshotcontrollers",
+            "singularName": "csisnapshotcontroller",
+            "namespaced": false,
+            "kind": "CSISnapshotController",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "bFbcgq1iZzM="
+        },
+        {
+            "name": "csisnapshotcontrollers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "CSISnapshotController",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "dnses",
+            "singularName": "dns",
+            "namespaced": false,
+            "kind": "DNS",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "G9905aqbo/s="
+        },
+        {
+            "name": "dnses/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "DNS",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "etcds",
+            "singularName": "etcd",
+            "namespaced": false,
+            "kind": "Etcd",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "coreoperators"
+            ],
+            "storageVersionHash": "ro9YGgxMvm8="
+        },
+        {
+            "name": "etcds/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Etcd",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "ingresscontrollers",
+            "singularName": "ingresscontroller",
+            "namespaced": true,
+            "kind": "IngressController",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "3HualLCmNv8="
+        },
+        {
+            "name": "ingresscontrollers/scale",
+            "singularName": "",
+            "namespaced": true,
+            "group": "autoscaling",
+            "version": "v1",
+            "kind": "Scale",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "ingresscontrollers/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "IngressController",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "kubeapiservers",
+            "singularName": "kubeapiserver",
+            "namespaced": false,
+            "kind": "KubeAPIServer",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "fq0dmqlYzhg="
+        },
+        {
+            "name": "kubeapiservers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "KubeAPIServer",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "kubecontrollermanagers",
+            "singularName": "kubecontrollermanager",
+            "namespaced": false,
+            "kind": "KubeControllerManager",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "coreoperators"
+            ],
+            "storageVersionHash": "0u2SGVIGzgI="
+        },
+        {
+            "name": "kubecontrollermanagers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "KubeControllerManager",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "kubeschedulers",
+            "singularName": "kubescheduler",
+            "namespaced": false,
+            "kind": "KubeScheduler",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "coreoperators"
+            ],
+            "storageVersionHash": "LqQcZlG4oI4="
+        },
+        {
+            "name": "kubeschedulers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "KubeScheduler",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "kubestorageversionmigrators",
+            "singularName": "kubestorageversionmigrator",
+            "namespaced": false,
+            "kind": "KubeStorageVersionMigrator",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "8YwaYb4U1KA="
+        },
+        {
+            "name": "kubestorageversionmigrators/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "KubeStorageVersionMigrator",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "networks",
+            "singularName": "network",
+            "namespaced": false,
+            "kind": "Network",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "JuI4WtFKtMI="
+        },
+        {
+            "name": "openshiftapiservers",
+            "singularName": "openshiftapiserver",
+            "namespaced": false,
+            "kind": "OpenShiftAPIServer",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "coreoperators"
+            ],
+            "storageVersionHash": "wTEwJGUaNBs="
+        },
+        {
+            "name": "openshiftapiservers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OpenShiftAPIServer",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "openshiftcontrollermanagers",
+            "singularName": "openshiftcontrollermanager",
+            "namespaced": false,
+            "kind": "OpenShiftControllerManager",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "coreoperators"
+            ],
+            "storageVersionHash": "hPPlE6lZ+MQ="
+        },
+        {
+            "name": "openshiftcontrollermanagers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OpenShiftControllerManager",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "servicecas",
+            "singularName": "serviceca",
+            "namespaced": false,
+            "kind": "ServiceCA",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "+DF3a5EUlMc="
+        },
+        {
+            "name": "servicecas/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ServiceCA",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "storages",
+            "singularName": "storage",
+            "namespaced": false,
+            "kind": "Storage",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "NnBYY8EyXNM="
+        },
+        {
+            "name": "storages/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Storage",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

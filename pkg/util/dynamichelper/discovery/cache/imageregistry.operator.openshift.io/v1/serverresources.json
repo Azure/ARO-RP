@@ -1,0 +1,63 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "imageregistry.operator.openshift.io/v1",
+    "resources": [
+        {
+            "name": "configs",
+            "singularName": "config",
+            "namespaced": false,
+            "kind": "Config",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "ezezfcipwsQ="
+        },
+        {
+            "name": "configs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Config",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "imagepruners",
+            "singularName": "imagepruner",
+            "namespaced": false,
+            "kind": "ImagePruner",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "csaZlx1bqEc="
+        },
+        {
+            "name": "imagepruners/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ImagePruner",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

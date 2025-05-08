@@ -1,0 +1,26 @@
+name: ci-python
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+      - azext-aro-*
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-python:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/python-311:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: validate
+        run: |
+          make test-python
+          hack/ci-utils/isClean.sh

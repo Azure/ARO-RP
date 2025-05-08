@@ -1,0 +1,35 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "preview.aro.openshift.io/v1alpha1",
+    "resources": [
+        {
+            "name": "previewfeatures",
+            "singularName": "previewfeature",
+            "namespaced": false,
+            "kind": "PreviewFeature",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "rsUQ61zWGQQ="
+        },
+        {
+            "name": "previewfeatures/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "PreviewFeature",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

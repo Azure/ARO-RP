@@ -1,0 +1,6 @@
+variables:
+  AZURE_UNIQUE_PREFIX: zzz # dummy value
+  NO_CACHE: true
+  ARO_INSTALL_VIA_HIVE: true
+  ARO_ADOPT_BY_HIVE: true
+  DATABASE_NAME: ARO

@@ -1,0 +1,47 @@
+apiVersion: admission.k8s.io/v1
+kind: AdmissionReview
+request:
+  dryRun: true
+  name: demo
+  kind:
+    group: ""
+    kind: Deployment
+    version: apps/v1
+  object:
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app: nginx
+      name: nginx-deployment
+      namespace: openshift-azure-guardrails
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: nginx
+      template:
+        metadata:
+          labels:
+            app: nginx
+        spec:
+          containers:
+          - image: nginx:1.14.2
+            name: nginx
+            ports:
+            - containerPort: 80
+  oldObject: null
+  operation: CREATE
+  options: null
+  requestKind:
+    group: ""
+    kind: Deployment
+    version: apps/v1
+  resource:
+    group: ""
+    resource: Deployment
+    version: apps/v1
+  uid: c05390a2-92cf-4a7d-9b8b-668184385d5f
+  userInfo:
+    uid: 9c61168e-77cb-4c42-82d4-be86313124d3
+    username: testuser

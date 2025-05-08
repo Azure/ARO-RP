@@ -1,0 +1,26 @@
+# Azure DevOps Pipeline deploying a dev environement
+trigger: none
+pr: none
+
+variables:
+  - template: vars.yml
+
+jobs:
+  - job: Deploy_new_shared_env
+    pool:
+      name: 1es-aro-ci-pool
+
+    steps:
+      - template: ./templates/template-checkout.yml
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - script: |
+          export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+          make secrets
+        displayName: 🔑 Downloading certificates and secrets from storage account
+      - template: ./templates/template-deploy-shared-env.yml
+        parameters:
+          subscriptionID: $(AZURE_SUBSCRIPTION_ID)
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - template: ./templates/template-az-cli-logout.yml

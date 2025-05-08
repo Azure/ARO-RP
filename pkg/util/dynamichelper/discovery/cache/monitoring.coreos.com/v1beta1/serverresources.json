@@ -1,0 +1,30 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "monitoring.coreos.com/v1beta1",
+    "resources": [
+        {
+            "name": "alertmanagerconfigs",
+            "singularName": "alertmanagerconfig",
+            "namespaced": true,
+            "kind": "AlertmanagerConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "amcfg"
+            ],
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "95DNJ6wsUCg="
+        }
+    ]
+}

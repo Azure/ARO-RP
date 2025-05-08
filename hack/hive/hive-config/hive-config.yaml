@@ -1,0 +1,14 @@
+apiVersion: hive.openshift.io/v1
+kind: HiveConfig
+metadata:
+  name: hive
+spec:
+  logLevel: debug
+  targetNamespace: HIVE_OPERATOR_NS
+  disabledControllers:
+  - remoteingress
+  failedProvisionConfig:
+    retryReasons:
+    - UnknownError
+  globalPullSecretRef:
+    name: hive-global-pull-secret

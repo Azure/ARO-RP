@@ -1,0 +1,4 @@
+variables:
+  GOPATH: $(Agent.BuildDirectory)/go
+  ARO_CHECKOUT_PATH: $(Agent.BuildDirectory)/go/src/github.com/Azure/ARO-RP
+  OpenShiftCLIVersion: "4.16.30"

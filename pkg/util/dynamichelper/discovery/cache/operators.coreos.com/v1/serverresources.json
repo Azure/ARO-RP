@@ -1,0 +1,137 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "operators.coreos.com/v1",
+    "resources": [
+        {
+            "name": "olmconfigs",
+            "singularName": "olmconfig",
+            "namespaced": false,
+            "kind": "OLMConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "rV2ESbqnZdM="
+        },
+        {
+            "name": "olmconfigs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OLMConfig",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "operatorconditions",
+            "singularName": "operatorcondition",
+            "namespaced": true,
+            "kind": "OperatorCondition",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "condition"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "Cil3d/t/Kpc="
+        },
+        {
+            "name": "operatorconditions/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "OperatorCondition",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "operatorgroups",
+            "singularName": "operatorgroup",
+            "namespaced": true,
+            "kind": "OperatorGroup",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "og"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "smrHN4vKoms="
+        },
+        {
+            "name": "operatorgroups/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "OperatorGroup",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "operators",
+            "singularName": "operator",
+            "namespaced": false,
+            "kind": "Operator",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "G7jRFeS6JKo="
+        },
+        {
+            "name": "operators/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Operator",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

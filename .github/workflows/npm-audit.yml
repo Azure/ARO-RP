@@ -1,0 +1,48 @@
+name: node-lint
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit-portal-v2:
+    name: npm-audit-portal-v2
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: setup Node.JS
+      uses: actions/setup-node@v4
+      with:
+        node-version: 16.16.0
+
+    - name: Run NPM Audit
+      run: bash ${GITHUB_WORKSPACE}/hack/github-actions/npm_audit.sh
+      shell: bash
+
+  npm-build-check:
+    name: npm-build-check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: setup Node.JS
+      uses: actions/setup-node@v4
+      with:
+        node-version: 16.16.0
+
+    - name: Run NPM Build
+      working-directory: ./portal/v2
+      run: |
+        npm ci
+        npm run build
+        ../../hack/ci-utils/isClean.sh

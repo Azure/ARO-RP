@@ -1,0 +1,24 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: aro-machinehealthcheck
+  namespace: openshift-machine-api
+spec:
+  selector:
+    matchExpressions:
+    - key: machine.openshift.io/cluster-api-machine-role
+      operator: NotIn
+      values:
+      - "infra"
+      - "master"
+    - key: machine.openshift.io/cluster-api-machineset
+      operator: Exists
+  unhealthyConditions:
+  - type: "Ready"
+    timeout: "15m"
+    status: "False"
+  - type: "Ready"
+    timeout: "15m"
+    status: "Unknown"
+  maxUnhealthy: "1"
+  nodeStartupTimeout: "25m"

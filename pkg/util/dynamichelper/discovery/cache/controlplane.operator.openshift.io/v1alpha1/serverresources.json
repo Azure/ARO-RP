@@ -1,0 +1,35 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "controlplane.operator.openshift.io/v1alpha1",
+    "resources": [
+        {
+            "name": "podnetworkconnectivitychecks",
+            "singularName": "podnetworkconnectivitycheck",
+            "namespaced": true,
+            "kind": "PodNetworkConnectivityCheck",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "OAM77/d6N/I="
+        },
+        {
+            "name": "podnetworkconnectivitychecks/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "PodNetworkConnectivityCheck",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

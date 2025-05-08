@@ -1,0 +1,32 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "acrLocationOverride": {
+            "type": "string",
+            "defaultValue": "eastus"
+        },
+        "acrName": {
+            "type": "string",
+            "defaultValue": "arosvcdev"
+        },
+        "acrResourceId": {
+            "type": "string",
+            "defaultValue": "Microsoft.ContainerRegistry/registries"
+        }
+    },
+    "resources": [
+        {
+            "sku": {
+                "name": "Premium"
+            },
+            "properties": {
+                "dataEndpointEnabled": true
+            },
+            "name": "[parameters('acrName')]",
+            "type": "Microsoft.ContainerRegistry/registries",
+            "location": "[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]",
+            "apiVersion": "2020-11-01-preview"
+        }
+    ]
+}

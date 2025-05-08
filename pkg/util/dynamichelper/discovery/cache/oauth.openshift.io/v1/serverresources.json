@@ -1,0 +1,98 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "oauth.openshift.io/v1",
+    "resources": [
+        {
+            "name": "oauthaccesstokens",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OAuthAccessToken",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "Hss+eIbWaq4="
+        },
+        {
+            "name": "oauthauthorizetokens",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OAuthAuthorizeToken",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "boIUgj6jo8I="
+        },
+        {
+            "name": "oauthclientauthorizations",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OAuthClientAuthorization",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "Q0jsEj2AFkk="
+        },
+        {
+            "name": "oauthclients",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OAuthClient",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "8NZGiGeCmFo="
+        },
+        {
+            "name": "tokenreviews",
+            "singularName": "",
+            "namespaced": false,
+            "group": "authentication.k8s.io",
+            "version": "v1",
+            "kind": "TokenReview",
+            "verbs": [
+                "create"
+            ]
+        },
+        {
+            "name": "useroauthaccesstokens",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "UserOAuthAccessToken",
+            "verbs": [
+                "delete",
+                "get",
+                "list",
+                "watch"
+            ]
+        }
+    ]
+}

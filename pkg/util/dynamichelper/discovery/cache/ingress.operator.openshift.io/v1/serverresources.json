@@ -1,0 +1,35 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "ingress.operator.openshift.io/v1",
+    "resources": [
+        {
+            "name": "dnsrecords",
+            "singularName": "dnsrecord",
+            "namespaced": true,
+            "kind": "DNSRecord",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "S3Nu5BOcJQA="
+        },
+        {
+            "name": "dnsrecords/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "DNSRecord",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

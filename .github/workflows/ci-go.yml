@@ -1,0 +1,74 @@
+name: ci-go
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  vendor-check:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Add GOBIN to PATH
+      run: |
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+    - run: |
+        make go-verify
+        hack/ci-utils/isClean.sh
+
+  generate-check:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Add GOBIN to PATH
+      run: |
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+    - name: Run make generate
+      run: |
+        make generate
+        hack/ci-utils/isClean.sh
+
+  golangci:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: v2.1.6
+        args: -v --timeout 15m
+
+  validate-go:
+    name: validate-go
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - run: make validate-go-action

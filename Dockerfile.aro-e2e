@@ -1,0 +1,26 @@
+# Uses a multi-stage container build to build the RP & E2E components.
+#
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/go-toolset:1.22.9-2 AS builder
+
+USER root
+ENV GOPATH=/root/go
+ENV PATH=$PATH:${GOPATH}/bin/
+RUN mkdir -p /app
+WORKDIR /app
+
+COPY . /app
+
+RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make validate-fips && make e2e.test e2etools
+
+FROM ${REGISTRY}/ubi8/ubi-minimal
+RUN microdnf update && microdnf clean all
+COPY --from=builder /root/go/bin/gojq /usr/local/bin/jq
+COPY --from=builder /app/aro /app/e2e.test /app/db /app/cluster /app/portalauth /usr/local/bin/
+# Setting ENV HOME=/tmp does not change the user’s default home directory of /
+# This setting is required to keep the existing e2e pipeline working without any code changes
+COPY --from=builder /app/portalauth /
+ENTRYPOINT ["aro"]
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
+USER 1000
+ENV HOME=/tmp
