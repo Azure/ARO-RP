@@ -36,7 +36,6 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
-
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
