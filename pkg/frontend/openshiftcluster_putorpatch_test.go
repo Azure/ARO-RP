@@ -45,7 +45,7 @@ var (
 
 type dummyOpenShiftClusterValidator struct{}
 
-func (*dummyOpenShiftClusterValidator) Static(interface{}, *api.OpenShiftCluster, string, string, bool, string) error {
+func (*dummyOpenShiftClusterValidator) Static(interface{}, *api.OpenShiftCluster, string, string, bool, api.ArchitectureVersion, string) error {
 	return nil
 }
 

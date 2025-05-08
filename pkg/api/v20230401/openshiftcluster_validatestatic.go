@@ -14,10 +14,10 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
+	"github.com/Azure/ARO-RP/pkg/api/util/pullsecret"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -30,7 +30,7 @@ type openShiftClusterStaticValidator struct {
 }
 
 // Validate validates an OpenShift cluster
-func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sWorkers bool, resourceID string) error {
+func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sWorkers bool, installArchitectureVersion api.ArchitectureVersion, resourceID string) error {
 	sv.location = location
 	sv.domain = domain
 	sv.requireD2sWorkers = requireD2sWorkers
