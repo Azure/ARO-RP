@@ -81,15 +81,12 @@ const clusterListDetailStyles: Partial<IDetailsListStyles> = {
   },
 }
 
-/* eslint-disable */
-
 interface ClusterListComponentProps {
   items: ICluster[]
   sshModalRef: MutableRefObject<any>
   csrfToken: MutableRefObject<string>
 }
 
-/* eslint-enable */
 class ClusterListComponent extends Component<ClusterListComponentProps, IClusterListState> {
   private _sshModal: MutableRefObject<any>
 

@@ -22,7 +22,7 @@ jobs:
     - name: setup Node.JS
       uses: actions/setup-node@v4
       with:
-        node-version: 16.16.0
+        node-version: 18
 
     - name: Run NPM Audit
       run: bash ${GITHUB_WORKSPACE}/hack/github-actions/npm_audit.sh
@@ -38,7 +38,7 @@ jobs:
     - name: setup Node.JS
       uses: actions/setup-node@v4
       with:
-        node-version: 16.16.0
+        node-version: 18
 
     - name: Run NPM Build
       working-directory: ./portal/v2

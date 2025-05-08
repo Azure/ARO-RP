@@ -99,7 +99,11 @@ export function ClusterDetailPanel(props: {
   const navigate = useNavigate()
 
   const params = useParams()
-  const resourceID = useMemo(() => `/subscriptions/${params.subscriptionId}/resourcegroups/${params.resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/${params.resourceName}`, [params.subscriptionId, params.resourceGroupName, params.resourceName])
+  const resourceID = useMemo(
+    () =>
+      `/subscriptions/${params.subscriptionId}/resourcegroups/${params.resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/${params.resourceName}`,
+    [params.subscriptionId, params.resourceGroupName, params.resourceName]
+  )
   const currentCluster = useMemo<IClusterCoordinates | null>(() => {
     if (params.subscriptionId && params.resourceGroupName && params.resourceName) {
       return {
@@ -300,7 +304,7 @@ export function ClusterDetailPanel(props: {
             <div className={headerStyles.subtitleText}>Cluster</div>
             <ToolIcons
               resourceId={currentCluster ? currentCluster?.resourceId : ""}
-              version={Number(data?.version) !== undefined ? Number(data?.version) : 0}
+              version={Number(data?.version)}
               csrfToken={props.csrfToken}
               sshBox={props.sshBox}
             />
