@@ -398,6 +398,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpParentDomainName",
 		"oidcStorageAccountName",
 		"otelAuditQueueSize",
+		"environmentSuffix",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",
@@ -639,7 +640,7 @@ func (g *generator) rpClusterParentDNSZone() *arm.Resource {
 }
 
 func (g *generator) rpDNSZone() *arm.Resource {
-	return g.dnsZone("[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]")
+	return g.dnsZone("[concat(resourceGroup().location, parameters('environmentSuffix'), '.', parameters('clusterParentDomainName'))]")
 }
 
 func (g *generator) rpClusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
@@ -1456,8 +1457,8 @@ func (g *generator) rpRBAC() []*arm.Resource {
 			rbac.RoleDNSZoneContributor,
 			"parameters('fpServicePrincipalId')",
 			"Microsoft.Network/dnsZones",
-			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))",
-			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))",
+			"concat(resourceGroup().location, parameters('environmentSuffix'), '.', parameters('clusterParentDomainName'))",
+			"concat(resourceGroup().location, parameters('environmentSuffix'), '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, parameters('environmentSuffix'), '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))",
 		),
 	}
 }
