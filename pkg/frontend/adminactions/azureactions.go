@@ -44,16 +44,17 @@ type azureActions struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	resources          features.ResourcesClient
-	resourceSkus       compute.ResourceSkusClient
-	virtualMachines    compute.VirtualMachinesClient
-	virtualNetworks    armnetwork.VirtualNetworksClient
-	diskEncryptionSets compute.DiskEncryptionSetsClient
-	routeTables        armnetwork.RouteTablesClient
-	storageAccounts    storage.AccountsClient
-	networkInterfaces  network.InterfacesClient
-	loadBalancers      armnetwork.LoadBalancersClient
-	securityGroups     armnetwork.SecurityGroupsClient
+	resources            features.ResourcesClient
+	resourceSkus         compute.ResourceSkusClient
+	virtualMachines      compute.VirtualMachinesClient
+	virtualNetworks      armnetwork.VirtualNetworksClient
+	diskEncryptionSets   compute.DiskEncryptionSetsClient
+	routeTables          armnetwork.RouteTablesClient
+	storageAccounts      storage.AccountsClient
+	networkInterfaces    network.InterfacesClient
+	loadBalancers        armnetwork.LoadBalancersClient
+	securityGroups       armnetwork.SecurityGroupsClient
+	armNetworkInterfaces armnetwork.InterfacesClient
 }
 
 // NewAzureActions returns an azureActions
@@ -92,6 +93,11 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	armNetworkInterfaces, err := armnetwork.NewInterfacesClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
@@ -107,6 +113,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		loadBalancers:      loadBalancers,
 		securityGroups:     securityGroups,
+		armNetworkInterfaces: armNetworkInterfaces,
 	}, nil
 }
 
