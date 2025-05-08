@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: aro-operator-master
   namespace: openshift-azure-operator
+  labels:
+    name: aro-operator-master
 spec:
   selector:
     app: aro-operator-master
@@ -10,3 +12,6 @@ spec:
     - name: http
       port: 8080
       targetPort: 8080
+    - name: http-metrics
+      port: 8888
+      targetPort: 8888
