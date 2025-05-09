@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -32,8 +33,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 
 	if existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
 		if existingMsiCertificate.Secret.Attributes != nil {
-			expiry := existingMsiCertificate.Secret.Attributes.Expires
-			if time.Now().Before(*expiry) {
+			if !m.isEligibleForRenewal(existingMsiCertificate) {
 				return nil
 			}
 		}
@@ -67,6 +67,13 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 
 	_, err = m.clusterMsiKeyVaultStore.SetSecret(ctx, name, parameters, nil)
 	return err
+}
+
+// https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation
+// The cert is eligible to be refreshed after the 46 day mark, and expires at 90 days
+func (m *manager) isEligibleForRenewal(secret azsecrets.GetSecretResponse) bool {
+		renewAfter := time.Time.AddDate(*secret.Secret.Attributes.NotBefore, 0, 0, 46)
+		return time.Now().After(renewAfter)
 }
 
 // initializeClusterMsiClients intializes any Azure clients that use the cluster

@@ -503,8 +503,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
 	placeholderString := "placeholder"
 	placeholderTime := time.Now().Format(time.RFC3339)
-	placeholderValidTime := time.Now().Add(1 * time.Hour)
-	placeholderExpiredTime := time.Now().Add(-1 * time.Hour)
+	placeholderNotEligibleForRotationTime := time.Now().Add(-1 * time.Hour)
+	placeholderEligibleForRotationTime := time.Now().Add(-1200 * time.Hour)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
@@ -532,19 +532,19 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 		panic(err)
 	}
 	credentialsObjectString := string(credentialsObjectBuffer)
-	validSecretsResponse := azsecrets.GetSecretResponse{
+	notEligibleForRotationResponse := azsecrets.GetSecretResponse{
 		Secret: azsecrets.Secret{
 			Value: &credentialsObjectString,
 			Attributes: &azsecrets.SecretAttributes{
-				Expires: &placeholderValidTime,
+				NotBefore: &placeholderNotEligibleForRotationTime,
 			},
 		},
 	}
-	expiredSecretsResponse := azsecrets.GetSecretResponse{
+	eligibleForRotationResponse := azsecrets.GetSecretResponse{
 		Secret: azsecrets.Secret{
 			Value: &credentialsObjectString,
 			Attributes: &azsecrets.SecretAttributes{
-				Expires: &placeholderExpiredTime,
+				NotBefore: &placeholderEligibleForRotationTime,
 			},
 		},
 	}
@@ -577,11 +577,11 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				},
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(validSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
-			name: "success - cluster doc has nil PlatformWorkloadIdentities, MSI certificate expired",
+			name: "success - cluster doc has nil PlatformWorkloadIdentities, MSI certificate eligible for rotation",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -609,7 +609,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(expiredSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(eligibleForRotationResponse, nil).Times(1)
 				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
 			},
 		},
@@ -634,7 +634,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				},
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(validSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -697,7 +697,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(validSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -759,7 +759,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ingressIdentityResourceId.ResourceGroup), gomock.Eq(ingressIdentityResourceId.ResourceName), gomock.Eq(ingressFedCredName), gomock.Any())
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(validSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -823,7 +823,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq("fedCredWithWrongIssuer"), gomock.Any()).Times(0)
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(validSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -853,7 +853,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			},
 			wantErr: "parsing failed for /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster. Invalid resource Id format",
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(validSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -886,7 +886,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 					Return(nil, fmt.Errorf("something unexpected occurred"))
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(validSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -933,7 +933,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 					Return(sdkmsi.FederatedIdentityCredentialsClientDeleteResponse{}, fmt.Errorf("something unexpected occurred"))
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(validSecretsResponse, nil).Times(1)
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 	}
