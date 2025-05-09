@@ -34,6 +34,8 @@ jobs:
           hack/ci-utils/isClean.sh
         env:
           GO_COMPLIANCE_INFO: "0"
+          GO111MODULE: 'auto'
+          GOFLAGS: '-mod=readonly'
 
   generate-check:
     runs-on: ubuntu-latest
@@ -58,6 +60,8 @@ jobs:
           hack/ci-utils/isClean.sh
         env:
           GO_COMPLIANCE_INFO: "0"
+          GO111MODULE: 'auto'
+          GOFLAGS: '-mod=readonly'
 
   golangci:
     name: golangci-lint
@@ -82,6 +86,9 @@ jobs:
         with:
           version: v1.64.5
           args: -v --timeout 15m
+        env:
+          GO111MODULE: 'auto'
+          GOFLAGS: '-mod=readonly'
 
   validate-go:
     name: validate-go
@@ -104,3 +111,5 @@ jobs:
       - run: make validate-go-action
         env:
           GO_COMPLIANCE_INFO: "0"
+          GO111MODULE: 'auto'
+          GOFLAGS: '-mod=readonly'
