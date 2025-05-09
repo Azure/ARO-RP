@@ -72,8 +72,8 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 // https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation
 // The cert is eligible to be refreshed after the 46 day mark, and expires at 90 days
 func (m *manager) isEligibleForRenewal(secret azsecrets.GetSecretResponse) bool {
-		renewAfter := time.Time.AddDate(*secret.Secret.Attributes.NotBefore, 0, 0, 46)
-		return time.Now().After(renewAfter)
+	renewAfter := time.Time.AddDate(*secret.Secret.Attributes.NotBefore, 0, 0, 46)
+	return time.Now().After(renewAfter)
 }
 
 // initializeClusterMsiClients intializes any Azure clients that use the cluster
