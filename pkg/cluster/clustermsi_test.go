@@ -41,8 +41,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 	placeholderString := "placeholder"
 	placeholderTime := time.Now().Format(time.RFC3339)
-	placeholderExpiredTime := time.Now().Add(-1 * time.Hour)
-	placeholderValidTime := time.Now().Add(1 * time.Hour)
+	placeholderNotEligibleForRotationTime := time.Now().Add(-1 * time.Hour)
+	placeholderEligibleForRotationTime := time.Now().Add(-1200 * time.Hour)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
@@ -121,7 +121,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			wantErr: "error in msi",
 		},
 		{
-			name: "success - refresh expired certificate in keyvault",
+			name: "success - refresh MSI certificate in keyvault",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -151,7 +151,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 					Secret: azsecrets.Secret{
 						Value: &credentialsObjectString,
 						Attributes: &azsecrets.SecretAttributes{
-							Expires: &placeholderExpiredTime,
+							NotBefore: &placeholderEligibleForRotationTime,
 						},
 					},
 				}
@@ -160,7 +160,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			},
 		},
 		{
-			name: "success - don't refresh valid certificate in keyvault",
+			name: "success - don't refresh MSI certificate in keyvault",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -187,7 +187,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 					Secret: azsecrets.Secret{
 						Value: &credentialsObjectString,
 						Attributes: &azsecrets.SecretAttributes{
-							Expires: &placeholderValidTime,
+							NotBefore: &placeholderNotEligibleForRotationTime,
 						},
 					},
 				}
@@ -249,6 +249,48 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 			err := m.ensureClusterMsiCertificate(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestIsEligibleForRenewal(t *testing.T) {
+	m := &manager{}
+
+	now := time.Now()
+
+	tests := []struct {
+		name      string
+		notBefore time.Time
+		expected  bool
+	}{
+		{
+			name:      "Eligible - NotBefore 47 days ago",
+			notBefore: now.AddDate(0, 0, -47),
+			expected:  true,
+		},
+		{
+			name:      "Not Eligible - NotBefore 45 days ago",
+			notBefore: now.AddDate(0, 0, -45),
+			expected:  false,
+		},
+		{
+			name:      "Exactly 46 days ago",
+			notBefore: now.AddDate(0, 0, -46),
+			expected:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			secret := azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Attributes: &azsecrets.SecretAttributes{
+						NotBefore: &tt.notBefore,
+					},
+				},
+			}
+			result := m.isEligibleForRenewal(secret)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
