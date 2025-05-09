@@ -1,0 +1,27 @@
+{
+  "peerDependencies": {
+    "@typespec/compiler": "latest",
+    "@typespec/http": "latest",
+    "@typespec/openapi": "latest",
+    "@typespec/openapi3": "latest",
+    "@typespec/rest": "latest"
+  },
+  "devDependencies": {
+    "@azure-tools/typespec-client-generator-cli": "^0.21.0",
+    "@typespec/compiler": "latest",
+    "@typespec/http": "latest",
+    "@typespec/openapi": "latest",
+    "@typespec/openapi3": "latest",
+    "@typespec/rest": "latest"
+  },
+  "dependencies": {
+    "@azure-tools/typespec-autorest": "^0.56.0",
+    "@azure-tools/typespec-azure-core": "^0.56.0",
+    "@azure-tools/typespec-azure-resource-manager": "^0.56.0",
+    "@azure-tools/typespec-azure-rulesets": "^0.56.0"
+  },
+  "scripts": {
+    "build": "tsp compile .",
+    "compare": "tsp-client compare --lhs ../swagger/redhatopenshift/ --rhs . --compile-tsp"
+  }
+}
