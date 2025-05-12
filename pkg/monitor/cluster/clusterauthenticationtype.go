@@ -5,34 +5,21 @@ package cluster
 
 import (
 	"context"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	operatorv1 "github.com/openshift/api/operator/v1"
 )
 
 const (
-	authenticationTypeMetricsTopic = "cluster.cloudCredentialsMode"
+	authenticationTypeMetricsTopic = "cluster.AuthenticationType"
 )
 
 func (mon *Monitor) emitClusterAuthenticationType(ctx context.Context) error {
-	cloudCredentialObject, err := mon.operatorcli.OperatorV1().CloudCredentials().Get(ctx, "cluster", metav1.GetOptions{})
-	if err != nil {
-		mon.log.Errorf("Error in getting the cluster authentication type: %v", err)
-		return err
-	}
-
-	if cloudCredentialObject.Spec.CredentialsMode == operatorv1.CloudCredentialsModeManual {
+	if mon.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		mon.emitGauge(authenticationTypeMetricsTopic, 1, map[string]string{
 			"type": "managedIdentity",
 		})
-	}
-
-	if cloudCredentialObject.Spec.CredentialsMode == operatorv1.CloudCredentialsModeDefault {
+	} else {
 		mon.emitGauge(authenticationTypeMetricsTopic, 1, map[string]string{
 			"type": "servicePrincipal",
 		})
 	}
-
 	return nil
 }
