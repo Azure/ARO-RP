@@ -1,0 +1,17 @@
+---
+standard_clusters:
+  hosts:
+    localrp:
+      name: aro
+      version: "{{ CLUSTERVERSION }}"
+      master_cidr: 10.0.0.0/23
+      # master_encryption_at_host: true
+      master_vm_size: Standard_D8s_v3
+      network_prefix_cidr: 10.0.0.0/22
+      # vnet_enable_encryption: true
+      # vnet_encryption_enforcement_policy: AllowUnencrypted
+      worker_cidr: 10.0.2.0/23
+      # worker_encryption_at_host: true
+      worker_vm_size: Standard_D2s_v5
+  vars:
+    resource_group: "{{ CLUSTERPREFIX }}-{{ inventory_hostname }}-{{ location }}"

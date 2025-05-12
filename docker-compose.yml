@@ -36,6 +36,60 @@ x-aro-common-env:
     USER_PULL_SECRET:
 
 services:
+  ansible:
+    image: localhost/aro-ansible
+    build:
+      context: https://github.com/openshift/aro-e2e.git#main
+      dockerfile: Dockerfile.ansible
+      args:
+        REGISTRY: registry.access.redhat.com
+    container_name: aro-ansible
+    network_mode: host
+    depends_on:
+      rp:
+        condition: service_healthy
+    entrypoint: "/bin/bash"
+    command:
+      - -xc
+      - |
+        set -eo pipefail
+        export AZURE_SECRET=${AZURE_CLIENT_SECRET}
+        export AZURE_TENANT=${AZURE_TENANT_ID}
+        az login --service-principal --username $${AZURE_CLIENT_ID} --password $${AZURE_SECRET} --tenant $${AZURE_TENANT} -o yaml
+        if [ ! -d /aro-rp ]; then
+          git clone /src/aro-rp /aro-rp
+          pushd /aro-rp
+          pip install wheel
+          make az
+          mkdir -p /opt/app-root/src/.azure/cliextensions/
+          ln -s /aro-rp/python/az/aro  /opt/app-root/src/.azure/cliextensions/aro
+          popd
+          # Hack: install the local RP's certificate into ansible and azure-cli's certifi trust store
+          for VENV in ansible azure-cli; do
+            yes Q | openssl s_client -connect localhost:8443 -showcerts -prexit 2>&1 | openssl x509 -text | tee -a /opt/app-root/src/.local/share/pipx/venvs/$${VENV}/lib/python3.12/site-packages/certifi/cacert.pem ||:
+          done
+        fi
+        az extension list
+        az aro list -o table
+        export LOCATION=$${LOCATION:-eastus}
+        export VERSION="$$(az aro get-versions -l $LOCATION -o table | tail -n1)"
+        echo Version $VERSION
+        ansible-playbook \
+          --inventory=/src/aro-rp/test/ansible/inventory.yaml \
+          --limit=localrp \
+          --extra-vars=location=$${LOCATION} \
+          --extra-vars=rp_mode=$${RP_MODE} \
+          --extra-vars=CLUSTERVERSION=$${VERSION} \
+          --extra-vars=CLEANUP=True \
+          --extra-vars=SSH_KEY_BASENAME=id_rsa \
+          --extra-vars=CLUSTERPREFIX=${CLUSTERPREFIX:-$USER} \
+          deploy.playbook.yaml
+    volumes:
+      - ${HOME}/.ssh:/root/.ssh:z
+      - ${PWD}:/src/aro-rp:z
+    environment:
+      <<: *common-env
+      ANSIBLE_VERBOSITY: 1
   vpn:
     image: ${LOCAL_VPN_IMAGE}:${VERSION}
     build:
@@ -50,6 +104,7 @@ services:
       - /dev/net/tun # required to modify VPN on host
     entrypoint: "openvpn"
     command: ["/secrets/vpn-eastus.ovpn"]
+    user: root
     ports:
       - "443:443"
     healthcheck:
@@ -62,6 +117,7 @@ services:
   selenium:
     image: selenium/standalone-edge:4.10.0-20230607
     container_name: selenium-container
+    user: root
     network_mode: host
     ports:
       - "4444:4444"
@@ -87,16 +143,10 @@ services:
     depends_on:
       vpn:
         condition: service_healthy
-    command: ["rp"]
-    secrets:
-      - source: proxy-client-key
-        target: /app/secrets/proxy-client.key
-      - source: proxy-client-crt
-        target: /app/secrets/proxy-client.crt
-      - source: proxy-crt
-        target: /app/secrets/proxy.crt
-      - source: hive-kubeconfig
-        target: /app/secrets/aks.kubeconfig
+    command: ["--loglevel", "debug", "rp"]
+    user: root
+    volumes:
+      - ${PWD}/secrets:/app/secrets:z
     environment:
       <<: *common-env
       ADMIN_OBJECT_ID:
@@ -133,13 +183,9 @@ services:
     ports:
       - "8444:8444"
       - "2222:2222"
-    secrets:
-      - source: proxy-client-key
-        target: /app/secrets/proxy-client.key
-      - source: proxy-client-crt
-        target: /app/secrets/proxy-client.crt
-      - source: proxy-crt
-        target: /app/secrets/proxy.crt
+    user: root
+    volumes:
+      - ${PWD}/secrets:/app/secrets:z
     cap_drop:
       - NET_RAW
     command: ["portal"]
