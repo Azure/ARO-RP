@@ -44,17 +44,17 @@ type azureActions struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
+	armNetworkInterfaces armnetwork.InterfacesClient
+	diskEncryptionSets   compute.DiskEncryptionSetsClient
+	loadBalancers        armnetwork.LoadBalancersClient
+	networkInterfaces    network.InterfacesClient
 	resources            features.ResourcesClient
 	resourceSkus         compute.ResourceSkusClient
+	routeTables          armnetwork.RouteTablesClient
+	securityGroups       armnetwork.SecurityGroupsClient
+	storageAccounts      storage.AccountsClient
 	virtualMachines      compute.VirtualMachinesClient
 	virtualNetworks      armnetwork.VirtualNetworksClient
-	diskEncryptionSets   compute.DiskEncryptionSetsClient
-	routeTables          armnetwork.RouteTablesClient
-	storageAccounts      storage.AccountsClient
-	networkInterfaces    network.InterfacesClient
-	loadBalancers        armnetwork.LoadBalancersClient
-	securityGroups       armnetwork.SecurityGroupsClient
-	armNetworkInterfaces armnetwork.InterfacesClient
 }
 
 // NewAzureActions returns an azureActions
@@ -73,17 +73,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 
 	options := env.Environment().ArmClientOptions()
 
-	routeTables, err := armnetwork.NewRouteTablesClient(subscriptionDoc.ID, credential, options)
-	if err != nil {
-		return nil, err
-	}
-
-	virtualNetworks, err := armnetwork.NewVirtualNetworksClient(subscriptionDoc.ID, credential, options)
-	if err != nil {
-		return nil, err
-	}
-
-	securityGroups, err := armnetwork.NewSecurityGroupsClient(subscriptionDoc.ID, credential, options)
+	armNetworkInterfaces, err := armnetwork.NewInterfacesClient(subscriptionDoc.ID, credential, options)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +83,17 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
-	armNetworkInterfaces, err := armnetwork.NewInterfacesClient(subscriptionDoc.ID, credential, options)
+	routeTables, err := armnetwork.NewRouteTablesClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
+	securityGroups, err := armnetwork.NewSecurityGroupsClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
+	virtualNetworks, err := armnetwork.NewVirtualNetworksClient(subscriptionDoc.ID, credential, options)
 	if err != nil {
 		return nil, err
 	}
@@ -103,17 +103,17 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		env: env,
 		oc:  oc,
 
-		resources:          features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		resourceSkus:       compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualNetworks:    virtualNetworks,
-		diskEncryptionSets: compute.NewDiskEncryptionSetsClientWithAROEnvironment(env.Environment(), subscriptionDoc.ID, fpAuth),
-		routeTables:        routeTables,
-		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		loadBalancers:      loadBalancers,
-		securityGroups:     securityGroups,
 		armNetworkInterfaces: armNetworkInterfaces,
+		diskEncryptionSets:   compute.NewDiskEncryptionSetsClientWithAROEnvironment(env.Environment(), subscriptionDoc.ID, fpAuth),
+		loadBalancers:        loadBalancers,
+		networkInterfaces:    network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		resources:            features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		resourceSkus:         compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		routeTables:          routeTables,
+		securityGroups:       securityGroups,
+		storageAccounts:      storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualMachines:      compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualNetworks:      virtualNetworks,
 	}, nil
 }
 
