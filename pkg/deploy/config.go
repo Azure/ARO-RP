@@ -131,6 +131,11 @@ func GetConfig(path, location string) (*RPConfig, error) {
 		return nil, err
 	}
 
+	return ResolveConfig(config, location)
+}
+
+// ResolveConfig return RP configuration from the env config
+func ResolveConfig(config *Config, location string) (*RPConfig, error) {
 	for _, c := range config.RPs {
 		if c.Location == location {
 			configuration, err := mergeConfig(c.Configuration, config.Configuration)
@@ -143,7 +148,7 @@ func GetConfig(path, location string) (*RPConfig, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("location %s not found in %s", location, path)
+	return nil, fmt.Errorf("location %s not found in config", location)
 }
 
 // mergeConfig merges two Configuration structs, replacing each zero field in
