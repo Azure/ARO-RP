@@ -46,7 +46,7 @@ spec:
     - /bin/bash
     - -c
     - 'cd && exec $COMMAND'
-    image: ubi8/ubi-minimal
+    image: ubi9/ubi-minimal
     name: debug
     securityContext:
       capabilities:
