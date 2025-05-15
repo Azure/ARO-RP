@@ -9,7 +9,7 @@ parameters:
 resources:
   containers:
     - container: container
-      image: registry.access.redhat.com/ubi8/toolbox:8.10
+      image: registry.access.redhat.com/ubi9/toolbox
       options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name rp-dev-container # Root (and full sysetme) user privileges, shared memory between host and container, and access to the TUN device for network tunneling
 
 # Variables
