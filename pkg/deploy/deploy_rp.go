@@ -85,6 +85,9 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
 		Value: globalDevopsMSI.PrincipalID.String(),
 	}
+	parameters.Parameters["environmentSuffix"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.EnvironmentSuffix,
+	}
 	if d.config.Configuration.CosmosDB != nil {
 		parameters.Parameters["cosmosDB"] = &arm.ParametersParameter{
 			Value: map[string]int{
@@ -122,12 +125,12 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
-	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
+	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+*d.config.Configuration.EnvironmentSuffix+"."+*d.config.Configuration.ClusterParentDomainName)
 	if err != nil {
 		return err
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location+*d.config.Configuration.EnvironmentSuffix, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
@@ -141,7 +144,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", mgmtdns.A, mgmtdns.RecordSet{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+*d.config.Configuration.EnvironmentSuffix+".admin", mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
@@ -162,7 +165,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		})
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location+*d.config.Configuration.EnvironmentSuffix+*d.config.Configuration.EnvironmentSuffix, mgmtdns.NS, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL:       to.Int64Ptr(3600),
 			NsRecords: &nsRecords,

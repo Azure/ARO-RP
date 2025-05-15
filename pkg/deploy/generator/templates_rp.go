@@ -83,6 +83,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"oidcStorageAccountName",
 			"otelAuditQueueSize",
 			"msiRpEndpoint",
+			"environmentSuffix",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
