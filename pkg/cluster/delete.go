@@ -380,6 +380,12 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 		return nil
 	}
 
+	// before deleting federated credentials, ensure validity of the MSI cert
+	err := m.ensureClusterMsiCertificate(ctx)
+	if err != nil {
+		return err
+	}
+
 	if m.clusterMsiFederatedIdentityCredentials == nil {
 		m.log.Warning("cluster MSI federated identity credentials client is nil, trying to initialize")
 		err := m.initializeClusterMsiClients(ctx)
