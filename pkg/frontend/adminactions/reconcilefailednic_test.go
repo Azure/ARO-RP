@@ -8,24 +8,24 @@ import (
 	"fmt"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-func getNic(subscription, resourceGroup, location, nicName string) mgmtnetwork.Interface {
-	return mgmtnetwork.Interface{
-		Name:     to.StringPtr(nicName),
-		Location: to.StringPtr(location),
-		ID:       to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkInterfaces/%s", subscription, resourceGroup, nicName)),
-		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-			ProvisioningState: mgmtnetwork.Failed,
+func getNic(subscription, resourceGroup, location, nicName string) armnetwork.Interface {
+	return armnetwork.Interface{
+		Name:     pointerutils.ToPtr(nicName),
+		Location: pointerutils.ToPtr(location),
+		ID:       pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkInterfaces/%s", subscription, resourceGroup, nicName)),
+		Properties: &armnetwork.InterfacePropertiesFormat{
+			ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateFailed),
 		},
 	}
 }
@@ -39,23 +39,23 @@ func TestReconcileFailedNic(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		mocks   func(*mock_network.MockInterfacesClient)
+		mocks   func(*mock_armnetwork.MockInterfacesClient)
 		wantErr string
 	}{
 		{
 			name: "successfully reconcile nic",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
+			mocks: func(networkInterfaces *mock_armnetwork.MockInterfacesClient) {
 				nic := getNic(subscription, clusterRG, location, nicName)
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, gomock.Any()).Return(nil)
+				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{Interface: nic}, nil)
+				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic, nil).Return(nil)
 			},
 		},
 		{
 			name: "nic not in failed provisioning state",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
+			mocks: func(networkInterfaces *mock_armnetwork.MockInterfacesClient) {
 				nic := getNic(subscription, clusterRG, location, nicName)
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{Interface: nic}, nil)
 			},
 			wantErr: fmt.Sprintf("skipping nic '%s' because it is not in a failed provisioning state", nicName),
 		},
@@ -69,7 +69,7 @@ func TestReconcileFailedNic(t *testing.T) {
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
 
-			networkInterfaces := mock_network.NewMockInterfacesClient(controller)
+			networkInterfaces := mock_armnetwork.NewMockInterfacesClient(controller)
 
 			tt.mocks(networkInterfaces)
 
