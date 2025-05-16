@@ -321,7 +321,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		if _env.FeatureIsSet(env.FeatureUseMockMsiRp) {
 			msiDataplane = _env.MockMSIResponses(msiResourceId)
 		} else {
-			msiDataplaneClientOptions, err := _env.MsiDataplaneClientOptions()
+			msiDataplaneClientOptions, err := _env.MsiDataplaneClientOptions(doc.CorrelationData)
 			if err != nil {
 				return nil, err
 			}

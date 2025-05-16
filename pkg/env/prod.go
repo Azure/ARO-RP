@@ -28,12 +28,14 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -418,8 +420,8 @@ func (p *prod) MsiRpEndpoint() string {
 	return fmt.Sprintf("https://%s", os.Getenv("MSI_RP_ENDPOINT"))
 }
 
-func (p *prod) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
-	armClientOptions := p.Environment().ArmClientOptions(ClientDebugLoggerMiddleware(p.log.WithField("client", "msi-dataplane")))
+func (p *prod) MsiDataplaneClientOptions(correlationData *api.CorrelationData) (*policy.ClientOptions, error) {
+	armClientOptions := p.Environment().ArmClientOptions(ClientDebugLoggerMiddleware(utillog.EnrichWithCorrelationData(p.log.WithField("client", "msi-dataplane"), correlationData)))
 	clientOptions := armClientOptions.ClientOptions
 
 	return &clientOptions, nil
