@@ -83,7 +83,7 @@ func TestReconcileFailedNic(t *testing.T) {
 						},
 					},
 				},
-				armNetworkInterfaces: networkInterfaces,
+				networkInterfaces: networkInterfaces,
 			}
 
 			err := a.NICReconcileFailedState(ctx, nicName)

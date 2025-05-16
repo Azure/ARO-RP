@@ -14,7 +14,7 @@ import (
 
 func (a *azureActions) NICReconcileFailedState(ctx context.Context, nicName string) error {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
-	nic, err := a.armNetworkInterfaces.Get(ctx, clusterRGName, nicName, nil)
+	nic, err := a.networkInterfaces.Get(ctx, clusterRGName, nicName, nil)
 	if err != nil {
 		return err
 	}
@@ -24,5 +24,5 @@ func (a *azureActions) NICReconcileFailedState(ctx context.Context, nicName stri
 		return fmt.Errorf("skipping nic '%s' because it is not in a failed provisioning state", nicName)
 	}
 
-	return a.armNetworkInterfaces.CreateOrUpdateAndWait(ctx, clusterRGName, nicName, nic.Interface, nil)
+	return a.networkInterfaces.CreateOrUpdateAndWait(ctx, clusterRGName, nicName, nic.Interface, nil)
 }

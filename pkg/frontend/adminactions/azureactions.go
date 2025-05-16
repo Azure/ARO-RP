@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -44,17 +43,16 @@ type azureActions struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	armNetworkInterfaces armnetwork.InterfacesClient
-	diskEncryptionSets   compute.DiskEncryptionSetsClient
-	loadBalancers        armnetwork.LoadBalancersClient
-	networkInterfaces    network.InterfacesClient
-	resources            features.ResourcesClient
-	resourceSkus         compute.ResourceSkusClient
-	routeTables          armnetwork.RouteTablesClient
-	securityGroups       armnetwork.SecurityGroupsClient
-	storageAccounts      storage.AccountsClient
-	virtualMachines      compute.VirtualMachinesClient
-	virtualNetworks      armnetwork.VirtualNetworksClient
+	networkInterfaces  armnetwork.InterfacesClient
+	diskEncryptionSets compute.DiskEncryptionSetsClient
+	loadBalancers      armnetwork.LoadBalancersClient
+	resources          features.ResourcesClient
+	resourceSkus       compute.ResourceSkusClient
+	routeTables        armnetwork.RouteTablesClient
+	securityGroups     armnetwork.SecurityGroupsClient
+	storageAccounts    storage.AccountsClient
+	virtualMachines    compute.VirtualMachinesClient
+	virtualNetworks    armnetwork.VirtualNetworksClient
 }
 
 // NewAzureActions returns an azureActions
@@ -73,7 +71,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 
 	options := env.Environment().ArmClientOptions()
 
-	armNetworkInterfaces, err := armnetwork.NewInterfacesClient(subscriptionDoc.ID, credential, options)
+	networkInterfaces, err := armnetwork.NewInterfacesClient(subscriptionDoc.ID, credential, options)
 	if err != nil {
 		return nil, err
 	}
@@ -103,17 +101,16 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		env: env,
 		oc:  oc,
 
-		armNetworkInterfaces: armNetworkInterfaces,
-		diskEncryptionSets:   compute.NewDiskEncryptionSetsClientWithAROEnvironment(env.Environment(), subscriptionDoc.ID, fpAuth),
-		loadBalancers:        loadBalancers,
-		networkInterfaces:    network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		resources:            features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		resourceSkus:         compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		routeTables:          routeTables,
-		securityGroups:       securityGroups,
-		storageAccounts:      storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualMachines:      compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualNetworks:      virtualNetworks,
+		networkInterfaces:  networkInterfaces,
+		diskEncryptionSets: compute.NewDiskEncryptionSetsClientWithAROEnvironment(env.Environment(), subscriptionDoc.ID, fpAuth),
+		loadBalancers:      loadBalancers,
+		resources:          features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		resourceSkus:       compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		routeTables:        routeTables,
+		securityGroups:     securityGroups,
+		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualNetworks:    virtualNetworks,
 	}, nil
 }
 
