@@ -398,6 +398,7 @@ type NetworkProfile struct {
 	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
 	OutboundType           OutboundType           `json:"outboundType,omitempty"`
 
+	InternalLoadBalancerZones  []string             `json:"internalLoadBalancerZones,omitempty"`
 	APIServerPrivateEndpointIP string               `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string               `json:"gatewayPrivateEndpointIp,omitempty"`
 	GatewayPrivateLinkID       string               `json:"gatewayPrivateLinkId,omitempty"`
@@ -440,6 +441,8 @@ type MasterProfile struct {
 	SubnetID            string           `json:"subnetId,omitempty"`
 	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
+	// Availability Zones that the control plane is deployed in
+	Zones []string `json:"zones,omitempty"`
 }
 
 // VMSize represents a VM size
