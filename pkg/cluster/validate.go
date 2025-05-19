@@ -42,6 +42,7 @@ func (m *manager) validateZones(ctx context.Context) error {
 		return err
 	}
 
+	// Options for zone checking manager unused for now
 	zoneChecker := azurezones.NewManager(false, "")
 	controlPlaneZones, _, originalZones, err := zoneChecker.DetermineAvailabilityZones(controlPlaneSKU, nil)
 	if err != nil {
