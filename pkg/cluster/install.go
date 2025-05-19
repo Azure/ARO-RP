@@ -374,7 +374,10 @@ func (m *manager) bootstrap() []steps.Step {
 		)
 	}
 
-	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+	s = append(s,
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateZones),
+	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
