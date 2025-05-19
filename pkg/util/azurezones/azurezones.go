@@ -19,9 +19,20 @@ type availabilityZoneManager struct {
 	forceSingleZoneInZonalRegion string
 }
 
-func (m *availabilityZoneManager) determineAvailabilityZones(controlPlaneSKU, workerSKU *mgmtcompute.ResourceSku) ([]string, []string, []string, error) {
+func NewManager(allowExpandedAvailabilityZones bool, forceSingleZoneInZonalRegion string) *availabilityZoneManager {
+	return &availabilityZoneManager{
+		allowExpandedAvailabilityZones: allowExpandedAvailabilityZones,
+		forceSingleZoneInZonalRegion:   forceSingleZoneInZonalRegion,
+	}
+}
+
+func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, workerSKU *mgmtcompute.ResourceSku) ([]string, []string, []string, error) {
 	controlPlaneZones := computeskus.Zones(controlPlaneSKU)
-	workerZones := computeskus.Zones(workerSKU)
+	var workerZones []string
+
+	if workerSKU != nil {
+		workerZones = computeskus.Zones(workerSKU)
+	}
 
 	// We sort the zones so that we will pick them in numerical order if we need
 	// less replicas than zones. With non-basic AZs, this means that control
@@ -49,7 +60,8 @@ func (m *availabilityZoneManager) determineAvailabilityZones(controlPlaneSKU, wo
 	// Save the original control plane zones (after we remove the expanded ones, if done) for other purposes (e.g. public IPs)
 	originalZones := slices.Clone(controlPlaneZones)
 
-	if (len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
+	if workerSKU != nil &&
+		(len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
 		(len(workerZones) == 0 && len(controlPlaneZones) > 0) {
 		return nil, nil, nil, fmt.Errorf("cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: %d, worker zones: %d)", len(controlPlaneZones), len(workerZones))
 	}
