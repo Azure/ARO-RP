@@ -16,6 +16,7 @@ import (
 
 	pkgdeploy "github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -80,6 +81,23 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 	config, err := pkgdeploy.GetConfig(flag.Arg(1), location)
 	if err != nil {
 		return err
+	}
+
+	if raConfigFile := os.Getenv("RA_CONFIG_FILE"); raConfigFile != "" {
+		raConfig, err := pkgdeploy.GetConfig(raConfigFile, location)
+		if err != nil {
+			if os.Getenv("RA_CONFIG_STRICT") == "true" {
+				return fmt.Errorf("error reading RA config file %s: %w", raConfigFile, err)
+			}
+		} else {
+			if diff := cmp.Diff(config, raConfig); diff != "" {
+				if os.Getenv("RA_CONFIG_STRICT") == "true" {
+					return fmt.Errorf("RA config file %s differs from deploy config: %s", raConfigFile, diff)
+				} else {
+					log.Printf("RA config file %s differs from deploy config: %s", raConfigFile, diff)
+				}
+			}
+		}
 	}
 
 	deployer, err := pkgdeploy.New(ctx, log, env, config, deployVersion, tokenCredential)
