@@ -81,6 +81,7 @@ type manager struct {
 	spGraphClient            *utilgraph.GraphServiceClient
 	disks                    compute.DisksClient
 	virtualMachines          compute.VirtualMachinesClient
+	resourceSkus             compute.ResourceSkusClient
 	interfaces               network.InterfacesClient // TODO: use armInterfaces instead. https://issues.redhat.com/browse/ARO-4665
 	armInterfaces            armnetwork.InterfacesClient
 	armPublicIPAddresses     armnetwork.PublicIPAddressesClient
@@ -269,6 +270,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		metricsEmitter:           metricsEmitter,
 		disks:                    compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualMachines:          compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resourceSkus:             compute.NewResourceSkusClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		interfaces:               network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armInterfaces:            armInterfacesClient,
 		armPublicIPAddresses:     armPublicIPAddressesClient,
