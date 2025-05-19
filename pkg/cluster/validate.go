@@ -44,11 +44,14 @@ func (m *manager) validateZones(ctx context.Context) error {
 
 	zoneChecker := azurezones.NewManager(false, "")
 	controlPlaneZones, _, originalZones, err := zoneChecker.DetermineAvailabilityZones(controlPlaneSKU, nil)
+	if err != nil {
+		return err
+	}
 
 	// Update the document with the control plane and worker zones
 	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
 		oscd.OpenShiftCluster.Properties.MasterProfile.Zones = controlPlaneZones
-		oscd.OpenShiftCluster.Properties.NetworkProfile.InternalLoadBalancerZones = originalZones
+		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones = originalZones
 		return nil
 	})
 	m.doc = updatedDoc

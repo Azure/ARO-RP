@@ -350,6 +350,12 @@ func (m *manager) networkPrivateEndpoint() *arm.Resource {
 }
 
 func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.Resource {
+	zones := to.StringSlicePtr([]string{})
+
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones != nil {
+		zones = to.StringSlicePtr(m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones)
+	}
+
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -358,6 +364,7 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 				PublicIPAllocationMethod: mgmtnetwork.Static,
 			},
+			Zones:    zones,
 			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: &azureRegion,

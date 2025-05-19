@@ -369,6 +369,8 @@ type LoadBalancerProfile struct {
 	OutboundIPs []OutboundIP `json:"outboundIps,omitempty"`
 	// The desired outbound IP Prefix resources for the cluster load balancer.
 	OutboundIPPrefixes []OutboundIPPrefix `json:"outboundIpPrefixes,omitempty"`
+	// The desired availability zones for the outbound IP
+	OutboundIPAvailabilityZones []string `json:"outboundIpAvailabilityZones,omitempty"`
 	// The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.
 	AllocatedOutboundPorts *int `json:"allocatedOutboundPorts,omitempty"`
 }
@@ -398,7 +400,6 @@ type NetworkProfile struct {
 	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
 	OutboundType           OutboundType           `json:"outboundType,omitempty"`
 
-	InternalLoadBalancerZones  []string             `json:"internalLoadBalancerZones,omitempty"`
 	APIServerPrivateEndpointIP string               `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string               `json:"gatewayPrivateEndpointIp,omitempty"`
 	GatewayPrivateLinkID       string               `json:"gatewayPrivateLinkId,omitempty"`
