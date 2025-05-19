@@ -157,7 +157,7 @@ func TestDetermineZones(t *testing.T) {
 				forceSingleZoneInZonalRegion:   tt.forceSingleZone,
 			}
 
-			controlPlaneZones, workerZones, originalZones, err := m.determineAvailabilityZones(controlPlaneSku, workerSku)
+			controlPlaneZones, workerZones, originalZones, err := m.DetermineAvailabilityZones(controlPlaneSku, workerSku)
 			if err != nil && err.Error() != tt.wantErr {
 				t.Error(cmp.Diff(tt.wantErr, err))
 			}
