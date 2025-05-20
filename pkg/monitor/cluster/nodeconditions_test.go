@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +16,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
@@ -40,7 +38,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-master-0",
 						Annotations: map[string]string{
-							"machine.openshift.io/machine": "openshift-machine-api/aro-master-0",
+							machineAnnotationKey: "openshift-machine-api/aro-master-0",
 						},
 					},
 					Status: corev1.NodeStatus{
@@ -58,7 +56,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-master-1",
 						Annotations: map[string]string{
-							"machine.openshift.io/machine": "openshift-machine-api/aro-master-1",
+							machineAnnotationKey: "openshift-machine-api/aro-master-1",
 						},
 					},
 					Status: corev1.NodeStatus{
@@ -76,7 +74,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-master-2",
 						Annotations: map[string]string{
-							"machine.openshift.io/machine": "openshift-machine-api/aro-master-2",
+							machineAnnotationKey: "openshift-machine-api/aro-master-2",
 						},
 					},
 					Status: corev1.NodeStatus{
@@ -94,7 +92,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-worker",
 						Annotations: map[string]string{
-							"machine.openshift.io/machine": "openshift-machine-api/aro-worker",
+							machineAnnotationKey: "openshift-machine-api/aro-worker",
 						},
 					},
 					Status: corev1.NodeStatus{
@@ -112,7 +110,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-worker-spot",
 						Annotations: map[string]string{
-							"machine.openshift.io/machine": "openshift-machine-api/aro-worker-spot",
+							machineAnnotationKey: "openshift-machine-api/aro-worker-spot",
 						},
 					},
 					Status: corev1.NodeStatus{
@@ -130,7 +128,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-infra",
 						Annotations: map[string]string{
-							"machine.openshift.io/machine": "openshift-machine-api/aro-infra",
+							machineAnnotationKey: "openshift-machine-api/aro-infra",
 						},
 					},
 					Status: corev1.NodeStatus{
@@ -302,140 +300,5 @@ func buildAzureProviderSpec(t *testing.T, amps machinev1beta1.AzureMachineProvid
 		Value: &kruntime.RawExtension{
 			Raw: raw,
 		},
-	}
-}
-
-func TestGetSpotInstances(t *testing.T) {
-	ctx := context.Background()
-
-	spotProvSpec, err := json.Marshal(machinev1beta1.AzureMachineProviderSpec{
-		SpotVMOptions: &machinev1beta1.SpotVMOptions{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	provSpec, err := json.Marshal(machinev1beta1.AzureMachineProviderSpec{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, tt := range []struct {
-		name                 string
-		maocli               machineclient.Interface
-		node                 corev1.Node
-		expectedSpotInstance bool
-	}{
-		{
-			name: "node is a spot instance",
-			maocli: machinefake.NewSimpleClientset(&machinev1beta1.Machine{
-				Spec: machinev1beta1.MachineSpec{
-					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &kruntime.RawExtension{
-							Raw: spotProvSpec,
-						},
-					},
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "aro-spot-0",
-					Namespace: "openshift-machine-api",
-				},
-			}),
-			node: corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "aro-spot-0",
-					Annotations: map[string]string{
-						"machine.openshift.io/machine": "openshift-machine-api/spot-0",
-					},
-				},
-			},
-			expectedSpotInstance: true,
-		},
-		{
-			name: "node is not a spot instance",
-			maocli: machinefake.NewSimpleClientset(&machinev1beta1.Machine{
-				Spec: machinev1beta1.MachineSpec{
-					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &kruntime.RawExtension{
-							Raw: provSpec,
-						},
-					},
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "master-0",
-					Namespace: "openshift-machine-api",
-				},
-			}),
-			node: corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "aro-master-0",
-					Annotations: map[string]string{
-						"machine.openshift.io/machine": "openshift-machine-api/master-0",
-					},
-				},
-			},
-			expectedSpotInstance: false,
-		},
-		{
-			name: "node is missing annotation",
-			maocli: machinefake.NewSimpleClientset(&machinev1beta1.Machine{
-				Spec: machinev1beta1.MachineSpec{
-					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &kruntime.RawExtension{
-							Raw: provSpec,
-						},
-					},
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "master-0",
-					Namespace: "openshift-machine-api",
-				},
-			}),
-			node: corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "aro-master-0",
-					Annotations: map[string]string{},
-				},
-			},
-			expectedSpotInstance: false,
-		},
-		{
-			name: "malformed json in providerSpec",
-			maocli: machinefake.NewSimpleClientset(&machinev1beta1.Machine{
-				Spec: machinev1beta1.MachineSpec{
-					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &kruntime.RawExtension{
-							Raw: []byte(";df9j"),
-						},
-					},
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "aro-spot-1",
-					Namespace: "openshift-machine-api",
-				},
-			}),
-			node: corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "aro-spot-1",
-					Annotations: map[string]string{
-						"machine.openshift.io/machine": "openshift-machine-api/spot-0",
-					},
-				},
-			},
-			expectedSpotInstance: false,
-		},
-	} {
-		controller := gomock.NewController(t)
-		defer controller.Finish()
-
-		mon := &Monitor{
-			maocli: tt.maocli,
-			log:    logrus.NewEntry(logrus.StandardLogger()),
-		}
-
-		_, isSpotInstance := mon.getSpotInstances(ctx)[tt.node.Name]
-		if isSpotInstance != tt.expectedSpotInstance {
-			t.Fatalf("test %s: isSpotInstance should be %t but got %t", tt.name, tt.expectedSpotInstance, isSpotInstance)
-		}
 	}
 }

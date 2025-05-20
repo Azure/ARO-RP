@@ -12,8 +12,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+)
+
+const (
+	machineAnnotationKey = "machine.openshift.io/machine"
 )
 
 var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus{
@@ -24,22 +29,23 @@ var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus
 }
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
-	ns, err := mon.listNodes(ctx)
+	nodes, err := mon.listNodes(ctx)
 	if err != nil {
 		return err
 	}
+	machines := mon.getMachines(ctx)
 
-	spotInstances := mon.getSpotInstances(ctx)
+	mon.emitGauge("node.count", int64(len(nodes.Items)), nil)
 
-	mon.emitGauge("node.count", int64(len(ns.Items)), nil)
+	for _, n := range nodes.Items {
+		machineNamespacedName := n.Annotations[machineAnnotationKey]
+		machine, hasMachine := machines[machineNamespacedName]
+		isSpotInstance := hasMachine && isSpotInstance(*machine)
 
-	for _, n := range ns.Items {
 		for _, c := range n.Status.Conditions {
 			if c.Status == nodeConditionsExpected[c.Type] {
 				continue
 			}
-
-			_, isSpotInstance := spotInstances[n.Name]
 
 			mon.emitGauge("node.conditions", 1, map[string]string{
 				"nodeName":     n.Name,
@@ -69,29 +75,34 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	return nil
 }
 
-// getSpotInstances returns a map where the keys are the machine name and only exist if the machine is a spot instance
-func (mon *Monitor) getSpotInstances(ctx context.Context) map[string]struct{} {
-	spotInstances := make(map[string]struct{})
+func (mon *Monitor) getMachines(ctx context.Context) map[string]*machinev1beta1.Machine {
+	machinesMap := make(map[string]*machinev1beta1.Machine)
 	machines, err := mon.maocli.MachineV1beta1().Machines("openshift-machine-api").List(ctx, metav1.ListOptions{})
 
 	if err != nil {
 		// when this call fails we may report spot vms as non spot until the next successful call
 		mon.log.Error(err)
-		return spotInstances
+		return machinesMap
 	}
 
 	for _, machine := range machines.Items {
+		key := types.NamespacedName{Namespace: machine.Namespace, Name: machine.Name}.String()
+
 		var spec machinev1beta1.AzureMachineProviderSpec
 		err = json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
 		if err != nil {
 			mon.log.Error(err)
 			continue
 		}
+		machine.Spec.ProviderSpec.Value.Object = &spec
 
-		if spec.SpotVMOptions != nil {
-			spotInstances[machine.Name] = struct{}{}
-		}
+		machinesMap[key] = &machine
 	}
 
-	return spotInstances
+	return machinesMap
+}
+
+func isSpotInstance(m machinev1beta1.Machine) bool {
+	amps, ok := m.Spec.ProviderSpec.Value.Object.(*machinev1beta1.AzureMachineProviderSpec)
+	return ok && amps.SpotVMOptions != nil
 }
