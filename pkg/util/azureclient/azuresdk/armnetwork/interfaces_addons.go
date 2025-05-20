@@ -13,6 +13,7 @@ import (
 type InterfacesClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, parameters armnetwork.Interface, options *armnetwork.InterfacesClientBeginCreateOrUpdateOptions) (err error)
 	DeleteAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginDeleteOptions) (err error)
+	List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (result []*armnetwork.Interface, err error)
 }
 
 func (c *interfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, parameters armnetwork.Interface, options *armnetwork.InterfacesClientBeginCreateOrUpdateOptions) error {
@@ -31,4 +32,18 @@ func (c *interfacesClient) DeleteAndWait(ctx context.Context, resourceGroupName 
 	}
 	_, err = poller.PollUntilDone(ctx, nil)
 	return err
+}
+
+func (c *interfacesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (result []*armnetwork.Interface, err error) {
+	pager := c.InterfacesClient.NewListPager(resourceGroupName, options)
+
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, page.Value...)
+	}
+
+	return result, nil
 }

@@ -20,6 +20,7 @@ import (
 
 var (
 	masterNICRegex               = regexp.MustCompile(`.*(master).*([0-2])-nic`)
+	sshBackendPoolRegex          = regexp.MustCompile(`ssh-([0-2])`)
 	interfacesCreateOrUpdateOpts = &armnetwork.InterfacesClientBeginCreateOrUpdateOptions{ResumeToken: ""}
 )
 
@@ -57,75 +58,73 @@ func (m *manager) fixSSH(ctx context.Context) error {
 
 func (m *manager) checkAndUpdateNICsInResourceGroup(ctx context.Context, resourceGroup string, infraID string, lb *mgmtnetwork.LoadBalancer) (err error) {
 	masterSubnetID := m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
-	pagerOpts := &armnetwork.InterfacesClientListOptions{}
-	pager := m.armInterfaces.NewListPager(resourceGroup, pagerOpts)
+	interfaces, err := m.armInterfaces.List(ctx, resourceGroup, &armnetwork.InterfacesClientListOptions{})
+	if err != nil {
+		m.log.Errorf("Error getting network interfaces for resource group %s: %v", resourceGroup, err)
+		return err
+	} else if len(interfaces) == 0 {
+		return fmt.Errorf("interfaces list call for resource group %s returned an empty result", resourceGroup)
+	}
 
-	for pager.More() {
-		nextPage, err := pager.NextPage(ctx)
-		if err != nil {
-			m.log.Errorf("Error getting network interfaces for resource group %s: %v", resourceGroup, err)
-			return err
+NICs:
+	for _, nic := range interfaces {
+		m.log.Infof("Checking NIC %s", *nic.Name)
+		// Filter out any NICs not associated with a control plane machine, ie workers / NIC for the private link service
+		// Not great filtering based on name, but quickest way to skip processing NICs unnecessarily, tags would be better
+		if !masterNICRegex.MatchString(*nic.Name) {
+			m.log.Infof("Skipping NIC %s, not associated with a control plane machine.", *nic.Name)
+			continue NICs
 		}
-	NICs:
-		for _, nic := range nextPage.Value {
-			m.log.Infof("Checking NIC %s", *nic.Name)
-			// Filter out any NICs not associated with a control plane machine, ie workers / NIC for the private link service
-			// Not great filtering based on name, but quickest way to skip processing NICs unnecessarily, tags would be better
-			if !masterNICRegex.MatchString(*nic.Name) {
-				m.log.Infof("Skipping NIC %s, not associated with a control plane machine.", *nic.Name)
-				continue NICs
+		//Check for orphaned NICs
+		if nic.Properties.VirtualMachine == nil {
+			err := m.deleteOrphanedNIC(ctx, nic, resourceGroup, masterSubnetID)
+			if err != nil {
+				return err
 			}
-			//Check for orphaned NICs
-			if nic.Properties.VirtualMachine == nil {
-				err := m.deleteOrphanedNIC(ctx, nic, resourceGroup, masterSubnetID)
-				if err != nil {
-					return err
-				}
-				continue NICs
-			}
-			ilbBackendPoolsUpdated := false
-			elbBackendPoolsUpdated := false
-			// Check and update NIC IPConfigurations. Do we ever expect multiple IP configs on an interface?
-			for _, ipc := range nic.Properties.IPConfigurations {
-				// TODO refactor this a bit, one if?
-				if ipc.Properties.Subnet != nil {
-					// Skip any NICs that are not in the master subnet
-					if *ipc.Properties.Subnet.ID != masterSubnetID {
-						m.log.Infof("Skipping NIC %s, NIC not in master subnet.", *nic.Name)
-						continue NICs
-					}
-				}
-
-				ilbBackendPoolsUpdated = m.updateILBBackendPools(*ipc, infraID, *nic.Name, *lb.ID)
-
-				if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
-					m.log.Infof("Updating UDR Cluster Network Interface %s", *nic.Name)
-					err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
-					if err != nil {
-						return err
-					}
+			continue NICs
+		}
+		ilbBackendPoolsUpdated := false
+		elbBackendPoolsUpdated := false
+		// Check and update NIC IPConfigurations. Do we ever expect multiple IP configs on an interface?
+		for _, ipc := range nic.Properties.IPConfigurations {
+			// TODO refactor this a bit, one if?
+			if ipc.Properties.Subnet != nil {
+				// Skip any NICs that are not in the master subnet
+				if *ipc.Properties.Subnet.ID != masterSubnetID {
+					m.log.Infof("Skipping NIC %s, NIC not in master subnet.", *nic.Name)
 					continue NICs
 				}
-
-				elbName := infraID
-				if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
-					elbName = infraID + "-public-lb"
-				}
-
-				elb, err := m.loadBalancers.Get(ctx, resourceGroup, elbName, "")
-				if err != nil {
-					return err
-				}
-
-				elbBackendPoolsUpdated = m.updateELBBackendPools(*ipc, infraID, *nic.Name, *elb.ID)
 			}
 
-			if ilbBackendPoolsUpdated || elbBackendPoolsUpdated {
-				m.log.Infof("Updating Network Interface %s", *nic.Name)
-				err = m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+			ilbBackendPoolsUpdated = m.updateILBBackendPools(*ipc, infraID, *nic.Name, *lb.ID)
+
+			if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+				m.log.Infof("Updating UDR Cluster Network Interface %s", *nic.Name)
+				err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
 				if err != nil {
 					return err
 				}
+				continue NICs
+			}
+
+			elbName := infraID
+			if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
+				elbName = infraID + "-public-lb"
+			}
+
+			elb, err := m.loadBalancers.Get(ctx, resourceGroup, elbName, "")
+			if err != nil {
+				return err
+			}
+
+			elbBackendPoolsUpdated = m.updateELBBackendPools(*ipc, infraID, *nic.Name, *elb.ID)
+		}
+
+		if ilbBackendPoolsUpdated || elbBackendPoolsUpdated {
+			m.log.Infof("Updating Network Interface %s", *nic.Name)
+			err = m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -153,7 +152,7 @@ func (m *manager) updateILBBackendPools(ipc armnetwork.InterfaceIPConfiguration,
 	// Check for NICs that are in the wrong SSH backend pool and remove them.
 	// This covers the case for the bad NIC backend pool placements for CPMS updates to a private cluster
 	ipc.Properties.LoadBalancerBackendAddressPools = slices.DeleteFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {
-		remove := *backendPool.ID != *sshBackendPool.ID && strings.Contains(*backendPool.ID, "ssh-")
+		remove := *backendPool.ID != *sshBackendPool.ID && sshBackendPoolRegex.MatchString(*backendPool.ID)
 		if remove {
 			m.log.Infof("Removing NIC %s from Internal Load Balancer API Address Pool %s", nicName, *backendPool.ID)
 			updated = true

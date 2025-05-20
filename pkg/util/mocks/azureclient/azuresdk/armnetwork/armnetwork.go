@@ -13,9 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	runtime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
-	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	armnetwork0 "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -111,7 +109,7 @@ func (m *MockInterfacesClient) EXPECT() *MockInterfacesClientMockRecorder {
 }
 
 // CreateOrUpdateAndWait mocks base method.
-func (m *MockInterfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, networkInterfaceName string, parameters armnetwork0.Interface, options *armnetwork0.InterfacesClientBeginCreateOrUpdateOptions) error {
+func (m *MockInterfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, networkInterfaceName string, parameters armnetwork.Interface, options *armnetwork.InterfacesClientBeginCreateOrUpdateOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, networkInterfaceName, parameters, options)
 	ret0, _ := ret[0].(error)
@@ -125,7 +123,7 @@ func (mr *MockInterfacesClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceG
 }
 
 // DeleteAndWait mocks base method.
-func (m *MockInterfacesClient) DeleteAndWait(ctx context.Context, resourceGroupName, networkInterfaceName string, options *armnetwork0.InterfacesClientBeginDeleteOptions) error {
+func (m *MockInterfacesClient) DeleteAndWait(ctx context.Context, resourceGroupName, networkInterfaceName string, options *armnetwork.InterfacesClientBeginDeleteOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteAndWait", ctx, resourceGroupName, networkInterfaceName, options)
 	ret0, _ := ret[0].(error)
@@ -139,10 +137,10 @@ func (mr *MockInterfacesClientMockRecorder) DeleteAndWait(ctx, resourceGroupName
 }
 
 // Get mocks base method.
-func (m *MockInterfacesClient) Get(ctx context.Context, resourceGroupName, networkInterfaceName string, options *armnetwork0.InterfacesClientGetOptions) (armnetwork0.InterfacesClientGetResponse, error) {
+func (m *MockInterfacesClient) Get(ctx context.Context, resourceGroupName, networkInterfaceName string, options *armnetwork.InterfacesClientGetOptions) (armnetwork.InterfacesClientGetResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, networkInterfaceName, options)
-	ret0, _ := ret[0].(armnetwork0.InterfacesClientGetResponse)
+	ret0, _ := ret[0].(armnetwork.InterfacesClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -153,18 +151,19 @@ func (mr *MockInterfacesClientMockRecorder) Get(ctx, resourceGroupName, networkI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterfacesClient)(nil).Get), ctx, resourceGroupName, networkInterfaceName, options)
 }
 
-// NewListPager mocks base method.
-func (m *MockInterfacesClient) NewListPager(resourceGroupName string, options *armnetwork0.InterfacesClientListOptions) *runtime.Pager[armnetwork0.InterfacesClientListResponse] {
+// List mocks base method.
+func (m *MockInterfacesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) ([]*armnetwork.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewListPager", resourceGroupName, options)
-	ret0, _ := ret[0].(*runtime.Pager[armnetwork0.InterfacesClientListResponse])
-	return ret0
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, options)
+	ret0, _ := ret[0].([]*armnetwork.Interface)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// NewListPager indicates an expected call of NewListPager.
-func (mr *MockInterfacesClientMockRecorder) NewListPager(resourceGroupName, options any) *gomock.Call {
+// List indicates an expected call of List.
+func (mr *MockInterfacesClientMockRecorder) List(ctx, resourceGroupName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewListPager", reflect.TypeOf((*MockInterfacesClient)(nil).NewListPager), resourceGroupName, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterfacesClient)(nil).List), ctx, resourceGroupName, options)
 }
 
 // MockLoadBalancersClient is a mock of LoadBalancersClient interface.

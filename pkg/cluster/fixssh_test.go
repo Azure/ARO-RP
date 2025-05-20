@@ -6,16 +6,10 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	azfake "github.com/Azure/azure-sdk-for-go/sdk/azcore/fake"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	fake_armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6/fake"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
@@ -27,11 +21,10 @@ import (
 )
 
 var (
-	resourceGroup     = "rg"
-	infraID           = "infra"
-	ipc               = "internal-lb-ip-v4"
-	dummySubscription = "/fake/resource/id"
-	masterSubnetID    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
+	resourceGroup  = "rg"
+	infraID        = "infra"
+	ipc            = "internal-lb-ip-v4"
+	masterSubnetID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
 )
 
 func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
@@ -186,7 +179,7 @@ func configureInterface(backendPools []string,
 	return &armnetwork.InterfacesClientGetResponse{Interface: iface}
 }
 
-// Return the pager response that mocks the state of a newly created cluster (no previous CPMS updates)
+// Return a list of interfaces that mocks the state of a newly created cluster (no previous CPMS updates)
 // 7 NICs total: 3 for masters, 1 for the private link service and 3 workers
 func ifListNewCluster(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
 	var ifList []*armnetwork.Interface
@@ -212,7 +205,7 @@ func ifListNewCluster(ilbID string, elbID string, withSSHBackendPool bool) []*ar
 	return ifList
 }
 
-// Return the pager response that mocks the state after the first successful CPMS update of a new cluster
+// Return a list of interfaces that mocks the state after the first successful CPMS update of a new cluster
 // 10 NICs total: 3 for the old masters, 3 for the new masters, 3 workers and 1 for the private link service
 func ifListAfterFirstCPMSUpdate(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
 	var ifList []*armnetwork.Interface
@@ -243,7 +236,7 @@ func ifListAfterFirstCPMSUpdate(ilbID string, elbID string, withSSHBackendPool b
 	return ifList
 }
 
-// Return the pager response that mocks the state after the first successful CPMS update of a new private cluster
+// Return a list of interfaces that mocks the state after the first successful CPMS update of a new private cluster
 // 10 NICs total: 3 for the old masters, 3 for the new masters all in the ssh-0 backend pool, 3 workers and 1 for the private link service
 func ifListAfterFirstCPMSUpdatePrivateCluster(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
 	var ifList []*armnetwork.Interface
@@ -276,7 +269,7 @@ func ifListAfterFirstCPMSUpdatePrivateCluster(ilbID string, elbID string, withSS
 	return ifList
 }
 
-// Return the pager response that mocks the state after multiple successful CPMS updates of a cluster
+// Return a list of interfaces that mocks the state after multiple successful CPMS updates of a cluster
 // 7 NICs total: 3 for the masters, 1 for the private link service, 3 workers
 func ifListAfterMultipleCPMSUpdates(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
 	var ifList []*armnetwork.Interface
@@ -310,94 +303,6 @@ func ifListOrphanedNIC() []*armnetwork.Interface {
 	return ifList
 }
 
-func ifListPager(f func(string, string, bool) []*armnetwork.Interface, ilbID string, elbID string, withSSHBackendPool bool) *runtime.Pager[armnetwork.InterfacesClientListResponse] {
-	ifServer := fake_armnetwork.InterfacesServer{
-		NewListPager: func(resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (resp azfake.PagerResponder[armnetwork.InterfacesClientListResponse]) {
-			ifList := f(ilbID, elbID, withSSHBackendPool)
-			pagerResponse := azfake.PagerResponder[armnetwork.InterfacesClientListResponse]{}
-			pagerResponse.AddPage(http.StatusOK, armnetwork.InterfacesClientListResponse{
-				InterfaceListResult: armnetwork.InterfaceListResult{
-					Value: ifList,
-				},
-			}, nil)
-			return pagerResponse
-		},
-	}
-
-	ifaceClient, err := armnetwork.NewInterfacesClient(dummySubscription, &azfake.TokenCredential{}, clientOpts(ifServer))
-	if err != nil {
-		fmt.Println("Error creating NewInterfacesClient")
-	}
-
-	return ifaceClient.NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{})
-}
-
-func ifListPagerWithError() *runtime.Pager[armnetwork.InterfacesClientListResponse] {
-	ifServer := fake_armnetwork.InterfacesServer{
-		NewListPager: func(resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (resp azfake.PagerResponder[armnetwork.InterfacesClientListResponse]) {
-			pagerResponse := azfake.PagerResponder[armnetwork.InterfacesClientListResponse]{}
-			pagerResponse.AddResponseError(http.StatusForbidden, "fake pager API auth error")
-			return pagerResponse
-		},
-	}
-
-	ifaceClient, err := armnetwork.NewInterfacesClient(dummySubscription, &azfake.TokenCredential{}, clientOpts(ifServer))
-	if err != nil {
-		fmt.Println("Error creating NewInterfacesClient")
-	}
-
-	return ifaceClient.NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{})
-}
-
-func ifListPagerNoResults() *runtime.Pager[armnetwork.InterfacesClientListResponse] {
-	ifServer := fake_armnetwork.InterfacesServer{
-		NewListPager: func(resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (resp azfake.PagerResponder[armnetwork.InterfacesClientListResponse]) {
-			pagerResponse := azfake.PagerResponder[armnetwork.InterfacesClientListResponse]{}
-			return pagerResponse
-		},
-	}
-
-	ifaceClient, err := armnetwork.NewInterfacesClient(dummySubscription, &azfake.TokenCredential{}, clientOpts(ifServer))
-	if err != nil {
-		fmt.Println("Error creating NewInterfacesClient")
-	}
-
-	return ifaceClient.NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{})
-}
-
-func ifListPagerOrphanedNIC() *runtime.Pager[armnetwork.InterfacesClientListResponse] {
-	ifServer := fake_armnetwork.InterfacesServer{
-		NewListPager: func(resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (resp azfake.PagerResponder[armnetwork.InterfacesClientListResponse]) {
-			ifList := ifListOrphanedNIC()
-			pagerResponse := azfake.PagerResponder[armnetwork.InterfacesClientListResponse]{}
-			pagerResponse.AddPage(http.StatusOK, armnetwork.InterfacesClientListResponse{
-				InterfaceListResult: armnetwork.InterfaceListResult{
-					Value: ifList,
-				},
-			}, nil)
-			return pagerResponse
-		},
-	}
-
-	ifaceClient, err := armnetwork.NewInterfacesClient(dummySubscription, &azfake.TokenCredential{}, clientOpts(ifServer))
-	if err != nil {
-		fmt.Println("Error creating NewInterfacesClient")
-	}
-
-	return ifaceClient.NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{})
-}
-
-func clientOpts(ifServer fake_armnetwork.InterfacesServer) *arm.ClientOptions {
-	ifTransporter := fake_armnetwork.NewInterfacesServerTransport(&ifServer)
-	options := &arm.ClientOptions{
-		ClientOptions: policy.ClientOptions{
-			Transport: ifTransporter,
-		},
-	}
-
-	return options
-}
-
 func TestFixSSH(t *testing.T) {
 	for _, tt := range []struct {
 		name                               string
@@ -415,8 +320,8 @@ func TestFixSSH(t *testing.T) {
 		afterFirstCPMSUpdate               bool
 		afterFirstCPMSUpdatePrivateCluster bool
 		afterMultipleCPMSUpdates           bool
-		pagerError                         bool
-		pagerNoResults                     bool
+		interfacesListError                bool
+		emptyInterfacesList                bool
 		deleteNICError                     bool
 		lbErrorExpected                    bool
 		writeExpected                      bool // do we expect write to happen as part of this test
@@ -480,32 +385,32 @@ func TestFixSSH(t *testing.T) {
 			elbID:                    "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 		},
 		{
-			name:          "Pager error expected",
-			ilb:           infraID + "-internal-lb",
-			ilbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
-			loadbalancer:  lbBefore,
-			iNameNewF:     "%s-master-12345-%d-nic",
-			iNameOldF:     "%s-master%d-nic",
-			pagerError:    true,
-			writeExpected: true,
-			elb:           infraID + "-public-lb",
-			elbV1ID:       "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
-			elbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
-			wantError:     "fake pager API auth error",
+			name:                "Interfaces list error expected",
+			ilb:                 infraID + "-internal-lb",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:        lbBefore,
+			iNameNewF:           "%s-master-12345-%d-nic",
+			iNameOldF:           "%s-master%d-nic",
+			interfacesListError: true,
+			writeExpected:       true,
+			elb:                 infraID + "-public-lb",
+			elbV1ID:             "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
+			wantError:           "interfaces list error",
 		},
 		{
-			name:           "Pager no results",
-			ilb:            infraID + "-internal-lb",
-			ilbID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
-			loadbalancer:   lbBefore,
-			iNameNewF:      "%s-master-12345-%d-nic",
-			iNameOldF:      "%s-master%d-nic",
-			pagerNoResults: true,
-			writeExpected:  true,
-			elb:            infraID + "-public-lb",
-			elbV1ID:        "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
-			elbID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
-			wantError:      "fake paged response is empty",
+			name:                "Interfaces list no results",
+			ilb:                 infraID + "-internal-lb",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:        lbBefore,
+			iNameNewF:           "%s-master-12345-%d-nic",
+			iNameOldF:           "%s-master%d-nic",
+			emptyInterfacesList: true,
+			writeExpected:       true,
+			elb:                 infraID + "-public-lb",
+			elbV1ID:             "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
+			wantError:           "interfaces list call for resource group rg returned an empty result",
 		},
 		{
 			name:           "Failed to delete orphaned NIC",
@@ -549,7 +454,7 @@ func TestFixSSH(t *testing.T) {
 			}
 
 			if tt.newCluster {
-				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(tt.interfaces, tt.ilbID, tt.elbID, true))
+				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(tt.interfaces(tt.ilbID, tt.elbID, true), nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
@@ -557,7 +462,7 @@ func TestFixSSH(t *testing.T) {
 
 			if tt.afterFirstCPMSUpdate {
 				ifList := ifListAfterFirstCPMSUpdate(tt.ilbID, tt.elbID, true)
-				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(ifListAfterFirstCPMSUpdate, tt.ilbID, tt.elbID, false))
+				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListAfterFirstCPMSUpdate(tt.ilbID, tt.elbID, false), nil)
 				// New interfaces post CPMS update
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 0), *ifList[0], createOrUpdateOptions)
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
@@ -576,7 +481,7 @@ func TestFixSSH(t *testing.T) {
 
 			if tt.afterFirstCPMSUpdatePrivateCluster {
 				ifList := ifListAfterFirstCPMSUpdatePrivateCluster(tt.ilbID, tt.elbID, true)
-				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(ifListAfterFirstCPMSUpdatePrivateCluster, tt.ilbID, tt.elbID, false))
+				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListAfterFirstCPMSUpdatePrivateCluster(tt.ilbID, tt.elbID, false), nil)
 				// New interfaces post CPMS update
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 1), *ifList[1], createOrUpdateOptions)
@@ -594,7 +499,7 @@ func TestFixSSH(t *testing.T) {
 
 			if tt.afterMultipleCPMSUpdates {
 				ifList := ifListAfterMultipleCPMSUpdates(tt.ilbID, tt.elbID, true)
-				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPager(tt.interfaces, tt.ilbID, tt.elbID, false))
+				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(tt.interfaces(tt.ilbID, tt.elbID, false), nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 0), *ifList[0], createOrUpdateOptions)
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 1), *ifList[1], createOrUpdateOptions)
@@ -603,17 +508,17 @@ func TestFixSSH(t *testing.T) {
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 			}
 
-			if tt.pagerError {
-				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPagerWithError())
+			if tt.interfacesListError {
+				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(nil, fmt.Errorf("interfaces list error"))
 			}
 
-			if tt.pagerNoResults {
-				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPagerNoResults())
+			if tt.emptyInterfacesList {
+				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return([]*armnetwork.Interface{}, nil)
 			}
 
 			if tt.deleteNICError {
 				ifList := ifListOrphanedNIC()
-				armInterfaces.EXPECT().NewListPager(resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListPagerOrphanedNIC())
+				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListOrphanedNIC(), nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), *ifList[0], createOrUpdateOptions)
 				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), nil).Return(fmt.Errorf("failed to delete orphaned NIC"))
 			}
