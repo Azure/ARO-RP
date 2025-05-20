@@ -148,6 +148,9 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-master-0",
 						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "master",
+						},
 					},
 					Spec: machinev1beta1.MachineSpec{
 						ProviderSpec: validProviderSpec(t),
@@ -157,6 +160,9 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-master-1",
 						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "master",
+						},
 					},
 					Spec: machinev1beta1.MachineSpec{
 						ProviderSpec: validProviderSpec(t),
@@ -166,6 +172,9 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-master-2",
 						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "master",
+						},
 					},
 					Spec: machinev1beta1.MachineSpec{
 						ProviderSpec: validProviderSpec(t),
@@ -175,6 +184,9 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-worker",
 						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "worker",
+						},
 					},
 					Spec: machinev1beta1.MachineSpec{
 						ProviderSpec: validProviderSpec(t),
@@ -184,6 +196,9 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-worker-spot",
 						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "worker",
+						},
 					},
 					Spec: machinev1beta1.MachineSpec{
 						ProviderSpec: validProviderSpecSpotVM(t),
@@ -193,6 +208,9 @@ func TestEmitNodeConditions(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-infra",
 						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "infra",
+						},
 					},
 					Spec: machinev1beta1.MachineSpec{
 						ProviderSpec: validProviderSpec(t),
@@ -206,47 +224,65 @@ func TestEmitNodeConditions(t *testing.T) {
 					"status":       "False",
 					"type":         "Ready",
 					"spotInstance": "false",
+					"role":         "master",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-master-1",
 					"status":       "True",
 					"type":         "MemoryPressure",
 					"spotInstance": "false",
+					"role":         "master",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-master-2",
 					"status":       "True",
 					"type":         "DiskPressure",
 					"spotInstance": "false",
+					"role":         "master",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker",
 					"status":       "False",
 					"type":         "Ready",
 					"spotInstance": "false",
+					"role":         "worker",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker-spot",
 					"status":       "False",
 					"type":         "Ready",
 					"spotInstance": "true",
+					"role":         "worker",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-infra",
 					"status":       "False",
 					"type":         "Ready",
 					"spotInstance": "false",
+					"role":         "infra",
 				})
 
-				for _, nodeName := range []string{
-					"aro-master-0", "aro-master-1", "aro-master-2",
-					"aro-worker", "aro-worker-spot", "aro-infra",
-				} {
+				for _, nodeName := range []string{"aro-master-0", "aro-master-1", "aro-master-2"} {
 					m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
 						"nodeName":       nodeName,
 						"kubeletVersion": kubeletVersion,
+						"role":           "master",
 					})
 				}
+
+				for _, nodeName := range []string{"aro-worker", "aro-worker-spot"} {
+					m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+						"nodeName":       nodeName,
+						"kubeletVersion": kubeletVersion,
+						"role":           "worker",
+					})
+				}
+
+				m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+					"nodeName":       "aro-infra",
+					"kubeletVersion": kubeletVersion,
+					"role":           "infra",
+				})
 			},
 		},
 	} {

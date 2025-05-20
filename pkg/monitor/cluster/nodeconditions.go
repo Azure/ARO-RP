@@ -19,6 +19,7 @@ import (
 
 const (
 	machineAnnotationKey = "machine.openshift.io/machine"
+	machineRoleLabelKey  = "machine.openshift.io/cluster-api-machine-role"
 )
 
 var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus{
@@ -42,6 +43,11 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 		machine, hasMachine := machines[machineNamespacedName]
 		isSpotInstance := hasMachine && isSpotInstance(*machine)
 
+		role := ""
+		if hasMachine {
+			role = machine.Labels[machineRoleLabelKey]
+		}
+
 		for _, c := range n.Status.Conditions {
 			if c.Status == nodeConditionsExpected[c.Type] {
 				continue
@@ -52,6 +58,7 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 				"status":       string(c.Status),
 				"type":         string(c.Type),
 				"spotInstance": strconv.FormatBool(isSpotInstance),
+				"role":         role,
 			})
 
 			if mon.hourlyRun {
@@ -62,12 +69,14 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 					"type":         c.Type,
 					"message":      c.Message,
 					"spotInstance": isSpotInstance,
+					"role":         role,
 				}).Print()
 			}
 		}
 
 		mon.emitGauge("node.kubelet.version", 1, map[string]string{
 			"nodeName":       n.Name,
+			"role":           role,
 			"kubeletVersion": n.Status.NodeInfo.KubeletVersion,
 		})
 	}
