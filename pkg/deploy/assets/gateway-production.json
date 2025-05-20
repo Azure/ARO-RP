@@ -65,7 +65,8 @@
                 "northcentralus",
                 "uaenorth",
                 "westus",
-                "japanwest"
+                "japanwest",
+                "uaecentral"
             ]
         },
         "rpImage": {
