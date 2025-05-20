@@ -64,8 +64,8 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	originalZones := slices.Clone(controlPlaneZones)
 
 	if workerSKU != nil &&
-		(len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
-		(len(workerZones) == 0 && len(controlPlaneZones) > 0) {
+		((len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
+			(len(workerZones) == 0 && len(controlPlaneZones) > 0)) {
 		return nil, nil, nil, fmt.Errorf("cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: %d, worker zones: %d)", len(controlPlaneZones), len(workerZones))
 	}
 
