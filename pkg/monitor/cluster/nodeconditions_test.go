@@ -186,6 +186,7 @@ func TestEmitNodeConditions(t *testing.T) {
 						Namespace: "openshift-machine-api",
 						Labels: map[string]string{
 							machineRoleLabelKey: "worker",
+							machinesetLabelKey:  "workers",
 						},
 					},
 					Spec: machinev1beta1.MachineSpec{
@@ -198,6 +199,7 @@ func TestEmitNodeConditions(t *testing.T) {
 						Namespace: "openshift-machine-api",
 						Labels: map[string]string{
 							machineRoleLabelKey: "worker",
+							machinesetLabelKey:  "spot-workers",
 						},
 					},
 					Spec: machinev1beta1.MachineSpec{
@@ -210,6 +212,7 @@ func TestEmitNodeConditions(t *testing.T) {
 						Namespace: "openshift-machine-api",
 						Labels: map[string]string{
 							machineRoleLabelKey: "infra",
+							machinesetLabelKey:  "infras",
 						},
 					},
 					Spec: machinev1beta1.MachineSpec{
@@ -225,6 +228,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					"type":         "Ready",
 					"spotInstance": "false",
 					"role":         "master",
+					"machineset":   "",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-master-1",
@@ -232,6 +236,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					"type":         "MemoryPressure",
 					"spotInstance": "false",
 					"role":         "master",
+					"machineset":   "",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-master-2",
@@ -239,6 +244,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					"type":         "DiskPressure",
 					"spotInstance": "false",
 					"role":         "master",
+					"machineset":   "",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker",
@@ -246,6 +252,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					"type":         "Ready",
 					"spotInstance": "false",
 					"role":         "worker",
+					"machineset":   "workers",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker-spot",
@@ -253,6 +260,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					"type":         "Ready",
 					"spotInstance": "true",
 					"role":         "worker",
+					"machineset":   "spot-workers",
 				})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-infra",
@@ -260,6 +268,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					"type":         "Ready",
 					"spotInstance": "false",
 					"role":         "infra",
+					"machineset":   "infras",
 				})
 
 				for _, nodeName := range []string{"aro-master-0", "aro-master-1", "aro-master-2"} {

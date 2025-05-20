@@ -20,6 +20,7 @@ import (
 const (
 	machineAnnotationKey = "machine.openshift.io/machine"
 	machineRoleLabelKey  = "machine.openshift.io/cluster-api-machine-role"
+	machinesetLabelKey   = "machine.openshift.io/cluster-api-machineset"
 )
 
 var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus{
@@ -48,6 +49,11 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 			role = machine.Labels[machineRoleLabelKey]
 		}
 
+		machineset := ""
+		if hasMachine {
+			machineset = machine.Labels[machinesetLabelKey]
+		}
+
 		for _, c := range n.Status.Conditions {
 			if c.Status == nodeConditionsExpected[c.Type] {
 				continue
@@ -59,6 +65,7 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 				"type":         string(c.Type),
 				"spotInstance": strconv.FormatBool(isSpotInstance),
 				"role":         role,
+				"machineset":   machineset,
 			})
 
 			if mon.hourlyRun {
@@ -70,6 +77,7 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 					"message":      c.Message,
 					"spotInstance": isSpotInstance,
 					"role":         role,
+					"machineset":   machineset,
 				}).Print()
 			}
 		}
