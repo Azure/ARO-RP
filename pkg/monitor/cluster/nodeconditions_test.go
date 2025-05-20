@@ -32,7 +32,7 @@ func TestEmitNodeConditions(t *testing.T) {
 		wantEmitted func(m *mock_metrics.MockEmitter)
 	}{
 		{
-			name: "standard cluster",
+			name: "control plane - emits conditions only when unexpected",
 			nodes: []kruntime.Object{
 				&corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
@@ -88,60 +88,6 @@ func TestEmitNodeConditions(t *testing.T) {
 						},
 					},
 				},
-				&corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "aro-worker",
-						Annotations: map[string]string{
-							machineAnnotationKey: "openshift-machine-api/aro-worker",
-						},
-					},
-					Status: corev1.NodeStatus{
-						Conditions: []corev1.NodeCondition{
-							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
-							{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse},
-							{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse},
-						},
-						NodeInfo: corev1.NodeSystemInfo{
-							KubeletVersion: kubeletVersion,
-						},
-					},
-				},
-				&corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "aro-worker-spot",
-						Annotations: map[string]string{
-							machineAnnotationKey: "openshift-machine-api/aro-worker-spot",
-						},
-					},
-					Status: corev1.NodeStatus{
-						Conditions: []corev1.NodeCondition{
-							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
-							{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse},
-							{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse},
-						},
-						NodeInfo: corev1.NodeSystemInfo{
-							KubeletVersion: kubeletVersion,
-						},
-					},
-				},
-				&corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "aro-infra",
-						Annotations: map[string]string{
-							machineAnnotationKey: "openshift-machine-api/aro-infra",
-						},
-					},
-					Status: corev1.NodeStatus{
-						Conditions: []corev1.NodeCondition{
-							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
-							{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse},
-							{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse},
-						},
-						NodeInfo: corev1.NodeSystemInfo{
-							KubeletVersion: kubeletVersion,
-						},
-					},
-				},
 			},
 			machines: []kruntime.Object{
 				&machinev1beta1.Machine{
@@ -180,6 +126,96 @@ func TestEmitNodeConditions(t *testing.T) {
 						ProviderSpec: validProviderSpec(t),
 					},
 				},
+			},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{})
+				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+					"nodeName":     "aro-master-0",
+					"status":       "False",
+					"type":         "Ready",
+					"spotInstance": "false",
+					"role":         "master",
+					"machineset":   "",
+				})
+				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+					"nodeName":     "aro-master-1",
+					"status":       "True",
+					"type":         "MemoryPressure",
+					"spotInstance": "false",
+					"role":         "master",
+					"machineset":   "",
+				})
+				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+					"nodeName":     "aro-master-2",
+					"status":       "True",
+					"type":         "DiskPressure",
+					"spotInstance": "false",
+					"role":         "master",
+					"machineset":   "",
+				})
+
+				for _, nodeName := range []string{"aro-master-0", "aro-master-1", "aro-master-2"} {
+					m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+						"nodeName":       nodeName,
+						"kubeletVersion": kubeletVersion,
+						"role":           "master",
+					})
+				}
+			},
+		},
+		{
+			name: "worker/infra nodes - emits spotVM and machineset information",
+			nodes: []kruntime.Object{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-worker",
+						Annotations: map[string]string{
+							machineAnnotationKey: "openshift-machine-api/aro-worker",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-worker-spot",
+						Annotations: map[string]string{
+							machineAnnotationKey: "openshift-machine-api/aro-worker-spot",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-infra",
+						Annotations: map[string]string{
+							machineAnnotationKey: "openshift-machine-api/aro-infra",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+			},
+			machines: []kruntime.Object{
 				&machinev1beta1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-worker",
@@ -221,31 +257,7 @@ func TestEmitNodeConditions(t *testing.T) {
 				},
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("node.count", int64(6), map[string]string{})
-				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
-					"nodeName":     "aro-master-0",
-					"status":       "False",
-					"type":         "Ready",
-					"spotInstance": "false",
-					"role":         "master",
-					"machineset":   "",
-				})
-				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
-					"nodeName":     "aro-master-1",
-					"status":       "True",
-					"type":         "MemoryPressure",
-					"spotInstance": "false",
-					"role":         "master",
-					"machineset":   "",
-				})
-				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
-					"nodeName":     "aro-master-2",
-					"status":       "True",
-					"type":         "DiskPressure",
-					"spotInstance": "false",
-					"role":         "master",
-					"machineset":   "",
-				})
+				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker",
 					"status":       "False",
@@ -271,14 +283,6 @@ func TestEmitNodeConditions(t *testing.T) {
 					"machineset":   "infras",
 				})
 
-				for _, nodeName := range []string{"aro-master-0", "aro-master-1", "aro-master-2"} {
-					m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
-						"nodeName":       nodeName,
-						"kubeletVersion": kubeletVersion,
-						"role":           "master",
-					})
-				}
-
 				for _, nodeName := range []string{"aro-worker", "aro-worker-spot"} {
 					m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
 						"nodeName":       nodeName,
@@ -291,6 +295,44 @@ func TestEmitNodeConditions(t *testing.T) {
 					"nodeName":       "aro-infra",
 					"kubeletVersion": kubeletVersion,
 					"role":           "infra",
+				})
+			},
+		},
+		{
+			name: "node missing machine - emits empty dimensions for machine values",
+			nodes: []kruntime.Object{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-impossible-node",
+						Annotations: map[string]string{
+							machineAnnotationKey: "openshift-machine-api/aro-impossible-node",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+			},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{})
+				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+					"nodeName":     "aro-impossible-node",
+					"status":       "False",
+					"type":         "Ready",
+					"spotInstance": "false",
+					"role":         "",
+					"machineset":   "",
+				})
+
+				m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+					"nodeName":       "aro-impossible-node",
+					"kubeletVersion": kubeletVersion,
+					"role":           "",
 				})
 			},
 		},
