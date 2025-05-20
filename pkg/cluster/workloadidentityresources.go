@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +19,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 const (
@@ -191,4 +194,69 @@ func (m *manager) getPlatformWorkloadIdentityFederatedCredName(sa string, identi
 	}
 
 	return platformworkloadidentity.GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId, sa), nil
+}
+
+func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error {
+	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
+	resourceGroup := stringutils.LastTokenByte(resourceGroupID, '/')
+
+	var toDelete []mgmtauthorization.RoleAssignment
+	var toAdd []*arm.Resource
+
+	m.log.Infof("retrieving existing role assignments")
+	allExistingRoleAssignments, err := m.roleAssignments.ListForResourceGroup(ctx, resourceGroup, "atScope()")
+	if err != nil {
+		return err
+	}
+
+	roleAssignmentsForManagedResourceGroup := map[string]mgmtauthorization.RoleAssignment{}
+	for _, roleAssignment := range allExistingRoleAssignments {
+		if strings.EqualFold(*roleAssignment.Scope, resourceGroupID) {
+			roleAssignmentsForManagedResourceGroup[*roleAssignment.RoleDefinitionID] = roleAssignment
+		}
+	}
+
+	platformWorkloadIdentityRoles := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
+
+	for roleName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		role, ok := platformWorkloadIdentityRoles[roleName]
+		if !ok {
+			return fmt.Errorf("role not found for identity %s", roleName)
+		}
+
+		roleDefinitionId := fmt.Sprintf("/subscriptions/%s%s", m.subscriptionDoc.ID, role.RoleDefinitionID)
+
+		if existingRoleAssignment, ok := roleAssignmentsForManagedResourceGroup[roleDefinitionId]; ok {
+			if strings.EqualFold(*existingRoleAssignment.PrincipalID, identity.ObjectID) {
+				continue
+			}
+
+			toDelete = append(toDelete, existingRoleAssignment)
+		}
+
+		toAdd = append(toAdd, m.workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(role.RoleDefinitionID, '/'), identity.ObjectID))
+	}
+
+	for _, assignment := range toDelete {
+		m.log.Infof("deleting role assignment %s", *assignment.Name)
+		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(toAdd) > 0 {
+		m.log.Infof("creating new role assignments for updated platform workload identities")
+		t := &arm.Template{
+			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+			ContentVersion: "1.0.0.0",
+			Resources:      toAdd,
+		}
+		err = arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "platformworkloadidentityrbac", t, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

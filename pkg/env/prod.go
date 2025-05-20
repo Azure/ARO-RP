@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
@@ -33,9 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -63,7 +60,6 @@ type prod struct {
 	miseAuthorizer        miseadapter.MISEAdapter
 
 	acrDomain string
-	vmskus    map[string]*mgmtcompute.ResourceSku
 
 	fpCertificateRefresher CertificateRefresher
 	fpClientID             string
@@ -143,11 +139,6 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		}
 	}
 
-	msiAuthorizer, err := p.NewMSIAuthorizer(p.Environment().ResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
 	msiCredential, err := p.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
@@ -163,12 +154,6 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)
 	}
 	p.serviceKeyvault = serviceKeyvaultClient
-
-	resourceSkusClient := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), msiAuthorizer)
-	err = p.populateVMSkus(ctx, resourceSkusClient)
-	if err != nil {
-		return nil, err
-	}
 
 	p.fpCertificateRefresher = newCertificateRefresher(log, 1*time.Hour, p.serviceKeyvault, RPFirstPartySecretName)
 	err = p.fpCertificateRefresher.Start(ctx)
@@ -339,23 +324,6 @@ func (p *prod) AROOperatorImage() string {
 	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
 }
 
-func (p *prod) populateVMSkus(ctx context.Context, resourceSkusClient compute.ResourceSkusClient) error {
-	// Filtering is poorly documented, but currently (API version 2019-04-01)
-	// it seems that the API returns all SKUs without a filter and with invalid
-	// value in the filter.
-	// Filtering gives significant optimisation: at the moment of writing,
-	// we get ~1.2M response in eastus vs ~37M unfiltered (467 items vs 16618).
-	filter := fmt.Sprintf("location eq '%s'", p.Location())
-	skus, err := resourceSkusClient.List(ctx, filter)
-	if err != nil {
-		return err
-	}
-
-	p.vmskus = computeskus.FilterVMSizes(skus, p.Location())
-
-	return nil
-}
-
 func (p *prod) ClusterGenevaLoggingAccount() string {
 	return p.clusterGenevaLoggingAccount
 }
@@ -428,14 +396,6 @@ func (p *prod) GatewayResourceGroup() string {
 
 func (p *prod) ServiceKeyvault() azsecrets.Client {
 	return p.serviceKeyvault
-}
-
-func (p *prod) VMSku(vmSize string) (*mgmtcompute.ResourceSku, error) {
-	vmsku, found := p.vmskus[vmSize]
-	if !found {
-		return nil, fmt.Errorf("sku information not found for vm size %q", vmSize)
-	}
-	return vmsku, nil
 }
 
 func (p *prod) LiveConfig() liveconfig.Manager {

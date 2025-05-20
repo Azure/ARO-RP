@@ -260,6 +260,10 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 
 		for k, identity := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if pwi, exists := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k]; exists {
+				if pwi.ResourceID != identity.ResourceID {
+					pwi.ClientID = ""
+					pwi.ObjectID = ""
+				}
 				pwi.ResourceID = identity.ResourceID
 				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = pwi
 			} else {

@@ -12,7 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,8 +32,6 @@ func TestMUOReconciler(t *testing.T) {
 		mocks          func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
 		flags          arov1alpha1.OperatorFlags
 		clusterVersion string
-		// connected MUO -- cluster pullsecret
-		pullsecret string
 		// errors
 		wantErr string
 	}{
@@ -56,8 +53,7 @@ func TestMUOReconciler(t *testing.T) {
 			clusterVersion: "4.10.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "wonderfulPullspec",
-					EnableConnected: false,
+					Pullspec: "wonderfulPullspec",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
@@ -72,124 +68,7 @@ func TestMUOReconciler(t *testing.T) {
 			clusterVersion: "4.10.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "acrtest.example.com/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
-					EnableConnected: false,
-				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-			},
-		},
-		{
-			name: "managed, OCM allowed but pull secret entirely missing",
-			flags: arov1alpha1.OperatorFlags{
-				operator.MuoEnabled:      operator.FlagTrue,
-				operator.MuoManaged:      operator.FlagTrue,
-				controllerForceLocalOnly: "false",
-				controllerPullSpec:       "wonderfulPullspec",
-			},
-			clusterVersion: "4.10.0",
-			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
-				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "wonderfulPullspec",
-					EnableConnected: false,
-				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-			},
-		},
-		{
-			name: "managed, OCM allowed but empty pullsecret",
-			flags: arov1alpha1.OperatorFlags{
-				operator.MuoEnabled:      operator.FlagTrue,
-				operator.MuoManaged:      operator.FlagTrue,
-				controllerForceLocalOnly: "false",
-				controllerPullSpec:       "wonderfulPullspec",
-			},
-			clusterVersion: "4.10.0",
-			pullsecret:     "{\"auths\": {}}",
-			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
-				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "wonderfulPullspec",
-					EnableConnected: false,
-				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-			},
-		},
-		{
-			name: "managed, OCM allowed but mangled pullsecret",
-			flags: arov1alpha1.OperatorFlags{
-				operator.MuoEnabled:      operator.FlagTrue,
-				operator.MuoManaged:      operator.FlagTrue,
-				controllerForceLocalOnly: "false",
-				controllerPullSpec:       "wonderfulPullspec",
-			},
-			clusterVersion: "4.10.0",
-			pullsecret:     "i'm a little json, short and stout",
-			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
-				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "wonderfulPullspec",
-					EnableConnected: false,
-				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-			},
-		},
-		{
-			name: "managed, OCM connected mode",
-			flags: arov1alpha1.OperatorFlags{
-				operator.MuoEnabled:      operator.FlagTrue,
-				operator.MuoManaged:      operator.FlagTrue,
-				controllerForceLocalOnly: "false",
-				controllerPullSpec:       "wonderfulPullspec",
-			},
-			clusterVersion: "4.10.0",
-			pullsecret:     "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
-			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
-				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "wonderfulPullspec",
-					EnableConnected: true,
-					OCMBaseURL:      "https://api.openshift.com",
-				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-			},
-		},
-		{
-			name: "managed, OCM connected mode, custom OCM URL",
-			flags: arov1alpha1.OperatorFlags{
-				operator.MuoEnabled:      operator.FlagTrue,
-				operator.MuoManaged:      operator.FlagTrue,
-				controllerForceLocalOnly: "false",
-				controllerOcmBaseURL:     "https://example.com",
-				controllerPullSpec:       "wonderfulPullspec",
-			},
-			clusterVersion: "4.10.0",
-			pullsecret:     "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
-			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
-				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "wonderfulPullspec",
-					EnableConnected: true,
-					OCMBaseURL:      "https://example.com",
-				}
-				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-			},
-		},
-		{
-			name: "managed, pull secret exists, OCM disabled",
-			flags: arov1alpha1.OperatorFlags{
-				operator.MuoEnabled:      operator.FlagTrue,
-				operator.MuoManaged:      operator.FlagTrue,
-				controllerForceLocalOnly: "true",
-				controllerPullSpec:       "wonderfulPullspec",
-			},
-			clusterVersion: "4.10.0",
-			pullsecret:     "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
-			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
-				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "wonderfulPullspec",
-					EnableConnected: false,
+					Pullspec: "acrtest.example.com/app-sre/managed-upgrade-operator:v0.1.1202-g118c178",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
@@ -206,7 +85,6 @@ func TestMUOReconciler(t *testing.T) {
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:                     "wonderfulPullspec",
-					EnableConnected:              false,
 					SupportsPodSecurityAdmission: true,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
@@ -305,16 +183,6 @@ func TestMUOReconciler(t *testing.T) {
 
 			deployer := mock_deployer.NewMockDeployer(controller)
 			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance, cv)
-
-			if tt.pullsecret != "" {
-				clientBuilder = clientBuilder.WithObjects(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      pullSecretName.Name,
-						Namespace: pullSecretName.Namespace,
-					},
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(tt.pullsecret)},
-				})
-			}
 
 			if tt.mocks != nil {
 				tt.mocks(deployer, instance)

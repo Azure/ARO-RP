@@ -9,16 +9,16 @@ import (
 	"net/http"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -29,52 +29,52 @@ var (
 	clusterRG    = "clusterRG"
 )
 
-var originalLB = mgmtnetwork.LoadBalancer{
-	Sku: &mgmtnetwork.LoadBalancerSku{
-		Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+var originalLB = armnetwork.LoadBalancer{
+	SKU: &armnetwork.LoadBalancerSKU{
+		Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
 	},
-	LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-		FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+	Properties: &armnetwork.LoadBalancerPropertiesFormat{
+		FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 			{
-				FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-					PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-						ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
+				Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+					PublicIPAddress: &armnetwork.PublicIPAddress{
+						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
 					},
 				},
-				ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
-				Name: to.StringPtr("public-lb-ip-v4"),
+				ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+				Name: pointerutils.ToPtr("public-lb-ip-v4"),
 			},
 			{
-				Name: to.StringPtr("ae3506385907e44eba9ef9bf76eac973"),
-				ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
-				FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-					LoadBalancingRules: &[]mgmtnetwork.SubResource{
+				Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+				ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+				Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+					LoadBalancingRules: []*armnetwork.SubResource{
 						{
-							ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+							ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
 						},
 						{
-							ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+							ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
 						},
 					},
-					PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-						ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+					PublicIPAddress: &armnetwork.PublicIPAddress{
+						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
 					},
 				},
 			},
 			{
-				Name: to.StringPtr("adce98f85c7dd47c5a21263a5e39c083"),
-				ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083"),
-				FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-					PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-						ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-adce98f85c7dd47c5a21263a5e39c083"),
+				Name: pointerutils.ToPtr("adce98f85c7dd47c5a21263a5e39c083"),
+				ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083"),
+				Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+					PublicIPAddress: &armnetwork.PublicIPAddress{
+						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-adce98f85c7dd47c5a21263a5e39c083"),
 					},
 				},
 			},
 		},
 	},
-	Name:     to.StringPtr(infraID),
-	Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-	Location: to.StringPtr(location),
+	Name:     pointerutils.ToPtr(infraID),
+	Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+	Location: pointerutils.ToPtr(location),
 }
 
 func TestDeleteManagedResource(t *testing.T) {
@@ -82,63 +82,63 @@ func TestDeleteManagedResource(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		resourceID  string
-		currentLB   mgmtnetwork.LoadBalancer
+		currentLB   armnetwork.LoadBalancer
 		expectedErr string
-		mocks       func(*mock_features.MockResourcesClient, *mock_network.MockLoadBalancersClient)
+		mocks       func(*mock_features.MockResourcesClient, *mock_armnetwork.MockLoadBalancersClient)
 	}{
 		{
 			name:        "remove frontend ip config",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083",
 			currentLB:   originalLB,
 			expectedErr: "",
-			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
-				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", "").Return(originalLB, nil)
-				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, mgmtnetwork.LoadBalancer{
-					Sku: &mgmtnetwork.LoadBalancerSku{
-						Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)
+				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, armnetwork.LoadBalancer{
+					SKU: &armnetwork.LoadBalancerSKU{
+						Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
 					},
-					LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-						FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+					Properties: &armnetwork.LoadBalancerPropertiesFormat{
+						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 							{
-								FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-									PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-										ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
+								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+									PublicIPAddress: &armnetwork.PublicIPAddress{
+										ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
 									},
 								},
-								ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
-								Name: to.StringPtr("public-lb-ip-v4"),
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+								Name: pointerutils.ToPtr("public-lb-ip-v4"),
 							},
 							{
-								Name: to.StringPtr("ae3506385907e44eba9ef9bf76eac973"),
-								ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
-								FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-									LoadBalancingRules: &[]mgmtnetwork.SubResource{
+								Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+									LoadBalancingRules: []*armnetwork.SubResource{
 										{
-											ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+											ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
 										},
 										{
-											ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+											ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
 										},
 									},
-									PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-										ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+									PublicIPAddress: &armnetwork.PublicIPAddress{
+										ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
 									},
 								},
 							},
 						},
 					},
-					Name:     to.StringPtr(infraID),
-					Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-					Location: to.StringPtr(location),
-				}).Return(nil)
+					Name:     pointerutils.ToPtr(infraID),
+					Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+					Location: pointerutils.ToPtr(location),
+				}, nil).Return(nil)
 			},
 		},
 		{
 			name:        "delete public IP Address",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083",
 			expectedErr: "",
-			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
 				resources.EXPECT().DeleteByIDAndWait(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(nil)
 			},
@@ -147,21 +147,21 @@ func TestDeleteManagedResource(t *testing.T) {
 			name:        "deletion of private link service is forbidden",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/privateLinkServices/infraID-pls",
 			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "deletion of resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/privateLinkServices/infraID-pls is forbidden").Error(),
-			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 			},
 		},
 		{
 			name:        "deletion of private endpoints are forbidden",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/privateEndpoints/infraID-pe",
 			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "deletion of resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/privateEndpoints/infraID-pe is forbidden").Error(),
-			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 			},
 		},
 		{
 			name:        "deletion of Microsoft.Storage resources is forbidden",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Storage/someStorageType/infraID",
 			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "deletion of resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Storage/someStorageType/infraID is forbidden").Error(),
-			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 			},
 		},
 	} {
@@ -172,9 +172,9 @@ func TestDeleteManagedResource(t *testing.T) {
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
 
-			networkLoadBalancers := mock_network.NewMockLoadBalancersClient(controller)
+			loadBalancers := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			resources := mock_features.NewMockResourcesClient(controller)
-			tt.mocks(resources, networkLoadBalancers)
+			tt.mocks(resources, loadBalancers)
 
 			a := azureActions{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -186,7 +186,7 @@ func TestDeleteManagedResource(t *testing.T) {
 						},
 					},
 				},
-				loadBalancers: networkLoadBalancers,
+				loadBalancers: loadBalancers,
 				resources:     resources,
 			}
 

@@ -4,6 +4,8 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
+
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -101,6 +103,18 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 			AccountProperties: accountProperties,
 			Tags:              tags,
 		},
+		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
+	}
+}
+
+func (g *generator) storageAccountBlobContainer(name string, storageAccountName string, containerProperties *mgmtstorage.ContainerProperties) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtstorage.BlobContainer{
+			Name:                to.StringPtr("[" + name + "]"),
+			Type:                to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+			ContainerProperties: containerProperties,
+		},
+		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Storage/storageAccounts', %s)]", storageAccountName)},
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
 }

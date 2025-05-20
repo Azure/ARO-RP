@@ -60,32 +60,6 @@ It uses hacks scripts around a lot of the setup to make things easier to bootstr
    SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
    ```
 
-1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to
-mock a cluster MSI. This script will also create the platform identities, platform identity role assignments, and role assignment on mock cluster MSI to federate the platform identities. Platform identities will be created in resource group `RESOURCEGROUP` and subscription `SUBSCRIPTION`. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`. Additionally, save the value for `Platform workload identity role sets`.
-
-1. Copy, edit (if necessary) and source your environment file. The required
-   environment variable configuration is documented immediately below:
-
-   ```bash
-   cp env.example env
-   vi env
-   . ./env
-   ```
-
-   - `LOCATION`: Location of the shared RP development environment (default:
-     `eastus`).
-   - `RP_MODE`: Set to `development` to use a development RP running at
-     https://localhost:8443/.
-   
-    **NOTE:** When creating a MIWI cluster, add the following as well:
-  
-
-   - `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
-   - `MOCK_MSI_OBJECT_ID`: Object ID for service principal that mocks cluster MSI (see previous step).
-   - `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
-   - `MOCK_MSI_TENANT_ID`: Tenant ID for service principal that mocks cluster MSI (see previous step).
-   - `PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS`: The platform workload identity role sets (see previous step or value in `local_dev_env.sh`).
-
 1. Create your own RP database (if you don't already have one in the $LOCATION):
 
     * The following command can be used to check whether a DB already exists
@@ -104,6 +78,67 @@ mock a cluster MSI. This script will also create the platform identities, platfo
           "databaseName=$DATABASE_NAME" \
         1>/dev/null
       ```
+
+### Mock MSI setup required for MIWI installs
+
+1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to
+mock a cluster MSI. This script will also create the platform identities, platform identity role assignments, and role assignment on mock cluster MSI to federate the platform identities. Platform identities will be created in resource group `RESOURCEGROUP` and subscription `SUBSCRIPTION`. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`. Additionally, save the value for `Platform workload identity role sets`.
+
+1. Copy, edit (if necessary) and source your environment file. The required
+   environment variable configuration is documented immediately below:
+
+   ```bash
+   cp env.example env
+   vi env
+   . ./env
+   ```
+
+   - `LOCATION`: Location of the shared RP development environment (default:
+     `eastus`).
+   - `RP_MODE`: Set to `development` to use a development RP running at
+     https://localhost:8443/.
+   
+### MIWI setup
+
+1. Create a resource group for your cluster and managed identities
+
+1. Source the local dev script and run the command to set up the wimi env file for you
+
+   ```bash
+   source ./hack/devtools/local_dev_env.sh
+   CLUSTER_RESOURCEGROUP=<your cluster resourcegroup> create_miwi_env_file
+   ```
+
+1. Ensure that the following environment variables were set in your env file, and re-source it:
+
+   - `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
+   - `MOCK_MSI_OBJECT_ID`: Object ID for service principal that mocks cluster MSI (see previous step).
+   - `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
+   - `MOCK_MSI_TENANT_ID`: Tenant ID for service principal that mocks cluster MSI (see previous step).
+   - `PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS`: The platform workload identity role sets (see previous step or value in `local_dev_env.sh`).
+
+1. Connect to the VPN and populate the platform workload identity role set definitions to your CosmosDB instance
+
+   **Note** if installing a version other than 4.14 you will need to change your local `PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS` env var to point to your desired version
+
+   - `go run ./cmd/aro update-role-sets`
+
+1. Add a new installable OCP version to your local RP instance. This version should be a 4.14.38+ or 4.15.35+ version and use one of the current aro-installer images in our INT repo
+
+   - for 4.16
+   ```
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.16.30", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:7aacace57ab6ec468dd98b0b3e0f3fc440b29afce21b90bd716fed0db487e9e9", "installerPullspec": "arosvc.azurecr.io/aro-installer:4.16@sha256:27871abbc88cdfda21c81ed1a00050e71df8c88b4bb53f96104f6d0661c0b9bf"}}'
+   ```
+
+   - for 4.15
+   ```
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.15.35", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:8c8433f95d09b051e156ff638f4ccc95543918c3aed92b8c09552a8977a2a1a2", "installerPullspec": "arointsvc.azurecr.io/aro-installer@sha256:e733a9b3fe549273098d7b6acd6b45a84819020f4170a6062a8185661417fe91"}}'
+   ```
+
+   - for 4.14
+   ```
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.14.38", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:98e43d1e848f0ad303ed4d8d427e92f7aaeaf2f670a3bfcdbeeeaa591b63fefd", "installerPullspec": "arointsvc.azurecr.io/aro-installer@sha256:e084ce2895fd1356d07e7f8a47f79ac43b75e3a146b211c843f58d5cb88d9c70"}}'
+   ```
 
 ## Run the RP and create a cluster
 
@@ -128,6 +163,8 @@ mock a cluster MSI. This script will also create the platform identities, platfo
     # build/run the RP as a container
     make run-rp
     ```
+
+### Create a service principal cluster
 
 1. To create a cluster, use one of the following methods:
 
@@ -180,6 +217,54 @@ mock a cluster MSI. This script will also create the platform identities, platfo
    > **NOTE:** If the cluster creation fails with `unable to connect to Podman socket...dial unix ///run/user/1000/podman/podman.sock: connect: no such file or directory`, then you will need enable podman user socket by executing : `systemctl --user enable --now podman.socket`, and re-run the installation.
 
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
+
+### Create a MIWI cluster
+
+1. Ensure the required environment variables are set:
+
+   - `make aks.kubeconfig`
+   - `export ARO_INSTALL_VIA_HIVE=true` : instructs the RP to use hive to install clusters
+   - `export HIVE_KUBE_CONFIG_PATH=$PWD/aks.kubeconfig` : where to look for the kubeconfig
+
+1. Ensure that the required platform workload identities were created in your resource group. If they haven't been, run `./hack/devtools/msi.sh`
+
+   - aro-cloud-controller-manager
+   - aro-ingress
+   - aro-machine-api
+   - aro-disk-csi-driver
+   - aro-cloud-network-config
+   - aro-image-registry
+   - aro-file-csi-driver
+   - aro-aro-operator
+   - aro-Cluster
+
+1. Create the cluster
+
+   **Note** If the identities are not in the same resource group as the cluster, you can optionally use full resource IDs for each managed and cluster identity
+
+   ```bash
+   az aro create \
+   --location ${LOCATION} \
+   --resource-group ${CLUSTER_RESOURCEGROUP} \
+   --name ${CLUSTER_NAME} \
+   --vnet ${CLUSTER_VNET} \
+   --master-subnet master-subnet \
+   --worker-subnet worker-subnet \
+   --version 4.15.35 \
+   --master-vm-size Standard_D8s_v5 \
+   --enable-managed-identity \
+   --assign-cluster-identity aro-Cluster \
+   --assign-platform-workload-identity file-csi-driver aro-file-csi-driver \
+   --assign-platform-workload-identity cloud-controller-manager aro-cloud-controller-manager \
+   --assign-platform-workload-identity ingress aro-ingress \
+   --assign-platform-workload-identity image-registry aro-image-registry \
+   --assign-platform-workload-identity machine-api aro-machine-api \
+   --assign-platform-workload-identity cloud-network-config aro-cloud-network-config \
+   --assign-platform-workload-identity aro-operator aro-aro-operator \
+   --assign-platform-workload-identity disk-csi-driver aro-disk-csi-driver
+   ```
+
+## Interact with the cluster
 
 1. Using `oc`:
 
@@ -448,16 +533,6 @@ If you want to run the installer version via hive and not in container, you will
 - List the enabled OpenShift installation versions within a region
   ```bash
   curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/locations/$LOCATION/openshiftversions?api-version=2022-09-04"
-  ```
-
-## OpenShift Cluster Manager (OCM) Configuration API Actions
-
-- Create a new OCM configuration
-
-  - You can find example payloads in the projects `./hack/ocm` folder.
-
-  ```bash
-  curl -X PUT -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/syncsets/mySyncSet?api-version=2022-09-04" --header "Content-Type: application/json" -d @./hack/ocm/syncset.b64
   ```
 
 ## Debugging OpenShift Cluster

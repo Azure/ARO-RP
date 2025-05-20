@@ -99,23 +99,25 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/openshift4/ose-cli-rhel9:v4.17",
 		"registry.redhat.io/openshift4/ose-cli-rhel9:latest",
 
-		// https://catalog.redhat.com/software/containers/ubi8/ubi-minimal/5c359a62bed8bd75a2c3fba8
 		// https://catalog.redhat.com/software/containers/ubi9/ubi-minimal/615bd9b4075b022acc111bf5
-		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
 		"registry.access.redhat.com/ubi9/ubi-minimal:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/nodejs-18/6278e5c078709f5277f26998
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
-
-		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
-		"registry.access.redhat.com/ubi8/go-toolset:1.22",
+		// https://catalog.redhat.com/software/containers/ubi9/nodejs-18/62e8e7ed22d1d3c2dfe2ca01
+		"registry.access.redhat.com/ubi9/nodejs-18:latest",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.1202-g118c178",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
-		"quay.io/app-sre/hive:5d3f4d77dc",
+		"quay.io/app-sre/hive:87bff5947f",
+
+		// OpenShift Automated Release Tooling partner images
+		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19",
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.23-openshift-4.19",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 
@@ -134,7 +136,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
 		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 12))
+		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 14))
 		if err != nil {
 			return err
 		}

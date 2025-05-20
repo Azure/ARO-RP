@@ -23,7 +23,7 @@ func TestGenerateEtcHostsAROConf(t *testing.T) {
 				GatewayDomains:           []string{"test2.com", "test3.com"},
 				GatewayPrivateEndpointIP: "20.20.20.20",
 			},
-			expected: "10.10.10.10\tapi.test.com api-int.test.com\n20.20.20.20\ttest2.com test3.com \n",
+			expected: "10.10.10.10\tapi.test.com api-int.test.com\n20.20.20.20\ttest2.com test3.com\n",
 		},
 	}
 

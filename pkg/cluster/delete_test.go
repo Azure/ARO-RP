@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
@@ -30,7 +31,6 @@ import (
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
@@ -46,59 +46,61 @@ func TestDeleteNic(t *testing.T) {
 	location := "eastus"
 	resourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkInterfaces/%s", subscription, clusterRG, nicName)
 
-	nic := mgmtnetwork.Interface{
-		Name:                      &nicName,
-		Location:                  &location,
-		ID:                        &resourceId,
-		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{},
+	nic := armnetwork.InterfacesClientGetResponse{
+		Interface: armnetwork.Interface{
+			Name:       &nicName,
+			Location:   &location,
+			ID:         &resourceId,
+			Properties: &armnetwork.InterfacePropertiesFormat{},
+		},
 	}
 
 	tests := []struct {
 		name    string
-		mocks   func(*mock_network.MockInterfacesClient)
+		mocks   func(*mock_armnetwork.MockInterfacesClient)
 		wantErr string
 	}{
 		{
 			name: "nic is in succeeded provisioning state",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				nic.Interface.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
+				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
 			},
 		},
 		{
 			name: "nic is in failed provisioning state",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateFailed)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
+				armNetworkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic.Interface, nil).Return(nil)
+				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
 			},
 		},
 		{
 			name: "provisioning state is failed and CreateOrUpdateAndWait returns error",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(fmt.Errorf("Failed to update"))
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateFailed)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
+				armNetworkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic.Interface, nil).Return(fmt.Errorf("Failed to update"))
 			},
 			wantErr: "Failed to update",
 		},
 		{
 			name: "nic no longer exists - do nothing",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				notFound := autorest.DetailedError{
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				notFound := azcore.ResponseError{
 					StatusCode: http.StatusNotFound,
 				}
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, notFound)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, &notFound)
 			},
 		},
 		{
 			name: "DeleteAndWait returns error",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(fmt.Errorf("Failed to delete"))
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
+				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(fmt.Errorf("Failed to delete"))
 			},
 			wantErr: "Failed to delete",
 		},
@@ -112,9 +114,9 @@ func TestDeleteNic(t *testing.T) {
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
 
-			networkInterfaces := mock_network.NewMockInterfacesClient(controller)
+			armNetworkInterfaces := mock_armnetwork.NewMockInterfacesClient(controller)
 
-			tt.mocks(networkInterfaces)
+			tt.mocks(armNetworkInterfaces)
 
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -127,7 +129,7 @@ func TestDeleteNic(t *testing.T) {
 						},
 					},
 				},
-				interfaces: networkInterfaces,
+				armInterfaces: armNetworkInterfaces,
 			}
 
 			err := m.deleteNic(ctx, nicName)

@@ -24,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -252,7 +251,6 @@ func TestRoutesAreNamedWithLowerCasePaths(t *testing.T) {
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-	_env.EXPECT().FeatureIsSet(env.FeatureEnableOCMEndpoints).AnyTimes().Return(true)
 
 	f := &frontend{
 		baseLog: logrus.NewEntry(logrus.StandardLogger()),

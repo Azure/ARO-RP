@@ -1172,30 +1172,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: to.StringPtr("ClusterManagerConfigurations"),
-						PartitionKey: &sdkcosmos.ContainerPartitionKey{
-							Paths: []*string{
-								to.StringPtr("/partitionKey"),
-							},
-							Kind: &hashPartitionKey,
-						},
-					},
-					Options: &sdkcosmos.CreateUpdateOptions{},
-				},
-				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/ClusterManagerConfigurations')]"),
-				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-				Location: to.StringPtr("[resourceGroup().location]"),
-			},
-			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
-			},
-			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-		},
-		{
-			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
-				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
-					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("Billing"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
@@ -1550,6 +1526,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			&mgmtstorage.AccountProperties{
 				AllowBlobPublicAccess: to.BoolPtr(false),
 				MinimumTLSVersion:     mgmtstorage.MinimumTLSVersionTLS12,
+				AllowSharedKeyAccess:  to.BoolPtr(false),
 			},
 			map[string]*string{},
 		),
@@ -1559,6 +1536,18 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			resourceTypeStorageAccount,
 			storageAccountName,
 			fmt.Sprintf("concat(%s, '/Microsoft.Authorization/', guid(resourceId('%s', %s)))", storageAccountName, resourceTypeStorageAccount, storageAccountName),
+		),
+		g.storageAccountBlobContainer(
+			fmt.Sprintf("concat(%s, '/default', '/$web')", storageAccountName),
+			storageAccountName,
+			&mgmtstorage.ContainerProperties{},
+		),
+		rbac.ResourceRoleAssignmentWithScope(
+			rbac.RoleStorageBlobDataContributor,
+			"parameters('globalDevopsServicePrincipalId')",
+			fmt.Sprintf("%s/%s", resourceTypeStorageAccount, resourceTypeBlobContainer),
+			fmt.Sprintf("concat(resourceId('Microsoft.Storage/storageAccounts', %s), '/blobServices/default/containers/$web')", storageAccountName),
+			fmt.Sprintf("concat(%s, '/default/$web/Microsoft.Authorization/', guid(%s))", storageAccountName, storageAccountName),
 		),
 	}
 }

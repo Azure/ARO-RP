@@ -248,11 +248,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
 	err = spDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
 	if err != nil {
 		return err

@@ -206,7 +206,6 @@ func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
 	return []steps.Step{
 		steps.Action(m.hiveCreateNamespace),
 		steps.Action(m.hiveEnsureResources),
-		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
 		steps.Action(m.hiveResetCorrelationData),
 	}
 }
@@ -249,6 +248,7 @@ func (m *manager) Update(ctx context.Context) error {
 		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
+			steps.Action(m.ensurePlatformWorkloadIdentityRBAC),
 			steps.Action(m.federateIdentityCredentials),
 		)
 	} else {
@@ -299,7 +299,6 @@ func (m *manager) Update(ctx context.Context) error {
 			// hive has the latest credentials after rotation.
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
-			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
 			steps.Action(m.hiveResetCorrelationData),
 		)
 	}
@@ -411,10 +410,10 @@ func (m *manager) bootstrap() []steps.Step {
 
 	s = append(s,
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.attachNSGs),
-		steps.Action(m.updateAPIIPEarly),
-		steps.Action(m.createOrUpdateRouterIPEarly),
-		steps.Action(m.ensureGatewayCreate),
-		steps.Action(m.createAPIServerPrivateEndpoint),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.updateAPIIPEarly),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createOrUpdateRouterIPEarly),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.ensureGatewayCreate),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
 	)
 

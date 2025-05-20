@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -62,6 +63,7 @@ type deployer struct {
 	clusterKeyvault              azsecrets.Client
 	portalKeyvault               azsecrets.Client
 	serviceKeyvault              azsecrets.Client
+	blobsClient                  azblob.BlobsClient
 
 	config      *RPConfig
 	version     string
@@ -102,6 +104,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		*into = client
 	}
 
+	serviceUrl := fmt.Sprintf("https://%s.blob.%s", *config.Configuration.RPVersionStorageAccountName, _env.Environment().StorageEndpointSuffix)
+	blobsClient, err := azblob.NewBlobsClientUsingEntra(serviceUrl, tokenCredential, _env.Environment().ArmClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failure to instantiate blobs client using SAS: %v", err)
+	}
+
 	return &deployer{
 		log: log,
 		env: _env,
@@ -124,6 +132,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		clusterKeyvault:              clusterKeyVault,
 		portalKeyvault:               portalKeyVault,
 		serviceKeyvault:              serviceKeyVault,
+		blobsClient:                  blobsClient,
 
 		config:      config,
 		version:     version,

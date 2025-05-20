@@ -46,7 +46,7 @@ const (
 	serviceAccountName    = "etcd-recovery-privileged"
 	kubeServiceAccount    = "system:serviceaccount" + namespaceEtcds + ":" + serviceAccountName
 	namespaceEtcds        = "openshift-etcd"
-	image                 = "ubi8/ubi-minimal"
+	image                 = "ubi9/ubi-minimal"
 	jobName               = "etcd-recovery-"
 	patchOverides         = "unsupportedConfigOverrides:"
 	patchDisableOverrides = `{"useUnsupportedUnsafeNonHANonProductionUnstableEtcd": true}`

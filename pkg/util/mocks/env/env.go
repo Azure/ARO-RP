@@ -20,7 +20,6 @@ import (
 	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
 	dataplane "github.com/Azure/msi-dataplane/pkg/dataplane"
 	logrus "github.com/sirupsen/logrus"
@@ -730,19 +729,4 @@ func (m *MockInterface) TenantID() string {
 func (mr *MockInterfaceMockRecorder) TenantID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockInterface)(nil).TenantID))
-}
-
-// VMSku mocks base method.
-func (m *MockInterface) VMSku(vmSize string) (*compute.ResourceSku, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VMSku", vmSize)
-	ret0, _ := ret[0].(*compute.ResourceSku)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// VMSku indicates an expected call of VMSku.
-func (mr *MockInterfaceMockRecorder) VMSku(vmSize any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSku", reflect.TypeOf((*MockInterface)(nil).VMSku), vmSize)
 }

@@ -78,7 +78,7 @@ func (m *manager) ensureCertificateIssuer(ctx context.Context, certificateName, 
 			return err
 		}
 
-		_, err = clusterKeyvault.CreateCertificate(ctx, issuerName, azcertificates.SignedCertificateParameters(certificateName, dnsName, azcertificates.EkuServerAuth), nil)
+		_, err = clusterKeyvault.CreateCertificate(ctx, certificateName, azcertificates.SignedCertificateParameters(issuerName, dnsName, azcertificates.EkuServerAuth), nil)
 		if err != nil {
 			return err
 		}

@@ -154,7 +154,7 @@ delete_pullsecret_with_userinfo(userinfo) = output {
         "object":{
           "apiVersion":"v1",
           "data":{
-              ".dockerconfigjson":"eyJhdXRocyI6eyJhcm9pbnRzdmMuYXp1cmVjci5pbyI6eyJhdXRoIjoiWlRKbExYQjFiR3c2Y1RsaVVGSnJRMVJ5VFd0WmNDOXZORXhzYW1aTmFsSmlSazVEUVhSU1NXZz0ifSwiYXJvc3ZjLmF6dXJlY3IuaW8iOnsiYXV0aCI6Ik9UTTVNRFE1WWpRdE5UbGxNUzAwWXpsaExXSmxZemd0TWpBeVpUQXhaamMyTVdGbE9qWkNMa3BGT21aUFQyaHZMVEkzUDI0NFRsWXliRFpxUVM5VWRqQk1kMWhtIn19fQ=="
+              ".dockerconfigjson":"abcdedfghijklmnopqrstuvwxyz"
           },
           "kind":"Secret",
           "metadata":{
