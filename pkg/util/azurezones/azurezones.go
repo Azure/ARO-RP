@@ -18,24 +18,30 @@ const CONTROL_PLANE_MACHINE_COUNT = 3
 type availabilityZoneManager struct {
 	allowExpandedAvailabilityZones bool
 
-	// Set to the zone to force, blank = disabled
-	forceSingleZoneInZonalRegion string
+	// Set to the zone to force
+	forceSingleZone bool
+	singleZoneToUse string
 }
 
-func NewManager(allowExpandedAvailabilityZones bool, forceSingleZoneInZonalRegion string) *availabilityZoneManager {
+func NewManager(allowExpandedAvailabilityZones bool, forceSingleZone bool, singleZoneToUse string) *availabilityZoneManager {
 	return &availabilityZoneManager{
 		allowExpandedAvailabilityZones: allowExpandedAvailabilityZones,
-		forceSingleZoneInZonalRegion:   forceSingleZoneInZonalRegion,
+		forceSingleZone:                forceSingleZone,
+		singleZoneToUse:                singleZoneToUse,
 	}
 }
 
 func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, workerSKU *mgmtcompute.ResourceSku) ([]string, []string, []string, error) {
-	controlPlaneZones := computeskus.Zones(controlPlaneSKU)
-	var workerZones []string
-
-	if workerSKU != nil {
-		workerZones = computeskus.Zones(workerSKU)
+	// If we are forcing a single zone and that zone is blank, that means to
+	// treat it as non-zonal. All regions support (todo: verify?) non-zonal
+	// resources, but may not have capacity. In Azure+OpenShift API parlance,
+	// [""] means non-zonal.
+	if m.forceSingleZone && m.singleZoneToUse == "" {
+		return []string{"", "", ""}, []string{""}, []string{""}, nil
 	}
+
+	controlPlaneZones := computeskus.Zones(controlPlaneSKU)
+	workerZones := computeskus.Zones(workerSKU)
 
 	// We sort the zones so that we will pick them in numerical order if we need
 	// less replicas than zones. With non-basic AZs, this means that control
@@ -63,14 +69,13 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	// Save the original control plane zones (after we remove the expanded ones, if done) for other purposes (e.g. public IPs)
 	originalZones := slices.Clone(controlPlaneZones)
 
-	if workerSKU != nil &&
-		((len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
-			(len(workerZones) == 0 && len(controlPlaneZones) > 0)) {
+	if (len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
+		(len(workerZones) == 0 && len(controlPlaneZones) > 0) {
 		return nil, nil, nil, fmt.Errorf("cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: %d, worker zones: %d)", len(controlPlaneZones), len(workerZones))
 	}
 
 	onlySingleZone := func(s string) bool {
-		return s != m.forceSingleZoneInZonalRegion
+		return s != m.singleZoneToUse
 	}
 
 	// We handle the case where regions have no zones or >= zones than replicas,
@@ -78,17 +83,23 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	// plane replicas and Azure AZs will always be a minimum of 3, see
 	// https://azure.microsoft.com/en-us/blog/our-commitment-to-expand-azure-availability-zones-to-more-regions/
 	if controlPlaneZones == nil {
-		controlPlaneZones = []string{""}
-	} else if m.forceSingleZoneInZonalRegion != "" {
+		controlPlaneZones = []string{"", "", ""}
+		originalZones = []string{""}
+	} else if m.forceSingleZone {
 		// If we're set to force a single zone, delete anything other than the
-		// singularly picked zone
+		// singularly picked zone. This is to ensure that we catch instances
+		// where we mandate a single zone, but the SKU is not available in that
+		// zone.
 		controlPlaneZones = slices.DeleteFunc(controlPlaneZones, onlySingleZone)
 
 		if len(controlPlaneZones) == 0 {
-			return nil, nil, nil, fmt.Errorf("control plane SKU is not available in zone '%s'", m.forceSingleZoneInZonalRegion)
+			return nil, nil, nil, fmt.Errorf("control plane SKU '%s' is not available in zone '%s'", *controlPlaneSKU.Name, m.singleZoneToUse)
 		}
+
+		// We need to give the control plane zones in threes
+		controlPlaneZones = []string{m.singleZoneToUse, m.singleZoneToUse, m.singleZoneToUse}
 	} else if len(controlPlaneZones) < CONTROL_PLANE_MACHINE_COUNT {
-		return nil, nil, nil, fmt.Errorf("cluster creation with %d zones and %d control plane replicas is unsupported", len(controlPlaneZones), CONTROL_PLANE_MACHINE_COUNT)
+		return nil, nil, nil, fmt.Errorf("control plane SKU '%s' only available in %d zones, need %d", *controlPlaneSKU.Name, len(controlPlaneZones), CONTROL_PLANE_MACHINE_COUNT)
 	} else if len(controlPlaneZones) >= CONTROL_PLANE_MACHINE_COUNT {
 		// Pick lower zones first
 		controlPlaneZones = controlPlaneZones[:CONTROL_PLANE_MACHINE_COUNT]
@@ -106,16 +117,18 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	// configuration.
 	if workerZones == nil {
 		workerZones = []string{""}
-	} else if m.forceSingleZoneInZonalRegion != "" {
+	} else if m.forceSingleZone {
 		// If we're set to force a single zone, delete anything other than the
-		// singularly picked zone
+		// singularly picked zone. This is to ensure that we catch instances
+		// where we mandate a single zone, but the SKU is not available in that
+		// zone.
 		workerZones = slices.DeleteFunc(workerZones, onlySingleZone)
 
 		if len(workerZones) == 0 {
-			return nil, nil, nil, fmt.Errorf("worker SKU is not available in zone '%s'", m.forceSingleZoneInZonalRegion)
+			return nil, nil, nil, fmt.Errorf("worker SKU '%s' is not available in zone '%s'", *workerSKU.Name, m.singleZoneToUse)
 		}
 	} else if len(workerZones) < 3 {
-		return nil, nil, nil, fmt.Errorf("cluster creation with a worker SKU available on less than 3 zones is unsupported (available: %d)", len(workerZones))
+		return nil, nil, nil, fmt.Errorf("worker SKU '%s' only available in %d zones, need %d", *workerSKU.Name, len(workerZones), 3)
 	}
 
 	return controlPlaneZones, workerZones, originalZones, nil

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -20,7 +21,8 @@ func TestDetermineZones(t *testing.T) {
 		wantWorkerZones       []string
 		wantOriginalZones     []string
 		allowExpandedAZs      bool
-		forceSingleZone       string
+		forceSingleZone       bool
+		singleZoneToUse       string
 		wantErr               string
 	}{
 		{
@@ -33,31 +35,35 @@ func TestDetermineZones(t *testing.T) {
 			name:                  "non-zonal",
 			controlPlaneSkuZones:  nil,
 			workerSkuZones:        nil,
-			wantControlPlaneZones: []string{""},
+			wantControlPlaneZones: []string{"", "", ""},
+			wantOriginalZones:     []string{""},
 			wantWorkerZones:       []string{""},
 		},
 		{
 			name:                  "force single zone does nothing in non-zonal",
-			forceSingleZone:       "3",
+			forceSingleZone:       true,
+			singleZoneToUse:       "3",
 			controlPlaneSkuZones:  nil,
 			workerSkuZones:        nil,
-			wantControlPlaneZones: []string{""},
+			wantControlPlaneZones: []string{"", "", ""},
 			wantWorkerZones:       []string{""},
-			wantOriginalZones:     nil,
+			wantOriginalZones:     []string{""},
 		},
 		{
 			name:                 "force single zone, control plane zone not available",
-			forceSingleZone:      "3",
+			forceSingleZone:      true,
+			singleZoneToUse:      "3",
 			controlPlaneSkuZones: []string{"1", "2"},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErr:              "control plane SKU is not available in zone '3'",
+			wantErr:              "control plane SKU 'controlPlaneSKU' is not available in zone '3'",
 		},
 		{
 			name:                 "force single zone, worker zone not available",
-			forceSingleZone:      "3",
+			forceSingleZone:      true,
+			singleZoneToUse:      "3",
 			controlPlaneSkuZones: []string{"1", "2", "3"},
 			workerSkuZones:       []string{"1", "2"},
-			wantErr:              "worker SKU is not available in zone '3'",
+			wantErr:              "worker SKU 'workerSKU' is not available in zone '3'",
 		},
 		{
 			name:                 "non-zonal control plane, zonal workers",
@@ -81,12 +87,23 @@ func TestDetermineZones(t *testing.T) {
 		},
 		{
 			name:                  "zonal control plane, zonal workers, forced fixed zone",
-			forceSingleZone:       "3",
+			forceSingleZone:       true,
+			singleZoneToUse:       "3",
 			controlPlaneSkuZones:  []string{"1", "2", "3"},
 			workerSkuZones:        []string{"1", "2", "3"},
-			wantControlPlaneZones: []string{"3"},
+			wantControlPlaneZones: []string{"3", "3", "3"},
 			wantWorkerZones:       []string{"3"},
 			wantOriginalZones:     []string{"1", "2", "3"},
+		},
+		{
+			name:                  "zonal control plane, zonal workers, forced fixed nonzonal",
+			forceSingleZone:       true,
+			singleZoneToUse:       "",
+			controlPlaneSkuZones:  []string{"1", "2", "3"},
+			workerSkuZones:        []string{"1", "2", "3"},
+			wantControlPlaneZones: []string{"", "", ""},
+			wantWorkerZones:       []string{""},
+			wantOriginalZones:     []string{""},
 		},
 		{
 			name:                  "region with 4 availability zones, expanded AZs, control plane uses first 3, workers use all",
@@ -110,25 +127,25 @@ func TestDetermineZones(t *testing.T) {
 			name:                 "not enough control plane zones",
 			controlPlaneSkuZones: []string{"1", "2"},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErr:              "cluster creation with 2 zones and 3 control plane replicas is unsupported",
+			wantErr:              "control plane SKU 'controlPlaneSKU' only available in 2 zones, need 3",
 		},
 		{
 			name:                 "not enough control plane zones, basic AZs only",
 			controlPlaneSkuZones: []string{"1", "2", "4"},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErr:              "cluster creation with 2 zones and 3 control plane replicas is unsupported",
+			wantErr:              "control plane SKU 'controlPlaneSKU' only available in 2 zones, need 3",
 		},
 		{
 			name:                 "not enough worker zones",
 			controlPlaneSkuZones: []string{"1", "2", "3"},
 			workerSkuZones:       []string{"1", "2"},
-			wantErr:              "cluster creation with a worker SKU available on less than 3 zones is unsupported (available: 2)",
+			wantErr:              "worker SKU 'workerSKU' only available in 2 zones, need 3",
 		},
 		{
 			name:                 "not enough worker zones, basic AZs only",
 			controlPlaneSkuZones: []string{"1", "2", "3"},
 			workerSkuZones:       []string{"1", "2", "4"},
-			wantErr:              "cluster creation with a worker SKU available on less than 3 zones is unsupported (available: 2)",
+			wantErr:              "worker SKU 'workerSKU' only available in 2 zones, need 3",
 		},
 		{
 			name:                  "region with 4 availability zones, expanded AZs, control plane only available in non-consecutive 3, workers use all",
@@ -142,11 +159,13 @@ func TestDetermineZones(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controlPlaneSku := &mgmtcompute.ResourceSku{
+				Name: to.StringPtr("controlPlaneSKU"),
 				LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
 					{Zones: &tt.controlPlaneSkuZones},
 				},
 			}
 			workerSku := &mgmtcompute.ResourceSku{
+				Name: to.StringPtr("workerSKU"),
 				LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
 					{Zones: &tt.workerSkuZones},
 				},
@@ -154,7 +173,8 @@ func TestDetermineZones(t *testing.T) {
 
 			m := &availabilityZoneManager{
 				allowExpandedAvailabilityZones: tt.allowExpandedAZs,
-				forceSingleZoneInZonalRegion:   tt.forceSingleZone,
+				forceSingleZone:                tt.forceSingleZone,
+				singleZoneToUse:                tt.singleZoneToUse,
 			}
 
 			controlPlaneZones, workerZones, originalZones, err := m.DetermineAvailabilityZones(controlPlaneSku, workerSku)

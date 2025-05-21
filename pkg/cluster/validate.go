@@ -32,7 +32,7 @@ func (m *manager) validateZones(ctx context.Context) error {
 	filter := fmt.Sprintf("location eq %s", location)
 	skus, err := m.resourceSkus.List(ctx, filter)
 	if err != nil {
-		return err
+		return fmt.Errorf("failure listing resource SKUs: %w", err)
 	}
 
 	filteredSkus := computeskus.FilterVMSizes(skus, location)
@@ -42,9 +42,14 @@ func (m *manager) validateZones(ctx context.Context) error {
 		return err
 	}
 
+	workerSKU, err := checkSKUAvailability(filteredSkus, location, "properties.workerProfiles[0].VMSize", string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
+	if err != nil {
+		return err
+	}
+
 	// Options for zone checking manager unused for now
-	zoneChecker := azurezones.NewManager(false, "")
-	controlPlaneZones, _, originalZones, err := zoneChecker.DetermineAvailabilityZones(controlPlaneSKU, nil)
+	zoneChecker := azurezones.NewManager(false, false, "")
+	controlPlaneZones, workerZones, originalZones, err := zoneChecker.DetermineAvailabilityZones(controlPlaneSKU, workerSKU)
 	if err != nil {
 		return err
 	}
@@ -52,6 +57,7 @@ func (m *manager) validateZones(ctx context.Context) error {
 	// Update the document with the control plane and worker zones
 	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
 		oscd.OpenShiftCluster.Properties.MasterProfile.Zones = controlPlaneZones
+		oscd.OpenShiftCluster.Properties.WorkerProfiles[0].Zones = workerZones
 		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones = originalZones
 		return nil
 	})
