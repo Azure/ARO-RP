@@ -126,6 +126,13 @@ func checkOperation(op azcertificates.CertificateOperation, log *logrus.Entry) (
 	if op.Status == nil {
 		return false, fmt.Errorf("operation status is nil")
 	}
+
+	considerFailure := func () (bool, error) {
+		if op.StatusDetails != nil {
+			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, op.Error)
+		}
+		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, op.Error)
+	}
 	switch *op.Status {
 	case "inProgress":
 		return false, nil
@@ -142,14 +149,9 @@ func checkOperation(op azcertificates.CertificateOperation, log *logrus.Entry) (
 			log.Warningf("certificateOperation FailedCanRetry %s: Error %v", *op.Status, op.Error)
 			return false, nil
 		}
-		// in case the failure is not retriable, then fallthrough and continue the switch to next (default) case
-		fallthrough
-		// no code after fallthrough
+		return considerFailure()
 
 	default:
-		if op.StatusDetails != nil {
-			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, op.Error)
-		}
-		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, op.Error)
+		return considerFailure()
 	}
 }
