@@ -755,6 +755,8 @@ type WorkerProfile struct {
 	Count               int              `json:"count,omitempty"`
 	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
+	// []string for creation, [1]string when fetched from API server
+	Zones []string `json:"zones,omitempty"`
 }
 
 // GetEnrichedWorkerProfiles returns WorkerProfilesStatus if not nil, otherwise WorkerProfiles
