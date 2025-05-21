@@ -63,3 +63,24 @@ func TestPanic(t *testing.T) {
 		}
 	}
 }
+
+func TestPanicHttpAbort(t *testing.T) {
+	h, log := testlog.New()
+
+	w := httptest.NewRecorder()
+
+	Panic(log)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic(http.ErrAbortHandler)
+	})).ServeHTTP(w, nil)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Error(w.Code)
+	}
+
+	expected := []map[string]types.GomegaMatcher{}
+
+	err := testlog.AssertLoggingOutput(h, expected)
+	if err != nil {
+		t.Error(err)
+	}
+}
