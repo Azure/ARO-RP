@@ -23,5 +23,15 @@ jobs:
 
       - name: Prune non-production tags
         run: |
-          TAGS="$(.github/list-prune-tags.sh -n ${{ github.ref_name }})"
-          git push origin --delete $TAGS
+          tags=( $(.github/list-prune-tags.sh -n ${{ github.ref_name }}) )
+
+          # we'll stop early if we don't find any tags to prune
+          if [ ${#tags[*]} -eq 0 ]; then
+            exit 0
+          fi
+
+          for i in ${!tags[*]}; do
+            tags[i]="refs/tags/${tags[i]}"
+          done
+
+          git push origin --delete ${tags[*]}
