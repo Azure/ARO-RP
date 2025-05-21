@@ -488,13 +488,36 @@ func setup(ctx context.Context) error {
 	}
 
 	if conf.IsCI { // always create cluster in CI
+		// 1) Pre-check for an existing cluster stuck in Deleting
+		clusterDoc, err := clients.OpenshiftClusters.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+		if err == nil && clusterDoc.ProvisioningState == "Deleting" {
+			log.Warnf("Cluster %s in resource group %s is in 'Deleting' state, waiting for cleanup...",
+				conf.ClusterName, conf.VnetResourceGroup)
+
+			const maxRetries = 10
+			const waitBetween = 30 * time.Second
+
+			for i := 1; i <= maxRetries; i++ {
+				time.Sleep(waitBetween)
+				clusterDoc, err = clients.OpenshiftClusters.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+				if err != nil || clusterDoc.ProvisioningState != "Deleting" {
+					break
+				}
+				log.Infof("Still waiting for cluster deletion... (%d/%d)", i, maxRetries)
+			}
+
+			// if it’s still deleting after all that, bail out
+			if err == nil && clusterDoc.ProvisioningState == "Deleting" {
+				return fmt.Errorf("cluster %s is stuck in 'Deleting' state after waiting, aborting", conf.ClusterName)
+			}
+		}
+
+		// 2) Safe to create a cluster
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
 		}
-
-		err = cluster.Create(ctx)
-		if err != nil {
+		if err = cluster.Create(ctx); err != nil {
 			return err
 		}
 	}
