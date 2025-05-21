@@ -27,7 +27,7 @@ const (
 func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 	ctx context.Context,
 	oc *api.OpenShiftCluster,
-	platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole,
+	platformWorkloadIdentityRolesByRoleName map[string][]api.PlatformWorkloadIdentityRole,
 	roleDefinitions armauthorization.RoleDefinitionsClient,
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
 	platformWorkloadIdentities map[string]api.PlatformWorkloadIdentity, // Platform Workload Identities with object and client IDs
@@ -43,17 +43,19 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(
 	}
 
 	for k, pwi := range dv.platformIdentities {
-		role, exists := platformWorkloadIdentityRolesByRoleName[k]
+		roles, exists := platformWorkloadIdentityRolesByRoleName[k]
 		if !exists {
 			return platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(oc, platformWorkloadIdentityRolesByRoleName)
 		}
 
-		roleDefinitionID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
-		actions, err := getActionsForRoleDefinition(ctx, roleDefinitionID, roleDefinitions)
-		if err != nil {
-			return err
+		for _, role := range roles {
+			roleDefinitionID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
+			actions, err := getActionsForRoleDefinition(ctx, roleDefinitionID, roleDefinitions)
+			if err != nil {
+				return err
+			}
+			dv.platformIdentitiesActionsMap[k] = stringutils.GroupsUnion(dv.platformIdentitiesActionsMap[k], actions)
 		}
-		dv.platformIdentitiesActionsMap[role.OperatorName] = actions
 
 		identityResourceId, err := azure.ParseResourceID(pwi.ResourceID)
 		if err != nil {
