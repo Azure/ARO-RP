@@ -33,3 +33,19 @@ func GroupsIntersect(as, bs []string) (gs []string) {
 
 	return gs
 }
+
+func GroupsUnion(as, bs []string) (gs []string) {
+	match := map[string]struct{}{}
+
+	for _, a := range as {
+		match[a] = struct{}{}
+	}
+	for _, b := range bs {
+		match[b] = struct{}{}
+	}
+
+	for g := range match {
+		gs = append(gs, g)
+	}
+	return gs
+}
