@@ -26,7 +26,7 @@ var (
 
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
 // backing certificate (if needed) and store the certificate in the cluster MSI key
-// vault. If the certificate stored in keyvault is invalid, it will request and persist
+// vault. If the certificate stored in keyvault is eligible for renewal, this function will request and persist
 // a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
