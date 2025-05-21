@@ -543,6 +543,7 @@ func setup(ctx context.Context) error {
 
 	vnetResourceGroup = conf.VnetResourceGroup
 	clusterName = conf.ClusterName
+	os.Setenv("CLUSTER", clusterName)
 	clusterResourceID = resourceIDFromEnv()
 	isMiwi = conf.UseWorkloadIdentity
 
