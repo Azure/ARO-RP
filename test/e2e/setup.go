@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -554,20 +555,31 @@ func setup(ctx context.Context) error {
 }
 
 func done(ctx context.Context) error {
-	// terminate early if delete flag is set to false
+	// Load the usual cluster config (to pick up IsCI, etc.)
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
 		return err
 	}
 
+	// Override with the actual values we used in setup()
+	conf.ClusterName = clusterName
+	conf.VnetResourceGroup = vnetResourceGroup
+
+	// Only delete in CI if the flag isn’t set to false
 	if conf.IsCI && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
 		}
 
-		err = cluster.Delete(ctx, cluster.Config.VnetResourceGroup, cluster.Config.ClusterName)
+		// Attempt deletion
+		err = cluster.Delete(ctx, conf.VnetResourceGroup, conf.ClusterName)
 		if err != nil {
+			// If the cluster truly isn’t there, that’s fine—skip without panicking
+			if strings.Contains(err.Error(), "not found") {
+				log.Infof("Cluster %s already gone, skipping delete", conf.ClusterName)
+				return nil
+			}
 			return err
 		}
 	}
