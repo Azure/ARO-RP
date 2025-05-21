@@ -465,54 +465,72 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 }
 
 func setup(ctx context.Context) error {
-	err := env.ValidateVars(
+	if err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
 		"CLUSTER",
-		"LOCATION")
-
-	if err != nil {
+		"LOCATION"); err != nil {
 		return err
 	}
 
+	// Core ARO env
+	var err error
 	_env, err = env.NewCoreForCI(ctx, log)
 	if err != nil {
 		return err
 	}
 
+	// Read out your test config
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
 		return err
 	}
 
-	if conf.IsCI { // always create cluster in CI
-		// 1) Pre-check for an existing cluster stuck in Deleting
-		clusterDoc, err := clients.OpenshiftClusters.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-		if err == nil && clusterDoc.ProvisioningState == "Deleting" {
-			log.Warnf("Cluster %s in resource group %s is in 'Deleting' state, waiting for cleanup...",
-				conf.ClusterName, conf.VnetResourceGroup)
+	// Build a bare‐bones Azure SDK client for OpenshiftClusters
+	credOptions := _env.Environment().EnvironmentCredentialOptions()
+	tokenCred, err := azidentity.NewEnvironmentCredential(credOptions)
+	if err != nil {
+		return err
+	}
+	scopes := []string{_env.Environment().ResourceManagerScope}
+	authAdapter := azidext.NewTokenCredentialAdapter(tokenCred, scopes)
+	azOCClient := redhatopenshift20240812preview.NewOpenShiftClustersClient(
+		_env.Environment(), _env.SubscriptionID(), authAdapter)
+
+	// In CI, optionally uniquify the name to avoid collisions
+	if conf.IsCI {
+		conf.ClusterName = fmt.Sprintf("%s-%d", conf.ClusterName, time.Now().Unix())
+	}
+
+	// wait for any leftover cluster to finish deleting
+	if conf.IsCI {
+		doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+		if err == nil && doc.ProvisioningState == "Deleting" {
+			log.Warnf("Cluster %s already in Deleting; waiting up to 5m", conf.ClusterName)
 
 			const maxRetries = 10
 			const waitBetween = 30 * time.Second
 
 			for i := 1; i <= maxRetries; i++ {
 				time.Sleep(waitBetween)
-				clusterDoc, err = clients.OpenshiftClusters.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-				if err != nil || clusterDoc.ProvisioningState != "Deleting" {
+				doc, err = azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+				if err != nil || doc.ProvisioningState != "Deleting" {
 					break
 				}
-				log.Infof("Still waiting for cluster deletion... (%d/%d)", i, maxRetries)
+				log.Infof("Still deleting (%d/%d)…", i, maxRetries)
 			}
 
-			// if it’s still deleting after all that, bail out
-			if err == nil && clusterDoc.ProvisioningState == "Deleting" {
-				return fmt.Errorf("cluster %s is stuck in 'Deleting' state after waiting, aborting", conf.ClusterName)
+			if err == nil && doc.ProvisioningState == "Deleting" {
+				return fmt.Errorf(
+					"cluster %s stuck in Deleting after %d attempts, aborting",
+					conf.ClusterName, maxRetries,
+				)
 			}
 		}
 
-		// 2) Safe to create a cluster
+		// Create the new cluster
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
