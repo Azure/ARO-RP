@@ -104,6 +104,7 @@ type Configuration struct {
 	OtelAuditQueueSize                 *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
 	MsiRpEndpoint                      *string                `json:"msiRpEndpoint,omitempty" value:"required"`
 
+	EnvironmentSuffix *string `json:"environmentSuffix,omitempty"`
 	// TODO: Replace with Live Service Configuration in KeyVault
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
 	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
