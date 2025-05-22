@@ -15,7 +15,11 @@ func Panic(log *logrus.Entry) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if e := recover(); e != nil {
-					log.Errorf("panic: %#v\n%s\n", e, string(debug.Stack()))
+					if e != http.ErrAbortHandler {
+						// ErrAbortHandler is a sentinel error that suppresses logging of a stack trace
+						// https://pkg.go.dev/net/http#ErrAbortHandler
+						log.Errorf("panic: %#v\n%s\n", e, string(debug.Stack()))
+					}
 					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				}
 			}()
