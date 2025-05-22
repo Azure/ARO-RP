@@ -43,6 +43,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
+	armmsiclient "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -57,22 +58,24 @@ import (
 )
 
 type ClusterConfig struct {
-	ClusterName           string `mapstructure:"CLUSTER"`
-	SubscriptionID        string `mapstructure:"AZURE_SUBSCRIPTION_ID"`
-	TenantID              string `mapstructure:"AZURE_TENANT_ID"`
-	Location              string `mapstructure:"LOCATION"`
-	AzureEnvironment      string `mapstructure:"AZURE_ENVIRONMENT"`
-	UseWorkloadIdentity   bool   `mapstructure:"USE_WI"`
-	WorkloadIdentityRoles string `mapstructure:"PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"`
-	IsCI                  bool   `mapstructure:"CI"`
-	RpMode                string `mapstructure:"RP_MODE"`
-	VnetResourceGroup     string `mapstructure:"CLUSTER_RESOURCEGROUP"`
-	RPResourceGroup       string `mapstructure:"RESOURCEGROUP"`
-	OSClusterVersion      string `mapstructure:"OS_CLUSTER_VERSION"`
-	FPServicePrincipalID  string `mapstructure:"AZURE_FP_SERVICE_PRINCIPAL_ID"`
-	IsPrivate             bool   `mapstructure:"PRIVATE_CLUSTER"`
-	NoInternet            bool   `mapstructure:"NO_INTERNET"`
-	MockMSIObjectID       string `mapstructure:"MOCK_MSI_OBJECT_ID"`
+	ClusterName                    string `mapstructure:"CLUSTER"`
+	SubscriptionID                 string `mapstructure:"AZURE_SUBSCRIPTION_ID"`
+	TenantID                       string `mapstructure:"AZURE_TENANT_ID"`
+	Location                       string `mapstructure:"LOCATION"`
+	AzureEnvironment               string `mapstructure:"AZURE_ENVIRONMENT"`
+	UseWorkloadIdentity            bool   `mapstructure:"USE_WI"`
+	WorkloadIdentityRoles          string `mapstructure:"PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"`
+	IdentityPoolResourceGroup      string `mapstructure:"PLATFORM_WORKLOAD_IDENTITY_POOL_RESOURCEGROUP"`
+	IdentityPoolClaimDurationHours int    `mapstructure:"PLATFORM_WORKLOAD_IDENTITY_POOL_CLAIM_DURATION_HOURS"`
+	IsCI                           bool   `mapstructure:"CI"`
+	RpMode                         string `mapstructure:"RP_MODE"`
+	VnetResourceGroup              string `mapstructure:"CLUSTER_RESOURCEGROUP"`
+	RPResourceGroup                string `mapstructure:"RESOURCEGROUP"`
+	OSClusterVersion               string `mapstructure:"OS_CLUSTER_VERSION"`
+	FPServicePrincipalID           string `mapstructure:"AZURE_FP_SERVICE_PRINCIPAL_ID"`
+	IsPrivate                      bool   `mapstructure:"PRIVATE_CLUSTER"`
+	NoInternet                     bool   `mapstructure:"NO_INTERNET"`
+	MockMSIObjectID                string `mapstructure:"MOCK_MSI_OBJECT_ID"`
 
 	MasterVMSize string `mapstructure:"MASTER_VM_SIZE"`
 	WorkerVMSize string `mapstructure:"WORKER_VM_SIZE"`
@@ -100,7 +103,7 @@ type Cluster struct {
 	peerings                 armnetwork.VirtualNetworkPeeringsClient
 	ciParentVnetPeerings     armnetwork.VirtualNetworkPeeringsClient
 	vaultsClient             armkeyvault.VaultsClient
-	msiClient                armmsi.UserAssignedIdentitiesClient
+	msiClient                armmsiclient.UserAssignedIdentitiesClient
 	diskEncryptionSetsClient compute.DiskEncryptionSetsClient
 }
 
@@ -170,6 +173,10 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 		conf.WorkerVMSize = DefaultWorkerVmSize.String()
 	}
 
+	if conf.IdentityPoolResourceGroup != "" && conf.IdentityPoolClaimDurationHours == 0 {
+		return nil, fmt.Errorf("missing env var: PLATFORM_WORKLOAD_IDENTITY_POOL_CLAIM_DURATION_HOURS")
+	}
+
 	return &conf, nil
 }
 
@@ -230,7 +237,7 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		return nil, err
 	}
 
-	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	msiClient, err := armmsiclient.NewUserAssignedIdentitiesClient(conf.SubscriptionID, spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +264,7 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		roledefinitions:          authorization.NewRoleDefinitionsClient(&azEnvironment, conf.SubscriptionID, authorizer),
 		peerings:                 virtualNetworkPeeringsClient,
 		vaultsClient:             vaultClient,
-		msiClient:                *msiClient,
+		msiClient:                msiClient,
 		diskEncryptionSetsClient: diskEncryptionSetsClient,
 	}
 
@@ -379,9 +386,13 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	})
 
 	c.log.Info("Assigning role to mock msi client")
+	identityRg := vnetResourceGroup
+	if c.Config.IdentityPoolResourceGroup != "" {
+		identityRg = c.Config.IdentityPoolResourceGroup
+	}
 	c.roleassignments.Create(
 		ctx,
-		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
+		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, identityRg),
 		uuid.DefaultGenerator.Generate(),
 		mgmtauthorization.RoleAssignmentCreateParameters{
 			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
@@ -392,14 +403,31 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		},
 	)
 
-	for _, wi := range platformWorkloadIdentityRoles {
-		c.log.Infof("creating WI: %s", wi.OperatorName)
-		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
-			Location: to.StringPtr(c.Config.Location),
-		}, nil)
+	newIdentities := []*armmsi.Identity{}
+	if c.Config.IdentityPoolResourceGroup != "" {
+		c.log.Info("Claiming workload identities")
+		pool := NewManagedIdentityPool(c.msiClient, c.Config.IdentityPoolResourceGroup)
+		timeout := time.Duration(c.Config.IdentityPoolClaimDurationHours) * time.Hour
+		identities, err := pool.ClaimIdentities(ctx, len(platformWorkloadIdentityRoles), c.Config.VnetResourceGroup, c.Config.ClusterName, timeout)
 		if err != nil {
 			return err
 		}
+		newIdentities = append(newIdentities, identities...)
+	} else {
+		for _, wi := range platformWorkloadIdentityRoles {
+			c.log.Infof("creating WI: %s", wi.OperatorName)
+			resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
+				Location: to.StringPtr(c.Config.Location),
+			}, nil)
+			if err != nil {
+				return err
+			}
+			newIdentities = append(newIdentities, &resp.Identity)
+		}
+	}
+
+	for i, wi := range platformWorkloadIdentityRoles {
+		currentIdentity := newIdentities[i]
 		_, err = c.roleassignments.Create(
 			ctx,
 			fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
@@ -407,7 +435,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			mgmtauthorization.RoleAssignmentCreateParameters{
 				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 					RoleDefinitionID: &wi.RoleDefinitionID,
-					PrincipalID:      resp.Properties.PrincipalID,
+					PrincipalID:      currentIdentity.Properties.PrincipalID,
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
@@ -418,7 +446,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 
 		if wi.OperatorName != "aro-Cluster" {
 			c.workloadIdentities[wi.OperatorName] = api.PlatformWorkloadIdentity{
-				ResourceID: *resp.ID,
+				ResourceID: *currentIdentity.ID,
 			}
 		}
 	}
@@ -430,6 +458,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 	c.log.Info("Creating cluster")
 	clusterGet, err := c.openshiftclusters.Get(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName)
 	c.log.Info("Got cluster ref")
+
 	if err == nil {
 		if clusterGet.Properties.ProvisioningState == api.ProvisioningStateFailed {
 			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry: %s, %s", clusterGet.ID, c.Config.VnetResourceGroup)
@@ -769,6 +798,13 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 		c.log.Info("Skipping deletion of workload identity roles")
 		return nil
 	}
+
+	if c.Config.IdentityPoolResourceGroup != "" {
+		c.log.Infof("Freeing claimed Workload Identities in RG %s", c.Config.IdentityPoolResourceGroup)
+		pool := NewManagedIdentityPool(c.msiClient, c.Config.IdentityPoolResourceGroup)
+		return pool.FreeAllIdentitiesOfCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName)
+	}
+
 	c.log.Info("deleting WIs")
 	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
 	if err != nil {
