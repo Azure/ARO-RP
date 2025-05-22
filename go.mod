@@ -3,6 +3,7 @@ module github.com/Azure/ARO-RP
 go 1.22.9
 
 require (
+	github.com/Azure/ARO-RP/pkg/api v0.0.0-00010101000000-000000000000
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
@@ -30,7 +31,7 @@ require (
 	github.com/containers/image/v5 v5.33.1
 	github.com/containers/podman/v5 v5.3.2
 	github.com/coreos/go-oidc/v3 v3.11.0
-	github.com/coreos/go-semver v0.3.0
+	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.5.1-0.20231103132048-7d375ecc2b09
 	github.com/coreos/ignition/v2 v2.14.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
@@ -1624,3 +1625,6 @@ replace (
 
 // broken deps on 2.8.3
 replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/distribution v2.8.2+incompatible
+
+// sub-packages
+replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	apitesterror "github.com/Azure/ARO-RP/pkg/api/test/error"
 )
 
 func TestNetworkSecurityGroupID(t *testing.T) {
@@ -87,7 +87,7 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 			}
 
 			nsgID, err := NetworkSecurityGroupID(oc, tt.subnetID)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			apitesterror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if nsgID != tt.wantNSGID {
 				t.Error(nsgID)
