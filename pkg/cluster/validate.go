@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 	"github.com/Azure/ARO-RP/pkg/util/azurezones"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
@@ -47,8 +49,12 @@ func (m *manager) validateZones(ctx context.Context) error {
 		return err
 	}
 
-	// Options for zone checking manager unused for now
-	zoneChecker := azurezones.NewManager(false, false, "")
+	// Set RP-level options for expanded AZs/Single Zone clusters
+	zoneChecker := azurezones.NewManager(
+		m.env.FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones),
+		m.env.FeatureIsSet(env.FeatureForceSingleZoneClusters),
+		os.Getenv(env.ForcedSingleZoneEnvVar))
+
 	controlPlaneZones, workerZones, originalZones, err := zoneChecker.DetermineAvailabilityZones(controlPlaneSKU, workerSKU)
 	if err != nil {
 		return err
