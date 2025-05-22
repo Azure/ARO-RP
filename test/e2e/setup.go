@@ -500,33 +500,39 @@ func setup(ctx context.Context) error {
 	azOCClient := redhatopenshift20240812preview.NewOpenShiftClustersClient(
 		_env.Environment(), _env.SubscriptionID(), authAdapter)
 
-	// wait for any leftover cluster to finish deleting
 	if conf.IsCI {
-		doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-		if err == nil && doc.ProvisioningState == "Deleting" {
-			log.Warnf("Cluster %s already in Deleting; waiting up to 5m", conf.ClusterName)
+		const (
+			maxRetries  = 10
+			waitBetween = 30 * time.Second
+		)
+		totalWait := time.Duration(maxRetries) * waitBetween
 
-			const maxRetries = 10
-			const waitBetween = 30 * time.Second
-
-			for i := 1; i <= maxRetries; i++ {
-				time.Sleep(waitBetween)
-				doc, err = azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-				if err != nil || doc.ProvisioningState != "Deleting" {
+		// Wait for any previous cluster to finish deleting
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					log.Infof("No leftover cluster found on attempt %d; proceeding", attempt)
 					break
 				}
-				log.Infof("Still deleting (%d/%d)…", i, maxRetries)
+				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
 			}
+			// Ensure we have a valid state
+			if doc.ProvisioningState == "" {
+				return fmt.Errorf("empty ProvisioningState on attempt %d", attempt)
+			}
+			if doc.ProvisioningState != "Deleting" {
+				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
+			}
+			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
+			time.Sleep(waitBetween)
 
-			if err == nil && doc.ProvisioningState == "Deleting" {
-				return fmt.Errorf(
-					"cluster %s stuck in Deleting after %d attempts, aborting",
-					conf.ClusterName, maxRetries,
-				)
+			if attempt == maxRetries {
+				return fmt.Errorf("cluster still stuck in Deleting after %s; aborting", totalWait)
 			}
 		}
 
-		// Create the new cluster
+		// Old cluster is gone, create the new one
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
@@ -555,10 +561,6 @@ func done(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// Override with the actual values we used in setup()
-	conf.ClusterName = clusterName
-	conf.VnetResourceGroup = vnetResourceGroup
 
 	// Only delete in CI if the flag isn’t set to false
 	if conf.IsCI && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
