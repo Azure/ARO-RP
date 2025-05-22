@@ -239,7 +239,10 @@
                     },
                     "storageProfile": {
                         "imageReference": {
-                            "sharedGalleryImageId": "/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"
+                            "publisher": "MicrosoftCBLMariner",
+                            "offer": "cbl-mariner",
+                            "sku": "cbl-mariner-2-gen2",
+                            "version": "latest"
                         },
                         "osDisk": {
                             "createOption": "FromImage",
@@ -281,9 +284,6 @@
                                 }
                             }
                         ]
-                    },
-                    "securityProfile": {
-                        "securityType": "TrustedLaunch"
                     },
                     "diagnosticsProfile": {
                         "bootDiagnostics": {
