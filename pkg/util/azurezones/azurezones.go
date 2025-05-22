@@ -37,7 +37,7 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	// resources, but may not have capacity. In Azure+OpenShift API parlance,
 	// [""] means non-zonal.
 	if m.forceSingleZone && m.singleZoneToUse == "" {
-		return []string{"", "", ""}, []string{""}, []string{""}, nil
+		return []string{"", "", ""}, []string{""}, []string{}, nil
 	}
 
 	controlPlaneZones := computeskus.Zones(controlPlaneSKU)
@@ -66,13 +66,16 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 		workerZones = slices.DeleteFunc(workerZones, onlyBasicAZs)
 	}
 
-	// Save the original control plane zones (after we remove the expanded ones, if done) for other purposes (e.g. public IPs)
-	originalZones := slices.Clone(controlPlaneZones)
-
 	if (len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
 		(len(workerZones) == 0 && len(controlPlaneZones) > 0) {
 		return nil, nil, nil, fmt.Errorf("cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: %d, worker zones: %d)", len(controlPlaneZones), len(workerZones))
 	}
+
+	// Once we've removed the expanded AZs (if applicable), get the super-set of
+	// AZs for deploying PIPs in
+	pipZones := slices.Concat(controlPlaneZones, workerZones)
+	slices.Sort(pipZones)
+	pipZones = slices.Compact(pipZones)
 
 	onlySingleZone := func(s string) bool {
 		return s != m.singleZoneToUse
@@ -84,7 +87,6 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	// https://azure.microsoft.com/en-us/blog/our-commitment-to-expand-azure-availability-zones-to-more-regions/
 	if controlPlaneZones == nil {
 		controlPlaneZones = []string{"", "", ""}
-		originalZones = []string{""}
 	} else if m.forceSingleZone {
 		// If we're set to force a single zone, delete anything other than the
 		// singularly picked zone. This is to ensure that we catch instances
@@ -103,8 +105,6 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	} else if len(controlPlaneZones) >= CONTROL_PLANE_MACHINE_COUNT {
 		// Pick lower zones first
 		controlPlaneZones = controlPlaneZones[:CONTROL_PLANE_MACHINE_COUNT]
-		// trim the originalZones as well
-		originalZones = originalZones[:CONTROL_PLANE_MACHINE_COUNT]
 	}
 
 	// Unlike above, we don't particularly mind if we pass the Installer more
@@ -131,5 +131,12 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 		return nil, nil, nil, fmt.Errorf("worker SKU '%s' only available in %d zones, need %d", *workerSKU.Name, len(workerZones), 3)
 	}
 
-	return controlPlaneZones, workerZones, originalZones, nil
+	// We don't want [""] for passing to the ARM template, just make it blank
+	if len(pipZones) == 1 && pipZones[0] == "" {
+		pipZones = []string{}
+	} else if pipZones == nil {
+		pipZones = []string{}
+	}
+
+	return controlPlaneZones, workerZones, pipZones, nil
 }

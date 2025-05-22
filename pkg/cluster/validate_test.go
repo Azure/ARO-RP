@@ -15,7 +15,9 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -29,8 +31,11 @@ func TestValidateZones(t *testing.T) {
 	type test struct {
 		name string
 
-		controlPlaneSkuZones []string
-		workerSkuZones       []string
+		controlPlaneSkuZones    []string
+		workerSkuZones          []string
+		forcedSingleZoneEnabled bool
+		forcedSingleZone        string
+		expandedAZs             bool
 
 		doc                   api.OpenShiftCluster
 		resourceSkusClientErr error
@@ -66,6 +71,119 @@ func TestValidateZones(t *testing.T) {
 			},
 		},
 		{
+			name:                 "zonal, all available, expanded AZs off",
+			controlPlaneSkuZones: []string{"1", "2", "3", "4"},
+			workerSkuZones:       []string{"1", "2", "3", "4"},
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+						Zones:  []string{"1", "2", "3"},
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+							Zones:  []string{"1", "2", "3"},
+						},
+					},
+					NetworkProfile: api.NetworkProfile{
+						LoadBalancerProfile: &api.LoadBalancerProfile{
+							OutboundIPAvailabilityZones: []string{"1", "2", "3"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:                    "zonal, forced single AZ, PIPs still in all available zones",
+			controlPlaneSkuZones:    []string{"1", "2", "3"},
+			workerSkuZones:          []string{"1", "2", "3"},
+			forcedSingleZoneEnabled: true,
+			forcedSingleZone:        "3",
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+						Zones:  []string{"3", "3", "3"},
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+							Zones:  []string{"3"},
+						},
+					},
+					NetworkProfile: api.NetworkProfile{
+						LoadBalancerProfile: &api.LoadBalancerProfile{
+							OutboundIPAvailabilityZones: []string{"1", "2", "3"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:                    "zonal, forced non-zonal",
+			controlPlaneSkuZones:    []string{"1", "2", "3"},
+			workerSkuZones:          []string{"1", "2", "3"},
+			forcedSingleZoneEnabled: true,
+			forcedSingleZone:        "",
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+						Zones:  []string{"", "", ""},
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+							Zones:  []string{""},
+						},
+					},
+					NetworkProfile: api.NetworkProfile{
+						LoadBalancerProfile: &api.LoadBalancerProfile{
+							OutboundIPAvailabilityZones: []string{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:                 "zonal, all available, expanded AZs on",
+			controlPlaneSkuZones: []string{"1", "2", "3", "4"},
+			workerSkuZones:       []string{"1", "2", "3", "4"},
+			expandedAZs:          true,
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+						Zones:  []string{"1", "2", "3"},
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+							Zones:  []string{"1", "2", "3", "4"},
+						},
+					},
+					NetworkProfile: api.NetworkProfile{
+						LoadBalancerProfile: &api.LoadBalancerProfile{
+							OutboundIPAvailabilityZones: []string{"1", "2", "3", "4"},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:                 "zonal, control plane unavailable",
 			controlPlaneSkuZones: []string{"1", "2"},
 			workerSkuZones:       []string{"1", "2", "3"},
@@ -80,6 +198,9 @@ func TestValidateZones(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			controller := gomock.NewController(t)
+
 			skus := []mgmtcompute.ResourceSku{
 				{
 					Name:      &workerProfileSku,
@@ -101,9 +222,13 @@ func TestValidateZones(t *testing.T) {
 				},
 			}
 
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-			ctx := context.Background()
+			mockEnv := mock_env.NewMockInterface(controller)
+
+			if tt.resourceSkusClientErr == nil {
+				mockEnv.EXPECT().FeatureIsSet(env.FeatureForceSingleZoneClusters).Return(tt.forcedSingleZoneEnabled)
+				mockEnv.EXPECT().FeatureIsSet(env.FeatureEnableClusterExpandedAvailabilityZones).Return(tt.expandedAZs)
+				t.Setenv(env.ForcedSingleZoneEnvVar, tt.forcedSingleZone)
+			}
 
 			openShiftClustersDatabase, openShiftClustersClient := testdatabase.NewFakeOpenShiftClusters()
 			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
@@ -120,6 +245,7 @@ func TestValidateZones(t *testing.T) {
 				Return(skus, tt.resourceSkusClientErr)
 
 			m := &manager{
+				env: mockEnv,
 				doc: &api.OpenShiftClusterDocument{
 					Key: strings.ToLower(key),
 					OpenShiftCluster: &api.OpenShiftCluster{

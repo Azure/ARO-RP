@@ -19,7 +19,7 @@ func TestDetermineZones(t *testing.T) {
 		workerSkuZones        []string
 		wantControlPlaneZones []string
 		wantWorkerZones       []string
-		wantOriginalZones     []string
+		wantPIPZones          []string
 		allowExpandedAZs      bool
 		forceSingleZone       bool
 		singleZoneToUse       string
@@ -36,8 +36,8 @@ func TestDetermineZones(t *testing.T) {
 			controlPlaneSkuZones:  nil,
 			workerSkuZones:        nil,
 			wantControlPlaneZones: []string{"", "", ""},
-			wantOriginalZones:     []string{""},
 			wantWorkerZones:       []string{""},
+			wantPIPZones:          []string{},
 		},
 		{
 			name:                  "force single zone does nothing in non-zonal",
@@ -47,7 +47,7 @@ func TestDetermineZones(t *testing.T) {
 			workerSkuZones:        nil,
 			wantControlPlaneZones: []string{"", "", ""},
 			wantWorkerZones:       []string{""},
-			wantOriginalZones:     []string{""},
+			wantPIPZones:          []string{},
 		},
 		{
 			name:                 "force single zone, control plane zone not available",
@@ -83,17 +83,17 @@ func TestDetermineZones(t *testing.T) {
 			workerSkuZones:        []string{"1", "2", "3"},
 			wantControlPlaneZones: []string{"1", "2", "3"},
 			wantWorkerZones:       []string{"1", "2", "3"},
-			wantOriginalZones:     []string{"1", "2", "3"},
+			wantPIPZones:          []string{"1", "2", "3"},
 		},
 		{
-			name:                  "zonal control plane, zonal workers, forced fixed zone",
+			name:                  "zonal control plane, zonal workers, forced fixed zone, PIPs are in all",
 			forceSingleZone:       true,
 			singleZoneToUse:       "3",
 			controlPlaneSkuZones:  []string{"1", "2", "3"},
 			workerSkuZones:        []string{"1", "2", "3"},
 			wantControlPlaneZones: []string{"3", "3", "3"},
 			wantWorkerZones:       []string{"3"},
-			wantOriginalZones:     []string{"1", "2", "3"},
+			wantPIPZones:          []string{"1", "2", "3"},
 		},
 		{
 			name:                  "zonal control plane, zonal workers, forced fixed nonzonal",
@@ -103,7 +103,7 @@ func TestDetermineZones(t *testing.T) {
 			workerSkuZones:        []string{"1", "2", "3"},
 			wantControlPlaneZones: []string{"", "", ""},
 			wantWorkerZones:       []string{""},
-			wantOriginalZones:     []string{""},
+			wantPIPZones:          []string{},
 		},
 		{
 			name:                  "region with 4 availability zones, expanded AZs, control plane uses first 3, workers use all",
@@ -112,7 +112,7 @@ func TestDetermineZones(t *testing.T) {
 			workerSkuZones:        []string{"1", "2", "3", "4"},
 			wantControlPlaneZones: []string{"1", "2", "3"},
 			wantWorkerZones:       []string{"1", "2", "3", "4"},
-			wantOriginalZones:     []string{"1", "2", "3"},
+			wantPIPZones:          []string{"1", "2", "3", "4"},
 		},
 		{
 			name:                  "region with 4 availability zones, basic AZs only, control plane and workers use 3",
@@ -121,7 +121,7 @@ func TestDetermineZones(t *testing.T) {
 			workerSkuZones:        []string{"1", "2", "3", "4"},
 			wantControlPlaneZones: []string{"1", "2", "3"},
 			wantWorkerZones:       []string{"1", "2", "3"},
-			wantOriginalZones:     []string{"1", "2", "3"},
+			wantPIPZones:          []string{"1", "2", "3"},
 		},
 		{
 			name:                 "not enough control plane zones",
@@ -154,7 +154,7 @@ func TestDetermineZones(t *testing.T) {
 			workerSkuZones:        []string{"1", "2", "3", "4"},
 			wantControlPlaneZones: []string{"1", "2", "4"},
 			wantWorkerZones:       []string{"1", "2", "3", "4"},
-			wantOriginalZones:     []string{"1", "2", "4"},
+			wantPIPZones:          []string{"1", "2", "3", "4"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -177,21 +177,21 @@ func TestDetermineZones(t *testing.T) {
 				singleZoneToUse:                tt.singleZoneToUse,
 			}
 
-			controlPlaneZones, workerZones, originalZones, err := m.DetermineAvailabilityZones(controlPlaneSku, workerSku)
+			controlPlaneZones, workerZones, PIPZones, err := m.DetermineAvailabilityZones(controlPlaneSku, workerSku)
 			if err != nil && err.Error() != tt.wantErr {
-				t.Error(cmp.Diff(tt.wantErr, err))
+				t.Error("wantErr", cmp.Diff(tt.wantErr, err))
 			}
 
 			if !reflect.DeepEqual(controlPlaneZones, tt.wantControlPlaneZones) {
-				t.Error(cmp.Diff(tt.wantControlPlaneZones, controlPlaneZones))
+				t.Error("controlPlaneZones", cmp.Diff(tt.wantControlPlaneZones, controlPlaneZones))
 			}
 
 			if !reflect.DeepEqual(workerZones, tt.wantWorkerZones) {
-				t.Error(cmp.Diff(tt.wantWorkerZones, workerZones))
+				t.Error("workerZones", cmp.Diff(tt.wantWorkerZones, workerZones))
 			}
 
-			if !reflect.DeepEqual(originalZones, tt.wantOriginalZones) {
-				t.Error(cmp.Diff(tt.wantOriginalZones, originalZones))
+			if !reflect.DeepEqual(PIPZones, tt.wantPIPZones) {
+				t.Error("PIPZones", cmp.Diff(tt.wantPIPZones, PIPZones))
 			}
 		})
 	}
