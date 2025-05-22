@@ -21,6 +21,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -41,27 +42,33 @@ var (
 )
 
 func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
+	var pullSecret *pullsecret.UserPass
 	pullPolicy := os.Getenv("ARO_PODMAN_PULL_POLICY")
 	if pullPolicy == "" {
 		pullPolicy = "always"
 	}
 
-	domain, _, ok := strings.Cut(version.Properties.InstallerPullspec, "/")
-	if !ok {
-		return fmt.Errorf("failed to get domain from %s", version.Properties.InstallerPullspec)
-	}
-	pullSecret, ok := m.pullSecrets[domain]
-	if !ok {
-		return fmt.Errorf("failed to get pullSecret for domain %s", domain)
+	if pullPolicy != "never" {
+		domain, _, ok := strings.Cut(version.Properties.InstallerPullspec, "/")
+		if !ok {
+			return fmt.Errorf("failed to get domain from %s", version.Properties.InstallerPullspec)
+		}
+		pullSecret, ok = m.pullSecrets[domain]
+		if !ok {
+			return fmt.Errorf("failed to get pullSecret for domain %s", domain)
+		}
 	}
 
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
 			options := (&images.PullOptions{}).
 				WithQuiet(true).
-				WithPolicy(pullPolicy).
-				WithUsername(pullSecret.Username).
-				WithPassword(pullSecret.Password)
+				WithPolicy(pullPolicy)
+
+			if pullPolicy != "never" {
+				options = options.WithUsername(pullSecret.Username).
+					WithPassword(pullSecret.Password)
+			}
 
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
