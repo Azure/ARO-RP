@@ -289,7 +289,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				instance = tt.instance
 			}
 
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance, tt.image).Build()
+			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance, tt.image).WithStatusSubresource(instance, tt.image).Build()
 
 			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
 			request := ctrl.Request{}

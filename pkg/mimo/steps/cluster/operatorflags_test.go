@@ -49,6 +49,10 @@ func TestOperatorFlags(t *testing.T) {
 						Name:            arov1alpha1.SingletonClusterName,
 						ResourceVersion: "1000",
 					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Cluster",
+						APIVersion: arov1alpha1.SchemeGroupVersion.String(),
+					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							"foo": "bar",
