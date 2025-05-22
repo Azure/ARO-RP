@@ -46,6 +46,7 @@ const (
 	OIDCAFDEndpoint        = "OIDC_AFD_ENDPOINT"
 	OIDCStorageAccountName = "OIDC_STORAGE_ACCOUNT_NAME"
 	OtelAuditQueueSize     = "OTEL_AUDIT_QUEUE_SIZE"
+	ForcedSingleZoneEnvVar = "CLUSTER_FORCED_SINGLE_ZONE"
 	ARMCABundlePath        = "/etc/aro-rp/arm-ca-bundle.pem"
 	AdminCABundlePath      = "/etc/aro-rp/admin-ca-bundle.pem"
 )
@@ -138,6 +139,21 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 			}
 
 			p.features[f] = true
+		}
+	}
+
+	// Validate that if ForceSingleZoneClusters is set, it is well formed
+	if p.FeatureIsSet(FeatureForceSingleZoneClusters) {
+		singleZoneSetting, exists := os.LookupEnv(ForcedSingleZoneEnvVar)
+
+		if !exists {
+			return nil, fmt.Errorf("RP_FEATURES has ForceSingleZoneClusters, but %s is unset", ForcedSingleZoneEnvVar)
+		}
+
+		if singleZoneSetting != "" {
+			p.log.Infof("ForceSingleZoneClusters enabled, %s set to '%s'", ForcedSingleZoneEnvVar, singleZoneSetting)
+		} else {
+			p.log.Infof("ForceSingleZoneClusters enabled, %s blank (non-zonal)", ForcedSingleZoneEnvVar)
 		}
 	}
 
