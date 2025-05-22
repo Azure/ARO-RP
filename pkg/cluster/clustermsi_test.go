@@ -41,6 +41,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 	placeholderString := "placeholder"
 	placeholderTime := time.Now().Format(time.RFC3339)
+	placeholderNotEligibleForRotationTime := time.Now().Add(-1 * time.Hour)
+	placeholderEligibleForRotationTime := time.Now().Add(-1200 * time.Hour)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
@@ -119,7 +121,46 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			wantErr: "error in msi",
 		},
 		{
-			name: "success - exit early because there is already a certificate in the key vault",
+			name: "success - refresh MSI certificate in keyvault",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.ManagedServiceIdentity{
+						IdentityURL: middleware.MockIdentityURL,
+						TenantID:    mockGuid,
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
+								ClientID:    mockGuid,
+								PrincipalID: mockGuid,
+							},
+						},
+					},
+				},
+			},
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
+				if err != nil {
+					panic(err)
+				}
+
+				credentialsObjectString := string(credentialsObjectBuffer)
+				getSecretResponse := azsecrets.GetSecretResponse{
+					Secret: azsecrets.Secret{
+						Value: &credentialsObjectString,
+						Attributes: &azsecrets.SecretAttributes{
+							NotBefore: &placeholderEligibleForRotationTime,
+						},
+					},
+				}
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
+			},
+		},
+		{
+			name: "success - don't refresh MSI certificate in keyvault",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -145,6 +186,9 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				getSecretResponse := azsecrets.GetSecretResponse{
 					Secret: azsecrets.Secret{
 						Value: &credentialsObjectString,
+						Attributes: &azsecrets.SecretAttributes{
+							NotBefore: &placeholderNotEligibleForRotationTime,
+						},
 					},
 				}
 				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
@@ -205,6 +249,48 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 			err := m.ensureClusterMsiCertificate(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestIsEligibleForRenewal(t *testing.T) {
+	m := &manager{}
+
+	now := time.Now()
+
+	tests := []struct {
+		name      string
+		notBefore time.Time
+		expected  bool
+	}{
+		{
+			name:      "Eligible - NotBefore 47 days ago",
+			notBefore: now.AddDate(0, 0, -47),
+			expected:  true,
+		},
+		{
+			name:      "Not Eligible - NotBefore 45 days ago",
+			notBefore: now.AddDate(0, 0, -45),
+			expected:  false,
+		},
+		{
+			name:      "Exactly 46 days ago",
+			notBefore: now.AddDate(0, 0, -46),
+			expected:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			secret := azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Attributes: &azsecrets.SecretAttributes{
+						NotBefore: &tt.notBefore,
+					},
+				},
+			}
+			result := m.isEligibleForRenewal(secret)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
