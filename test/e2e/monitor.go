@@ -24,7 +24,8 @@ var _ = Describe("Monitor", func() {
 		mon, err := cluster.NewMonitor(log, clients.RestConfig, &api.OpenShiftCluster{
 			ID: resourceIDFromEnv(),
 		}, &api.OpenShiftClusterDocument{
-			ID: resourceIDFromEnv(),
+			OpenShiftCluster: &api.OpenShiftCluster{},
+			ID:               resourceIDFromEnv(),
 		}, nil, "", &noop.Noop{}, nil, true, &wg, nil)
 		Expect(err).NotTo(HaveOccurred())
 

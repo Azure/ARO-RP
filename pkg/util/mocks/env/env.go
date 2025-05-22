@@ -25,6 +25,7 @@ import (
 	logrus "github.com/sirupsen/logrus"
 	gomock "go.uber.org/mock/gomock"
 
+	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
 	azcertificates "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
@@ -545,18 +546,18 @@ func (mr *MockInterfaceMockRecorder) MockMSIResponses(msiResourceId any) *gomock
 }
 
 // MsiDataplaneClientOptions mocks base method.
-func (m *MockInterface) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
+func (m *MockInterface) MsiDataplaneClientOptions(correlationData *api.CorrelationData) (*policy.ClientOptions, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MsiDataplaneClientOptions")
+	ret := m.ctrl.Call(m, "MsiDataplaneClientOptions", correlationData)
 	ret0, _ := ret[0].(*policy.ClientOptions)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MsiDataplaneClientOptions indicates an expected call of MsiDataplaneClientOptions.
-func (mr *MockInterfaceMockRecorder) MsiDataplaneClientOptions() *gomock.Call {
+func (mr *MockInterfaceMockRecorder) MsiDataplaneClientOptions(correlationData any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MsiDataplaneClientOptions", reflect.TypeOf((*MockInterface)(nil).MsiDataplaneClientOptions))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MsiDataplaneClientOptions", reflect.TypeOf((*MockInterface)(nil).MsiDataplaneClientOptions), correlationData)
 }
 
 // MsiRpEndpoint mocks base method.

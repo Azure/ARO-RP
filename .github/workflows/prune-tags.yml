@@ -18,10 +18,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Gather tags
-        id: gather_tags
-        run: echo "TAGS=$(.github/list-prune-tags.sh -n ${{ github.ref_name }})" >> $GITHUB_OUTPUT
+      - name: Prune non-production tags
+        run: |
+          tags=( $(.github/list-prune-tags.sh -n ${{ github.ref_name }}) )
 
-      - name: Prune tags
-        run: git push origin --delete ${{ steps.gather_tags.outputs.TAGS }}
+          # we'll stop early if we don't find any tags to prune
+          if [ ${#tags[*]} -eq 0 ]; then
+            exit 0
+          fi
+
+          for i in ${!tags[*]}; do
+            tags[i]="refs/tags/${tags[i]}"
+          done
+
+          git push origin --delete ${tags[*]}

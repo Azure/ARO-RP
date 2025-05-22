@@ -32,15 +32,21 @@ else
 	VERSION = $(TAG)
 endif
 
+REGISTRY ?= ${REGISTRY}
+BUILDER_REGISTRY ?= ${BUILDER_REGISTRY}
 # default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
+	BUILDER_REGISTRY = arointsvc.azurecr.io
 else ifeq ($(RP_IMAGE_ACR),arosvc)
 	REGISTRY = arosvc.azurecr.io
+	BUILDER_REGISTRY = arosvc.azurecr.io
 else ifeq ($(RP_IMAGE_ACR),)
-	REGISTRY = registry.access.redhat.com
+	REGISTRY ?= registry.access.redhat.com
+	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
 else
 	REGISTRY = $(RP_IMAGE_ACR)
+	BUILDER_REGISTRY = quay.io/openshift-release-dev
 endif
 
 # prod images
@@ -151,11 +157,11 @@ init-contrib:
 
 .PHONY: image-aro-multistage
 image-aro-multistage:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-autorest
 image-autorest:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 .PHONY: image-fluentbit
 image-fluentbit:
@@ -163,12 +169,12 @@ image-fluentbit:
 
 .PHONY: image-proxy
 image-proxy:
-	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
+	docker pull $(REGISTRY)/ubi9/ubi-minimal
+	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-gatekeeper
 image-gatekeeper:
-	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
+	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
 
 .PHONY: publish-image-aro-multistage
 publish-image-aro-multistage: image-aro-multistage
@@ -196,7 +202,7 @@ publish-image-gatekeeper: image-gatekeeper
 
 .PHONY: image-e2e
 image-e2e:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: publish-image-e2e
 publish-image-e2e: image-e2e
@@ -303,7 +309,7 @@ lint-go:
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
-	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
+	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
 	docker run --platform=linux/amd64 -t --rm linter:latest
 
 .PHONY: test-python
@@ -426,10 +432,11 @@ ci-rp:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=${REGISTRY} \
-		--build-arg ARO_VERSION=${VERSION} \
-		--no-cache=${NO_CACHE} \
-		-t ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
 
 	# Extract test coverage files from build to local filesystem
 	docker create --name extract_cover_out ${LOCAL_ARO_RP_IMAGE}:${VERSION}; \
@@ -442,10 +449,11 @@ aro-e2e:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.aro-e2e \
 		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=${REGISTRY} \
-		--build-arg ARO_VERSION=${VERSION} \
-		--no-cache=${NO_CACHE} \
-		-t ${LOCAL_E2E_IMAGE}:${VERSION}
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_E2E_IMAGE):$(VERSION)
 
 .PHONY: ci-tunnel
 ci-tunnel:
@@ -454,6 +462,7 @@ ci-tunnel:
 		-f Dockerfile.ci-tunnel \
 		--ulimit=nofile=4096:4096 \
 		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_TUNNEL_IMAGE):$(VERSION)
