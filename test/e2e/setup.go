@@ -500,11 +500,6 @@ func setup(ctx context.Context) error {
 	azOCClient := redhatopenshift20240812preview.NewOpenShiftClustersClient(
 		_env.Environment(), _env.SubscriptionID(), authAdapter)
 
-	// In CI, optionally uniquify the name to avoid collisions
-	if conf.IsCI {
-		conf.ClusterName = fmt.Sprintf("%s-%d", conf.ClusterName, time.Now().Unix())
-	}
-
 	// wait for any leftover cluster to finish deleting
 	if conf.IsCI {
 		doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
@@ -543,7 +538,6 @@ func setup(ctx context.Context) error {
 
 	vnetResourceGroup = conf.VnetResourceGroup
 	clusterName = conf.ClusterName
-	os.Setenv("CLUSTER", clusterName)
 	clusterResourceID = resourceIDFromEnv()
 	isMiwi = conf.UseWorkloadIdentity
 
