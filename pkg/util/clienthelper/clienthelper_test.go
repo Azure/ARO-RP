@@ -764,6 +764,80 @@ func TestMerge(t *testing.T) {
 			},
 			wantChanged: true,
 		},
+		{
+			name: "New Hive ClusterDeployment missing",
+			old: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/version":      "4.13.11",
+						"hive.openshift.io/somemetadata": "bar",
+					},
+					Finalizers: []string{"bar"},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{
+						Platform: &hivev1.ClusterPlatformMetadata{
+							Azure: &azure.Metadata{
+								ResourceGroupName: pointerutils.ToPtr("test"),
+							},
+						},
+					},
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					APIURL: "example",
+				},
+			},
+			new: &hivev1.ClusterDeployment{},
+			want: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/version":      "4.13.11",
+						"hive.openshift.io/somemetadata": "bar",
+					},
+					Finalizers: []string{"bar"},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{
+						Platform: &hivev1.ClusterPlatformMetadata{
+							Azure: &azure.Metadata{
+								ResourceGroupName: pointerutils.ToPtr("test"),
+							},
+						},
+					},
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					APIURL: "example",
+				},
+			},
+			wantChanged:   false,
+			wantEmptyDiff: true,
+		},
+		{
+			name: "Old Hive ClusterDeployment missing",
+			old:  &hivev1.ClusterDeployment{},
+			new: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/somemetadata": "baz",
+					},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{},
+				},
+			},
+			want: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"hive.openshift.io/somemetadata": "baz",
+					},
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					ClusterMetadata: &hivev1.ClusterMetadata{},
+				},
+			},
+			wantChanged:   true,
+			wantEmptyDiff: false,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, changed, diff, err := Merge(tt.old, tt.new)

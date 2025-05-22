@@ -241,7 +241,9 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 		}
 
 		// Copy over the ClusterMetadata.Platform that Hive generates
-		if old.Spec.ClusterMetadata.Platform != nil {
+		if new.Spec.ClusterMetadata == nil {
+			new.Spec.ClusterMetadata = old.Spec.ClusterMetadata
+		} else if old.Spec.ClusterMetadata != nil {
 			new.Spec.ClusterMetadata.Platform = old.Spec.ClusterMetadata.Platform
 		}
 
