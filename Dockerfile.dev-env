@@ -1,0 +1,78 @@
+# Use Fedora as base image since the project documentation mentions Fedora/RHEL dependencies
+FROM fedora:41
+
+# Install system dependencies
+RUN dnf update -y && dnf install -y \
+    gpgme-devel \
+    libassuan-devel \
+    openssl \
+    openssl-devel \
+    openssl-libs \
+    lvm2 \
+    lvm2-devel \
+    golang-github-containerd-btrfs-devel \
+    bzip2-devel \
+    ncurses-devel \
+    libffi-devel \
+    readline-devel \
+    sqlite-devel \
+    tk-devel \
+    xz-devel \
+    zlib-devel \
+    gcc \
+    make \
+    patch \
+    openvpn \
+    podman \
+    podman-docker \
+    git \
+    curl \
+    wget \
+    python3-pip \
+    which \
+    && dnf clean all
+
+# Install Go 1.22.9
+RUN wget https://go.dev/dl/go1.22.9.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.22.9.linux-amd64.tar.gz && \
+    rm go1.22.9.linux-amd64.tar.gz
+
+# Set up Go environment
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="/go"
+ENV PATH="${GOPATH}/bin:${PATH}"
+
+# Install Python 3.10 using pyenv
+RUN curl https://pyenv.run | bash
+ENV PATH="/root/.pyenv/bin:${PATH}"
+RUN echo 'eval "$(pyenv init --path)"' >> ~/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> ~/.bashrc && \
+    echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
+
+# Install Python 3.10 and set up pip
+RUN pyenv install 3.10.0 && \
+    pyenv global 3.10.0 && \
+    pip install --upgrade pip
+
+# Install Azure CLI using pip
+RUN pip install azure-cli
+
+# Install golangci-lint
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.0.2
+
+# Install yamllint
+RUN dnf install -y yamllint
+
+# Configure Podman
+RUN mkdir -p /root/.config/containers && \
+    echo '{"default":[{"type":"insecureAcceptAnything"}]}' > /root/.config/containers/policy.json && \
+    touch /etc/containers/nodocker
+
+# Set up working directory
+WORKDIR /workspace
+
+# Copy entrypoint script
+COPY dev-container-entrypoint.sh /dev-container-entrypoint.sh
+RUN chmod +x /dev-container-entrypoint.sh
+
+ENTRYPOINT ["/dev-container-entrypoint.sh"]
