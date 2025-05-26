@@ -12,8 +12,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20200430"
-	"github.com/Azure/ARO-RP/test/validate"
 )
 
 func emptyResponse(w http.ResponseWriter, r *http.Request) {}

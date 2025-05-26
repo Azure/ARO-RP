@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 var validationSuccess = api.ValidationResult{
@@ -122,7 +123,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 	}
 	if isCreate {
 		converter.ToInternal(ext, oc)
-		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), resourceID); err != nil {
+		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, resourceID); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.CloudErrorBody{
@@ -140,7 +141,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			}
 		}
 	} else {
-		if err := staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), resourceID); err != nil {
+		if err := staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, resourceID); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.CloudErrorBody{

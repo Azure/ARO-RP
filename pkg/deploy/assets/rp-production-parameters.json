@@ -130,7 +130,8 @@
                 "northcentralus",
                 "uaenorth",
                 "westus",
-                "japanwest"
+                "japanwest",
+                "uaecentral"
             ]
         },
         "oidcStorageAccountName": {

@@ -1,0 +1,21 @@
+serviceGroup: Microsoft.Azure.ARO.Classic.MIMO
+rolloutName: ARO Classic MIMO
+resourceGroups:
+- name: $config(classic.resourceGroup)
+  subscription: classic-$location()
+  steps:
+  - name: workloadMSI # use the created bicep and bicepparam files to read the existing msi and out it's objectID as workloadMsiObjectId
+    action: ARM
+    template: templates/mimo.msi.outputs.bicep
+    parameters: parameters/mimo.msi.bicepparam
+    deploymentLevel: ResourceGroup
+  - name: shellExample
+    action: Shell
+    dependsOn:
+      - workloadMSI # depends on the msi output step
+    command: ./example.sh
+    variables:
+    - name: workloadMsiObjectId # capture the workloadMsiObjectId passed from the workloadMSI step
+      input:
+        step: workloadMSI
+        name: workloadMsiObjectId

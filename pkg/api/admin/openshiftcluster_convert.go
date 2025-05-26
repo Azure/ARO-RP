@@ -5,7 +5,7 @@ package admin
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 )
 
 type openShiftClusterConverter struct{}
