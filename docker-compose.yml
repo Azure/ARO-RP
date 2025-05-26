@@ -195,6 +195,35 @@ services:
         "--ginkgo.label-filter=${E2E_LABEL}",
       ]
 
+  aro-dev-env:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev-env
+    image: aro-rp_aro-dev
+    volumes:
+      - .:/workspace:Z
+      - ~/.azure:/root/.azure:ro,Z
+      - ~/.ssh:/root/.ssh:ro,Z
+      - ./secrets:/workspace/secrets:ro,Z
+    environment:
+      KUBECONFIG: /workspace/secrets/aks.kubeconfig
+      AZURE_EXTENSION_DEV_SOURCES: /workspace/python
+      USER: ${USER}
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_CHROOT
+      - DAC_READ_SEARCH
+    security_opt:
+      - label=disable
+    network_mode: "host"
+    pid: host
+    ipc: host
+    uts: host
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    command: make runlocal-rp 
+
 secrets:
   proxy-client-key:
     file: ./secrets/proxy-client.key
