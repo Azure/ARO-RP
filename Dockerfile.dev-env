@@ -54,20 +54,6 @@ RUN pyenv install 3.10.0 && \
     pyenv global 3.10.0 && \
     pip install --upgrade pip
 
-# Install Azure CLI using pip
-RUN pip install azure-cli
-
-# Install golangci-lint
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.0.2
-
-# Install yamllint
-RUN dnf install -y yamllint
-
-# Configure Podman
-RUN mkdir -p /root/.config/containers && \
-    echo '{"default":[{"type":"insecureAcceptAnything"}]}' > /root/.config/containers/policy.json && \
-    touch /etc/containers/nodocker
-
 # Set up working directory
 WORKDIR /workspace
 
