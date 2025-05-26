@@ -32,7 +32,7 @@ func (f *frontend) putAdminMaintManifestCreate(w http.ResponseWriter, r *http.Re
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Request, resourceID string) ([]byte, error) {
+func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Request, resourceID string, maintenanceTaskID string) ([]byte, error) {
 	converter := f.apis[admin.APIVersion].MaintenanceManifestConverter
 	validator := f.apis[admin.APIVersion].MaintenanceManifestStaticValidator
 
@@ -69,6 +69,10 @@ func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Req
 	// fill in some defaults
 	ext.ID = dbMaintenanceManifests.NewUUID()
 	ext.State = admin.MaintenanceManifestStatePending
+
+	if maintenanceTaskID != "" {
+		ext.MaintenanceTaskID = maintenanceTaskID
+	}
 
 	if ext.RunAfter == 0 {
 		ext.RunAfter = int(f.now().Unix())
