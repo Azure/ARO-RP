@@ -127,7 +127,7 @@ func checkOperation(op azcertificates.CertificateOperation, log *logrus.Entry) (
 		return false, fmt.Errorf("operation status is nil")
 	}
 
-	considerFailure := func () (bool, error) {
+	considerFailure := func() (bool, error) {
 		if op.StatusDetails != nil {
 			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, op.Error)
 		}
