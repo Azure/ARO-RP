@@ -7,7 +7,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/Azure/go-autorest/autorest/date v0.3.0
 	github.com/Azure/go-autorest/autorest/to v0.4.0
-	github.com/coreos/go-semver v0.3.1
+	github.com/coreos/go-semver v0.3.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/ugorji/go/codec v1.2.12
 	go.uber.org/mock v0.4.0
@@ -25,9 +25,4 @@ require (
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-)
-
-replace (
-	github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
-	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
 )
