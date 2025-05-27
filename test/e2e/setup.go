@@ -43,6 +43,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	openshiftmgmt "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -507,7 +508,6 @@ func setup(ctx context.Context) error {
 		)
 		totalWait := time.Duration(maxRetries) * waitBetween
 
-		// Wait for any previous cluster to finish deleting
 		for attempt := 1; attempt <= maxRetries; attempt++ {
 			doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
 			if err != nil {
@@ -517,22 +517,21 @@ func setup(ctx context.Context) error {
 				}
 				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
 			}
-			// Ensure we have a valid state
-			if doc.ProvisioningState == "" {
-				return fmt.Errorf("empty ProvisioningState on attempt %d", attempt)
-			}
-			if doc.ProvisioningState != "Deleting" {
+
+			if doc.ProvisioningState != openshiftmgmt.Deleting {
 				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
 			}
-			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
-			time.Sleep(waitBetween)
 
 			if attempt == maxRetries {
 				return fmt.Errorf("cluster still stuck in Deleting after %s; aborting", totalWait)
 			}
+
+			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
+			time.Sleep(waitBetween)
 		}
 
 		// Old cluster is gone, create the new one
+
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
