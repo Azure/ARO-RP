@@ -303,11 +303,11 @@ unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 .PHONY: lint-go
-lint-go:
+lint-go: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --verbose
 
 .PHONY: lint-go-fix
-lint-go-fix:
+lint-go-fix: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --verbose --fix
 
 .PHONY: lint-admin-portal
