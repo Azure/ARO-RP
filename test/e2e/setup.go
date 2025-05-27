@@ -43,7 +43,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	openshiftmgmt "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
+	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -518,7 +518,7 @@ func setup(ctx context.Context) error {
 				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
 			}
 
-			if doc.ProvisioningState != openshiftmgmt.Deleting {
+			if doc.ProvisioningState != mgmtredhatopenshift20240812preview.Deleting {
 				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
 			}
 
