@@ -38,20 +38,20 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 		if subnetObject.SubnetPropertiesFormat == nil {
 			subnetObject.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
 		}
-		if subnetObject.SubnetPropertiesFormat.ServiceEndpoints == nil {
-			subnetObject.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+		if subnetObject.ServiceEndpoints == nil {
+			subnetObject.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
 		}
 
 		for _, endpoint := range api.SubnetsEndpoints {
 			var found bool
-			for _, se := range *subnetObject.SubnetPropertiesFormat.ServiceEndpoints {
+			for _, se := range *subnetObject.ServiceEndpoints {
 				if strings.EqualFold(*se.Service, endpoint) &&
 					se.ProvisioningState == mgmtnetwork.Succeeded {
 					found = true
 				}
 			}
 			if !found {
-				*subnetObject.SubnetPropertiesFormat.ServiceEndpoints = append(*subnetObject.SubnetPropertiesFormat.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
+				*subnetObject.ServiceEndpoints = append(*subnetObject.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
 					Service:   to.StringPtr(endpoint),
 					Locations: &[]string{"*"},
 				})

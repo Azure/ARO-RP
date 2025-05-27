@@ -98,7 +98,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	if boundSASigningKeySecret != nil {
 		resources = append(resources, boundSASigningKeySecret)
 		cd.Spec.BoundServiceAccountSignkingKeySecretRef = &corev1.LocalObjectReference{
-			Name: boundSASigningKeySecret.ObjectMeta.Name,
+			Name: boundSASigningKeySecret.Name,
 		}
 	}
 

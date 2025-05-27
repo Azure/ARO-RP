@@ -121,11 +121,12 @@ func (ocb *openShiftClusterBackend) gatherNodeMetrics(log *logrus.Entry, doc *ap
 	mp := doc.OpenShiftCluster.Properties.MasterProfile
 	dimensions[masterProfileVmSizeMetricName] = ocb.getStringMetricValue(log, masterProfileVmSizeMetricName, string(mp.VMSize))
 
-	if doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled {
+	switch doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost {
+	case api.EncryptionAtHostEnabled:
 		dimensions[masterEncryptionAtHostMetricName] = string(api.EncryptionAtHostEnabled)
-	} else if doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostDisabled {
+	case api.EncryptionAtHostDisabled:
 		dimensions[masterEncryptionAtHostMetricName] = string(api.EncryptionAtHostDisabled)
-	} else {
+	default:
 		log.Warnf("%s %s", metricFailToCollectErr, masterEncryptionAtHostMetricName)
 		dimensions[masterEncryptionAtHostMetricName] = unknown
 	}
@@ -136,21 +137,23 @@ func (ocb *openShiftClusterBackend) gatherNodeMetrics(log *logrus.Entry, doc *ap
 		dimensions[workerVmSizeMetricName] = ocb.getStringMetricValue(log, workerVmSizeMetricName, string(wp.VMSize))
 		dimensions[workerVmDiskSizeMetricName] = strconv.FormatInt(int64(wp.DiskSizeGB), 10)
 
-		if wp.EncryptionAtHost == api.EncryptionAtHostEnabled {
+		switch wp.EncryptionAtHost {
+		case api.EncryptionAtHostEnabled:
 			dimensions[workerEncryptionAtHostMetricName] = string(api.EncryptionAtHostEnabled)
-		} else if wp.EncryptionAtHost == api.EncryptionAtHostDisabled {
+		case api.EncryptionAtHostDisabled:
 			dimensions[workerEncryptionAtHostMetricName] = string(api.EncryptionAtHostDisabled)
-		} else {
+		default:
 			log.Warnf("%s %s", metricFailToCollectErr, workerEncryptionAtHostMetricName)
 			dimensions[workerEncryptionAtHostMetricName] = unknown
 		}
 	}
 
-	if doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules == api.FipsValidatedModulesEnabled {
+	switch doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules {
+	case api.FipsValidatedModulesEnabled:
 		dimensions[fipsMetricName] = string(api.FipsValidatedModulesEnabled)
-	} else if doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules == api.FipsValidatedModulesDisabled {
+	case api.FipsValidatedModulesDisabled:
 		dimensions[fipsMetricName] = string(api.FipsValidatedModulesDisabled)
-	} else {
+	default:
 		log.Warnf("%s %s", metricFailToCollectErr, fipsMetricName)
 		dimensions[fipsMetricName] = unknown
 	}
@@ -175,21 +178,23 @@ func (ocb *openShiftClusterBackend) gatherAuthMetrics(log *logrus.Entry, doc *ap
 
 func (ocb *openShiftClusterBackend) gatherNetworkMetrics(log *logrus.Entry, doc *api.OpenShiftClusterDocument, dimensions map[string]string) {
 	for _, p := range doc.OpenShiftCluster.Properties.IngressProfiles {
-		if p.Visibility == api.VisibilityPrivate {
+		switch p.Visibility {
+		case api.VisibilityPrivate:
 			dimensions[ingressProfileMetricName] = fmt.Sprintf("%s.%s", string(api.VisibilityPrivate), p.Name)
-		} else if p.Visibility == api.VisibilityPublic {
+		case api.VisibilityPublic:
 			dimensions[ingressProfileMetricName] = fmt.Sprintf("%s.%s", string(api.VisibilityPublic), p.Name)
-		} else {
+		default:
 			log.Warnf("%s %s", metricFailToCollectErr, ingressProfileMetricName)
 			dimensions[ingressProfileMetricName] = unknown
 		}
 	}
 
-	if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+	switch doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType {
+	case api.OutboundTypeUserDefinedRouting:
 		dimensions[networkProfileOutboundTypeMetricName] = string(api.OutboundTypeUserDefinedRouting)
-	} else if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeLoadbalancer {
+	case api.OutboundTypeLoadbalancer:
 		dimensions[networkProfileOutboundTypeMetricName] = string(api.OutboundTypeLoadbalancer)
-	} else {
+	default:
 		log.Warnf("%s %s", metricFailToCollectErr, networkProfileManagedOutboundIpsMetricName)
 		dimensions[networkProfileOutboundTypeMetricName] = unknown
 	}
@@ -225,11 +230,12 @@ func (ocb *openShiftClusterBackend) gatherNetworkMetrics(log *logrus.Entry, doc 
 		dimensions[networkProfileManagedOutboundIpsMetricName] = unknown
 	}
 
-	if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled {
+	switch doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG {
+	case api.PreconfiguredNSGEnabled:
 		dimensions[networkProfilePreConfiguredNSGMetricName] = string(api.PreconfiguredNSGEnabled)
-	} else if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGDisabled {
+	case api.PreconfiguredNSGDisabled:
 		dimensions[networkProfilePreConfiguredNSGMetricName] = string(api.PreconfiguredNSGDisabled)
-	} else {
+	default:
 		log.Warnf("%s %s", metricFailToCollectErr, networkProfilePreConfiguredNSGMetricName)
 		dimensions[networkProfilePreConfiguredNSGMetricName] = unknown
 	}

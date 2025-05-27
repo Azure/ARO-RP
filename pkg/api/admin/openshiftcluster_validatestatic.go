@@ -36,14 +36,14 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 }
 
 func validateMaintenanceTask(task MaintenanceTask) error {
-	if !(task == "" ||
-		task == MaintenanceTaskEverything ||
-		task == MaintenanceTaskOperator ||
-		task == MaintenanceTaskRenewCerts ||
-		task == MaintenanceTaskPending ||
-		task == MaintenanceTaskNone ||
-		task == MaintenanceTaskSyncClusterObject ||
-		task == MaintenanceTaskCustomerActionNeeded) {
+	if task != "" &&
+		task != MaintenanceTaskEverything &&
+		task != MaintenanceTaskOperator &&
+		task != MaintenanceTaskRenewCerts &&
+		task != MaintenanceTaskPending &&
+		task != MaintenanceTaskNone &&
+		task != MaintenanceTaskSyncClusterObject &&
+		task != MaintenanceTaskCustomerActionNeeded {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.maintenanceTask", "Invalid enum parameter.")
 	}
 

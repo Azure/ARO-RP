@@ -16,7 +16,7 @@ type ResourceGroupsClientAddons interface {
 }
 
 func (c *resourceGroupsClient) DeleteAndWait(ctx context.Context, resourceGroupName string) error {
-	future, err := c.ResourceGroupsClient.Delete(ctx, resourceGroupName)
+	future, err := c.Delete(ctx, resourceGroupName)
 	if err != nil {
 		return err
 	}

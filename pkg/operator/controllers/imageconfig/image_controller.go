@@ -145,9 +145,9 @@ func GetCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
 	}
 
 	switch instance.Spec.AZEnvironment {
-	case azureclient.PublicCloud.Environment.Name:
+	case azureclient.PublicCloud.Name:
 		dnsSuffix = azure.PublicCloud.ContainerRegistryDNSSuffix
-	case azureclient.USGovernmentCloud.Environment.Name:
+	case azureclient.USGovernmentCloud.Name:
 		dnsSuffix = azure.USGovernmentCloud.ContainerRegistryDNSSuffix
 	default:
 		return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)

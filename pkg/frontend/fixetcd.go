@@ -118,8 +118,8 @@ func (f *frontend) fixEtcd(ctx context.Context, log *logrus.Entry, env env.Inter
 		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	etcd.Spec.OperatorSpec.UnsupportedConfigOverrides.Raw = existingOverrides
-	err = patchEtcd(ctx, log, etcdcli, etcd, patchOverides+string(etcd.Spec.OperatorSpec.UnsupportedConfigOverrides.Raw))
+	etcd.Spec.UnsupportedConfigOverrides.Raw = existingOverrides
+	err = patchEtcd(ctx, log, etcdcli, etcd, patchOverides+string(etcd.Spec.UnsupportedConfigOverrides.Raw))
 	if err != nil {
 		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
@@ -522,9 +522,10 @@ func waitForJobSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Int
 	case event := <-watcher.ResultChan():
 		pod := event.Object.(*corev1.Pod)
 
-		if pod.Status.Phase == corev1.PodSucceeded {
+		switch pod.Status.Phase {
+		case corev1.PodSucceeded:
 			log.Infof("Job %s completed with %s", pod.GetName(), pod.Status.Message)
-		} else if pod.Status.Phase == corev1.PodFailed {
+		case corev1.PodFailed:
 			log.Infof("Job %s reached phase %s with message: %s", pod.GetName(), pod.Status.Phase, pod.Status.Message)
 			waitErr = fmt.Errorf("pod %s event %s received with message %s", pod.Name, pod.Status.Phase, pod.Status.Message)
 		}

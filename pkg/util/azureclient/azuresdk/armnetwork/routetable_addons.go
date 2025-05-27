@@ -15,7 +15,7 @@ type RouteTablesClientAddons interface {
 }
 
 func (c *routeTablesClient) DeleteAndWait(ctx context.Context, resourceGroupName string, routeTableName string, options *armnetwork.RouteTablesClientBeginDeleteOptions) error {
-	poller, err := c.RouteTablesClient.BeginDelete(ctx, resourceGroupName, routeTableName, options)
+	poller, err := c.BeginDelete(ctx, resourceGroupName, routeTableName, options)
 	if err != nil {
 		return err
 	}

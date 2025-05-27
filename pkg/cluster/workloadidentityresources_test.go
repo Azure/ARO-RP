@@ -198,7 +198,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 
 			got, err := m.generateWorkloadIdentityResources()
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			assert.EqualValues(t, tt.want, got)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

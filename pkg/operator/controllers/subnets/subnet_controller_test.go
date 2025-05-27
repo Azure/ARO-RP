@@ -74,7 +74,7 @@ func getValidSubnet() *mgmtnetwork.Subnet {
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
-		*s.SubnetPropertiesFormat.ServiceEndpoints = append(*s.SubnetPropertiesFormat.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
+		*s.ServiceEndpoints = append(*s.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
 			Service:           to.StringPtr(endpoint),
 			ProvisioningState: mgmtnetwork.Succeeded,
 		})
@@ -395,14 +395,14 @@ func TestReconcileManager(t *testing.T) {
 
 				// master
 				subnetObjectMaster := getValidSubnet()
-				subnetObjectMaster.SubnetPropertiesFormat.ServiceEndpoints = nil
+				subnetObjectMaster.ServiceEndpoints = nil
 				subnetObjectMaster.ServiceEndpoints = nil
 				subnetObjectMaster.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), subnetResourceIdWorker).Return(subnetObjectMaster, nil).MaxTimes(2)
 
 				subnetObjectMasterUpdate := getValidSubnet()
 				subnetObjectMasterUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
-				for i := range *subnetObjectMasterUpdate.SubnetPropertiesFormat.ServiceEndpoints {
+				for i := range *subnetObjectMasterUpdate.ServiceEndpoints {
 					(*subnetObjectMasterUpdate.SubnetPropertiesFormat.ServiceEndpoints)[i].Locations = &[]string{"*"}
 					(*subnetObjectMasterUpdate.SubnetPropertiesFormat.ServiceEndpoints)[i].ProvisioningState = ""
 				}
@@ -410,14 +410,14 @@ func TestReconcileManager(t *testing.T) {
 
 				// worker
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.SubnetPropertiesFormat.ServiceEndpoints = nil
+				subnetObjectWorker.ServiceEndpoints = nil
 				subnetObjectWorker.ServiceEndpoints = nil
 				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), subnetResourceIdWorker).Return(subnetObjectWorker, nil).MaxTimes(2)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
 				subnetObjectWorkerUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
-				for i := range *subnetObjectWorkerUpdate.SubnetPropertiesFormat.ServiceEndpoints {
+				for i := range *subnetObjectWorkerUpdate.ServiceEndpoints {
 					(*subnetObjectWorkerUpdate.SubnetPropertiesFormat.ServiceEndpoints)[i].Locations = &[]string{"*"}
 					(*subnetObjectWorkerUpdate.SubnetPropertiesFormat.ServiceEndpoints)[i].ProvisioningState = ""
 				}
@@ -447,14 +447,14 @@ func TestReconcileManager(t *testing.T) {
 
 				// master
 				subnetObjectMaster := getValidSubnet()
-				subnetObjectMaster.SubnetPropertiesFormat.ServiceEndpoints = nil
+				subnetObjectMaster.ServiceEndpoints = nil
 				subnetObjectMaster.ServiceEndpoints = nil
 				subnetObjectMaster.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), subnetResourceIdWorker).Return(subnetObjectMaster, nil).MaxTimes(2)
 
 				// worker
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.SubnetPropertiesFormat.ServiceEndpoints = nil
+				subnetObjectWorker.ServiceEndpoints = nil
 				subnetObjectWorker.ServiceEndpoints = nil
 				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), subnetResourceIdWorker).Return(subnetObjectWorker, nil).MaxTimes(2)

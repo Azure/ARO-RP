@@ -58,13 +58,13 @@ type ApplicationsRequestBuilderPostRequestConfiguration struct {
 // ByApplicationId provides operations to manage the collection of application entities.
 func (m *ApplicationsRequestBuilder) ByApplicationId(applicationId string) *ApplicationItemRequestBuilder {
 	urlTplParams := make(map[string]string)
-	for idx, item := range m.BaseRequestBuilder.PathParameters {
+	for idx, item := range m.PathParameters {
 		urlTplParams[idx] = item
 	}
 	if applicationId != "" {
 		urlTplParams["application%2Did"] = applicationId
 	}
-	return NewApplicationItemRequestBuilderInternal(urlTplParams, m.BaseRequestBuilder.RequestAdapter)
+	return NewApplicationItemRequestBuilderInternal(urlTplParams, m.RequestAdapter)
 }
 
 // NewApplicationsRequestBuilderInternal instantiates a new ApplicationsRequestBuilder and sets the default values.
@@ -95,7 +95,7 @@ func (m *ApplicationsRequestBuilder) Get(ctx context.Context, requestConfigurati
 		"4XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 		"5XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 	}
-	res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateApplicationCollectionResponseFromDiscriminatorValue, errorMapping)
+	res, err := m.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateApplicationCollectionResponseFromDiscriminatorValue, errorMapping)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (m *ApplicationsRequestBuilder) Post(ctx context.Context, body i6a022527509
 		"4XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 		"5XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 	}
-	res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateApplicationFromDiscriminatorValue, errorMapping)
+	res, err := m.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateApplicationFromDiscriminatorValue, errorMapping)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +131,8 @@ func (m *ApplicationsRequestBuilder) Post(ctx context.Context, body i6a022527509
 // ToGetRequestInformation get the list of applications in this organization.
 func (m *ApplicationsRequestBuilder) ToGetRequestInformation(ctx context.Context, requestConfiguration *ApplicationsRequestBuilderGetRequestConfiguration) (*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
 	requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
-	requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
-	requestInfo.PathParameters = m.BaseRequestBuilder.PathParameters
+	requestInfo.UrlTemplate = m.UrlTemplate
+	requestInfo.PathParameters = m.PathParameters
 	requestInfo.Method = i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.GET
 	requestInfo.Headers.Add("Accept", "application/json")
 	if requestConfiguration != nil {
@@ -148,11 +148,11 @@ func (m *ApplicationsRequestBuilder) ToGetRequestInformation(ctx context.Context
 // ToPostRequestInformation create a new application object.
 func (m *ApplicationsRequestBuilder) ToPostRequestInformation(ctx context.Context, body i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.Applicationable, requestConfiguration *ApplicationsRequestBuilderPostRequestConfiguration) (*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
 	requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
-	requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
-	requestInfo.PathParameters = m.BaseRequestBuilder.PathParameters
+	requestInfo.UrlTemplate = m.UrlTemplate
+	requestInfo.PathParameters = m.PathParameters
 	requestInfo.Method = i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.POST
 	requestInfo.Headers.Add("Accept", "application/json")
-	err := requestInfo.SetContentFromParsable(ctx, m.BaseRequestBuilder.RequestAdapter, "application/json", body)
+	err := requestInfo.SetContentFromParsable(ctx, m.RequestAdapter, "application/json", body)
 	if err != nil {
 		return nil, err
 	}

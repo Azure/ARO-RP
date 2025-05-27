@@ -268,7 +268,7 @@ func TestConditions(t *testing.T) {
 				Controller:         ptr.To(true),
 				BlockOwnerDeletion: ptr.To(true),
 			}}
-			if diff := cmp.Diff(wantOwnerReference, operator.ObjectMeta.OwnerReferences); diff != "" {
+			if diff := cmp.Diff(wantOwnerReference, operator.OwnerReferences); diff != "" {
 				t.Error(diff)
 			}
 		})
