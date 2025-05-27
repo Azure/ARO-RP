@@ -6,7 +6,6 @@ package frontend
 import (
 	"bytes"
 	"context"
-	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,7 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	_ "embed"
+
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -25,6 +25,8 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+
+	"github.com/Azure/go-autorest/autorest/to"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"

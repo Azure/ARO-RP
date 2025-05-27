@@ -12,6 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	conditions "github.com/serge1peshcoff/selenium-go-conditions"
 	"github.com/tebeka/selenium"
 )

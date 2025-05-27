@@ -10,10 +10,11 @@ import (
 	"reflect"
 	"time"
 
-	azcorepolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
+
+	azcorepolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"

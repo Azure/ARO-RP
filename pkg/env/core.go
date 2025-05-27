@@ -7,9 +7,10 @@ import (
 	"context"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/sirupsen/logrus"
 
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
