@@ -210,7 +210,7 @@ services:
       AZURE_EXTENSION_DEV_SOURCES: /workspace/python
       USER: ${USER}
     network_mode: "host"
-    command: make runlocal-rp 
+    command: make runlocal-rp
 
 secrets:
   proxy-client-key:
