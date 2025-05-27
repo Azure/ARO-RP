@@ -283,7 +283,7 @@ validate-go: validate-imports
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 .PHONY: validate-go-action
-validate-go-action: validate-imports
+validate-go-action: validate-imports validate-lint-go-fix
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -306,6 +306,18 @@ unit-test-go-coverpkg: $(GOTESTSUM)
 .PHONY: lint-go
 lint-go: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --verbose
+
+.PHONY: lint-go-fix
+lint-go-fix: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run --verbose --fix
+
+.PHONY: validate-lint-go-fix
+validate-lint-go-fix: lint-go-fix
+	if ! git diff --quiet HEAD; then \
+		git diff; \
+		echo "You need to run 'make lint-go-fix' to update the codebase and commit the changes"; \
+		exit 1; \
+	fi
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
