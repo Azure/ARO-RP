@@ -307,6 +307,10 @@ unit-test-go-coverpkg: $(GOTESTSUM)
 lint-go:
 	$(GOLANGCI_LINT) run --verbose
 
+.PHONY: lint-go-fix
+lint-go-fix:
+	$(GOLANGCI_LINT) run --verbose --fix
+
 .PHONY: lint-admin-portal
 lint-admin-portal:
 	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
