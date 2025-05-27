@@ -1,192 +1,197 @@
+version: "2"
 run:
-  timeout: 10m
-  build-tags:
-    - "aro"
-    - "containers_image_openpgp"
-    - "exclude_graphdriver_devicemapper"
-    - "exclude_graphdriver_btrfs"
   go: "1.22"
-output:
-  formats:
-    - format: github-actions
+  build-tags:
+    - aro
+    - containers_image_openpgp
+    - exclude_graphdriver_devicemapper
+    - exclude_graphdriver_btrfs
+linters:
+  default: none
+  enable:
+    - ginkgolinter
+    - govet
+    - importas
+    - musttag
+    - staticcheck
+    - testifylint
+    - unconvert
+    - unused
+    - usestdlibvars
+    - whitespace
+  settings:
+    importas:
+      alias:
+        - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
+          alias: apiuuid
+        - pkg: github.com/Azure/ARO-RP/pkg/api/test/error
+          alias: apitesterror
+        - pkg: github.com/Azure/ARO-RP/pkg/frontend/middleware
+          alias: frontendmiddleware
+        - pkg: github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb
+          alias: dbmetrics
+        - pkg: github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1
+          alias: arov1alpha1
+        - pkg: github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1
+          alias: aropreviewv1alpha1
+        - pkg: github.com/Azure/ARO-RP/pkg/operator/clientset/versioned
+          alias: aroclient
+        - pkg: github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake
+          alias: arofake
+        - pkg: github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault
+          alias: keyvaultclient
+        - pkg: github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery
+          alias: utildiscovery
+        - pkg: github.com/Azure/ARO-RP/test/database
+          alias: testdatabase
+        - pkg: github.com/Azure/ARO-RP/test/util/dynamichelper
+          alias: testdynamichelper
+        - pkg: github.com/Azure/ARO-RP/test/util/log
+          alias: testlog
+        - pkg: github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
+          alias: azkeyvault
+        - pkg: github.com/Azure/azure-sdk-for-go/storage
+          alias: azstorage
+        - pkg: github.com/coreos/stream-metadata-go/arch
+          alias: coreosarch
+        - pkg: github.com/googleapis/gnostic/openapiv2
+          alias: openapi_v2
+        - pkg: github.com/openshift/console-operator/pkg/api
+          alias: consoleapi
+        - pkg: github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1
+          alias: machinev1beta1
+        - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned
+          alias: maoclient
+        - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake
+          alias: maofake
+        - pkg: github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
+          alias: mcv1
+        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
+          alias: mcoclient
+        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake
+          alias: mcofake
+        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1
+          alias: mcoclientv1
+        - pkg: github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1
+          alias: monitoringv1
+        - pkg: golang.org/x/crypto/ssh
+          alias: cryptossh
+        - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
+          alias: extensionsv1
+        - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1
+          alias: extensionsv1beta1
+        - pkg: k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset
+          alias: extensionsclient
+        - pkg: k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake
+          alias: extensionsfake
+        - pkg: k8s.io/apimachinery/pkg/api/errors
+          alias: kerrors
+        - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
+          alias: metav1
+        - pkg: k8s.io/apimachinery/pkg/runtime
+          alias: kruntime
+        - pkg: k8s.io/apimachinery/pkg/runtime/serializer/json
+          alias: kjson
+        - pkg: k8s.io/apimachinery/pkg/util/rand
+          alias: utilrand
+        - pkg: k8s.io/apimachinery/pkg/util/runtime
+          alias: utilruntime
+        - pkg: k8s.io/apimachinery/pkg/version
+          alias: kversion
+        - pkg: k8s.io/client-go/testing
+          alias: ktesting
+        - pkg: k8s.io/client-go/tools/clientcmd/api/v1
+          alias: clientcmdv1
+        - pkg: k8s.io/client-go/tools/metrics
+          alias: kmetrics
+        - pkg: sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1
+          alias: azureproviderv1beta1
+        - pkg: sigs.k8s.io/controller-runtime
+          alias: ctrl
+        - pkg: github.com/openshift/hive/pkg/client/clientset/versioned
+          alias: hiveclient
+        - pkg: github.com/openshift/hive/pkg/client/clientset/versioned/fake
+          alias: hivefake
+        - pkg: github.com/openshift/hive/apis/hive/v1
+          alias: hivev1
+        - pkg: github.com/openshift/hive/apis/hive/v1/azure
+          alias: hivev1azure
+        - pkg: github.com/gofrs/uuid
+          alias: gofrsuuid
+        - pkg: github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common
+          alias: checkercommon
+        - pkg: github.com/Azure/ARO-RP/pkg/api/util/subnet
+          alias: apisubnet
+        - pkg: ^github\.com/Azure/ARO-RP/pkg/api/(v[^/]*[0-9])$
+          alias: $1
+        - pkg: ^github\.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$
+          alias: mgmtredhatopenshift$1$2$3$4
+        - pkg: ^github\.com/Azure/ARO-RP/pkg/(deploy|gateway|mirror|monitor|operator|portal)$
+          alias: pkg$1
+        - pkg: ^github\.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$
+          alias: redhatopenshift$1$2$3$4
+        - pkg: ^github\.com/Azure/ARO-RP/pkg/util/([^/]+)$
+          alias: util$1
+        - pkg: ^github\.com/Azure/ARO-RP/pkg/(util|operator)/mocks/(.+/)?([^/]+)$
+          alias: mock_$3
+        - pkg: ^github\.com/Azure/azure-sdk-for-go/services/(preview/)?([^/]+)/mgmt/([^/]+)/([^/]+)$
+          alias: mgmt$4
+        - pkg: ^github\.com/openshift/api/([^/]+)/(v[^/]+)$
+          alias: $1$2
+        - pkg: ^github\.com/openshift/client-go/([^/]+)/clientset/versioned$
+          alias: ${1}client
+        - pkg: ^github\.com/openshift/client-go/([^/]+)/clientset/versioned/fake$
+          alias: ${1}fake
+        - pkg: ^k8s\.io/api/([^/]+)/(v[^/]+)$
+          alias: $1$2
+        - pkg: ^k8s\.io/client-go/kubernetes/typed/([^/]+)/(v[^/]+)$
+          alias: $1${2}client
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022
+      dot-import-whitelist:
+        - github.com/onsi/ginkgo/v2
+        - github.com/onsi/gomega
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - staticcheck
+        text: 'SA1019: codec.BasicHandle is deprecated'
+      - linters:
+          - importas
+        path: pkg/client/(.+)\.go
+      - linters:
+          - importas
+        path: (.+/)?zz_generated_(.+)\.go
+      - linters:
+          - importas
+        path: pkg/operator/(clientset|mocks)/(.+)\.go
+      - linters:
+          - importas
+        path: pkg/util/mocks/(.+)\.go
+    paths:
+      - vendor/portal
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-same-issues: 0
-  exclude-dirs:
-    - vendor/portal
-    - vendor
-  exclude-dirs-use-default: true
-  exclude-rules:
-    - linters:
-        - staticcheck
-      text: "SA1019: codec.BasicHandle is deprecated"
-    # This is set to false to disregard the default EXC0011 exclusion
-    # which shadows all the ST* checks. Refer https://github.com/golangci/golangci-lint/issues/2281
-    - path: "pkg/client/(.+)\\.go"
-      linters:
-        - importas
-    - path: "(.+/)?zz_generated_(.+)\\.go"
-      linters:
-        - importas
-    - path: "pkg/operator/(clientset|mocks)/(.+)\\.go"
-      linters:
-        - importas
-    - path: "pkg/util/mocks/(.+)\\.go"
-      linters:
-        - importas
-  exclude-use-default: false
-
-linters-settings:
-  stylecheck:
-    # added additional checks for comments in Go.
-    # Refer https://staticcheck.io/docs/options#checks for details
-    checks:
-      ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022"]
-    dot-import-whitelist:
-      - github.com/onsi/ginkgo/v2
-      - github.com/onsi/gomega
-
-  importas:
-    alias:
-      - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
-        alias: apiuuid
-      - pkg: github.com/Azure/ARO-RP/pkg/api/test/error
-        alias: apitesterror
-      - pkg: github.com/Azure/ARO-RP/pkg/frontend/middleware
-        alias: frontendmiddleware
-      - pkg: github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb
-        alias: dbmetrics
-      - pkg: github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1
-        alias: arov1alpha1
-      - pkg: github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1
-        alias: aropreviewv1alpha1
-      - pkg: github.com/Azure/ARO-RP/pkg/operator/clientset/versioned
-        alias: aroclient
-      - pkg: github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake
-        alias: arofake
-      - pkg: github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault
-        alias: keyvaultclient
-      - pkg: github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery
-        alias: utildiscovery
-      - pkg: github.com/Azure/ARO-RP/test/database
-        alias: testdatabase
-      - pkg: github.com/Azure/ARO-RP/test/util/dynamichelper
-        alias: testdynamichelper
-      - pkg: github.com/Azure/ARO-RP/test/util/log
-        alias: testlog
-      - pkg: github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
-        alias: azkeyvault
-      - pkg: github.com/Azure/azure-sdk-for-go/storage
-        alias: azstorage
-      - pkg: github.com/coreos/stream-metadata-go/arch
-        alias: coreosarch
-      - pkg: github.com/googleapis/gnostic/openapiv2
-        alias: openapi_v2
-      - pkg: github.com/openshift/console-operator/pkg/api
-        alias: consoleapi
-      - pkg: github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1
-        alias: machinev1beta1
-      - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned
-        alias: maoclient
-      - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake
-        alias: maofake
-      - pkg: github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
-        alias: mcv1
-      - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
-        alias: mcoclient
-      - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake
-        alias: mcofake
-      - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1
-        alias: mcoclientv1
-      - pkg: github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1
-        alias: monitoringv1
-      - pkg: golang.org/x/crypto/ssh
-        alias: cryptossh
-      - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
-        alias: extensionsv1
-      - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1
-        alias: extensionsv1beta1
-      - pkg: k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset
-        alias: extensionsclient
-      - pkg: k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake
-        alias: extensionsfake
-      - pkg: k8s.io/apimachinery/pkg/api/errors
-        alias: kerrors
-      - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
-        alias: metav1
-      - pkg: k8s.io/apimachinery/pkg/runtime
-        alias: kruntime
-      - pkg: k8s.io/apimachinery/pkg/runtime/serializer/json
-        alias: kjson
-      - pkg: k8s.io/apimachinery/pkg/util/rand
-        alias: utilrand
-      - pkg: k8s.io/apimachinery/pkg/util/runtime
-        alias: utilruntime
-      - pkg: k8s.io/apimachinery/pkg/version
-        alias: kversion
-      - pkg: k8s.io/client-go/testing
-        alias: ktesting
-      - pkg: k8s.io/client-go/tools/clientcmd/api/v1
-        alias: clientcmdv1
-      - pkg: k8s.io/client-go/tools/metrics
-        alias: kmetrics
-      - pkg: sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1
-        alias: azureproviderv1beta1
-      - pkg: sigs.k8s.io/controller-runtime
-        alias: ctrl
-      - pkg: github.com/openshift/hive/pkg/client/clientset/versioned
-        alias: hiveclient
-      - pkg: github.com/openshift/hive/pkg/client/clientset/versioned/fake
-        alias: hivefake
-      - pkg: github.com/openshift/hive/apis/hive/v1
-        alias: hivev1
-      - pkg: github.com/openshift/hive/apis/hive/v1/azure
-        alias: hivev1azure
-      - pkg: github.com/gofrs/uuid
-        alias: gofrsuuid
-      - pkg: github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common
-        alias: checkercommon
-      - pkg: github.com/Azure/ARO-RP/pkg/api/util/subnet
-        alias: apisubnet
-
-      - pkg: "^github\\.com/Azure/ARO-RP/pkg/api/(v[^/]*[0-9])$"
-        alias: $1
-      - pkg: "^github\\.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$"
-        alias: mgmtredhatopenshift$1$2$3$4
-      - pkg: "^github\\.com/Azure/ARO-RP/pkg/(deploy|gateway|mirror|monitor|operator|portal)$"
-        alias: pkg$1
-      - pkg: "^github\\.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$"
-        alias: redhatopenshift$1$2$3$4
-      - pkg: "^github\\.com/Azure/ARO-RP/pkg/util/([^/]+)$"
-        alias: util$1
-      - pkg: "^github\\.com/Azure/ARO-RP/pkg/(util|operator)/mocks/(.+/)?([^/]+)$"
-        alias: mock_$3
-      - pkg: "^github\\.com/Azure/azure-sdk-for-go/services/(preview/)?([^/]+)/mgmt/([^/]+)/([^/]+)$"
-        alias: mgmt$4
-      - pkg: "^github\\.com/openshift/api/([^/]+)/(v[^/]+)$"
-        alias: $1$2
-      - pkg: "^github\\.com/openshift/client-go/([^/]+)/clientset/versioned$"
-        alias: ${1}client
-      - pkg: "^github\\.com/openshift/client-go/([^/]+)/clientset/versioned/fake$"
-        alias: ${1}fake
-      - pkg: "^k8s\\.io/api/([^/]+)/(v[^/]+)$"
-        alias: $1$2
-      - pkg: "^k8s\\.io/client-go/kubernetes/typed/([^/]+)/(v[^/]+)$"
-        alias: $1${2}client
-
-linters:
-  disable-all: true
+formatters:
   enable:
     - gofmt
-    - unused
-    - gosimple
-    - govet
-    - staticcheck
-    - whitespace
-    - stylecheck
-    - unconvert
-    - importas
-    - tenv
-    - musttag
-    - ginkgolinter
-    - testifylint
-    - usestdlibvars
+  exclusions:
+    generated: lax
+    paths:
+      - vendor/portal
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
