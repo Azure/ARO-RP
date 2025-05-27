@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	network "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	gomock "go.uber.org/mock/gomock"
+
+	network "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	subnet "github.com/Azure/ARO-RP/pkg/util/subnet"
 )
