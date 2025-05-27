@@ -209,19 +209,19 @@ services:
       KUBECONFIG: /workspace/secrets/aks.kubeconfig
       AZURE_EXTENSION_DEV_SOURCES: /workspace/python
       USER: ${USER}
-    privileged: true
-    cap_add:
-      - NET_ADMIN
-      - SYS_CHROOT
-      - DAC_READ_SEARCH
-    security_opt:
-      - label=disable
+    # privileged: true
+    # cap_add:
+    #   - NET_ADMIN
+    #   - SYS_CHROOT
+    #   - DAC_READ_SEARCH
+    # security_opt:
+    #   - label=disable
     network_mode: "host"
-    pid: host
-    ipc: host
-    uts: host
-    devices:
-      - /dev/net/tun:/dev/net/tun
+    # pid: host
+    # ipc: host
+    # uts: host
+    # devices:
+    #   - /dev/net/tun:/dev/net/tun
     command: make runlocal-rp 
 
 secrets:
