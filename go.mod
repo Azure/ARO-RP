@@ -1626,5 +1626,5 @@ replace (
 // broken deps on 2.8.3
 replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/distribution v2.8.2+incompatible
 
-// sub-packages
+// ARO-RP sub-packages
 replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api
