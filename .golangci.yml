@@ -186,7 +186,20 @@ issues:
   max-same-issues: 0
 formatters:
   enable:
-    - gofmt
+    - gci
+  settings:
+    gci:
+      custom-order: true
+      sections:
+        - standard
+        - blank
+        - dot
+        - default
+        - prefix(k8s.io)
+        - prefix(sigs.k8s.io)
+        - prefix(github.com/Azure)
+        - prefix(github.com/openshift)
+        - localmodule
   exclusions:
     generated: lax
     paths:
