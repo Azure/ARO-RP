@@ -20,6 +20,7 @@ import (
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utilcert "github.com/Azure/ARO-RP/pkg/util/cert"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -85,7 +86,7 @@ func TestEmitMDSDCertificateExpiry(t *testing.T) {
 			ctx := context.Background()
 
 			var secrets []client.Object
-			secretsFromCertInfo, err := generateTestSecrets(tt.certsPresent, tweakTemplateFn(expiration))
+			secretsFromCertInfo, thumbprints, err := generateTestSecrets(tt.certsPresent, tweakTemplateFn(expiration))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -112,7 +113,10 @@ func TestEmitMDSDCertificateExpiry(t *testing.T) {
 				m.EXPECT().EmitGauge(secretMissingMetricName, int64(1), warning)
 			}
 
-			for _, exp := range tt.wantExpirations {
+			for i, exp := range tt.wantExpirations {
+				// add thumbprint to expected dimensions, since the certificates are dynamically generated we can not define these in the test cases themselves
+				exp["thumbprint"] = thumbprints[i]
+
 				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(daysUntilExpiration), exp)
 			}
 
@@ -219,7 +223,7 @@ func TestEmitIngressAndAPIServerCertificateExpiry(t *testing.T) {
 			ctx := context.Background()
 
 			var secrets []client.Object
-			secretsFromCertInfo, err := generateTestSecrets(tt.certsPresent, tweakTemplateFn(expiration))
+			secretsFromCertInfo, thumbprints, err := generateTestSecrets(tt.certsPresent, tweakTemplateFn(expiration))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -249,7 +253,10 @@ func TestEmitIngressAndAPIServerCertificateExpiry(t *testing.T) {
 				m.EXPECT().EmitGauge(secretMissingMetricName, int64(1), warning)
 			}
 
-			for _, exp := range tt.wantExpirations {
+			for i, exp := range tt.wantExpirations {
+				// add thumbprint to expected dimensions, since the certificates are dynamically generated we can not define these in the test cases themselves
+				exp["thumbprint"] = thumbprints[i]
+
 				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(daysUntilExpiration), exp)
 			}
 
@@ -263,7 +270,7 @@ func TestEmitIngressAndAPIServerCertificateExpiry(t *testing.T) {
 func TestEtcdCertificateExpiry(t *testing.T) {
 	ctx := context.Background()
 	expiration := time.Now().Add(time.Microsecond * 60)
-	_, cert, err := utiltls.GenerateTestKeyAndCertificate("etcd-cert", nil, nil, false, false, tweakTemplateFn(expiration))
+	_, certificate, err := utiltls.GenerateTestKeyAndCertificate("etcd-cert", nil, nil, false, false, tweakTemplateFn(expiration))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +305,7 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 						Namespace: "openshift-etcd",
 					},
 					Data: map[string][]byte{
-						corev1.TLSCertKey: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert[0].Raw}),
+						corev1.TLSCertKey: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificate[0].Raw}),
 					},
 					Type: corev1.SecretTypeTLS,
 				},
@@ -318,9 +325,10 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 			}
 
 			m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(tt.minDaysUntilExpiration), map[string]string{
-				"namespace": "openshift-etcd",
-				"name":      "etcd-peer-master-0",
-				"subject":   "etcd-cert",
+				"namespace":  "openshift-etcd",
+				"name":       "etcd-peer-master-0",
+				"subject":    "etcd-cert",
+				"thumbprint": utilcert.Thumbprint(certificate[0]),
 			})
 			err = mon.emitEtcdCertificateExpiry(ctx)
 			if err != nil {
@@ -336,12 +344,13 @@ func tweakTemplateFn(expiration time.Time) func(*x509.Certificate) {
 	}
 }
 
-func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certificate)) ([]client.Object, error) {
+func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certificate)) ([]client.Object, []string, error) {
 	var secrets []client.Object
+	var thumbprints []string
 	for _, sec := range certsInfo {
 		_, cert, err := utiltls.GenerateTestKeyAndCertificate(sec.certSubject, nil, nil, false, false, tweakTemplateFn)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		certKey := "tls.crt"
 		if sec.secretName == "cluster" {
@@ -355,8 +364,9 @@ func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certif
 		}
 		s := buildSecret(sec.secretName, data)
 		secrets = append(secrets, s)
+		thumbprints = append(thumbprints, utilcert.Thumbprint(cert[0]))
 	}
-	return secrets, nil
+	return secrets, thumbprints, nil
 }
 
 func buildSecret(secretName string, data map[string][]byte) *corev1.Secret {
