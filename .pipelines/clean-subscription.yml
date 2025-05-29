@@ -11,6 +11,7 @@ resources:
     - container: golang
       image: arointsvc.azurecr.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19
       options: --user=0
+      endpoint: arointsvc
 
 variables:
   - template: vars.yml
