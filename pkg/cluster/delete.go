@@ -105,12 +105,12 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 			}
 		}
 
-		if s.SubnetPropertiesFormat == nil || s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
-			!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, *nsg.ID) {
+		if s.SubnetPropertiesFormat == nil || s.NetworkSecurityGroup == nil ||
+			!strings.EqualFold(*s.NetworkSecurityGroup.ID, *nsg.ID) {
 			continue
 		}
 
-		s.SubnetPropertiesFormat.NetworkSecurityGroup = nil
+		s.NetworkSecurityGroup = nil
 
 		m.log.Printf("disconnecting network security group from subnet %s", *s.ID)
 		err = m.subnet.CreateOrUpdate(ctx, *s.ID, s)

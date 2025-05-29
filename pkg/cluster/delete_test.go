@@ -66,7 +66,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic is in succeeded provisioning state",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Interface.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
 			},

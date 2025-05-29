@@ -53,7 +53,7 @@ func (m *ItemAddPasswordRequestBuilder) Post(ctx context.Context, body ItemAddPa
 		"4XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 		"5XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 	}
-	res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreatePasswordCredentialFromDiscriminatorValue, errorMapping)
+	res, err := m.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreatePasswordCredentialFromDiscriminatorValue, errorMapping)
 	if err != nil {
 		return nil, err
 	}
@@ -66,11 +66,11 @@ func (m *ItemAddPasswordRequestBuilder) Post(ctx context.Context, body ItemAddPa
 // ToPostRequestInformation adds a strong password or secret to an application.
 func (m *ItemAddPasswordRequestBuilder) ToPostRequestInformation(ctx context.Context, body ItemAddPasswordPostRequestBodyable, requestConfiguration *ItemAddPasswordRequestBuilderPostRequestConfiguration) (*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
 	requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
-	requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
-	requestInfo.PathParameters = m.BaseRequestBuilder.PathParameters
+	requestInfo.UrlTemplate = m.UrlTemplate
+	requestInfo.PathParameters = m.PathParameters
 	requestInfo.Method = i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.POST
 	requestInfo.Headers.Add("Accept", "application/json")
-	err := requestInfo.SetContentFromParsable(ctx, m.BaseRequestBuilder.RequestAdapter, "application/json", body)
+	err := requestInfo.SetContentFromParsable(ctx, m.RequestAdapter, "application/json", body)
 	if err != nil {
 		return nil, err
 	}

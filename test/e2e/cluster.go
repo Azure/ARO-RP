@@ -261,10 +261,10 @@ var _ = Describe("Cluster", Serial, func() {
 // clusterSubnets returns a slice containing all of the cluster subnets' resource IDs
 func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
 	subnetMap := map[string]struct{}{}
-	subnetMap[*oc.OpenShiftClusterProperties.MasterProfile.SubnetID] = struct{}{}
+	subnetMap[*oc.MasterProfile.SubnetID] = struct{}{}
 
 	// TODO: change to workerProfileStatuses when we bump the API to 20230904 stable
-	for _, p := range *oc.OpenShiftClusterProperties.WorkerProfiles {
+	for _, p := range *oc.WorkerProfiles {
 		s := strings.ToLower(*p.SubnetID)
 		subnetMap[s] = struct{}{}
 	}

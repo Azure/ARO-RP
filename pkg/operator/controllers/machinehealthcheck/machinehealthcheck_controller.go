@@ -117,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			if isUpgrading {
-				mhc.ObjectMeta.Annotations = map[string]string{
+				mhc.Annotations = map[string]string{
 					MHCPausedAnnotation: "",
 				}
 			}

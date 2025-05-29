@@ -42,13 +42,13 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	}
 
 	// if the NSG is assigned && it's the correct NSG - do nothing
-	if subnetObject.SubnetPropertiesFormat.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
+	if subnetObject.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
 		return nil
 	}
 
 	// else the NSG assignment needs to be corrected
 	oldNSG := "nil"
-	if subnetObject.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+	if subnetObject.NetworkSecurityGroup != nil {
 		oldNSG = *subnetObject.NetworkSecurityGroup.ID
 	}
 	r.log.Infof("Fixing NSG from %s to %s", oldNSG, correctNSGResourceID)

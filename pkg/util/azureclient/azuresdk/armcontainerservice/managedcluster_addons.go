@@ -25,5 +25,5 @@ func (r *managedClustersClient) ListClusterAdminCredentials(ctx context.Context,
 }
 
 func (r *managedClustersClient) List(ctx context.Context) *runtime.Pager[armcontainerservice.ManagedClustersClientListResponse] {
-	return r.ManagedClustersClient.NewListPager(nil)
+	return r.NewListPager(nil)
 }

@@ -93,7 +93,7 @@ func TestReconcile(t *testing.T) {
 					Name: arov1alpha1.SingletonClusterName,
 				},
 				Spec: arov1alpha1.ClusterSpec{
-					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					AZEnvironment: azureclient.PublicCloud.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						operator.CheckerEnabled: operator.FlagTrue,
 					},

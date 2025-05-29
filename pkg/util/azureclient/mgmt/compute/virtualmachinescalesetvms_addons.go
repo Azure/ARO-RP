@@ -15,12 +15,12 @@ type VirtualMachineScaleSetVMsClientAddons interface {
 }
 
 func (c *virtualMachineScaleSetVMsClient) RunCommandAndWait(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, parameters mgmtcompute.RunCommandInput) error {
-	future, err := c.VirtualMachineScaleSetVMsClient.RunCommand(ctx, resourceGroupName, VMScaleSetName, instanceID, parameters)
+	future, err := c.RunCommand(ctx, resourceGroupName, VMScaleSetName, instanceID, parameters)
 	if err != nil {
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.VirtualMachineScaleSetVMsClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 func (c *virtualMachineScaleSetVMsClient) List(ctx context.Context, resourceGroupName string, virtualMachineScaleSetName string, filter string, selectParameter string, expand string) ([]mgmtcompute.VirtualMachineScaleSetVM, error) {

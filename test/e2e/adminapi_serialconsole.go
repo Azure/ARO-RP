@@ -22,7 +22,7 @@ var _ = Describe("[Admin API] VM serial console action", func() {
 		By("getting the resource group where the VM instances live in")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 
 		By("picking a master node to get logs from")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)

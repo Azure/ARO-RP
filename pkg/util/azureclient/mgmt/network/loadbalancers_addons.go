@@ -15,7 +15,7 @@ type LoadBalancersClientAddons interface {
 }
 
 func (c *loadBalancersClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, loadBalancerName string, parameters mgmtnetwork.LoadBalancer) error {
-	future, err := c.LoadBalancersClient.CreateOrUpdate(ctx, resourceGroupName, loadBalancerName, parameters)
+	future, err := c.CreateOrUpdate(ctx, resourceGroupName, loadBalancerName, parameters)
 	if err != nil {
 		return err
 	}

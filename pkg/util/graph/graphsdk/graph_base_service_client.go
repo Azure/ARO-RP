@@ -23,7 +23,7 @@ type GraphBaseServiceClient struct {
 
 // Applications provides operations to manage the collection of application entities.
 func (m *GraphBaseServiceClient) Applications() *ifc7ae6fb75d952477cad00b42c63b11b8c674355828ff1ba0e1b8bd380f51827.ApplicationsRequestBuilder {
-	return ifc7ae6fb75d952477cad00b42c63b11b8c674355828ff1ba0e1b8bd380f51827.NewApplicationsRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+	return ifc7ae6fb75d952477cad00b42c63b11b8c674355828ff1ba0e1b8bd380f51827.NewApplicationsRequestBuilderInternal(m.PathParameters, m.RequestAdapter)
 }
 
 // NewGraphBaseServiceClient instantiates a new GraphBaseServiceClient and sets the default values.
@@ -52,15 +52,15 @@ func NewGraphBaseServiceClient(requestAdapter i2ae4187f7daee263371cb1c977df63981
 	i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RegisterDefaultDeserializer(func() i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNodeFactory {
 		return i4bcdc892e61ac17e2afc10b5e2b536b29f4fd6c1ad30f4a5a68df47495db3347.NewFormParseNodeFactory()
 	})
-	if m.BaseRequestBuilder.RequestAdapter.GetBaseUrl() == "" {
-		m.BaseRequestBuilder.RequestAdapter.SetBaseUrl("https://graph.microsoft.com/v1.0")
+	if m.RequestAdapter.GetBaseUrl() == "" {
+		m.RequestAdapter.SetBaseUrl("https://graph.microsoft.com/v1.0")
 	}
-	m.BaseRequestBuilder.PathParameters["baseurl"] = m.BaseRequestBuilder.RequestAdapter.GetBaseUrl()
-	m.BaseRequestBuilder.RequestAdapter.EnableBackingStore(backingStore)
+	m.PathParameters["baseurl"] = m.RequestAdapter.GetBaseUrl()
+	m.RequestAdapter.EnableBackingStore(backingStore)
 	return m
 }
 
 // ServicePrincipals provides operations to manage the collection of servicePrincipal entities.
 func (m *GraphBaseServiceClient) ServicePrincipals() *i50842935825402c554412d8c8453e6ff3db97093d4f614fff0d8372d844cb674.ServicePrincipalsRequestBuilder {
-	return i50842935825402c554412d8c8453e6ff3db97093d4f614fff0d8372d844cb674.NewServicePrincipalsRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+	return i50842935825402c554412d8c8453e6ff3db97093d4f614fff0d8372d844cb674.NewServicePrincipalsRequestBuilderInternal(m.PathParameters, m.RequestAdapter)
 }

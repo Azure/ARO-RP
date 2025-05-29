@@ -74,7 +74,7 @@ func TestReconcile(t *testing.T) {
 					Name: arov1alpha1.SingletonClusterName,
 				},
 				Spec: arov1alpha1.ClusterSpec{
-					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					AZEnvironment: azureclient.PublicCloud.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						operator.CheckerEnabled: operator.FlagTrue,
 					},
@@ -90,8 +90,8 @@ func TestReconcile(t *testing.T) {
 				log:  utillog.GetLogger(),
 				role: "master",
 				checker: fakeChecker(func(ctx context.Context, AZEnvironment string) error {
-					if !reflect.DeepEqual(AZEnvironment, azureclient.PublicCloud.Environment.Name) {
-						t.Error(cmp.Diff(AZEnvironment, azureclient.PublicCloud.Environment.Name))
+					if !reflect.DeepEqual(AZEnvironment, azureclient.PublicCloud.Name) {
+						t.Error(cmp.Diff(AZEnvironment, azureclient.PublicCloud.Name))
 					}
 
 					return tt.checkerReturnErr
