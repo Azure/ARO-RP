@@ -234,7 +234,7 @@ func (client OpenShiftClustersClient) Get(ctx context.Context, resourceGroupName
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
-				sc = result.Response.StatusCode
+				sc = result.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -317,7 +317,7 @@ func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShif
 		defer func() {
 			sc := -1
 			if result.oscl.Response.Response != nil {
-				sc = result.oscl.Response.StatusCode
+				sc = result.oscl.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -420,7 +420,7 @@ func (client OpenShiftClustersClient) ListComplete(ctx context.Context) (result 
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.StatusCode
+				sc = result.page.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -439,7 +439,7 @@ func (client OpenShiftClustersClient) ListAdminCredentials(ctx context.Context, 
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
-				sc = result.Response.StatusCode
+				sc = result.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -524,7 +524,7 @@ func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, r
 		defer func() {
 			sc := -1
 			if result.oscl.Response.Response != nil {
-				sc = result.oscl.Response.StatusCode
+				sc = result.oscl.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -632,7 +632,7 @@ func (client OpenShiftClustersClient) ListByResourceGroupComplete(ctx context.Co
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.StatusCode
+				sc = result.page.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -651,7 +651,7 @@ func (client OpenShiftClustersClient) ListCredentials(ctx context.Context, resou
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
-				sc = result.Response.StatusCode
+				sc = result.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
