@@ -140,8 +140,7 @@ generate-kiota:
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
 .PHONY: imports
-imports: $(OPENSHIFT_GOIMPORTS)
-	$(OPENSHIFT_GOIMPORTS) --module github.com/Azure/ARO-RP
+imports: lint-go-fix
 
 .PHONY: validate-imports
 validate-imports: imports
