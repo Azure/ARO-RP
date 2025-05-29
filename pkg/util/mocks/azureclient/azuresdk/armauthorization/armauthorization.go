@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	armauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 	gomock "go.uber.org/mock/gomock"
+
+	armauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 )
 
 // MockRoleDefinitionsClient is a mock of RoleDefinitionsClient interface.

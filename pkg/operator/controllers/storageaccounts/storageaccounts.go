@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
-
-	"k8s.io/apimachinery/pkg/types"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 

@@ -32,6 +32,7 @@ import (
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"

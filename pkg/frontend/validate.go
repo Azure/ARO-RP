@@ -10,10 +10,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/coreos/go-semver/semver"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"

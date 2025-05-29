@@ -7,9 +7,10 @@ import (
 	"bytes"
 	"text/template"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	"github.com/vincent-petithory/dataurl"
+
+	"github.com/Azure/go-autorest/autorest/to"
 )
 
 const restartScriptFileName = "99-dnsmasq-restart"

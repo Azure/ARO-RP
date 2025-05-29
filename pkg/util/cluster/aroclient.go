@@ -7,8 +7,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"

@@ -7,9 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 )
 
 // DeploymentsClientAddons contains addons for DeploymentsClient

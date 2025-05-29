@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	"github.com/pkg/errors"
 	"github.com/vincent-petithory/dataurl"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/Azure/go-autorest/autorest/to"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )

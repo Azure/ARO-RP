@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	containerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	gomock "go.uber.org/mock/gomock"
+
+	containerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 )
 
 // MockTokensClient is a mock of TokensClient interface.

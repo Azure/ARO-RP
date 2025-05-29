@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/jongio/azidext/go/azidext"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/jongio/azidext/go/azidext"
 )
 
 type MSIContext string

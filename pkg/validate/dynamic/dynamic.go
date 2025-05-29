@@ -11,16 +11,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/sirupsen/logrus"
+
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/apparentlymart/go-cidr/cidr"
-	"github.com/sirupsen/logrus"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"

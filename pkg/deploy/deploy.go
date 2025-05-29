@@ -10,11 +10,12 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/jongio/azidext/go/azidext"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/jongio/azidext/go/azidext"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"

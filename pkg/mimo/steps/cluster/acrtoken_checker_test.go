@@ -8,11 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/date"
 	. "github.com/onsi/gomega"
+
 	"go.uber.org/mock/gomock"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/Azure/go-autorest/autorest/date"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"

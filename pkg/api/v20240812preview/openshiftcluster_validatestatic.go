@@ -10,9 +10,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
+
 	azcorearm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/coreos/go-semver/semver"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"

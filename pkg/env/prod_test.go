@@ -6,8 +6,9 @@ package env
 import (
 	"testing"
 
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
