@@ -51,14 +51,14 @@ func (ce machineClientEnricher) Enrich(
 		return err
 	}
 
-	workerProfiles := make([]api.WorkerProfile, len(machinesets.Items))
-	for i, machineset := range machinesets.Items {
+	workerProfiles := []api.WorkerProfile{}
+	for _, machineset := range machinesets.Items {
 		workerCount := 1
 		if machineset.Spec.Replicas != nil {
 			workerCount = int(*machineset.Spec.Replicas)
 		}
 
-		workerProfiles[i] = api.WorkerProfile{
+		workerProfile := api.WorkerProfile{
 			Name:  machineset.Name,
 			Count: workerCount,
 		}
@@ -79,9 +79,9 @@ func (ce machineClientEnricher) Enrich(
 			continue
 		}
 
-		workerProfiles[i].VMSize = api.VMSize(machineProviderSpec.VMSize)
-		workerProfiles[i].DiskSizeGB = int(machineProviderSpec.OSDisk.DiskSizeGB)
-		workerProfiles[i].SubnetID = fmt.Sprintf(
+		workerProfile.VMSize = api.VMSize(machineProviderSpec.VMSize)
+		workerProfile.DiskSizeGB = int(machineProviderSpec.OSDisk.DiskSizeGB)
+		workerProfile.SubnetID = fmt.Sprintf(
 			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
 			r.SubscriptionID, machineProviderSpec.NetworkResourceGroup, machineProviderSpec.Vnet, machineProviderSpec.Subnet,
 		)
@@ -93,11 +93,13 @@ func (ce machineClientEnricher) Enrich(
 			encryptionAtHost = api.EncryptionAtHostEnabled
 		}
 
-		workerProfiles[i].EncryptionAtHost = encryptionAtHost
+		workerProfile.EncryptionAtHost = encryptionAtHost
 
 		if machineProviderSpec.OSDisk.ManagedDisk.DiskEncryptionSet != nil {
-			workerProfiles[i].DiskEncryptionSetID = machineProviderSpec.OSDisk.ManagedDisk.DiskEncryptionSet.ID
+			workerProfile.DiskEncryptionSetID = machineProviderSpec.OSDisk.ManagedDisk.DiskEncryptionSet.ID
 		}
+
+		workerProfiles = append(workerProfiles, workerProfile)
 	}
 
 	sort.Slice(workerProfiles, func(i, j int) bool { return workerProfiles[i].Name < workerProfiles[j].Name })

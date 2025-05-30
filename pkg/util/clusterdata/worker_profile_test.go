@@ -49,7 +49,6 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 	emptyProvSpec := machinev1beta1.ProviderSpec{}
 	noRawProvSpec := machinev1beta1.ProviderSpec{Value: &kruntime.RawExtension{}}
 
-	invalidWorkerProfile := []api.WorkerProfile{{Name: "fake-worker-profile-1", Count: 1}}
 	emptyWorkerProfile := []api.WorkerProfile{}
 
 	testCases := []struct {
@@ -80,19 +79,19 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name:    "machine set objects exist - invalid provider spec JSON",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", invalidProvSpec)),
-			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
+			wantOc:  getWantOc(clusterID, emptyWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
 			name:    "machine set objects exist - provider spec is missing",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", emptyProvSpec)),
-			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
+			wantOc:  getWantOc(clusterID, emptyWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
 			name:    "machine set objects exist - provider spec is missing raw value",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", noRawProvSpec)),
-			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
+			wantOc:  getWantOc(clusterID, emptyWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
@@ -102,7 +101,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 				ms.Status.ReadyReplicas = 0
 				return ms
 			}()),
-			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
+			wantOc:  getWantOc(clusterID, emptyWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
