@@ -483,16 +483,14 @@ export RESOURCEGROUP=<resource-group-name>
 
   ```bash
   curl -X GET -k \
-    "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/top/pods" \
-    | jq
+    "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/top/pods" 
   ```
 
 - Get top node metrics for a dev cluster
   
   ```bash
   curl -X GET -k \
-  "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/top/nodes" \
-  | jq
+  "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/top/nodes"
   ```
 
 ## OpenShift Version
