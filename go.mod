@@ -43,7 +43,7 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/csrf v1.7.2
+	github.com/gorilla/csrf v1.7.3
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gorilla/sessions v1.2.2
