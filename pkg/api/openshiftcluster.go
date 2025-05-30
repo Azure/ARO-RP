@@ -834,8 +834,6 @@ const (
 	ArchitectureVersionV1 ArchitectureVersion = iota
 	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG. Non-zonal + zonal frontend IP
 	ArchitectureVersionV2
-	// ArchitectureVersionV3: Like V2, but single zonal LB frontend IP
-	ArchitectureVersionV3
 )
 
 // HiveProfile represents the hive related data of a cluster
