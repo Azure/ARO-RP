@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -66,6 +67,16 @@ func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb sdknetwork.
 	return err
 }
 
+func (m *manager) outboundIPZones() []*string {
+	zones := []*string{}
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones != nil {
+		for _, z := range m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones {
+			zones = append(zones, to.StringPtr(z))
+		}
+	}
+	return zones
+}
+
 func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb sdknetwork.LoadBalancer) error {
 	m.log.Info("reconciling outbound-rule-v4")
 
@@ -91,7 +102,7 @@ func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb sdknet
 
 	// rebuild outbound-rule-v4 frontend ip config with desired outbound ips
 	removeOutboundIPsFromLB(lb)
-	addOutboundIPsToLB(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, lb, desiredOutboundIPs)
+	addOutboundIPsToLB(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, lb, desiredOutboundIPs, m.outboundIPZones())
 
 	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID, lb, nil)
 	if err != nil {
@@ -157,7 +168,7 @@ func getFrontendIPConfigs(lb sdknetwork.LoadBalancer) map[string]sdknetwork.Fron
 }
 
 // addOutboundIPsToLB adds IPs or IPPrefixes to the load balancer outbound rule "outbound-rule-v4".
-func addOutboundIPsToLB(resourceGroupID string, lb sdknetwork.LoadBalancer, obIPsOrIPPrefixes []api.ResourceReference) {
+func addOutboundIPsToLB(resourceGroupID string, lb sdknetwork.LoadBalancer, obIPsOrIPPrefixes []api.ResourceReference, zones []*string) {
 	frontendIPConfigs := getFrontendIPConfigs(lb)
 	var outboundRuleV4FrontendIPConfig []*sdknetwork.SubResource
 
@@ -167,7 +178,7 @@ func addOutboundIPsToLB(resourceGroupID string, lb sdknetwork.LoadBalancer, obIP
 		if _, ok := frontendIPConfigs[obIPOrIPPrefix.ID]; !ok {
 			frontendIPConfigName := stringutils.LastTokenByte(obIPOrIPPrefix.ID, '/')
 			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-			lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, obIPOrIPPrefix.ID))
+			lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, obIPOrIPPrefix.ID, zones))
 			outboundRuleV4FrontendIPConfig = append(outboundRuleV4FrontendIPConfig, newOutboundRuleFrontendIPConfig(frontendConfigID))
 		} else {
 			// frontendIPConfig already exists and just needs to be added to the outbound rule
@@ -376,7 +387,7 @@ func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPR
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	resourceID := fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, name)
 	m.log.Infof("creating public IP Address: %s", name)
-	publicIPAddress := newPublicIPAddress(name, resourceID, m.doc.OpenShiftCluster.Location)
+	publicIPAddress := newPublicIPAddress(name, resourceID, m.doc.OpenShiftCluster.Location, m.outboundIPZones())
 
 	err := m.armPublicIPAddresses.CreateOrUpdateAndWait(ctx, resourceGroupName, name, publicIPAddress, nil)
 	ch <- createIPResult{
@@ -421,11 +432,12 @@ func (m *manager) patchEffectiveOutboundIPs(ctx context.Context, outboundIPs []a
 	return nil
 }
 
-func newPublicIPAddress(name, resourceID, location string) sdknetwork.PublicIPAddress {
+func newPublicIPAddress(name, resourceID, location string, zones []*string) sdknetwork.PublicIPAddress {
 	return sdknetwork.PublicIPAddress{
 		Name:     &name,
 		ID:       &resourceID,
 		Location: &location,
+		Zones:    zones,
 		Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
 			PublicIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodStatic),
 			PublicIPAddressVersion:   pointerutils.ToPtr(sdknetwork.IPVersionIPv4),
@@ -436,11 +448,12 @@ func newPublicIPAddress(name, resourceID, location string) sdknetwork.PublicIPAd
 	}
 }
 
-func newFrontendIPConfig(name string, id string, publicIPorIPPrefixID string) *sdknetwork.FrontendIPConfiguration {
+func newFrontendIPConfig(name string, id string, publicIPorIPPrefixID string, zones []*string) *sdknetwork.FrontendIPConfiguration {
 	// TODO: add check for publicIPorIPPrefixID
 	return &sdknetwork.FrontendIPConfiguration{
-		Name: &name,
-		ID:   &id,
+		Name:  &name,
+		ID:    &id,
+		Zones: zones,
 		Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 			PublicIPAddress: &sdknetwork.PublicIPAddress{
 				ID: &publicIPorIPPrefixID,
