@@ -150,9 +150,10 @@ func (mon *Monitor) processCertificate(ctx context.Context, secretNamespace, sec
 
 	// emit the cert expiration metric if the cert is valid
 	mon.emitGauge(certificateExpirationMetricName, int64(utilcert.DaysUntilExpiration(cert)), map[string]string{
-		"namespace": secretNamespace,
-		"name":      secretName,
-		"subject":   cert.Subject.CommonName,
+		"namespace":  secretNamespace,
+		"name":       secretName,
+		"subject":    cert.Subject.CommonName,
+		"thumbprint": utilcert.Thumbprint(cert),
 	})
 	return nil
 }
