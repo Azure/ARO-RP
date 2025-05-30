@@ -131,13 +131,13 @@ func TestMerge(t *testing.T) {
 	}
 
 	mhcWithAnnotation := mhc.DeepCopy()
-	mhcWithAnnotation.ObjectMeta.Annotations = map[string]string{
+	mhcWithAnnotation.Annotations = map[string]string{
 		"cluster.x-k8s.io/paused": "",
 	}
 
 	mhcWithStatusAndAnnotation := mhc.DeepCopy()
 	mhcWithStatusAndAnnotation.Status = *mhcWithStatus.Status.DeepCopy()
-	mhcWithStatusAndAnnotation.ObjectMeta.Annotations = mhcWithAnnotation.ObjectMeta.Annotations
+	mhcWithStatusAndAnnotation.Annotations = mhcWithAnnotation.Annotations
 
 	for _, tt := range []struct {
 		name             string

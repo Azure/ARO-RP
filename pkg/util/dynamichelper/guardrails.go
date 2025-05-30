@@ -103,7 +103,7 @@ func (dh *dynamicHelper) deleteUnstructuredObj(ctx context.Context, groupKind, n
 	if err != nil || uns == nil {
 		return err
 	}
-	if err = dh.dynamicClient.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); !(err == nil || notFound(err)) {
+	if err = dh.dynamicClient.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !notFound(err) {
 		return err
 	}
 	return nil

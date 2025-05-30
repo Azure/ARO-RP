@@ -32,7 +32,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
 	if existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
-		if existingMsiCertificate.Secret.Attributes != nil {
+		if existingMsiCertificate.Attributes != nil {
 			if !m.isEligibleForRenewal(existingMsiCertificate) {
 				return nil
 			}
@@ -72,7 +72,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 // https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation
 // The cert is eligible to be refreshed after the 46 day mark, and expires at 90 days
 func (m *manager) isEligibleForRenewal(secret azsecrets.GetSecretResponse) bool {
-	renewAfter := time.Time.AddDate(*secret.Secret.Attributes.NotBefore, 0, 0, 46)
+	renewAfter := time.Time.AddDate(*secret.Attributes.NotBefore, 0, 0, 46)
 	return time.Now().After(renewAfter)
 }
 

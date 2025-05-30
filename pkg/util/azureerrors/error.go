@@ -55,7 +55,7 @@ func deploymentFailedDueToAuthError(err error, authCode string) bool {
 					var ce *api.CloudError
 					if json.Unmarshal([]byte(message), &ce) == nil &&
 						ce.CloudErrorBody != nil &&
-						ce.CloudErrorBody.Code == authCode {
+						ce.Code == authCode {
 						return true
 					}
 				}

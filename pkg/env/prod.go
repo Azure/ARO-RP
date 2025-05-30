@@ -232,7 +232,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	p.liveConfig, err = p.Core.NewLiveConfigManager(ctx)
+	p.liveConfig, err = p.NewLiveConfigManager(ctx)
 	if err != nil {
 		return nil, err
 	}

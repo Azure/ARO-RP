@@ -134,7 +134,7 @@ func getActionsForRoleDefinition(ctx context.Context, roleDefinitionID string, r
 		return nil, err
 	}
 
-	if len(definition.RoleDefinition.Properties.Permissions) == 0 {
+	if len(definition.Properties.Permissions) == 0 {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError,
 			"", "Internal server error.")
 	}

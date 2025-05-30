@@ -16,7 +16,7 @@ type VirtualNetworkLinksClientAddons interface {
 }
 
 func (c *virtualNetworkLinksClient) DeleteAndWait(ctx context.Context, resourceGroupName string, privateZoneName string, virtualNetworkLinkName string, ifMatch string) error {
-	future, err := c.VirtualNetworkLinksClient.Delete(ctx, resourceGroupName, privateZoneName, virtualNetworkLinkName, ifMatch)
+	future, err := c.Delete(ctx, resourceGroupName, privateZoneName, virtualNetworkLinkName, ifMatch)
 	if err != nil {
 		return err
 	}

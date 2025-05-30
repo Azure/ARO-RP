@@ -58,13 +58,13 @@ type ServicePrincipalsRequestBuilderPostRequestConfiguration struct {
 // ByServicePrincipalId provides operations to manage the collection of servicePrincipal entities.
 func (m *ServicePrincipalsRequestBuilder) ByServicePrincipalId(servicePrincipalId string) *ServicePrincipalItemRequestBuilder {
 	urlTplParams := make(map[string]string)
-	for idx, item := range m.BaseRequestBuilder.PathParameters {
+	for idx, item := range m.PathParameters {
 		urlTplParams[idx] = item
 	}
 	if servicePrincipalId != "" {
 		urlTplParams["servicePrincipal%2Did"] = servicePrincipalId
 	}
-	return NewServicePrincipalItemRequestBuilderInternal(urlTplParams, m.BaseRequestBuilder.RequestAdapter)
+	return NewServicePrincipalItemRequestBuilderInternal(urlTplParams, m.RequestAdapter)
 }
 
 // NewServicePrincipalsRequestBuilderInternal instantiates a new ServicePrincipalsRequestBuilder and sets the default values.
@@ -95,7 +95,7 @@ func (m *ServicePrincipalsRequestBuilder) Get(ctx context.Context, requestConfig
 		"4XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 		"5XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 	}
-	res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateServicePrincipalCollectionResponseFromDiscriminatorValue, errorMapping)
+	res, err := m.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateServicePrincipalCollectionResponseFromDiscriminatorValue, errorMapping)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (m *ServicePrincipalsRequestBuilder) Post(ctx context.Context, body i6a0225
 		"4XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 		"5XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 	}
-	res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateServicePrincipalFromDiscriminatorValue, errorMapping)
+	res, err := m.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateServicePrincipalFromDiscriminatorValue, errorMapping)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +131,8 @@ func (m *ServicePrincipalsRequestBuilder) Post(ctx context.Context, body i6a0225
 // ToGetRequestInformation retrieve a list of servicePrincipal objects.
 func (m *ServicePrincipalsRequestBuilder) ToGetRequestInformation(ctx context.Context, requestConfiguration *ServicePrincipalsRequestBuilderGetRequestConfiguration) (*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
 	requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
-	requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
-	requestInfo.PathParameters = m.BaseRequestBuilder.PathParameters
+	requestInfo.UrlTemplate = m.UrlTemplate
+	requestInfo.PathParameters = m.PathParameters
 	requestInfo.Method = i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.GET
 	requestInfo.Headers.Add("Accept", "application/json")
 	if requestConfiguration != nil {
@@ -148,11 +148,11 @@ func (m *ServicePrincipalsRequestBuilder) ToGetRequestInformation(ctx context.Co
 // ToPostRequestInformation create a new servicePrincipal object.
 func (m *ServicePrincipalsRequestBuilder) ToPostRequestInformation(ctx context.Context, body i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.ServicePrincipalable, requestConfiguration *ServicePrincipalsRequestBuilderPostRequestConfiguration) (*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
 	requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
-	requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
-	requestInfo.PathParameters = m.BaseRequestBuilder.PathParameters
+	requestInfo.UrlTemplate = m.UrlTemplate
+	requestInfo.PathParameters = m.PathParameters
 	requestInfo.Method = i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.POST
 	requestInfo.Headers.Add("Accept", "application/json")
-	err := requestInfo.SetContentFromParsable(ctx, m.BaseRequestBuilder.RequestAdapter, "application/json", body)
+	err := requestInfo.SetContentFromParsable(ctx, m.RequestAdapter, "application/json", body)
 	if err != nil {
 		return nil, err
 	}

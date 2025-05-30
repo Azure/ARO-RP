@@ -25,7 +25,7 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		By("getting the resource group where cluster resources live in")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 
 		By("getting a list of resources from the cluster resource group via ARM")
 		expectedResources, err := clients.Resources.ListByResourceGroup(ctx, clusterResourceGroup, "", "", nil)
@@ -43,7 +43,7 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*diskEncryptionSet.ID))
 
 		By("adding VNet to the list of expected resource IDs")
-		vnetID, _, err := apisubnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
+		vnetID, _, err := apisubnet.Split(*oc.MasterProfile.SubnetID)
 		Expect(err).NotTo(HaveOccurred())
 		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(vnetID))
 
@@ -52,9 +52,9 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		subnets := map[string]struct{}{
-			strings.ToLower(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID): {},
+			strings.ToLower(*oc.MasterProfile.SubnetID): {},
 		}
-		for _, p := range *oc.OpenShiftClusterProperties.WorkerProfiles {
+		for _, p := range *oc.WorkerProfiles {
 			subnets[strings.ToLower(*p.SubnetID)] = struct{}{}
 		}
 

@@ -59,7 +59,7 @@ var _ = Describe("Update clusters", func() {
 
 		Expect(deployment.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
 
-		oldRevision, err := strconv.Atoi(deployment.ObjectMeta.Annotations["deployment.kubernetes.io/revision"])
+		oldRevision, err := strconv.Atoi(deployment.Annotations["deployment.kubernetes.io/revision"])
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
@@ -72,7 +72,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(deployment.Spec.Template.Annotations).To(HaveKey("kubectl.kubernetes.io/restartedAt"))
 		Expect(deployment.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
 
-		newRevision, err := strconv.Atoi(deployment.ObjectMeta.Annotations["deployment.kubernetes.io/revision"])
+		newRevision, err := strconv.Atoi(deployment.Annotations["deployment.kubernetes.io/revision"])
 		Expect(err).NotTo(HaveOccurred())
 		Expect(newRevision).To(Equal(oldRevision + 1))
 	})
@@ -147,7 +147,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(5))
 
 		By("sending the PUT request to decrease Managed Outbound IPs")
-		oc.OpenShiftClusterProperties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = to.Int32Ptr(1)
+		oc.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = to.Int32Ptr(1)
 		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
 		Expect(err).NotTo(HaveOccurred())
 

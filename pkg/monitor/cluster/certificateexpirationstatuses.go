@@ -107,7 +107,7 @@ func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
 	}
 
 	for _, secret := range secretList.Items {
-		secretName := secret.ObjectMeta.Name
+		secretName := secret.Name
 		// only process secrets with names indicating ETCD certificates.
 		if strings.Contains(secretName, "etcd-peer") || strings.Contains(secretName, "etcd-serving") {
 			if err := mon.processCertificate(ctx, etcdNamespace, secretName, corev1.TLSCertKey, &secret); err != nil {

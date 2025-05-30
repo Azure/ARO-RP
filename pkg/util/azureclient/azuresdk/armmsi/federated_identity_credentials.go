@@ -38,7 +38,7 @@ func NewFederatedIdentityCredentialsClient(subscriptionID string, credential azc
 }
 
 func (c *ArmFederatedIdentityCredentialsClient) List(ctx context.Context, resourceGroupName string, resourceName string, options *armmsi.FederatedIdentityCredentialsClientListOptions) (result []*armmsi.FederatedIdentityCredential, err error) {
-	pager := c.FederatedIdentityCredentialsClient.NewListPager(resourceGroupName, resourceName, options)
+	pager := c.NewListPager(resourceGroupName, resourceName, options)
 
 	for pager.More() {
 		page, err := pager.NextPage(ctx)

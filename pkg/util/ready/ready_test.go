@@ -429,7 +429,7 @@ func TestCheckDaemonSetIsRunning(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating daemonset: %v", err)
 	}
-	_, err = CheckDaemonSetIsReady(ctx, clientset.AppsV1().DaemonSets("default"), ds.ObjectMeta.Name)()
+	_, err = CheckDaemonSetIsReady(ctx, clientset.AppsV1().DaemonSets("default"), ds.Name)()
 
 	if err != nil {
 		t.Fatalf("check daemonset is not running: %v", err)
@@ -446,7 +446,7 @@ func TestCheckDaemonSetIsRunningNotFound(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset()
-	ok, err := CheckDaemonSetIsReady(ctx, clientset.AppsV1().DaemonSets("default"), ds.ObjectMeta.Name)()
+	ok, err := CheckDaemonSetIsReady(ctx, clientset.AppsV1().DaemonSets("default"), ds.Name)()
 
 	if ok {
 		t.Fatalf("check daemonset is not running: %v", err)
@@ -457,7 +457,7 @@ func TestCheckDaemonSetIsRunningError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "daemonsets", func(action ktesting.Action) (bool, kruntime.Object, error) {
+	clientset.PrependReactor("get", "daemonsets", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &appsv1.DaemonSet{}, errors.New("error getting daemonset")
 	})
 	_, err := CheckDaemonSetIsReady(ctx, clientset.AppsV1().DaemonSets("default"), "")()
@@ -481,7 +481,7 @@ func TestCheckPodIsRunning(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating pod: %v", err)
 	}
-	_, err = CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), pod.ObjectMeta.Name)()
+	_, err = CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), pod.Name)()
 	if err != nil {
 		t.Fatalf("error getting running pod: %v", err)
 	}
@@ -497,7 +497,7 @@ func TestCheckPodIsRunningNotFound(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset()
-	ok, err := CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), pod.ObjectMeta.Name)()
+	ok, err := CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), pod.Name)()
 	if ok {
 		t.Fatalf("error getting running pod: %v", err)
 	}
@@ -507,7 +507,7 @@ func TestCheckPodIsRunningError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
+	clientset.PrependReactor("get", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &corev1.Pod{}, errors.New("error getting pod")
 	})
 	_, err := CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), "")()
@@ -531,7 +531,7 @@ func TestCheckDeploymentIsReady(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating deployment: %v", err)
 	}
-	_, err = CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.ObjectMeta.Name)()
+	_, err = CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.Name)()
 
 	if err != nil {
 		t.Fatalf("check deployement is not ready: %v", err)
@@ -547,7 +547,7 @@ func TestCheckDeploymentIsReadyNotFound(t *testing.T) {
 		},
 	}
 	clientset := fake.NewSimpleClientset()
-	ok, _ := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.ObjectMeta.Name)()
+	ok, _ := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.Name)()
 
 	if ok {
 		t.Fatalf("check deployment is found")
@@ -558,7 +558,7 @@ func TestCheckDeploymentIsReadyError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "deployments", func(action ktesting.Action) (bool, kruntime.Object, error) {
+	clientset.PrependReactor("get", "deployments", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &appsv1.Deployment{}, errors.New("error getting deployment")
 	})
 	_, err := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), "")()
@@ -581,7 +581,7 @@ func TestCheckMachineConfigPoolIsReady(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating machineconfigpool: %v", err)
 	}
-	_, err = CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), machineconfigpool.ObjectMeta.Name)()
+	_, err = CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), machineconfigpool.Name)()
 
 	if err != nil {
 		t.Fatalf("check machineconfigpool is not ready: %v", err)
@@ -596,7 +596,7 @@ func TestCheckMachineConfigPoolIsReadyNotFound(t *testing.T) {
 		},
 	}
 	clientset := mcofake.NewSimpleClientset()
-	ok, _ := CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), machineconfigpool.ObjectMeta.Name)()
+	ok, _ := CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), machineconfigpool.Name)()
 
 	if ok {
 		t.Fatalf("check machineconfigpool is found")
@@ -607,7 +607,7 @@ func TestCheckMachineConfigPoolIsReadyError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := mcofake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "machineconfigpools", func(action ktesting.Action) (bool, kruntime.Object, error) {
+	clientset.PrependReactor("get", "machineconfigpools", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &mcv1.MachineConfigPool{}, errors.New("error getting machineconfigpool")
 	})
 	_, err := CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), "")()
@@ -622,7 +622,7 @@ func TestCheckPodsAreRunning(t *testing.T) {
 	labels := make(map[string]string)
 	labels["app"] = "running"
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
+	clientset.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return false, &corev1.PodList{Items: []corev1.Pod{
 			{ObjectMeta: metav1.ObjectMeta{
 				Name:      "one-pod",
@@ -642,7 +642,7 @@ func TestCheckPodsAreReadyError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
+	clientset.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &corev1.PodList{}, errors.New("error getting pods")
 	})
 	labels := make(map[string]string)
