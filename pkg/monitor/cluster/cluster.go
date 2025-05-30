@@ -115,8 +115,13 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	// lazy discovery will not attempt to reach out to the apiserver immediately
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +168,13 @@ func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
 		return nil, nil
 	}
 
+	httpClient, err := rest.HTTPClientFor(hiveRestConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	// lazy discovery will not attempt to reach out to the apiserver immediately
-	mapper, err := apiutil.NewDynamicRESTMapper(hiveRestConfig, apiutil.WithLazyDiscovery)
+	mapper, err := apiutil.NewDynamicRESTMapper(hiveRestConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}

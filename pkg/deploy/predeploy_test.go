@@ -1661,7 +1661,7 @@ func TestWaitForReadiness(t *testing.T) {
 				cancel:        cancelFastTimeout,
 			},
 			mocks:   []mock{getInstanceViewMock(unhealthyVMSS)},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "context deadline exceeded",
 		},
 		{
 			name: "run successfully after confirming healthy status",

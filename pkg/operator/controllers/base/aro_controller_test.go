@@ -119,18 +119,16 @@ func TestConditions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			client := ctrlfake.NewClientBuilder().
-				WithObjects(
-					&arov1alpha1.Cluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: arov1alpha1.SingletonClusterName,
-						},
-						Status: arov1alpha1.ClusterStatus{
-							Conditions:      tt.start,
-							OperatorVersion: "unknown",
-						},
-					},
-				).Build()
+			cluster := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Status: arov1alpha1.ClusterStatus{
+					Conditions:      tt.start,
+					OperatorVersion: "unknown",
+				},
+			}
+			client := ctrlfake.NewClientBuilder().WithObjects(cluster).WithStatusSubresource(cluster).Build()
 
 			controller := AROController{
 				Log:    logrus.NewEntry(logrus.StandardLogger()),
