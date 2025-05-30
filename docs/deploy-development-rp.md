@@ -479,6 +479,22 @@ export RESOURCEGROUP=<resource-group-name>
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/deletemanagedresource?managedResourceID=$MANAGED_RESOURCEID"
   ```
 
+- Get top pod metrics for a dev cluster:
+
+  ```bash
+  curl -X GET -k \
+    "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/top/pods" \
+    | jq
+  ```
+
+- Get top node metrics for a dev cluster
+  
+  ```bash
+  curl -X GET -k \
+  "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/top/nodes" \
+  | jq
+  ```
+
 ## OpenShift Version
 
 - We have a cosmos container which contains supported installable OCP versions, more information on the definition in `pkg/api/openshiftversion.go`.
