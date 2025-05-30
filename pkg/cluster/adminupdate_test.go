@@ -60,6 +60,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action populateRegistryStorageAccountName]",
 		"[Action migrateStorageAccounts]",
 		"[Action fixSSH]",
+		"[Action fixInternalLoadBalancerZones]",
 		"[Action startVMs]",
 		"[Condition apiServersReady, timeout 30m0s]",
 		"[Action fixSREKubeconfig]",
