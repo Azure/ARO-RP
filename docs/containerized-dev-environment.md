@@ -1,10 +1,10 @@
 # Containerized Development Environment
 
-This document describes how to set up and use a containerized development environment for ARO-RP using Podman and Podman Compose.
+This document describes how to set up and use a containerized development environment for ARO-RP using Podman Compose.
 
 ## Files for this setup
 
-The following files, located at the root of the repository, are used for this setup:
+The following files, located at the project root, are used for this setup:
 
 - `Dockerfile.dev-env`: Defines the container image with necessary dependencies and tools.
 - `dev-container-entrypoint.sh`: Script executed when the container starts to set up the environment (pyenv, venv, source env).
