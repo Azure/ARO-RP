@@ -405,6 +405,7 @@ type NetworkProfile struct {
 	GatewayPrivateLinkID       string               `json:"gatewayPrivateLinkId,omitempty"`
 	PreconfiguredNSG           PreconfiguredNSG     `json:"preconfiguredNSG,omitempty"`
 	LoadBalancerProfile        *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
+	InternalLoadBalancerZones  []string             `json:"zones,omitempty"`
 }
 
 // IP address ranges internally used by ARO
@@ -831,8 +832,10 @@ type ArchitectureVersion int
 const (
 	// ArchitectureVersionV1: 4.3, 4.4: 2 load balancers, 2 NSGs
 	ArchitectureVersionV1 ArchitectureVersion = iota
-	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG
+	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG. Non-zonal + zonal frontend IP
 	ArchitectureVersionV2
+	// ArchitectureVersionV3: Like V2, but single zonal LB frontend IP
+	ArchitectureVersionV3
 )
 
 // HiveProfile represents the hive related data of a cluster
