@@ -945,7 +945,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip-v4')]"),
 										},
 									},
-									Name: to.StringPtr("public-lb-ip-v4"),
+									Zones: []*string{},
+									Name:  to.StringPtr("public-lb-ip-v4"),
 								},
 							},
 							BackendAddressPools: []*sdknetwork.BackendAddressPool{
@@ -1081,7 +1082,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip-v4')]"),
 										},
 									},
-									Name: to.StringPtr("public-lb-ip-v4"),
+									Zones: []*string{to.StringPtr("1"), to.StringPtr("2"), to.StringPtr("3")},
+									Name:  to.StringPtr("public-lb-ip-v4"),
 								},
 							},
 							BackendAddressPools: []*sdknetwork.BackendAddressPool{
@@ -1231,7 +1233,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip-v4')]"),
 										},
 									},
-									Name: to.StringPtr("public-lb-ip-v4"),
+									Zones: []*string{},
+									Name:  to.StringPtr("public-lb-ip-v4"),
 								},
 								{
 									ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
@@ -1240,7 +1243,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
 										},
 									},
-									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+									Zones: []*string{},
+									Name:  to.StringPtr("uuid1-outbound-pip-v4"),
 								},
 							},
 							BackendAddressPools: []*sdknetwork.BackendAddressPool{
@@ -1380,7 +1384,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
 										},
 									},
-									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+									Zones: []*string{},
+									Name:  to.StringPtr("uuid1-outbound-pip-v4"),
 								},
 							},
 							BackendAddressPools: []*sdknetwork.BackendAddressPool{
@@ -1485,7 +1490,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
 										},
 									},
-									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+									Zones: []*string{},
+									Name:  to.StringPtr("uuid1-outbound-pip-v4"),
 								},
 							},
 							BackendAddressPools: []*sdknetwork.BackendAddressPool{
@@ -1590,7 +1596,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
 										},
 									},
-									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+									Zones: []*string{to.StringPtr("1"), to.StringPtr("2"), to.StringPtr("3")},
+									Name:  to.StringPtr("uuid1-outbound-pip-v4"),
 								},
 							},
 							BackendAddressPools: []*sdknetwork.BackendAddressPool{
@@ -1695,7 +1702,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
 										},
 									},
-									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+									Zones: []*string{to.StringPtr("3")},
+									Name:  to.StringPtr("uuid1-outbound-pip-v4"),
 								},
 							},
 							BackendAddressPools: []*sdknetwork.BackendAddressPool{
@@ -1814,7 +1822,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
 										},
 									},
-									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+									Zones: []*string{},
+									Name:  to.StringPtr("uuid1-outbound-pip-v4"),
 								},
 								{
 									ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid2-outbound-pip-v4"),
@@ -1823,7 +1832,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid2-outbound-pip-v4"),
 										},
 									},
-									Name: to.StringPtr("uuid2-outbound-pip-v4"),
+									Zones: []*string{},
+									Name:  to.StringPtr("uuid2-outbound-pip-v4"),
 								},
 							},
 							BackendAddressPools: []*sdknetwork.BackendAddressPool{

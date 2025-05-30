@@ -10,16 +10,24 @@ import (
 	"strings"
 	"testing"
 
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -189,6 +197,194 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 
 			if !reflect.DeepEqual(tt.ExpectedArmResource, resource) {
 				t.Error("resultant ARM resource isn't the same as expected.")
+			}
+		})
+	}
+}
+
+func TestNetworkInternalLoadBalancerZonality(t *testing.T) {
+	infraID := "infraID"
+	location := "eastus"
+	clusterRGID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
+	// Define the DB instance we will use to run the PatchWithLease function
+	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+
+	// Run tests
+	for _, tt := range []struct {
+		name                string
+		m                   manager
+		expectedARMResource *arm.Resource
+		uuids               []string
+	}{
+		{
+			name:  "non-zonal",
+			uuids: []string{},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ArchitectureVersion: api.ArchitectureVersionV2,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							MasterProfile: api.MasterProfile{
+								SubnetID: "someID",
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							NetworkProfile: api.NetworkProfile{
+								LoadBalancerProfile: &api.LoadBalancerProfile{},
+							},
+						},
+					},
+				},
+			},
+			expectedARMResource: &arm.Resource{
+
+				Resource: &sdknetwork.LoadBalancer{
+					SKU: &sdknetwork.LoadBalancerSKU{
+						Name: ptr.To(sdknetwork.LoadBalancerSKUNameStandard),
+					},
+					Properties: &sdknetwork.LoadBalancerPropertiesFormat{
+						FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
+							{
+								Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
+									PrivateIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodDynamic),
+									Subnet: &sdknetwork.Subnet{
+										ID: to.StringPtr("someID"),
+									},
+								},
+								Zones: []*string{},
+								Name:  to.StringPtr("internal-lb-ip-v4"),
+							},
+						},
+						BackendAddressPools: []*sdknetwork.BackendAddressPool{
+							{
+								Name: to.StringPtr(infraID),
+							},
+							{
+								Name: to.StringPtr("ssh-0"),
+							},
+							{
+								Name: to.StringPtr("ssh-1"),
+							},
+							{
+								Name: to.StringPtr("ssh-2"),
+							},
+						},
+					},
+					Name:     to.StringPtr(infraID + "-internal"),
+					Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+					Location: to.StringPtr(location),
+				},
+				APIVersion: azureclient.APIVersion("Microsoft.Network"),
+				DependsOn:  []string{},
+			},
+		},
+		{
+			name:  "non-zonal",
+			uuids: []string{},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ArchitectureVersion: api.ArchitectureVersionV2,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							MasterProfile: api.MasterProfile{
+								SubnetID: "someID",
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							NetworkProfile: api.NetworkProfile{
+								LoadBalancerProfile: &api.LoadBalancerProfile{},
+
+								InternalLoadBalancerZones: []string{"1", "2", "3"},
+							},
+						},
+					},
+				},
+			},
+			expectedARMResource: &arm.Resource{
+				Resource: &sdknetwork.LoadBalancer{
+					SKU: &sdknetwork.LoadBalancerSKU{
+						Name: ptr.To(sdknetwork.LoadBalancerSKUNameStandard),
+					},
+					Properties: &sdknetwork.LoadBalancerPropertiesFormat{
+						FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
+							{
+								Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
+									PrivateIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodDynamic),
+									Subnet: &sdknetwork.Subnet{
+										ID: to.StringPtr("someID"),
+									},
+								},
+								Zones: []*string{to.StringPtr("1"), to.StringPtr("2"), to.StringPtr("3")},
+								Name:  to.StringPtr("internal-lb-ip-v4"),
+							},
+						},
+						BackendAddressPools: []*sdknetwork.BackendAddressPool{
+							{
+								Name: to.StringPtr(infraID),
+							},
+							{
+								Name: to.StringPtr("ssh-0"),
+							},
+							{
+								Name: to.StringPtr("ssh-1"),
+							},
+							{
+								Name: to.StringPtr("ssh-2"),
+							},
+						},
+					},
+					Name:     to.StringPtr(infraID + "-internal"),
+					Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+					Location: to.StringPtr(location),
+				},
+				APIVersion: azureclient.APIVersion("Microsoft.Network"),
+				DependsOn:  []string{},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create the DB to test the cluster
+			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
+			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
+			fixture.AddOpenShiftClusterDocuments(tt.m.doc)
+			err := fixture.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+			tt.m.db = openShiftClustersDatabase
+			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+
+			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
+
+			resource := tt.m.networkInternalLoadBalancer(location)
+
+			// nil out the LB rules since we don't test them here
+			lb := resource.Resource.(*sdknetwork.LoadBalancer)
+			lb.Properties.Probes = nil
+			lb.Properties.LoadBalancingRules = nil
+
+			if !assert.Equal(t, tt.expectedARMResource, resource) {
+				for _, x := range deep.Equal(tt.expectedARMResource, resource) {
+					t.Log(x)
+				}
 			}
 		})
 	}

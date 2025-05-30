@@ -31,6 +31,19 @@ func NewManager(allowExpandedAvailabilityZones bool, forceSingleZone bool, singl
 	}
 }
 
+func (m *availabilityZoneManager) FilterZones(zones []string) []string {
+	// Gate allowing expanded AZs behind feature flag
+	if !m.allowExpandedAvailabilityZones {
+		basicAZs := []string{"1", "2", "3"}
+		onlyBasicAZs := func(s string) bool {
+			return !slices.Contains(basicAZs, s)
+		}
+		return slices.DeleteFunc(zones, onlyBasicAZs)
+	}
+
+	return zones
+}
+
 func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, workerSKU *mgmtcompute.ResourceSku) ([]string, []string, []string, error) {
 	// If we are forcing a single zone and that zone is blank, that means to
 	// treat it as non-zonal. All regions support (todo: verify?) non-zonal
@@ -56,15 +69,8 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	slices.Sort(controlPlaneZones)
 	slices.Sort(workerZones)
 
-	// Gate allowing expanded AZs behind feature flag
-	if !m.allowExpandedAvailabilityZones {
-		basicAZs := []string{"1", "2", "3"}
-		onlyBasicAZs := func(s string) bool {
-			return !slices.Contains(basicAZs, s)
-		}
-		controlPlaneZones = slices.DeleteFunc(controlPlaneZones, onlyBasicAZs)
-		workerZones = slices.DeleteFunc(workerZones, onlyBasicAZs)
-	}
+	controlPlaneZones = m.FilterZones(controlPlaneZones)
+	workerZones = m.FilterZones(workerZones)
 
 	if (len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
 		(len(workerZones) == 0 && len(controlPlaneZones) > 0) {

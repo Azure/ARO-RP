@@ -29,15 +29,23 @@ func (m *manager) validateResources(ctx context.Context) error {
 	).Dynamic(ctx)
 }
 
-func (m *manager) validateZones(ctx context.Context) error {
+func (m *manager) getVMSKUsForCurrentRegion(ctx context.Context) (map[string]*mgmtcompute.ResourceSku, error) {
 	location := m.doc.OpenShiftCluster.Location
 	filter := fmt.Sprintf("location eq %s", location)
 	skus, err := m.resourceSkus.List(ctx, filter)
 	if err != nil {
-		return fmt.Errorf("failure listing resource SKUs: %w", err)
+		return nil, fmt.Errorf("failure listing resource SKUs: %w", err)
 	}
 
-	filteredSkus := computeskus.FilterVMSizes(skus, location)
+	return computeskus.FilterVMSizes(skus, location), nil
+}
+
+func (m *manager) validateZones(ctx context.Context) error {
+	location := m.doc.OpenShiftCluster.Location
+	filteredSkus, err := m.getVMSKUsForCurrentRegion(ctx)
+	if err != nil {
+		return err
+	}
 
 	controlPlaneSKU, err := checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
 	if err != nil {
@@ -64,6 +72,7 @@ func (m *manager) validateZones(ctx context.Context) error {
 	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
 		oscd.OpenShiftCluster.Properties.MasterProfile.Zones = controlPlaneZones
 		oscd.OpenShiftCluster.Properties.WorkerProfiles[0].Zones = workerZones
+		oscd.OpenShiftCluster.Properties.NetworkProfile.InternalLoadBalancerZones = originalZones
 		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones = originalZones
 		return nil
 	})
