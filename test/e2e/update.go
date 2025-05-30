@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/Azure/go-autorest/autorest/to"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
