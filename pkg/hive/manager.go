@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"

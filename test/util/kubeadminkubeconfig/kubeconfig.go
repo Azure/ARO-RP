@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
@@ -38,7 +39,7 @@ func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autore
 		return nil, err
 	}
 
-	tokenURL, err := getTokenURLFromConsoleURL(*oc.OpenShiftClusterProperties.ConsoleProfile.URL)
+	tokenURL, err := getTokenURLFromConsoleURL(*oc.ConsoleProfile.URL)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +62,7 @@ func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autore
 		return nil, err
 	}
 
-	u, err := url.Parse(*oc.OpenShiftClusterProperties.ApiserverProfile.URL)
+	u, err := url.Parse(*oc.ApiserverProfile.URL)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autore
 }
 
 func makeKubeconfig(endpoint, username, token, namespace string) *clientcmdv1.Config {
-	clustername := strings.Replace(endpoint, ".", "-", -1)
+	clustername := strings.ReplaceAll(endpoint, ".", "-")
 	authinfoname := username + "/" + clustername
 	contextname := namespace + "/" + clustername + "/" + username
 

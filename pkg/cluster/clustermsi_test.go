@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"

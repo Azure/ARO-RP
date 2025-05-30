@@ -7,8 +7,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/date"
-
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/Azure/go-autorest/autorest/date"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"

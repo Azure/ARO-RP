@@ -11,9 +11,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/coreos/go-systemd/v22/journal"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
@@ -23,7 +24,7 @@ import (
 var (
 	_, thisfile, _, _ = runtime.Caller(0)
 	pkgpath           = filepath.Dir(thisfile)
-	repopath          = strings.Replace(thisfile, "pkg/util/log/log.go", "", -1)
+	repopath          = strings.ReplaceAll(thisfile, "pkg/util/log/log.go", "")
 
 	loglevel = flag.String("loglevel", "info", "{panic,fatal,error,warning,info,debug,trace}")
 

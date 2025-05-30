@@ -317,12 +317,20 @@ func checkPickedExactlyOne(path string, lbp *LoadBalancerProfile) error {
 	var isManagedOutboundIPCount = lbp.ManagedOutboundIPs != nil
 	var isOutboundIPs = lbp.OutboundIPs != nil
 	var isOutboundIPPrefixes = lbp.OutboundIPPrefixes != nil
+	var providedProfiles int
+	if isManagedOutboundIPCount {
+		providedProfiles++
+	}
+	if isOutboundIPs {
+		providedProfiles++
+	}
+	if isOutboundIPPrefixes {
+		providedProfiles++
+	}
 
-	if !isManagedOutboundIPCount && !isOutboundIPPrefixes && !isOutboundIPs {
+	if providedProfiles == 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The provided loadBalancerProfile is invalid: must specify one of managedOutboundIps, outboundIps, or outboundIpPrefixes.")
-	} else if !((isManagedOutboundIPCount && !isOutboundIPs && !isOutboundIPPrefixes) ||
-		(!isManagedOutboundIPCount && isOutboundIPs && !isOutboundIPPrefixes) ||
-		(!isManagedOutboundIPCount && !isOutboundIPs && isOutboundIPPrefixes)) {
+	} else if providedProfiles > 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The provided loadBalancerProfile is invalid: can only use one of managedOutboundIps, outboundIps, or outboundIpPrefixes at a time.")
 	}
 	return nil
@@ -332,7 +340,7 @@ func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundI
 	if architectureVersion == api.ArchitectureVersionV1 && managedOutboundIPs.Count > 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", fmt.Sprintf("The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.", managedOutboundIPs.Count))
 	}
-	if !(managedOutboundIPs.Count > 0 && managedOutboundIPs.Count <= 20) {
+	if managedOutboundIPs.Count <= 0 || managedOutboundIPs.Count > 20 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", fmt.Sprintf("The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be in the range of 1 to 20 (inclusive).", managedOutboundIPs.Count))
 	}
 	return nil

@@ -21,11 +21,12 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
-	"github.com/gofrs/uuid"
 )
 
 // OpenShiftClustersClient is the rest API for Azure Red Hat OpenShift 4
@@ -55,7 +56,7 @@ func (client OpenShiftClustersClient) CreateOrUpdate(ctx context.Context, resour
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.CreateOrUpdate")
 		defer func() {
 			sc := -1
-			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+			if result.FutureAPI != nil && result.Response() != nil {
 				sc = result.FutureAPI.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
@@ -143,7 +144,7 @@ func (client OpenShiftClustersClient) Delete(ctx context.Context, resourceGroupN
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.Delete")
 		defer func() {
 			sc := -1
-			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+			if result.FutureAPI != nil && result.Response() != nil {
 				sc = result.FutureAPI.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
@@ -229,7 +230,7 @@ func (client OpenShiftClustersClient) Get(ctx context.Context, resourceGroupName
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
-				sc = result.Response.Response.StatusCode
+				sc = result.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -309,7 +310,7 @@ func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShif
 		defer func() {
 			sc := -1
 			if result.oscl.Response.Response != nil {
-				sc = result.oscl.Response.Response.StatusCode
+				sc = result.oscl.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -406,7 +407,7 @@ func (client OpenShiftClustersClient) ListComplete(ctx context.Context) (result 
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.Response.StatusCode
+				sc = result.page.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -425,7 +426,7 @@ func (client OpenShiftClustersClient) ListAdminCredentials(ctx context.Context, 
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
-				sc = result.Response.Response.StatusCode
+				sc = result.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -507,7 +508,7 @@ func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, r
 		defer func() {
 			sc := -1
 			if result.oscl.Response.Response != nil {
-				sc = result.oscl.Response.Response.StatusCode
+				sc = result.oscl.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -612,7 +613,7 @@ func (client OpenShiftClustersClient) ListByResourceGroupComplete(ctx context.Co
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.Response.StatusCode
+				sc = result.page.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -631,7 +632,7 @@ func (client OpenShiftClustersClient) ListCredentials(ctx context.Context, resou
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
-				sc = result.Response.Response.StatusCode
+				sc = result.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -714,7 +715,7 @@ func (client OpenShiftClustersClient) Update(ctx context.Context, resourceGroupN
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.Update")
 		defer func() {
 			sc := -1
-			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+			if result.FutureAPI != nil && result.Response() != nil {
 				sc = result.FutureAPI.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)

@@ -7,8 +7,9 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest"
 	gofrsuuid "github.com/gofrs/uuid"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"

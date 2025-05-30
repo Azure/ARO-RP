@@ -7,8 +7,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
 	"go.uber.org/mock/gomock"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
 
 	azcertificates_wrapper "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	mock_azcertificates "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcertificates"

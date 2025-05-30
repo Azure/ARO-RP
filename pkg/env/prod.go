@@ -19,14 +19,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jongio/azidext/go/azidext"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/jongio/azidext/go/azidext"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -232,7 +233,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	p.liveConfig, err = p.Core.NewLiveConfigManager(ctx)
+	p.liveConfig, err = p.NewLiveConfigManager(ctx)
 	if err != nil {
 		return nil, err
 	}

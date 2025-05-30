@@ -9,8 +9,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"

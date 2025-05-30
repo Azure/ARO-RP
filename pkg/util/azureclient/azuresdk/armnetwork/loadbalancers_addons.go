@@ -15,7 +15,7 @@ type LoadBalancersClientAddons interface {
 }
 
 func (c *loadBalancersClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, loadBalancerName string, parameters armnetwork.LoadBalancer, options *armnetwork.LoadBalancersClientBeginCreateOrUpdateOptions) error {
-	poller, err := c.LoadBalancersClient.BeginCreateOrUpdate(ctx, resourceGroupName, loadBalancerName, parameters, options)
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, loadBalancerName, parameters, options)
 	if err != nil {
 		return err
 	}

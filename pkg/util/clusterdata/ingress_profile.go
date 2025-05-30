@@ -59,7 +59,7 @@ func (ip ingressProfileEnricher) Enrich(
 		if len(service.Status.LoadBalancer.Ingress) == 0 {
 			continue
 		}
-		matchingICName, ok := service.ObjectMeta.Labels["ingresscontroller.operator.openshift.io/owning-ingresscontroller"]
+		matchingICName, ok := service.Labels["ingresscontroller.operator.openshift.io/owning-ingresscontroller"]
 		if !ok {
 			// Un-expected case where a router service has no owning ingress controller
 			continue
@@ -71,8 +71,8 @@ func (ip ingressProfileEnricher) Enrich(
 	ingressProfiles := make([]api.IngressProfile, len(ingressControllers.Items))
 	for i, ingressController := range ingressControllers.Items {
 		ingressProfiles[i] = api.IngressProfile{
-			Name: ingressController.ObjectMeta.Name,
-			IP:   routerIPs[ingressController.ObjectMeta.Name],
+			Name: ingressController.Name,
+			IP:   routerIPs[ingressController.Name],
 		}
 
 		var visibility api.Visibility

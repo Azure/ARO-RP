@@ -17,6 +17,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jongio/azidext/go/azidext"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -28,11 +34,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/jongio/azidext/go/azidext"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
@@ -502,12 +503,12 @@ func (c *Cluster) Create(ctx context.Context) error {
 		diskEncryptionSet, err := c.diskEncryptionSetsClient.Get(ctx, c.Config.VnetResourceGroup, diskEncryptionSetName)
 		if err == nil {
 			if diskEncryptionSet.EncryptionSetProperties == nil ||
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey == nil ||
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault == nil ||
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID == nil {
+				diskEncryptionSet.ActiveKey == nil ||
+				diskEncryptionSet.ActiveKey.SourceVault == nil ||
+				diskEncryptionSet.ActiveKey.SourceVault.ID == nil {
 				return fmt.Errorf("no valid Key Vault found in Disk Encryption Set: %v. Delete the Disk Encryption Set and retry", diskEncryptionSet)
 			}
-			ID := *diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID
+			ID := *diskEncryptionSet.ActiveKey.SourceVault.ID
 			var found bool
 			_, kvName, found = strings.Cut(ID, "/providers/Microsoft.KeyVault/vaults/")
 			if !found {
@@ -597,12 +598,9 @@ func (c *Cluster) Create(ctx context.Context) error {
 		c.log.Info("creating Classic role assignments")
 		c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, appDetails.SPId)
 	}
-	fipsMode := true
+	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()
 
 	// Don't install with FIPS in a local dev, non-CI environment
-	if !c.Config.IsCI && c.Config.IsLocalDevelopmentMode() {
-		fipsMode = false
-	}
 
 	c.log.Info("creating cluster")
 	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OSClusterVersion, fipsMode)

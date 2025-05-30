@@ -5,8 +5,9 @@ package machinehealthcheck
 
 import (
 	"context"
-	_ "embed"
 	"time"
+
+	_ "embed"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -117,7 +119,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			if isUpgrading {
-				mhc.ObjectMeta.Annotations = map[string]string{
+				mhc.Annotations = map[string]string{
 					MHCPausedAnnotation: "",
 				}
 			}

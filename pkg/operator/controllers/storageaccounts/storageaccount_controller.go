@@ -6,10 +6,10 @@ package storageaccounts
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/types"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 

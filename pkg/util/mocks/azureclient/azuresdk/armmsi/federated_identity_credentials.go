@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	runtime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	armmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockFederatedIdentityCredentialsClient is a mock of FederatedIdentityCredentialsClient interface.

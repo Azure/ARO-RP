@@ -68,7 +68,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
-		rgName := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
+		rgName := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 		lbName, err := getInfraID(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -100,7 +100,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{*oc.OpenShiftClusterProperties.MasterProfile.SubnetID}}, true, nil, nil)
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{*oc.MasterProfile.SubnetID}}, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 	})
@@ -111,7 +111,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Fake name prevents accidentally deleting the PLS but still validates guardrail logic works.
-		plsResourceID := fmt.Sprintf("%s/providers/Microsoft.Network/PrivateLinkServices/%s", *oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, "fake-pls")
+		plsResourceID := fmt.Sprintf("%s/providers/Microsoft.Network/PrivateLinkServices/%s", *oc.ClusterProfile.ResourceGroupID, "fake-pls")
 
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{plsResourceID}}, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())

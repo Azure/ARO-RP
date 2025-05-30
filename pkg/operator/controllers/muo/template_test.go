@@ -5,8 +5,9 @@ package muo
 
 import (
 	"context"
-	_ "embed"
 	"testing"
+
+	_ "embed"
 
 	"github.com/go-test/deep"
 	"go.uber.org/mock/gomock"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 

@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"

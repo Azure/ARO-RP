@@ -10,9 +10,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/sirupsen/logrus"
 
 	pkgdeploy "github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/env"

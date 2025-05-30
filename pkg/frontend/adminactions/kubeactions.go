@@ -7,7 +7,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
@@ -20,7 +19,10 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"

@@ -12,6 +12,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -93,7 +94,7 @@ func TestReconcile(t *testing.T) {
 					Name: arov1alpha1.SingletonClusterName,
 				},
 				Spec: arov1alpha1.ClusterSpec{
-					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					AZEnvironment: azureclient.PublicCloud.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						operator.CheckerEnabled: operator.FlagTrue,
 					},

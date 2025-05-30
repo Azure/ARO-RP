@@ -12,13 +12,14 @@ import (
 	"strings"
 	"testing"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/go-test/deep"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
@@ -207,7 +208,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 
 				iothing := bytes.NewBufferString("")
 				for i := 0; i < 11; i++ {
-					iothing.WriteString(fmt.Sprintf("%d", i))
+					fmt.Fprintf(iothing, "%d", i)
 					for x := 0; x < 98; x++ {
 						iothing.WriteByte('a')
 					}

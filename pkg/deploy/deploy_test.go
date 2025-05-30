@@ -9,11 +9,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
+
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"

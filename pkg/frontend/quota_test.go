@@ -7,10 +7,11 @@ import (
 	"context"
 	"testing"
 
+	"go.uber.org/mock/gomock"
+
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"

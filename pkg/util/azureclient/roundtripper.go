@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"

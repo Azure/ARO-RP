@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -268,7 +269,7 @@ func TestConditions(t *testing.T) {
 				Controller:         ptr.To(true),
 				BlockOwnerDeletion: ptr.To(true),
 			}}
-			if diff := cmp.Diff(wantOwnerReference, operator.ObjectMeta.OwnerReferences); diff != "" {
+			if diff := cmp.Diff(wantOwnerReference, operator.OwnerReferences); diff != "" {
 				t.Error(diff)
 			}
 		})

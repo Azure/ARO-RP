@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -107,7 +108,7 @@ func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
 	}
 
 	for _, secret := range secretList.Items {
-		secretName := secret.ObjectMeta.Name
+		secretName := secret.Name
 		// only process secrets with names indicating ETCD certificates.
 		if strings.Contains(secretName, "etcd-peer") || strings.Contains(secretName, "etcd-serving") {
 			if err := mon.processCertificate(ctx, etcdNamespace, secretName, corev1.TLSCertKey, &secret); err != nil {

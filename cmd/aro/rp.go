@@ -10,10 +10,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 
 	kmetrics "k8s.io/client-go/tools/metrics"
+
+	"github.com/Azure/go-autorest/tracing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/api/admin"

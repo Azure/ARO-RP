@@ -17,7 +17,7 @@ type SecurityGroupsClientAddons interface {
 }
 
 func (c *securityGroupsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, networkSecurityGroupName string, parameters armnetwork.SecurityGroup, options *armnetwork.SecurityGroupsClientBeginCreateOrUpdateOptions) error {
-	poller, err := c.SecurityGroupsClient.BeginCreateOrUpdate(ctx, resourceGroupName, networkSecurityGroupName, parameters, options)
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, networkSecurityGroupName, parameters, options)
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (c *securityGroupsClient) CreateOrUpdateAndWait(ctx context.Context, resour
 }
 
 func (c *securityGroupsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, networkSecurityGroupName string, options *armnetwork.SecurityGroupsClientBeginDeleteOptions) error {
-	poller, err := c.SecurityGroupsClient.BeginDelete(ctx, resourceGroupName, networkSecurityGroupName, options)
+	poller, err := c.BeginDelete(ctx, resourceGroupName, networkSecurityGroupName, options)
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func (c *securityGroupsClient) DeleteAndWait(ctx context.Context, resourceGroupN
 }
 
 func (c *securityGroupsClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.SecurityGroupsClientListOptions) (result []*armnetwork.SecurityGroup, err error) {
-	pager := c.SecurityGroupsClient.NewListPager(resourceGroupName, options)
+	pager := c.NewListPager(resourceGroupName, options)
 
 	for pager.More() {
 		page, err := pager.NextPage(ctx)

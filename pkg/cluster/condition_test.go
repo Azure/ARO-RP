@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +19,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	ktesting "k8s.io/client-go/testing"
+
+	"github.com/Azure/go-autorest/autorest/to"
 
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"

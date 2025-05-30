@@ -6,13 +6,13 @@ package cluster
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/version"

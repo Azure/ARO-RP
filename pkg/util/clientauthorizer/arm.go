@@ -14,8 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/recover"

@@ -16,7 +16,7 @@ type PrivateZonesClientAddons interface {
 }
 
 func (c *privateZonesClient) DeleteAndWait(ctx context.Context, resourceGroupName string, privateZoneName string, ifMatch string) error {
-	future, err := c.PrivateZonesClient.Delete(ctx, resourceGroupName, privateZoneName, ifMatch)
+	future, err := c.Delete(ctx, resourceGroupName, privateZoneName, ifMatch)
 	if err != nil {
 		return err
 	}

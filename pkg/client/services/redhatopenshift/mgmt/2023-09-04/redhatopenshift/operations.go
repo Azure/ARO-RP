@@ -49,7 +49,7 @@ func (client OperationsClient) List(ctx context.Context) (result OperationListPa
 		defer func() {
 			sc := -1
 			if result.ol.Response.Response != nil {
-				sc = result.ol.Response.Response.StatusCode
+				sc = result.ol.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -142,7 +142,7 @@ func (client OperationsClient) ListComplete(ctx context.Context) (result Operati
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.Response.StatusCode
+				sc = result.page.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()

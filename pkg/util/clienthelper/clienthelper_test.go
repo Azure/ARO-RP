@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
 
@@ -25,8 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/Azure/go-autorest/autorest/to"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -131,13 +133,13 @@ func TestMerge(t *testing.T) {
 	}
 
 	mhcWithAnnotation := mhc.DeepCopy()
-	mhcWithAnnotation.ObjectMeta.Annotations = map[string]string{
+	mhcWithAnnotation.Annotations = map[string]string{
 		"cluster.x-k8s.io/paused": "",
 	}
 
 	mhcWithStatusAndAnnotation := mhc.DeepCopy()
 	mhcWithStatusAndAnnotation.Status = *mhcWithStatus.Status.DeepCopy()
-	mhcWithStatusAndAnnotation.ObjectMeta.Annotations = mhcWithAnnotation.ObjectMeta.Annotations
+	mhcWithStatusAndAnnotation.Annotations = mhcWithAnnotation.Annotations
 
 	for _, tt := range []struct {
 		name             string
