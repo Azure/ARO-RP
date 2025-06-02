@@ -41,6 +41,7 @@ type PutOrPatchOpenshiftClusterParameters struct {
 	subId                     string
 	resourceProviderNamespace string
 	apiVersion                string
+	isAdmin                   bool
 	identityURL               string
 	identityTenantID          string
 }
@@ -63,8 +64,8 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 
 	identityURL := r.Header.Get("x-ms-identity-url")
 	identityTenantID := r.Header.Get("x-ms-home-tenant-id")
-
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
+	isAdmin := (r.URL.Query().Get("admin") == "true")
 	putOrPatchClusterParameters := PutOrPatchOpenshiftClusterParameters{
 		body,
 		correlationData,
@@ -79,6 +80,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 		subId,
 		resourceProviderNamespace,
 		apiVersion,
+		isAdmin,
 		identityURL,
 		identityTenantID,
 	}
@@ -153,9 +155,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 	doc.CorrelationData = putOrPatchClusterParameters.correlationData
 
-	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
-	if err != nil {
-		return nil, err
+	// If this is an admin‐update (admin=true in the URL), skip the “no‐updates‐once‐AdminUpdating” check,
+	// because we already handled the “409 → Cluster is already in AdminUpdating” case above.
+	if putOrPatchClusterParameters.apiVersion != admin.APIVersion &&
+		!putOrPatchClusterParameters.isAdmin {
+		if err := validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState); err != nil {
+			return nil, err
+		}
 	}
 
 	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed {
