@@ -135,6 +135,20 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
 			doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = true
 		}
+	} else {
+		// If this is an “admin update” and the cluster is already AdminUpdating,
+		// return HTTP 409 Conflict immediately.
+		if putOrPatchClusterParameters.apiVersion == admin.APIVersion &&
+			doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateAdminUpdating {
+			return nil, api.NewCloudError(
+				http.StatusConflict,
+				"",
+				"",
+				"Cluster is already in AdminUpdating state",
+			)
+		}
+		// Otherwise, flip to AdminUpdating (for admin API)
+		setUpdateProvisioningState(doc, putOrPatchClusterParameters.apiVersion)
 	}
 
 	doc.CorrelationData = putOrPatchClusterParameters.correlationData
