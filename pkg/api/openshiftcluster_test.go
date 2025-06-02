@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	apitesterror "github.com/Azure/ARO-RP/pkg/api/test/error"
 )
 
 func TestIsTerminal(t *testing.T) {
@@ -186,7 +186,7 @@ func TestClusterMsiResourceId(t *testing.T) {
 			defer controller.Finish()
 
 			_, err := tt.oc.ClusterMsiResourceId()
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			apitesterror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
