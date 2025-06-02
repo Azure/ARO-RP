@@ -603,8 +603,7 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
 				},
 			},
-			Zones: zones,
-			Name:  pointerutils.ToPtr("public-lb-ip-v4"),
+			Name: pointerutils.ToPtr("public-lb-ip-v4"),
 		})
 
 		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &sdknetwork.LoadBalancingRule{
@@ -645,7 +644,7 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 			resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
 			frontendIPConfigName := stringutils.LastTokenByte(outboundIPs[i].ID, '/')
 			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-			lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, outboundIPs[i].ID, zones))
+			lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, outboundIPs[i].ID))
 		}
 
 		for i := 0; i < m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count; i++ {

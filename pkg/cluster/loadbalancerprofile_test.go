@@ -441,7 +441,7 @@ func TestAddOutboundIPsToLB(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			// Run addOutboundIPsToLB and assert the correct results
-			addOutboundIPsToLB(clusterRGID, tt.currentLB, tt.desiredOBIPs, []*string{})
+			addOutboundIPsToLB(clusterRGID, tt.currentLB, tt.desiredOBIPs)
 			assert.Equal(t, tt.expectedLB, tt.currentLB)
 		})
 	}
@@ -1161,7 +1161,7 @@ func fakeUpdatedLoadBalancer(additionalIPCount int) sdknetwork.LoadBalancer {
 	for i := 0; i < additionalIPCount; i++ {
 		ipResourceRefs = append(ipResourceRefs, api.ResourceReference{ID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid%d-outbound-pip-v4", i+1)})
 	}
-	addOutboundIPsToLB(clusterRGID, lb, ipResourceRefs, []*string{})
+	addOutboundIPsToLB(clusterRGID, lb, ipResourceRefs)
 	return lb
 }
 

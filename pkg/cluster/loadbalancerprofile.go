@@ -102,7 +102,7 @@ func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb sdknet
 
 	// rebuild outbound-rule-v4 frontend ip config with desired outbound ips
 	removeOutboundIPsFromLB(lb)
-	addOutboundIPsToLB(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, lb, desiredOutboundIPs, m.outboundIPZones())
+	addOutboundIPsToLB(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, lb, desiredOutboundIPs)
 
 	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID, lb, nil)
 	if err != nil {
@@ -168,7 +168,7 @@ func getFrontendIPConfigs(lb sdknetwork.LoadBalancer) map[string]sdknetwork.Fron
 }
 
 // addOutboundIPsToLB adds IPs or IPPrefixes to the load balancer outbound rule "outbound-rule-v4".
-func addOutboundIPsToLB(resourceGroupID string, lb sdknetwork.LoadBalancer, obIPsOrIPPrefixes []api.ResourceReference, zones []*string) {
+func addOutboundIPsToLB(resourceGroupID string, lb sdknetwork.LoadBalancer, obIPsOrIPPrefixes []api.ResourceReference) {
 	frontendIPConfigs := getFrontendIPConfigs(lb)
 	var outboundRuleV4FrontendIPConfig []*sdknetwork.SubResource
 
@@ -178,7 +178,7 @@ func addOutboundIPsToLB(resourceGroupID string, lb sdknetwork.LoadBalancer, obIP
 		if _, ok := frontendIPConfigs[obIPOrIPPrefix.ID]; !ok {
 			frontendIPConfigName := stringutils.LastTokenByte(obIPOrIPPrefix.ID, '/')
 			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-			lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, obIPOrIPPrefix.ID, zones))
+			lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, obIPOrIPPrefix.ID))
 			outboundRuleV4FrontendIPConfig = append(outboundRuleV4FrontendIPConfig, newOutboundRuleFrontendIPConfig(frontendConfigID))
 		} else {
 			// frontendIPConfig already exists and just needs to be added to the outbound rule
@@ -448,12 +448,11 @@ func newPublicIPAddress(name, resourceID, location string, zones []*string) sdkn
 	}
 }
 
-func newFrontendIPConfig(name string, id string, publicIPorIPPrefixID string, zones []*string) *sdknetwork.FrontendIPConfiguration {
+func newFrontendIPConfig(name string, id string, publicIPorIPPrefixID string) *sdknetwork.FrontendIPConfiguration {
 	// TODO: add check for publicIPorIPPrefixID
 	return &sdknetwork.FrontendIPConfiguration{
-		Name:  &name,
-		ID:    &id,
-		Zones: zones,
+		Name: &name,
+		ID:   &id,
 		Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 			PublicIPAddress: &sdknetwork.PublicIPAddress{
 				ID: &publicIPorIPPrefixID,
