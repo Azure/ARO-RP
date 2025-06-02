@@ -104,7 +104,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		*into = client
 	}
 
-	publicipaddressesClient, err := armnetwork.NewPublicIPAddressesClient(config.SubscriptionID, tokenCredential, _env.Environment().ArmClientOptions())
+	publicIpAddressesClient, err := armnetwork.NewPublicIPAddressesClient(config.SubscriptionID, tokenCredential, _env.Environment().ArmClientOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate publicipaddresses client: %w", err)
 	}
@@ -130,7 +130,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		providers:                    features.NewProvidersClient(_env.Environment(), config.SubscriptionID, authorizer),
 		roleassignments:              authorization.NewRoleAssignmentsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		resourceskus:                 compute.NewResourceSkusClient(_env.Environment(), config.SubscriptionID, authorizer),
-		publicipaddresses:            publicipaddressesClient,
+		publicipaddresses:            publicIpAddressesClient,
 		vmss:                         vmssClient,
 		vmssvms:                      compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		zones:                        dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
