@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
@@ -119,7 +120,9 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19",
 		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.23-openshift-4.19",
 	} {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
+		l := log.WithField("payload", ref)
+		startTime := time.Now()
+		l.Debugf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 
 		srcAuth := srcAuthRedhat
 		if strings.Index(ref, "quay.io") == 0 {
@@ -127,8 +130,9 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
+		l.WithError(err).WithField("duration", time.Since(startTime)).Printf("mirroring completed")
 		if err != nil {
-			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s: %s\n", ref, err))
+			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s: %s", ref, err))
 		}
 	}
 
@@ -172,14 +176,14 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			l.Printf("skipping mirror due to hard-coded deny list")
 			continue
 		}
-		l.Printf("mirroring release")
+		l.Debugf("mirroring release")
 		c, err := pkgmirror.Mirror(ctx, l, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
 		imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s (%d)", release.Version, c))
 		if err != nil {
 			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("Error on %s: %s", release, err))
 		}
 	}
-	fmt.Print("==========\nSummary\n==========\n", strings.Join(imageMirroringSummary, ", "))
+	fmt.Print("==========\nSummary\n==========\n", strings.Join(imageMirroringSummary, "\n"))
 	log.Print("done")
 
 	return nil
