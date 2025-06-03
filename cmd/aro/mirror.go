@@ -13,11 +13,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -41,7 +43,6 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 
 func mirror(ctx context.Context, log *logrus.Entry) error {
 	err := env.ValidateVars(
-		"DST_AUTH",
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",
 		"SRC_AUTH_REDHAT")
@@ -54,15 +55,24 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-
-	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
-
-	dstAuth, err := getAuth("DST_AUTH")
+	options := env.Environment().EnvironmentCredentialOptions()
+	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return err
 	}
 
-	dstAcr := os.Getenv("DST_ACR_NAME")
+	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
+
+	dstAcr := os.Getenv("DST_ACR_NAME") + acrDomainSuffix
+	acrAuthenticationClient, err := azcontainerregistry.NewAuthenticationClient(fmt.Sprintf("https://%s", dstAcr), env.Environment().AzureClientOptions())
+	if err != nil {
+		return err
+	}
+
+	acrauth, err := pkgmirror.NewAcrAuth(dstAcr, log, env, tokenCredential, acrAuthenticationClient)
+	if err != nil {
+		return err
+	}
 
 	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {
@@ -122,14 +132,18 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	} {
 		l := log.WithField("payload", ref)
 		startTime := time.Now()
-		l.Debugf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
+		l.Debugf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr, ref))
 
 		srcAuth := srcAuthRedhat
 		if strings.Index(ref, "quay.io") == 0 {
 			srcAuth = srcAuthQuay
 		}
 
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
+		dstAuth, err := acrauth.Get(ctx)
+		if err != nil {
+			return err
+		}
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr, ref), ref, dstAuth, srcAuth)
 		l.WithError(err).WithField("duration", time.Since(startTime)).Printf("mirroring completed")
 		if err != nil {
 			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s: %s", ref, err))
@@ -177,7 +191,11 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			continue
 		}
 		l.Debugf("mirroring release")
-		c, err := pkgmirror.Mirror(ctx, l, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		dstAuth, err := acrauth.Get(ctx)
+		if err != nil {
+			return err
+		}
+		c, err := pkgmirror.Mirror(ctx, l, dstAcr, release.Payload, dstAuth, srcAuthQuay)
 		imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s (%d)", release.Version, c))
 		if err != nil {
 			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("Error on %s: %s", release, err))
