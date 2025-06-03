@@ -75,7 +75,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	// We can lose visibility of early image mirroring errors because logs are trimmed in the output of Ev2 pipelines.
 	// If images fail to mirror, those errors need to be returned together and logged at the end of the execution.
-	var imageMirroringErrors []string
+	var imageMirroringSummary []string
 
 	for _, ref := range []string{
 
@@ -128,7 +128,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
 		if err != nil {
-			imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", ref, err))
+			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s: %s\n", ref, err))
 		}
 	}
 
@@ -167,22 +167,20 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	for _, release := range releases {
+		l := log.WithFields(logrus.Fields{"release": release.Version, "payload": release.Payload})
 		if _, ok := doNotMirrorTags[release.Version]; ok {
-			log.Printf("skipping mirror of release %s", release.Version)
+			l.Printf("skipping mirror due to hard-coded deny list")
 			continue
 		}
-		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		l.Printf("mirroring release")
+		c, err := pkgmirror.Mirror(ctx, l, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s (%d)", release.Version, c))
 		if err != nil {
-			imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", release, err))
+			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("Error on %s: %s", release, err))
 		}
 	}
-
+	fmt.Print("==========\nSummary\n==========\n", strings.Join(imageMirroringSummary, ", "))
 	log.Print("done")
-
-	if imageMirroringErrors != nil {
-		return fmt.Errorf("failed to mirror image/s\n%s", strings.Join(imageMirroringErrors, "\n"))
-	}
 
 	return nil
 }

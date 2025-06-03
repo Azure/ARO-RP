@@ -73,11 +73,12 @@ func DestLastIndex(repo, reference string) string {
 	return repo + reference[strings.LastIndex(reference, "/"):]
 }
 
-func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, dstauth, srcauth *types.DockerAuthConfig) error {
-	log.Printf("reading imagestream from %s", srcrelease)
+func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, dstauth, srcauth *types.DockerAuthConfig) (int, error) {
+	log.Debugf("reading imagestream")
 	is, err := getReleaseImageStream(ctx, srcrelease, srcauth)
 	if err != nil {
-		return err
+		log.WithError(err).Errorf("failed to read imagestream")
+		return 0, err
 	}
 
 	type work struct {
@@ -91,13 +92,14 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 	ch := make(chan *work)
 	wg := &sync.WaitGroup{}
 	var errorOccurred atomic.Value
+	var successfulImages atomic.Uint32
 	errorOccurred.Store(false)
 
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
 			for w := range ch {
-				log.Printf("mirroring %s", w.tag)
+				log.Debugf("mirroring %s", w.tag)
 				var err error
 				for retry := 0; retry < 6; retry++ {
 					err = Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
@@ -107,9 +109,10 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 					time.Sleep(10 * time.Second)
 				}
 				if err != nil {
-					log.Errorf("%s: %s\n", w.tag, err)
+					log.WithField("tag", w.tag).WithError(err).Error("failed to mirror image after 6 retries")
 					errorOccurred.Store(true)
 				}
+				successfulImages.Add(1)
 			}
 			wg.Done()
 		}()
@@ -139,8 +142,8 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 	wg.Wait()
 
 	if errorOccurred.Load().(bool) {
-		return fmt.Errorf("an error occurred")
+		return int(successfulImages.Load()), fmt.Errorf("an error occurred")
 	}
 
-	return nil
+	return int(successfulImages.Load()), nil
 }
