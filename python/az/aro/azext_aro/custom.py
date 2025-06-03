@@ -515,6 +515,7 @@ def aro_update(cmd,
                refresh_cluster_credentials=False,
                client_id=None,
                client_secret=None,
+               mi_user_assigned=None,
                platform_workload_identities=None,
                load_balancer_managed_outbound_ip_count=None,
                upgradeable_to=None,
@@ -541,6 +542,12 @@ def aro_update(cmd,
 
             if client_id is not None:
                 oc_update.service_principal_profile.client_id = client_id
+
+    if mi_user_assigned is not None:
+        oc_update.ManagedServiceIdentity = openshiftcluster.ManagedServiceIdentity(
+            type='UserAssigned',
+            user_assigned_identities={mi_user_assigned: {}}
+        )
 
     if oc.platform_workload_identity_profile is not None:
         if platform_workload_identities is not None or upgradeable_to is not None:
