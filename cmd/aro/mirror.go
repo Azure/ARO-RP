@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
@@ -51,15 +52,41 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	env, err := env.NewCoreForCI(ctx, log)
-	if err != nil {
-		return err
+	var _env env.Core
+	var tokenCredential azcore.TokenCredential
+	if os.Getenv("AZURE_EV2") != "" {
+		var err error
+		_env, err = env.NewCore(ctx, log, env.COMPONENT_MIRROR)
+		if err != nil {
+			return err
+		}
+		options := _env.Environment().ManagedIdentityCredentialOptions()
+		tokenCredential, err = azidentity.NewManagedIdentityCredential(options)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := env.ValidateVars(
+			"AZURE_CLIENT_ID",
+			"AZURE_CLIENT_SECRET",
+			"AZURE_SUBSCRIPTION_ID",
+			"AZURE_TENANT_ID")
+
+		if err != nil {
+			return err
+		}
+
+		_env, err = env.NewCoreForCI(ctx, log)
+		if err != nil {
+			return err
+		}
+		options := _env.Environment().EnvironmentCredentialOptions()
+		tokenCredential, err = azidentity.NewEnvironmentCredential(options)
+		if err != nil {
+			return err
+		}
 	}
-	options := env.Environment().EnvironmentCredentialOptions()
-	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
-	if err != nil {
-		return err
-	}
+	env := _env
 
 	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
 
