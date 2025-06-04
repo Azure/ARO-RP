@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
@@ -21,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/dns"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -404,7 +402,7 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient)
-		mocks          func(*mock_network.MockLoadBalancersClient)
+		mocks          func(*mock_armnetwork.MockLoadBalancersClient)
 		wantErr        string
 	}{
 		{
@@ -430,15 +428,18 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = privateIP
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient) {
+			mocks: func(loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 				loadBalancers.EXPECT().
-					Get(gomock.Any(), "clusterResourceGroup", "infra-internal-lb", "").
-					Return(mgmtnetwork.LoadBalancer{
-						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
-								{
-									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-										PrivateIPAddress: to.StringPtr(privateIP),
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal-lb", nil).
+					Return(armnetwork.LoadBalancersClientGetResponse{
+						LoadBalancer: armnetwork.LoadBalancer{
+							Properties: &armnetwork.LoadBalancerPropertiesFormat{
+								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+									{
+										Name: to.StringPtr("doesntmatter"),
+										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+											PrivateIPAddress: to.StringPtr(privateIP),
+										},
 									},
 								},
 							},
@@ -469,15 +470,18 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = privateIP
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient) {
+			mocks: func(loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 				loadBalancers.EXPECT().
-					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", "").
-					Return(mgmtnetwork.LoadBalancer{
-						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
-								{
-									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-										PrivateIPAddress: to.StringPtr(privateIP),
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", nil).
+					Return(armnetwork.LoadBalancersClientGetResponse{
+						LoadBalancer: armnetwork.LoadBalancer{
+							Properties: &armnetwork.LoadBalancerPropertiesFormat{
+								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+									{
+										Name: to.StringPtr("doesntmatter"),
+										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+											PrivateIPAddress: to.StringPtr(privateIP),
+										},
 									},
 								},
 							},
@@ -515,9 +519,9 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			loadBalancers := mock_network.NewMockLoadBalancersClient(controller)
+			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			if tt.mocks != nil {
-				tt.mocks(loadBalancers)
+				tt.mocks(loadBalancersClient)
 			}
 
 			dbOpenShiftClusters, dbClient := testdatabase.NewFakeOpenShiftClusters()
@@ -539,9 +543,9 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 			}
 
 			m := &manager{
-				doc:           doc,
-				db:            dbOpenShiftClusters,
-				loadBalancers: loadBalancers,
+				doc:              doc,
+				db:               dbOpenShiftClusters,
+				armLoadBalancers: loadBalancersClient,
 			}
 
 			err = m.populateDatabaseIntIP(ctx)
