@@ -42,7 +42,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/blob"
@@ -82,10 +81,8 @@ type manager struct {
 	spGraphClient            *utilgraph.GraphServiceClient
 	disks                    compute.DisksClient
 	virtualMachines          compute.VirtualMachinesClient
-	interfaces               network.InterfacesClient // TODO: use armInterfaces instead. https://issues.redhat.com/browse/ARO-4665
 	armInterfaces            armnetwork.InterfacesClient
 	armPublicIPAddresses     armnetwork.PublicIPAddressesClient
-	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead. https://issues.redhat.com/browse/ARO-4665
 	armLoadBalancers         armnetwork.LoadBalancersClient
 	armPrivateEndpoints      armnetwork.PrivateEndpointsClient
 	armSecurityGroups        armnetwork.SecurityGroupsClient
@@ -98,7 +95,6 @@ type manager struct {
 	roleDefinitions          authorization.RoleDefinitionsClient
 	armRoleDefinitions       armauthorization.RoleDefinitionsClient
 	denyAssignments          authorization.DenyAssignmentClient
-	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead. https://issues.redhat.com/browse/ARO-4665
 	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
 	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
 	armSubnets               armnetwork.SubnetsClient
@@ -270,10 +266,8 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		metricsEmitter:           metricsEmitter,
 		disks:                    compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualMachines:          compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		interfaces:               network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armInterfaces:            armInterfacesClient,
 		armPublicIPAddresses:     armPublicIPAddressesClient,
-		loadBalancers:            network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armLoadBalancers:         armLoadBalancersClient,
 		armPrivateEndpoints:      armPrivateEndpoints,
 		armSecurityGroups:        armSecurityGroupsClient,
@@ -286,7 +280,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		roleDefinitions:          authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armRoleDefinitions:       armRoleDefinitionsClient,
 		denyAssignments:          authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		fpPrivateEndpoints:       network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
 		armSubnets:               armSubnetsClient,
