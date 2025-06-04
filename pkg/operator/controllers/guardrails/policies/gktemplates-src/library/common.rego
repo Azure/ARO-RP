@@ -39,9 +39,10 @@ is_exempted_user_or_groups(user, groups) = true {
   exempted_user[user]
   print("exempted user:", user)
 } {
-  group := [ g | g := groups[_]; (g in cast_set(exempted_groups)) ]
-  count(group) > 0
-  print("exempted group:", group)
+  g := groups[_]
+  kw := exempted_groups[_]
+  contains(lower(g), lower(kw))
+  print("exempted group:", groups)
 }
 
 has_field(object, field) = true {
@@ -64,9 +65,9 @@ exempted_user = {
 
 exempted_groups = {
   # "system:cluster-admins", # dont allow kube:admin
-  "system:nodes",
-  "system:serviceaccounts", # allow all system service accounts
-  "system:masters"
+  "system:node",
+  "system:serviceaccount", # allow all system service accounts
+  "system:master"
 }
 privileged_ns = {
   # Kubernetes specific namespaces
