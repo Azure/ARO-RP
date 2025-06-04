@@ -97,10 +97,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	acrauth, err := pkgmirror.NewAcrAuth(dstAcr, log, env, tokenCredential, acrAuthenticationClient)
-	if err != nil {
-		return err
-	}
+	acrauth := pkgmirror.NewAcrAuth(dstAcr, log, env, tokenCredential, acrAuthenticationClient)
 
 	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {

@@ -39,7 +39,7 @@ type AcrAuth struct {
 	mu       sync.RWMutex
 }
 
-func NewAcrAuth(acr string, log *logrus.Entry, env env.Core, tokenCredential azcore.TokenCredential, authenticationClient azcontainerregistry.AuthenticationClient) (*AcrAuth, error) {
+func NewAcrAuth(acr string, log *logrus.Entry, env env.Core, tokenCredential azcore.TokenCredential, authenticationClient azcontainerregistry.AuthenticationClient) *AcrAuth {
 	return &AcrAuth{
 		acr:                  acr,
 		log:                  log,
@@ -47,7 +47,7 @@ func NewAcrAuth(acr string, log *logrus.Entry, env env.Core, tokenCredential azc
 		tokenCredential:      tokenCredential,
 		authenticationClient: authenticationClient,
 		now:                  func() time.Time { return time.Now() },
-	}, nil
+	}
 }
 
 func (a *AcrAuth) Get(ctx context.Context) (*types.DockerAuthConfig, error) {
