@@ -16,7 +16,10 @@ spec:
       gatekeeper.sh/system: "yes"
   template:
     metadata:
-      # annotations: #intended deviation from upstream
+      annotations:
+      # intended deviation from upstream, specify the SCC, note only supported on version >=4.14
+        openshift.io/required-scc: "restricted-v2"
+      # intended deviation from upstream
       #   container.seccomp.security.alpha.kubernetes.io/manager: runtime/default
       labels:
         control-plane: controller-manager
