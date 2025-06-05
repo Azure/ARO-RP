@@ -167,7 +167,7 @@ func TestReconciler(t *testing.T) {
 				clusterMock.Status.Conditions = append(clusterMock.Status.Conditions, tt.startConditions...)
 			}
 
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(clusterMock)
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(clusterMock).WithStatusSubresource(clusterMock)
 			if tt.ingressController != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.ingressController)
 			}
