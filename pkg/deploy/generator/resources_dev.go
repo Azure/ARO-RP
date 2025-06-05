@@ -125,6 +125,10 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 						EnableAutomaticOSUpgrade: to.BoolPtr(true),
 					},
 				},
+				// https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-instance-repairs?tabs=portal-1%2Cportal-2%2Crest-api-4%2Crest-api-5
+				AutomaticRepairsPolicy: &mgmtcompute.AutomaticRepairsPolicy{
+					Enabled: to.BoolPtr(true),
+				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
 						ComputerNamePrefix: to.StringPtr("dev-proxy-"),
