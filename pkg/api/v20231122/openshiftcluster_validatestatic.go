@@ -97,8 +97,10 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", p.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
-		return err
+	if len(p.IngressProfiles) > 0 {
+		if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
+			return err
+		}
 	}
 	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadBalancerProfile, isCreate, architectureVersion); err != nil {
 		return err
