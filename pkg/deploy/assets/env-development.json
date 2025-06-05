@@ -286,6 +286,9 @@
                         "enableAutomaticOSUpgrade": true
                     }
                 },
+                "automaticRepairsPolicy": {
+                    "enabled": true
+                },
                 "virtualMachineProfile": {
                     "osProfile": {
                         "computerNamePrefix": "dev-proxy-",

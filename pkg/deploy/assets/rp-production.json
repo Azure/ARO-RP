@@ -389,6 +389,9 @@
                         "enableAutomaticOSUpgrade": true
                     }
                 },
+                "automaticRepairsPolicy": {
+                    "enabled": true
+                },
                 "virtualMachineProfile": {
                     "osProfile": {
                         "computerNamePrefix": "[concat('rp-', parameters('vmssName'), '-')]",
