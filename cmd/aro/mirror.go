@@ -62,6 +62,10 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			return err
 		}
 		options := _env.Environment().ManagedIdentityCredentialOptions()
+		// use specific user-assigned managed identity if set
+		if os.Getenv("AZURE_CLIENT_ID") != "" {
+			options.ID = azidentity.ClientID(os.Getenv("AZURE_CLIENT_ID"))
+		}
 		tokenCredential, err = azidentity.NewManagedIdentityCredential(options)
 		if err != nil {
 			return err
