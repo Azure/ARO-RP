@@ -769,3 +769,18 @@ func (mr *MockVirtualNetworksClientMockRecorder) Get(ctx, resourceGroupName, vir
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualNetworksClient)(nil).Get), ctx, resourceGroupName, virtualNetworkName, options)
 }
+
+// GetUsage mocks base method.
+func (m *MockVirtualNetworksClient) GetUsage(ctx context.Context, resourceGroupName, virtualNetworkName string, options *armnetwork.VirtualNetworksClientListUsageOptions) ([]*armnetwork.VirtualNetworkUsage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUsage", ctx, resourceGroupName, virtualNetworkName, options)
+	ret0, _ := ret[0].([]*armnetwork.VirtualNetworkUsage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUsage indicates an expected call of GetUsage.
+func (mr *MockVirtualNetworksClientMockRecorder) GetUsage(ctx, resourceGroupName, virtualNetworkName, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUsage", reflect.TypeOf((*MockVirtualNetworksClient)(nil).GetUsage), ctx, resourceGroupName, virtualNetworkName, options)
+}
