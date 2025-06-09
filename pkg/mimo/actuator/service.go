@@ -150,11 +150,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
 
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
-	for {
-		if s.stopping.Load() {
-			break
-		}
-
+	for !s.stopping.Load() {
 		old, err := s.poll(ctx, lastGotDocs)
 		if err != nil {
 			s.baseLog.Error(err)
@@ -288,11 +284,7 @@ func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
 	}()
 
 out:
-	for {
-		if s.stopping.Load() {
-			break
-		}
-
+	for !s.stopping.Load() {
 		func() {
 			s.workers.Add(1)
 			s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)

@@ -74,7 +74,7 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 	}
 
 	for _, rule := range virtualNetworkResourceIDs {
-		*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules = append(*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+		*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: to.StringPtr(rule),
 			Action:                   mgmtstorage.ActionAllow,
 		})
@@ -93,7 +93,7 @@ func getValidSubnet(resourceId string) *mgmtnetwork.Subnet {
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
-		*s.SubnetPropertiesFormat.ServiceEndpoints = append(*s.SubnetPropertiesFormat.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
+		*s.ServiceEndpoints = append(*s.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
 			Service:           to.StringPtr(endpoint),
 			Locations:         &[]string{location},
 			ProvisioningState: mgmtnetwork.Succeeded,

@@ -65,7 +65,7 @@ var _ = Describe("ARO cluster DNS", Label(regressiontest), func() {
 		)
 
 		for _, node := range nodeList.Items {
-			name := node.ObjectMeta.Name
+			name := node.Name
 			if isWorkerNode(node) {
 				workerNodes[name] = ""
 			}
@@ -75,7 +75,7 @@ var _ = Describe("ARO cluster DNS", Label(regressiontest), func() {
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 		for wn := range workerNodes {
 			resp, err := clients.Interfaces.Get(ctx, clusterResourceGroup, nicName(wn), nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -332,7 +332,7 @@ func verifyResolvConf(
 		return fmt.Errorf("found %v Pods associated with the Job, but there should be exactly 1", len(podList.Items))
 	}
 
-	podName := podList.Items[0].ObjectMeta.Name
+	podName := podList.Items[0].Name
 	tailLines := int64(10)
 	podLogOptions := &corev1.PodLogOptions{
 		Container: resolvConfContainerName,
@@ -397,8 +397,8 @@ func toggleAcceleratedNetworking(ctx context.Context, interfaces armnetwork.Inte
 
 func isWorkerNode(node corev1.Node) bool {
 	ok := false
-	if node.ObjectMeta.Labels != nil {
-		_, ok = node.ObjectMeta.Labels["node-role.kubernetes.io/worker"]
+	if node.Labels != nil {
+		_, ok = node.Labels["node-role.kubernetes.io/worker"]
 	}
 	return ok
 }

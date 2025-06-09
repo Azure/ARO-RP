@@ -624,7 +624,7 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			result, _ := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
 			for _, v := range result.Items {
-				actualAnnotations := v.ObjectMeta.Annotations
+				actualAnnotations := v.Annotations
 				if !reflect.DeepEqual(actualAnnotations, tt.wantAnnotation) {
 					t.Errorf("actual annotation: %v, wanted %v", tt.annotation, tt.wantAnnotation)
 				}

@@ -987,9 +987,10 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 
 	if err == wait.ErrWaitTimeout {
 		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
-		if dv.authorizerType == AuthorizerClusterServicePrincipal {
+		switch dv.authorizerType {
+		case AuthorizerClusterServicePrincipal:
 			errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
-		} else if dv.authorizerType == AuthorizerWorkloadIdentity {
+		case AuthorizerWorkloadIdentity:
 			return api.NewCloudError(
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,

@@ -295,7 +295,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := apisubnet.Split((*oc.OpenShiftClusterProperties.MasterProfile.SubnetID))
+		vnet, masterSubnet, err := apisubnet.Split((*oc.MasterProfile.SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
@@ -670,7 +670,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 			if err != nil {
 				return err
 			}
-			customMachineConfig.ObjectMeta.Labels["testlabel"] = "testvalue"
+			customMachineConfig.Labels["testlabel"] = "testvalue"
 			_, err = clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Update(ctx, customMachineConfig, metav1.UpdateOptions{})
 			return err
 		})

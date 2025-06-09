@@ -42,11 +42,11 @@ func (m *manager) startVMs(ctx context.Context) error {
 			continue
 		}
 
-		if vm.VirtualMachineProperties.InstanceView == nil || vm.VirtualMachineProperties.InstanceView.Statuses == nil {
+		if vm.InstanceView == nil || vm.InstanceView.Statuses == nil {
 			continue
 		}
 
-		for _, status := range *vm.VirtualMachineProperties.InstanceView.Statuses {
+		for _, status := range *vm.InstanceView.Statuses {
 			if status.Code == nil {
 				continue
 			}

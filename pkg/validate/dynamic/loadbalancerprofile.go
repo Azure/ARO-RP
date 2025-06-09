@@ -81,7 +81,7 @@ func (dv *dynamic) validateOBRuleV4FrontendPorts(ctx context.Context, oc *api.Op
 		return err
 	}
 
-	totalBackendInstances := len(*backendPools.BackendAddressPoolPropertiesFormat.BackendIPConfigurations)
+	totalBackendInstances := len(*backendPools.BackendIPConfigurations)
 	// TODO: update once allocatedOutboundPorts is implemented
 	allocatedOutboundPorts := 1024
 	var desiredNumIPs int

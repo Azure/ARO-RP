@@ -13,7 +13,7 @@ type DisksClientAddons interface {
 }
 
 func (c *disksClient) DeleteAndWait(ctx context.Context, resourceGroupName string, diskName string) error {
-	future, err := c.DisksClient.Delete(ctx, resourceGroupName, diskName)
+	future, err := c.Delete(ctx, resourceGroupName, diskName)
 	if err != nil {
 		return err
 	}

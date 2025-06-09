@@ -42,8 +42,8 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			return err
 		}
 
-		if mgmtSubnet.SubnetPropertiesFormat != nil && mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints != nil {
-			for _, serviceEndpoint := range *mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints {
+		if mgmtSubnet.SubnetPropertiesFormat != nil && mgmtSubnet.ServiceEndpoints != nil {
+			for _, serviceEndpoint := range *mgmtSubnet.ServiceEndpoints {
 				isStorageEndpoint := (serviceEndpoint.Service != nil) && (*serviceEndpoint.Service == "Microsoft.Storage")
 				matchesClusterLocation := false
 
@@ -91,8 +91,8 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			// if subnet ResourceID was found and we need to append
 			found := false
 
-			if account.AccountProperties.NetworkRuleSet != nil && account.AccountProperties.NetworkRuleSet.VirtualNetworkRules != nil {
-				for _, rule := range *account.AccountProperties.NetworkRuleSet.VirtualNetworkRules {
+			if account.NetworkRuleSet != nil && account.NetworkRuleSet.VirtualNetworkRules != nil {
+				for _, rule := range *account.NetworkRuleSet.VirtualNetworkRules {
 					if strings.EqualFold(to.String(rule.VirtualNetworkResourceID), subnet) {
 						found = true
 						break
@@ -102,7 +102,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 
 			// if rule was not found - we add it
 			if !found {
-				*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules = append(*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+				*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 					VirtualNetworkResourceID: to.StringPtr(subnet),
 					Action:                   mgmtstorage.ActionAllow,
 				})
@@ -113,7 +113,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 		if changed {
 			sa := mgmtstorage.AccountUpdateParameters{
 				AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-					NetworkRuleSet: account.AccountProperties.NetworkRuleSet,
+					NetworkRuleSet: account.NetworkRuleSet,
 				},
 			}
 

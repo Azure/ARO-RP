@@ -22,11 +22,11 @@ func URI(metadata instancemetadata.InstanceMetadata, suffix, keyVaultPrefix stri
 
 // ParseSecretAsCertificate parses the value of a KeyVault secret as a set of PEM blocks containing a private key and certificate.
 func ParseSecretAsCertificate(secret azsecrets.GetSecretResponse) (*rsa.PrivateKey, []*x509.Certificate, error) {
-	if secret.Secret.Value == nil {
+	if secret.Value == nil {
 		return nil, nil, errors.New("secret response has no value")
 	}
 
-	key, certs, err := utilpem.Parse([]byte(*secret.Secret.Value))
+	key, certs, err := utilpem.Parse([]byte(*secret.Value))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -44,8 +44,8 @@ func ParseSecretAsCertificate(secret azsecrets.GetSecretResponse) (*rsa.PrivateK
 
 // ExtractBase64Value extracts the value of a KeyVault secret as a base64-encoded string
 func ExtractBase64Value(secret azsecrets.GetSecretResponse) ([]byte, error) {
-	if secret.Secret.Value == nil {
+	if secret.Value == nil {
 		return nil, errors.New("secret response has no value")
 	}
-	return base64.StdEncoding.DecodeString(*secret.Secret.Value)
+	return base64.StdEncoding.DecodeString(*secret.Value)
 }
