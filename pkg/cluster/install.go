@@ -320,8 +320,15 @@ func (m *manager) runPodmanInstaller(ctx context.Context) error {
 	return i.Install(ctx, m.subscriptionDoc, m.doc, version)
 }
 
-func (m *manager) runHiveInstaller(ctx context.Context) error {
-	var err error
+func (m *manager) runHiveInstaller(ctx context.Context) (err error) {
+	// Recover from unexpected panics inside Hive install logic
+	defer func() {
+		if r := recover(); r != nil {
+			m.log.Error("panic in runHiveInstaller, recovering: ", r)
+			err = fmt.Errorf("panic recovered in runHiveInstaller: %v", r)
+		}
+	}()
+
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, setFieldCreatedByHive(true))
 	if err != nil {
 		return err

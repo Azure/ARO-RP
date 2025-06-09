@@ -131,6 +131,11 @@ func azureCredentialSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscrip
 		return nil, err
 	}
 
+	// ensure Data map is initialized so dynamic-merge won’t panic on retry
+	if azureCredentialSecret.Data == nil {
+		azureCredentialSecret.Data = make(map[string][]byte)
+	}
+
 	azureCredentialSecret.Data["99_aro.json"] = enc
 	azureCredentialSecret.Data["99_sub.json"] = encSub
 
