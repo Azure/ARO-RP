@@ -119,6 +119,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
 		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19",
 		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.23-openshift-4.19",
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20",
 	} {
 		l := log.WithField("payload", ref)
 		startTime := time.Now()
