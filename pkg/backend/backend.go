@@ -131,7 +131,7 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			b.baseLog.Error(err)
 		}
 
-		if !(ocbDidWork || sbDidWork) {
+		if !ocbDidWork && !sbDidWork {
 			<-t.C
 		}
 	}

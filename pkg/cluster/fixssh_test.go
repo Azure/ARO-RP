@@ -174,7 +174,7 @@ func ifNoVmBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbB
 
 func ifNoVmAfter(nic *mgmtnetwork.Interface) *mgmtnetwork.Interface {
 	emptyAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
-	(*nic.InterfacePropertiesFormat.IPConfigurations)[0].InterfaceIPConfigurationPropertiesFormat.LoadBalancerBackendAddressPools = &emptyAddressPool
+	(*nic.InterfacePropertiesFormat.IPConfigurations)[0].LoadBalancerBackendAddressPools = &emptyAddressPool
 	return nic
 }
 

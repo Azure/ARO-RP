@@ -34,7 +34,7 @@ var _ = Describe("[Admin API] VM redeploy action", Label(regressiontest), func()
 		By("getting the resource group where the VM instances live in")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 
 		By("picking the first VM to redeploy")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)

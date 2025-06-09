@@ -396,8 +396,8 @@ func (e *etcdrenew) backupEtcdSecrets(ctx context.Context) error {
 			secret.CreationTimestamp = metav1.Time{
 				Time: time.Now(),
 			}
-			secret.ObjectMeta.ResourceVersion = ""
-			secret.ObjectMeta.UID = ""
+			secret.ResourceVersion = ""
+			secret.UID = ""
 
 			var cert []byte
 			err = codec.NewEncoderBytes(&cert, &codec.JsonHandle{}).Encode(secret)

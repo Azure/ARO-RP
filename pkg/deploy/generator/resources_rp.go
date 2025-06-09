@@ -82,7 +82,7 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 
 	if !g.production {
 		// override production ARM flag for more open configuration in development
-		rules[0].SecurityRulePropertiesFormat.SourceAddressPrefix = to.StringPtr("*")
+		rules[0].SourceAddressPrefix = to.StringPtr("*")
 
 		rules = append(rules, mgmtnetwork.SecurityRule{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{

@@ -45,12 +45,12 @@ var _ = Describe("Encryption at host", func() {
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
 		Expect(oc.OpenShiftClusterProperties.WorkerProfiles).To(Not(BeNil()))
 		Expect(*oc.OpenShiftClusterProperties.WorkerProfiles).NotTo(BeEmpty())
-		for _, profile := range *oc.OpenShiftClusterProperties.WorkerProfiles {
+		for _, profile := range *oc.WorkerProfiles {
 			Expect(profile.EncryptionAtHost).To(BeEquivalentTo("Enabled"))
 		}
 
 		By("getting the resource group where the VM instances live in")
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 
 		By("listing all VMs for the test cluster")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
@@ -89,13 +89,13 @@ var _ = Describe("Disk encryption at rest", func() {
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
 		Expect(oc.OpenShiftClusterProperties.WorkerProfiles).To(Not(BeNil()))
 		Expect(*oc.OpenShiftClusterProperties.WorkerProfiles).NotTo(BeEmpty())
-		for _, profile := range *oc.OpenShiftClusterProperties.WorkerProfiles {
+		for _, profile := range *oc.WorkerProfiles {
 			Expect(profile.DiskEncryptionSetID).NotTo(BeNil())
 			Expect(*profile.DiskEncryptionSetID).NotTo(BeEmpty())
 		}
 
 		By("getting the resource group where the VM instances live in")
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 
 		By("listing all VMs")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)

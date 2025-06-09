@@ -238,7 +238,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	// If a storage account already has encryption enabled and the encrypted
 	// bool is set to false, it will still maintain the encryption on the storage account.
 	if encrypted {
-		sa.AccountProperties.Encryption = &mgmtstorage.Encryption{
+		sa.Encryption = &mgmtstorage.Encryption{
 			RequireInfrastructureEncryption: to.BoolPtr(true),
 			Services: &mgmtstorage.EncryptionServices{
 				Blob: &mgmtstorage.EncryptionService{

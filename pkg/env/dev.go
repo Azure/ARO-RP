@@ -46,14 +46,14 @@ func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) 
 		d.features[feature] = true
 	}
 
-	d.prod.clusterGenevaLoggingAccount = version.DevClusterGenevaLoggingAccount
-	d.prod.clusterGenevaLoggingConfigVersion = version.DevClusterGenevaLoggingConfigVersion
-	d.prod.clusterGenevaLoggingEnvironment = version.DevGenevaLoggingEnvironment
-	d.prod.clusterGenevaLoggingNamespace = version.DevClusterGenevaLoggingNamespace
+	d.clusterGenevaLoggingAccount = version.DevClusterGenevaLoggingAccount
+	d.clusterGenevaLoggingConfigVersion = version.DevClusterGenevaLoggingConfigVersion
+	d.clusterGenevaLoggingEnvironment = version.DevGenevaLoggingEnvironment
+	d.clusterGenevaLoggingNamespace = version.DevClusterGenevaLoggingNamespace
 
 	// ugh: run this again after RP_MODE=development has caused the feature flag
 	// to be set.
-	d.prod.ARMHelper, err = newARMHelper(ctx, log, d)
+	d.ARMHelper, err = newARMHelper(ctx, log, d)
 	if err != nil {
 		return nil, err
 	}

@@ -72,9 +72,9 @@
     sudo dnf install bzip2-devel ncurses-devel libffi-devel readline-devel sqlite-devel tk-devel xz-devel zlib-devel gcc make
     ```
 
-### Install Go 1.22
+### Install Go
 
-1. [Download Go 1.22](https://golang.org/dl)
+1. [Download Go](https://golang.org/dl) matching the version in `go.mod`.
 2. Extract the archive
 
    ```sh

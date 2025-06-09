@@ -463,8 +463,8 @@ func TestSetAnnotation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setAnnotation(&tt.node.ObjectMeta, tt.annotationKey, tt.annotationValue)
 
-			if !reflect.DeepEqual(tt.node.ObjectMeta.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}) {
-				t.Error(cmp.Diff(tt.node.ObjectMeta.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}))
+			if !reflect.DeepEqual(tt.node.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}) {
+				t.Error(cmp.Diff(tt.node.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}))
 			}
 		})
 	}

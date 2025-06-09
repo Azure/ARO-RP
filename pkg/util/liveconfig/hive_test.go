@@ -121,7 +121,7 @@ func TestProdHiveAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(adminCredsResult.CredentialResults.Kubeconfigs) != 1 {
+	if len(adminCredsResult.Kubeconfigs) != 1 {
 		t.Fatal(errors.New("invalid number of credentials returned"))
 	}
 

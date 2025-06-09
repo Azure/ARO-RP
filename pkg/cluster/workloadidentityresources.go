@@ -44,7 +44,7 @@ func (m *manager) generateWorkloadIdentityResources() (map[string]kruntime.Objec
 		return nil, err
 	} else {
 		for _, secret := range platformWorkloadIdentitySecrets {
-			key := fmt.Sprintf("%s-%s-credentials.yaml", secret.ObjectMeta.Namespace, secret.ObjectMeta.Name)
+			key := fmt.Sprintf("%s-%s-credentials.yaml", secret.Namespace, secret.Name)
 			resources[key] = secret
 		}
 	}
