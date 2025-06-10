@@ -7,12 +7,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"github.com/Azure/go-autorest/autorest/to"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"

@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/pires/go-proxyproto"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"

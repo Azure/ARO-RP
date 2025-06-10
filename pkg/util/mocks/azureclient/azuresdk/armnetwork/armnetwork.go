@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	gomock "go.uber.org/mock/gomock"
+
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 )
 
 // MockFlowLogsClientInterface is a mock of FlowLogsClientInterface interface.

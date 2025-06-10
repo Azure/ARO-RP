@@ -11,9 +11,10 @@ import (
 	"os"
 	"strings"
 
+	jwt "github.com/golang-jwt/jwt/v4"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	jwt "github.com/golang-jwt/jwt/v4"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"

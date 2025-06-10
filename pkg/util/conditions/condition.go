@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/clock"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1 "github.com/openshift/api/operator/v1"

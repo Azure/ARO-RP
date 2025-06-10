@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	gomock "go.uber.org/mock/gomock"
+
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 )
 
 // MockClient is a mock of Client interface.

@@ -7,11 +7,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"

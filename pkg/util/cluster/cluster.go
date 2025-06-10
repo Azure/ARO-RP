@@ -17,6 +17,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jongio/azidext/go/azidext"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -28,11 +34,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/jongio/azidext/go/azidext"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"

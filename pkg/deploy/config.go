@@ -11,10 +11,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"golang.org/x/crypto/ssh"
 
 	"sigs.k8s.io/yaml"
+
+	"github.com/Azure/go-autorest/autorest/to"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
