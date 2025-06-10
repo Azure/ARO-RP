@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -19,102 +18,97 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/cluster/failurediagnostics"
-	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
 type diagnosticStep struct {
-	f      func(context.Context) (interface{}, error)
-	isJSON bool
+	f func(context.Context) error
 }
 
 func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
-	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines)
+	d := failurediagnostics.NewFailureDiagnostics(
+		m.log,
+		m.env,
+		m.doc,
+		m.virtualMachines,
+		m.loadBalancers,
+		m.metrics,
+	)
 
 	s := []diagnosticStep{
-		{f: m.logClusterVersion, isJSON: true},
-		{f: m.logNodes, isJSON: false},
-		{f: m.logClusterOperators, isJSON: false},
-		{f: m.logIngressControllers, isJSON: false},
-		{f: m.logPodLogs, isJSON: false},
+		{f: m.logClusterVersion},
+		{f: m.logNodes},
+		{f: m.logClusterOperators},
+		{f: m.logIngressControllers},
+		{f: m.logPodLogs},
 	}
 
 	// only log serial consoles and Hive CD on an install, not on updates/adminUpdates
 	if runType == "install" {
-		s = append(s, diagnosticStep{f: d.LogVMSerialConsole, isJSON: false})
-		s = append(s, diagnosticStep{f: m.logClusterDeployment, isJSON: true})
+		s = append(s, diagnosticStep{f: d.LogVMSerialConsole})
+		s = append(s, diagnosticStep{f: d.LogLoadBalancers})
+		s = append(s, diagnosticStep{f: m.logClusterDeployment})
 	}
 
 	for _, f := range s {
-		o, err := f.f(ctx)
+		err := f.f(ctx)
 		if err != nil {
-			m.log.Error(err)
+			m.log.Errorf("failed to gather logs: %v", err)
 			continue
-		}
-
-		if f.isJSON {
-			b, err := json.MarshalIndent(o, "", "    ")
-			if err != nil {
-				m.log.Error(err)
-				continue
-			}
-
-			m.log.Printf("%s: %s", steps.FriendlyName(f.f), string(b))
-		} else {
-			entries, ok := o.([]interface{})
-			name := steps.FriendlyName(f.f)
-			if ok {
-				for _, i := range entries {
-					m.log.Printf("%s: %v", name, i)
-				}
-			} else {
-				m.log.Printf("%s: %v", steps.FriendlyName(f.f), o)
-			}
 		}
 	}
 }
 
-func (m *manager) logClusterDeployment(ctx context.Context) (interface{}, error) {
+func (m *manager) logClusterDeployment(ctx context.Context) error {
 	if m.doc == nil || m.hiveClusterManager == nil {
-		return nil, nil
+		m.log.Info("skipping step")
+		return nil
 	}
 
 	cd, err := m.hiveClusterManager.GetClusterDeployment(ctx, m.doc)
 	if err != nil {
-		return nil, err
+		m.log.WithError(err).Errorf("failed to get cluster deployment")
+		return err
 	}
 
 	cd.ManagedFields = nil
+	m.log.Infof("clusterdeployment %s - %s", cd.Name, structToJson(cd))
 
-	return cd, nil
+	return nil
 }
 
-func (m *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
+func (m *manager) logClusterVersion(ctx context.Context) error {
 	if m.configcli == nil {
-		return nil, nil
+		m.log.Info("skipping step")
+		return nil
 	}
 
 	cv, err := m.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		m.log.WithError(err).Errorf("failed to get clusterversion")
+		return err
 	}
 
 	cv.ManagedFields = nil
+	m.log.Infof("clusterversion %s - %s", cv.Name, structToJson(cv))
 
-	return cv, nil
+	return nil
 }
 
-func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
+func (m *manager) logNodes(ctx context.Context) error {
 	if m.kubernetescli == nil {
-		return nil, nil
+		m.log.Info("skipping step")
+		return nil
 	}
 
 	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		m.log.WithError(err).Errorf("failed to get nodes")
+		return err
 	}
 
-	lines := make([]string, 0)
-	errs := make([]error, 0)
+	if len(nodes.Items) == 0 {
+		return fmt.Errorf("no nodes found")
+	}
 
 	for _, node := range nodes.Items {
 		node.ManagedFields = nil
@@ -126,31 +120,29 @@ func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
 				break
 			}
 		}
-		lines = append(lines, fmt.Sprintf("%s - Ready: %s", node.Name, nodeReady))
 
-		json, err := json.Marshal(node)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		m.log.Info(string(json))
+		m.log.Infof("node %s - Ready: %s", node.Name, nodeReady)
+		m.log.Infof("node %s - %s", node.Name, structToJson(node))
 	}
 
-	return strings.Join(lines, "\n"), errors.Join(errs...)
+	return nil
 }
 
-func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) {
+func (m *manager) logClusterOperators(ctx context.Context) error {
 	if m.configcli == nil {
-		return nil, nil
+		m.log.Info("skipping step")
+		return nil
 	}
 
 	cos, err := m.configcli.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		m.log.WithError(err).Errorf("failed to get clusteroperators")
+		return err
 	}
 
-	lines := make([]string, 0)
-	errs := make([]error, 0)
+	if len(cos.Items) == 0 {
+		return fmt.Errorf("no cluster operators found")
+	}
 
 	for _, co := range cos.Items {
 		co.ManagedFields = nil
@@ -168,31 +160,28 @@ func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) 
 				coDegraded = condition.Status
 			}
 		}
-		lines = append(lines, fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s", co.Name, coAvailable, coProgressing, coDegraded))
-
-		json, err := json.Marshal(co)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		m.log.Info(string(json))
+		m.log.Infof("clusteroperator %s - Available: %s, Progressing: %s, Degraded: %s", co.Name, coAvailable, coProgressing, coDegraded)
+		m.log.Infof("clusteroperator %s - %s", co.Name, structToJson(co))
 	}
 
-	return strings.Join(lines, "\n"), errors.Join(errs...)
+	return nil
 }
 
-func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error) {
+func (m *manager) logIngressControllers(ctx context.Context) error {
 	if m.operatorcli == nil {
-		return nil, nil
+		m.log.Info("skipping step")
+		return nil
 	}
 
 	ics, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		m.log.WithError(err).Errorf("failed to get ingresscontrollers")
+		return err
 	}
 
-	lines := make([]string, 0)
-	errs := make([]error, 0)
+	if len(ics.Items) == 0 {
+		return fmt.Errorf("no ingress controllers found")
+	}
 
 	for _, ic := range ics.Items {
 		ic.ManagedFields = nil
@@ -210,58 +199,71 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 				icDegraded = condition.Status
 			}
 		}
-		lines = append(lines, fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s", ic.Name, icAvailable, icProgressing, icDegraded))
-
-		json, err := json.Marshal(ic)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		m.log.Info(string(json))
+		m.log.Infof("ingresscontroller %s - Available: %s, Progressing: %s, Degraded: %s", ic.Name, icAvailable, icProgressing, icDegraded)
+		m.log.Infof("ingresscontroller %s - %s", ic.Name, structToJson(ic))
 	}
 
-	return strings.Join(lines, "\n"), errors.Join(errs...)
+	return nil
 }
 
-func (m *manager) logPodLogs(ctx context.Context) (interface{}, error) {
+func (m *manager) logPodLogs(ctx context.Context) error {
 	if m.kubernetescli == nil {
-		return nil, nil
+		m.log.Info("skipping step")
+		return nil
 	}
 
 	tailLines := int64(20)
 	podLogOptions := corev1.PodLogOptions{
 		TailLines: &tailLines,
 	}
-	items := make([]interface{}, 0)
 
-	pods, err := m.kubernetescli.CoreV1().Pods("openshift-azure-operator").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	for _, i := range pods.Items {
-		items = append(items, fmt.Sprintf("pod status %s: %v", i.Name, i.Status))
-
-		req := m.kubernetescli.CoreV1().Pods("openshift-azure-operator").GetLogs(i.Name, &podLogOptions)
-		logForPod := m.log.WithField("pod", i.Name)
-		logStream, err := req.Stream(ctx)
+	for _, ns := range []string{"openshift-azure-operator", "openshift-machine-config-operator"} {
+		pods, err := m.kubernetescli.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			items = append(items, fmt.Sprintf("pod logs retrieval error for %s: %s", i.Name, err))
-			continue
+			m.log.WithError(err).Errorf("failed to list pods in namespace %s", ns)
+			return err
 		}
-		defer logStream.Close()
-
-		reader := bufio.NewReader(logStream)
-		for {
-			line, err := reader.ReadString('\n')
-			logForPod.Info(strings.TrimSpace(line))
-			if err == io.EOF {
-				break
+		for _, i := range pods.Items {
+			podName := fmt.Sprintf("%s/%s", i.Namespace, i.Name)
+			l := m.log.WithField("pod", podName)
+			l.Infof("pod %s - phase=%s reason=%s message=%s", podName, i.Status.Phase, i.Status.Reason, i.Status.Message)
+			for _, condition := range i.Status.Conditions {
+				l.Infof("pod %s - Condition %s=%s reason=%s transition=%s message=%s", podName, condition.Type, condition.Status, condition.Reason, condition.LastTransitionTime, condition.Message)
 			}
+			for _, containerStatus := range i.Status.ContainerStatuses {
+				l.Infof("pod %s - Container %s started=%t ready=%t restarts=%d state=%s", podName, containerStatus.Name, *containerStatus.Started, containerStatus.Ready, containerStatus.RestartCount, structToJson(containerStatus.State))
+			}
+
+			req := m.kubernetescli.CoreV1().Pods(ns).GetLogs(i.Name, &podLogOptions)
+			logStream, err := req.Stream(ctx)
 			if err != nil {
-				m.log.Errorf("pod logs reading error for %s: %s", i.Name, err)
-				break
+				m.log.Infof("pod logs retrieval error for %s: %s", i.Name, err)
+				continue
+			}
+			defer logStream.Close()
+
+			reader := bufio.NewReader(logStream)
+			for {
+				line, err := reader.ReadString('\n')
+				l.Info(strings.TrimSpace(line))
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					l.Infof("pod logs reading error for %s/%s", i.Namespace, i.Name)
+					break
+				}
 			}
 		}
 	}
-	return items, nil
+	return nil
+}
+
+func structToJson(v any) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprintf("%s", err)
+	}
+	// Replace double quotes with single quotes
+	return strings.ReplaceAll(string(b), "\"", "'")
 }
