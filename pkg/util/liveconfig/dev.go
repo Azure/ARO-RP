@@ -6,6 +6,7 @@ package liveconfig
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"k8s.io/client-go/rest"
@@ -55,6 +56,7 @@ func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, erro
 func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
 	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
+		log.Println("InstallViaHive is empty in Dev")
 		return true, nil
 	}
 	return false, nil
@@ -67,6 +69,7 @@ func (d *dev) DefaultInstallerPullSpecOverride(ctx context.Context) string {
 func (p *dev) AdoptByHive(ctx context.Context) (bool, error) {
 	adopt := os.Getenv(hiveAdoptEnableEnvVar)
 	if adopt != "" {
+		log.Println("AdoptByHive is empty in Prod")
 		return true, nil
 	}
 	return false, nil
