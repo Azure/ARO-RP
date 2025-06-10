@@ -133,6 +133,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 		steps.Action(m.migrateStorageAccounts),
 		steps.Action(m.fixSSH),
+		steps.Action(m.fixInternalLoadBalancerZones),
 		// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 
 	}
@@ -374,7 +375,10 @@ func (m *manager) bootstrap() []steps.Step {
 		)
 	}
 
-	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+	s = append(s,
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateZones),
+	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,

@@ -369,6 +369,8 @@ type LoadBalancerProfile struct {
 	OutboundIPs []OutboundIP `json:"outboundIps,omitempty"`
 	// The desired outbound IP Prefix resources for the cluster load balancer.
 	OutboundIPPrefixes []OutboundIPPrefix `json:"outboundIpPrefixes,omitempty"`
+	// The desired availability zones for the outbound IP
+	OutboundIPAvailabilityZones []string `json:"outboundIpAvailabilityZones,omitempty"`
 	// The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.
 	AllocatedOutboundPorts *int `json:"allocatedOutboundPorts,omitempty"`
 }
@@ -403,6 +405,7 @@ type NetworkProfile struct {
 	GatewayPrivateLinkID       string               `json:"gatewayPrivateLinkId,omitempty"`
 	PreconfiguredNSG           PreconfiguredNSG     `json:"preconfiguredNSG,omitempty"`
 	LoadBalancerProfile        *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
+	InternalLoadBalancerZones  []string             `json:"zones,omitempty"`
 }
 
 // IP address ranges internally used by ARO
@@ -440,6 +443,8 @@ type MasterProfile struct {
 	SubnetID            string           `json:"subnetId,omitempty"`
 	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
+	// Availability Zones that the control plane is deployed in
+	Zones []string `json:"zones,omitempty"`
 }
 
 // VMSize represents a VM size
@@ -751,6 +756,8 @@ type WorkerProfile struct {
 	Count               int              `json:"count,omitempty"`
 	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
+	// []string for creation, [1]string when fetched from API server
+	Zones []string `json:"zones,omitempty"`
 }
 
 // GetEnrichedWorkerProfiles returns WorkerProfilesStatus if not nil, otherwise WorkerProfiles
@@ -825,7 +832,7 @@ type ArchitectureVersion int
 const (
 	// ArchitectureVersionV1: 4.3, 4.4: 2 load balancers, 2 NSGs
 	ArchitectureVersionV1 ArchitectureVersion = iota
-	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG
+	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG. Non-zonal + zonal frontend IP
 	ArchitectureVersionV2
 )
 

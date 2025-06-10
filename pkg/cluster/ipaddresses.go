@@ -215,13 +215,23 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
 	}
 
-	lb, err := m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+	lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, lbName, nil)
 	if err != nil {
 		return err
 	}
 
+	frontendIPs := map[string]string{}
+	for _, fip := range lb.Properties.FrontendIPConfigurations {
+		frontendIPs[*fip.Name] = *fip.Properties.PrivateIPAddress
+	}
+
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+		// Handle architecture v2 clusters with zonal frontend IPs
+		if ip, ok := frontendIPs["internal-lb-ip-zonal-v4"]; ok {
+			doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = ip
+		} else {
+			doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *lb.Properties.FrontendIPConfigurations[0].Properties.PrivateIPAddress
+		}
 		return nil
 	})
 	return err

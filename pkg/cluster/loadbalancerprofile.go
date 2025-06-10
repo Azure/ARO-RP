@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -64,6 +65,16 @@ func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb sdknetwork.
 	}
 
 	return err
+}
+
+func (m *manager) outboundIPZones() []*string {
+	zones := []*string{}
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones != nil {
+		for _, z := range m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPAvailabilityZones {
+			zones = append(zones, to.StringPtr(z))
+		}
+	}
+	return zones
 }
 
 func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb sdknetwork.LoadBalancer) error {
@@ -376,7 +387,7 @@ func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPR
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	resourceID := fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, name)
 	m.log.Infof("creating public IP Address: %s", name)
-	publicIPAddress := newPublicIPAddress(name, resourceID, m.doc.OpenShiftCluster.Location)
+	publicIPAddress := newPublicIPAddress(name, resourceID, m.doc.OpenShiftCluster.Location, m.outboundIPZones())
 
 	err := m.armPublicIPAddresses.CreateOrUpdateAndWait(ctx, resourceGroupName, name, publicIPAddress, nil)
 	ch <- createIPResult{
@@ -421,11 +432,12 @@ func (m *manager) patchEffectiveOutboundIPs(ctx context.Context, outboundIPs []a
 	return nil
 }
 
-func newPublicIPAddress(name, resourceID, location string) sdknetwork.PublicIPAddress {
+func newPublicIPAddress(name, resourceID, location string, zones []*string) sdknetwork.PublicIPAddress {
 	return sdknetwork.PublicIPAddress{
 		Name:     &name,
 		ID:       &resourceID,
 		Location: &location,
+		Zones:    zones,
 		Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
 			PublicIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodStatic),
 			PublicIPAddressVersion:   pointerutils.ToPtr(sdknetwork.IPVersionIPv4),
