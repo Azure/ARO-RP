@@ -47,7 +47,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 
 	for _, tt := range []struct {
 		name           string
-		expectedOutput interface{}
+		expectedOutput []string
 		mock           func(vmClient *mock_compute.MockVirtualMachinesClient)
 		expectedLogs   []map[string]types.GomegaMatcher
 	}{
@@ -57,7 +57,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return(nil, errors.New("vm explod"))
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
+			expectedOutput: []string{
 				"vm listing error: vm explod",
 			},
 		},
@@ -67,7 +67,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{}, nil)
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
+			expectedOutput: []string{
 				"no VMs found",
 			},
 		},
@@ -93,7 +93,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				).Times(1).Return(errors.New("explod"))
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
+			expectedOutput: []string{
 				`vm somename: {"location":"eastus","properties":{}}`,
 				"vm boot diagnostics retrieval error for somename: explod",
 			},
@@ -130,7 +130,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []string{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -166,7 +166,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []string{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -191,7 +191,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				})
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
+			expectedOutput: []string{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -274,7 +274,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []string{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
