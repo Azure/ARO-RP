@@ -544,7 +544,7 @@ def aro_update(cmd,
                 oc_update.service_principal_profile.client_id = client_id
 
     if mi_user_assigned is not None:
-        oc_update.ManagedServiceIdentity = openshiftcluster.ManagedServiceIdentity(
+        oc_update.identity = openshiftcluster.ManagedServiceIdentity(
             type='UserAssigned',
             user_assigned_identities={mi_user_assigned: {}}
         )
