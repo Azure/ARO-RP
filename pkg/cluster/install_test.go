@@ -145,6 +145,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogLoadBalancers: networkclient missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterDeployment: null`),
 				},
 			},
@@ -236,6 +240,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogVMSerialConsole: vmclient missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogLoadBalancers: networkclient missing`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
