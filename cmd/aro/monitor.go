@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
@@ -103,7 +104,13 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbg, m, clusterm, liveConfig, _env)
+	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, log, _env)
+	if err != nil {
+		log.Errorf("hiveClusterManager error: %d", err)
+		return err
+	}
+
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbg, m, clusterm, liveConfig, _env, hiveClusterManager)
 
 	return mon.Run(ctx)
 }

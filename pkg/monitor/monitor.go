@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
@@ -52,16 +53,17 @@ type monitor struct {
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
 
-	liveConfig       liveconfig.Manager
-	hiveShardConfigs map[int]*rest.Config
-	shardMutex       sync.RWMutex
+	liveConfig         liveconfig.Manager
+	hiveShardConfigs   map[int]*rest.Config
+	shardMutex         sync.RWMutex
+	hiveClusterManager hive.ClusterManager
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager, e env.Interface) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager, e env.Interface, hiveClusterManager hive.ClusterManager) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -82,6 +84,8 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		liveConfig: liveConfig,
 
 		hiveShardConfigs: map[int]*rest.Config{},
+
+		hiveClusterManager: hiveClusterManager,
 	}
 }
 

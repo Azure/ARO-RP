@@ -6,6 +6,7 @@ package liveconfig
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -99,6 +100,7 @@ func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
 	// TODO: Replace with RP Live Service Config (KeyVault)
 	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
+		log.Println("InstallViaHive is empty in Prod")
 		return true, nil
 	}
 	return false, nil
@@ -114,6 +116,7 @@ func (p *prod) AdoptByHive(ctx context.Context) (bool, error) {
 	// TODO: Replace with RP Live Service Config (KeyVault)
 	adopt := os.Getenv(hiveAdoptEnableEnvVar)
 	if adopt != "" {
+		log.Println("AdoptByHive is empty in Prod")
 		return true, nil
 	}
 	return false, nil
