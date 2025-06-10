@@ -211,6 +211,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	for _, f := range []func(context.Context) error{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
+		mon.emitClusterSync,
 		mon.emitNSGReconciliation,
 		mon.emitClusterOperatorConditions,
 		mon.emitClusterOperatorVersions,
@@ -229,7 +230,6 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitJobConditions,
 		mon.emitSummary,
 		mon.emitHiveRegistrationStatus,
-		mon.emitClusterSync,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitMaintenanceState,
 		mon.emitMDSDCertificateExpiry,

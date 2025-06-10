@@ -20,12 +20,15 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 
 	clusterSync, err := mon.hiveClusterManager.GetClusterSync(ctx, mon.doc)
 	if err != nil {
+		mon.log.Errorf("Error in getting the cluster wide proxy: %v", err)
 		return err
 	}
 	if clusterSync == nil {
+		mon.log.Info("clusterSync is NIL")
 		return nil
 	} else {
 		if clusterSync.Status.SyncSets == nil {
+			mon.log.Info("clusterSync.SyncSets is NIL")
 			return nil
 		} else {
 			for _, s := range clusterSync.Status.SyncSets {
@@ -48,6 +51,7 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 			}
 		}
 		if clusterSync.Status.SelectorSyncSets == nil {
+			mon.log.Info("clusterSync.SelectorSyncSets is NIL")
 			return nil
 		} else {
 			for _, s := range clusterSync.Status.SelectorSyncSets {
@@ -69,6 +73,7 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 			}
 		}
 	}
+	mon.log.Info("Syncset and SelectorSyncet is NIL")
 	return nil
 }
 

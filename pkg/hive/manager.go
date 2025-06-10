@@ -87,7 +87,7 @@ func NewFromEnvCLusterManager(ctx context.Context, log *logrus.Entry, env env.In
 		return nil, err
 	}
 	if !adoptByHive && !installViaHive {
-		log.Infof("hive is disabled, skipping creation of ClusterManager")
+		log.Infof("hive is disabled, skipping creation of ClusterManager adoptByHive: %t installViaHive: %t", adoptByHive, installViaHive)
 		return nil, nil
 	}
 	hiveShard := 1
