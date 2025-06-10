@@ -159,10 +159,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 }
 
 func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
-	if hiveRestConfig == nil {
-		return nil, nil
-	}
-
 	// lazy discovery will not attempt to reach out to the apiserver immediately
 	mapper, err := apiutil.NewDynamicRESTMapper(hiveRestConfig, apiutil.WithLazyDiscovery)
 	if err != nil {
