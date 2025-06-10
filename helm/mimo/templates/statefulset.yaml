@@ -37,6 +37,19 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
+        - name: {{ .Chart.Name }}-mdm
+          securityContext:
+            {{- toYaml .Values.mdm.securityContext | nindent 12 }}
+          {{- with .Values.mdm.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command: /usr/sbin/MetricsExtension
+          args: ["-CertFile", "$(MDM_CERTFILE)", "-FrontEndUrl", "$(MDM_FRONTENDURL)", "-Logger", "$(MDM_LOGGER)", "-LogLevel", "$(MDM_LOGLEVEL)", "-PrivateKeyFile", "$(MDM_PRIVATEKEYFILE)", "-SourceEnvironment", "$(MDM_SOURCEENVIRONMENT)", "-SourceRole", "$(MDM_SOURCEROLE)", "-SourceRoleInstance", "$(MDM_SOURCEROLEINSTANCE)"]
+          image: "{{ .Values.mdm.image }}"
+          volumeMounts:
+            - name: statsd-socket
+              mountPath: /var/run
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
@@ -57,6 +70,8 @@ spec:
           {{- with .Values.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
+            - name: statsd-socket
+              mountPath: /var/run
           {{- end }}
           {{- with .Values.env }}
           env:
@@ -65,6 +80,8 @@ spec:
       {{- with .Values.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
+        - name: statsd-volume
+          emptyDir: {}
       {{- end }}
       {{- with .Values.volumeClaimTemplates }}
       volumeClaimTemplates:

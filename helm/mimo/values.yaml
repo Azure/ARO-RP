@@ -121,6 +121,10 @@ mimo:
   command: ["aro"]
   args: ["mimo-actuator"]
 
+mdm:
+  tenantId: ""
+  keyvaultName: ""
+
 configmap:
   azure_fp_client_id: ""
   azure_arm_client_id: ""
@@ -137,8 +141,8 @@ configmap:
   rp_features: ""
   msi_rp_endpoint: ""
 
-  mdm_account: ""
-  mdm_namespace: ""
+  mdm_account: "AzureRedHatOpenShiftRP"
+  mdm_namespace: "ARORPLogs"
   mdm_statsd_socket: ""
 
   cluster_mdm_environment: ""
@@ -340,4 +344,25 @@ env:
       configMapKeyRef:
         name: mimo-config
         key: azure_resource_group
+  
 
+mdm:
+  securityContext: {}
+  image: linuxgeneva-microsoft.azurecr.io/genevamdm:master_20211120.1
+  env:
+    - name: MDM_CERTFILE
+      value: /etc/mdm.pem
+    - name: MDM_FRONTENDURL
+      value: https://global.ppe.microsoftmetrics.com/
+    - name: MDM_LOGGER
+      value: Console
+    - name: MDM_LOGLEVEL
+      value: DEBUG
+    - name: MDM_PRIVATEKEYFILE
+      value: /etc/mdm.pem
+    - name: MDM_SOURCEENVIRONMENT
+      value: 
+    - name: MDM_SOURCEROLE
+      value: 
+    - name: MDM_SOURCEROLEINSTANCE
+      value: $HOSTNAME
