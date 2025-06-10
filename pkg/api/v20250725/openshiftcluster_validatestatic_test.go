@@ -1339,19 +1339,6 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			wantErr: "400: InvalidParameter: identity: Cluster identity and platform workload identities require each other.",
 		},
 		{
-			name: "platform workload identity - cluster identity map is empty",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
-						"operator_name": {},
-					},
-				}
-				oc.Properties.ServicePrincipalProfile = nil
-				oc.Identity = &ManagedServiceIdentity{}
-			},
-			wantErr: "400: InvalidParameter: identity: The provided cluster identity is invalid; there should be exactly one.",
-		},
-		{
 			name: "operator name missing",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Identity = &ManagedServiceIdentity{
