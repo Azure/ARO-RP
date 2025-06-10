@@ -284,7 +284,15 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	var monitors []monitoring.Monitor
 	var wg sync.WaitGroup
 
-	hiveClusterManager, _ := hive.NewFromConfigClusterManager(log, mon.env, hiveRestConfig)
+	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, log, mon.env)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	if hiveClusterManager == nil {
+		log.Info("skipping: no hive cluster manager")
+	}
 
 	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
 
