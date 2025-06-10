@@ -48,6 +48,8 @@ func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 // succeeded in dequeuing anything - if this is false, the caller should sleep
 // before calling again
 func (ocb *openShiftClusterBackend) try(ctx context.Context, monitorDeleteWaitTimeSec int) (bool, error) {
+	// catch any panic in this cluster worker so the whole backend keeps running
+	defer recover.Panic(ocb.baseLog)
 	doc, err := ocb.dbOpenShiftClusters.Dequeue(ctx)
 	if err != nil || doc == nil {
 		return false, err
