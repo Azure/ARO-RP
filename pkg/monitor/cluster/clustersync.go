@@ -16,16 +16,22 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 		// TODO(hive): remove this once we have Hive everywhere.
 		mon.log.Info("skipping: no hive cluster manager")
 		return nil
+	} else {
+		mon.log.Infof("on.hiveClusterManager %v:", mon.hiveClusterManager)
 	}
+	mon.log.Infof("mon.hourlyRun %t:", mon.hourlyRun)
 
 	clusterSync, err := mon.hiveClusterManager.GetClusterSync(ctx, mon.doc)
 	if err != nil {
+		mon.log.Errorf("Error in getting the clustersync data %v", err)
 		return err
 	}
 	if clusterSync == nil {
+		mon.log.Info("clusterSync is NIL")
 		return nil
 	} else {
 		if clusterSync.Status.SyncSets == nil {
+			mon.log.Info("clusterSync.SyncSets is NIL")
 			return nil
 		} else {
 			for _, s := range clusterSync.Status.SyncSets {
@@ -34,7 +40,7 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 					"name":     s.Name,
 					"result":   string(s.Result),
 				})
-
+				mon.log.Info(s.Name)
 				if mon.hourlyRun {
 					mon.log.WithFields(logrus.Fields{
 						"syncType":           "SyncSets",
@@ -48,6 +54,7 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 			}
 		}
 		if clusterSync.Status.SelectorSyncSets == nil {
+			mon.log.Info("clusterSync.SelectorSyncSets is NIL")
 			return nil
 		} else {
 			for _, s := range clusterSync.Status.SelectorSyncSets {
@@ -56,6 +63,7 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 					"name":     s.Name,
 					"result":   string(s.Result),
 				})
+				mon.log.Info(s.Name)
 				if mon.hourlyRun {
 					mon.log.WithFields(logrus.Fields{
 						"syncType":           "SelectorSyncSets",
@@ -69,6 +77,7 @@ func (mon *Monitor) emitClusterSync(ctx context.Context) error {
 			}
 		}
 	}
+	mon.log.Info("Syncset and SelectorSyncet is NIL")
 	return nil
 }
 
