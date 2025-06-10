@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	runtime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	azcertificates "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockClient is a mock of Client interface.

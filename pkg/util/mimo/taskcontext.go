@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"

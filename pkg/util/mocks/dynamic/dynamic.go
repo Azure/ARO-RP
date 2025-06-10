@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	gomock "go.uber.org/mock/gomock"
+
+	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
 	armauthorization "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"

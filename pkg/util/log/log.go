@@ -11,9 +11,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/coreos/go-systemd/v22/journal"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
