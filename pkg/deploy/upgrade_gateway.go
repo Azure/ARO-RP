@@ -79,10 +79,8 @@ func (d *deployer) gatewayRemoveOldScaleset(ctx context.Context, vmssName string
 
 	d.log.Printf("stopping scaleset %s", vmssName)
 	errors := make(chan error, len(scalesetVMs))
-	//var healthyVMs []mgmtcompute.VirtualMachineScaleSetVM
 	for _, vm := range scalesetVMs {
 		if d.isVMInstanceHealthy(ctx, d.config.GatewayResourceGroupName, vmssName, *vm.InstanceID) {
-			//healthyVMs = append(healthyVMs, vm)
 			d.log.Printf("stopping gateway service on %s", *vm.Name)
 			go func(id string) {
 				errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.GatewayResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
