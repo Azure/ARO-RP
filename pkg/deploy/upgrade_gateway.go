@@ -79,20 +79,29 @@ func (d *deployer) gatewayRemoveOldScaleset(ctx context.Context, vmssName string
 
 	d.log.Printf("stopping scaleset %s", vmssName)
 	errors := make(chan error, len(scalesetVMs))
+	//var healthyVMs []mgmtcompute.VirtualMachineScaleSetVM
 	for _, vm := range scalesetVMs {
-		go func(id string) {
-			errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.GatewayResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
-				CommandID: to.StringPtr("RunShellScript"),
-				Script:    &[]string{"systemctl stop aro-gateway"},
-			})
-		}(*vm.InstanceID) // https://golang.org/doc/faq#closures_and_goroutines
+		if d.isVMInstanceHealthy(ctx, d.config.GatewayResourceGroupName, vmssName, *vm.InstanceID) {
+			//healthyVMs = append(healthyVMs, vm)
+			d.log.Printf("stopping gateway service on %s", *vm.Name)
+			go func(id string) {
+				errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.GatewayResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
+					CommandID: to.StringPtr("RunShellScript"),
+					Script:    &[]string{"systemctl stop aro-gateway"},
+				})
+			}(*vm.InstanceID) // https://golang.org/doc/faq#closures_and_goroutines
+		}
 	}
 
 	d.log.Print("waiting for instances to stop")
 	for range scalesetVMs {
-		err := <-errors
-		if err != nil {
-			return err
+		select {
+		case err := <-errors:
+			if err != nil {
+				return err
+			}
+		case <-time.After(10 * time.Second):
+			continue
 		}
 	}
 
