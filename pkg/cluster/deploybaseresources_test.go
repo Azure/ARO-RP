@@ -1463,7 +1463,7 @@ func TestCreateOIDC(t *testing.T) {
 			},
 		},
 	}
-	testOIDCKeyBitSize := 256
+	testOIDCKeyBitSize := 2048
 	uploadResponse := azblob.UploadBufferResponse{}
 
 	for _, tt := range []struct {
