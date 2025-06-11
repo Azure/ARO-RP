@@ -63,7 +63,7 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", "%s", err.Error())
 	}
 
 	result.fn = client.listNextResults

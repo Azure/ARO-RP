@@ -175,7 +175,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 func getTestKeyData(t *testing.T) ([]byte, []byte, []byte) {
 	t.Helper()
 
-	testKeyBitSize := 256
+	testKeyBitSize := 2048
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
