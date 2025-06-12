@@ -5,6 +5,7 @@ package arm
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -74,7 +75,7 @@ func TestDeployARMTemplate(t *testing.T) {
 					Return(activeErr)
 				dc.EXPECT().
 					Wait(ctx, resourceGroup, deploymentName).
-					Return(wait.ErrWaitTimeout)
+					Return(wait.ErrorInterrupted(errors.New("timed out waiting for the condition")))
 			},
 			wantErr: "timed out waiting for the condition",
 		},

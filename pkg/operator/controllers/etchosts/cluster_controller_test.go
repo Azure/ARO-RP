@@ -352,7 +352,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 		}
 		var hook = logtest.NewLocal(logger)
 
-		clientBuilder := ctrlfake.NewClientBuilder().WithObjects(tt.objects...)
+		clientBuilder := ctrlfake.NewClientBuilder().WithObjects(tt.objects...).WithStatusSubresource(tt.objects...)
 
 		r := &EtcHostsClusterReconciler{
 			AROController: base.AROController{

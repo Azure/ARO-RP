@@ -355,7 +355,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 	// NSG since the inner loop is tolerant of that, and since we are attaching
 	// the same NSG the only allowed failure case is when the NSG cannot be
 	// attached to begin with, so it shouldn't happen in practice.
-	_ = wait.PollImmediateUntil(pollInterval, func() (bool, error) {
+	_ = wait.PollUntilContextCancel(timeoutCtx, pollInterval, true, func(ctx context.Context) (bool, error) {
 		var c bool
 		c, innerErr = func() (bool, error) {
 			for _, subnetID := range []string{
@@ -412,9 +412,8 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 			}
 			return true, nil
 		}()
-
 		return c, innerErr
-	}, timeoutCtx.Done())
+	})
 
 	return innerErr
 }
