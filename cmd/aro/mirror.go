@@ -16,8 +16,12 @@ import (
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -41,7 +45,6 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 
 func mirror(ctx context.Context, log *logrus.Entry) error {
 	err := env.ValidateVars(
-		"DST_AUTH",
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",
 		"SRC_AUTH_REDHAT")
@@ -50,19 +53,55 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	env, err := env.NewCoreForCI(ctx, log)
-	if err != nil {
-		return err
+	var _env env.Core
+	var tokenCredential azcore.TokenCredential
+	if os.Getenv("AZURE_EV2") != "" {
+		var err error
+		_env, err = env.NewCore(ctx, log, env.COMPONENT_MIRROR)
+		if err != nil {
+			return err
+		}
+		options := _env.Environment().ManagedIdentityCredentialOptions()
+		// use specific user-assigned managed identity if set
+		if os.Getenv("AZURE_CLIENT_ID") != "" {
+			options.ID = azidentity.ClientID(os.Getenv("AZURE_CLIENT_ID"))
+		}
+		tokenCredential, err = azidentity.NewManagedIdentityCredential(options)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := env.ValidateVars(
+			"AZURE_CLIENT_ID",
+			"AZURE_CLIENT_SECRET",
+			"AZURE_SUBSCRIPTION_ID",
+			"AZURE_TENANT_ID")
+
+		if err != nil {
+			return err
+		}
+
+		_env, err = env.NewCoreForCI(ctx, log)
+		if err != nil {
+			return err
+		}
+		options := _env.Environment().EnvironmentCredentialOptions()
+		tokenCredential, err = azidentity.NewEnvironmentCredential(options)
+		if err != nil {
+			return err
+		}
 	}
+	env := _env
 
 	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
 
-	dstAuth, err := getAuth("DST_AUTH")
+	dstAcr := os.Getenv("DST_ACR_NAME") + acrDomainSuffix
+	acrAuthenticationClient, err := azcontainerregistry.NewAuthenticationClient(fmt.Sprintf("https://%s", dstAcr), env.Environment().AzureClientOptions())
 	if err != nil {
 		return err
 	}
 
-	dstAcr := os.Getenv("DST_ACR_NAME")
+	acrauth := pkgmirror.NewAcrAuth(dstAcr, log, env, tokenCredential, acrAuthenticationClient)
 
 	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {
@@ -122,14 +161,18 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	} {
 		l := log.WithField("payload", ref)
 		startTime := time.Now()
-		l.Debugf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
+		l.Debugf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr, ref))
 
 		srcAuth := srcAuthRedhat
 		if strings.Index(ref, "quay.io") == 0 {
 			srcAuth = srcAuthQuay
 		}
 
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
+		dstAuth, err := acrauth.Get(ctx)
+		if err != nil {
+			return err
+		}
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr, ref), ref, dstAuth, srcAuth)
 		l.WithError(err).WithField("duration", time.Since(startTime)).Printf("mirroring completed")
 		if err != nil {
 			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s: %s", ref, err))
@@ -140,7 +183,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
 		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 14))
+		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 12))
 		if err != nil {
 			return err
 		}
@@ -177,7 +220,11 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			continue
 		}
 		l.Debugf("mirroring release")
-		c, err := pkgmirror.Mirror(ctx, l, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		dstAuth, err := acrauth.Get(ctx)
+		if err != nil {
+			return err
+		}
+		c, err := pkgmirror.Mirror(ctx, l, dstAcr, release.Payload, dstAuth, srcAuthQuay)
 		imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s (%d)", release.Version, c))
 		if err != nil {
 			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("Error on %s: %s", release, err))
