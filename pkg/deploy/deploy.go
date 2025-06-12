@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -27,7 +28,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 )
 
@@ -55,7 +55,7 @@ type deployer struct {
 	groups                       features.ResourceGroupsClient
 	userassignedidentities       msi.UserAssignedIdentitiesClient
 	providers                    features.ProvidersClient
-	publicipaddresses            network.PublicIPAddressesClient
+	publicipaddresses            armnetwork.PublicIPAddressesClient
 	resourceskus                 compute.ResourceSkusClient
 	roleassignments              authorization.RoleAssignmentsClient
 	vmss                         compute.VirtualMachineScaleSetsClient
@@ -105,6 +105,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		*into = client
 	}
 
+	publicIpAddressesClient, err := armnetwork.NewPublicIPAddressesClient(config.SubscriptionID, tokenCredential, _env.Environment().ArmClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate publicipaddresses client: %w", err)
+	}
+
 	serviceUrl := fmt.Sprintf("https://%s.blob.%s", *config.Configuration.RPVersionStorageAccountName, _env.Environment().StorageEndpointSuffix)
 	blobsClient, err := azblob.NewBlobsClientUsingEntra(serviceUrl, tokenCredential, _env.Environment().ArmClientOptions())
 	if err != nil {
@@ -126,7 +131,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		providers:                    features.NewProvidersClient(_env.Environment(), config.SubscriptionID, authorizer),
 		roleassignments:              authorization.NewRoleAssignmentsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		resourceskus:                 compute.NewResourceSkusClient(_env.Environment(), config.SubscriptionID, authorizer),
-		publicipaddresses:            network.NewPublicIPAddressesClient(_env.Environment(), config.SubscriptionID, authorizer),
+		publicipaddresses:            publicIpAddressesClient,
 		vmss:                         vmssClient,
 		vmssvms:                      compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		zones:                        dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
