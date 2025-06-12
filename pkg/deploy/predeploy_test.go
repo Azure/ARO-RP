@@ -74,6 +74,9 @@ var (
 			},
 		},
 	}
+	nilVMHealth = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
+		VMHealth: nil,
+	}
 
 	newSecretBundle = azsecretssdk.GetSecretResponse{
 		Secret: azsecretssdk.Secret{
@@ -1763,6 +1766,16 @@ func TestIsVMInstanceHealthy(t *testing.T) {
 			},
 			mocks:    []mock{getInstanceViewMock(healthyVMSS, nil)},
 			wantBool: true,
+		},
+		{
+			name: "return false if GetInstanceView has nil VMHealth field",
+			testParams: testParams{
+				resourceGroup: rpRGName,
+				vmssName:      vmssName,
+				instanceID:    instanceID,
+			},
+			mocks:    []mock{getInstanceViewMock(nilVMHealth, nil)},
+			wantBool: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

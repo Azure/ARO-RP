@@ -577,7 +577,7 @@ func (d *deployer) waitForReadiness(ctx context.Context, vmssName string, vmInst
 
 func (d *deployer) isVMInstanceHealthy(ctx context.Context, resourceGroupName string, vmssName string, vmInstanceID string) bool {
 	r, err := d.vmssvms.GetInstanceView(ctx, resourceGroupName, vmssName, vmInstanceID)
-	instanceUnhealthy := r.VMHealth != nil && r.VMHealth.Status != nil && r.VMHealth.Status.Code != nil && *r.VMHealth.Status.Code != "HealthState/healthy"
+	instanceUnhealthy := r.VMHealth == nil || r.VMHealth.Status == nil || r.VMHealth.Status.Code == nil || *r.VMHealth.Status.Code != "HealthState/healthy"
 	if err != nil || instanceUnhealthy {
 		d.log.Printf("instance %s is unhealthy", vmInstanceID)
 		return false
