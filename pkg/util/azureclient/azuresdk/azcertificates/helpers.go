@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
@@ -102,7 +103,7 @@ func IsCertificateNotFoundError(err error) bool {
 
 // WaitForCertificateOperation wraps the certificates client to poll for an operation to finish,
 // as the Track 2 client still does not support runtime.Poller.
-func WaitForCertificateOperation(parent context.Context, operation func(ctx context.Context) (azcertificates.CertificateOperation, error)) error {
+func WaitForCertificateOperation(parent context.Context, log *logrus.Entry, operation func(ctx context.Context) (azcertificates.CertificateOperation, error)) error {
 	ctx, cancel := context.WithTimeout(parent, 15*time.Minute)
 	defer cancel()
 
@@ -112,14 +113,25 @@ func WaitForCertificateOperation(parent context.Context, operation func(ctx cont
 			return false, err
 		}
 
-		return checkOperation(op)
+		return checkOperation(op, log)
 	}, ctx.Done())
 	return err
 }
 
-func checkOperation(op azcertificates.CertificateOperation) (bool, error) {
+var errorInfoContains = func(e *azcertificates.ErrorInfo, substr string) bool {
+	return e != nil && strings.Contains(e.Error(), substr)
+}
+
+func checkOperation(op azcertificates.CertificateOperation, log *logrus.Entry) (bool, error) {
 	if op.Status == nil {
 		return false, fmt.Errorf("operation status is nil")
+	}
+
+	considerFailure := func() (bool, error) {
+		if op.StatusDetails != nil {
+			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, op.Error)
+		}
+		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, op.Error)
 	}
 	switch *op.Status {
 	case "inProgress":
@@ -128,10 +140,18 @@ func checkOperation(op azcertificates.CertificateOperation) (bool, error) {
 	case "completed":
 		return true, nil
 
-	default:
-		if op.StatusDetails != nil {
-			return false, fmt.Errorf("certificateOperation %s (%s): Error %w", *op.Status, *op.StatusDetails, op.Error)
+	case "failed":
+		// consider failed operation that can retry as not an error, but as if inProgress
+		if errorInfoContains(op.Error, "[Status:FailedCanRetry]") {
+			if op.StatusDetails != nil {
+				log.Warningf("certificateOperation FailedCanRetry %s (%s): Error %v", *op.Status, *op.StatusDetails, op.Error)
+			}
+			log.Warningf("certificateOperation FailedCanRetry %s: Error %v", *op.Status, op.Error)
+			return false, nil
 		}
-		return false, fmt.Errorf("certificateOperation %s: Error %w", *op.Status, op.Error)
+		return considerFailure()
+
+	default:
+		return considerFailure()
 	}
 }
