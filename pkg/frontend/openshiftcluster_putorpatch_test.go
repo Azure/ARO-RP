@@ -2253,6 +2253,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	}
 
 	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	mockSubID := "00000000-0000-0000-0000-000000000000"
 
 	type test struct {
 		name                    string
@@ -2270,6 +2271,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		wantResponse            *v20240812preview.OpenShiftCluster
 		wantAsync               bool
 		wantError               string
+		headers                 map[string]string
 	}
 
 	for _, tt := range []*test{
@@ -3352,6 +3354,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								},
 							},
 						},
+						Identity: &api.ManagedServiceIdentity{},
 					},
 				})
 			},
@@ -3448,6 +3451,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 							},
 						},
+						Identity: &api.ManagedServiceIdentity{
+							TenantID:               "00000000-0000-0000-0000-000000000000",
+							UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+							IdentityURL:            "https://bogus.identity.azure.net/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/Microsoft.ApiManagement/service/test/credentials?tid=00000000-0000-0000-0000-000000000000&oid=00000000-0000-0000-0000-000000000000&aid=00000000-0000-0000-0000-000000000000",
+						},
 					},
 				})
 			},
@@ -3534,6 +3542,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 						UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 					},
+				},
+				Identity: &v20240812preview.ManagedServiceIdentity{
+					TenantID: "00000000-0000-0000-0000-000000000000",
 				},
 			},
 		},
@@ -3629,6 +3640,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								},
 							},
 						},
+						Identity: &api.ManagedServiceIdentity{
+							TenantID: "00000000-0000-0000-0000-000000000000",
+						},
 					},
 				})
 			},
@@ -3719,6 +3733,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								},
 							},
 						},
+						Identity: &api.ManagedServiceIdentity{
+							TenantID:               "00000000-0000-0000-0000-000000000000",
+							UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+							IdentityURL:            "https://bogus.identity.azure.net/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/Microsoft.ApiManagement/service/test/credentials?tid=00000000-0000-0000-0000-000000000000&oid=00000000-0000-0000-0000-000000000000&aid=00000000-0000-0000-0000-000000000000",
+						},
 					},
 				})
 			},
@@ -3799,6 +3818,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 						},
 					},
+				},
+				Identity: &v20240812preview.ManagedServiceIdentity{
+					TenantID: "00000000-0000-0000-0000-000000000000",
 				},
 			},
 		},
@@ -4298,6 +4320,314 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantStatusCode:         http.StatusBadRequest,
 			wantError:              fmt.Sprintf("400: DuplicateClientID: : The provided user assigned identity '%s' is already in use by a cluster.", mockMiResourceId),
 		},
+		{
+			name: "replace cluster identity",
+			request: func(oc *v20240812preview.OpenShiftCluster) {
+				oc.Identity = &v20240812preview.ManagedServiceIdentity{
+					Type: v20240812preview.ManagedServiceIdentityUserAssigned,
+					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
+						mockMiResourceId2: {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				}
+			},
+			headers: map[string]string{
+				middleware.MsiIdentityURLHeader: "https://bogus.identity.azure.net/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/Microsoft.ApiManagement/service/test/credentials?tid=10000000-0000-0000-0000-000000000000&oid=00000000-0000-0000-0000-000000000000&aid=00000000-0000-0000-0000-000000000000",
+				middleware.MsiTenantHeader:      "qwer",
+			},
+			isPatch: true,
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+					},
+				})
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockGuid, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockGuid, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Identity: &api.ManagedServiceIdentity{
+							Type: api.ManagedServiceIdentityUserAssigned,
+							UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+								mockMiResourceId: {
+									ClientID:    mockGuid,
+									PrincipalID: mockGuid,
+								},
+							},
+							IdentityURL: middleware.MockIdentityURL,
+							TenantID:    mockGuid,
+						},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							IngressProfiles:   []api.IngressProfile{{Name: "default"}},
+							WorkerProfiles: []api.WorkerProfile{
+								{
+									Name:             "default",
+									EncryptionAtHost: api.EncryptionAtHostDisabled,
+								},
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
+							},
+							ClusterProfile: api.ClusterProfile{
+								Version:                       defaultVersion,
+								OIDCIssuer:                    (*api.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
+								BoundServiceAccountSigningKey: (*api.SecureString)(pointerutils.ToPtr(mockGuid)),
+							},
+							OperatorFlags: api.OperatorFlags{"testFlag": "true"},
+							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+								PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+									"file-csi-driver": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"cloud-controller-manager": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"ingress": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"image-registry": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"machine-api": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"cloud-network-config": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"aro-operator": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"disk-csi-driver": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+								},
+							},
+						},
+					},
+				})
+			},
+			wantSystemDataEnriched: true,
+			wantEnriched:           []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
+			wantDocuments: func(c *testdatabase.Checker) {
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					AsyncOperation: &api.AsyncOperation{
+						InitialProvisioningState: api.ProvisioningStateUpdating,
+						ProvisioningState:        api.ProvisioningStateUpdating,
+					},
+				})
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Identity: &api.ManagedServiceIdentity{
+							Type: api.ManagedServiceIdentityUserAssigned,
+							UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+								mockMiResourceId2: {
+									ClientID:    "11111111-1111-1111-1111-111111111111",
+									PrincipalID: "11111111-1111-1111-1111-111111111111",
+								},
+							},
+							IdentityURL: "https://bogus.identity.azure.net/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/Microsoft.ApiManagement/service/test/credentials?tid=10000000-0000-0000-0000-000000000000&oid=00000000-0000-0000-0000-000000000000&aid=00000000-0000-0000-0000-000000000000",
+							TenantID:    "qwer",
+						},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:     api.ProvisioningStateUpdating,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							IngressProfiles:       []api.IngressProfile{{Name: "default"}},
+							WorkerProfiles: []api.WorkerProfile{
+								{
+									Name:             "default",
+									EncryptionAtHost: api.EncryptionAtHostDisabled,
+								},
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+							ClusterProfile: api.ClusterProfile{
+								Version:                       defaultVersion,
+								FipsValidatedModules:          api.FipsValidatedModulesDisabled,
+								OIDCIssuer:                    (*api.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
+								BoundServiceAccountSigningKey: (*api.SecureString)(pointerutils.ToPtr(mockGuid)),
+							},
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG:       api.PreconfiguredNSGDisabled,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 1,
+									},
+								},
+							},
+							OperatorFlags: api.OperatorFlags{"testFlag": "true"},
+							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+								PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+									"file-csi-driver": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"cloud-controller-manager": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"ingress": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"image-registry": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"machine-api": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"cloud-network-config": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"aro-operator": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+									"disk-csi-driver": {
+										ResourceID: mockMiResourceId,
+										ClientID:   mockGuid,
+										ObjectID:   mockGuid,
+									},
+								},
+							},
+						},
+					},
+				})
+			},
+			wantAsync:      true,
+			wantError:      "",
+			wantStatusCode: http.StatusOK,
+			wantResponse: &v20240812preview.OpenShiftCluster{
+				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Name: "resourceName",
+				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+				Identity: &v20240812preview.ManagedServiceIdentity{
+					Type: v20240812preview.ManagedServiceIdentityUserAssigned,
+					UserAssignedIdentities: map[string]v20240812preview.UserAssignedIdentity{
+						mockMiResourceId2: {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+					TenantID: "qwer",
+				},
+				SystemData: &v20240812preview.SystemData{},
+				Properties: v20240812preview.OpenShiftClusterProperties{
+					ProvisioningState: v20240812preview.ProvisioningStateUpdating,
+					IngressProfiles:   []v20240812preview.IngressProfile{{Name: "default"}},
+					WorkerProfiles: []v20240812preview.WorkerProfile{
+						{
+							Name:             "default",
+							EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
+						},
+					},
+					ClusterProfile: v20240812preview.ClusterProfile{
+						Version:              defaultVersion,
+						FipsValidatedModules: v20240812preview.FipsValidatedModulesDisabled,
+						OIDCIssuer:           (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
+					},
+					NetworkProfile: v20240812preview.NetworkProfile{
+						OutboundType:     v20240812preview.OutboundTypeLoadbalancer,
+						PreconfiguredNSG: v20240812preview.PreconfiguredNSGDisabled,
+						LoadBalancerProfile: &v20240812preview.LoadBalancerProfile{
+							ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
+								Count: 1,
+							},
+						},
+					},
+					MasterProfile: v20240812preview.MasterProfile{
+						EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
+					},
+					PlatformWorkloadIdentityProfile: &v20240812preview.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]v20240812preview.PlatformWorkloadIdentity{
+							"file-csi-driver": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"cloud-controller-manager": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"ingress": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"image-registry": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"machine-api": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"cloud-network-config": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"aro-operator": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+							"disk-csi-driver": {
+								ResourceID: mockMiResourceId,
+								ClientID:   mockGuid,
+								ObjectID:   mockGuid,
+							},
+						},
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).
@@ -4366,6 +4696,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 			requestHeaders := http.Header{
 				"Content-Type": []string{"application/json"},
+			}
+			for k, v := range tt.headers {
+				requestHeaders[k] = []string{v}
 			}
 
 			var internal api.OpenShiftCluster
