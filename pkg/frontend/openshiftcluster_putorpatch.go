@@ -321,14 +321,14 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// Persist identity URL and tenant ID for managed/workload identity clusters
 	// We do support updating cluster managed identity after cluster creation
 	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		// PATCHes can have an empty identityURL
+		// A PATCH will only have a non-empty identityURL if the PATCH includes a new cluster identity
 		skip := putOrPatchClusterParameters.method == http.MethodPatch && putOrPatchClusterParameters.identityURL == ""
 		if !skip {
 			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
 				return nil, err
 			}
 		}
-		// PATCHes can have an empty identityTenantID
+		// A PATCH will only have a non-empty identityURL if the PATCH includes a new cluster identity
 		skip = putOrPatchClusterParameters.method == http.MethodPatch && putOrPatchClusterParameters.identityTenantID == ""
 		if !skip {
 			if err := validateIdentityTenantID(doc.OpenShiftCluster, putOrPatchClusterParameters.identityTenantID); err != nil {
