@@ -47,6 +47,7 @@ spec:
         {{ end }}            
       nodeSelector:
         node-role.kubernetes.io/worker: ""
+        kubernetes.io/arch: "amd64"
       {{ if .SupportsPodSecurityAdmission }}
       securityContext:
         runAsNonRoot: true        
