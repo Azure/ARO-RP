@@ -28,7 +28,7 @@ type diagnosticStep struct {
 }
 
 func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
-	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines)
+	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines, m.loadBalancers)
 
 	s := []diagnosticStep{
 		{f: m.logClusterVersion, isJSON: true},
@@ -41,6 +41,7 @@ func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 	// only log serial consoles and Hive CD on an install, not on updates/adminUpdates
 	if runType == "install" {
 		s = append(s, diagnosticStep{f: d.LogVMSerialConsole, isJSON: false})
+		s = append(s, diagnosticStep{f: d.LogLoadBalancers, isJSON: false})
 		s = append(s, diagnosticStep{f: m.logClusterDeployment, isJSON: true})
 	}
 
@@ -234,34 +235,49 @@ func (m *manager) logPodLogs(ctx context.Context) (interface{}, error) {
 	}
 	items := make([]interface{}, 0)
 
-	pods, err := m.kubernetescli.CoreV1().Pods("openshift-azure-operator").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	for _, i := range pods.Items {
-		items = append(items, fmt.Sprintf("pod status %s: %v", i.Name, i.Status))
-
-		req := m.kubernetescli.CoreV1().Pods("openshift-azure-operator").GetLogs(i.Name, &podLogOptions)
-		logForPod := m.log.WithField("pod", i.Name)
-		logStream, err := req.Stream(ctx)
+	for _, ns := range []string{"openshift-azure-operator", "openshift-machine-config-operator"} {
+		pods, err := m.kubernetescli.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			items = append(items, fmt.Sprintf("pod logs retrieval error for %s: %s", i.Name, err))
-			continue
+			return nil, err
 		}
-		defer logStream.Close()
+		for _, i := range pods.Items {
+			items = append(items, formatPodStatus(i))
 
-		reader := bufio.NewReader(logStream)
-		for {
-			line, err := reader.ReadString('\n')
-			logForPod.Info(strings.TrimSpace(line))
-			if err == io.EOF {
-				break
-			}
+			req := m.kubernetescli.CoreV1().Pods(ns).GetLogs(i.Name, &podLogOptions)
+			logForPod := m.log.WithField("pod", i.Name).WithField("namespace", ns)
+			logStream, err := req.Stream(ctx)
 			if err != nil {
-				m.log.Errorf("pod logs reading error for %s: %s", i.Name, err)
-				break
+				items = append(items, fmt.Sprintf("pod logs retrieval error for %s: %s", i.Name, err))
+				continue
+			}
+			defer logStream.Close()
+
+			reader := bufio.NewReader(logStream)
+			for {
+				line, err := reader.ReadString('\n')
+				logForPod.Info(strings.TrimSpace(line))
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					m.log.Errorf("pod logs reading error for %s: %s", i.Name, err)
+					break
+				}
 			}
 		}
 	}
 	return items, nil
+}
+
+func formatPodStatus(pod corev1.Pod) interface{} {
+	items := make([]interface{}, 0)
+	prefix := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+	items = append(items, fmt.Sprintf("%s: phase=%s reason=%s message=%s", prefix, pod.Status.Phase, pod.Status.Reason, pod.Status.Message))
+	for _, condition := range pod.Status.Conditions {
+		items = append(items, fmt.Sprintf("%s: Condition %s=%s reason=%s transition=%s", prefix, condition.Type, condition.Status, condition.Reason, condition.LastTransitionTime))
+	}
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		items = append(items, fmt.Sprintf("%s: Container %s started=%t ready=%t restarts=%d state=%v", prefix, containerStatus.Name, *containerStatus.Started, containerStatus.Ready, containerStatus.RestartCount, containerStatus.State))
+	}
+	return items
 }

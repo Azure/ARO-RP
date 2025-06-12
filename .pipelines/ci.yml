@@ -226,6 +226,7 @@ stages:
 
               deploy_e2e_db
               register_sub
+              docker compose logs --follow &
               docker compose up --quiet-pull --exit-code-from e2e e2e
               # Check if the E2E tests failed
               E2E_EXIT_CODE=$?
