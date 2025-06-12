@@ -59,7 +59,8 @@ def rp_mode_development():
     return os.environ.get('RP_MODE', '').lower() == 'development'
 
 
-def aro_create(cmd,  # pylint: disable=too-many-locals
+def aro_create(*,  # pylint: disable=too-many-locals
+               cmd,
                client,
                resource_group_name,
                resource_name,
@@ -104,12 +105,12 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     validate_subnets(master_subnet, worker_subnet)
 
-    validate(cmd,
-             client,
-             resource_group_name,
-             resource_name,
-             master_subnet,
-             worker_subnet,
+    validate(cmd=cmd,
+             client=client,
+             resource_group_name=resource_group_name,
+             resource_name=resource_name,
+             master_subnet=master_subnet,
+             worker_subnet=worker_subnet,
              vnet=vnet,
              enable_preconfigured_nsg=enable_preconfigured_nsg,
              cluster_resource_group=cluster_resource_group,
@@ -233,7 +234,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
+def validate(*,  # pylint: disable=too-many-locals,too-many-statements
+             cmd,
              client,  # pylint: disable=unused-argument
              resource_group_name,  # pylint: disable=unused-argument
              resource_name,  # pylint: disable=unused-argument
@@ -348,7 +350,8 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
         raise ValidationError(full_msg)
 
 
-def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
+def aro_validate(*,  # pylint: disable=too-many-locals,too-many-statements
+                 cmd,
                  client,
                  resource_group_name,
                  resource_name,
@@ -369,12 +372,12 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
                  mi_user_assigned=None,
                  ):
 
-    validate(cmd,
-             client,
-             resource_group_name,
-             resource_name,
-             master_subnet,
-             worker_subnet,
+    validate(cmd=cmd,
+             client=client,
+             resource_group_name=resource_group_name,
+             resource_name=resource_name,
+             master_subnet=master_subnet,
+             worker_subnet=worker_subnet,
              vnet=vnet,
              cluster_resource_group=cluster_resource_group,
              client_id=client_id,
@@ -391,7 +394,7 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
              warnings_as_text=False)
 
 
-def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False, delete_identities=None):
+def aro_delete(*, cmd, client, resource_group_name, resource_name, no_wait=False, delete_identities=None):
     # TODO: clean up rbac
     rp_client_sp_id = None
 
@@ -508,7 +511,7 @@ def aro_get_versions(client, location):
     return sorted(versions)
 
 
-def aro_update(cmd,
+def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
                client,
                resource_group_name,
                resource_name,
