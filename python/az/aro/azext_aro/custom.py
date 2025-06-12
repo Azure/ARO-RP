@@ -533,6 +533,11 @@ def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
             "Cannot assign platform workload identities to a cluster with service principal"
         )
 
+    if mi_user_assigned is not None and oc.service_principal_profile is not None:
+        raise InvalidArgumentValueError(
+            "Cannot assign platform workload identities to a cluster with service principal"
+        )
+
     if oc.service_principal_profile is not None:
         client_id, client_secret = cluster_application_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_credentials)  # pylint: disable=line-too-long
 
