@@ -208,7 +208,10 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
 RPIMAGE='$image'
 PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+IPADDRESS='$ipaddress'
+ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
+ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
+ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'"
 
     write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
 
@@ -245,6 +248,9 @@ ExecStart=/usr/bin/podman run \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
+  -e ARO_INSTALL_VIA_HIVE \
+  -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
+  -e ARO_ADOPT_BY_HIVE \
   -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
