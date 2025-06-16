@@ -44,7 +44,8 @@ spec:
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          command: /usr/sbin/MetricsExtension
+          command:
+            - /usr/sbin/MetricsExtension
           args: ["-CertFile", "$(MDM_CERTFILE)", "-FrontEndUrl", "$(MDM_FRONTENDURL)", "-Logger", "$(MDM_LOGGER)", "-LogLevel", "$(MDM_LOGLEVEL)", "-PrivateKeyFile", "$(MDM_PRIVATEKEYFILE)", "-SourceEnvironment", "$(MDM_SOURCEENVIRONMENT)", "-SourceRole", "$(MDM_SOURCEROLE)", "-SourceRoleInstance", "$(MDM_SOURCEROLEINSTANCE)"]
           image: "{{ .Values.mdm.image }}"
           volumeMounts:
