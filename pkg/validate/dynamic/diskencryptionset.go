@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )

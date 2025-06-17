@@ -14,11 +14,10 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
+	"github.com/Azure/ARO-RP/pkg/api/util/pullsecret"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -31,12 +30,12 @@ type openShiftClusterStaticValidator struct {
 }
 
 // Validate validates an OpenShift cluster
-func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sWorkers bool, resourceID string) error {
+func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sWorkers bool, installArchitectureVersion api.ArchitectureVersion, resourceID string) error {
 	sv.location = location
 	sv.domain = domain
 	sv.requireD2sWorkers = requireD2sWorkers
 	sv.resourceID = resourceID
-	architectureVersion := version.InstallArchitectureVersion
+	architectureVersion := installArchitectureVersion
 
 	oc := _oc.(*OpenShiftCluster)
 
@@ -317,12 +316,20 @@ func checkPickedExactlyOne(path string, lbp *LoadBalancerProfile) error {
 	var isManagedOutboundIPCount = lbp.ManagedOutboundIPs != nil
 	var isOutboundIPs = lbp.OutboundIPs != nil
 	var isOutboundIPPrefixes = lbp.OutboundIPPrefixes != nil
+	var providedProfiles int
+	if isManagedOutboundIPCount {
+		providedProfiles++
+	}
+	if isOutboundIPs {
+		providedProfiles++
+	}
+	if isOutboundIPPrefixes {
+		providedProfiles++
+	}
 
-	if !isManagedOutboundIPCount && !isOutboundIPPrefixes && !isOutboundIPs {
+	if providedProfiles == 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The provided loadBalancerProfile is invalid: must specify one of managedOutboundIps, outboundIps, or outboundIpPrefixes.")
-	} else if !((isManagedOutboundIPCount && !isOutboundIPs && !isOutboundIPPrefixes) ||
-		(!isManagedOutboundIPCount && isOutboundIPs && !isOutboundIPPrefixes) ||
-		(!isManagedOutboundIPCount && !isOutboundIPs && isOutboundIPPrefixes)) {
+	} else if providedProfiles > 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The provided loadBalancerProfile is invalid: can only use one of managedOutboundIps, outboundIps, or outboundIpPrefixes at a time.")
 	}
 	return nil

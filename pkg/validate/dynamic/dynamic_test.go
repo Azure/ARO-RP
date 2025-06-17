@@ -10,12 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"

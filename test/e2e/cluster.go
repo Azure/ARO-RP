@@ -8,10 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -20,6 +16,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/to"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
@@ -261,10 +262,10 @@ var _ = Describe("Cluster", Serial, func() {
 // clusterSubnets returns a slice containing all of the cluster subnets' resource IDs
 func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
 	subnetMap := map[string]struct{}{}
-	subnetMap[*oc.OpenShiftClusterProperties.MasterProfile.SubnetID] = struct{}{}
+	subnetMap[*oc.MasterProfile.SubnetID] = struct{}{}
 
 	// TODO: change to workerProfileStatuses when we bump the API to 20230904 stable
-	for _, p := range *oc.OpenShiftClusterProperties.WorkerProfiles {
+	for _, p := range *oc.WorkerProfiles {
 		s := strings.ToLower(*p.SubnetID)
 		subnetMap[s] = struct{}{}
 	}

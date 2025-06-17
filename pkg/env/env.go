@@ -12,14 +12,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/go-multierror"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
@@ -107,7 +109,7 @@ type Interface interface {
 	OIDCKeyBitSize() int
 	OtelAuditQueueSize() (int, error)
 	MsiRpEndpoint() string
-	MsiDataplaneClientOptions() (*policy.ClientOptions, error)
+	MsiDataplaneClientOptions(correlationData *api.CorrelationData) (*policy.ClientOptions, error)
 	MockMSIResponses(msiResourceId *arm.ResourceID) dataplane.ClientFactory
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager

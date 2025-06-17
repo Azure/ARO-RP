@@ -13,8 +13,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/date"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/test/validate"
 )
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
@@ -758,7 +758,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			(&openShiftClusterConverter{}).ToInternal(tt.oc(), current)
 
 			v := &openShiftClusterStaticValidator{}
-			err := v.Static(oc, current, "", "", true, "")
+			err := v.Static(oc, current, "", "", true, api.ArchitectureVersionV2, "")
 			if err == nil {
 				if tt.wantErr != "" {
 					t.Error(err)

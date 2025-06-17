@@ -10,9 +10,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/sirupsen/logrus"
 
 	pkgdeploy "github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -78,10 +79,12 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("location %s must be lower case", location)
 	}
 
-	config, err := pkgdeploy.GetConfig(flag.Arg(1), location)
+	var config *pkgdeploy.RPConfig
+	classicConfig, err := pkgdeploy.GetConfig(flag.Arg(1), location)
 	if err != nil {
 		return err
 	}
+	config = classicConfig
 
 	if raConfigFile := os.Getenv("RA_CONFIG_FILE"); raConfigFile != "" {
 		raConfig, err := pkgdeploy.GetConfig(raConfigFile, location)
@@ -90,11 +93,15 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 				return fmt.Errorf("error reading RA config file %s: %w", raConfigFile, err)
 			}
 		} else {
-			if diff := cmp.Diff(config, raConfig); diff != "" {
+			if diff := cmp.Diff(classicConfig, raConfig); diff != "" {
 				if os.Getenv("RA_CONFIG_STRICT") == "true" {
 					return fmt.Errorf("RA config file %s differs from deploy config: %s", raConfigFile, diff)
 				} else {
 					log.Printf("RA config file %s differs from deploy config: %s", raConfigFile, diff)
+				}
+			} else {
+				if os.Getenv("PREFER_RA_CONFIG") == "true" {
+					config = raConfig
 				}
 			}
 		}

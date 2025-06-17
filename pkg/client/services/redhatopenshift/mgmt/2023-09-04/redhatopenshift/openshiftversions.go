@@ -53,7 +53,7 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 		defer func() {
 			sc := -1
 			if result.osvl.Response.Response != nil {
-				sc = result.osvl.Response.Response.StatusCode
+				sc = result.osvl.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -63,7 +63,7 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", "%s", err.Error())
 	}
 
 	result.fn = client.listNextResults
@@ -159,7 +159,7 @@ func (client OpenShiftVersionsClient) ListComplete(ctx context.Context, location
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.Response.StatusCode
+				sc = result.page.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()

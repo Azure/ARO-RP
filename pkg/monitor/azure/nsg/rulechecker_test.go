@@ -7,8 +7,9 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )

@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/operator"
 )
 
 const (
@@ -24,7 +23,7 @@ const (
 // merge (default): The provided cluster flags are laid on top of the cluster’s existing flags.
 // reset: The provided cluster flags are laid on top of the default cluster flags,
 // essentially ‘resetting’ the flags if no new flags are provided.
-func OperatorFlagsMergeStrategy(oc *api.OpenShiftCluster, body []byte) error {
+func OperatorFlagsMergeStrategy(oc *api.OpenShiftCluster, body []byte, defaultFlags api.OperatorFlags) error {
 	payload := &OpenShiftCluster{}
 
 	err := json.Unmarshal(body, &payload)
@@ -49,7 +48,7 @@ func OperatorFlagsMergeStrategy(oc *api.OpenShiftCluster, body []byte) error {
 	// return defaultOperatorFlags, if OperatorFlagsMergeStrategy is reset and payload has not operatorFlags
 	// return defaultOperatorFlags + operatorFlags of payload, if OperatorFlagsMergeStrategy is reset and payload has operatorFlags
 	if payload.OperatorFlagsMergeStrategy == OperatorFlagsMergeStrategyReset {
-		oc.Properties.OperatorFlags = operator.DefaultOperatorFlags()
+		oc.Properties.OperatorFlags = defaultFlags
 	}
 
 	return nil

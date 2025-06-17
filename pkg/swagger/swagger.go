@@ -248,10 +248,11 @@ func Run(api, outputDir string) error {
 
 		properties = nil
 		for _, property := range s.Definitions[azureResource].Properties {
-			if property.Name == "properties" {
+			switch property.Name {
+			case "properties":
 				property.Schema.ClientFlatten = true
 				properties = append(properties, property)
-			} else if property.Name == "identity" {
+			case "identity":
 				properties = append(properties, property)
 			}
 		}

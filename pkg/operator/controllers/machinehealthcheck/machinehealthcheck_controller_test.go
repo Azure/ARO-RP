@@ -14,6 +14,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -292,7 +293,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			}
 
 			if tt.instance != nil {
-				utilconditions.AssertControllerConditions(t, ctx, r.AROController.Client, tt.wantConditions)
+				utilconditions.AssertControllerConditions(t, ctx, r.Client, tt.wantConditions)
 			}
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
@@ -310,7 +311,7 @@ func (m mhcIsPausedMatcher) Matches(x interface{}) bool {
 	} else {
 		for _, obj := range objs {
 			if mhc, ok := obj.(*machinev1beta1.MachineHealthCheck); ok {
-				if _, ok := mhc.ObjectMeta.Annotations[MHCPausedAnnotation]; ok != m.paused {
+				if _, ok := mhc.Annotations[MHCPausedAnnotation]; ok != m.paused {
 					return false
 				}
 			}

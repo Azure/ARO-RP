@@ -5,10 +5,18 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+
+	"k8s.io/utils/ptr"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
@@ -20,11 +28,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
-
-	"k8s.io/utils/ptr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
@@ -32,6 +35,7 @@ import (
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -63,7 +67,7 @@ func TestDeleteNic(t *testing.T) {
 		{
 			name: "nic is in succeeded provisioning state",
 			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
-				nic.Interface.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
 				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
 				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
 			},
@@ -480,28 +484,84 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 
 func TestDeleteFederatedCredentials(t *testing.T) {
 	ctx := context.Background()
+
+	// cluster vars
 	docID := "00000000-0000-0000-0000-000000000000"
 	clusterID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/fakeResourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/fakeCluster"
 	clusterResourceId, _ := azure.ParseResourceID(clusterID)
 	mockGuid := "00000000-0000-0000-0000-000000000000"
 	clusterRGName := "aro-cluster"
+	secretName := dataplane.ManagedIdentityCredentialsStoragePrefix + mockGuid
 	identityIDPrefix := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/", mockGuid, clusterRGName)
-
 	oidcIssuer := "https://fakeissuer.fakedomain/fakecluster"
 
+	// service account vars
 	ccmServiceAccountName := "system:serviceaccount:openshift-cloud-controller-manager:cloud-controller-manager"
 	ccmIdentityResourceId, _ := azure.ParseResourceID(fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"))
 	ingressServiceAccountName := "system:serviceaccount:openshift-ingress-operator:ingress-operator"
 	ingressIdentityResourceId, _ := azure.ParseResourceID(fmt.Sprintf("%s/%s", identityIDPrefix, "cio"))
 
+	// msi vars
+	miName := "aro-cluster-msi"
+	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+	placeholderString := "placeholder"
+	placeholderTime := time.Now().Format(time.RFC3339)
+	placeholderNotEligibleForRotationTime := time.Now().Add(-1 * time.Hour)
+	placeholderEligibleForRotationTime := time.Now().Add(-1200 * time.Hour)
+	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
+		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
+			{
+				ClientID:                   &placeholderString,
+				ClientSecret:               &placeholderString,
+				TenantID:                   &placeholderString,
+				ResourceID:                 &miResourceId,
+				AuthenticationEndpoint:     &placeholderString,
+				CannotRenewAfter:           &placeholderTime,
+				ClientSecretURL:            &placeholderString,
+				MtlsAuthenticationEndpoint: &placeholderString,
+				NotAfter:                   &placeholderTime,
+				NotBefore:                  &placeholderTime,
+				RenewAfter:                 &placeholderTime,
+				CustomClaims: &dataplane.CustomClaims{
+					XMSAzNwperimid: []string{placeholderString},
+					XMSAzTm:        &placeholderString,
+				},
+				ObjectID: &placeholderString,
+			},
+		},
+	}
+	credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
+	if err != nil {
+		panic(err)
+	}
+	credentialsObjectString := string(credentialsObjectBuffer)
+	notEligibleForRotationResponse := azsecrets.GetSecretResponse{
+		Secret: azsecrets.Secret{
+			Value: &credentialsObjectString,
+			Attributes: &azsecrets.SecretAttributes{
+				NotBefore: &placeholderNotEligibleForRotationTime,
+			},
+		},
+	}
+	eligibleForRotationResponse := azsecrets.GetSecretResponse{
+		Secret: azsecrets.Secret{
+			Value: &credentialsObjectString,
+			Attributes: &azsecrets.SecretAttributes{
+				NotBefore: &placeholderEligibleForRotationTime,
+			},
+		},
+	}
+
 	tests := []struct {
-		name    string
-		doc     *api.OpenShiftClusterDocument
-		mocks   func(*mock_armmsi.MockFederatedIdentityCredentialsClient)
-		wantErr string
+		name             string
+		doc              *api.OpenShiftClusterDocument
+		mocks            func(*mock_armmsi.MockFederatedIdentityCredentialsClient)
+		kvClientMocks    func(*mock_azsecrets.MockClient)
+		msiDataplaneStub func(*mock_msidataplane.MockClient)
+		wantErr          string
 	}{
 		{
-			name: "success - cluster doc has nil PlatformWorkloadIdentities",
+			name: "success - cluster doc has nil PlatformWorkloadIdentities, MSI certificate valid",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -514,7 +574,46 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+					},
 				},
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
+		},
+		{
+			name: "success - cluster doc has nil PlatformWorkloadIdentities, MSI certificate eligible for rotation",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
+								ClientID:    mockGuid,
+								PrincipalID: mockGuid,
+							},
+						},
+						IdentityURL: "https://foo.bar",
+					},
+				},
+			},
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(eligibleForRotationResponse, nil).Times(1)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
 			},
 		},
 		{
@@ -532,7 +631,13 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+					},
 				},
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -556,6 +661,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 								},
 							},
 						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
 					},
 				},
 			},
@@ -583,10 +691,16 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							},
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+					},
 				},
 			},
 			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -611,6 +725,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 								},
 							},
 						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
 					},
 				},
 			},
@@ -644,6 +761,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq(ccmFedCredName), gomock.Any())
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ingressIdentityResourceId.ResourceGroup), gomock.Eq(ingressIdentityResourceId.ResourceName), gomock.Eq(ingressFedCredName), gomock.Any())
 			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
 		},
 		{
 			name: "success - does not delete federated credentials that do not belong to the cluster",
@@ -664,6 +784,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 								},
 							},
 						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
 					},
 				},
 			},
@@ -702,6 +825,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq("fedCredWithWrongAudience"), gomock.Any()).Times(0)
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq("fedCredWithWrongIssuer"), gomock.Any()).Times(0)
 			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
 		},
 		{
 			name: "error - encounter blocking error deleting a federated credential",
@@ -723,9 +849,15 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							},
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+					},
 				},
 			},
 			wantErr: "parsing failed for /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster. Invalid resource Id format",
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
 		},
 		{
 			name: "success - federated identity credentials client returns error when listing credentials but deletion continues",
@@ -747,11 +879,17 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							},
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+					},
 				},
 			},
 			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Any()).
 					Return(nil, fmt.Errorf("something unexpected occurred"))
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -774,6 +912,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							},
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+					},
 				},
 			},
 			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
@@ -794,6 +935,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq(ccmFedCredName), gomock.Any()).
 					Return(sdkmsi.FederatedIdentityCredentialsClientDeleteResponse{}, fmt.Errorf("something unexpected occurred"))
 			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
 		},
 	}
 
@@ -807,10 +951,24 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				tt.mocks(federatedIdentityCredentials)
 			}
 
+			mockKvClient := mock_azsecrets.NewMockClient(controller)
+			if tt.kvClientMocks != nil {
+				tt.kvClientMocks(mockKvClient)
+			}
+
+			factory := mock_msidataplane.NewMockClientFactory(controller)
+			client := mock_msidataplane.NewMockClient(controller)
+			if tt.msiDataplaneStub != nil {
+				tt.msiDataplaneStub(client)
+			}
+			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
+
 			m := manager{
 				log:                                    logrus.NewEntry(logrus.StandardLogger()),
 				doc:                                    tt.doc,
 				clusterMsiFederatedIdentityCredentials: federatedIdentityCredentials,
+				clusterMsiKeyVaultStore:                mockKvClient,
+				msiDataplane:                           factory,
 			}
 
 			err := m.deleteFederatedCredentials(ctx)

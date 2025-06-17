@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -189,7 +190,7 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 
 	case *corev1.ServiceAccount:
 		old, new := old.(*corev1.ServiceAccount), new.(*corev1.ServiceAccount)
-		for _, name := range maps.Keys(old.ObjectMeta.Annotations) {
+		for _, name := range maps.Keys(old.Annotations) {
 			if strings.HasPrefix(name, "openshift.io/") {
 				copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, name)
 			}
@@ -231,24 +232,26 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 
 	case *hivev1.ClusterDeployment:
 		old, new := old.(*hivev1.ClusterDeployment), new.(*hivev1.ClusterDeployment)
-		new.ObjectMeta.Finalizers = old.ObjectMeta.Finalizers
+		new.Finalizers = old.Finalizers
 		new.Status = old.Status
 
-		for _, name := range maps.Keys(old.ObjectMeta.Labels) {
+		for _, name := range maps.Keys(old.Labels) {
 			if strings.HasPrefix(name, "hive.openshift.io/") {
 				copyLabel(&new.ObjectMeta, &old.ObjectMeta, name)
 			}
 		}
 
 		// Copy over the ClusterMetadata.Platform that Hive generates
-		if old.Spec.ClusterMetadata.Platform != nil {
+		if new.Spec.ClusterMetadata == nil {
+			new.Spec.ClusterMetadata = old.Spec.ClusterMetadata
+		} else if old.Spec.ClusterMetadata != nil {
 			new.Spec.ClusterMetadata.Platform = old.Spec.ClusterMetadata.Platform
 		}
 
 	case *corev1.ConfigMap:
 		old, new := old.(*corev1.ConfigMap), new.(*corev1.ConfigMap)
 
-		_, injectTrustBundle := new.ObjectMeta.Labels["config.openshift.io/inject-trusted-cabundle"]
+		_, injectTrustBundle := new.Labels["config.openshift.io/inject-trusted-cabundle"]
 		if injectTrustBundle {
 			caBundle, ext := old.Data["ca-bundle.crt"]
 			if ext {

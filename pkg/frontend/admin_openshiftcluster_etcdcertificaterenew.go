@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -24,6 +23,8 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -396,8 +397,8 @@ func (e *etcdrenew) backupEtcdSecrets(ctx context.Context) error {
 			secret.CreationTimestamp = metav1.Time{
 				Time: time.Now(),
 			}
-			secret.ObjectMeta.ResourceVersion = ""
-			secret.ObjectMeta.UID = ""
+			secret.ResourceVersion = ""
+			secret.UID = ""
 
 			var cert []byte
 			err = codec.NewEncoderBytes(&cert, &codec.JsonHandle{}).Encode(secret)

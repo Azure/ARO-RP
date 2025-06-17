@@ -15,7 +15,7 @@ type UsageClientAddons interface {
 }
 
 func (c *usagesClient) List(ctx context.Context, location string, options *armnetwork.UsagesClientListOptions) (result []*armnetwork.Usage, err error) {
-	pager := c.UsagesClient.NewListPager(location, options)
+	pager := c.NewListPager(location, options)
 
 	for pager.More() {
 		page, err := pager.NextPage(ctx)

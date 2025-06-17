@@ -24,5 +24,5 @@ func (r *registriesClient) GenerateCredentials(ctx context.Context, resourceGrou
 	if err != nil {
 		return mgmtcontainerregistry.GenerateCredentialsResult{}, err
 	}
-	return r.RegistriesClient.GenerateCredentialsResponder(future.Response())
+	return r.GenerateCredentialsResponder(future.Response())
 }

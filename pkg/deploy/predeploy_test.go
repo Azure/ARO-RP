@@ -10,6 +10,10 @@ import (
 	"testing"
 	"time"
 
+	gofrsuuid "github.com/gofrs/uuid"
+	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -18,9 +22,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	gofrsuuid "github.com/gofrs/uuid"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -72,6 +73,9 @@ var (
 				Code: to.StringPtr("HealthState/unhealthy"),
 			},
 		},
+	}
+	nilVMHealth = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
+		VMHealth: nil,
 	}
 
 	newSecretBundle = azsecretssdk.GetSecretResponse{
@@ -1762,6 +1766,16 @@ func TestIsVMInstanceHealthy(t *testing.T) {
 			},
 			mocks:    []mock{getInstanceViewMock(healthyVMSS, nil)},
 			wantBool: true,
+		},
+		{
+			name: "return false if GetInstanceView has nil VMHealth field",
+			testParams: testParams{
+				resourceGroup: rpRGName,
+				vmssName:      vmssName,
+				instanceID:    instanceID,
+			},
+			mocks:    []mock{getInstanceViewMock(nilVMHealth, nil)},
+			wantBool: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

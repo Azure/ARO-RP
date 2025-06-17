@@ -9,11 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/ugorji/go/codec"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +19,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
+
 	"sigs.k8s.io/yaml"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/to"
 
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
@@ -295,7 +298,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := apisubnet.Split((*oc.OpenShiftClusterProperties.MasterProfile.SubnetID))
+		vnet, masterSubnet, err := apisubnet.Split((*oc.MasterProfile.SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
@@ -670,7 +673,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 			if err != nil {
 				return err
 			}
-			customMachineConfig.ObjectMeta.Labels["testlabel"] = "testvalue"
+			customMachineConfig.Labels["testlabel"] = "testvalue"
 			_, err = clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Update(ctx, customMachineConfig, metav1.UpdateOptions{})
 			return err
 		})

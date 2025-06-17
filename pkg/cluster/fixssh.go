@@ -83,14 +83,15 @@ NICs:
 			}
 			continue NICs
 		}
+    
+    // Booleans to track if backend pools are updated
 		ilbBackendPoolsUpdated := false
 		elbBackendPoolsUpdated := false
+    
 		// Check and update NIC IPConfigurations. Do we ever expect multiple IP configs on an interface?
 		for _, ipc := range nic.Properties.IPConfigurations {
-			// TODO refactor this a bit, one if?
-			if ipc.Properties.Subnet != nil {
-				// Skip any NICs that are not in the master subnet
-				if *ipc.Properties.Subnet.ID != masterSubnetID {
+			// Skip any NICs that are not in the master subnet
+			if ipc.Properties.Subnet != nil && ipc.Properties.Subnet.ID != nil && *ipc.Properties.Subnet.ID != masterSubnetID {
 					m.log.Infof("Skipping NIC %s, NIC not in master subnet.", *nic.Name)
 					continue NICs
 				}
@@ -138,6 +139,7 @@ func (m *manager) updateILBBackendPools(ipc armnetwork.InterfaceIPConfiguration,
 	if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
 		ilbBackendPoolID = infraID + "-internal-controlplane-v4"
 	}
+
 	ilbBackendPoolID = fmt.Sprintf("%s/backendAddressPools/%s", lbID, ilbBackendPoolID)
 	ilbBackendPool := &armnetwork.BackendAddressPool{ID: &ilbBackendPoolID}
 	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {

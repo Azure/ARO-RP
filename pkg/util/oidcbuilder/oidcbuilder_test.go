@@ -19,11 +19,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkg/errors"
+	"go.uber.org/mock/gomock"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
-	"github.com/pkg/errors"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azblob"
@@ -174,7 +175,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 func getTestKeyData(t *testing.T) ([]byte, []byte, []byte) {
 	t.Helper()
 
-	testKeyBitSize := 256
+	testKeyBitSize := 2048
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()

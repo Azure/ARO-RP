@@ -15,7 +15,7 @@ type VirtualNetworkPeeringsAddons interface {
 }
 
 func (c *virtualNetworkPeeringsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters armnetwork.VirtualNetworkPeering, options *armnetwork.VirtualNetworkPeeringsClientBeginCreateOrUpdateOptions) (err error) {
-	poller, err := c.VirtualNetworkPeeringsClient.BeginCreateOrUpdate(ctx, resourceGroupName, virtualNetworkName, virtualNetworkPeeringName, virtualNetworkPeeringParameters, options)
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, virtualNetworkName, virtualNetworkPeeringName, virtualNetworkPeeringParameters, options)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (c *virtualNetworkPeeringsClient) CreateOrUpdateAndWait(ctx context.Context
 }
 
 func (c *virtualNetworkPeeringsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, options *armnetwork.VirtualNetworkPeeringsClientBeginDeleteOptions) (err error) {
-	poller, err := c.VirtualNetworkPeeringsClient.BeginDelete(ctx, resourceGroupName, virtualNetworkName, virtualNetworkPeeringName, options)
+	poller, err := c.BeginDelete(ctx, resourceGroupName, virtualNetworkName, virtualNetworkPeeringName, options)
 	if err != nil {
 		return err
 	}

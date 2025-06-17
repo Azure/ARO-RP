@@ -325,13 +325,6 @@ def validate_enable_managed_identity(namespace):
     if namespace.client_secret is not None:
         raise InvalidArgumentValueError('Must not specify --client-secret when --enable-managed-identity is True')
 
-    if namespace.version is None or not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
-        raise InvalidArgumentValueError('Enabling managed identity requires --version >= 4.14.z')
-
-    _, versionY, _ = namespace.version.split('.', 2)
-    if int(versionY) < 14:
-        raise InvalidArgumentValueError('Enabling managed identity requires --version >= 4.14.z')
-
     if not namespace.platform_workload_identities:
         raise RequiredArgumentMissingError('Enabling managed identity requires platform workload identities to be provided')  # pylint: disable=line-too-long
 

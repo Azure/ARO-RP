@@ -6,12 +6,12 @@ package cluster
 import (
 	"context"
 
-	azcertificates_sdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+
+	azcertificates_sdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
 
 	configv1 "github.com/openshift/api/config/v1"
 

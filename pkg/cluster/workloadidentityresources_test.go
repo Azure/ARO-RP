@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -19,7 +17,11 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
 	configv1 "github.com/openshift/api/config/v1"
 
@@ -198,7 +200,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 
 			got, err := m.generateWorkloadIdentityResources()
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			assert.EqualValues(t, tt.want, got)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

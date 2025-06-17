@@ -17,7 +17,7 @@ type TokensAddons interface {
 }
 
 func (t *tokensClient) CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters mgmtcontainerregistry.Token) error {
-	future, err := t.TokensClient.Create(ctx, resourceGroupName, registryName, tokenName, tokenCreateParameters)
+	future, err := t.Create(ctx, resourceGroupName, registryName, tokenName, tokenCreateParameters)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (t *tokensClient) CreateAndWait(ctx context.Context, resourceGroupName stri
 }
 
 func (t *tokensClient) DeleteAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string) error {
-	future, err := t.TokensClient.Delete(ctx, resourceGroupName, registryName, tokenName)
+	future, err := t.Delete(ctx, resourceGroupName, registryName, tokenName)
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func (t *tokensClient) DeleteAndWait(ctx context.Context, resourceGroupName stri
 
 func (t *tokensClient) GetTokenProperties(ctx context.Context, resourceGroupName, registryName, tokenName string) (mgmtcontainerregistry.TokenProperties, error) {
 	var token mgmtcontainerregistry.Token
-	token, err := t.TokensClient.Get(ctx, resourceGroupName, registryName, tokenName)
+	token, err := t.Get(ctx, resourceGroupName, registryName, tokenName)
 	if err != nil {
 		return mgmtcontainerregistry.TokenProperties{}, err
 	}

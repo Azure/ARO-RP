@@ -21,6 +21,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -146,14 +147,11 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		return nil, errors.New("nil operator secret, cannot verify userData integrity")
 	}
 
-	recreate := false
+	recreate := userSecret == nil || (userSecret.Type != corev1.SecretTypeDockerConfigJson || userSecret.Data == nil)
 
 	// if there is no userSecret, create new, or when
 	// userSecret have broken type, recreates it with proper type
 	// unfortunately the type field is immutable, therefore the whole secret have to be deleted and create once more
-	if userSecret == nil || (userSecret.Type != corev1.SecretTypeDockerConfigJson || userSecret.Data == nil) {
-		recreate = true
-	}
 
 	if recreate {
 		secret = &corev1.Secret{

@@ -2,6 +2,7 @@ package api
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+
 const APIVersionKey = "api-version"
 
 type OpenShiftClusterConverter interface {
@@ -12,7 +13,7 @@ type OpenShiftClusterConverter interface {
 }
 
 type OpenShiftClusterStaticValidator interface {
-	Static(interface{}, *OpenShiftCluster, string, string, bool, string) error
+	Static(interface{}, *OpenShiftCluster, string, string, bool, ArchitectureVersion, string) error
 }
 
 type OpenShiftClusterCredentialsConverter interface {

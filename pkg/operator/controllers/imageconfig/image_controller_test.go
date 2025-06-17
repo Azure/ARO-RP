@@ -13,6 +13,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -53,7 +54,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "arointsvc.azurecr.io",
-					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					AZEnvironment: azureclient.PublicCloud.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						operator.ImageConfigEnabled: operator.FlagFalse,
 					},
@@ -211,7 +212,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "fakesvc.azurecr.io",
-					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					AZEnvironment: azureclient.PublicCloud.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						operator.ImageConfigEnabled: operator.FlagTrue,
 					},
@@ -242,7 +243,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "fakesvc.azurecr.us",
-					AZEnvironment: azureclient.USGovernmentCloud.Environment.Name,
+					AZEnvironment: azureclient.USGovernmentCloud.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						operator.ImageConfigEnabled: operator.FlagTrue,
 					},
@@ -275,7 +276,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "arointsvc.azurecr.io",
-					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					AZEnvironment: azureclient.PublicCloud.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						operator.ImageConfigEnabled: operator.FlagTrue,
 					},
@@ -326,7 +327,7 @@ func TestGetCloudAwareRegistries(t *testing.T) {
 			instance: &arov1alpha1.Cluster{
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "arosvc.azurecr.io",
-					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					AZEnvironment: azureclient.PublicCloud.Name,
 					Location:      "eastus",
 				},
 			},
@@ -337,7 +338,7 @@ func TestGetCloudAwareRegistries(t *testing.T) {
 			instance: &arov1alpha1.Cluster{
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "arointsvc.azurecr.us",
-					AZEnvironment: azureclient.USGovernmentCloud.Environment.Name,
+					AZEnvironment: azureclient.USGovernmentCloud.Name,
 					Location:      "eastus",
 				},
 			},
@@ -348,7 +349,7 @@ func TestGetCloudAwareRegistries(t *testing.T) {
 			instance: &arov1alpha1.Cluster{
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "fakeacr.azurecr.io",
-					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					AZEnvironment: azureclient.PublicCloud.Name,
 					Location:      "anyplace",
 				},
 			},

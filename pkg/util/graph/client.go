@@ -55,8 +55,8 @@ func NewGraphServiceClientWithCredentials(credential azcore.TokenCredential, sco
 
 // GetAdapter returns the client current adapter, Method should only be called when the user is certain an adapter has been provided
 func (m *GraphServiceClient) GetAdapter() abstractions.RequestAdapter {
-	if m.BaseRequestBuilder.RequestAdapter == nil {
+	if m.RequestAdapter == nil {
 		panic(errors.New("request adapter has not been initialized"))
 	}
-	return m.BaseRequestBuilder.RequestAdapter
+	return m.RequestAdapter
 }

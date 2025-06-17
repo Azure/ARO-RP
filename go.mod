@@ -1,11 +1,13 @@
 module github.com/Azure/ARO-RP
 
-go 1.22.9
+go 1.24.3
 
 require (
+	github.com/Azure/ARO-RP/pkg/api v0.0.0-00010101000000-000000000000
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
+	github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry v0.2.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3 v3.0.0-beta.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6 v6.2.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2 v2.5.0
@@ -30,7 +32,7 @@ require (
 	github.com/containers/image/v5 v5.33.1
 	github.com/containers/podman/v5 v5.3.2
 	github.com/coreos/go-oidc/v3 v3.11.0
-	github.com/coreos/go-semver v0.3.0
+	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.5.1-0.20231103132048-7d375ecc2b09
 	github.com/coreos/ignition/v2 v2.14.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
@@ -82,13 +84,13 @@ require (
 	github.com/ugorji/go/codec v1.2.12
 	github.com/vincent-petithory/dataurl v1.0.0
 	go.uber.org/mock v0.4.0
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.39.0
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
-	golang.org/x/net v0.35.0
+	golang.org/x/net v0.41.0
 	golang.org/x/oauth2 v0.23.0
-	golang.org/x/sync v0.11.0
-	golang.org/x/text v0.22.0
-	golang.org/x/tools v0.26.0
+	golang.org/x/sync v0.15.0
+	golang.org/x/text v0.26.0
+	golang.org/x/tools v0.34.0
 	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.27.2
 	k8s.io/apimachinery v0.31.1
@@ -280,9 +282,9 @@ require (
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/term v0.29.0 // indirect
+	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.3.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
@@ -1624,3 +1626,6 @@ replace (
 
 // broken deps on 2.8.3
 replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/distribution v2.8.2+incompatible
+
+// ARO-RP sub-packages
+replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api

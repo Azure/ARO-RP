@@ -19,21 +19,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jongio/azidext/go/azidext"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/jongio/azidext/go/azidext"
-	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -230,7 +233,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	p.liveConfig, err = p.Core.NewLiveConfigManager(ctx)
+	p.liveConfig, err = p.NewLiveConfigManager(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -418,8 +421,8 @@ func (p *prod) MsiRpEndpoint() string {
 	return fmt.Sprintf("https://%s", os.Getenv("MSI_RP_ENDPOINT"))
 }
 
-func (p *prod) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
-	armClientOptions := p.Environment().ArmClientOptions(ClientDebugLoggerMiddleware(p.log.WithField("client", "msi-dataplane")))
+func (p *prod) MsiDataplaneClientOptions(correlationData *api.CorrelationData) (*policy.ClientOptions, error) {
+	armClientOptions := p.Environment().ArmClientOptions(ClientDebugLoggerMiddleware(utillog.EnrichWithCorrelationData(p.log.WithField("client", "msi-dataplane"), correlationData)))
 	clientOptions := armClientOptions.ClientOptions
 
 	return &clientOptions, nil

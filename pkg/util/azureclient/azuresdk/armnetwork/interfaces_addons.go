@@ -17,7 +17,7 @@ type InterfacesClientAddons interface {
 }
 
 func (c *interfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, parameters armnetwork.Interface, options *armnetwork.InterfacesClientBeginCreateOrUpdateOptions) error {
-	poller, err := c.InterfacesClient.BeginCreateOrUpdate(ctx, resourceGroupName, networkInterfaceName, parameters, options)
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, networkInterfaceName, parameters, options)
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (c *interfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGr
 }
 
 func (c *interfacesClient) DeleteAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginDeleteOptions) error {
-	poller, err := c.InterfacesClient.BeginDelete(ctx, resourceGroupName, networkInterfaceName, options)
+	poller, err := c.BeginDelete(ctx, resourceGroupName, networkInterfaceName, options)
 	if err != nil {
 		return err
 	}

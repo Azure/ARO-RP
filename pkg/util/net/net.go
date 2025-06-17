@@ -10,13 +10,14 @@ import (
 	"strings"
 	"syscall"
 
-	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
+
+	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	v1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
