@@ -11,10 +11,10 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
-        "rpServicePrincipalId": {
+        "globalDevopsServicePrincipalId": {
             "type": "string"
         },
-        "globalDevopsServicePrincipalId": {
+        "rpServicePrincipalId": {
             "type": "string"
         }
     },
