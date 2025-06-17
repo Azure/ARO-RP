@@ -26,19 +26,48 @@ var (
 
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
 // backing certificate (if needed) and store the certificate in the cluster MSI key
-// vault. If the certificate stored in keyvault is eligible for renewal, this function will request and persist
-// a new certificate.
+// vault. If the certificate stored in keyvault is eligible for renewal, the
+// certificate is empty or the certificate is for a different identity, this
+// function will request and persist a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
+	needsNewCert := false
 
 	if existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
 		if existingMsiCertificate.Attributes != nil {
-			if !m.isEligibleForRenewal(existingMsiCertificate) {
-				return nil
+			// if the secret's value is empty or the secret is for a different
+			// identity, we need to issue a new certificate
+			if existingMsiCertificate.Secret.Value == nil {
+				needsNewCert = true
+			} else {
+				keyvaultCredentials := &dataplane.ManagedIdentityCredentials{}
+				err := json.Unmarshal([]byte(*existingMsiCertificate.Secret.Value), keyvaultCredentials)
+				if err != nil {
+					return err
+				}
+
+				clusterIdentityResourceID := ""
+				for k, _ := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
+					clusterIdentityResourceID = k
+				}
+				if *keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterIdentityResourceID {
+					needsNewCert = true
+				}
+			}
+
+			if m.isEligibleForRenewal(existingMsiCertificate) {
+				needsNewCert = true
 			}
 		}
 	} else if !azureerrors.IsNotFoundError(err) {
 		return err
+	} else {
+		// ie: if there's an error getting the secret but the error isn't a IsNotFoundError
+		needsNewCert = true
+	}
+
+	if !needsNewCert {
+		return nil
 	}
 
 	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
