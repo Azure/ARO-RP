@@ -49,7 +49,7 @@ spec:
           args: ["-CertFile", "$(MDM_CERTFILE)", "-FrontEndUrl", "$(MDM_FRONTENDURL)", "-Logger", "$(MDM_LOGGER)", "-LogLevel", "$(MDM_LOGLEVEL)", "-PrivateKeyFile", "$(MDM_PRIVATEKEYFILE)", "-SourceEnvironment", "$(MDM_SOURCEENVIRONMENT)", "-SourceRole", "$(MDM_SOURCEROLE)", "-SourceRoleInstance", "$(MDM_SOURCEROLEINSTANCE)"]
           image: "{{ .Values.mdm.image }}"
           volumeMounts:
-            - name: statsd-socket
+            - name: statsd-volume
               mountPath: /var/run
         - name: {{ .Chart.Name }}
           securityContext:
@@ -69,7 +69,7 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-            - name: statsd-socket
+            - name: statsd-volume
               mountPath: /var/run
           {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
