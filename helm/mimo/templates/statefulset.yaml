@@ -51,6 +51,9 @@ spec:
           volumeMounts:
             - name: statsd-volume
               mountPath: /var/run
+            - name: secrets-store
+              mountPath: /secrets
+              readOnly: true
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
@@ -79,6 +82,12 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
       volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "rp-keyvault"
         - name: statsd-volume
           emptyDir: {}
       {{- with .Values.volumes }}

@@ -351,7 +351,7 @@ mdm:
   image: linuxgeneva-microsoft.azurecr.io/genevamdm:master_20211120.1
   env:
     - name: MDM_CERTFILE
-      value: /etc/mdm.pem
+      value: /secrets/mdm.pem
     - name: MDM_FRONTENDURL
       value: https://global.ppe.microsoftmetrics.com/
     - name: MDM_LOGGER
@@ -359,7 +359,7 @@ mdm:
     - name: MDM_LOGLEVEL
       value: DEBUG
     - name: MDM_PRIVATEKEYFILE
-      value: /etc/mdm.pem
+      value: /secrets/mdm.pem
     - name: MDM_SOURCEENVIRONMENT
       value: 
     - name: MDM_SOURCEROLE
