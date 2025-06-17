@@ -152,7 +152,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.1202-g118c178",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
-		"quay.io/app-sre/hive:87bff5947f",
+		"quay.io/app-sre/hive:8796c4f534",
 
 		// OpenShift Automated Release Tooling partner images
 		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
