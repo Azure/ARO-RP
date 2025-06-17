@@ -37,17 +37,17 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 		if existingMsiCertificate.Attributes != nil {
 			// if the secret's value is empty or the secret is for a different
 			// identity, we need to issue a new certificate
-			if existingMsiCertificate.Secret.Value == nil {
+			if existingMsiCertificate.Value == nil {
 				needsNewCert = true
 			} else {
 				keyvaultCredentials := &dataplane.ManagedIdentityCredentials{}
-				err := json.Unmarshal([]byte(*existingMsiCertificate.Secret.Value), keyvaultCredentials)
+				err := json.Unmarshal([]byte(*existingMsiCertificate.Value), keyvaultCredentials)
 				if err != nil {
 					return err
 				}
 
 				clusterIdentityResourceID := ""
-				for k, _ := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
+				for k := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
 					clusterIdentityResourceID = k
 				}
 				if *keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterIdentityResourceID {
