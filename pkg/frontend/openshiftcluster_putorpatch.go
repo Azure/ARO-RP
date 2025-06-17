@@ -230,10 +230,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			// only identity
 			if tempPatchParameters.Identity != nil && len(tempPatchParameters.Identity.UserAssignedIdentities) > 0 {
 				doc.OpenShiftCluster.Identity.UserAssignedIdentities = map[string]api.UserAssignedIdentity{}
-				for k, v := range tempPatchParameters.Identity.UserAssignedIdentities {
+				for k, _ := range tempPatchParameters.Identity.UserAssignedIdentities {
 					doc.OpenShiftCluster.Identity.UserAssignedIdentities[k] = api.UserAssignedIdentity{
-						ClientID:    v.ClientID,
-						PrincipalID: v.PrincipalID,
+						ClientID:    "",
+						PrincipalID: "",
 					}
 				}
 			}
