@@ -13,6 +13,9 @@
         },
         "rpServicePrincipalId": {
             "type": "string"
+        },
+        "globalDevopsServicePrincipalId": {
+            "type": "string"
         }
     },
     "resources": [
