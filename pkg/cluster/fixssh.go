@@ -83,18 +83,17 @@ NICs:
 			}
 			continue NICs
 		}
-    
-    // Booleans to track if backend pools are updated
+
+		// Booleans to track if backend pools are updated
 		ilbBackendPoolsUpdated := false
 		elbBackendPoolsUpdated := false
-    
+
 		// Check and update NIC IPConfigurations. Do we ever expect multiple IP configs on an interface?
 		for _, ipc := range nic.Properties.IPConfigurations {
 			// Skip any NICs that are not in the master subnet
 			if ipc.Properties.Subnet != nil && ipc.Properties.Subnet.ID != nil && *ipc.Properties.Subnet.ID != masterSubnetID {
-					m.log.Infof("Skipping NIC %s, NIC not in master subnet.", *nic.Name)
-					continue NICs
-				}
+				m.log.Infof("Skipping NIC %s, NIC not in master subnet.", *nic.Name)
+				continue NICs
 			}
 
 			ilbBackendPoolsUpdated = m.updateILBBackendPools(*ipc, infraID, *nic.Name, *lb.ID)
