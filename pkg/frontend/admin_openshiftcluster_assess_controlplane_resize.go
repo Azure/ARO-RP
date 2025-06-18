@@ -74,7 +74,7 @@ func (f *frontend) _postAdminAssessControlPlaneDownsize(
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	cpResizeMgr := newControlPlaneResize(portFwdAction)
+	cpResizeMgr := newCPResizeAssessment(portFwdAction)
 	assessment, err := cpResizeMgr.assessDownsizeRequest(ctx, downsizeReq, log)
 
 	assessmentJsonStr, err := json.MarshalIndent(assessment, "", " ")

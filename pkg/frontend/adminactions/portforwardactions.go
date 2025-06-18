@@ -18,12 +18,14 @@ import (
 	restclient "k8s.io/client-go/rest"
 )
 
+// A service that allows k8s port-forwarding, typically a pod.
 type PortForwardService interface {
-	GetPortForwardPodName() string
-	GetPortForwardNamespace() string
-	GetPortForwardPort() string
+	GetPodName() string
+	GetPodNamespace() string
+	GetPodPort() string
 }
 
+// Supported port-forward sessions.
 type PortForwardActions interface {
 	ForwardHttp(ctx context.Context, portFwd PortForwardService, httpReqs []*http.Request) ([]*http.Response, error)
 }
@@ -48,21 +50,17 @@ func NewPortForwardActions(log *logrus.Entry, env env.Interface, oc *api.OpenShi
 
 }
 
-// Establishes a k8s port forwarded connection and executes HTTP client requests on it.
+// Runs http requests on a k8s port-forward session and returns their responses.
 func (p *portForwardActions) ForwardHttp(ctx context.Context, svc PortForwardService, httpReqs []*http.Request) ([]*http.Response, error) {
 	hc := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-				_, port, err := net.SplitHostPort(address)
-				if err != nil {
-					p.log.Errorf("failed to split host and port from the address %s: %v", address, err)
-					return nil, err
-				}
-				return portforward.DialContext(ctx, p.log, p.restconfig, svc.GetPortForwardNamespace(), svc.GetPortForwardPodName(), port)
+				return portforward.DialContext(ctx, p.log, p.restconfig, svc.GetPodNamespace(), svc.GetPodName(), svc.GetPodPort())
 			},
+			// No need to reuse connections
 			DisableKeepAlives: true,
 		},
-		Timeout: time.Minute,
+		Timeout: 3 * time.Minute,
 	}
 
 	var httpResps []*http.Response
@@ -74,8 +72,9 @@ func (p *portForwardActions) ForwardHttp(ctx context.Context, svc PortForwardSer
 		if err != nil {
 			newErr := fmt.Errorf(
 				"port forward to pod %s, in namespace %s and port %s failed: %v",
-				svc.GetPortForwardNamespace(), svc.GetPortForwardNamespace(), err,
+				svc.GetPodName(), svc.GetPodNamespace(), svc.GetPodPort(), err,
 			)
+			// note: callers must close the response body
 			return httpResps, newErr
 		}
 		httpResps = append(httpResps, resp)

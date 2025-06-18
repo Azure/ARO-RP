@@ -23,7 +23,7 @@ const (
 	ErrMsgMetricDataUnavailable           = "the required metric data is unavailable"
 	ErrMsgNotEnoughMetricData             = "not enough metric data points"
 	ErrMsgUnknownPrometheusResponse       = "unknown prometheus response"
-	ErrMsgInvalidPrometheusResponse       = "invalid prometheus response"
+	ErrMsgUnexpectedPrometheusResponse    = "unexpected prometheus response"
 	ErrMsgPrometheusQueryFailed           = "prometheus query failed"
 	ErrMsgPrometheusRequestCreationFailed = "prometheus request creation failed"
 	ErrMsgPrometheusQueryUnexpected       = "prometheus query returned unexpected type or value"
@@ -38,15 +38,18 @@ const (
 	IncompleteDownsizeMsg   = "assessment incomplete due to errors"
 )
 
-type controlPlaneResize struct {
-	portForward        adminactions.PortForwardActions
+// cpResizeAssessment represents a utility for assessing control-plane resizes.
+type cpResizeAssessment struct {
+	// portForward provides a k8s port-forwarded sessions to pods.
+	portForward adminactions.PortForwardActions
+	// portForwardService is typically the pod that being portforwarded to.
 	portForwardService adminactions.PortForwardService
 }
 
 type portForwardService struct {
-	portForwardPodName   string
-	portForwardNamespace string
-	portForwardPort      string
+	podName      string
+	podNamespace string
+	podPort      string
 }
 
 type MetricData struct {
@@ -61,20 +64,24 @@ type AlertData struct {
 	Severity string `json:"severity"`
 }
 
+// A representation of a downsize assessment result given a downsize request
 type DownsizeAssessment struct {
 	Proceed         bool         `json:"proceed"`
 	Recommendation  string       `json:"recommendation"`
 	Err             string       `json:"error,omitempty"`
-	MetricDataStats []MetricData `json:"metricDataStats,omitempty"`
+	MetricData      []MetricData `json:"metricData,omitempty"`
 	FiringAlerts    []AlertData  `json:"firingalerts"`
+	FailedCondition int          `json:"failedcondition"`
 }
 
 type DownsizeRequest interface {
 	// Azure-advertised instance memory size
 	GetInstanceMemorySizeGB() int64
+	// Azure-advertised instance CPU size
 	GetInstanceCPUSize() int64
 	// Azure-advertised instance memory size
 	GetTargetInstanceMemorySizeGB() int64
+	// Azure-advertised instance CPU size
 	GetTargetInstanceCPUSize() int64
 	GetNumControlPlaneNodes() int64
 }
@@ -94,24 +101,25 @@ type VectorResult struct {
 	Value  [2]interface{}    `json:"value"`
 }
 
-func newControlPlaneResize(portForward adminactions.PortForwardActions) *controlPlaneResize {
+func newCPResizeAssessment(portForward adminactions.PortForwardActions) *cpResizeAssessment {
 	portFwdSvc := portForwardService{
-		portForwardPodName:   "prometheus-k8s-0",
-		portForwardNamespace: "openshift-monitoring",
-		portForwardPort:      "9090",
+		podName:      "prometheus-k8s-0",
+		podNamespace: "openshift-monitoring",
+		podPort:      "9090",
 	}
-	return &controlPlaneResize{
+	return &cpResizeAssessment{
 		portForward:        portForward,
 		portForwardService: portFwdSvc,
 	}
 }
 
-func (p *controlPlaneResize) createPrometheusQueryRequest(ctx context.Context, query string) (*http.Request, error) {
+// Creates and returns an http request for a prometheus query api.
+func (c *cpResizeAssessment) createPrometheusQueryRequest(ctx context.Context, query string) (*http.Request, error) {
 	promURL := fmt.Sprintf(
 		"http://%s.%s.svc:%s/api/v1/query",
-		p.portForwardService.GetPortForwardPodName(),
-		p.portForwardService.GetPortForwardNamespace(),
-		p.portForwardService.GetPortForwardPort(),
+		c.portForwardService.GetPodName(),
+		c.portForwardService.GetPodNamespace(),
+		c.portForwardService.GetPodPort(),
 	)
 	params := url.Values{}
 	params.Add("query", query)
@@ -119,17 +127,17 @@ func (p *controlPlaneResize) createPrometheusQueryRequest(ctx context.Context, q
 	return http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 }
 
-func (p *controlPlaneResize) parsePrometheusVectorResult(resp *http.Response) ([]VectorResult, error) {
+// Parses and returns a prometheus http response into a prometheus vector.
+func (c *cpResizeAssessment) parsePrometheusVectorResult(resp *http.Response) ([]VectorResult, error) {
 	body, err := ioutil.ReadAll(resp.Body)
-
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", ErrMsgUnknownPrometheusResponse, err)
+		return nil, fmt.Errorf("%s, failed to parse body: %v", ErrMsgUnknownPrometheusResponse, err)
 	}
 
 	var result PrometheusResponse
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", ErrMsgUnknownPrometheusResponse, err)
+		return nil, fmt.Errorf("%s, failed to unmarshal body: %v", ErrMsgUnknownPrometheusResponse, err)
 	}
 
 	var vector []VectorResult
@@ -138,24 +146,23 @@ func (p *controlPlaneResize) parsePrometheusVectorResult(resp *http.Response) ([
 		return vector, nil
 	}
 
-	return nil, fmt.Errorf("result type %s is not a vector: %w", result.Data.ResultType, ErrMsgInvalidPrometheusResponse)
+	return nil, fmt.Errorf("result type %s is not a vector: %w", result.Data.ResultType, ErrMsgUnexpectedPrometheusResponse)
 }
 
-func (p *controlPlaneResize) getFiringAlerts(ctx context.Context, log *logrus.Entry) ([]AlertData, error) {
+// Returns the firing alerts in a cluster's prometheus
+func (c *cpResizeAssessment) getFiringAlerts(ctx context.Context, log *logrus.Entry) ([]AlertData, error) {
 	alerts := []AlertData{}
 	query := GetFiringAlertsQuery()
 
-	req, err := p.createPrometheusQueryRequest(ctx, query.Query)
+	req, err := c.createPrometheusQueryRequest(ctx, query.Query)
 	if err != nil {
 		log.Errorf("%s: %v", ErrMsgPrometheusRequestCreationFailed, err)
 		return nil, errors.New(ErrMsgPrometheusRequestCreationFailed)
 	}
 
-	resps, err := p.portForward.ForwardHttp(ctx, p.portForwardService, []*http.Request{req})
+	resps, err := c.portForward.ForwardHttp(ctx, c.portForwardService, []*http.Request{req})
 
-	var r *http.Response
-	if len(resps) > 0 {
-		r = resps[0]
+	for _, r := range resps {
 		defer r.Body.Close()
 	}
 
@@ -163,7 +170,8 @@ func (p *controlPlaneResize) getFiringAlerts(ctx context.Context, log *logrus.En
 		return nil, err
 	}
 
-	vectorResult, err := p.parsePrometheusVectorResult(r)
+	r := resps[0]
+	vectorResult, err := c.parsePrometheusVectorResult(r)
 
 	vectorResultJson, err := json.MarshalIndent(vectorResult, "", " ")
 	if err != nil {
@@ -172,17 +180,10 @@ func (p *controlPlaneResize) getFiringAlerts(ctx context.Context, log *logrus.En
 
 	log.Infof("vector result: %s", vectorResultJson)
 
-	if len(vectorResult) < 1 {
-		return alerts, nil
-	}
-
 	for _, alert := range vectorResult {
 		alertName := alert.Metric["alertname"]
 		alertState := alert.Metric["alertstate"]
 		alertSeverity := alert.Metric["severity"]
-		// no need to check for the value since the query itself
-		// guarantees the returne values are firing alerts.
-
 		alerts = append(alerts, AlertData{
 			Name:     alertName,
 			State:    alertState,
@@ -193,12 +194,14 @@ func (p *controlPlaneResize) getFiringAlerts(ctx context.Context, log *logrus.En
 	return alerts, nil
 }
 
-func (p *controlPlaneResize) getDownsizeMetricsDataStats(ctx context.Context, log *logrus.Entry) ([]MetricData, error) {
-	stats := []MetricData{}
+// Returns information about prometheus metrics to be used for a downsize assessment
+func (c *cpResizeAssessment) getDownsizeMetricsData(ctx context.Context, log *logrus.Entry) ([]MetricData, error) {
+	data := []MetricData{}
 	requests := []*http.Request{}
 	promQueries := GetDownsizeMetricAvailabilityQueries()
+
 	for _, query := range promQueries {
-		req, err := p.createPrometheusQueryRequest(ctx, query.Query)
+		req, err := c.createPrometheusQueryRequest(ctx, query.Query)
 		if err != nil {
 			log.Errorf("%s: %v", ErrMsgPrometheusRequestCreationFailed, err)
 			return nil, errors.New(ErrMsgPrometheusRequestCreationFailed)
@@ -206,7 +209,7 @@ func (p *controlPlaneResize) getDownsizeMetricsDataStats(ctx context.Context, lo
 		requests = append(requests, req)
 	}
 
-	resps, err := p.portForward.ForwardHttp(ctx, p.portForwardService, requests)
+	resps, err := c.portForward.ForwardHttp(ctx, c.portForwardService, requests)
 
 	for _, r := range resps {
 		defer r.Body.Close()
@@ -217,7 +220,7 @@ func (p *controlPlaneResize) getDownsizeMetricsDataStats(ctx context.Context, lo
 	}
 
 	for i, r := range resps {
-		vectorResult, err := p.parsePrometheusVectorResult(r)
+		vectorResult, err := c.parsePrometheusVectorResult(r)
 
 		vectorResultJson, err := json.MarshalIndent(vectorResult, "", " ")
 		if err != nil {
@@ -226,34 +229,42 @@ func (p *controlPlaneResize) getDownsizeMetricsDataStats(ctx context.Context, lo
 
 		log.Infof("vector result: %s", vectorResultJson)
 
-		if len(vectorResult) < 1 {
-			// Expect the query to return 1 vector
+		if len(vectorResult) == 0 {
+			log.Errorf("Vector result is empty: %v", ErrMsgPrometheusQueryUnexpected)
 			return nil, errors.New(ErrMsgPrometheusQueryUnexpected)
 		}
 
 		value, ok := vectorResult[0].Value[1].(string)
 		if !ok {
+			log.Errorf("Vector result value is not a string: %v", ErrMsgPrometheusQueryUnexpected)
 			return nil, errors.New(ErrMsgPrometheusQueryUnexpected)
 		}
 
 		percent, err := strconv.ParseFloat(value, 64)
 		if err != nil {
+			log.Errorf("Failed to parse vector result value into an float: %v: %v", ErrMsgPrometheusQueryUnexpected, err)
 			return nil, errors.New(ErrMsgPrometheusQueryUnexpected)
 		}
 
 		percent = math.Round(percent*100) / 100
-		data := MetricData{
+		newData := MetricData{
 			Name:             promQueries[i].Name,
 			PercentAvailable: percent,
 			Query:            promQueries[i].Query,
 		}
-		stats = append(stats, data)
+		data = append(data, newData)
 	}
 
-	return stats, nil
+	return data, nil
 }
 
-func (p *controlPlaneResize) checkForDownsizeConditions(ctx context.Context, downsizeRequest DownsizeRequest, log *logrus.Entry) error {
+// Checks for downsize assessment conditions (see SOP) and returns the condition
+// number and an error if at least one of the conditions is not met
+func (c *cpResizeAssessment) checkForDownsizeConditions(
+	ctx context.Context,
+	downsizeRequest DownsizeRequest,
+	log *logrus.Entry,
+) (int, error) {
 	memSizeFactor := (downsizeRequest.GetNumControlPlaneNodes() * downsizeRequest.GetTargetInstanceMemorySizeGB()) /
 		(downsizeRequest.GetNumControlPlaneNodes() * downsizeRequest.GetInstanceMemorySizeGB())
 	cpuSizeFactor := (downsizeRequest.GetNumControlPlaneNodes() * downsizeRequest.GetTargetInstanceCPUSize()) /
@@ -263,11 +274,6 @@ func (p *controlPlaneResize) checkForDownsizeConditions(ctx context.Context, dow
 	condition2Query := GetDownsizeCondition2Query(cpuSizeFactor)
 	condition3Query := GetDownsizeCondition3Query(memSizeFactor)
 	condition4Query := GetDownsizeCondition4Query(cpuSizeFactor)
-
-	// fmt.Printf("\n%s\n", condition1Query.Query)
-	// fmt.Printf("\n%s\n", condition2Query.Query)
-	// fmt.Printf("\n%s\n", condition3Query.Query)
-	// fmt.Printf("\n%s\n", condition4Query.Query)
 
 	type item struct {
 		query PrometheusQuery
@@ -281,31 +287,30 @@ func (p *controlPlaneResize) checkForDownsizeConditions(ctx context.Context, dow
 		{condition3Query, errors.New(ErrMsgCondition3)},
 		{condition4Query, errors.New(ErrMsgCondition4)},
 	}
+	conditionChecksFailed := 0
 
 	for _, q := range promQueries {
-		req, err := p.createPrometheusQueryRequest(ctx, q.query.Query)
+		req, err := c.createPrometheusQueryRequest(ctx, q.query.Query)
 		if err != nil {
 			log.Errorf("%s: %v", ErrMsgPrometheusRequestCreationFailed, err)
-			return errors.New(ErrMsgPrometheusRequestCreationFailed)
+			return conditionChecksFailed, errors.New(ErrMsgPrometheusRequestCreationFailed)
 		}
 		requests = append(requests, req)
 	}
 
-	resps, err := p.portForward.ForwardHttp(ctx, p.portForwardService, requests)
+	resps, err := c.portForward.ForwardHttp(ctx, c.portForwardService, requests)
 
 	for _, r := range resps {
 		defer r.Body.Close()
 	}
 
 	if err != nil {
-		return err
+		return conditionChecksFailed, err
 	}
 
 	for i, r := range resps {
 
-		fmt.Printf("\nstatus: %s, body: %s\n", r.Status, r.Body)
-
-		vectorResult, err := p.parsePrometheusVectorResult(r)
+		vectorResult, err := c.parsePrometheusVectorResult(r)
 
 		vectorResultJson, err := json.MarshalIndent(vectorResult, "", " ")
 		if err != nil {
@@ -314,31 +319,33 @@ func (p *controlPlaneResize) checkForDownsizeConditions(ctx context.Context, dow
 
 		log.Infof("vector result: %s", vectorResultJson)
 
-		if len(vectorResult) < 1 {
-			// Expect the query to return 1 vector
-			return errors.New(ErrMsgPrometheusQueryUnexpected)
+		if len(vectorResult) == 0 {
+			log.Errorf("Vector result is empty: %v", ErrMsgPrometheusQueryUnexpected)
+			return conditionChecksFailed, errors.New(ErrMsgPrometheusQueryUnexpected)
 		}
 
 		value, ok := vectorResult[0].Value[1].(string)
 		if !ok {
-			return errors.New(ErrMsgPrometheusQueryUnexpected)
+			log.Errorf("Vector result value is not a string: %v", ErrMsgPrometheusQueryUnexpected)
+			return conditionChecksFailed, errors.New(ErrMsgPrometheusQueryUnexpected)
 		}
 
 		isPassed, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return errors.New(ErrMsgPrometheusQueryUnexpected)
+			log.Errorf("Failed to parse vector result value into an float: %v: %v", ErrMsgPrometheusQueryUnexpected, err)
+			return conditionChecksFailed, errors.New(ErrMsgPrometheusQueryUnexpected)
 		}
 
 		if isPassed == 0 {
 			// fail immediately when at least 1 condition is not satisfied
-			return promQueries[i].err
+			return i + 1, promQueries[i].err
 		}
 	}
 
-	return nil
+	return 0, nil
 }
 
-func (c *controlPlaneResize) assessDownsizeRequest(ctx context.Context, downsizeRequest DownsizeRequest, log *logrus.Entry) (DownsizeAssessment, error) {
+func (c *cpResizeAssessment) assessDownsizeRequest(ctx context.Context, downsizeRequest DownsizeRequest, log *logrus.Entry) (DownsizeAssessment, error) {
 	var err error
 
 	// Get firing alerts
@@ -347,73 +354,74 @@ func (c *controlPlaneResize) assessDownsizeRequest(ctx context.Context, downsize
 		log.Warnf("%v: %v", ErrMsgMetricDataUnavailable, err)
 	}
 
-	metricData, err := c.getDownsizeMetricsDataStats(ctx, log)
+	metricData, err := c.getDownsizeMetricsData(ctx, log)
 
-	// var errStr string
-	// if err != nil {
-	// 	errStr = err.Error()
-	// }
+	var errStr string
+	if err != nil {
+		errStr = err.Error()
+	}
 
-	// if err != nil {
-	// 	log.Errorf("%s: %v", ErrMsgMetricDataUnavailable, err)
+	if err != nil {
+		log.Errorf("%s: %v", ErrMsgMetricDataUnavailable, err)
 
-	// 	err = errors.New(ErrMsgMetricDataUnavailable)
-	// 	return DownsizeAssessment{
-	// 		Err:             errStr,
-	// 		MetricDataStats: metricData,
-	// 		Proceed:         false,
-	// 		Recommendation:  IncompleteDownsizeMsg,
-	// 		FiringAlerts:    firingAlerts,
-	// 	}, err
-	// }
+		err = errors.New(ErrMsgMetricDataUnavailable)
+		return DownsizeAssessment{
+			Err:            errStr,
+			MetricData:     metricData,
+			Proceed:        false,
+			Recommendation: IncompleteDownsizeMsg,
+			FiringAlerts:   firingAlerts,
+		}, err
+	}
 
-	// // 1. Ensure there are enough metric data
-	// for _, data := range metricData {
-	// 	if data.PercentAvailable < 80 {
-	// 		err := fmt.Errorf(
-	// 			"metric %s has only %v%% data points: %s",
-	// 			data.Name,
-	// 			data.PercentAvailable,
-	// 			ErrMsgMetricDataUnavailable,
-	// 		)
-	// 		return DownsizeAssessment{
-	// 			Err:             err.Error(),
-	// 			MetricDataStats: metricData,
-	// 			Proceed:         false,
-	// 			Recommendation:  DoNotProceedDownsizeMsg,
-	// 			FiringAlerts:    firingAlerts,
-	// 		}, err
-	// 	}
-	// }
+	// 1. Ensure there are enough metric data
+	for _, data := range metricData {
+		if data.PercentAvailable < 80 {
+			err := fmt.Errorf(
+				"metric %s has only %v%% data points: %s",
+				data.Name,
+				data.PercentAvailable,
+				ErrMsgMetricDataUnavailable,
+			)
+			return DownsizeAssessment{
+				Err:            err.Error(),
+				MetricData:     metricData,
+				Proceed:        false,
+				Recommendation: DoNotProceedDownsizeMsg,
+				FiringAlerts:   firingAlerts,
+			}, err
+		}
+	}
 
 	// 2. Ensure all downsize conditions are satisfied
-	err = c.checkForDownsizeConditions(ctx, downsizeRequest, log)
+	failedCondition, err := c.checkForDownsizeConditions(ctx, downsizeRequest, log)
 	if err != nil {
 		return DownsizeAssessment{
 			Err:             err.Error(),
-			MetricDataStats: metricData,
+			MetricData:      metricData,
 			Proceed:         false,
 			Recommendation:  DoNotProceedDownsizeMsg,
 			FiringAlerts:    firingAlerts,
+			FailedCondition: failedCondition,
 		}, err
 	}
 
 	return DownsizeAssessment{
-		MetricDataStats: metricData,
-		Proceed:         true,
-		Recommendation:  ProceedDownsizeMsg,
-		FiringAlerts:    firingAlerts,
+		MetricData:     metricData,
+		Proceed:        true,
+		Recommendation: ProceedDownsizeMsg,
+		FiringAlerts:   firingAlerts,
 	}, nil
 }
 
-func (p portForwardService) GetPortForwardPodName() string {
-	return p.portForwardPodName
+func (p portForwardService) GetPodName() string {
+	return p.podName
 }
 
-func (p portForwardService) GetPortForwardNamespace() string {
-	return p.portForwardNamespace
+func (p portForwardService) GetPodNamespace() string {
+	return p.podNamespace
 }
 
-func (p portForwardService) GetPortForwardPort() string {
-	return p.portForwardPort
+func (p portForwardService) GetPodPort() string {
+	return p.podPort
 }
