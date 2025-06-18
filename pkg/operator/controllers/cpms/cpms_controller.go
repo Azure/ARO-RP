@@ -187,19 +187,3 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named(ControllerName).
 		Complete(r)
 }
-
-/*func (r *Reconciler) cpmsProgressing(ctx context.Context) (bool, error) {
-	cpms := &configv1.ClusterOperator{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: CPMSOperatorName}, cpms)
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			r.Log.Info("CPMS is not present on cluster, cannot check progressing status")
-			return false, nil
-		}
-		r.Log.Errorf("Error when retrieving CPMS: %v", err)
-		return false, err
-	}
-
-	if cpms.Status.Conditions == nil {
-	}
-}*/
