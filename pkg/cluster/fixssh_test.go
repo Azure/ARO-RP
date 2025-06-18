@@ -9,11 +9,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
@@ -151,7 +152,7 @@ func configureInterface(backendPools []string,
 	}
 
 	if addVM {
-		iface.Properties.VirtualMachine = &armnetwork.SubResource{ID: to.StringPtr(strings.Replace(name, "-nic", "", -1))}
+		iface.Properties.VirtualMachine = &armnetwork.SubResource{ID: to.StringPtr(strings.ReplaceAll(name, "-nic", ""))}
 	} else {
 		iface.Properties.VirtualMachine = nil
 	}

@@ -35,7 +35,7 @@ func (c *interfacesClient) DeleteAndWait(ctx context.Context, resourceGroupName 
 }
 
 func (c *interfacesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (result []*armnetwork.Interface, err error) {
-	pager := c.InterfacesClient.NewListPager(resourceGroupName, options)
+	pager := c.NewListPager(resourceGroupName, options)
 
 	for pager.More() {
 		page, err := pager.NextPage(ctx)
