@@ -50,8 +50,8 @@ RUN echo 'eval "$(pyenv init --path)"' >> ~/.bashrc && \
     echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 
 # Install Python 3.10 and set up pip
-RUN pyenv install 3.10.0 && \
-    pyenv global 3.10.0 && \
+RUN pyenv install 3.10 && \
+    pyenv global 3.10 && \
     pip install --upgrade pip
 
 # Set up working directory
