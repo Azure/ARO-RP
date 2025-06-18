@@ -2,6 +2,7 @@ package cpms
 
 import (
 	"context"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -19,7 +20,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 
-	//"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
@@ -30,9 +30,9 @@ import (
 // Licensed under the Apache License 2.0.
 
 const (
-	AROOperatorName = "aro"
-	ControllerName  = "CPMSController"
-	//CPMSOperatorName          = "control-plane-machine-set"
+	AROOperatorName           = "aro"
+	ControllerName            = "CPMSController"
+	CPMSOperatorName          = "control-plane-machine-set"
 	CPMSProgressingAnnotation = "aro.openshift.io/cpms-progressing"
 	SingletonCPMSName         = "cluster"
 	SingletonCPMSNamespace    = "openshift-machine-api"
@@ -100,27 +100,38 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 
 		// Check if we're waiting for a CPMS update to finish by looking for the associated annotation on the ARO operator
-		aroOperator := &configv1.ClusterOperator{}
-		err := r.Client.Get(ctx, types.NamespacedName{Name: AROOperatorName}, aroOperator)
+
+		cpmsOperator := &configv1.ClusterOperator{}
+		err := r.Client.Get(ctx, types.NamespacedName{Name: CPMSOperatorName}, cpmsOperator)
 		if err != nil {
 			return reconcile.Result{}, err
+		}
+
+		aroOperator := &configv1.ClusterOperator{}
+		err = r.Client.Get(ctx, types.NamespacedName{Name: AROOperatorName}, aroOperator)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if aroOperator.Annotations == nil {
+			aroOperator.Annotations = map[string]string{}
 		}
 
 		cpmsProgressing, annotationExists := aroOperator.Annotations[CPMSProgressingAnnotation]
 
 		// Base case: CPMS operator not progressing and annotation not present = add the annotation
-		if !clusteroperators.IsOperatorProgressing(aroOperator) && !annotationExists {
+		if !clusteroperators.IsOperatorProgressing(cpmsOperator) && !annotationExists {
 			r.Log.Info("No CPMS active CPMS update detected, adding progress tracking annotation")
 			aroOperator.Annotations[CPMSProgressingAnnotation] = "false"
 			err = r.Client.Update(ctx, aroOperator)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-		} else if !clusteroperators.IsOperatorProgressing(aroOperator) && annotationExists && cpmsProgressing == "false" {
-			r.Log.Info("No CPMS active CPMS update detected")
-		} else if !clusteroperators.IsOperatorProgressing(aroOperator) && annotationExists && cpmsProgressing == "true" {
+		} else if !clusteroperators.IsOperatorProgressing(cpmsOperator) && annotationExists && cpmsProgressing == "false" {
+			r.Log.Info("No active CPMS update detected")
+		} else if !clusteroperators.IsOperatorProgressing(cpmsOperator) && annotationExists && cpmsProgressing == "true" {
 			// This is where we need to trigger the fixssh admin step and set the annotation back to false
-			r.Log.Info("CPMS update complete, triggering fixssh")
+			r.Log.Info("CPMS update complete, triggering admin update")
 			aroOperator.Annotations[CPMSProgressingAnnotation] = "false"
 			err = r.Client.Update(ctx, aroOperator)
 			if err != nil {
@@ -128,25 +139,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			// How are we triggering the admin update steps?
+			// Directly from the ARO operator in the cluster?
 			// Prometheus metric consumed by the regional RPs?
 			// Producer / Consumer async messaging?
 			// Direct HTTPS callback?
-		} else if clusteroperators.IsOperatorProgressing(aroOperator) && !annotationExists {
+
+			// Let's try triggering the admin update steps from the operator first
+			//cluster
+
+		} else if clusteroperators.IsOperatorProgressing(cpmsOperator) && !annotationExists {
 			r.Log.Info("CPMS update detected, adding progress tracking annotation")
 			aroOperator.Annotations[CPMSProgressingAnnotation] = "true"
 			err = r.Client.Update(ctx, aroOperator)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-		} else if clusteroperators.IsOperatorProgressing(aroOperator) && annotationExists && cpmsProgressing == "true" {
+		} else if clusteroperators.IsOperatorProgressing(cpmsOperator) && annotationExists && cpmsProgressing == "true" {
 			r.Log.Info("CPMS update detected, watching for completion")
 			// Do we increase the reconciliation frequency here?
-		} else if clusteroperators.IsOperatorProgressing(aroOperator) && annotationExists && cpmsProgressing == "false" {
+		} else if clusteroperators.IsOperatorProgressing(cpmsOperator) && annotationExists && cpmsProgressing == "false" {
 			r.Log.Info("CPMS update detected, updating progress tracking annotation")
+			aroOperator.Annotations[CPMSProgressingAnnotation] = "true"
+			err = r.Client.Update(ctx, aroOperator)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
