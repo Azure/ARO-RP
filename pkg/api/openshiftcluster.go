@@ -473,6 +473,10 @@ const (
 	VMSizeStandardD64sV5 VMSize = "Standard_D64s_v5"
 	VMSizeStandardD96sV5 VMSize = "Standard_D96s_v5"
 
+	VMSizeStandardD2sV6  VMSize = "Standard_D2s_v6"
+	VMSizeStandardD4sV6  VMSize = "Standard_D4s_v6"
+	VMSizeStandardD8sV6  VMSize = "Standard_D8s_v6"
+
 	VMSizeStandardD4asV4  VMSize = "Standard_D4as_v4"
 	VMSizeStandardD8asV4  VMSize = "Standard_D8as_v4"
 	VMSizeStandardD16asV4 VMSize = "Standard_D16as_v4"
@@ -606,6 +610,10 @@ var (
 	VMSizeStandardD64sV5Struct = VMSizeStruct{CoreCount: 64, Family: standardDSv5}
 	VMSizeStandardD96sV5Struct = VMSizeStruct{CoreCount: 96, Family: standardDSv5}
 
+	VMSizeStandardD2sV6Struct  = VMSizeStruct{CoreCount: 2, Family: standardDSv6}
+	VMSizeStandardD4sV6Struct  = VMSizeStruct{CoreCount: 4, Family: standardDSv6}
+	VMSizeStandardD8sV6Struct  = VMSizeStruct{CoreCount: 8, Family: standardDSv6}
+
 	VMSizeStandardD4asV4Struct  = VMSizeStruct{CoreCount: 4, Family: standardDASv4}
 	VMSizeStandardD8asV4Struct  = VMSizeStruct{CoreCount: 8, Family: standardDASv4}
 	VMSizeStandardD16asV4Struct = VMSizeStruct{CoreCount: 16, Family: standardDASv4}
@@ -718,6 +726,7 @@ const (
 	standardDSv3   = "standardDSv3Family"
 	standardDSv4   = "standardDSv4Family"
 	standardDSv5   = "standardDSv5Family"
+	standardDSv6   = "standardDSv6Family"
 	standardDASv4  = "standardDASv4Family"
 	standardDASv5  = "standardDASv5Family"
 	standardDDSv5  = "standardDDSv5Family"

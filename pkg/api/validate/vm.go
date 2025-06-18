@@ -43,6 +43,8 @@ var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardD16sV5: api.VMSizeStandardD16sV5Struct,
 	api.VMSizeStandardD32sV5: api.VMSizeStandardD32sV5Struct,
 
+	api.VMSizeStandardD8sV6:  api.VMSizeStandardD8sV6Struct,
+
 	api.VMSizeStandardD8asV4:  api.VMSizeStandardD8asV4Struct,
 	api.VMSizeStandardD16asV4: api.VMSizeStandardD16asV4Struct,
 	api.VMSizeStandardD32asV4: api.VMSizeStandardD32asV4Struct,
@@ -125,6 +127,9 @@ var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardD32sV5: api.VMSizeStandardD32sV5Struct,
 	api.VMSizeStandardD64sV5: api.VMSizeStandardD64sV5Struct,
 	api.VMSizeStandardD96sV5: api.VMSizeStandardD96sV5Struct,
+
+	api.VMSizeStandardD4sV6:  api.VMSizeStandardD4sV6Struct,
+	api.VMSizeStandardD8sV6:  api.VMSizeStandardD8sV6Struct,
 
 	api.VMSizeStandardD4asV4:  api.VMSizeStandardD4asV4Struct,
 	api.VMSizeStandardD8asV4:  api.VMSizeStandardD8asV4Struct,
@@ -249,7 +254,7 @@ func VMSizeIsValid(vmSize api.VMSize, requireD2sWorkers, isMaster bool) bool {
 
 	if requireD2sWorkers {
 		switch vmSize {
-		case api.VMSizeStandardD2sV3, api.VMSizeStandardD2sV4, api.VMSizeStandardD2sV5:
+		case api.VMSizeStandardD2sV3, api.VMSizeStandardD2sV4, api.VMSizeStandardD2sV5, api.VMSizeStandardD2sV6, api.VMSizeStandardD4sV6, api.VMSizeStandardD8sV6:
 			return true
 		default:
 			return false
