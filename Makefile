@@ -440,6 +440,8 @@ ci-clean:
 
 .PHONY: ci-rp
 ci-rp:
+	id -a \
+	ls -al /var/run/docker.sock \
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
