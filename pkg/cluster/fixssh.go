@@ -167,7 +167,7 @@ func (m *manager) updateILBBackendPools(ipc armnetwork.InterfaceIPConfiguration,
 	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {
 		return *backendPool.ID == *sshBackendPool.ID
 	}) {
-		m.log.Infof("Adding NIC %s to Internal Load Balancer API Address Pool %s", nicName, sshBackendPoolID)
+		m.log.Infof("Adding NIC %s to Internal Load Balancer SSH Address Pool %s", nicName, sshBackendPoolID)
 		ipc.Properties.LoadBalancerBackendAddressPools = append(ipc.Properties.LoadBalancerBackendAddressPools, sshBackendPool)
 		updated = true
 	}
