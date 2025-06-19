@@ -132,7 +132,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: rpPIP.PublicIPAddress.Properties.IPAddress,
+					Ipv4Address: rpPIP.Properties.IPAddress,
 				},
 			},
 		},
@@ -146,7 +146,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: portalPIP.PublicIPAddress.Properties.IPAddress,
+					Ipv4Address: portalPIP.Properties.IPAddress,
 				},
 			},
 		},
