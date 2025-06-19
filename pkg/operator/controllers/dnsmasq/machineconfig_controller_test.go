@@ -108,6 +108,7 @@ func TestMachineConfigReconciler(t *testing.T) {
 
 			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
 				WithObjects(tt.objects...).
+				WithStatusSubresource(tt.objects...).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
@@ -255,7 +256,7 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 			},
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{
-				"MachineConfig//99-custom-aro-dns": 1,
+				"//99-custom-aro-dns": 1,
 			},
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -273,21 +274,23 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
-				WithObjects(&configv1.ClusterVersion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "version",
-					},
-					Status: configv1.ClusterVersionStatus{
-						History: []configv1.UpdateHistory{
-							{
-								State:   configv1.CompletedUpdate,
-								Version: "4.10.11",
-							},
+			cluster := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Status: configv1.ClusterVersionStatus{
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "4.10.11",
 						},
 					},
-				}).
+				},
+			}
+			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
+				WithObjects(tt.objects...).
+				WithStatusSubresource(tt.objects...).
+				WithObjects(cluster).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
@@ -434,7 +437,7 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 			},
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{
-				"MachineConfig//99-custom-aro-dns": 1,
+				"//99-custom-aro-dns": 1,
 			},
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -463,6 +466,7 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "custom",
 						DeletionTimestamp: &transitionTime,
+						Finalizers:        []string{"test-finalizer"},
 					},
 					Status: mcv1.MachineConfigPoolStatus{},
 					Spec:   mcv1.MachineConfigPoolSpec{},
@@ -486,22 +490,25 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
-				WithObjects(&configv1.ClusterVersion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "version",
-					},
-					Spec: configv1.ClusterVersionSpec{},
-					Status: configv1.ClusterVersionStatus{
-						Conditions: []configv1.ClusterOperatorStatusCondition{
-							{
-								Type:   configv1.OperatorProgressing,
-								Status: configv1.ConditionTrue,
-							},
+			clusterversion := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Spec: configv1.ClusterVersionSpec{},
+				Status: configv1.ClusterVersionStatus{
+					Conditions: []configv1.ClusterOperatorStatusCondition{
+						{
+							Type:   configv1.OperatorProgressing,
+							Status: configv1.ConditionTrue,
 						},
 					},
-				}).
+				},
+			}
+
+			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
+				WithObjects(tt.objects...).
+				WithStatusSubresource(tt.objects...).
+				WithObjects(clusterversion).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))

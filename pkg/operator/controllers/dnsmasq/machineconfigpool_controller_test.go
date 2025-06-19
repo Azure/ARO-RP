@@ -114,6 +114,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 
 			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
 				WithObjects(tt.objects...).
+				WithStatusSubresource(tt.objects...).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
@@ -342,7 +343,7 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 			},
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{
-				"MachineConfig//99-custom-aro-dns": 1,
+				"//99-custom-aro-dns": 1,
 			},
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -374,6 +375,7 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						},
 					},
 				}).
+				WithStatusSubresource(tt.objects...).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
@@ -491,7 +493,7 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 			},
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{
-				"MachineConfig//99-custom-aro-dns": 1,
+				"//99-custom-aro-dns": 1,
 			},
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -524,6 +526,7 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 						},
 					},
 				}).
+				WithStatusSubresource(tt.objects...).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))

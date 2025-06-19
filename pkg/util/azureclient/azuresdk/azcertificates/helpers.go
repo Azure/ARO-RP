@@ -106,14 +106,14 @@ func WaitForCertificateOperation(parent context.Context, operation func(ctx cont
 	ctx, cancel := context.WithTimeout(parent, 15*time.Minute)
 	defer cancel()
 
-	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	err := wait.PollUntilContextCancel(ctx, 10*time.Second, true, func(context.Context) (bool, error) {
 		op, err := operation(ctx)
 		if err != nil {
 			return false, err
 		}
 
 		return checkOperation(op)
-	}, ctx.Done())
+	})
 	return err
 }
 
