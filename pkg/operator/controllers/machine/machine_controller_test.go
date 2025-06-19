@@ -269,7 +269,7 @@ func workerMachineSet(name string) *machinev1beta1.MachineSet {
 			Namespace: machineSetsNamespace,
 		},
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: to.Int32Ptr(1),
+			Replicas: to.Ptr(int32(1)),
 		},
 	}
 }

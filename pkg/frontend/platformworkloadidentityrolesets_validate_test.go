@@ -6,9 +6,10 @@ package frontend
 import (
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func TestValidatePlatformWorkloadIdentities(t *testing.T) {

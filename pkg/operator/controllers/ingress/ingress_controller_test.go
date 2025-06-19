@@ -87,7 +87,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(3),
+					Replicas: to.Ptr(int32(3)),
 				},
 			},
 			expectedReplica: 3,
@@ -103,7 +103,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(minimumReplicas),
+					Replicas: to.Ptr(minimumReplicas),
 				},
 			},
 			expectedReplica: minimumReplicas,
@@ -119,7 +119,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(1),
+					Replicas: to.Ptr(int32(1)),
 				},
 			},
 			expectedReplica: minimumReplicas,
@@ -144,7 +144,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(0),
+					Replicas: to.Ptr(int32(0)),
 				},
 			},
 			expectedReplica: minimumReplicas,

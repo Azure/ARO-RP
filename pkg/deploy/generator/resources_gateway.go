@@ -110,8 +110,8 @@ func (g *generator) gatewayLB() *arm.Resource {
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(443),
-							BackendPort:      to.Int32Ptr(443),
+							FrontendPort:     to.Ptr(int32(443)),
+							BackendPort:      to.Ptr(int32(443)),
 						},
 						Name: to.Ptr("gateway-lbrule-https"),
 					},
@@ -128,8 +128,8 @@ func (g *generator) gatewayLB() *arm.Resource {
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(80),
-							BackendPort:      to.Int32Ptr(80),
+							FrontendPort:     to.Ptr(int32(80)),
+							BackendPort:      to.Ptr(int32(80)),
 						},
 						Name: to.Ptr("gateway-lbrule-http"),
 					},
@@ -138,8 +138,8 @@ func (g *generator) gatewayLB() *arm.Resource {
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolHTTP,
-							Port:           to.Int32Ptr(80),
-							NumberOfProbes: to.Int32Ptr(2),
+							Port:           to.Ptr(int32(80)),
+							NumberOfProbes: to.Ptr(int32(2)),
 							RequestPath:    to.Ptr("/healthz/ready"),
 						},
 						Name: to.Ptr("gateway-probe"),
@@ -258,7 +258,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 			Sku: &mgmtcompute.Sku{
 				Name:     to.Ptr("[parameters('gatewayVmSize')]"),
 				Tier:     to.Ptr("Standard"),
-				Capacity: to.Int64Ptr(1339),
+				Capacity: to.Ptr(int64(1339)),
 			},
 			Tags: map[string]*string{},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
@@ -267,9 +267,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					Mode: mgmtcompute.UpgradeModeAutomatic,
 					RollingUpgradePolicy: &mgmtcompute.RollingUpgradePolicy{
 						// Percentage equates to 1.02 instances out of 3
-						MaxBatchInstancePercent:             to.Int32Ptr(34),
-						MaxUnhealthyInstancePercent:         to.Int32Ptr(34),
-						MaxUnhealthyUpgradedInstancePercent: to.Int32Ptr(34),
+						MaxBatchInstancePercent:             to.Ptr(int32(34)),
+						MaxUnhealthyInstancePercent:         to.Ptr(int32(34)),
+						MaxUnhealthyUpgradedInstancePercent: to.Ptr(int32(34)),
 						PauseTimeBetweenBatches:             to.Ptr("PT10M"),
 					},
 					AutomaticOSUpgradePolicy: &mgmtcompute.AutomaticOSUpgradePolicy{
@@ -310,7 +310,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
-							DiskSizeGB: to.Int32Ptr(1024),
+							DiskSizeGB: to.Ptr(int32(1024)),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{

@@ -48,7 +48,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: to.Int32Ptr(replicas0), // Modify replicas accordingly
+				Replicas: to.Ptr(replicas0), // Modify replicas accordingly
 			},
 		}
 		workerMachineSet1 := &machinev1beta1.MachineSet{
@@ -60,7 +60,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: to.Int32Ptr(replicas1),
+				Replicas: to.Ptr(replicas1),
 			},
 		}
 		workerMachineSet2 := &machinev1beta1.MachineSet{
@@ -72,7 +72,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: to.Int32Ptr(replicas2),
+				Replicas: to.Ptr(replicas2),
 			},
 		}
 		return []client.Object{workerMachineSet0, workerMachineSet1, workerMachineSet2}
@@ -126,7 +126,7 @@ func TestReconciler(t *testing.T) {
 							},
 						},
 						Spec: machinev1beta1.MachineSetSpec{
-							Replicas: to.Int32Ptr(0),
+							Replicas: to.Ptr(int32(0)),
 						},
 					},
 				)

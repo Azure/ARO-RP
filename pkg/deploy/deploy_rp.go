@@ -129,10 +129,10 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: to.Int64Ptr(3600),
+			TTL: to.Ptr(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: rpPIP.PublicIPAddress.Properties.IPAddress,
+					Ipv4Address: rpPIP.Properties.IPAddress,
 				},
 			},
 		},
@@ -143,10 +143,10 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: to.Int64Ptr(3600),
+			TTL: to.Ptr(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: portalPIP.PublicIPAddress.Properties.IPAddress,
+					Ipv4Address: portalPIP.Properties.IPAddress,
 				},
 			},
 		},
@@ -164,7 +164,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL:       to.Int64Ptr(3600),
+			TTL:       to.Ptr(int64(3600)),
 			NsRecords: &nsRecords,
 		},
 	}, "", "")

@@ -93,7 +93,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 
 			if account.NetworkRuleSet != nil && account.NetworkRuleSet.VirtualNetworkRules != nil {
 				for _, rule := range *account.NetworkRuleSet.VirtualNetworkRules {
-					if strings.EqualFold(to.String(rule.VirtualNetworkResourceID), subnet) {
+					if rule.VirtualNetworkResourceID != nil && strings.EqualFold(*rule.VirtualNetworkResourceID, subnet) {
 						found = true
 						break
 					}

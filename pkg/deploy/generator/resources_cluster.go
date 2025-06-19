@@ -94,7 +94,7 @@ func (g *generator) diskEncryptionKey() *arm.Resource {
 	key := &mgmtkeyvault.Key{
 		KeyProperties: &mgmtkeyvault.KeyProperties{
 			Kty:     mgmtkeyvault.RSA,
-			KeySize: to.Int32Ptr(4096),
+			KeySize: to.Ptr(int32(4096)),
 		},
 
 		Name:     to.Ptr(fmt.Sprintf("[concat(parameters('kvName'), '/', %s)]", diskEncryptionKeyName)),

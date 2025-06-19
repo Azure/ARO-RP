@@ -103,7 +103,7 @@ func (c *virtualMachinesClient) List(ctx context.Context, resourceGroupName stri
 // retrieveBootDiagnosticsData returns the boot diagnostics data for the given
 // VM by RG and VMName.
 func (c *virtualMachinesClient) retrieveBootDiagnosticsData(ctx context.Context, resourceGroupName string, VMName string) (serialConsoleURI string, err error) {
-	resp, err := c.RetrieveBootDiagnosticsData(ctx, resourceGroupName, VMName, to.Int32Ptr(60))
+	resp, err := c.RetrieveBootDiagnosticsData(ctx, resourceGroupName, VMName, to.Ptr(int32(60)))
 	if err != nil {
 		return "", err
 	}

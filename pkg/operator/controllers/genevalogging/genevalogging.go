@@ -161,7 +161,7 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 							// TODO: specify requests/limits
 							SecurityContext: &corev1.SecurityContext{
 								Privileged: to.Ptr(true),
-								RunAsUser:  to.Int64Ptr(0),
+								RunAsUser:  to.Ptr(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -282,7 +282,7 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 							},
 							SecurityContext: &corev1.SecurityContext{
 								Privileged: to.Ptr(true),
-								RunAsUser:  to.Int64Ptr(0),
+								RunAsUser:  to.Ptr(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{

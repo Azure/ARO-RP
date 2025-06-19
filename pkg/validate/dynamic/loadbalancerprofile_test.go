@@ -83,8 +83,8 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 							Name: &sdknetwork.UsageName{
 								Value: to.Ptr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(4),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: to.Ptr(int64(4)),
+							Limit:        to.Ptr(int64(10)),
 						},
 					}, nil)
 				loadBalancerBackendAddressPoolsClient.EXPECT().
@@ -169,8 +169,8 @@ func TestValidatePublicIPQuota(t *testing.T) {
 							Name: &sdknetwork.UsageName{
 								Value: to.Ptr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(4),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: to.Ptr(int64(4)),
+							Limit:        to.Ptr(int64(10)),
 						},
 					}, nil)
 			},
@@ -212,8 +212,8 @@ func TestValidatePublicIPQuota(t *testing.T) {
 							Name: &sdknetwork.UsageName{
 								Value: to.Ptr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(8),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: to.Ptr(int64(8)),
+							Limit:        to.Ptr(int64(10)),
 						},
 					}, nil)
 			},
@@ -251,8 +251,8 @@ func TestValidatePublicIPQuota(t *testing.T) {
 							Name: &sdknetwork.UsageName{
 								Value: to.Ptr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(4),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: to.Ptr(int64(4)),
+							Limit:        to.Ptr(int64(10)),
 						},
 					}, nil)
 			},
@@ -289,8 +289,8 @@ func TestValidatePublicIPQuota(t *testing.T) {
 							Name: &sdknetwork.UsageName{
 								Value: to.Ptr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(8),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: to.Ptr(int64(8)),
+							Limit:        to.Ptr(int64(10)),
 						},
 					}, nil)
 			},

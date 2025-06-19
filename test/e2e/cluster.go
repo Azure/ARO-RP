@@ -378,7 +378,7 @@ func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli 
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: to.Int32Ptr(1),
+			Replicas: to.Ptr(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": name,

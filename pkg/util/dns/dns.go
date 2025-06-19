@@ -114,7 +114,7 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 
 	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, sdkdns.RecordSet{
 		Properties: &sdkdns.RecordSetProperties{
-			TTL: to.Int64Ptr(300),
+			TTL: to.Ptr(int64(300)),
 			ARecords: []*sdkdns.ARecord{
 				{
 					IPv4Address: &routerIP,
@@ -172,7 +172,7 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 			Metadata: map[string]*string{
 				resourceID: &oc.ID,
 			},
-			TTL: to.Int64Ptr(300),
+			TTL: to.Ptr(int64(300)),
 		},
 	}
 

@@ -17,6 +17,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -26,7 +28,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func TestConditions(t *testing.T) {

@@ -38,29 +38,29 @@ func TestValidateQuota(t *testing.T) {
 							Name: &mgmtcompute.UsageName{
 								Value: to.Ptr("cores"),
 							},
-							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(212),
+							CurrentValue: to.Ptr(int32(100)),
+							Limit:        to.Ptr(int64(212)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.Ptr("virtualMachines"),
 							},
-							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(114),
+							CurrentValue: to.Ptr(int32(100)),
+							Limit:        to.Ptr(int64(114)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.Ptr("standardDSv3Family"),
 							},
-							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(212),
+							CurrentValue: to.Ptr(int32(100)),
+							Limit:        to.Ptr(int64(212)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.Ptr("PremiumDiskCount"),
 							},
-							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(114),
+							CurrentValue: to.Ptr(int32(100)),
+							Limit:        to.Ptr(int64(114)),
 						},
 					}, nil)
 				nuc.EXPECT().
@@ -70,8 +70,8 @@ func TestValidateQuota(t *testing.T) {
 							Name: &sdknetwork.UsageName{
 								Value: to.Ptr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(4),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: to.Ptr(int64(4)),
+							Limit:        to.Ptr(int64(10)),
 						},
 					}, nil)
 			},
@@ -87,8 +87,8 @@ func TestValidateQuota(t *testing.T) {
 							Name: &mgmtcompute.UsageName{
 								Value: to.Ptr("cores"),
 							},
-							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(212),
+							CurrentValue: to.Ptr(int32(101)),
+							Limit:        to.Ptr(int64(212)),
 						},
 					}, nil)
 			},
@@ -104,8 +104,8 @@ func TestValidateQuota(t *testing.T) {
 							Name: &mgmtcompute.UsageName{
 								Value: to.Ptr("virtualMachines"),
 							},
-							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(114),
+							CurrentValue: to.Ptr(int32(101)),
+							Limit:        to.Ptr(int64(114)),
 						},
 					}, nil)
 			},
@@ -121,8 +121,8 @@ func TestValidateQuota(t *testing.T) {
 							Name: &mgmtcompute.UsageName{
 								Value: to.Ptr("standardDSv3Family"),
 							},
-							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(212),
+							CurrentValue: to.Ptr(int32(101)),
+							Limit:        to.Ptr(int64(212)),
 						},
 					}, nil)
 			},
@@ -138,8 +138,8 @@ func TestValidateQuota(t *testing.T) {
 							Name: &mgmtcompute.UsageName{
 								Value: to.Ptr("PremiumDiskCount"),
 							},
-							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(114),
+							CurrentValue: to.Ptr(int32(101)),
+							Limit:        to.Ptr(int64(114)),
 						},
 					}, nil)
 			},
@@ -158,8 +158,8 @@ func TestValidateQuota(t *testing.T) {
 							Name: &sdknetwork.UsageName{
 								Value: to.Ptr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(4),
-							Limit:        to.Int64Ptr(6),
+							CurrentValue: to.Ptr(int64(4)),
+							Limit:        to.Ptr(int64(6)),
 						},
 					}, nil)
 			},

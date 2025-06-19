@@ -27,10 +27,10 @@ import (
 )
 
 const (
-	ControllerName                      = "IngressControllerARO"
-	openshiftIngressControllerNamespace = "openshift-ingress-operator"
-	openshiftIngressControllerName      = "default"
-	minimumReplicas                     = 2
+	ControllerName                            = "IngressControllerARO"
+	openshiftIngressControllerNamespace       = "openshift-ingress-operator"
+	openshiftIngressControllerName            = "default"
+	minimumReplicas                     int32 = 2
 )
 
 // Reconciler spots openshift ingress controllers has abnormal replica counts (less than 2)
@@ -70,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if ingress.Spec.Replicas != nil && *ingress.Spec.Replicas < minimumReplicas {
-		ingress.Spec.Replicas = to.Int32Ptr(minimumReplicas)
+		ingress.Spec.Replicas = to.Ptr(minimumReplicas)
 		err := r.Client.Update(ctx, ingress)
 		if err != nil {
 			r.Log.Error(err)

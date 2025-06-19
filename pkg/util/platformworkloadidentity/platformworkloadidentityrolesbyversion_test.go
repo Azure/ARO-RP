@@ -8,12 +8,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {

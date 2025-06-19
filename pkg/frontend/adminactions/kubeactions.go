@@ -178,7 +178,7 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 
 	resourceDeleteOptions := metav1.DeleteOptions{}
 	if force {
-		resourceDeleteOptions.GracePeriodSeconds = to.Int64Ptr(0)
+		resourceDeleteOptions.GracePeriodSeconds = to.Ptr(int64(0))
 	}
 
 	if propagationPolicy != nil {

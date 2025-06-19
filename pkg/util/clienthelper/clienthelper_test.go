@@ -419,7 +419,7 @@ func TestMerge(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
+							TerminationGracePeriodSeconds: to.Ptr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -432,7 +432,7 @@ func TestMerge(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: to.Int32Ptr(10),
+					RevisionHistoryLimit: to.Ptr(int32(10)),
 				},
 			},
 			wantChanged: true,
@@ -473,11 +473,11 @@ func TestMerge(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: to.Int32Ptr(1),
+					Replicas: to.Ptr(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
+							TerminationGracePeriodSeconds: to.Ptr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -497,8 +497,8 @@ func TestMerge(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    to.Int32Ptr(10),
-					ProgressDeadlineSeconds: to.Int32Ptr(600),
+					RevisionHistoryLimit:    to.Ptr(int32(10)),
+					ProgressDeadlineSeconds: to.Ptr(int32(600)),
 				},
 			},
 			wantChanged: true,
@@ -1166,7 +1166,7 @@ func TestMergeApply(t *testing.T) {
 					Namespace: "testnamespace",
 				},
 				Spec: appsv1.DaemonSetSpec{
-					RevisionHistoryLimit: to.Int32Ptr(12),
+					RevisionHistoryLimit: to.Ptr(int32(12)),
 				},
 			},
 			want: &appsv1.DaemonSet{
@@ -1186,7 +1186,7 @@ func TestMergeApply(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
+							TerminationGracePeriodSeconds: to.Ptr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -1199,7 +1199,7 @@ func TestMergeApply(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: to.Int32Ptr(12),
+					RevisionHistoryLimit: to.Ptr(int32(12)),
 				},
 			},
 			wantChanged: true,
@@ -1234,7 +1234,7 @@ func TestMergeApply(t *testing.T) {
 					Namespace: "testnamespace",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: to.Int32Ptr(12),
+					RevisionHistoryLimit: to.Ptr(int32(12)),
 				},
 			},
 			want: &appsv1.Deployment{
@@ -1252,11 +1252,11 @@ func TestMergeApply(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: to.Int32Ptr(1),
+					Replicas: to.Ptr(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
+							TerminationGracePeriodSeconds: to.Ptr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -1276,8 +1276,8 @@ func TestMergeApply(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    to.Int32Ptr(12),
-					ProgressDeadlineSeconds: to.Int32Ptr(600),
+					RevisionHistoryLimit:    to.Ptr(int32(12)),
+					ProgressDeadlineSeconds: to.Ptr(int32(600)),
 				},
 			},
 			wantChanged: true,

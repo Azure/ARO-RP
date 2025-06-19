@@ -66,7 +66,7 @@ func TestCreate(t *testing.T) {
 							Metadata: map[string]*string{
 								resourceID: to.Ptr(tt.oc.ID),
 							},
-							TTL: to.Int64Ptr(300),
+							TTL: to.Ptr(int64(300)),
 						},
 					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
 						IfMatch:     to.Ptr(""),
@@ -200,7 +200,7 @@ func TestUpdate(t *testing.T) {
 							Metadata: map[string]*string{
 								resourceID: to.Ptr(tt.oc.ID),
 							},
-							TTL: to.Int64Ptr(300),
+							TTL: to.Ptr(int64(300)),
 							ARecords: []*sdkdns.ARecord{
 								{
 									IPv4Address: to.Ptr("1.2.3.4"),
@@ -317,7 +317,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
-							TTL: to.Int64Ptr(300),
+							TTL: to.Ptr(int64(300)),
 							ARecords: []*sdkdns.ARecord{
 								{
 									IPv4Address: to.Ptr(tt.routerIP),
@@ -347,7 +347,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
-							TTL: to.Int64Ptr(300),
+							TTL: to.Ptr(int64(300)),
 							ARecords: []*sdkdns.ARecord{
 								{
 									IPv4Address: to.Ptr(tt.routerIP),
@@ -374,7 +374,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
-								TTL: to.Int64Ptr(300),
+								TTL: to.Ptr(int64(300)),
 								ARecords: []*sdkdns.ARecord{
 									{
 										IPv4Address: to.Ptr(tt.routerIP),
@@ -395,7 +395,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
-								TTL: to.Int64Ptr(300),
+								TTL: to.Ptr(int64(300)),
 								ARecords: []*sdkdns.ARecord{
 									{
 										IPv4Address: to.Ptr("1.2.3.4"),
@@ -408,7 +408,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
-							TTL: to.Int64Ptr(300),
+							TTL: to.Ptr(int64(300)),
 							ARecords: []*sdkdns.ARecord{
 								{
 									IPv4Address: to.Ptr(tt.routerIP),

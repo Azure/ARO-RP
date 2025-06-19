@@ -33,7 +33,7 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 			KeyProperties: &azcertificates.KeyProperties{
 				Exportable: to.Ptr(true),
 				KeyType:    to.Ptr(azcertificates.KeyTypeRSA),
-				KeySize:    to.Int32Ptr(2048),
+				KeySize:    to.Ptr(int32(2048)),
 			},
 			SecretProperties: &azcertificates.SecretProperties{
 				ContentType: to.Ptr("application/x-pem-file"),
@@ -52,12 +52,12 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 					to.Ptr(azcertificates.KeyUsageTypeDigitalSignature),
 					to.Ptr(azcertificates.KeyUsageTypeKeyEncipherment),
 				},
-				ValidityInMonths: to.Int32Ptr(12),
+				ValidityInMonths: to.Ptr(int32(12)),
 			},
 			LifetimeActions: []*azcertificates.LifetimeAction{
 				{
 					Trigger: &azcertificates.LifetimeActionTrigger{
-						DaysBeforeExpiry: to.Int32Ptr(365 - 90),
+						DaysBeforeExpiry: to.Ptr(int32(365 - 90)),
 					},
 					Action: &azcertificates.LifetimeActionType{
 						ActionType: to.Ptr(azcertificates.CertificatePolicyActionAutoRenew),

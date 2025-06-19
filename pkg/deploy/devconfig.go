@@ -8,9 +8,10 @@ import (
 	"encoding/pem"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func adminKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {

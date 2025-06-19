@@ -16,6 +16,8 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
@@ -28,7 +30,6 @@ import (
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 const (

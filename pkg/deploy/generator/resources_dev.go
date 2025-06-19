@@ -55,8 +55,8 @@ func (g *generator) devLBInternal() *arm.Resource {
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(443),
-							BackendPort:      to.Int32Ptr(443),
+							FrontendPort:     to.Ptr(int32(443)),
+							BackendPort:      to.Ptr(int32(443)),
 						},
 						Name: to.Ptr("dev-lbrule"),
 					},
@@ -65,8 +65,8 @@ func (g *generator) devLBInternal() *arm.Resource {
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolTCP,
-							Port:           to.Int32Ptr(443),
-							NumberOfProbes: to.Int32Ptr(3),
+							Port:           to.Ptr(int32(443)),
+							NumberOfProbes: to.Ptr(int32(3)),
 						},
 						Name: to.Ptr("dev-probe"),
 					},
@@ -110,7 +110,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 			Sku: &mgmtcompute.Sku{
 				Name:     to.Ptr(string(mgmtcompute.VirtualMachineSizeTypesStandardF2sV2)),
 				Tier:     to.Ptr("Standard"),
-				Capacity: to.Int64Ptr(1),
+				Capacity: to.Ptr(int64(1)),
 			},
 			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
 				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
@@ -160,7 +160,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
-							DiskSizeGB: to.Int32Ptr(64),
+							DiskSizeGB: to.Ptr(int32(64)),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
@@ -376,7 +376,7 @@ func (g *generator) devDiskEncryptionKey() *arm.Resource {
 	key := &mgmtkeyvault.Key{
 		KeyProperties: &mgmtkeyvault.KeyProperties{
 			Kty:     mgmtkeyvault.RSA,
-			KeySize: to.Int32Ptr(4096),
+			KeySize: to.Ptr(int32(4096)),
 		},
 
 		Name:     to.Ptr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName)),

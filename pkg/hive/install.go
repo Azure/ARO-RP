@@ -238,7 +238,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
-			InstallAttemptsLimit: to.Int32Ptr(1),
+			InstallAttemptsLimit: to.Ptr(int32(1)),
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
 			},

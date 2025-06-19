@@ -45,7 +45,7 @@ func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resourc
 		SourceAddressPrefixes:    &[]string{},
 		DestinationAddressPrefix: to.Ptr("*"),
 		Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-		Priority:                 to.Int32Ptr(142),
+		Priority:                 to.Ptr(int32(142)),
 		Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
 }
@@ -60,7 +60,7 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 				SourceAddressPrefix:      to.Ptr("AzureResourceManager"),
 				DestinationAddressPrefix: to.Ptr("*"),
 				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				Priority:                 to.Int32Ptr(120),
+				Priority:                 to.Ptr(int32(120)),
 				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
 			Name: to.Ptr("rp_in_arm"),
@@ -73,7 +73,7 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 				SourceAddressPrefix:      to.Ptr("GenevaActions"),
 				DestinationAddressPrefix: to.Ptr("*"),
 				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				Priority:                 to.Int32Ptr(130),
+				Priority:                 to.Ptr(int32(130)),
 				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
 			Name: to.Ptr("rp_in_geneva"),
@@ -92,7 +92,7 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 				SourceAddressPrefix:      to.Ptr("*"),
 				DestinationAddressPrefix: to.Ptr("*"),
 				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				Priority:                 to.Int32Ptr(125),
+				Priority:                 to.Ptr(int32(125)),
 				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
 			Name: to.Ptr("ssh_in"),
@@ -107,7 +107,7 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 					SourceAddressPrefix:      to.Ptr("10.0.8.0/24"),
 					DestinationAddressPrefix: to.Ptr("*"),
 					Access:                   mgmtnetwork.SecurityRuleAccessDeny,
-					Priority:                 to.Int32Ptr(145),
+					Priority:                 to.Ptr(int32(145)),
 					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 				},
 				Name: to.Ptr("deny_in_gateway"),
@@ -225,8 +225,8 @@ func (g *generator) rpLB() *arm.Resource {
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(443),
-							BackendPort:      to.Int32Ptr(443),
+							FrontendPort:     to.Ptr(int32(443)),
+							BackendPort:      to.Ptr(int32(443)),
 						},
 						Name: to.Ptr("rp-lbrule"),
 					},
@@ -243,8 +243,8 @@ func (g *generator) rpLB() *arm.Resource {
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(443),
-							BackendPort:      to.Int32Ptr(444),
+							FrontendPort:     to.Ptr(int32(443)),
+							BackendPort:      to.Ptr(int32(444)),
 						},
 						Name: to.Ptr("portal-lbrule"),
 					},
@@ -261,8 +261,8 @@ func (g *generator) rpLB() *arm.Resource {
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(22),
-							BackendPort:      to.Int32Ptr(2222),
+							FrontendPort:     to.Ptr(int32(22)),
+							BackendPort:      to.Ptr(int32(2222)),
 						},
 						Name: to.Ptr("portal-lbrule-ssh"),
 					},
@@ -271,8 +271,8 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
-							Port:           to.Int32Ptr(443),
-							NumberOfProbes: to.Int32Ptr(2),
+							Port:           to.Ptr(int32(443)),
+							NumberOfProbes: to.Ptr(int32(2)),
 							RequestPath:    to.Ptr("/healthz/ready"),
 						},
 						Name: to.Ptr("rp-probe"),
@@ -280,8 +280,8 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
-							Port:           to.Int32Ptr(444),
-							NumberOfProbes: to.Int32Ptr(2),
+							Port:           to.Ptr(int32(444)),
+							NumberOfProbes: to.Ptr(int32(2)),
 							RequestPath:    to.Ptr("/healthz/ready"),
 						},
 						Name: to.Ptr("portal-probe-https"),
@@ -289,8 +289,8 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolTCP,
-							Port:           to.Int32Ptr(2222),
-							NumberOfProbes: to.Int32Ptr(2),
+							Port:           to.Ptr(int32(2222)),
+							NumberOfProbes: to.Ptr(int32(2)),
 						},
 						Name: to.Ptr("portal-probe-ssh"),
 					},
@@ -320,7 +320,7 @@ func (g *generator) rpLBAlert(threshold float64, severity int32, name string, ev
 				},
 				Enabled:             to.Ptr(true),
 				EvaluationFrequency: to.Ptr(evalFreq),
-				Severity:            to.Int32Ptr(severity),
+				Severity:            to.Ptr(severity),
 				Scopes: &[]string{
 					"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 				},
@@ -481,7 +481,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 			Sku: &mgmtcompute.Sku{
 				Name:     to.Ptr("[parameters('vmSize')]"),
 				Tier:     to.Ptr("Standard"),
-				Capacity: to.Int64Ptr(1338),
+				Capacity: to.Ptr(int64(1338)),
 			},
 			Tags: map[string]*string{},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
@@ -490,9 +490,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 					Mode: mgmtcompute.UpgradeModeAutomatic,
 					RollingUpgradePolicy: &mgmtcompute.RollingUpgradePolicy{
 						// Percentage equates to 1.02 instances out of 3
-						MaxBatchInstancePercent:             to.Int32Ptr(34),
-						MaxUnhealthyInstancePercent:         to.Int32Ptr(34),
-						MaxUnhealthyUpgradedInstancePercent: to.Int32Ptr(34),
+						MaxBatchInstancePercent:             to.Ptr(int32(34)),
+						MaxUnhealthyInstancePercent:         to.Ptr(int32(34)),
+						MaxUnhealthyUpgradedInstancePercent: to.Ptr(int32(34)),
 						PauseTimeBetweenBatches:             to.Ptr("PT10M"),
 					},
 					AutomaticOSUpgradePolicy: &mgmtcompute.AutomaticOSUpgradePolicy{
@@ -534,7 +534,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
-							DiskSizeGB: to.Int32Ptr(1024),
+							DiskSizeGB: to.Ptr(int32(1024)),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
@@ -909,8 +909,8 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 			BackupPolicy: &sdkcosmos.PeriodicModeBackupPolicy{
 				Type: &backupPolicy,
 				PeriodicModeProperties: &sdkcosmos.PeriodicModeProperties{
-					BackupIntervalInMinutes:        to.Int32Ptr(240), //4 hours
-					BackupRetentionIntervalInHours: to.Int32Ptr(720), //30 days
+					BackupIntervalInMinutes:        to.Ptr(int32(240)), //4 hours
+					BackupRetentionIntervalInHours: to.Ptr(int32(720)), //30 days
 				},
 			},
 			MinimalTLSVersion: &minTLSVersion,
@@ -989,7 +989,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					ID: to.Ptr("[" + databaseName + "]"),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: to.Int32Ptr(cosmosDbStandardProvisionedThroughputHack),
+					Throughput: to.Ptr(int32(cosmosDbStandardProvisionedThroughputHack)),
 				},
 			},
 			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
@@ -1011,10 +1011,10 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 						},
 						Kind: &hashPartitionKey,
 					},
-					DefaultTTL: to.Int32Ptr(-1),
+					DefaultTTL: to.Ptr(int32(-1)),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: to.Int32Ptr(cosmosDbPortalProvisionedThroughputHack),
+					Throughput: to.Ptr(int32(cosmosDbPortalProvisionedThroughputHack)),
 				},
 			},
 			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Portal')]"),
@@ -1039,10 +1039,10 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 						},
 						Kind: &hashPartitionKey,
 					},
-					DefaultTTL: to.Int32Ptr(-1),
+					DefaultTTL: to.Ptr(int32(-1)),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: to.Int32Ptr(cosmosDbGatewayProvisionedThroughputHack),
+					Throughput: to.Ptr(int32(cosmosDbGatewayProvisionedThroughputHack)),
 				},
 			},
 			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Gateway')]"),
@@ -1067,10 +1067,10 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 						},
 						Kind: &hashPartitionKey,
 					},
-					DefaultTTL: to.Int32Ptr(-1),
+					DefaultTTL: to.Ptr(int32(-1)),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: to.Int32Ptr(cosmosDbGatewayProvisionedThroughputHack),
+					Throughput: to.Ptr(int32(cosmosDbGatewayProvisionedThroughputHack)),
 				},
 			},
 			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/MaintenanceManifests')]"),
@@ -1087,7 +1087,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	if !g.production {
 		database.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{
 			AutoscaleSettings: &sdkcosmos.AutoscaleSettings{
-				MaxThroughput: to.Int32Ptr(1000),
+				MaxThroughput: to.Ptr(int32(1000)),
 			},
 		}
 		portal.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
@@ -1108,7 +1108,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: &hashPartitionKey,
 						},
-						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
+						DefaultTTL: to.Ptr(int32(7 * 86400)), // 7 days
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
@@ -1133,7 +1133,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: &hashPartitionKey,
 						},
-						DefaultTTL: to.Int32Ptr(-1),
+						DefaultTTL: to.Ptr(int32(-1)),
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
@@ -1158,7 +1158,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: &hashPartitionKey,
 						},
-						DefaultTTL: to.Int32Ptr(-1),
+						DefaultTTL: to.Ptr(int32(-1)),
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
@@ -1208,7 +1208,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: &hashPartitionKey,
 						},
-						DefaultTTL: to.Int32Ptr(-1),
+						DefaultTTL: to.Ptr(int32(-1)),
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
@@ -1388,7 +1388,7 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 				},
 				Enabled:             to.Ptr(true),
 				EvaluationFrequency: to.Ptr(evalFreq),
-				Severity:            to.Int32Ptr(severity),
+				Severity:            to.Ptr(severity),
 				Scopes: &[]string{
 					"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
 				},

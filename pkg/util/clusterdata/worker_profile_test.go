@@ -164,7 +164,7 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 
 		// Specify the desired state for the MachineSet
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: to.Int32Ptr(1),
+			Replicas: to.Ptr(int32(1)),
 			Template: machinev1beta1.MachineTemplateSpec{
 				// Specify the desired configuration for the machine using ProviderSpec
 				Spec: machinev1beta1.MachineSpec{

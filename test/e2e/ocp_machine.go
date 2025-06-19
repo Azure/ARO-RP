@@ -7,12 +7,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 )

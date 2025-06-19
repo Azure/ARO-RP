@@ -16,10 +16,11 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+
 	"github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func successfulFunc(context.Context) error { return nil }

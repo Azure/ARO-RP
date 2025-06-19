@@ -299,9 +299,9 @@ loadBalancingRules:
 				},
 				Protocol:             mgmtnetwork.TransportProtocolTCP,
 				LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-				FrontendPort:         to.Int32Ptr(2200 + int32(i)),
-				BackendPort:          to.Int32Ptr(22),
-				IdleTimeoutInMinutes: to.Int32Ptr(30),
+				FrontendPort:         to.Ptr(int32(2200) + int32(i)),
+				BackendPort:          to.Ptr(int32(22)),
+				IdleTimeoutInMinutes: to.Ptr(int32(30)),
 				DisableOutboundSnat:  to.Ptr(true),
 			},
 			Name: &name,
@@ -319,9 +319,9 @@ loadBalancingRules:
 	*lb.Probes = append(*lb.Probes, mgmtnetwork.Probe{
 		ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 			Protocol:          mgmtnetwork.ProbeProtocolTCP,
-			Port:              to.Int32Ptr(22),
-			IntervalInSeconds: to.Int32Ptr(5),
-			NumberOfProbes:    to.Int32Ptr(2),
+			Port:              to.Ptr(int32(22)),
+			IntervalInSeconds: to.Ptr(int32(5)),
+			NumberOfProbes:    to.Ptr(int32(2)),
 		},
 		Name: to.Ptr("ssh"),
 	})

@@ -36,7 +36,7 @@ func TestMarshalGauge(t *testing.T) {
 		dimensions: map[string]string{"key": "value"},
 
 		timestamp:  time.Unix(0, 0),
-		valueGauge: to.Int64Ptr(42),
+		valueGauge: to.Ptr(int64(42)),
 	}
 	b, err := g.marshalStatsd()
 	if err != nil {

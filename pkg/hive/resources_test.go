@@ -13,9 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func TestInstallConfigMap(t *testing.T) {
