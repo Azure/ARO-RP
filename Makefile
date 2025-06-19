@@ -15,7 +15,7 @@ FLUENTBIT_VERSION = 1.9.10
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
-GATEKEEPER_VERSION = v3.19.1
+GATEKEEPER_VERSION = v3.19.2
 
 # Golang version go mod tidy compatibility
 GOLANG_VERSION ?= 1.22.9
