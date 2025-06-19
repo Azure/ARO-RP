@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	"github.com/Azure/go-autorest/autorest/azure"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	configv1 "github.com/openshift/api/config/v1"
 
@@ -44,7 +44,7 @@ func (m *manager) generateWorkloadIdentityResources() (map[string]kruntime.Objec
 		return nil, err
 	} else {
 		for _, secret := range platformWorkloadIdentitySecrets {
-			key := fmt.Sprintf("%s-%s-credentials.yaml", secret.ObjectMeta.Namespace, secret.ObjectMeta.Name)
+			key := fmt.Sprintf("%s-%s-credentials.yaml", secret.Namespace, secret.Name)
 			resources[key] = secret
 		}
 	}

@@ -7,8 +7,9 @@ import (
 	"context"
 	"strings"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"golang.org/x/sync/errgroup"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -42,11 +43,11 @@ func (m *manager) startVMs(ctx context.Context) error {
 			continue
 		}
 
-		if vm.VirtualMachineProperties.InstanceView == nil || vm.VirtualMachineProperties.InstanceView.Statuses == nil {
+		if vm.InstanceView == nil || vm.InstanceView.Statuses == nil {
 			continue
 		}
 
-		for _, status := range *vm.VirtualMachineProperties.InstanceView.Statuses {
+		for _, status := range *vm.InstanceView.Statuses {
 			if status.Code == nil {
 				continue
 			}

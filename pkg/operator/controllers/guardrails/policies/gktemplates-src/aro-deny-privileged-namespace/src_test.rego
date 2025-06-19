@@ -199,7 +199,9 @@ input_disallowed_ns = "openshift-apiserver"
 priv_user = "system:admin"
 non_priv_user = "testuser"
 
-priv_groups = ["system:masters", "system:authenticated"]
+# priv_groups = ["system:master", "system:authenticated"]
+# priv_groups = ["system:serviceaccounts", "system:authenticated"]
+priv_groups = ["system:serviceaccount:openshift-machine-config-operator:machine-config-controller", "system:authenticated"]
 non_priv_groups = ["system:cluster-admins", "system:authenticated"]
 
 priv_username_nonpriv_group_userinfo = {

@@ -10,10 +10,10 @@ request:
     kind: MachineConfig
     apiVersion: machineconfiguration.openshift.io/v1
     metadata:
-      name: 99-worker-generated-crio-fake
+      name: 99-worker-generated-kubelet
   oldObject:
     kind: MachineConfig
     apiVersion: machineconfiguration.openshift.io/v1
     metadata:
-      name: 99-worker-generated-crio-seccomp-use-default
+      name: 99-worker-generated-registries
   dryRun: true

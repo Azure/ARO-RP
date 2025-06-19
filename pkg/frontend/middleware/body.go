@@ -25,7 +25,7 @@ func Body(h http.Handler) http.Handler {
 
 			contentType := strings.SplitN(r.Header.Get("Content-Type"), ";", 2)[0]
 
-			if contentType != "application/json" && !(len(body) == 0 && contentType == "") {
+			if contentType != "application/json" && (len(body) != 0 || contentType != "") {
 				api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeUnsupportedMediaType, "", fmt.Sprintf("The content media type '%s' is not supported. Only 'application/json' is supported.", r.Header.Get("Content-Type")))
 				return
 			}

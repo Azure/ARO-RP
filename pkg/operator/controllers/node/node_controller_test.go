@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -463,8 +464,8 @@ func TestSetAnnotation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setAnnotation(&tt.node.ObjectMeta, tt.annotationKey, tt.annotationValue)
 
-			if !reflect.DeepEqual(tt.node.ObjectMeta.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}) {
-				t.Error(cmp.Diff(tt.node.ObjectMeta.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}))
+			if !reflect.DeepEqual(tt.node.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}) {
+				t.Error(cmp.Diff(tt.node.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}))
 			}
 		})
 	}

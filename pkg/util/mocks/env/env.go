@@ -16,14 +16,15 @@ import (
 	net "net"
 	reflect "reflect"
 
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
+
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	autorest "github.com/Azure/go-autorest/autorest"
 	dataplane "github.com/Azure/msi-dataplane/pkg/dataplane"
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"

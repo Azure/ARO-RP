@@ -35,11 +35,11 @@ $(CONTROLLER_GEN): $(BINGO_DIR)/controller-gen.mod
 	@echo "(re)installing $(GOBIN)/controller-gen-v0.16.5"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=controller-gen.mod -o=$(GOBIN)/controller-gen-v0.16.5 "sigs.k8s.io/controller-tools/cmd/controller-gen"
 
-ENUMER := $(GOBIN)/enumer-v1.5.10
+ENUMER := $(GOBIN)/enumer-v1.5.11
 $(ENUMER): $(BINGO_DIR)/enumer.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/enumer-v1.5.10"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=enumer.mod -o=$(GOBIN)/enumer-v1.5.10 "github.com/dmarkham/enumer"
+	@echo "(re)installing $(GOBIN)/enumer-v1.5.11"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=enumer.mod -o=$(GOBIN)/enumer-v1.5.11 "github.com/dmarkham/enumer"
 
 FIPS_DETECT := $(GOBIN)/fips-detect-v0.0.0-20230309083406-7157dae5bafd
 $(FIPS_DETECT): $(BINGO_DIR)/fips-detect.mod
@@ -77,11 +77,11 @@ $(GOJQ): $(BINGO_DIR)/gojq.mod
 	@echo "(re)installing $(GOBIN)/gojq-v0.12.16"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gojq.mod -o=$(GOBIN)/gojq-v0.12.16 "github.com/itchyny/gojq/cmd/gojq"
 
-GOLANGCI_LINT := $(GOBIN)/golangci-lint-v1.63.4
+GOLANGCI_LINT := $(GOBIN)/golangci-lint-v2.1.6
 $(GOLANGCI_LINT): $(BINGO_DIR)/golangci-lint.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/golangci-lint-v1.63.4"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v1.63.4 "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	@echo "(re)installing $(GOBIN)/golangci-lint-v2.1.6"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v2.1.6 "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
 
 GOTESTSUM := $(GOBIN)/gotestsum-v1.11.0
 $(GOTESTSUM): $(BINGO_DIR)/gotestsum.mod
@@ -100,10 +100,4 @@ $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
 	@echo "(re)installing $(GOBIN)/mockgen-v0.5.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.5.0 "go.uber.org/mock/mockgen"
-
-OPENSHIFT_GOIMPORTS := $(GOBIN)/openshift-goimports-v0.0.0-20230304234052-c70783e636f2
-$(OPENSHIFT_GOIMPORTS): $(BINGO_DIR)/openshift-goimports.mod
-	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/openshift-goimports-v0.0.0-20230304234052-c70783e636f2"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=openshift-goimports.mod -o=$(GOBIN)/openshift-goimports-v0.0.0-20230304234052-c70783e636f2 "github.com/openshift-eng/openshift-goimports"
 

@@ -81,7 +81,7 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 		if err != nil {
 			m.log.Warnf("Fetching details for NIC %s has failed with err %s", nicName, err)
 			fallbackNIC = true
-		} else if nic.InterfacePropertiesFormat != nil && nic.InterfacePropertiesFormat.VirtualMachine == nil {
+		} else if nic.InterfacePropertiesFormat != nil && nic.VirtualMachine == nil {
 			err = m.removeBackendPoolsFromNIC(ctx, resourceGroup, nicName, &nic)
 			if err != nil {
 				m.log.Warnf("Removing BackendPools from NIC %s has failed with err %s", nicName, err)
@@ -134,10 +134,10 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 }
 
 func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, nicName string, nic *mgmtnetwork.Interface) error {
-	if nic.InterfacePropertiesFormat.IPConfigurations == nil || len(*nic.InterfacePropertiesFormat.IPConfigurations) == 0 {
+	if nic.IPConfigurations == nil || len(*nic.IPConfigurations) == 0 {
 		return fmt.Errorf("unable to remove Backend Address Pools from NIC as there are no IP configurations for %s in resource group %s", nicName, resourceGroup)
 	}
-	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
+	ipc := (*nic.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools != nil {
 		m.log.Printf("Removing Load balancer Backend Address Pools from NIC %s with no VMs attached", nicName)
 		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = []mgmtnetwork.BackendAddressPool{}
@@ -147,7 +147,7 @@ func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, 
 }
 
 func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, lb *mgmtnetwork.LoadBalancer, i int, resourceGroup string, infraID string) error {
-	if nic.InterfacePropertiesFormat.IPConfigurations == nil || len(*nic.InterfacePropertiesFormat.IPConfigurations) == 0 {
+	if nic.IPConfigurations == nil || len(*nic.IPConfigurations) == 0 {
 		return fmt.Errorf("unable to update NIC as there are no IP configurations for %s", nicName)
 	}
 
@@ -162,7 +162,7 @@ func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 	updateSSHPool := true
 	updateILBPool := true
 
-	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
+	ipc := (*nic.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools == nil {
 		emptyBackendAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
 		(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = &emptyBackendAddressPool
@@ -199,7 +199,7 @@ func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 }
 
 func (m *manager) updateV1ELBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, resourceGroup string, infraID string) error {
-	if nic.InterfacePropertiesFormat.IPConfigurations == nil || len(*nic.InterfacePropertiesFormat.IPConfigurations) == 0 {
+	if nic.IPConfigurations == nil || len(*nic.IPConfigurations) == 0 {
 		return fmt.Errorf("unable to update NIC as there are no IP configurations for %s", nicName)
 	}
 
@@ -228,7 +228,7 @@ func (m *manager) updateV1ELBAddressPool(ctx context.Context, nic *mgmtnetwork.I
 }
 
 func (m *manager) updateELBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, lb *mgmtnetwork.LoadBalancer, resourceGroup string, infraID string) error {
-	if nic.InterfacePropertiesFormat.IPConfigurations == nil || len(*nic.InterfacePropertiesFormat.IPConfigurations) == 0 {
+	if nic.IPConfigurations == nil || len(*nic.IPConfigurations) == 0 {
 		return fmt.Errorf("unable to update NIC as there are no IP configurations for %s", nicName)
 	}
 

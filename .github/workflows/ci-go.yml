@@ -76,9 +76,9 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.64.5
+          version: v2.1.6
           args: -v --timeout 15m
         env:
           GO111MODULE: 'auto'

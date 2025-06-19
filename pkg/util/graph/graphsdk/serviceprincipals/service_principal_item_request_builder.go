@@ -79,7 +79,7 @@ func (m *ServicePrincipalItemRequestBuilder) Delete(ctx context.Context, request
 		"4XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 		"5XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 	}
-	err = m.BaseRequestBuilder.RequestAdapter.SendNoContent(ctx, requestInfo, errorMapping)
+	err = m.RequestAdapter.SendNoContent(ctx, requestInfo, errorMapping)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (m *ServicePrincipalItemRequestBuilder) Get(ctx context.Context, requestCon
 		"4XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 		"5XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 	}
-	res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateServicePrincipalFromDiscriminatorValue, errorMapping)
+	res, err := m.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateServicePrincipalFromDiscriminatorValue, errorMapping)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (m *ServicePrincipalItemRequestBuilder) Patch(ctx context.Context, body i6a
 		"4XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 		"5XX": i590dfc7f28a1fc5720c211d996119093307169ae10220ddded8912d222cbd376.CreateODataErrorFromDiscriminatorValue,
 	}
-	res, err := m.BaseRequestBuilder.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateServicePrincipalFromDiscriminatorValue, errorMapping)
+	res, err := m.RequestAdapter.Send(ctx, requestInfo, i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.CreateServicePrincipalFromDiscriminatorValue, errorMapping)
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +132,8 @@ func (m *ServicePrincipalItemRequestBuilder) Patch(ctx context.Context, body i6a
 // ToDeleteRequestInformation delete a servicePrincipal object.
 func (m *ServicePrincipalItemRequestBuilder) ToDeleteRequestInformation(ctx context.Context, requestConfiguration *ServicePrincipalItemRequestBuilderDeleteRequestConfiguration) (*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
 	requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
-	requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
-	requestInfo.PathParameters = m.BaseRequestBuilder.PathParameters
+	requestInfo.UrlTemplate = m.UrlTemplate
+	requestInfo.PathParameters = m.PathParameters
 	requestInfo.Method = i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.DELETE
 	if requestConfiguration != nil {
 		requestInfo.Headers.AddAll(requestConfiguration.Headers)
@@ -145,8 +145,8 @@ func (m *ServicePrincipalItemRequestBuilder) ToDeleteRequestInformation(ctx cont
 // ToGetRequestInformation retrieve the properties and relationships of a servicePrincipal object.
 func (m *ServicePrincipalItemRequestBuilder) ToGetRequestInformation(ctx context.Context, requestConfiguration *ServicePrincipalItemRequestBuilderGetRequestConfiguration) (*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
 	requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
-	requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
-	requestInfo.PathParameters = m.BaseRequestBuilder.PathParameters
+	requestInfo.UrlTemplate = m.UrlTemplate
+	requestInfo.PathParameters = m.PathParameters
 	requestInfo.Method = i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.GET
 	requestInfo.Headers.Add("Accept", "application/json")
 	if requestConfiguration != nil {
@@ -162,11 +162,11 @@ func (m *ServicePrincipalItemRequestBuilder) ToGetRequestInformation(ctx context
 // ToPatchRequestInformation update entity in servicePrincipals
 func (m *ServicePrincipalItemRequestBuilder) ToPatchRequestInformation(ctx context.Context, body i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.ServicePrincipalable, requestConfiguration *ServicePrincipalItemRequestBuilderPatchRequestConfiguration) (*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
 	requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
-	requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
-	requestInfo.PathParameters = m.BaseRequestBuilder.PathParameters
+	requestInfo.UrlTemplate = m.UrlTemplate
+	requestInfo.PathParameters = m.PathParameters
 	requestInfo.Method = i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.PATCH
 	requestInfo.Headers.Add("Accept", "application/json")
-	err := requestInfo.SetContentFromParsable(ctx, m.BaseRequestBuilder.RequestAdapter, "application/json", body)
+	err := requestInfo.SetContentFromParsable(ctx, m.RequestAdapter, "application/json", body)
 	if err != nil {
 		return nil, err
 	}

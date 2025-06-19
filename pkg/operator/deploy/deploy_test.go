@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
@@ -624,7 +625,7 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			result, _ := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
 			for _, v := range result.Items {
-				actualAnnotations := v.ObjectMeta.Annotations
+				actualAnnotations := v.Annotations
 				if !reflect.DeepEqual(actualAnnotations, tt.wantAnnotation) {
 					t.Errorf("actual annotation: %v, wanted %v", tt.annotation, tt.wantAnnotation)
 				}

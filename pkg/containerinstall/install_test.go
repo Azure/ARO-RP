@@ -9,14 +9,15 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/containers/podman/v5/libpod/define"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/bindings/secrets"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
@@ -26,7 +27,7 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-const TEST_PULLSPEC = "registry.access.redhat.com/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.22-openshift-4.19"
+const TEST_PULLSPEC = "registry.redhat.io/ubi9/ubi-minimal:latest"
 
 var _ = Describe("Podman", Ordered, func() {
 	var err error

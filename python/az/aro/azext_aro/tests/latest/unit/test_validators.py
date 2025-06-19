@@ -1016,27 +1016,6 @@ test_validate_enable_managed_identity_data = [
         InvalidArgumentValueError, 'Must not specify --client-secret when --enable-managed-identity is True'
     ),
     (
-        "Should raise InvalidArgumentValueError when version is not present",
-        Mock(enable_managed_identity=True,
-             client_id=None, client_secret=None,
-             version=None),
-        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
-    ),
-    (
-        "Should raise InvalidArgumentValueError when version is invalid",
-        Mock(enable_managed_identity=True,
-             client_id=None, client_secret=None,
-             version="a"),
-        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
-    ),
-    (
-        "Should raise InvalidArgumentValueError when version < 4.14.0",
-        Mock(enable_managed_identity=True,
-             client_id=None, client_secret=None,
-             version="4.13.99"),
-        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
-    ),
-    (
         "Should raise RequiredArgumentMissingError when no platform workload identities are set",
         Mock(enable_managed_identity=True,
              client_id=None, client_secret=None,

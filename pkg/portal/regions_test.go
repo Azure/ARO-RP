@@ -35,7 +35,7 @@ func TestRegionListPublic(t *testing.T) {
 		dbGroup: dbg,
 	}
 
-	t.Setenv("AZURE_ENVIRONMENT", azureclient.PublicCloud.Environment.Name)
+	t.Setenv("AZURE_ENVIRONMENT", azureclient.PublicCloud.Name)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/regions", nil)
 	if err != nil {
@@ -249,7 +249,7 @@ func TestRegionListFF(t *testing.T) {
 		dbGroup: dbg,
 	}
 
-	t.Setenv("AZURE_ENVIRONMENT", azureclient.USGovernmentCloud.Environment.Name)
+	t.Setenv("AZURE_ENVIRONMENT", azureclient.USGovernmentCloud.Name)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/regions", nil)
 	if err != nil {

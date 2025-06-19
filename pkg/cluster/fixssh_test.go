@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
@@ -174,7 +175,7 @@ func ifNoVmBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbB
 
 func ifNoVmAfter(nic *mgmtnetwork.Interface) *mgmtnetwork.Interface {
 	emptyAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
-	(*nic.InterfacePropertiesFormat.IPConfigurations)[0].InterfaceIPConfigurationPropertiesFormat.LoadBalancerBackendAddressPools = &emptyAddressPool
+	(*nic.InterfacePropertiesFormat.IPConfigurations)[0].LoadBalancerBackendAddressPools = &emptyAddressPool
 	return nic
 }
 
