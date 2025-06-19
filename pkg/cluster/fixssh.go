@@ -85,8 +85,7 @@ NICs:
 		}
 
 		// Booleans to track if backend pools are updated
-		ilbBackendPoolsUpdated := false
-		elbBackendPoolsUpdated := false
+		ilbBackendPoolsUpdated, elbBackendPoolsUpdated := false, false
 
 		// Check and update NIC IPConfigurations. Do we ever expect multiple IP configs on an interface?
 		for _, ipc := range nic.Properties.IPConfigurations {
@@ -98,8 +97,12 @@ NICs:
 
 			ilbBackendPoolsUpdated = m.updateILBBackendPools(*ipc, infraID, *nic.Name, *lb.ID)
 
-			if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
-				m.log.Infof("Updating UDR Cluster Network Interface %s", *nic.Name)
+			// Check if this is a fully private cluster and the internal load balancer backend pools have been updated
+			// If both the API and ingress visibility are private, there is no external LB so we continue
+			if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPrivate &&
+				m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate &&
+				ilbBackendPoolsUpdated {
+				m.log.Infof("Updating Private Cluster Network Interface %s", *nic.Name)
 				err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
 				if err != nil {
 					return err
