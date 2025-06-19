@@ -22,9 +22,11 @@ linters:
   settings:
     depguard:
       rules:
-        deprecated-sdks:
+        deprecatedutillibs:
           deny:
             - pkg: "github.com/Azure/go-autorest/autorest/to"
+              desc: use github.com/Azure/ARO-RP/pkg/util/poinerutils
+            - pkg: "k8s.io/utils/ptr"
               desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
     importas:
       alias:
