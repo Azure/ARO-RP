@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // ensureServiceEndpoints should enable service endpoints on
@@ -104,8 +104,8 @@ func addEndpointToSubnet(endpoint string, subnet *armnetwork.Subnet) {
 	}
 
 	serviceEndpoint := armnetwork.ServiceEndpointPropertiesFormat{
-		Service:   to.Ptr(endpoint),
-		Locations: []*string{to.Ptr("*")},
+		Service:   pointerutils.ToPtr(endpoint),
+		Locations: []*string{pointerutils.ToPtr("*")},
 	}
 
 	subnet.Properties.ServiceEndpoints = append(subnet.Properties.ServiceEndpoints, &serviceEndpoint)

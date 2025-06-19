@@ -14,8 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type Eku string
@@ -31,41 +32,41 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 	return azcertificates.CreateCertificateParameters{
 		CertificatePolicy: &azcertificates.CertificatePolicy{
 			KeyProperties: &azcertificates.KeyProperties{
-				Exportable: to.Ptr(true),
-				KeyType:    to.Ptr(azcertificates.KeyTypeRSA),
-				KeySize:    to.Ptr(int32(2048)),
+				Exportable: pointerutils.ToPtr(true),
+				KeyType:    pointerutils.ToPtr(azcertificates.KeyTypeRSA),
+				KeySize:    pointerutils.ToPtr(int32(2048)),
 			},
 			SecretProperties: &azcertificates.SecretProperties{
-				ContentType: to.Ptr("application/x-pem-file"),
+				ContentType: pointerutils.ToPtr("application/x-pem-file"),
 			},
 			X509CertificateProperties: &azcertificates.X509CertificateProperties{
-				Subject: to.Ptr(pkix.Name{CommonName: getShortCommonName(commonName)}.String()),
+				Subject: pointerutils.ToPtr(pkix.Name{CommonName: getShortCommonName(commonName)}.String()),
 				EnhancedKeyUsage: []*string{
-					to.Ptr(string(eku)),
+					pointerutils.ToPtr(string(eku)),
 				},
 				SubjectAlternativeNames: &azcertificates.SubjectAlternativeNames{
 					DNSNames: []*string{
-						to.Ptr(commonName),
+						pointerutils.ToPtr(commonName),
 					},
 				},
 				KeyUsage: []*azcertificates.KeyUsageType{
-					to.Ptr(azcertificates.KeyUsageTypeDigitalSignature),
-					to.Ptr(azcertificates.KeyUsageTypeKeyEncipherment),
+					pointerutils.ToPtr(azcertificates.KeyUsageTypeDigitalSignature),
+					pointerutils.ToPtr(azcertificates.KeyUsageTypeKeyEncipherment),
 				},
-				ValidityInMonths: to.Ptr(int32(12)),
+				ValidityInMonths: pointerutils.ToPtr(int32(12)),
 			},
 			LifetimeActions: []*azcertificates.LifetimeAction{
 				{
 					Trigger: &azcertificates.LifetimeActionTrigger{
-						DaysBeforeExpiry: to.Ptr(int32(365 - 90)),
+						DaysBeforeExpiry: pointerutils.ToPtr(int32(365 - 90)),
 					},
 					Action: &azcertificates.LifetimeActionType{
-						ActionType: to.Ptr(azcertificates.CertificatePolicyActionAutoRenew),
+						ActionType: pointerutils.ToPtr(azcertificates.CertificatePolicyActionAutoRenew),
 					},
 				},
 			},
 			IssuerParameters: &azcertificates.IssuerParameters{
-				Name: to.Ptr(issuer),
+				Name: pointerutils.ToPtr(issuer),
 			},
 		},
 	}

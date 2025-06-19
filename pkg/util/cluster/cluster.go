@@ -25,7 +25,6 @@ import (
 
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
@@ -51,6 +50,7 @@ import (
 	redhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -319,7 +319,7 @@ func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, disk
 					uuid.DefaultGenerator.Generate(),
 					mgmtauthorization.RoleAssignmentCreateParameters{
 						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: to.Ptr("/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
+							RoleDefinitionID: pointerutils.ToPtr("/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
 							PrincipalID:      &principalID,
 							PrincipalType:    mgmtauthorization.ServicePrincipal,
 						},
@@ -385,7 +385,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		uuid.DefaultGenerator.Generate(),
 		mgmtauthorization.RoleAssignmentCreateParameters{
 			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: to.Ptr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
+				RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
 				PrincipalID:      &c.Config.MockMSIObjectID,
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
@@ -395,7 +395,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
 		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
-			Location: to.Ptr(c.Config.Location),
+			Location: pointerutils.ToPtr(c.Config.Location),
 		}, nil)
 		if err != nil {
 			return err
@@ -456,7 +456,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 	if c.Config.IsCI {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, c.Config.VnetResourceGroup, mgmtfeatures.ResourceGroup{
-			Location: to.Ptr(c.Config.Location),
+			Location: pointerutils.ToPtr(c.Config.Location),
 		})
 		if err != nil {
 			return err
@@ -523,7 +523,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 				kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
 				result, err := c.vaultsClient.CheckNameAvailability(
 					ctx,
-					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.Ptr("Microsoft.KeyVault/vaults")},
+					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: pointerutils.ToPtr("Microsoft.KeyVault/vaults")},
 					nil,
 				)
 				if err != nil {
@@ -557,10 +557,10 @@ func (c *Cluster) Create(ctx context.Context) error {
 			Value: []sdknetwork.Route{
 				{
 					Properties: &sdknetwork.RoutePropertiesFormat{
-						AddressPrefix: to.Ptr("0.0.0.0/0"),
-						NextHopType:   to.Ptr(sdknetwork.RouteNextHopTypeNone),
+						AddressPrefix: pointerutils.ToPtr("0.0.0.0/0"),
+						NextHopType:   pointerutils.ToPtr(sdknetwork.RouteNextHopTypeNone),
 					},
-					Name: to.Ptr("blackhole"),
+					Name: pointerutils.ToPtr("blackhole"),
 				},
 			},
 		}
@@ -1194,17 +1194,17 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &c.ciParentVnet,
 		},
-		AllowVirtualNetworkAccess: to.Ptr(true),
-		AllowForwardedTraffic:     to.Ptr(true),
-		UseRemoteGateways:         to.Ptr(true),
+		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
+		AllowForwardedTraffic:     pointerutils.ToPtr(true),
+		UseRemoteGateways:         pointerutils.ToPtr(true),
 	}
 	rpProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &cluster,
 		},
-		AllowVirtualNetworkAccess: to.Ptr(true),
-		AllowForwardedTraffic:     to.Ptr(true),
-		AllowGatewayTransit:       to.Ptr(true),
+		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
+		AllowForwardedTraffic:     pointerutils.ToPtr(true),
+		AllowGatewayTransit:       pointerutils.ToPtr(true),
 	}
 
 	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: clusterProp}, nil)

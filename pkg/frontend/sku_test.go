@@ -11,11 +11,11 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -250,9 +250,9 @@ func TestValidateVMSku(t *testing.T) {
 
 			encryptionAtHost := func(enabled bool) *string {
 				if enabled {
-					return to.Ptr("True")
+					return pointerutils.ToPtr("True")
 				}
-				return to.Ptr("False")
+				return pointerutils.ToPtr("False")
 			}
 
 			skus := []mgmtcompute.ResourceSku{
@@ -265,11 +265,11 @@ func TestValidateVMSku(t *testing.T) {
 					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
 					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
 						{
-							Name:  to.Ptr("EncryptionAtHostSupported"),
+							Name:  pointerutils.ToPtr("EncryptionAtHostSupported"),
 							Value: encryptionAtHost(tt.availableSkuHasEncryption),
 						},
 					},
-					ResourceType: to.Ptr("virtualMachines"),
+					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 				{
 					Name:      &tt.availableSku2,
@@ -280,11 +280,11 @@ func TestValidateVMSku(t *testing.T) {
 					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
 					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
 						{
-							Name:  to.Ptr("EncryptionAtHostSupported"),
+							Name:  pointerutils.ToPtr("EncryptionAtHostSupported"),
 							Value: encryptionAtHost(tt.availableSku2HasEncryption),
 						},
 					},
-					ResourceType: to.Ptr("virtualMachines"),
+					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 				{
 					Name:      &tt.restrictedSku,
@@ -301,7 +301,7 @@ func TestValidateVMSku(t *testing.T) {
 						},
 					},
 					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{},
-					ResourceType: to.Ptr("virtualMachines"),
+					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 			}
 

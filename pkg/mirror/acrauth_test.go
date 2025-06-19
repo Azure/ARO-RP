@@ -16,13 +16,13 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdkcontainerregistry "github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_azcontainerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcontainerregistry"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -37,7 +37,7 @@ func TestAcrAuthGet(t *testing.T) {
 
 	validAcrRefreshTokenResponse := sdkcontainerregistry.AuthenticationClientExchangeAADAccessTokenForACRRefreshTokenResponse{
 		ACRRefreshToken: sdkcontainerregistry.ACRRefreshToken{
-			RefreshToken: to.Ptr("password"),
+			RefreshToken: pointerutils.ToPtr("password"),
 		},
 	}
 

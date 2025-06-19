@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -25,6 +24,7 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -118,8 +118,8 @@ var _ = Describe("Cluster", Serial, func() {
 
 				if !subnetAlreadyHasStorageEndpoint {
 					storageEndpoint := armnetwork.ServiceEndpointPropertiesFormat{
-						Service:   to.Ptr("Microsoft.Storage"),
-						Locations: []*string{to.Ptr("*")},
+						Service:   pointerutils.ToPtr("Microsoft.Storage"),
+						Locations: []*string{pointerutils.ToPtr("*")},
 					}
 
 					subnet.Properties.ServiceEndpoints = append(subnet.Properties.ServiceEndpoints, &storageEndpoint)
@@ -331,7 +331,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace,
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						StorageClassName: to.Ptr(storageClass),
+						StorageClassName: pointerutils.ToPtr(storageClass),
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: pvcStorage,
@@ -378,7 +378,7 @@ func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli 
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: to.Ptr(int32(1)),
+			Replicas: pointerutils.ToPtr(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": name,

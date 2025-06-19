@@ -5,7 +5,7 @@ package admin
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 )
 
 type openShiftClusterConverter struct{}
@@ -220,7 +220,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	}
 
 	if oc.Properties.ClusterProfile.OIDCIssuer != nil {
-		out.Properties.ClusterProfile.OIDCIssuer = to.Ptr(OIDCIssuer(*oc.Properties.ClusterProfile.OIDCIssuer))
+		out.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(OIDCIssuer(*oc.Properties.ClusterProfile.OIDCIssuer))
 	}
 
 	out.Properties.HiveProfile = HiveProfile{

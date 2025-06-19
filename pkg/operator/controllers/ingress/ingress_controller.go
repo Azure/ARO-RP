@@ -16,14 +16,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -70,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if ingress.Spec.Replicas != nil && *ingress.Spec.Replicas < minimumReplicas {
-		ingress.Spec.Replicas = to.Ptr(minimumReplicas)
+		ingress.Spec.Replicas = pointerutils.ToPtr(minimumReplicas)
 		err := r.Client.Update(ctx, ingress)
 		if err != nil {
 			r.Log.Error(err)

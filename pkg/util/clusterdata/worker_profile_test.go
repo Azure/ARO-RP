@@ -18,14 +18,13 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ktesting "k8s.io/client-go/testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -164,7 +163,7 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 
 		// Specify the desired state for the MachineSet
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: to.Ptr(int32(1)),
+			Replicas: pointerutils.ToPtr(int32(1)),
 			Template: machinev1beta1.MachineTemplateSpec{
 				// Specify the desired configuration for the machine using ProviderSpec
 				Spec: machinev1beta1.MachineSpec{

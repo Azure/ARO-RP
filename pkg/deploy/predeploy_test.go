@@ -15,7 +15,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
@@ -30,6 +29,7 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_msi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/msi"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -63,13 +63,13 @@ var (
 
 	healthyVMSS = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
 		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{Code: to.Ptr("HealthState/healthy")},
+			Status: &mgmtcompute.InstanceViewStatus{Code: pointerutils.ToPtr("HealthState/healthy")},
 		},
 	}
 	unhealthyVMSS = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
 		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
 			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.Ptr("HealthState/unhealthy"),
+				Code: pointerutils.ToPtr("HealthState/unhealthy"),
 			},
 		},
 	}
@@ -79,7 +79,7 @@ var (
 
 	newSecretBundle = azsecretssdk.GetSecretResponse{
 		Secret: azsecretssdk.Secret{
-			Attributes: &azsecretssdk.SecretAttributes{Created: to.Ptr(time.Now())},
+			Attributes: &azsecretssdk.SecretAttributes{Created: pointerutils.ToPtr(time.Now())},
 		},
 	}
 
@@ -92,12 +92,12 @@ var (
 	}
 
 	secretItems = func(err error) *runtime.Pager[azsecretssdk.ListSecretPropertiesResponse] {
-		return mock_azuresdk.NewPager(listForItems([]*azsecretssdk.SecretProperties{{ID: to.Ptr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/secretExists/whatever"))}}), []error{err})
+		return mock_azuresdk.NewPager(listForItems([]*azsecretssdk.SecretProperties{{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/secretExists/whatever"))}}), []error{err})
 	}
 
-	vmsss        = []mgmtcompute.VirtualMachineScaleSet{{Name: to.Ptr(vmssName)}}
+	vmsss        = []mgmtcompute.VirtualMachineScaleSet{{Name: pointerutils.ToPtr(vmssName)}}
 	invalidVMSSs = []mgmtcompute.VirtualMachineScaleSet{{Name: &invalidVMSSName}}
-	vms          = []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: to.Ptr(instanceID)}}
+	vms          = []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: pointerutils.ToPtr(instanceID)}}
 )
 
 func TestPreDeploy(t *testing.T) {
@@ -119,7 +119,7 @@ func TestPreDeploy(t *testing.T) {
 	oneMissingSecrets := []string{env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	oneMissingSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range oneMissingSecrets {
-		oneMissingSecretItems = append(oneMissingSecretItems, &azsecretssdk.SecretProperties{ID: to.Ptr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
+		oneMissingSecretItems = append(oneMissingSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
 	}
 
 	type resourceGroups struct {
@@ -183,7 +183,7 @@ func TestPreDeploy(t *testing.T) {
 	}
 	vmRestartMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, gomock.Any(), tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
-			CommandID: to.Ptr("RunShellScript"),
+			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
 		}).Return(nil)
 	}
@@ -827,7 +827,7 @@ func TestDeployRPGlobal(t *testing.T) {
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				config: &RPConfig{
 					Configuration: &Configuration{
-						GlobalResourceGroupName: to.Ptr(tt.testParams.resourceGroup),
+						GlobalResourceGroupName: pointerutils.ToPtr(tt.testParams.resourceGroup),
 					},
 					Location: tt.testParams.location,
 				},
@@ -892,7 +892,7 @@ func TestDeployRPGlobalACRReplication(t *testing.T) {
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				config: &RPConfig{
 					Configuration: &Configuration{
-						GlobalResourceGroupName: to.Ptr(tt.testParams.resourceGroup),
+						GlobalResourceGroupName: pointerutils.ToPtr(tt.testParams.resourceGroup),
 					},
 					Location: tt.testParams.location,
 				},
@@ -999,12 +999,12 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	oneMissingSecrets := []string{env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	oneMissingSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range oneMissingSecrets {
-		oneMissingSecretItems = append(oneMissingSecretItems, &azsecretssdk.SecretProperties{ID: to.Ptr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
+		oneMissingSecretItems = append(oneMissingSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
 	}
 	allSecrets := []string{env.EncryptionSecretV2Name, env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	allSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range allSecrets {
-		allSecretItems = append(allSecretItems, &azsecretssdk.SecretProperties{ID: to.Ptr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
+		allSecretItems = append(allSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
 	}
 
 	type testParams struct {
@@ -1035,7 +1035,7 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	}
 	vmRestartMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, tp.resourceGroup, tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
-			CommandID: to.Ptr("RunShellScript"),
+			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
 		}).Return(nil).AnyTimes()
 	}
@@ -1143,7 +1143,7 @@ func TestEnsureAndRotateSecret(t *testing.T) {
 	ctx := context.Background()
 	oldSecretBundle := azsecretssdk.GetSecretResponse{
 		Secret: azsecretssdk.Secret{
-			Attributes: &azsecretssdk.SecretAttributes{Created: to.Ptr(time.Now().Add(-rotateSecretAfter))},
+			Attributes: &azsecretssdk.SecretAttributes{Created: pointerutils.ToPtr(time.Now().Add(-rotateSecretAfter))},
 		},
 	}
 
@@ -1464,7 +1464,7 @@ func TestRestartOldScalesets(t *testing.T) {
 	}
 	vmRestartMock := func(vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, tp.resourceGroup, tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
-			CommandID: to.Ptr("RunShellScript"),
+			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
 		}).Return(nil)
 	}
@@ -1557,7 +1557,7 @@ func TestRestartOldScaleset(t *testing.T) {
 	vmRestartMock := func(returnError error) mock {
 		return func(c *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			c.EXPECT().RunCommandAndWait(ctx, tp.resourceGroup, tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
-				CommandID: to.Ptr("RunShellScript"),
+				CommandID: pointerutils.ToPtr("RunShellScript"),
 				Script:    &[]string{tp.restartScript},
 			}).Return(returnError)
 		}

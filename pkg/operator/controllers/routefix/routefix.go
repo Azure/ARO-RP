@@ -14,12 +14,11 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-
 	projectv1 "github.com/openshift/api/project/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -165,7 +164,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 								},
 								// TODO: specify requests/limits
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: to.Ptr(true),
+									Privileged: pointerutils.ToPtr(true),
 								},
 								Lifecycle: &corev1.Lifecycle{
 									PreStop: &corev1.LifecycleHandler{
@@ -218,7 +217,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 								},
 								// TODO: specify requests/limits
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: to.Ptr(true),
+									Privileged: pointerutils.ToPtr(true),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -256,7 +255,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: configmapName,
 										},
-										DefaultMode: to.Ptr(int32(0555)),
+										DefaultMode: pointerutils.ToPtr(int32(0555)),
 									},
 								},
 							},

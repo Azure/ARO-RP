@@ -17,14 +17,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -238,7 +237,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
-			InstallAttemptsLimit: to.Ptr(int32(1)),
+			InstallAttemptsLimit: pointerutils.ToPtr(int32(1)),
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
 			},

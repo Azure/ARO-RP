@@ -4,11 +4,11 @@ package rbac
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -45,12 +45,12 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: to.Ptr("[" + name + "]"),
-			Type: to.Ptr(resourceType + "/providers/roleAssignments"),
+			Name: pointerutils.ToPtr("[" + name + "]"),
+			Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.Ptr("[" + resourceID + "]"),
-				RoleDefinitionID: to.Ptr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
-				PrincipalID:      to.Ptr("[" + spID + "]"),
+				Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
+				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
+				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
@@ -70,12 +70,12 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 func ResourceRoleAssignmentWithScope(roleID, spID, resourceType string, scope string, names string, condition ...interface{}) *arm.Resource {
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: to.Ptr("[" + names + "]"),
-			Type: to.Ptr(resourceType + "/providers/roleAssignments"),
+			Name: pointerutils.ToPtr("[" + names + "]"),
+			Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.Ptr("[" + scope + "]"),
-				RoleDefinitionID: to.Ptr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
-				PrincipalID:      to.Ptr("[" + spID + "]"),
+				Scope:            pointerutils.ToPtr("[" + scope + "]"),
+				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
+				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
@@ -106,12 +106,12 @@ func resourceGroupRoleAssignmentWithDetails(roleID, spID string, name string, de
 	}
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: to.Ptr("[" + name + "]"),
-			Type: to.Ptr("Microsoft.Authorization/roleAssignments"),
+			Name: pointerutils.ToPtr("[" + name + "]"),
+			Type: pointerutils.ToPtr("Microsoft.Authorization/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.Ptr("[resourceGroup().id]"),
-				RoleDefinitionID: to.Ptr("[" + resourceIDFunction + "('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"),
-				PrincipalID:      to.Ptr("[" + spID + "]"),
+				Scope:            pointerutils.ToPtr("[resourceGroup().id]"),
+				RoleDefinitionID: pointerutils.ToPtr("[" + resourceIDFunction + "('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"),
+				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},

@@ -7,8 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // SaveVersion for current location in shared storage account for environment
@@ -17,7 +18,7 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 
 	d.log.Infof("ensuring static web content is enabled")
 	_, err := d.blobsClient.ServiceClient().SetProperties(ctx, &service.SetPropertiesOptions{
-		StaticWebsite: &service.StaticWebsite{Enabled: to.Ptr(true)},
+		StaticWebsite: &service.StaticWebsite{Enabled: pointerutils.ToPtr(true)},
 	})
 	if err != nil {
 		d.log.Errorf("failure to update static properties: %v", err)

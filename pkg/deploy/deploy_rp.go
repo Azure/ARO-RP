@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -16,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (d *deployer) DeployRP(ctx context.Context) error {
@@ -129,7 +129,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: to.Ptr(int64(3600)),
+			TTL: pointerutils.ToPtr(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: rpPIP.Properties.IPAddress,
@@ -143,7 +143,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: to.Ptr(int64(3600)),
+			TTL: pointerutils.ToPtr(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: portalPIP.Properties.IPAddress,
@@ -164,7 +164,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL:       to.Ptr(int64(3600)),
+			TTL:       pointerutils.ToPtr(int64(3600)),
 			NsRecords: &nsRecords,
 		},
 	}, "", "")
@@ -174,7 +174,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 func (d *deployer) convertToIPAddressOrRange(ipSlice []string) []mgmtdocumentdb.IPAddressOrRange {
 	ips := []mgmtdocumentdb.IPAddressOrRange{}
 	for _, v := range ipSlice {
-		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: to.Ptr(v)})
+		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: pointerutils.ToPtr(v)})
 	}
 	return ips
 }

@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -292,17 +292,17 @@ loadBalancingRules:
 					ID: (*lb.FrontendIPConfigurations)[0].ID,
 				},
 				BackendAddressPool: &mgmtnetwork.SubResource{
-					ID: to.Ptr(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
+					ID: pointerutils.ToPtr(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
 				},
 				Probe: &mgmtnetwork.SubResource{
-					ID: to.Ptr(*lb.ID + "/probes/ssh"),
+					ID: pointerutils.ToPtr(*lb.ID + "/probes/ssh"),
 				},
 				Protocol:             mgmtnetwork.TransportProtocolTCP,
 				LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-				FrontendPort:         to.Ptr(int32(2200) + int32(i)),
-				BackendPort:          to.Ptr(int32(22)),
-				IdleTimeoutInMinutes: to.Ptr(int32(30)),
-				DisableOutboundSnat:  to.Ptr(true),
+				FrontendPort:         pointerutils.ToPtr(int32(2200) + int32(i)),
+				BackendPort:          pointerutils.ToPtr(int32(22)),
+				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+				DisableOutboundSnat:  pointerutils.ToPtr(true),
 			},
 			Name: &name,
 		})
@@ -319,11 +319,11 @@ loadBalancingRules:
 	*lb.Probes = append(*lb.Probes, mgmtnetwork.Probe{
 		ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 			Protocol:          mgmtnetwork.ProbeProtocolTCP,
-			Port:              to.Ptr(int32(22)),
-			IntervalInSeconds: to.Ptr(int32(5)),
-			NumberOfProbes:    to.Ptr(int32(2)),
+			Port:              pointerutils.ToPtr(int32(22)),
+			IntervalInSeconds: pointerutils.ToPtr(int32(5)),
+			NumberOfProbes:    pointerutils.ToPtr(int32(2)),
 		},
-		Name: to.Ptr("ssh"),
+		Name: pointerutils.ToPtr("ssh"),
 	})
 
 	return changed

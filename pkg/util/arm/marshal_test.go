@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiljson "github.com/Azure/ARO-RP/test/util/json"
 )
 
@@ -36,7 +36,7 @@ func TestResourceMarshal(t *testing.T) {
 						"zero": {Uint: 0, Unmarshaled: 1},
 						"one":  {Uint: 1, Unmarshaled: 1},
 					},
-					Ptr:         to.Ptr("test"),
+					Ptr:         pointerutils.ToPtr("test"),
 					Slice:       []*testResource{{Float: 1.1, Unmarshaled: 1}},
 					ByteSlice:   []byte("test"),
 					String:      "test",
@@ -101,55 +101,55 @@ func TestResourceMarshal(t *testing.T) {
 			r: &Resource{
 				APIVersion: "2020-08-01",
 				Resource: armnetwork.VirtualNetwork{
-					ID:       to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet"),
-					Name:     to.Ptr("vnet"),
-					Type:     to.Ptr("microsoft.network/virtualnetworks"),
-					Location: to.Ptr("eastus"),
-					Tags:     map[string]*string{"Tag": to.Ptr("Value")},
+					ID:       pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet"),
+					Name:     pointerutils.ToPtr("vnet"),
+					Type:     pointerutils.ToPtr("microsoft.network/virtualnetworks"),
+					Location: pointerutils.ToPtr("eastus"),
+					Tags:     map[string]*string{"Tag": pointerutils.ToPtr("Value")},
 					Properties: &armnetwork.VirtualNetworkPropertiesFormat{
-						ProvisioningState: to.Ptr(armnetwork.ProvisioningStateSucceeded),
-						ResourceGUID:      to.Ptr("00000000-0000-0000-0000-000000000000"),
+						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ResourceGUID:      pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
 						AddressSpace: &armnetwork.AddressSpace{
-							AddressPrefixes: []*string{to.Ptr("10.0.0.0/22")},
+							AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/22")},
 						},
 						Encryption: &armnetwork.VirtualNetworkEncryption{
-							Enabled:     to.Ptr(false),
-							Enforcement: to.Ptr(armnetwork.VirtualNetworkEncryptionEnforcementAllowUnencrypted),
+							Enabled:     pointerutils.ToPtr(false),
+							Enforcement: pointerutils.ToPtr(armnetwork.VirtualNetworkEncryptionEnforcementAllowUnencrypted),
 						},
-						EnableDdosProtection:   to.Ptr(false),
+						EnableDdosProtection:   pointerutils.ToPtr(false),
 						VirtualNetworkPeerings: []*armnetwork.VirtualNetworkPeering{},
 						Subnets: []*armnetwork.Subnet{
 							{
-								ID:   to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"),
-								Name: to.Ptr("master"),
-								Type: to.Ptr("Microsoft.Network/virtualNetworks/subnets"),
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"),
+								Name: pointerutils.ToPtr("master"),
+								Type: pointerutils.ToPtr("Microsoft.Network/virtualNetworks/subnets"),
 								Properties: &armnetwork.SubnetPropertiesFormat{
-									ProvisioningState:    to.Ptr(armnetwork.ProvisioningStateSucceeded),
-									AddressPrefixes:      []*string{to.Ptr("10.0.0.0/23")},
-									NetworkSecurityGroup: &armnetwork.SecurityGroup{ID: to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
+									ProvisioningState:    pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+									AddressPrefixes:      []*string{pointerutils.ToPtr("10.0.0.0/23")},
+									NetworkSecurityGroup: &armnetwork.SecurityGroup{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
 									IPConfigurations: []*armnetwork.IPConfiguration{
-										{ID: to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/loadBalancers/ARO-00000-INTERNAL/frontendIPConfigurations/INTERNAL-LB-IP-V4")},
-										{ID: to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkInterfaces/ARO-00000-PE.NIC.00000000-0000-0000-0000-000000000000/ipConfigurations/PRIVATEENDPOINTIPCONFIG.00000000-0000-0000-0000-000000000000")},
-										{ID: to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkInterfaces/ARO-00000-PLS.NIC.00000000-0000-0000-0000-000000000000/ipConfigurations/ARO-00000-PLS-NIC")},
-										{ID: to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateLinkServices/ARO-00000-PLS/ipConfigurations/ARO-00000-PLS-NIC")},
+										{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/loadBalancers/ARO-00000-INTERNAL/frontendIPConfigurations/INTERNAL-LB-IP-V4")},
+										{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkInterfaces/ARO-00000-PE.NIC.00000000-0000-0000-0000-000000000000/ipConfigurations/PRIVATEENDPOINTIPCONFIG.00000000-0000-0000-0000-000000000000")},
+										{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkInterfaces/ARO-00000-PLS.NIC.00000000-0000-0000-0000-000000000000/ipConfigurations/ARO-00000-PLS-NIC")},
+										{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateLinkServices/ARO-00000-PLS/ipConfigurations/ARO-00000-PLS-NIC")},
 									},
-									PrivateEndpoints:                  []*armnetwork.PrivateEndpoint{{ID: to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateEndpoints/ARO-00000-PE")}},
-									PrivateEndpointNetworkPolicies:    to.Ptr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
-									PrivateLinkServiceNetworkPolicies: to.Ptr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
-									Purpose:                           to.Ptr("PrivateEndpoints"),
+									PrivateEndpoints:                  []*armnetwork.PrivateEndpoint{{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateEndpoints/ARO-00000-PE")}},
+									PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+									PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+									Purpose:                           pointerutils.ToPtr("PrivateEndpoints"),
 									Delegations:                       []*armnetwork.Delegation{},
 								},
 							},
 							{
-								ID:   to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker"),
-								Name: to.Ptr("worker"),
-								Type: to.Ptr("Microsoft.Network/virtualNetworks/subnets"),
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker"),
+								Name: pointerutils.ToPtr("worker"),
+								Type: pointerutils.ToPtr("Microsoft.Network/virtualNetworks/subnets"),
 								Properties: &armnetwork.SubnetPropertiesFormat{
-									ProvisioningState:                 to.Ptr(armnetwork.ProvisioningStateSucceeded),
-									AddressPrefixes:                   []*string{to.Ptr("10.0.2.0/23")},
-									NetworkSecurityGroup:              &armnetwork.SecurityGroup{ID: to.Ptr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
-									PrivateEndpointNetworkPolicies:    to.Ptr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
-									PrivateLinkServiceNetworkPolicies: to.Ptr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesEnabled),
+									ProvisioningState:                 pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+									AddressPrefixes:                   []*string{pointerutils.ToPtr("10.0.2.0/23")},
+									NetworkSecurityGroup:              &armnetwork.SecurityGroup{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
+									PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+									PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesEnabled),
 									Delegations:                       []*armnetwork.Delegation{},
 								},
 							},
@@ -244,17 +244,17 @@ func TestResourceMarshal(t *testing.T) {
 			r: &Resource{
 				APIVersion: "2023-04-15",
 				Resource: &armcosmos.SQLDatabaseCreateUpdateParameters{
-					Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
-					Location: to.Ptr("eastus"),
-					Name:     to.Ptr("databaseAccountName/databaseName"),
+					Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
+					Location: pointerutils.ToPtr("eastus"),
+					Name:     pointerutils.ToPtr("databaseAccountName/databaseName"),
 					Properties: &armcosmos.SQLDatabaseCreateUpdateProperties{
 						Options: &armcosmos.CreateUpdateOptions{
 							AutoscaleSettings: &armcosmos.AutoscaleSettings{
-								MaxThroughput: to.Ptr(int32(1000)),
+								MaxThroughput: pointerutils.ToPtr(int32(1000)),
 							},
 						},
 						Resource: &armcosmos.SQLDatabaseResource{
-							ID: to.Ptr("databaseName"),
+							ID: pointerutils.ToPtr("databaseName"),
 						},
 					},
 				},

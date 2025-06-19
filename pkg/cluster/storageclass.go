@@ -12,9 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -112,7 +111,7 @@ func newEncryptedStorageClass(diskEncryptionSetID, encryptedStorageClassName, pr
 		},
 		Provisioner:          provisioner,
 		VolumeBindingMode:    &volumeBindingMode,
-		AllowVolumeExpansion: to.Ptr(true),
+		AllowVolumeExpansion: pointerutils.ToPtr(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"kind":                "Managed",

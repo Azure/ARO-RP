@@ -13,9 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -150,7 +149,7 @@ func TestBoundSASigningKeySecret(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					ClusterProfile: api.ClusterProfile{
-						BoundServiceAccountSigningKey: to.Ptr(api.SecureString("fakeboundserviceaccountsigningkey")),
+						BoundServiceAccountSigningKey: pointerutils.ToPtr(api.SecureString("fakeboundserviceaccountsigningkey")),
 					},
 				},
 			},

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
@@ -17,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -26,27 +26,27 @@ func (m *manager) denyAssignment() *arm.Resource {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		for _, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
-				ID:   to.Ptr(identity.ObjectID),
-				Type: to.Ptr(string(mgmtauthorization.ServicePrincipal)),
+				ID:   pointerutils.ToPtr(identity.ObjectID),
+				Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 			})
 		}
 		excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
-			ID:   to.Ptr(m.fpServicePrincipalID),
-			Type: to.Ptr(string(mgmtauthorization.ServicePrincipal)),
+			ID:   pointerutils.ToPtr(m.fpServicePrincipalID),
+			Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 		})
 	} else {
 		excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
 			ID:   &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID,
-			Type: to.Ptr(string(mgmtauthorization.ServicePrincipal)),
+			Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 		})
 	}
 
 	resource := &arm.Resource{
 		Resource: &mgmtauthorization.DenyAssignment{
-			Name: to.Ptr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
-			Type: to.Ptr("Microsoft.Authorization/denyAssignments"),
+			Name: pointerutils.ToPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+			Type: pointerutils.ToPtr("Microsoft.Authorization/denyAssignments"),
 			DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
-				DenyAssignmentName: to.Ptr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+				DenyAssignmentName: pointerutils.ToPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
 				Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
 					{
 						Actions: &[]string{
@@ -79,12 +79,12 @@ func (m *manager) denyAssignment() *arm.Resource {
 				Scope: &m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
 				Principals: &[]mgmtauthorization.Principal{
 					{
-						ID:   to.Ptr("00000000-0000-0000-0000-000000000000"),
-						Type: to.Ptr("SystemDefined"),
+						ID:   pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
+						Type: pointerutils.ToPtr("SystemDefined"),
 					},
 				},
 				ExcludePrincipals: &excludePrincipals,
-				IsSystemProtected: to.Ptr(true),
+				IsSystemProtected: pointerutils.ToPtr(true),
 			},
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Authorization/denyAssignments"),
@@ -158,11 +158,11 @@ func (m *manager) fpspStorageBlobContributorRBAC(storageAccountName, principalID
 func (m *manager) storageAccount(name, region string, ocpSubnets []string, encrypted bool, setSasPolicy bool) *arm.Resource {
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
-			VirtualNetworkResourceID: to.Ptr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+			VirtualNetworkResourceID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
 			Action:                   mgmtstorage.ActionAllow,
 		},
 		{
-			VirtualNetworkResourceID: to.Ptr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
+			VirtualNetworkResourceID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
 			Action:                   mgmtstorage.ActionAllow,
 		},
 	}
@@ -170,7 +170,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	// add OCP subnets which have Microsoft.Storage service endpoint enabled
 	for _, subnet := range ocpSubnets {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: to.Ptr(subnet),
+			VirtualNetworkResourceID: pointerutils.ToPtr(subnet),
 			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
@@ -180,7 +180,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	hiveShard := 1
 	if m.installViaHive && strings.Index(name, "cluster") == 0 {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: to.Ptr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
+			VirtualNetworkResourceID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
 			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
@@ -190,7 +190,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	// https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/azure-subscription-service-limits#private-link-limits
 	if !m.env.IsLocalDevelopmentMode() {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: to.Ptr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
+			VirtualNetworkResourceID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
 			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
@@ -201,8 +201,8 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 			Name: "Standard_LRS",
 		},
 		AccountProperties: &mgmtstorage.AccountProperties{
-			AllowBlobPublicAccess:  to.Ptr(false),
-			EnableHTTPSTrafficOnly: to.Ptr(true),
+			AllowBlobPublicAccess:  pointerutils.ToPtr(false),
+			EnableHTTPSTrafficOnly: pointerutils.ToPtr(true),
 			MinimumTLSVersion:      mgmtstorage.MinimumTLSVersionTLS12,
 			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
 				Bypass:              mgmtstorage.BypassAzureServices,
@@ -212,16 +212,16 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 		},
 		Name:     &name,
 		Location: &region,
-		Type:     to.Ptr("Microsoft.Storage/storageAccounts"),
+		Type:     pointerutils.ToPtr("Microsoft.Storage/storageAccounts"),
 	}
 
 	// For Workload Identity Cluster disable shared access keys, only User Delegated SAS are allowed
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		sa.AllowSharedKeyAccess = to.Ptr(false)
+		sa.AllowSharedKeyAccess = pointerutils.ToPtr(false)
 		if setSasPolicy {
 			sa.SasPolicy = &mgmtstorage.SasPolicy{
-				SasExpirationPeriod: to.Ptr("0.01:00:00"),
-				ExpirationAction:    to.Ptr("Log"),
+				SasExpirationPeriod: pointerutils.ToPtr("0.01:00:00"),
+				ExpirationAction:    pointerutils.ToPtr("Log"),
 			}
 		}
 	}
@@ -238,23 +238,23 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	// bool is set to false, it will still maintain the encryption on the storage account.
 	if encrypted {
 		sa.Encryption = &mgmtstorage.Encryption{
-			RequireInfrastructureEncryption: to.Ptr(true),
+			RequireInfrastructureEncryption: pointerutils.ToPtr(true),
 			Services: &mgmtstorage.EncryptionServices{
 				Blob: &mgmtstorage.EncryptionService{
 					KeyType: mgmtstorage.KeyTypeAccount,
-					Enabled: to.Ptr(true),
+					Enabled: pointerutils.ToPtr(true),
 				},
 				File: &mgmtstorage.EncryptionService{
 					KeyType: mgmtstorage.KeyTypeAccount,
-					Enabled: to.Ptr(true),
+					Enabled: pointerutils.ToPtr(true),
 				},
 				Table: &mgmtstorage.EncryptionService{
 					KeyType: mgmtstorage.KeyTypeAccount,
-					Enabled: to.Ptr(true),
+					Enabled: pointerutils.ToPtr(true),
 				},
 				Queue: &mgmtstorage.EncryptionService{
 					KeyType: mgmtstorage.KeyTypeAccount,
-					Enabled: to.Ptr(true),
+					Enabled: pointerutils.ToPtr(true),
 				},
 			},
 			KeySource: mgmtstorage.KeySourceMicrosoftStorage,
@@ -270,8 +270,8 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 func (m *manager) storageAccountBlobContainer(storageAccountName, name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtstorage.BlobContainer{
-			Name: to.Ptr(storageAccountName + "/default/" + name),
-			Type: to.Ptr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+			Name: pointerutils.ToPtr(storageAccountName + "/default/" + name),
+			Type: pointerutils.ToPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 		DependsOn: []string{
@@ -286,7 +286,7 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 			PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
 				LoadBalancerFrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 					{
-						ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+						ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 					},
 				},
 				IPConfigurations: &[]mgmtnetwork.PrivateLinkServiceIPConfiguration{
@@ -296,7 +296,7 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 								ID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 							},
 						},
-						Name: to.Ptr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls-nic"),
+						Name: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls-nic"),
 					},
 				},
 				Visibility: &mgmtnetwork.PrivateLinkServicePropertiesVisibility{
@@ -310,8 +310,8 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 					},
 				},
 			},
-			Name:     to.Ptr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls"),
-			Type:     to.Ptr("Microsoft.Network/privateLinkServices"),
+			Name:     pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/privateLinkServices"),
 			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -326,22 +326,22 @@ func (m *manager) networkPrivateEndpoint() *arm.Resource {
 		Resource: &mgmtnetwork.PrivateEndpoint{
 			PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 				Subnet: &mgmtnetwork.Subnet{
-					ID: to.Ptr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+					ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 				},
 				ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
 					{
-						Name: to.Ptr("gateway-plsconnection"),
+						Name: pointerutils.ToPtr("gateway-plsconnection"),
 						PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
 							// TODO: in the future we will need multiple PLSes.
 							// It will be necessary to decide which the PLS for
 							// a cluster somewhere around here.
-							PrivateLinkServiceID: to.Ptr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/privateLinkServices/gateway-pls-001"),
+							PrivateLinkServiceID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/privateLinkServices/gateway-pls-001"),
 						},
 					},
 				},
 			},
-			Name:     to.Ptr(m.doc.OpenShiftCluster.Properties.InfraID + "-pe"),
-			Type:     to.Ptr("Microsoft.Network/privateEndpoints"),
+			Name:     pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pe"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/privateEndpoints"),
 			Location: &m.doc.OpenShiftCluster.Location,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -358,7 +358,7 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 				PublicIPAllocationMethod: mgmtnetwork.Static,
 			},
 			Name:     &name,
-			Type:     to.Ptr("Microsoft.Network/publicIPAddresses"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -377,10 +377,10 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 							PrivateIPAllocationMethod: mgmtnetwork.Dynamic,
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.Ptr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+								ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
 						},
-						Name: to.Ptr("internal-lb-ip-v4"),
+						Name: pointerutils.ToPtr("internal-lb-ip-v4"),
 					},
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
@@ -388,150 +388,150 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 						Name: &m.doc.OpenShiftCluster.Properties.InfraID,
 					},
 					{
-						Name: to.Ptr("ssh-0"),
+						Name: pointerutils.ToPtr("ssh-0"),
 					},
 					{
-						Name: to.Ptr("ssh-1"),
+						Name: pointerutils.ToPtr("ssh-1"),
 					},
 					{
-						Name: to.Ptr("ssh-2"),
+						Name: pointerutils.ToPtr("ssh-2"),
 					},
 				},
 				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Protocol:             mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:         to.Ptr(int32(6443)),
-							BackendPort:          to.Ptr(int32(6443)),
-							IdleTimeoutInMinutes: to.Ptr(int32(30)),
-							DisableOutboundSnat:  to.Ptr(true),
+							FrontendPort:         pointerutils.ToPtr(int32(6443)),
+							BackendPort:          pointerutils.ToPtr(int32(6443)),
+							IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+							DisableOutboundSnat:  pointerutils.ToPtr(true),
 						},
-						Name: to.Ptr("api-internal-v4"),
+						Name: pointerutils.ToPtr("api-internal-v4"),
 					},
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'sint-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'sint-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Protocol:             mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:         to.Ptr(int32(22623)),
-							BackendPort:          to.Ptr(int32(22623)),
-							IdleTimeoutInMinutes: to.Ptr(int32(30)),
+							FrontendPort:         pointerutils.ToPtr(int32(22623)),
+							BackendPort:          pointerutils.ToPtr(int32(22623)),
+							IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
 						},
-						Name: to.Ptr("sint-v4"),
+						Name: pointerutils.ToPtr("sint-v4"),
 					},
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-0')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-0')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Protocol:             mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:         to.Ptr(int32(2200)),
-							BackendPort:          to.Ptr(int32(22)),
-							IdleTimeoutInMinutes: to.Ptr(int32(30)),
-							DisableOutboundSnat:  to.Ptr(true),
+							FrontendPort:         pointerutils.ToPtr(int32(2200)),
+							BackendPort:          pointerutils.ToPtr(int32(22)),
+							IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+							DisableOutboundSnat:  pointerutils.ToPtr(true),
 						},
-						Name: to.Ptr("ssh-0"),
+						Name: pointerutils.ToPtr("ssh-0"),
 					},
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-1')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-1')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Protocol:             mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:         to.Ptr(int32(2201)),
-							BackendPort:          to.Ptr(int32(22)),
-							IdleTimeoutInMinutes: to.Ptr(int32(30)),
-							DisableOutboundSnat:  to.Ptr(true),
+							FrontendPort:         pointerutils.ToPtr(int32(2201)),
+							BackendPort:          pointerutils.ToPtr(int32(22)),
+							IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+							DisableOutboundSnat:  pointerutils.ToPtr(true),
 						},
-						Name: to.Ptr("ssh-1"),
+						Name: pointerutils.ToPtr("ssh-1"),
 					},
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-2')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-2')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Protocol:             mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:         to.Ptr(int32(2202)),
-							BackendPort:          to.Ptr(int32(22)),
-							IdleTimeoutInMinutes: to.Ptr(int32(30)),
-							DisableOutboundSnat:  to.Ptr(true),
+							FrontendPort:         pointerutils.ToPtr(int32(2202)),
+							BackendPort:          pointerutils.ToPtr(int32(22)),
+							IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+							DisableOutboundSnat:  pointerutils.ToPtr(true),
 						},
-						Name: to.Ptr("ssh-2"),
+						Name: pointerutils.ToPtr("ssh-2"),
 					},
 				},
 				Probes: &[]mgmtnetwork.Probe{
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
-							Port:              to.Ptr(int32(6443)),
-							IntervalInSeconds: to.Ptr(int32(5)),
-							NumberOfProbes:    to.Ptr(int32(2)),
-							RequestPath:       to.Ptr("/readyz"),
+							Port:              pointerutils.ToPtr(int32(6443)),
+							IntervalInSeconds: pointerutils.ToPtr(int32(5)),
+							NumberOfProbes:    pointerutils.ToPtr(int32(2)),
+							RequestPath:       pointerutils.ToPtr("/readyz"),
 						},
-						Name: to.Ptr("api-internal-probe"),
+						Name: pointerutils.ToPtr("api-internal-probe"),
 					},
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
-							Port:              to.Ptr(int32(22623)),
-							IntervalInSeconds: to.Ptr(int32(5)),
-							NumberOfProbes:    to.Ptr(int32(2)),
-							RequestPath:       to.Ptr("/healthz"),
+							Port:              pointerutils.ToPtr(int32(22623)),
+							IntervalInSeconds: pointerutils.ToPtr(int32(5)),
+							NumberOfProbes:    pointerutils.ToPtr(int32(2)),
+							RequestPath:       pointerutils.ToPtr("/healthz"),
 						},
-						Name: to.Ptr("sint-probe"),
+						Name: pointerutils.ToPtr("sint-probe"),
 					},
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:          mgmtnetwork.ProbeProtocolTCP,
-							Port:              to.Ptr(int32(22)),
-							IntervalInSeconds: to.Ptr(int32(5)),
-							NumberOfProbes:    to.Ptr(int32(2)),
+							Port:              pointerutils.ToPtr(int32(22)),
+							IntervalInSeconds: pointerutils.ToPtr(int32(5)),
+							NumberOfProbes:    pointerutils.ToPtr(int32(2)),
 						},
-						Name: to.Ptr("ssh"),
+						Name: pointerutils.ToPtr("ssh"),
 					},
 				},
 			},
-			Name:     to.Ptr(m.doc.OpenShiftCluster.Properties.InfraID + "-internal"),
-			Type:     to.Ptr("Microsoft.Network/loadBalancers"),
+			Name:     pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-internal"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
 			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -541,13 +541,13 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []api.ResourceReference) *arm.Resource {
 	lb := &sdknetwork.LoadBalancer{
 		SKU: &sdknetwork.LoadBalancerSKU{
-			Name: to.Ptr(sdknetwork.LoadBalancerSKUNameStandard),
+			Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
 		},
 		Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{},
 			BackendAddressPools: []*sdknetwork.BackendAddressPool{
 				{
-					Name: to.Ptr(m.doc.OpenShiftCluster.Properties.InfraID),
+					Name: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 				},
 			},
 			LoadBalancingRules: []*sdknetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
@@ -557,17 +557,17 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 					Properties: &sdknetwork.OutboundRulePropertiesFormat{
 						FrontendIPConfigurations: []*sdknetwork.SubResource{},
 						BackendAddressPool: &sdknetwork.SubResource{
-							ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 						},
-						Protocol:             to.Ptr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
-						IdleTimeoutInMinutes: to.Ptr(int32(30)),
+						Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
 					},
-					Name: to.Ptr("outbound-rule-v4"),
+					Name: pointerutils.ToPtr("outbound-rule-v4"),
 				},
 			},
 		},
 		Name:     &m.doc.OpenShiftCluster.Properties.InfraID,
-		Type:     to.Ptr("Microsoft.Network/loadBalancers"),
+		Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
 		Location: &azureRegion,
 	}
 
@@ -575,42 +575,42 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 		lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, &sdknetwork.FrontendIPConfiguration{
 			Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 				PublicIPAddress: &sdknetwork.PublicIPAddress{
-					ID: to.Ptr("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
+					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
 				},
 			},
-			Name: to.Ptr("public-lb-ip-v4"),
+			Name: pointerutils.ToPtr("public-lb-ip-v4"),
 		})
 
 		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &sdknetwork.LoadBalancingRule{
 			Properties: &sdknetwork.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &sdknetwork.SubResource{
-					ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
 				BackendAddressPool: &sdknetwork.SubResource{
-					ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
 				Probe: &sdknetwork.SubResource{
-					ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
-				Protocol:             to.Ptr(sdknetwork.TransportProtocolTCP),
-				LoadDistribution:     to.Ptr(sdknetwork.LoadDistributionDefault),
-				FrontendPort:         to.Ptr(int32(6443)),
-				BackendPort:          to.Ptr(int32(6443)),
-				IdleTimeoutInMinutes: to.Ptr(int32(30)),
-				DisableOutboundSnat:  to.Ptr(true),
+				Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
+				LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+				FrontendPort:         pointerutils.ToPtr(int32(6443)),
+				BackendPort:          pointerutils.ToPtr(int32(6443)),
+				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+				DisableOutboundSnat:  pointerutils.ToPtr(true),
 			},
-			Name: to.Ptr("api-internal-v4"),
+			Name: pointerutils.ToPtr("api-internal-v4"),
 		})
 
 		lb.Properties.Probes = append(lb.Properties.Probes, &sdknetwork.Probe{
 			Properties: &sdknetwork.ProbePropertiesFormat{
-				Protocol:          to.Ptr(sdknetwork.ProbeProtocolHTTPS),
-				Port:              to.Ptr(int32(6443)),
-				IntervalInSeconds: to.Ptr(int32(5)),
-				NumberOfProbes:    to.Ptr(int32(2)),
-				RequestPath:       to.Ptr("/readyz"),
+				Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolHTTPS),
+				Port:              pointerutils.ToPtr(int32(6443)),
+				IntervalInSeconds: pointerutils.ToPtr(int32(5)),
+				NumberOfProbes:    pointerutils.ToPtr(int32(2)),
+				RequestPath:       pointerutils.ToPtr("/readyz"),
 			},
-			Name: to.Ptr("api-internal-probe"),
+			Name: pointerutils.ToPtr("api-internal-probe"),
 		})
 	}
 

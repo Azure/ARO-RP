@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/checkaccess-v2-go-sdk/client"
 	"github.com/Azure/go-autorest/autorest"
@@ -24,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
@@ -266,7 +266,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		dv.env.Environment(),
 		dv.subscriptionDoc.ID,
 		dv.fpAuthorizer,
-		to.Ptr(dv.env.FPClientID()),
+		pointerutils.ToPtr(dv.env.FPClientID()),
 		dynamic.AuthorizerFirstParty,
 		fpClientCred,
 		pdpClient,

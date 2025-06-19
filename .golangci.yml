@@ -25,7 +25,7 @@ linters:
         deprecated-sdks:
           deny:
             - pkg: "github.com/Azure/go-autorest/autorest/to"
-              desc: use github.com/Azure/azure-sdk-for-go/sdk/azcore/to
+              desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
     importas:
       alias:
         - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid

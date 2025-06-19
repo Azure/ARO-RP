@@ -10,10 +10,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -427,11 +427,11 @@ func newPublicIPAddress(name, resourceID, location string) sdknetwork.PublicIPAd
 		ID:       &resourceID,
 		Location: &location,
 		Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-			PublicIPAllocationMethod: to.Ptr(sdknetwork.IPAllocationMethodStatic),
-			PublicIPAddressVersion:   to.Ptr(sdknetwork.IPVersionIPv4),
+			PublicIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodStatic),
+			PublicIPAddressVersion:   pointerutils.ToPtr(sdknetwork.IPVersionIPv4),
 		},
 		SKU: &sdknetwork.PublicIPAddressSKU{
-			Name: to.Ptr(sdknetwork.PublicIPAddressSKUNameStandard),
+			Name: pointerutils.ToPtr(sdknetwork.PublicIPAddressSKUNameStandard),
 		},
 	}
 }

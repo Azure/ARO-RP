@@ -19,13 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -269,7 +268,7 @@ func workerMachineSet(name string) *machinev1beta1.MachineSet {
 			Namespace: machineSetsNamespace,
 		},
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: to.Ptr(int32(1)),
+			Replicas: pointerutils.ToPtr(int32(1)),
 		},
 	}
 }

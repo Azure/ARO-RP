@@ -11,11 +11,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var (
@@ -26,11 +26,11 @@ var (
 
 func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
 	return &mgmtnetwork.LoadBalancer{
-		ID: to.Ptr(lbID),
+		ID: pointerutils.ToPtr(lbID),
 		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 				{
-					ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
+					ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{},
@@ -42,95 +42,95 @@ func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
 
 func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 	return &mgmtnetwork.LoadBalancer{
-		ID: to.Ptr(lbID),
+		ID: pointerutils.ToPtr(lbID),
 		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 				{
-					ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
+					ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 				{
-					Name: to.Ptr("ssh-0"),
+					Name: pointerutils.ToPtr("ssh-0"),
 				},
 				{
-					Name: to.Ptr("ssh-1"),
+					Name: pointerutils.ToPtr("ssh-1"),
 				},
 				{
-					Name: to.Ptr("ssh-2"),
+					Name: pointerutils.ToPtr("ssh-2"),
 				},
 			},
 			LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/backendAddressPools/ssh-0"),
+							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-0"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/probes/ssh"),
+							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-						FrontendPort:         to.Ptr(int32(2200)),
-						BackendPort:          to.Ptr(int32(22)),
-						IdleTimeoutInMinutes: to.Ptr(int32(30)),
-						DisableOutboundSnat:  to.Ptr(true),
+						FrontendPort:         pointerutils.ToPtr(int32(2200)),
+						BackendPort:          pointerutils.ToPtr(int32(22)),
+						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+						DisableOutboundSnat:  pointerutils.ToPtr(true),
 					},
-					Name: to.Ptr("ssh-0"),
+					Name: pointerutils.ToPtr("ssh-0"),
 				},
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/backendAddressPools/ssh-1"),
+							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-1"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/probes/ssh"),
+							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-						FrontendPort:         to.Ptr(int32(2201)),
-						BackendPort:          to.Ptr(int32(22)),
-						IdleTimeoutInMinutes: to.Ptr(int32(30)),
-						DisableOutboundSnat:  to.Ptr(true),
+						FrontendPort:         pointerutils.ToPtr(int32(2201)),
+						BackendPort:          pointerutils.ToPtr(int32(22)),
+						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+						DisableOutboundSnat:  pointerutils.ToPtr(true),
 					},
-					Name: to.Ptr("ssh-1"),
+					Name: pointerutils.ToPtr("ssh-1"),
 				},
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/backendAddressPools/ssh-2"),
+							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-2"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.Ptr(lbID + "/probes/ssh"),
+							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-						FrontendPort:         to.Ptr(int32(2202)),
-						BackendPort:          to.Ptr(int32(22)),
-						IdleTimeoutInMinutes: to.Ptr(int32(30)),
-						DisableOutboundSnat:  to.Ptr(true),
+						FrontendPort:         pointerutils.ToPtr(int32(2202)),
+						BackendPort:          pointerutils.ToPtr(int32(22)),
+						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+						DisableOutboundSnat:  pointerutils.ToPtr(true),
 					},
-					Name: to.Ptr("ssh-2"),
+					Name: pointerutils.ToPtr("ssh-2"),
 				},
 			},
 			Probes: &[]mgmtnetwork.Probe{
 				{
 					ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 						Protocol:          mgmtnetwork.ProbeProtocolTCP,
-						Port:              to.Ptr(int32(22)),
-						IntervalInSeconds: to.Ptr(int32(5)),
-						NumberOfProbes:    to.Ptr(int32(2)),
+						Port:              pointerutils.ToPtr(int32(22)),
+						IntervalInSeconds: pointerutils.ToPtr(int32(5)),
+						NumberOfProbes:    pointerutils.ToPtr(int32(2)),
 					},
-					Name: to.Ptr("ssh"),
+					Name: pointerutils.ToPtr("ssh"),
 				},
 			},
 		},
@@ -141,7 +141,7 @@ func ifBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbBacke
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: &mgmtnetwork.SubResource{
-				ID: to.Ptr(fmt.Sprintf("master-%d", i)),
+				ID: pointerutils.ToPtr(fmt.Sprintf("master-%d", i)),
 			},
 			IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 				{
@@ -163,7 +163,7 @@ func ifNoVmBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbB
 					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								ID: to.Ptr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
+								ID: pointerutils.ToPtr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
 							},
 						},
 					},
@@ -183,20 +183,20 @@ func ifAfter(ilbID string, elbID string, i int, ilbBackendPool string, elbBacken
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: &mgmtnetwork.SubResource{
-				ID: to.Ptr(fmt.Sprintf("master-%d", i)),
+				ID: pointerutils.ToPtr(fmt.Sprintf("master-%d", i)),
 			},
 			IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 				{
 					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								ID: to.Ptr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
+								ID: pointerutils.ToPtr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
 							},
 							{
-								ID: to.Ptr(fmt.Sprintf(ilbID+"/backendAddressPools/%s", ilbBackendPool)),
+								ID: pointerutils.ToPtr(fmt.Sprintf(ilbID+"/backendAddressPools/%s", ilbBackendPool)),
 							},
 							{
-								ID: to.Ptr(fmt.Sprintf(elbID+"/backendAddressPools/%s", elbBackendPool)),
+								ID: pointerutils.ToPtr(fmt.Sprintf(elbID+"/backendAddressPools/%s", elbBackendPool)),
 							},
 						},
 					},

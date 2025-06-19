@@ -22,7 +22,6 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	"github.com/Azure/ARO-RP/test/util/serversideapply"
@@ -74,11 +74,11 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			name: "noop",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
-					Name: to.Ptr(assignmentName),
+					Name: pointerutils.ToPtr(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						RoleDefinitionID: to.Ptr(rbac.RoleContributor),
-						Scope:            to.Ptr(resourceGroupID),
-						PrincipalID:      to.Ptr(fakeClusterSPObjectId),
+						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
+						Scope:            pointerutils.ToPtr(resourceGroupID),
+						PrincipalID:      pointerutils.ToPtr(fakeClusterSPObjectId),
 					},
 				},
 			},
@@ -114,11 +114,11 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			name: "needs delete & create",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
-					Name: to.Ptr(assignmentName),
+					Name: pointerutils.ToPtr(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						RoleDefinitionID: to.Ptr(rbac.RoleContributor),
-						Scope:            to.Ptr(resourceGroupID),
-						PrincipalID:      to.Ptr("00000000-0000-0000-0000-000000000001"),
+						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
+						Scope:            pointerutils.ToPtr(resourceGroupID),
+						PrincipalID:      pointerutils.ToPtr("00000000-0000-0000-0000-000000000001"),
 					},
 				},
 			},

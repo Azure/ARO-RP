@@ -11,10 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestRemoveFailedScaleset(t *testing.T) {
@@ -51,7 +51,7 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.Ptr(servingVMSS)},
+						{Name: pointerutils.ToPtr(servingVMSS)},
 					},
 					nil,
 				)
@@ -63,7 +63,7 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.Ptr(vmssToDelete)},
+						{Name: pointerutils.ToPtr(vmssToDelete)},
 					},
 					nil,
 				)
@@ -74,8 +74,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.Ptr(servingVMSS)},
-						{Name: to.Ptr("otherVMSS")},
+						{Name: pointerutils.ToPtr(servingVMSS)},
+						{Name: pointerutils.ToPtr("otherVMSS")},
 					},
 					nil,
 				)
@@ -87,8 +87,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.Ptr(servingVMSS)},
-						{Name: to.Ptr(vmssToDelete)},
+						{Name: pointerutils.ToPtr(servingVMSS)},
+						{Name: pointerutils.ToPtr(vmssToDelete)},
 					},
 					nil,
 				)
@@ -100,8 +100,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.Ptr(servingVMSS)},
-						{Name: to.Ptr(vmssToDelete)},
+						{Name: pointerutils.ToPtr(servingVMSS)},
+						{Name: pointerutils.ToPtr(vmssToDelete)},
 					},
 					nil,
 				)

@@ -7,10 +7,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestZones(t *testing.T) {
@@ -69,7 +69,7 @@ func TestHasCapability(t *testing.T) {
 			name: "sku explicitly supports capability",
 			sku: &mgmtcompute.ResourceSku{
 				Capabilities: &([]mgmtcompute.ResourceSkuCapabilities{
-					{Name: &fakeCapabilityName, Value: to.Ptr("True")},
+					{Name: &fakeCapabilityName, Value: pointerutils.ToPtr("True")},
 				}),
 			},
 			wantResult: true,
@@ -78,7 +78,7 @@ func TestHasCapability(t *testing.T) {
 			name: "sku explicitly does not support capability",
 			sku: &mgmtcompute.ResourceSku{
 				Capabilities: &([]mgmtcompute.ResourceSkuCapabilities{
-					{Name: &fakeCapabilityName, Value: to.Ptr("False")},
+					{Name: &fakeCapabilityName, Value: pointerutils.ToPtr("False")},
 				}),
 			},
 		},
@@ -125,14 +125,14 @@ func TestFilterVmSizes(t *testing.T) {
 
 			wantResult: map[string]*mgmtcompute.ResourceSku{
 				"Fake_Sku": {
-					Name: to.Ptr("Fake_Sku"),
+					Name: pointerutils.ToPtr("Fake_Sku"),
 					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{{
 						ReasonCode: mgmtcompute.NotAvailableForSubscription}},
 					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{{
 						Zones: &[]string{"eastus-2"}},
 					},
 					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{{
-						Name: to.Ptr("some-capability"),
+						Name: pointerutils.ToPtr("some-capability"),
 					}},
 				},
 			},
@@ -173,16 +173,16 @@ func TestFilterVmSizes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sku := []mgmtcompute.ResourceSku{
 				{
-					Name: to.Ptr("Fake_Sku"),
+					Name: pointerutils.ToPtr("Fake_Sku"),
 					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
 						{
-							Name: to.Ptr(tt.skuCapabilities),
+							Name: pointerutils.ToPtr(tt.skuCapabilities),
 						},
 					},
 					Locations:    &tt.skuLocation,
 					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{tt.skuRestrictions},
 					LocationInfo: &tt.skuLocationInfo,
-					ResourceType: to.Ptr(tt.resourceType),
+					ResourceType: pointerutils.ToPtr(tt.resourceType),
 				},
 			}
 
@@ -281,7 +281,7 @@ func TestSupportedOSDisk(t *testing.T) {
 				Name: &tt.vmSku,
 				Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
 					{
-						Name:  to.Ptr(premiumDiskCapability),
+						Name:  pointerutils.ToPtr(premiumDiskCapability),
 						Value: &tt.supportsPremiumDisk,
 					},
 				},

@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
@@ -131,15 +131,15 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.architectureVersion == nil {
-					tt.architectureVersion = to.Ptr(api.ArchitectureVersionV2)
+					tt.architectureVersion = pointerutils.ToPtr(api.ArchitectureVersionV2)
 				}
 
 				if tt.location == nil {
-					tt.location = to.Ptr("location")
+					tt.location = pointerutils.ToPtr("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = to.Ptr("resourceName")
+					tt.clusterName = pointerutils.ToPtr("resourceName")
 				}
 
 				v := &openShiftClusterStaticValidator{
@@ -775,7 +775,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 					ManagedOutboundIPs: &ManagedOutboundIPs{
 						Count: 1,
 					},
-					AllocatedOutboundPorts: to.Ptr(1),
+					AllocatedOutboundPorts: pointerutils.ToPtr(1),
 				}
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.allocatedOutboundPorts: The field allocatedOutboundPorts is not implemented at this time, please check back later.",
@@ -811,7 +811,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 					},
 				}
 			},
-			architectureVersion: (*api.ArchitectureVersion)(to.Ptr(int(api.ArchitectureVersionV1))),
+			architectureVersion: (*api.ArchitectureVersion)(pointerutils.ToPtr(int(api.ArchitectureVersionV1))),
 			wantErr:             "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.managedOutboundIps.count: The provided managedOutboundIps.count 20 is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.",
 		},
 	}

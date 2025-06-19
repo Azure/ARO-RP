@@ -7,8 +7,9 @@ import (
 	"context"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // ManagedClustersAddons is a minimal interface for azure ManagedClustersAddons
@@ -19,7 +20,7 @@ type ManagedClustersAddons interface {
 
 func (r *managedClustersClient) ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (armcontainerservice.ManagedClustersClientListClusterAdminCredentialsResponse, error) {
 	return r.ManagedClustersClient.ListClusterAdminCredentials(ctx, resourceGroupName, resourceName, &armcontainerservice.ManagedClustersClientListClusterAdminCredentialsOptions{
-		ServerFqdn: to.Ptr(serverFqdn),
+		ServerFqdn: pointerutils.ToPtr(serverFqdn),
 	})
 }
 

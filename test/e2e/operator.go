@@ -22,7 +22,6 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -40,6 +39,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
@@ -53,7 +53,7 @@ var _ = Describe("ARO Operator", Label(smoke), func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			for _, pod := range pods.Items {
 				// Check the latest 10 minutes of logs.
-				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: to.Ptr(int64(600))}).DoRaw(ctx)
+				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: pointerutils.ToPtr(int64(600))}).DoRaw(ctx)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(string(body)).NotTo(ContainSubstring("level=error"))
 			}
@@ -305,8 +305,8 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		subnetsToReconcile = map[string]*string{
-			masterSubnet: to.Ptr(""),
-			workerSubnet: to.Ptr(""),
+			masterSubnet: pointerutils.ToPtr(""),
+			workerSubnet: pointerutils.ToPtr(""),
 		}
 
 		r, err := azure.ParseResourceID(vnet)
@@ -346,8 +346,8 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		By("creating an empty test NSG")
 		testNSG = armnetwork.SecurityGroup{
 			Location:   &location,
-			Name:       to.Ptr(nsg),
-			Type:       to.Ptr("Microsoft.Network/networkSecurityGroups"),
+			Name:       pointerutils.ToPtr(nsg),
+			Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups"),
 			Properties: &armnetwork.SecurityGroupPropertiesFormat{},
 		}
 		err := clients.NetworkSecurityGroups.CreateOrUpdateAndWait(ctx, resourceGroup, nsg, testNSG, nil)
@@ -420,7 +420,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				Labels:      newMachineSet.ObjectMeta.Labels,
 			}
 			newMachineSet.Name = emptyMachineSet
-			newMachineSet.Spec.Replicas = to.Ptr(int32(0))
+			newMachineSet.Spec.Replicas = pointerutils.ToPtr(int32(0))
 
 			_, err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Create(ctx, newMachineSet, metav1.CreateOptions{})
 			g.Expect(err).NotTo(HaveOccurred())

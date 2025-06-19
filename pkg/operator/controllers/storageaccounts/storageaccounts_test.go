@@ -16,7 +16,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest"
@@ -29,6 +28,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/storage"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -77,7 +77,7 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 	for _, rule := range virtualNetworkResourceIDs {
 		*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: to.Ptr(rule),
+			VirtualNetworkResourceID: pointerutils.ToPtr(rule),
 			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
@@ -86,17 +86,17 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 func getValidSubnet(resourceId string) *mgmtnetwork.Subnet {
 	s := &mgmtnetwork.Subnet{
-		ID: to.Ptr(resourceId),
+		ID: pointerutils.ToPtr(resourceId),
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-				ID: to.Ptr(nsgv1MasterResourceId),
+				ID: pointerutils.ToPtr(nsgv1MasterResourceId),
 			},
 			ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
 		*s.ServiceEndpoints = append(*s.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
-			Service:           to.Ptr(endpoint),
+			Service:           pointerutils.ToPtr(endpoint),
 			Locations:         &[]string{location},
 			ProvisioningState: mgmtnetwork.Succeeded,
 		})

@@ -16,8 +16,6 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
@@ -28,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -1942,8 +1941,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							ClusterProfile: api.ClusterProfile{
 								Version:                       defaultVersion,
-								OIDCIssuer:                    (*api.OIDCIssuer)(to.Ptr(mockGuid)),
-								BoundServiceAccountSigningKey: (*api.SecureString)(to.Ptr(mockGuid)),
+								OIDCIssuer:                    (*api.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
+								BoundServiceAccountSigningKey: (*api.SecureString)(pointerutils.ToPtr(mockGuid)),
 							},
 							OperatorFlags: api.OperatorFlags{"testFlag": "true"},
 							PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
@@ -2031,8 +2030,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								Version:                       defaultVersion,
 								FipsValidatedModules:          api.FipsValidatedModulesDisabled,
-								OIDCIssuer:                    (*api.OIDCIssuer)(to.Ptr(mockGuid)),
-								BoundServiceAccountSigningKey: (*api.SecureString)(to.Ptr(mockGuid)),
+								OIDCIssuer:                    (*api.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
+								BoundServiceAccountSigningKey: (*api.SecureString)(pointerutils.ToPtr(mockGuid)),
 							},
 							MaintenanceTask: api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
@@ -2109,7 +2108,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						ClusterProfile: admin.ClusterProfile{
 							Version:              defaultVersion,
 							FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-							OIDCIssuer:           (*admin.OIDCIssuer)(to.Ptr(mockGuid)),
+							OIDCIssuer:           (*admin.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
 						},
 						MaintenanceTask: admin.MaintenanceTaskEverything,
 						NetworkProfile: admin.NetworkProfile{
@@ -3267,7 +3266,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						"disk-csi-driver":          {ResourceID: mockMiResourceId},
 						"extra-new-operator":       {ResourceID: mockMiResourceId},
 					},
-					UpgradeableTo: to.Ptr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+					UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 				}
 			},
 			isPatch: true,
@@ -3446,7 +3445,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 										ResourceID: mockMiResourceId,
 									},
 								},
-								UpgradeableTo: to.Ptr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+								UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 							},
 						},
 					},
@@ -3533,7 +3532,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								ResourceID: mockMiResourceId,
 							},
 						},
-						UpgradeableTo: to.Ptr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+						UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 					},
 				},
 			},
@@ -3818,7 +3817,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						"disk-csi-driver":          {ResourceID: mockMiResourceId},
 						"unexpected-operator":      {ResourceID: mockMiResourceId},
 					},
-					UpgradeableTo: to.Ptr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+					UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 				}
 			},
 			isPatch: true,

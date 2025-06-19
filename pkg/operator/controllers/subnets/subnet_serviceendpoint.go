@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -52,7 +52,7 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 			}
 			if !found {
 				*subnetObject.ServiceEndpoints = append(*subnetObject.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
-					Service:   to.Ptr(endpoint),
+					Service:   pointerutils.ToPtr(endpoint),
 					Locations: &[]string{"*"},
 				})
 				changed = true

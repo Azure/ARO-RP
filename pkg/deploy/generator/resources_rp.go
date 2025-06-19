@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
@@ -22,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -29,9 +29,9 @@ import (
 func (g *generator) rpManagedIdentity() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtmsi.Identity{
-			Type:     to.Ptr("Microsoft.ManagedIdentity/userAssignedIdentities"),
-			Name:     to.Ptr("[concat('aro-rp-', resourceGroup().location)]"),
-			Location: to.Ptr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.ManagedIdentity/userAssignedIdentities"),
+			Name:     pointerutils.ToPtr("[concat('aro-rp-', resourceGroup().location)]"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ManagedIdentity"),
 	}
@@ -40,12 +40,12 @@ func (g *generator) rpManagedIdentity() *arm.Resource {
 func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resource {
 	return g.securityRules("rp-nsg/portal_in", &mgmtnetwork.SecurityRulePropertiesFormat{
 		Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-		SourcePortRange:          to.Ptr("*"),
-		DestinationPortRange:     to.Ptr("444"),
+		SourcePortRange:          pointerutils.ToPtr("*"),
+		DestinationPortRange:     pointerutils.ToPtr("444"),
 		SourceAddressPrefixes:    &[]string{},
-		DestinationAddressPrefix: to.Ptr("*"),
+		DestinationAddressPrefix: pointerutils.ToPtr("*"),
 		Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-		Priority:                 to.Ptr(int32(142)),
+		Priority:                 pointerutils.ToPtr(int32(142)),
 		Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
 }
@@ -55,62 +55,62 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 		{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-				SourcePortRange:          to.Ptr("*"),
-				DestinationPortRange:     to.Ptr("443"),
-				SourceAddressPrefix:      to.Ptr("AzureResourceManager"),
-				DestinationAddressPrefix: to.Ptr("*"),
+				SourcePortRange:          pointerutils.ToPtr("*"),
+				DestinationPortRange:     pointerutils.ToPtr("443"),
+				SourceAddressPrefix:      pointerutils.ToPtr("AzureResourceManager"),
+				DestinationAddressPrefix: pointerutils.ToPtr("*"),
 				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				Priority:                 to.Ptr(int32(120)),
+				Priority:                 pointerutils.ToPtr(int32(120)),
 				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
-			Name: to.Ptr("rp_in_arm"),
+			Name: pointerutils.ToPtr("rp_in_arm"),
 		},
 		{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-				SourcePortRange:          to.Ptr("*"),
-				DestinationPortRange:     to.Ptr("443"),
-				SourceAddressPrefix:      to.Ptr("GenevaActions"),
-				DestinationAddressPrefix: to.Ptr("*"),
+				SourcePortRange:          pointerutils.ToPtr("*"),
+				DestinationPortRange:     pointerutils.ToPtr("443"),
+				SourceAddressPrefix:      pointerutils.ToPtr("GenevaActions"),
+				DestinationAddressPrefix: pointerutils.ToPtr("*"),
 				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				Priority:                 to.Ptr(int32(130)),
+				Priority:                 pointerutils.ToPtr(int32(130)),
 				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
-			Name: to.Ptr("rp_in_geneva"),
+			Name: pointerutils.ToPtr("rp_in_geneva"),
 		},
 	}
 
 	if !g.production {
 		// override production ARM flag for more open configuration in development
-		rules[0].SourceAddressPrefix = to.Ptr("*")
+		rules[0].SourceAddressPrefix = pointerutils.ToPtr("*")
 
 		rules = append(rules, mgmtnetwork.SecurityRule{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-				SourcePortRange:          to.Ptr("*"),
-				DestinationPortRange:     to.Ptr("22"),
-				SourceAddressPrefix:      to.Ptr("*"),
-				DestinationAddressPrefix: to.Ptr("*"),
+				SourcePortRange:          pointerutils.ToPtr("*"),
+				DestinationPortRange:     pointerutils.ToPtr("22"),
+				SourceAddressPrefix:      pointerutils.ToPtr("*"),
+				DestinationAddressPrefix: pointerutils.ToPtr("*"),
 				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				Priority:                 to.Ptr(int32(125)),
+				Priority:                 pointerutils.ToPtr(int32(125)),
 				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
-			Name: to.Ptr("ssh_in"),
+			Name: pointerutils.ToPtr("ssh_in"),
 		})
 	} else {
 		rules = append(rules,
 			mgmtnetwork.SecurityRule{
 				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-					SourcePortRange:          to.Ptr("*"),
-					DestinationPortRange:     to.Ptr("*"),
-					SourceAddressPrefix:      to.Ptr("10.0.8.0/24"),
-					DestinationAddressPrefix: to.Ptr("*"),
+					SourcePortRange:          pointerutils.ToPtr("*"),
+					DestinationPortRange:     pointerutils.ToPtr("*"),
+					SourceAddressPrefix:      pointerutils.ToPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: pointerutils.ToPtr("*"),
 					Access:                   mgmtnetwork.SecurityRuleAccessDeny,
-					Priority:                 to.Ptr(int32(145)),
+					Priority:                 pointerutils.ToPtr(int32(145)),
 					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 				},
-				Name: to.Ptr("deny_in_gateway"),
+				Name: pointerutils.ToPtr("deny_in_gateway"),
 			},
 		)
 	}
@@ -130,28 +130,28 @@ func (g *generator) rpVnet() *arm.Resource {
 
 	subnet := mgmtnetwork.Subnet{
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-			AddressPrefix: to.Ptr(addressPrefix),
+			AddressPrefix: pointerutils.ToPtr(addressPrefix),
 			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-				ID: to.Ptr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
+				ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
 			},
 			ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 				{
-					Service:   to.Ptr("Microsoft.Storage"),
+					Service:   pointerutils.ToPtr("Microsoft.Storage"),
 					Locations: &[]string{"*"},
 				},
 			},
 		},
-		Name: to.Ptr("rp-subnet"),
+		Name: pointerutils.ToPtr("rp-subnet"),
 	}
 
 	if g.production {
 		*subnet.ServiceEndpoints = append(*subnet.ServiceEndpoints, []mgmtnetwork.ServiceEndpointPropertiesFormat{
 			{
-				Service:   to.Ptr("Microsoft.KeyVault"),
+				Service:   pointerutils.ToPtr("Microsoft.KeyVault"),
 				Locations: &[]string{"*"},
 			},
 			{
-				Service:   to.Ptr("Microsoft.AzureCosmosDB"),
+				Service:   pointerutils.ToPtr("Microsoft.AzureCosmosDB"),
 				Locations: &[]string{"*"},
 			},
 		}...)
@@ -164,19 +164,19 @@ func (g *generator) rpPEVnet() *arm.Resource {
 	return g.virtualNetwork("rp-pe-vnet-001", "10.0.4.0/22", &[]mgmtnetwork.Subnet{
 		{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefix: to.Ptr("10.0.4.0/22"),
+				AddressPrefix: pointerutils.ToPtr("10.0.4.0/22"),
 				NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-					ID: to.Ptr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
+					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 				},
-				PrivateEndpointNetworkPolicies: to.Ptr("Disabled"),
+				PrivateEndpointNetworkPolicies: pointerutils.ToPtr("Disabled"),
 				ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 					{
-						Service:   to.Ptr("Microsoft.Storage"),
+						Service:   pointerutils.ToPtr("Microsoft.Storage"),
 						Locations: &[]string{"*"},
 					},
 				},
 			},
-			Name: to.Ptr("rp-pe-subnet"),
+			Name: pointerutils.ToPtr("rp-pe-subnet"),
 		},
 	}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"})
 }
@@ -192,113 +192,113 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 							PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-								ID: to.Ptr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"),
 							},
 						},
-						Name: to.Ptr("rp-frontend"),
+						Name: pointerutils.ToPtr("rp-frontend"),
 					},
 					{
 						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 							PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-								ID: to.Ptr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]"),
 							},
 						},
-						Name: to.Ptr("portal-frontend"),
+						Name: pointerutils.ToPtr("portal-frontend"),
 					},
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 					{
-						Name: to.Ptr("rp-backend"),
+						Name: pointerutils.ToPtr("rp-backend"),
 					},
 				},
 				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Ptr(int32(443)),
-							BackendPort:      to.Ptr(int32(443)),
+							FrontendPort:     pointerutils.ToPtr(int32(443)),
+							BackendPort:      pointerutils.ToPtr(int32(443)),
 						},
-						Name: to.Ptr("rp-lbrule"),
+						Name: pointerutils.ToPtr("rp-lbrule"),
 					},
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Ptr(int32(443)),
-							BackendPort:      to.Ptr(int32(444)),
+							FrontendPort:     pointerutils.ToPtr(int32(443)),
+							BackendPort:      pointerutils.ToPtr(int32(444)),
 						},
-						Name: to.Ptr("portal-lbrule"),
+						Name: pointerutils.ToPtr("portal-lbrule"),
 					},
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh')]"),
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Ptr(int32(22)),
-							BackendPort:      to.Ptr(int32(2222)),
+							FrontendPort:     pointerutils.ToPtr(int32(22)),
+							BackendPort:      pointerutils.ToPtr(int32(2222)),
 						},
-						Name: to.Ptr("portal-lbrule-ssh"),
+						Name: pointerutils.ToPtr("portal-lbrule-ssh"),
 					},
 				},
 				Probes: &[]mgmtnetwork.Probe{
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
-							Port:           to.Ptr(int32(443)),
-							NumberOfProbes: to.Ptr(int32(2)),
-							RequestPath:    to.Ptr("/healthz/ready"),
+							Port:           pointerutils.ToPtr(int32(443)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
 						},
-						Name: to.Ptr("rp-probe"),
+						Name: pointerutils.ToPtr("rp-probe"),
 					},
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
-							Port:           to.Ptr(int32(444)),
-							NumberOfProbes: to.Ptr(int32(2)),
-							RequestPath:    to.Ptr("/healthz/ready"),
+							Port:           pointerutils.ToPtr(int32(444)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
 						},
-						Name: to.Ptr("portal-probe-https"),
+						Name: pointerutils.ToPtr("portal-probe-https"),
 					},
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolTCP,
-							Port:           to.Ptr(int32(2222)),
-							NumberOfProbes: to.Ptr(int32(2)),
+							Port:           pointerutils.ToPtr(int32(2222)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
 						},
-						Name: to.Ptr("portal-probe-ssh"),
+						Name: pointerutils.ToPtr("portal-probe-ssh"),
 					},
 				},
 			},
-			Name:     to.Ptr("rp-lb"),
-			Type:     to.Ptr("Microsoft.Network/loadBalancers"),
-			Location: to.Ptr("[resourceGroup().location]"),
+			Name:     pointerutils.ToPtr("rp-lb"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
@@ -315,36 +315,36 @@ func (g *generator) rpLBAlert(threshold float64, severity int32, name string, ev
 			MetricAlertProperties: &mgmtinsights.MetricAlertProperties{
 				Actions: &[]mgmtinsights.MetricAlertAction{
 					{
-						ActionGroupID: to.Ptr("[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
+						ActionGroupID: pointerutils.ToPtr("[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
 					},
 				},
-				Enabled:             to.Ptr(true),
-				EvaluationFrequency: to.Ptr(evalFreq),
-				Severity:            to.Ptr(severity),
+				Enabled:             pointerutils.ToPtr(true),
+				EvaluationFrequency: pointerutils.ToPtr(evalFreq),
+				Severity:            pointerutils.ToPtr(severity),
 				Scopes: &[]string{
 					"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 				},
-				WindowSize:         to.Ptr(windowSize),
-				TargetResourceType: to.Ptr("Microsoft.Network/loadBalancers"),
-				AutoMitigate:       to.Ptr(true),
+				WindowSize:         pointerutils.ToPtr(windowSize),
+				TargetResourceType: pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+				AutoMitigate:       pointerutils.ToPtr(true),
 				Criteria: mgmtinsights.MetricAlertSingleResourceMultipleMetricCriteria{
 					AllOf: &[]mgmtinsights.MetricCriteria{
 						{
 							CriterionType:   mgmtinsights.CriterionTypeStaticThresholdCriterion,
-							MetricName:      to.Ptr(metric),
-							MetricNamespace: to.Ptr("microsoft.network/loadBalancers"),
-							Name:            to.Ptr("HealthProbeCheck"),
+							MetricName:      pointerutils.ToPtr(metric),
+							MetricNamespace: pointerutils.ToPtr("microsoft.network/loadBalancers"),
+							Name:            pointerutils.ToPtr("HealthProbeCheck"),
 							Operator:        mgmtinsights.OperatorLessThan,
-							Threshold:       to.Ptr(threshold),
+							Threshold:       pointerutils.ToPtr(threshold),
 							TimeAggregation: mgmtinsights.Average,
 						},
 					},
 					OdataType: mgmtinsights.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
 				},
 			},
-			Name:     to.Ptr("[concat('" + name + "-', resourceGroup().location)]"),
-			Type:     to.Ptr("Microsoft.Insights/metricAlerts"),
-			Location: to.Ptr("global"),
+			Name:     pointerutils.ToPtr("[concat('" + name + "-', resourceGroup().location)]"),
+			Type:     pointerutils.ToPtr("Microsoft.Insights/metricAlerts"),
+			Location: pointerutils.ToPtr("global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
 		DependsOn: []string{
@@ -479,9 +479,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
-				Name:     to.Ptr("[parameters('vmSize')]"),
-				Tier:     to.Ptr("Standard"),
-				Capacity: to.Ptr(int64(1338)),
+				Name:     pointerutils.ToPtr("[parameters('vmSize')]"),
+				Tier:     pointerutils.ToPtr("Standard"),
+				Capacity: pointerutils.ToPtr(int64(1338)),
 			},
 			Tags: map[string]*string{},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
@@ -490,30 +490,30 @@ func (g *generator) rpVMSS() *arm.Resource {
 					Mode: mgmtcompute.UpgradeModeAutomatic,
 					RollingUpgradePolicy: &mgmtcompute.RollingUpgradePolicy{
 						// Percentage equates to 1.02 instances out of 3
-						MaxBatchInstancePercent:             to.Ptr(int32(34)),
-						MaxUnhealthyInstancePercent:         to.Ptr(int32(34)),
-						MaxUnhealthyUpgradedInstancePercent: to.Ptr(int32(34)),
-						PauseTimeBetweenBatches:             to.Ptr("PT10M"),
+						MaxBatchInstancePercent:             pointerutils.ToPtr(int32(34)),
+						MaxUnhealthyInstancePercent:         pointerutils.ToPtr(int32(34)),
+						MaxUnhealthyUpgradedInstancePercent: pointerutils.ToPtr(int32(34)),
+						PauseTimeBetweenBatches:             pointerutils.ToPtr("PT10M"),
 					},
 					AutomaticOSUpgradePolicy: &mgmtcompute.AutomaticOSUpgradePolicy{
-						EnableAutomaticOSUpgrade: to.Ptr(true),
+						EnableAutomaticOSUpgrade: pointerutils.ToPtr(true),
 					},
 				},
 				// https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-instance-repairs?tabs=portal-1%2Cportal-2%2Crest-api-4%2Crest-api-5
 				AutomaticRepairsPolicy: &mgmtcompute.AutomaticRepairsPolicy{
-					Enabled: to.Ptr(true),
+					Enabled: pointerutils.ToPtr(true),
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
-						ComputerNamePrefix: to.Ptr("[concat('rp-', parameters('vmssName'), '-')]"),
-						AdminUsername:      to.Ptr("cloud-user"),
+						ComputerNamePrefix: pointerutils.ToPtr("[concat('rp-', parameters('vmssName'), '-')]"),
+						AdminUsername:      pointerutils.ToPtr("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-							DisablePasswordAuthentication: to.Ptr(true),
+							DisablePasswordAuthentication: pointerutils.ToPtr(true),
 							SSH: &mgmtcompute.SSHConfiguration{
 								PublicKeys: &[]mgmtcompute.SSHPublicKey{
 									{
-										Path:    to.Ptr("/home/cloud-user/.ssh/authorized_keys"),
-										KeyData: to.Ptr("[parameters('sshPublicKey')]"),
+										Path:    pointerutils.ToPtr("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: pointerutils.ToPtr("[parameters('sshPublicKey')]"),
 									},
 								},
 							},
@@ -527,39 +527,39 @@ func (g *generator) rpVMSS() *arm.Resource {
 							// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade
 							// https://eng.ms/docs/cloud-ai-platform/azure-core/azure-compute/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryusageinstructions#vmss-deployment-with-1p-image-galleryarm-template
 							// https://eng.ms/docs/cloud-ai-platform/azure-core/core-compute-and-host/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryimagereference#cbl-mariner-2-images
-							SharedGalleryImageID: to.Ptr("/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"),
+							SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
-							DiskSizeGB: to.Ptr(int32(1024)),
+							DiskSizeGB: pointerutils.ToPtr(int32(1024)),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
 						HealthProbe: &mgmtcompute.APIEntityReference{
-							ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+							ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
 						},
 						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
 							{
-								Name: to.Ptr("rp-vmss-nic"),
+								Name: pointerutils.ToPtr("rp-vmss-nic"),
 								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
-									Primary: to.Ptr(true),
+									Primary: pointerutils.ToPtr(true),
 									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
 										{
-											Name: to.Ptr("rp-vmss-ipconfig"),
+											Name: pointerutils.ToPtr("rp-vmss-ipconfig"),
 											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
 												Subnet: &mgmtcompute.APIEntityReference{
-													ID: to.Ptr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+													ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 												},
-												Primary: to.Ptr(true),
+												Primary: pointerutils.ToPtr(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
-													Name: to.Ptr("rp-vmss-pip"),
+													Name: pointerutils.ToPtr("rp-vmss-pip"),
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{
-														ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+														ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 													},
 												},
 											},
@@ -572,12 +572,12 @@ func (g *generator) rpVMSS() *arm.Resource {
 					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
 						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
 							{
-								Name: to.Ptr("rp-vmss-cse"),
+								Name: pointerutils.ToPtr("rp-vmss-cse"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.Ptr("Microsoft.Azure.Extensions"),
-									Type:                    to.Ptr("CustomScript"),
-									TypeHandlerVersion:      to.Ptr("2.0"),
-									AutoUpgradeMinorVersion: to.Ptr(true),
+									Publisher:               pointerutils.ToPtr("Microsoft.Azure.Extensions"),
+									Type:                    pointerutils.ToPtr("CustomScript"),
+									TypeHandlerVersion:      pointerutils.ToPtr("2.0"),
+									AutoUpgradeMinorVersion: pointerutils.ToPtr(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
 										"script": customScript,
@@ -589,13 +589,13 @@ func (g *generator) rpVMSS() *arm.Resource {
 								// References:
 								// 		https://eng.ms/docs/products/azure-linux/gettingstarted/aks/monitoring
 								//		https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/179541/Linux-AzSecPack-AutoConfig-Onboarding-(manual-for-C-AI)?anchor=3.1.1-using-arm-template-resource-elements
-								Name: to.Ptr("AzureMonitorLinuxAgent"),
+								Name: pointerutils.ToPtr("AzureMonitorLinuxAgent"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.Ptr("Microsoft.Azure.Monitor"),
-									EnableAutomaticUpgrade:  to.Ptr(true),
-									AutoUpgradeMinorVersion: to.Ptr(true),
-									TypeHandlerVersion:      to.Ptr("1.0"),
-									Type:                    to.Ptr("AzureMonitorLinuxAgent"),
+									Publisher:               pointerutils.ToPtr("Microsoft.Azure.Monitor"),
+									EnableAutomaticUpgrade:  pointerutils.ToPtr(true),
+									AutoUpgradeMinorVersion: pointerutils.ToPtr(true),
+									TypeHandlerVersion:      pointerutils.ToPtr("1.0"),
+									Type:                    pointerutils.ToPtr("AzureMonitorLinuxAgent"),
 									Settings: map[string]interface{}{
 										"GCS_AUTO_CONFIG": true,
 									},
@@ -605,7 +605,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 					},
 					DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 						BootDiagnostics: &mgmtcompute.BootDiagnostics{
-							Enabled: to.Ptr(true),
+							Enabled: pointerutils.ToPtr(true),
 						},
 					},
 					SecurityProfile: &mgmtcompute.SecurityProfile{
@@ -614,7 +614,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 						SecurityType: mgmtcompute.SecurityTypesTrustedLaunch,
 					},
 				},
-				Overprovision: to.Ptr(false),
+				Overprovision: pointerutils.ToPtr(false),
 			},
 			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
 				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
@@ -622,9 +622,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location))]": {},
 				},
 			},
-			Name:     to.Ptr("[concat('rp-vmss-', parameters('vmssName'))]"),
-			Type:     to.Ptr("Microsoft.Compute/virtualMachineScaleSets"),
-			Location: to.Ptr("[resourceGroup().location]"),
+			Name:     pointerutils.ToPtr("[concat('rp-vmss-', parameters('vmssName'))]"),
+			Type:     pointerutils.ToPtr("Microsoft.Compute/virtualMachineScaleSets"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
@@ -650,7 +650,7 @@ func (g *generator) rpClusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolic
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
 			TenantID: &tenantUUIDHack,
-			ObjectID: to.Ptr("[parameters('fpServicePrincipalId')]"),
+			ObjectID: pointerutils.ToPtr("[parameters('fpServicePrincipalId')]"),
 			Permissions: &mgmtkeyvault.Permissions{
 				Secrets: &[]mgmtkeyvault.SecretPermissions{
 					mgmtkeyvault.SecretPermissionsGet,
@@ -670,7 +670,7 @@ func (g *generator) rpPortalKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicy
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
 			TenantID: &tenantUUIDHack,
-			ObjectID: to.Ptr("[parameters('rpServicePrincipalId')]"),
+			ObjectID: pointerutils.ToPtr("[parameters('rpServicePrincipalId')]"),
 			Permissions: &mgmtkeyvault.Permissions{
 				Secrets: &[]mgmtkeyvault.SecretPermissions{
 					mgmtkeyvault.SecretPermissionsGet,
@@ -684,7 +684,7 @@ func (g *generator) rpServiceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolic
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
 			TenantID: &tenantUUIDHack,
-			ObjectID: to.Ptr("[parameters('rpServicePrincipalId')]"),
+			ObjectID: pointerutils.ToPtr("[parameters('rpServicePrincipalId')]"),
 			Permissions: &mgmtkeyvault.Permissions{
 				Secrets: &[]mgmtkeyvault.SecretPermissions{
 					mgmtkeyvault.SecretPermissionsGet,
@@ -698,28 +698,28 @@ func (g *generator) rpServiceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolic
 func (g *generator) rpClusterKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			EnableSoftDelete: to.Ptr(true),
+			EnableSoftDelete: pointerutils.ToPtr(true),
 			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
-				Family: to.Ptr("A"),
+				Family: pointerutils.ToPtr("A"),
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
-					ObjectID: to.Ptr(clusterAccessPolicyHack),
+					ObjectID: pointerutils.ToPtr(clusterAccessPolicyHack),
 				},
 			},
 		},
-		Name:     to.Ptr("[concat(parameters('keyvaultPrefix'), '" + env.ClusterKeyvaultSuffix + "')]"),
-		Type:     to.Ptr("Microsoft.KeyVault/vaults"),
-		Location: to.Ptr("[resourceGroup().location]"),
+		Name:     pointerutils.ToPtr("[concat(parameters('keyvaultPrefix'), '" + env.ClusterKeyvaultSuffix + "')]"),
+		Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults"),
+		Location: pointerutils.ToPtr("[resourceGroup().location]"),
 	}
 
 	if !g.production {
 		*vault.Properties.AccessPolicies = append(g.rpClusterKeyvaultAccessPolicies(),
 			mgmtkeyvault.AccessPolicyEntry{
 				TenantID: &tenantUUIDHack,
-				ObjectID: to.Ptr("[parameters('adminObjectId')]"),
+				ObjectID: pointerutils.ToPtr("[parameters('adminObjectId')]"),
 				Permissions: &mgmtkeyvault.Permissions{
 					Certificates: &[]mgmtkeyvault.CertificatePermissions{
 						mgmtkeyvault.Get,
@@ -739,28 +739,28 @@ func (g *generator) rpClusterKeyvault() *arm.Resource {
 func (g *generator) rpPortalKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			EnableSoftDelete: to.Ptr(true),
+			EnableSoftDelete: pointerutils.ToPtr(true),
 			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
-				Family: to.Ptr("A"),
+				Family: pointerutils.ToPtr("A"),
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
-					ObjectID: to.Ptr(portalAccessPolicyHack),
+					ObjectID: pointerutils.ToPtr(portalAccessPolicyHack),
 				},
 			},
 		},
-		Name:     to.Ptr("[concat(parameters('keyvaultPrefix'), '" + env.PortalKeyvaultSuffix + "')]"),
-		Type:     to.Ptr("Microsoft.KeyVault/vaults"),
-		Location: to.Ptr("[resourceGroup().location]"),
+		Name:     pointerutils.ToPtr("[concat(parameters('keyvaultPrefix'), '" + env.PortalKeyvaultSuffix + "')]"),
+		Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults"),
+		Location: pointerutils.ToPtr("[resourceGroup().location]"),
 	}
 
 	if !g.production {
 		*vault.Properties.AccessPolicies = append(g.rpPortalKeyvaultAccessPolicies(),
 			mgmtkeyvault.AccessPolicyEntry{
 				TenantID: &tenantUUIDHack,
-				ObjectID: to.Ptr("[parameters('adminObjectId')]"),
+				ObjectID: pointerutils.ToPtr("[parameters('adminObjectId')]"),
 				Permissions: &mgmtkeyvault.Permissions{
 					Certificates: &[]mgmtkeyvault.CertificatePermissions{
 						mgmtkeyvault.Delete,
@@ -792,7 +792,7 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
 					TenantID: &tenantUUIDHack,
-					ObjectID: to.Ptr("[reference(resourceId('Microsoft.ContainerService/managedClusters', 'aro-aks-cluster-001'), '2020-12-01', 'Full').properties.identityProfile.kubeletidentity.objectId]"),
+					ObjectID: pointerutils.ToPtr("[reference(resourceId('Microsoft.ContainerService/managedClusters', 'aro-aks-cluster-001'), '2020-12-01', 'Full').properties.identityProfile.kubeletidentity.objectId]"),
 					Permissions: &mgmtkeyvault.Permissions{
 						Secrets: &[]mgmtkeyvault.SecretPermissions{
 							mgmtkeyvault.SecretPermissionsGet,
@@ -826,7 +826,7 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 			},
 			Mode: "Incremental",
 			ExpressionEvaluationOptions: map[string]*string{
-				"scope": to.Ptr("inner"),
+				"scope": pointerutils.ToPtr("inner"),
 			},
 		},
 	}
@@ -843,28 +843,28 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 func (g *generator) rpServiceKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			EnableSoftDelete: to.Ptr(true),
+			EnableSoftDelete: pointerutils.ToPtr(true),
 			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
-				Family: to.Ptr("A"),
+				Family: pointerutils.ToPtr("A"),
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
-					ObjectID: to.Ptr(serviceAccessPolicyHack),
+					ObjectID: pointerutils.ToPtr(serviceAccessPolicyHack),
 				},
 			},
 		},
-		Name:     to.Ptr("[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "')]"),
-		Type:     to.Ptr("Microsoft.KeyVault/vaults"),
-		Location: to.Ptr("[resourceGroup().location]"),
+		Name:     pointerutils.ToPtr("[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "')]"),
+		Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults"),
+		Location: pointerutils.ToPtr("[resourceGroup().location]"),
 	}
 
 	if !g.production {
 		*vault.Properties.AccessPolicies = append(g.rpServiceKeyvaultAccessPolicies(),
 			mgmtkeyvault.AccessPolicyEntry{
 				TenantID: &tenantUUIDHack,
-				ObjectID: to.Ptr("[parameters('adminObjectId')]"),
+				ObjectID: pointerutils.ToPtr("[parameters('adminObjectId')]"),
 				Permissions: &mgmtkeyvault.Permissions{
 					Certificates: &[]mgmtkeyvault.CertificatePermissions{
 						mgmtkeyvault.Delete,
@@ -902,25 +902,25 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 			},
 			Locations: []*sdkcosmos.Location{
 				{
-					LocationName: to.Ptr("[resourceGroup().location]"),
+					LocationName: pointerutils.ToPtr("[resourceGroup().location]"),
 				},
 			},
-			DatabaseAccountOfferType: to.Ptr("Standard"),
+			DatabaseAccountOfferType: pointerutils.ToPtr("Standard"),
 			BackupPolicy: &sdkcosmos.PeriodicModeBackupPolicy{
 				Type: &backupPolicy,
 				PeriodicModeProperties: &sdkcosmos.PeriodicModeProperties{
-					BackupIntervalInMinutes:        to.Ptr(int32(240)), //4 hours
-					BackupRetentionIntervalInHours: to.Ptr(int32(720)), //30 days
+					BackupIntervalInMinutes:        pointerutils.ToPtr(int32(240)), //4 hours
+					BackupRetentionIntervalInHours: pointerutils.ToPtr(int32(720)), //30 days
 				},
 			},
 			MinimalTLSVersion: &minTLSVersion,
-			DisableLocalAuth:  to.Ptr(true), // Disable local authentication
+			DisableLocalAuth:  pointerutils.ToPtr(true), // Disable local authentication
 		},
-		Name:     to.Ptr("[parameters('databaseAccountName')]"),
-		Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts"),
-		Location: to.Ptr("[resourceGroup().location]"),
+		Name:     pointerutils.ToPtr("[parameters('databaseAccountName')]"),
+		Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts"),
+		Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
-			"defaultExperience": to.Ptr("Core (SQL)"),
+			"defaultExperience": pointerutils.ToPtr("Core (SQL)"),
 		},
 	}
 
@@ -931,9 +931,9 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 	}
 	if g.production {
 		cosmosdb.Properties.IPRules = []*sdkcosmos.IPAddressOrRange{}
-		cosmosdb.Properties.IsVirtualNetworkFilterEnabled = to.Ptr(true)
+		cosmosdb.Properties.IsVirtualNetworkFilterEnabled = pointerutils.ToPtr(true)
 		cosmosdb.Properties.VirtualNetworkRules = []*sdkcosmos.VirtualNetworkRule{}
-		cosmosdb.Properties.DisableKeyBasedMetadataWriteAccess = to.Ptr(true)
+		cosmosdb.Properties.DisableKeyBasedMetadataWriteAccess = pointerutils.ToPtr(true)
 	}
 
 	rs := []*arm.Resource{
@@ -964,12 +964,12 @@ func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, componen
 
 	roleAssignment := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: to.Ptr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
-			Type: to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
+			Name: pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
+			Type: pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            &scope,
-				RoleDefinitionID: to.Ptr("[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '" + rbac.RoleDocumentDBDataContributor + "')]"),
-				PrincipalID:      to.Ptr("[parameters('" + component + "ServicePrincipalId')]"),
+				RoleDefinitionID: pointerutils.ToPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '" + rbac.RoleDocumentDBDataContributor + "')]"),
+				PrincipalID:      pointerutils.ToPtr("[parameters('" + component + "ServicePrincipalId')]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
@@ -986,15 +986,15 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		Resource: &sdkcosmos.SQLDatabaseCreateUpdateParameters{
 			Properties: &sdkcosmos.SQLDatabaseCreateUpdateProperties{
 				Resource: &sdkcosmos.SQLDatabaseResource{
-					ID: to.Ptr("[" + databaseName + "]"),
+					ID: pointerutils.ToPtr("[" + databaseName + "]"),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: to.Ptr(int32(cosmosDbStandardProvisionedThroughputHack)),
+					Throughput: pointerutils.ToPtr(int32(cosmosDbStandardProvisionedThroughputHack)),
 				},
 			},
-			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
-			Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
-			Location: to.Ptr("[resourceGroup().location]"),
+			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
+			Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		Type:       "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
@@ -1004,22 +1004,22 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 				Resource: &sdkcosmos.SQLContainerResource{
-					ID: to.Ptr("Portal"),
+					ID: pointerutils.ToPtr("Portal"),
 					PartitionKey: &sdkcosmos.ContainerPartitionKey{
 						Paths: []*string{
-							to.Ptr("/id"),
+							pointerutils.ToPtr("/id"),
 						},
 						Kind: &hashPartitionKey,
 					},
-					DefaultTTL: to.Ptr(int32(-1)),
+					DefaultTTL: pointerutils.ToPtr(int32(-1)),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: to.Ptr(int32(cosmosDbPortalProvisionedThroughputHack)),
+					Throughput: pointerutils.ToPtr(int32(cosmosDbPortalProvisionedThroughputHack)),
 				},
 			},
-			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Portal')]"),
-			Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-			Location: to.Ptr("[resourceGroup().location]"),
+			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Portal')]"),
+			Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
@@ -1032,22 +1032,22 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 				Resource: &sdkcosmos.SQLContainerResource{
-					ID: to.Ptr("Gateway"),
+					ID: pointerutils.ToPtr("Gateway"),
 					PartitionKey: &sdkcosmos.ContainerPartitionKey{
 						Paths: []*string{
-							to.Ptr("/id"),
+							pointerutils.ToPtr("/id"),
 						},
 						Kind: &hashPartitionKey,
 					},
-					DefaultTTL: to.Ptr(int32(-1)),
+					DefaultTTL: pointerutils.ToPtr(int32(-1)),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: to.Ptr(int32(cosmosDbGatewayProvisionedThroughputHack)),
+					Throughput: pointerutils.ToPtr(int32(cosmosDbGatewayProvisionedThroughputHack)),
 				},
 			},
-			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Gateway')]"),
-			Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-			Location: to.Ptr("[resourceGroup().location]"),
+			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Gateway')]"),
+			Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
@@ -1060,22 +1060,22 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 				Resource: &sdkcosmos.SQLContainerResource{
-					ID: to.Ptr("MaintenanceManifests"),
+					ID: pointerutils.ToPtr("MaintenanceManifests"),
 					PartitionKey: &sdkcosmos.ContainerPartitionKey{
 						Paths: []*string{
-							to.Ptr("/clusterResourceID"),
+							pointerutils.ToPtr("/clusterResourceID"),
 						},
 						Kind: &hashPartitionKey,
 					},
-					DefaultTTL: to.Ptr(int32(-1)),
+					DefaultTTL: pointerutils.ToPtr(int32(-1)),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: to.Ptr(int32(cosmosDbGatewayProvisionedThroughputHack)),
+					Throughput: pointerutils.ToPtr(int32(cosmosDbGatewayProvisionedThroughputHack)),
 				},
 			},
-			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/MaintenanceManifests')]"),
-			Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-			Location: to.Ptr("[resourceGroup().location]"),
+			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/MaintenanceManifests')]"),
+			Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
@@ -1087,7 +1087,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	if !g.production {
 		database.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{
 			AutoscaleSettings: &sdkcosmos.AutoscaleSettings{
-				MaxThroughput: to.Ptr(int32(1000)),
+				MaxThroughput: pointerutils.ToPtr(int32(1000)),
 			},
 		}
 		portal.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
@@ -1101,20 +1101,20 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: to.Ptr("AsyncOperations"),
+						ID: pointerutils.ToPtr("AsyncOperations"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
-								to.Ptr("/id"),
+								pointerutils.ToPtr("/id"),
 							},
 							Kind: &hashPartitionKey,
 						},
-						DefaultTTL: to.Ptr(int32(7 * 86400)), // 7 days
+						DefaultTTL: pointerutils.ToPtr(int32(7 * 86400)), // 7 days
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
-				Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/AsyncOperations')]"),
-				Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-				Location: to.Ptr("[resourceGroup().location]"),
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/AsyncOperations')]"),
+				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
@@ -1126,20 +1126,20 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: to.Ptr("OpenShiftVersions"),
+						ID: pointerutils.ToPtr("OpenShiftVersions"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
-								to.Ptr("/id"),
+								pointerutils.ToPtr("/id"),
 							},
 							Kind: &hashPartitionKey,
 						},
-						DefaultTTL: to.Ptr(int32(-1)),
+						DefaultTTL: pointerutils.ToPtr(int32(-1)),
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
-				Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftVersions')]"),
-				Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-				Location: to.Ptr("[resourceGroup().location]"),
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftVersions')]"),
+				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
@@ -1151,20 +1151,20 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: to.Ptr("PlatformWorkloadIdentityRoleSets"),
+						ID: pointerutils.ToPtr("PlatformWorkloadIdentityRoleSets"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
-								to.Ptr("/id"),
+								pointerutils.ToPtr("/id"),
 							},
 							Kind: &hashPartitionKey,
 						},
-						DefaultTTL: to.Ptr(int32(-1)),
+						DefaultTTL: pointerutils.ToPtr(int32(-1)),
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
-				Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/PlatformWorkloadIdentityRoleSets')]"),
-				Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-				Location: to.Ptr("[resourceGroup().location]"),
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/PlatformWorkloadIdentityRoleSets')]"),
+				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
@@ -1176,19 +1176,19 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: to.Ptr("Billing"),
+						ID: pointerutils.ToPtr("Billing"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
-								to.Ptr("/id"),
+								pointerutils.ToPtr("/id"),
 							},
 							Kind: &hashPartitionKey,
 						},
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
-				Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Billing')]"),
-				Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-				Location: to.Ptr("[resourceGroup().location]"),
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Billing')]"),
+				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
@@ -1201,20 +1201,20 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: to.Ptr("Monitors"),
+						ID: pointerutils.ToPtr("Monitors"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
-								to.Ptr("/id"),
+								pointerutils.ToPtr("/id"),
 							},
 							Kind: &hashPartitionKey,
 						},
-						DefaultTTL: to.Ptr(int32(-1)),
+						DefaultTTL: pointerutils.ToPtr(int32(-1)),
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
-				Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Monitors')]"),
-				Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-				Location: to.Ptr("[resourceGroup().location]"),
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Monitors')]"),
+				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
@@ -1226,10 +1226,10 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: to.Ptr("OpenShiftClusters"),
+						ID: pointerutils.ToPtr("OpenShiftClusters"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
-								to.Ptr("/partitionKey"),
+								pointerutils.ToPtr("/partitionKey"),
 							},
 							Kind: &hashPartitionKey,
 						},
@@ -1237,17 +1237,17 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							UniqueKeys: []*sdkcosmos.UniqueKey{
 								{
 									Paths: []*string{
-										to.Ptr("/key"),
+										pointerutils.ToPtr("/key"),
 									},
 								},
 								{
 									Paths: []*string{
-										to.Ptr("/clusterResourceGroupIdKey"),
+										pointerutils.ToPtr("/clusterResourceGroupIdKey"),
 									},
 								},
 								{
 									Paths: []*string{
-										to.Ptr("/clientIdKey"),
+										pointerutils.ToPtr("/clientIdKey"),
 									},
 								},
 							},
@@ -1255,9 +1255,9 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
-				Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftClusters')]"),
-				Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-				Location: to.Ptr("[resourceGroup().location]"),
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftClusters')]"),
+				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
@@ -1270,19 +1270,19 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: to.Ptr("Subscriptions"),
+						ID: pointerutils.ToPtr("Subscriptions"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
-								to.Ptr("/id"),
+								pointerutils.ToPtr("/id"),
 							},
 							Kind: &hashPartitionKey,
 						},
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
-				Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Subscriptions')]"),
-				Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
-				Location: to.Ptr("[resourceGroup().location]"),
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Subscriptions')]"),
+				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
@@ -1331,15 +1331,15 @@ func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, t
 		Resource: &sdkcosmos.SQLTriggerCreateUpdateParameters{
 			Properties: &sdkcosmos.SQLTriggerCreateUpdateProperties{
 				Resource: &sdkcosmos.SQLTriggerResource{
-					ID:               to.Ptr(triggerID),
-					Body:             to.Ptr(triggerFunction),
+					ID:               pointerutils.ToPtr(triggerID),
+					Body:             pointerutils.ToPtr(triggerFunction),
 					TriggerOperation: &triggerOperation,
 					TriggerType:      &triggerType,
 				},
 			},
-			Name:     to.Ptr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/" + containerName + "/" + triggerID + "')]"),
-			Type:     to.Ptr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"),
-			Location: to.Ptr("[resourceGroup().location]"),
+			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/" + containerName + "/" + triggerID + "')]"),
+			Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
@@ -1353,16 +1353,16 @@ func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, t
 func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsumptionThreshold float64, severity int32, name string, evalFreq string, windowSize string) *arm.Resource {
 	throttledRequestMetricCriteria := mgmtinsights.MetricCriteria{
 		CriterionType:   mgmtinsights.CriterionTypeStaticThresholdCriterion,
-		MetricName:      to.Ptr("TotalRequests"),
-		MetricNamespace: to.Ptr("Microsoft.DocumentDB/databaseAccounts"),
-		Name:            to.Ptr("ThrottledRequestCheck"),
+		MetricName:      pointerutils.ToPtr("TotalRequests"),
+		MetricNamespace: pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts"),
+		Name:            pointerutils.ToPtr("ThrottledRequestCheck"),
 		Operator:        mgmtinsights.OperatorGreaterThan,
-		Threshold:       to.Ptr(throttledRequestThreshold),
+		Threshold:       pointerutils.ToPtr(throttledRequestThreshold),
 		TimeAggregation: mgmtinsights.Count,
 		Dimensions: &[]mgmtinsights.MetricDimension{
 			{
-				Name:     to.Ptr("StatusCode"),
-				Operator: to.Ptr("Include"),
+				Name:     pointerutils.ToPtr("StatusCode"),
+				Operator: pointerutils.ToPtr("Include"),
 				Values:   &[]string{"429"},
 			},
 		},
@@ -1370,11 +1370,11 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 
 	ruConsumptionMetricCriteria := mgmtinsights.MetricCriteria{
 		CriterionType:   mgmtinsights.CriterionTypeStaticThresholdCriterion,
-		MetricName:      to.Ptr("NormalizedRUConsumption"),
-		MetricNamespace: to.Ptr("Microsoft.DocumentDB/databaseAccounts"),
-		Name:            to.Ptr("RUConsumptionCheck"),
+		MetricName:      pointerutils.ToPtr("NormalizedRUConsumption"),
+		MetricNamespace: pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts"),
+		Name:            pointerutils.ToPtr("RUConsumptionCheck"),
 		Operator:        mgmtinsights.OperatorGreaterThan,
-		Threshold:       to.Ptr(ruConsumptionThreshold),
+		Threshold:       pointerutils.ToPtr(ruConsumptionThreshold),
 		TimeAggregation: mgmtinsights.Average,
 	}
 
@@ -1383,26 +1383,26 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 			MetricAlertProperties: &mgmtinsights.MetricAlertProperties{
 				Actions: &[]mgmtinsights.MetricAlertAction{
 					{
-						ActionGroupID: to.Ptr("[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
+						ActionGroupID: pointerutils.ToPtr("[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
 					},
 				},
-				Enabled:             to.Ptr(true),
-				EvaluationFrequency: to.Ptr(evalFreq),
-				Severity:            to.Ptr(severity),
+				Enabled:             pointerutils.ToPtr(true),
+				EvaluationFrequency: pointerutils.ToPtr(evalFreq),
+				Severity:            pointerutils.ToPtr(severity),
 				Scopes: &[]string{
 					"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
 				},
-				WindowSize:         to.Ptr(windowSize),
-				TargetResourceType: to.Ptr("Microsoft.DocumentDB/databaseAccounts"),
-				AutoMitigate:       to.Ptr(true),
+				WindowSize:         pointerutils.ToPtr(windowSize),
+				TargetResourceType: pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts"),
+				AutoMitigate:       pointerutils.ToPtr(true),
 				Criteria: mgmtinsights.MetricAlertSingleResourceMultipleMetricCriteria{
 					AllOf:     &[]mgmtinsights.MetricCriteria{throttledRequestMetricCriteria, ruConsumptionMetricCriteria},
 					OdataType: mgmtinsights.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
 				},
 			},
-			Name:     to.Ptr("[concat('" + name + "-', resourceGroup().location)]"),
-			Type:     to.Ptr("Microsoft.Insights/metricAlerts"),
-			Location: to.Ptr("global"),
+			Name:     pointerutils.ToPtr("[concat('" + name + "-', resourceGroup().location)]"),
+			Type:     pointerutils.ToPtr("Microsoft.Insights/metricAlerts"),
+			Location: pointerutils.ToPtr("global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
 		DependsOn: []string{
@@ -1414,10 +1414,10 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 func (g *generator) rpRoleDefinitionTokenContributor() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleDefinition{
-			Name: to.Ptr("48983534-3d06-4dcb-a566-08a694eb1279"),
-			Type: to.Ptr("Microsoft.Authorization/roleDefinitions"),
+			Name: pointerutils.ToPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
+			Type: pointerutils.ToPtr("Microsoft.Authorization/roleDefinitions"),
 			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-				RoleName:         to.Ptr("ARO v4 ContainerRegistry Token Contributor"),
+				RoleName:         pointerutils.ToPtr("ARO v4 ContainerRegistry Token Contributor"),
 				AssignableScopes: &[]string{"[subscription().id]"},
 				Permissions: &[]mgmtauthorization.Permission{
 					{
@@ -1474,12 +1474,12 @@ func (g *generator) rpACR() *arm.Resource {
 			},
 			RegistryProperties: &mgmtcontainerregistry.RegistryProperties{
 				// enable data hostname stability: https://azure.microsoft.com/en-gb/blog/azure-container-registry-mitigating-data-exfiltration-with-dedicated-data-endpoints/
-				DataEndpointEnabled: to.Ptr(true),
+				DataEndpointEnabled: pointerutils.ToPtr(true),
 			},
-			Name: to.Ptr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
-			Type: to.Ptr("Microsoft.ContainerRegistry/registries"),
+			Name: pointerutils.ToPtr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
+			Type: pointerutils.ToPtr("Microsoft.ContainerRegistry/registries"),
 			// TODO: INT ACR has wrong location - should be redeployed at globalResourceGroupLocation then remove acrLocationOverride configurable.
-			Location: to.Ptr("[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]"),
+			Location: pointerutils.ToPtr("[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
 	}
@@ -1488,9 +1488,9 @@ func (g *generator) rpACR() *arm.Resource {
 func (g *generator) rpACRReplica() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcontainerregistry.Replication{
-			Name:     to.Ptr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]"),
-			Type:     to.Ptr("Microsoft.ContainerRegistry/registries/replications"),
-			Location: to.Ptr("[parameters('location')]"),
+			Name:     pointerutils.ToPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]"),
+			Type:     pointerutils.ToPtr("Microsoft.ContainerRegistry/registries/replications"),
+			Location: pointerutils.ToPtr("[parameters('location')]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
 	}
@@ -1528,9 +1528,9 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 		g.storageAccount(
 			fmt.Sprintf("[%s]", storageAccountName),
 			&mgmtstorage.AccountProperties{
-				AllowBlobPublicAccess: to.Ptr(false),
+				AllowBlobPublicAccess: pointerutils.ToPtr(false),
 				MinimumTLSVersion:     mgmtstorage.MinimumTLSVersionTLS12,
-				AllowSharedKeyAccess:  to.Ptr(false),
+				AllowSharedKeyAccess:  pointerutils.ToPtr(false),
 			},
 			map[string]*string{},
 		),

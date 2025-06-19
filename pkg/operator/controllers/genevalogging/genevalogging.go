@@ -14,7 +14,6 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	projectv1 "github.com/openshift/api/project/v1"
@@ -22,6 +21,7 @@ import (
 
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -160,8 +160,8 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 							},
 							// TODO: specify requests/limits
 							SecurityContext: &corev1.SecurityContext{
-								Privileged: to.Ptr(true),
-								RunAsUser:  to.Ptr(int64(0)),
+								Privileged: pointerutils.ToPtr(true),
+								RunAsUser:  pointerutils.ToPtr(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -281,8 +281,8 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								Privileged: to.Ptr(true),
-								RunAsUser:  to.Ptr(int64(0)),
+								Privileged: pointerutils.ToPtr(true),
+								RunAsUser:  pointerutils.ToPtr(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
