@@ -18,7 +18,14 @@ linters:
     - unused
     - usestdlibvars
     - whitespace
+    - depguard
   settings:
+    depguard:
+      rules:
+        deprecated-sdks:
+          deny:
+            - pkg: "github.com/Azure/go-autorest/autorest/to"
+              desc: use github.com/Azure/azure-sdk-for-go/sdk/azcore/to
     importas:
       alias:
         - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
@@ -162,7 +169,7 @@ linters:
     rules:
       - linters:
           - staticcheck
-        text: 'SA1019: codec.BasicHandle is deprecated'
+        text: "SA1019: codec.BasicHandle is deprecated"
       - linters:
           - importas
         path: pkg/client/(.+)\.go
