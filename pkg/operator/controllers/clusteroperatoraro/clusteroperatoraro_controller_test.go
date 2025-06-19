@@ -13,7 +13,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -27,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func TestConditions(t *testing.T) {
@@ -266,8 +266,8 @@ func TestConditions(t *testing.T) {
 				APIVersion:         arov1alpha1.GroupVersion.Identifier(),
 				Kind:               "Cluster",
 				Name:               arov1alpha1.SingletonClusterName,
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(true),
+				Controller:         to.Ptr(true),
+				BlockOwnerDeletion: to.Ptr(true),
 			}}
 			if diff := cmp.Diff(wantOwnerReference, operator.OwnerReferences); diff != "" {
 				t.Error(diff)

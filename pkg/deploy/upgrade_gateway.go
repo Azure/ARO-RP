@@ -9,8 +9,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 )
 
 const (
@@ -84,7 +84,7 @@ func (d *deployer) gatewayRemoveOldScaleset(ctx context.Context, vmssName string
 			d.log.Printf("stopping gateway service on %s", *vm.Name)
 			go func(id string) {
 				errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.GatewayResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
-					CommandID: to.StringPtr("RunShellScript"),
+					CommandID: to.Ptr("RunShellScript"),
 					Script:    &[]string{"systemctl stop aro-gateway"},
 				})
 			}(*vm.InstanceID) // https://golang.org/doc/faq#closures_and_goroutines

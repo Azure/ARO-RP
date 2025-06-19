@@ -8,10 +8,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -174,7 +174,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 func (d *deployer) convertToIPAddressOrRange(ipSlice []string) []mgmtdocumentdb.IPAddressOrRange {
 	ips := []mgmtdocumentdb.IPAddressOrRange{}
 	for _, v := range ipSlice {
-		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: to.StringPtr(v)})
+		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: to.Ptr(v)})
 	}
 	return ips
 }

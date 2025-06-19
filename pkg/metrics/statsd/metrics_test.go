@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func TestMarshalFloat(t *testing.T) {
@@ -17,7 +17,7 @@ func TestMarshalFloat(t *testing.T) {
 		dimensions: map[string]string{"key": "value"},
 
 		timestamp:  time.Unix(0, 0),
-		valueFloat: to.Float64Ptr(1.0),
+		valueFloat: to.Ptr(1.0),
 	}
 	b, err := f.marshalStatsd()
 	if err != nil {

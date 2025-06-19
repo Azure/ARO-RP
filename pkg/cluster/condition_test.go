@@ -20,7 +20,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	ktesting "k8s.io/client-go/testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -122,7 +122,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          to.StringPtr(phaseRunning),
+						Phase:          to.Ptr(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -135,7 +135,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          to.StringPtr(phaseRunning),
+						Phase:          to.Ptr(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -148,7 +148,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          to.StringPtr(phaseFailed),
+						Phase:          to.Ptr(phaseFailed),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},

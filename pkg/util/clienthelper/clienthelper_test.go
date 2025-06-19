@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -37,7 +37,6 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
@@ -127,8 +126,8 @@ func TestMerge(t *testing.T) {
 				LastTransitionTime: metav1.Time{Time: time.Now()},
 			},
 		},
-		CurrentHealthy:      to.IntPtr(3),
-		ExpectedMachines:    to.IntPtr(3),
+		CurrentHealthy:      to.Ptr(3),
+		ExpectedMachines:    to.Ptr(3),
 		RemediationsAllowed: 1,
 	}
 
@@ -662,7 +661,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: to.Ptr("test"),
 							},
 						},
 					},
@@ -693,7 +692,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: to.Ptr("test"),
 							},
 						},
 					},
@@ -721,7 +720,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: to.Ptr("test"),
 							},
 						},
 					},
@@ -755,7 +754,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: to.Ptr("test"),
 							},
 						},
 					},
@@ -780,7 +779,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: to.Ptr("test"),
 							},
 						},
 					},
@@ -802,7 +801,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: to.Ptr("test"),
 							},
 						},
 					},

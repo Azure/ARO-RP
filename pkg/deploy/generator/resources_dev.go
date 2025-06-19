@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -30,35 +30,35 @@ func (g *generator) devLBInternal() *arm.Resource {
 					{
 						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+								ID: to.Ptr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 							},
 						},
-						Name: to.StringPtr("not-used"),
+						Name: to.Ptr("not-used"),
 					},
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 					{
-						Name: to.StringPtr("dev-backend"),
+						Name: to.Ptr("dev-backend"),
 					},
 				},
 				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'dev-lb-internal', 'not-used')]"),
+								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'dev-lb-internal', 'not-used')]"),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'dev-lb-internal', 'dev-backend')]"),
+								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'dev-lb-internal', 'dev-backend')]"),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"),
+								ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"),
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
 							FrontendPort:     to.Int32Ptr(443),
 							BackendPort:      to.Int32Ptr(443),
 						},
-						Name: to.StringPtr("dev-lbrule"),
+						Name: to.Ptr("dev-lbrule"),
 					},
 				},
 				Probes: &[]mgmtnetwork.Probe{
@@ -68,13 +68,13 @@ func (g *generator) devLBInternal() *arm.Resource {
 							Port:           to.Int32Ptr(443),
 							NumberOfProbes: to.Int32Ptr(3),
 						},
-						Name: to.StringPtr("dev-probe"),
+						Name: to.Ptr("dev-probe"),
 					},
 				},
 			},
-			Name:     to.StringPtr("dev-lb-internal"),
-			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Name:     to.Ptr("dev-lb-internal"),
+			Type:     to.Ptr("Microsoft.Network/loadBalancers"),
+			Location: to.Ptr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
@@ -108,8 +108,8 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
-				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardF2sV2)),
-				Tier:     to.StringPtr("Standard"),
+				Name:     to.Ptr(string(mgmtcompute.VirtualMachineSizeTypesStandardF2sV2)),
+				Tier:     to.Ptr("Standard"),
 				Capacity: to.Int64Ptr(1),
 			},
 			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
@@ -122,24 +122,24 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
 					Mode: mgmtcompute.UpgradeModeRolling,
 					AutomaticOSUpgradePolicy: &mgmtcompute.AutomaticOSUpgradePolicy{
-						EnableAutomaticOSUpgrade: to.BoolPtr(true),
+						EnableAutomaticOSUpgrade: to.Ptr(true),
 					},
 				},
 				// https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-instance-repairs?tabs=portal-1%2Cportal-2%2Crest-api-4%2Crest-api-5
 				AutomaticRepairsPolicy: &mgmtcompute.AutomaticRepairsPolicy{
-					Enabled: to.BoolPtr(true),
+					Enabled: to.Ptr(true),
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
-						ComputerNamePrefix: to.StringPtr("dev-proxy-"),
-						AdminUsername:      to.StringPtr("cloud-user"),
+						ComputerNamePrefix: to.Ptr("dev-proxy-"),
+						AdminUsername:      to.Ptr("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-							DisablePasswordAuthentication: to.BoolPtr(true),
+							DisablePasswordAuthentication: to.Ptr(true),
 							SSH: &mgmtcompute.SSHConfiguration{
 								PublicKeys: &[]mgmtcompute.SSHPublicKey{
 									{
-										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
-										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+										Path:    to.Ptr("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: to.Ptr("[parameters('sshPublicKey')]"),
 									},
 								},
 							},
@@ -150,10 +150,10 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
-							Publisher: to.StringPtr("MicrosoftCBLMariner"),
-							Offer:     to.StringPtr("cbl-mariner"),
-							Sku:       to.StringPtr("cbl-mariner-2-gen2"),
-							Version:   to.StringPtr("latest"),
+							Publisher: to.Ptr("MicrosoftCBLMariner"),
+							Offer:     to.Ptr("cbl-mariner"),
+							Sku:       to.Ptr("cbl-mariner-2-gen2"),
+							Version:   to.Ptr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
@@ -165,32 +165,32 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
 						HealthProbe: &mgmtcompute.APIEntityReference{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"),
+							ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"),
 						},
 						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
 							{
-								Name: to.StringPtr("dev-proxy-vmss-nic"),
+								Name: to.Ptr("dev-proxy-vmss-nic"),
 								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
-									Primary: to.BoolPtr(true),
+									Primary: to.Ptr(true),
 									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
 										{
-											Name: to.StringPtr("dev-proxy-vmss-ipconfig"),
+											Name: to.Ptr("dev-proxy-vmss-ipconfig"),
 											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
 												Subnet: &mgmtcompute.APIEntityReference{
-													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+													ID: to.Ptr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 												},
-												Primary: to.BoolPtr(true),
+												Primary: to.Ptr(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
-													Name: to.StringPtr("dev-proxy-vmss-pip"),
+													Name: to.Ptr("dev-proxy-vmss-pip"),
 													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
 														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
-															DomainNameLabel: to.StringPtr("[parameters('proxyDomainNameLabel')]"),
+															DomainNameLabel: to.Ptr("[parameters('proxyDomainNameLabel')]"),
 														},
 													},
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{
-														ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'dev-lb-internal', 'dev-backend')]"),
+														ID: to.Ptr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'dev-lb-internal', 'dev-backend')]"),
 													},
 												},
 											},
@@ -203,16 +203,16 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
 						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
 							{
-								Name: to.StringPtr("dev-proxy-vmss-cse"),
+								Name: to.Ptr("dev-proxy-vmss-cse"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:          to.StringPtr("Microsoft.Azure.Extensions"),
-									Type:               to.StringPtr("CustomScript"),
-									TypeHandlerVersion: to.StringPtr("2.0"),
+									Publisher:          to.Ptr("Microsoft.Azure.Extensions"),
+									Type:               to.Ptr("CustomScript"),
+									TypeHandlerVersion: to.Ptr("2.0"),
 									ProvisionAfterExtensions: &[]string{
 										"Microsoft.Azure.Monitor.AzureMonitorLinuxAgent",
 										"Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent",
 									},
-									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									AutoUpgradeMinorVersion: to.Ptr(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
 										"script": customScript,
@@ -220,26 +220,26 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 								},
 							},
 							{
-								Name: to.StringPtr("Microsoft.Azure.Monitor.AzureMonitorLinuxAgent"),
+								Name: to.Ptr("Microsoft.Azure.Monitor.AzureMonitorLinuxAgent"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.StringPtr("Microsoft.Azure.Monitor"),
-									Type:                    to.StringPtr("AzureMonitorLinuxAgent"),
-									TypeHandlerVersion:      to.StringPtr("1.0"),
-									AutoUpgradeMinorVersion: to.BoolPtr(true),
-									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									Publisher:               to.Ptr("Microsoft.Azure.Monitor"),
+									Type:                    to.Ptr("AzureMonitorLinuxAgent"),
+									TypeHandlerVersion:      to.Ptr("1.0"),
+									AutoUpgradeMinorVersion: to.Ptr(true),
+									EnableAutomaticUpgrade:  to.Ptr(true),
 									Settings: map[string]interface{}{
 										"GCS_AUTO_CONFIG": true,
 									},
 								},
 							},
 							{
-								Name: to.StringPtr("Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent"),
+								Name: to.Ptr("Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.StringPtr("Microsoft.Azure.Security.Monitoring"),
-									Type:                    to.StringPtr("AzureSecurityLinuxAgent"),
-									TypeHandlerVersion:      to.StringPtr("2.0"),
-									AutoUpgradeMinorVersion: to.BoolPtr(true),
-									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									Publisher:               to.Ptr("Microsoft.Azure.Security.Monitoring"),
+									Type:                    to.Ptr("AzureSecurityLinuxAgent"),
+									TypeHandlerVersion:      to.Ptr("2.0"),
+									AutoUpgradeMinorVersion: to.Ptr(true),
+									EnableAutomaticUpgrade:  to.Ptr(true),
 									Settings: map[string]interface{}{
 										"enableGenevaUpload":               true,
 										"enableAutoConfig":                 true,
@@ -250,11 +250,11 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 						},
 					},
 				},
-				Overprovision: to.BoolPtr(false),
+				Overprovision: to.Ptr(false),
 			},
-			Name:     to.StringPtr("dev-proxy-vmss"),
-			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Name:     to.Ptr("dev-proxy-vmss"),
+			Type:     to.Ptr("Microsoft.Compute/virtualMachineScaleSets"),
+			Location: to.Ptr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		Tags: map[string]any{
@@ -275,9 +275,9 @@ func (g *generator) devVPNPip() *arm.Resource {
 			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 				PublicIPAllocationMethod: "[parameters('publicIPAddressAllocationMethod')]",
 			},
-			Name:     to.StringPtr("dev-vpn-pip"),
-			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Name:     to.Ptr("dev-vpn-pip"),
+			Type:     to.Ptr("Microsoft.Network/publicIPAddresses"),
+			Location: to.Ptr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
@@ -287,12 +287,12 @@ func (g *generator) devVnet() *arm.Resource {
 	return g.virtualNetwork("dev-vnet", "10.0.0.0/16", &[]mgmtnetwork.Subnet{
 		{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefix: to.StringPtr("10.0.1.0/24"),
+				AddressPrefix: to.Ptr("10.0.1.0/24"),
 				NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-					ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
+					ID: to.Ptr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
 				},
 			},
-			Name: to.StringPtr("ToolingSubnet"),
+			Name: to.Ptr("ToolingSubnet"),
 		},
 	}, nil, nil)
 }
@@ -301,9 +301,9 @@ func (g *generator) devVPNVnet() *arm.Resource {
 	return g.virtualNetwork("dev-vpn-vnet", "10.2.0.0/24", &[]mgmtnetwork.Subnet{
 		{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefix: to.StringPtr("10.2.0.0/24"),
+				AddressPrefix: to.Ptr("10.2.0.0/24"),
 			},
-			Name: to.StringPtr("GatewaySubnet"),
+			Name: to.Ptr("GatewaySubnet"),
 		},
 	}, nil, nil)
 }
@@ -316,13 +316,13 @@ func (g *generator) devVPN() *arm.Resource {
 					{
 						VirtualNetworkGatewayIPConfigurationPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayIPConfigurationPropertiesFormat{
 							Subnet: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vpn-vnet', 'GatewaySubnet')]"),
+								ID: to.Ptr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vpn-vnet', 'GatewaySubnet')]"),
 							},
 							PublicIPAddress: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"),
+								ID: to.Ptr("[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"),
 							},
 						},
-						Name: to.StringPtr("default"),
+						Name: to.Ptr("default"),
 					},
 				},
 				VpnType: mgmtnetwork.RouteBased,
@@ -337,9 +337,9 @@ func (g *generator) devVPN() *arm.Resource {
 					VpnClientRootCertificates: &[]mgmtnetwork.VpnClientRootCertificate{
 						{
 							VpnClientRootCertificatePropertiesFormat: &mgmtnetwork.VpnClientRootCertificatePropertiesFormat{
-								PublicCertData: to.StringPtr("[parameters('vpnCACertificate')]"),
+								PublicCertData: to.Ptr("[parameters('vpnCACertificate')]"),
 							},
-							Name: to.StringPtr("dev-vpn-ca"),
+							Name: to.Ptr("dev-vpn-ca"),
 						},
 					},
 					VpnClientProtocols: &[]mgmtnetwork.VpnClientProtocol{
@@ -347,9 +347,9 @@ func (g *generator) devVPN() *arm.Resource {
 					},
 				},
 			},
-			Name:     to.StringPtr("dev-vpn"),
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworkGateways"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Name:     to.Ptr("dev-vpn"),
+			Type:     to.Ptr("Microsoft.Network/virtualNetworkGateways"),
+			Location: to.Ptr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
@@ -379,9 +379,9 @@ func (g *generator) devDiskEncryptionKey() *arm.Resource {
 			KeySize: to.Int32Ptr(4096),
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName)),
-		Type:     to.StringPtr("Microsoft.KeyVault/vaults/keys"),
-		Location: to.StringPtr("[resourceGroup().location]"),
+		Name:     to.Ptr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName)),
+		Type:     to.Ptr("Microsoft.KeyVault/vaults/keys"),
+		Location: to.Ptr("[resourceGroup().location]"),
 	}
 
 	return &arm.Resource{
@@ -395,16 +395,16 @@ func (g *generator) devDiskEncryptionSet() *arm.Resource {
 	diskEncryptionSet := &mgmtcompute.DiskEncryptionSet{
 		EncryptionSetProperties: &mgmtcompute.EncryptionSetProperties{
 			ActiveKey: &mgmtcompute.KeyForDiskEncryptionSet{
-				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
+				KeyURL: to.Ptr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
 				SourceVault: &mgmtcompute.SourceVault{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedDiskEncryptionKeyVaultName)),
+					ID: to.Ptr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedDiskEncryptionKeyVaultName)),
 				},
 			},
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[%s]", sharedDiskEncryptionSetName)),
-		Type:     to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
-		Location: to.StringPtr("[resourceGroup().location]"),
+		Name:     to.Ptr(fmt.Sprintf("[%s]", sharedDiskEncryptionSetName)),
+		Type:     to.Ptr("Microsoft.Compute/diskEncryptionSets"),
+		Location: to.Ptr("[resourceGroup().location]"),
 		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.DiskEncryptionSetIdentityTypeSystemAssigned},
 	}
 
@@ -423,7 +423,7 @@ func (g *generator) devDiskEncryptionKeyVaultAccessPolicy() *arm.Resource {
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
 					TenantID: &tenantUUIDHack,
-					ObjectID: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", sharedDiskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))),
+					ObjectID: to.Ptr(fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", sharedDiskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))),
 					Permissions: &mgmtkeyvault.Permissions{
 						Keys: &[]mgmtkeyvault.KeyPermissions{
 							mgmtkeyvault.KeyPermissionsGet,
@@ -435,9 +435,9 @@ func (g *generator) devDiskEncryptionKeyVaultAccessPolicy() *arm.Resource {
 			},
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/add')]", sharedDiskEncryptionKeyVaultName)),
-		Type:     to.StringPtr("Microsoft.KeyVault/vaults/accessPolicies"),
-		Location: to.StringPtr("[resourceGroup().location]"),
+		Name:     to.Ptr(fmt.Sprintf("[concat(%s, '/add')]", sharedDiskEncryptionKeyVaultName)),
+		Type:     to.Ptr("Microsoft.KeyVault/vaults/accessPolicies"),
+		Location: to.Ptr("[resourceGroup().location]"),
 	}
 
 	return &arm.Resource{

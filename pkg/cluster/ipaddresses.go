@@ -16,14 +16,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/installer"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -122,7 +121,7 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		subnet, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, &armnetwork.SubnetsClientGetOptions{Expand: to.StringPtr("ipConfigurations")})
+		subnet, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, &armnetwork.SubnetsClientGetOptions{Expand: to.Ptr("ipConfigurations")})
 		if err != nil {
 			return err
 		}
@@ -276,7 +275,7 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	pe, err := m.armPrivateEndpoints.Get(ctx, resourceGroup, infraID+"-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")})
+	pe, err := m.armPrivateEndpoints.Get(ctx, resourceGroup, infraID+"-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: to.Ptr("networkInterfaces")})
 	if err != nil {
 		return err
 	}
@@ -299,8 +298,8 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 		linkIdentifier = *conn.Properties.LinkIdentifier
 
 		if !strings.EqualFold(*conn.Properties.PrivateLinkServiceConnectionState.Status, "Approved") {
-			conn.Properties.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
-			conn.Properties.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
+			conn.Properties.PrivateLinkServiceConnectionState.Status = to.Ptr("Approved")
+			conn.Properties.PrivateLinkServiceConnectionState.Description = to.Ptr("Approved")
 
 			_, err = m.armRPPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, *conn, nil)
 			if err != nil {
@@ -363,13 +362,13 @@ func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 				// TODO: in the future we will need multiple vnets for our PEs.
 				// It will be necessary to decide the vnet for a cluster's PE
 				// somewhere around here.
-				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+				ID: to.Ptr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
 			},
 			ManualPrivateLinkServiceConnections: []*armnetwork.PrivateLinkServiceConnection{
 				{
-					Name: to.StringPtr("rp-plsconnection"),
+					Name: to.Ptr("rp-plsconnection"),
 					Properties: &armnetwork.PrivateLinkServiceConnectionProperties{
-						PrivateLinkServiceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
+						PrivateLinkServiceID: to.Ptr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
 					},
 				},
 			},
@@ -380,7 +379,7 @@ func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 		return err
 	}
 
-	pe, err := m.armFPPrivateEndpoints.Get(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, &armnetwork.PrivateEndpointsClientGetOptions{Expand: to.StringPtr("networkInterfaces")})
+	pe, err := m.armFPPrivateEndpoints.Get(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, &armnetwork.PrivateEndpointsClientGetOptions{Expand: to.Ptr("networkInterfaces")})
 	if err != nil {
 		return err
 	}

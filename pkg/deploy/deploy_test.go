@@ -12,9 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
@@ -284,8 +284,8 @@ func TestCheckForKnownError(t *testing.T) {
 }
 
 func TestGetParameters(t *testing.T) {
-	databaseAccountName := to.StringPtr("databaseAccountName")
-	adminApiCaBundle := to.StringPtr("adminApiCaBundle")
+	databaseAccountName := to.Ptr("databaseAccountName")
+	adminApiCaBundle := to.Ptr("adminApiCaBundle")
 	extraClusterKeyVaultAccessPolicies := []interface{}{"a", "b", 1}
 	for _, tt := range []struct {
 		name   string

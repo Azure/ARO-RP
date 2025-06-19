@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -105,7 +105,7 @@ func (m *manager) PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryP
 func (m *manager) EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error) {
 	err := m.tokens.CreateAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, rp.Username, mgmtcontainerregistry.Token{
 		TokenProperties: &mgmtcontainerregistry.TokenProperties{
-			ScopeMapID: to.StringPtr(m.env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
+			ScopeMapID: to.Ptr(m.env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
 			Status:     mgmtcontainerregistry.TokenStatusEnabled,
 		},
 	})
@@ -164,7 +164,7 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 // a password for the specified password name
 func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
-		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
+		TokenID: to.Ptr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
 		Name:    passwordName,
 	})
 	if err != nil {

@@ -13,8 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -70,7 +70,7 @@ func TestAdminListVMSizeList(t *testing.T) {
 					VMSizeList(gomock.Any()).
 					Return([]mgmtcompute.ResourceSku{
 						{
-							Name: to.StringPtr("Standard_D8s_v90"),
+							Name: to.Ptr("Standard_D8s_v90"),
 							Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{
 								{
 									Type: mgmtcompute.Location,
@@ -78,7 +78,7 @@ func TestAdminListVMSizeList(t *testing.T) {
 							},
 						},
 						{
-							Name:         to.StringPtr("Standard_D8s_v9001"),
+							Name:         to.Ptr("Standard_D8s_v9001"),
 							Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
 						},
 					}, nil)

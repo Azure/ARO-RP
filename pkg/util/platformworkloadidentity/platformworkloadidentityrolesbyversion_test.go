@@ -8,13 +8,12 @@ import (
 	"fmt"
 	"testing"
 
-	"k8s.io/utils/ptr"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
@@ -74,7 +73,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 						Version: "4.14.40",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo("4.15.40")),
 					},
 				},
 			},
@@ -113,7 +112,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 						Version: "4.14.40",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo("4.15.40")),
 					},
 				},
 			},
@@ -152,7 +151,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 						Version: "4.14.40",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo("4.13.40")),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo("4.13.40")),
 					},
 				},
 			},
@@ -179,7 +178,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 						Version: "4.14.40",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo("4.14.60")),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo("4.14.60")),
 					},
 				},
 			},
@@ -241,7 +240,7 @@ func TestNewPlatformWorkloadIdentityRolesByVersion(t *testing.T) {
 						Version: "4.14.26",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo("4.15.40")),
 					},
 				},
 			},
@@ -327,7 +326,7 @@ func TestGetPlatformWorkloadIdentityMismatchError(t *testing.T) {
 						Version: invalidVersion,
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo("4.15.40")),
 					},
 				},
 			},
@@ -341,7 +340,7 @@ func TestGetPlatformWorkloadIdentityMismatchError(t *testing.T) {
 						Version: "4.14.40",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo(invalidVersion)),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo(invalidVersion)),
 					},
 				},
 			},
@@ -368,7 +367,7 @@ func TestGetPlatformWorkloadIdentityMismatchError(t *testing.T) {
 						Version: "4.14.40",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo("4.15.40")),
 					},
 				},
 			},
@@ -382,7 +381,7 @@ func TestGetPlatformWorkloadIdentityMismatchError(t *testing.T) {
 						Version: "4.14.40",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: ptr.To(api.UpgradeableTo("4.13.40")),
+						UpgradeableTo: to.Ptr(api.UpgradeableTo("4.13.40")),
 					},
 				},
 			},

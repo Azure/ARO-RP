@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
@@ -120,7 +120,7 @@ func makeConfig() mcv1.KubeletConfig {
 			Name: configName,
 		},
 		Spec: mcv1.KubeletConfigSpec{
-			AutoSizingReserved: to.BoolPtr(true),
+			AutoSizingReserved: to.Ptr(true),
 			MachineConfigPoolSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{

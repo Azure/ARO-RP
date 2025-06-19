@@ -9,9 +9,9 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
@@ -36,28 +36,28 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: to.StringPtr("cores"),
+								Value: to.Ptr("cores"),
 							},
 							CurrentValue: to.Int32Ptr(100),
 							Limit:        to.Int64Ptr(212),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: to.StringPtr("virtualMachines"),
+								Value: to.Ptr("virtualMachines"),
 							},
 							CurrentValue: to.Int32Ptr(100),
 							Limit:        to.Int64Ptr(114),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: to.StringPtr("standardDSv3Family"),
+								Value: to.Ptr("standardDSv3Family"),
 							},
 							CurrentValue: to.Int32Ptr(100),
 							Limit:        to.Int64Ptr(212),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: to.StringPtr("PremiumDiskCount"),
+								Value: to.Ptr("PremiumDiskCount"),
 							},
 							CurrentValue: to.Int32Ptr(100),
 							Limit:        to.Int64Ptr(114),
@@ -68,7 +68,7 @@ func TestValidateQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: to.Ptr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
 							Limit:        to.Int64Ptr(10),
@@ -85,7 +85,7 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: to.StringPtr("cores"),
+								Value: to.Ptr("cores"),
 							},
 							CurrentValue: to.Int32Ptr(101),
 							Limit:        to.Int64Ptr(212),
@@ -102,7 +102,7 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: to.StringPtr("virtualMachines"),
+								Value: to.Ptr("virtualMachines"),
 							},
 							CurrentValue: to.Int32Ptr(101),
 							Limit:        to.Int64Ptr(114),
@@ -119,7 +119,7 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: to.StringPtr("standardDSv3Family"),
+								Value: to.Ptr("standardDSv3Family"),
 							},
 							CurrentValue: to.Int32Ptr(101),
 							Limit:        to.Int64Ptr(212),
@@ -136,7 +136,7 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: to.StringPtr("PremiumDiskCount"),
+								Value: to.Ptr("PremiumDiskCount"),
 							},
 							CurrentValue: to.Int32Ptr(101),
 							Limit:        to.Int64Ptr(114),
@@ -156,7 +156,7 @@ func TestValidateQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: to.Ptr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
 							Limit:        to.Int64Ptr(6),

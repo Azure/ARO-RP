@@ -12,8 +12,8 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armdns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armdns"
@@ -64,13 +64,13 @@ func TestCreate(t *testing.T) {
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
 							Metadata: map[string]*string{
-								resourceID: to.StringPtr(tt.oc.ID),
+								resourceID: to.Ptr(tt.oc.ID),
 							},
 							TTL: to.Int64Ptr(300),
 						},
 					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     to.StringPtr(""),
-						IfNoneMatch: to.StringPtr("*"),
+						IfMatch:     to.Ptr(""),
+						IfNoneMatch: to.Ptr("*"),
 					}).
 					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
 						RecordSet: sdkdns.RecordSet{},
@@ -104,7 +104,7 @@ func TestCreate(t *testing.T) {
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
-									"resourceId": to.StringPtr("not us"),
+									"resourceId": to.Ptr("not us"),
 								},
 							},
 						},
@@ -186,7 +186,7 @@ func TestUpdate(t *testing.T) {
 					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{
-							Etag: to.StringPtr("etag"),
+							Etag: to.Ptr("etag"),
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
 									"resourceId": &tt.oc.ID,
@@ -198,18 +198,18 @@ func TestUpdate(t *testing.T) {
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, sdkdns.RecordSet{
 						Properties: &sdkdns.RecordSetProperties{
 							Metadata: map[string]*string{
-								resourceID: to.StringPtr(tt.oc.ID),
+								resourceID: to.Ptr(tt.oc.ID),
 							},
 							TTL: to.Int64Ptr(300),
 							ARecords: []*sdkdns.ARecord{
 								{
-									IPv4Address: to.StringPtr("1.2.3.4"),
+									IPv4Address: to.Ptr("1.2.3.4"),
 								},
 							},
 						},
 					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     to.StringPtr("etag"),
-						IfNoneMatch: to.StringPtr(""),
+						IfMatch:     to.Ptr("etag"),
+						IfNoneMatch: to.Ptr(""),
 					}).
 					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
 						RecordSet: sdkdns.RecordSet{},
@@ -226,7 +226,7 @@ func TestUpdate(t *testing.T) {
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
-									"resourceId": to.StringPtr("not us"),
+									"resourceId": to.Ptr("not us"),
 								},
 							},
 						}}, nil)
@@ -320,7 +320,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 							TTL: to.Int64Ptr(300),
 							ARecords: []*sdkdns.ARecord{
 								{
-									IPv4Address: to.StringPtr(tt.routerIP),
+									IPv4Address: to.Ptr(tt.routerIP),
 								},
 							},
 						},
@@ -350,7 +350,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 							TTL: to.Int64Ptr(300),
 							ARecords: []*sdkdns.ARecord{
 								{
-									IPv4Address: to.StringPtr(tt.routerIP),
+									IPv4Address: to.Ptr(tt.routerIP),
 								},
 							},
 						},
@@ -377,7 +377,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 								TTL: to.Int64Ptr(300),
 								ARecords: []*sdkdns.ARecord{
 									{
-										IPv4Address: to.StringPtr(tt.routerIP),
+										IPv4Address: to.Ptr(tt.routerIP),
 									},
 								},
 							},
@@ -398,7 +398,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 								TTL: to.Int64Ptr(300),
 								ARecords: []*sdkdns.ARecord{
 									{
-										IPv4Address: to.StringPtr("1.2.3.4"),
+										IPv4Address: to.Ptr("1.2.3.4"),
 									},
 								},
 							},
@@ -411,7 +411,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 							TTL: to.Int64Ptr(300),
 							ARecords: []*sdkdns.ARecord{
 								{
-									IPv4Address: to.StringPtr(tt.routerIP),
+									IPv4Address: to.Ptr(tt.routerIP),
 								},
 							},
 						},
@@ -501,7 +501,7 @@ func TestDelete(t *testing.T) {
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{
-							Etag: to.StringPtr("etag"),
+							Etag: to.Ptr("etag"),
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
 									"resourceId": &tt.oc.ID,
@@ -512,13 +512,13 @@ func TestDelete(t *testing.T) {
 
 				recordsets.EXPECT().
 					Delete(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
-						IfMatch: to.StringPtr(""),
+						IfMatch: to.Ptr(""),
 					}).
 					Return(sdkdns.RecordSetsClientDeleteResponse{}, nil)
 
 				recordsets.EXPECT().
 					Delete(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
-						IfMatch: to.StringPtr("etag"),
+						IfMatch: to.Ptr("etag"),
 					}).
 					Return(sdkdns.RecordSetsClientDeleteResponse{}, nil)
 			},
@@ -533,7 +533,7 @@ func TestDelete(t *testing.T) {
 						RecordSet: sdkdns.RecordSet{
 							Properties: &sdkdns.RecordSetProperties{
 								Metadata: map[string]*string{
-									"resourceId": to.StringPtr("not us"),
+									"resourceId": to.Ptr("not us"),
 								},
 							},
 						},

@@ -11,9 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
@@ -81,7 +81,7 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: to.Ptr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
 							Limit:        to.Int64Ptr(10),
@@ -167,7 +167,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: to.Ptr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
 							Limit:        to.Int64Ptr(10),
@@ -210,7 +210,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: to.Ptr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(8),
 							Limit:        to.Int64Ptr(10),
@@ -249,7 +249,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: to.Ptr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(4),
 							Limit:        to.Int64Ptr(10),
@@ -287,7 +287,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: to.Ptr("PublicIPAddresses"),
 							},
 							CurrentValue: to.Int64Ptr(8),
 							Limit:        to.Int64Ptr(10),
@@ -439,7 +439,7 @@ func getFakeBackendIPConfigs(ipConfigCount int) *[]mgmtnetwork.InterfaceIPConfig
 	ipConfigs := []mgmtnetwork.InterfaceIPConfiguration{}
 	for i := 0; i < ipConfigCount; i++ {
 		ipConfigName := "ip-" + strconv.Itoa(i)
-		ipConfigs = append(ipConfigs, mgmtnetwork.InterfaceIPConfiguration{Name: to.StringPtr(ipConfigName)})
+		ipConfigs = append(ipConfigs, mgmtnetwork.InterfaceIPConfiguration{Name: to.Ptr(ipConfigName)})
 	}
 	return &ipConfigs
 }

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -55,10 +55,10 @@ func TestConfigurationFieldParity(t *testing.T) {
 }
 
 func TestMergeConfig(t *testing.T) {
-	databaseAccountName := to.StringPtr("databaseAccountName")
-	fpServerCertCommonName := to.StringPtr("fpServerCertCommonName")
-	fpServerSecondaryCommonName := to.StringPtr("fpServerSecondaryCommonName")
-	kvPrefix := to.StringPtr("keyvaultPrefix")
+	databaseAccountName := to.Ptr("databaseAccountName")
+	fpServerCertCommonName := to.Ptr("fpServerCertCommonName")
+	fpServerSecondaryCommonName := to.Ptr("fpServerSecondaryCommonName")
+	kvPrefix := to.Ptr("keyvaultPrefix")
 
 	for _, tt := range []struct {
 		name      string

@@ -15,9 +15,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster"
@@ -328,9 +328,9 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
 
 		if backendErr == nil {
-			adminUpdateError = to.StringPtr("")
+			adminUpdateError = to.Ptr("")
 		} else {
-			adminUpdateError = to.StringPtr(backendErr.Error())
+			adminUpdateError = to.Ptr(backendErr.Error())
 		}
 	}
 

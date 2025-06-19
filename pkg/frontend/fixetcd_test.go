@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	ktesting "k8s.io/client-go/testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	operatorv1fake "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake"
 
@@ -636,7 +636,7 @@ func newEtcdPods(t *testing.T, doc *api.OpenShiftClusterDocument, healthy, multi
 		{
 			Name:         "etcd",
 			Ready:        false,
-			Started:      to.BoolPtr(false),
+			Started:      to.Ptr(false),
 			RestartCount: 50,
 			State: corev1.ContainerState{
 				Waiting: &corev1.ContainerStateWaiting{

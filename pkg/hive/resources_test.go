@@ -14,8 +14,8 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 func TestInstallConfigMap(t *testing.T) {
@@ -149,7 +149,7 @@ func TestBoundSASigningKeySecret(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					ClusterProfile: api.ClusterProfile{
-						BoundServiceAccountSigningKey: pointerutils.ToPtr(api.SecureString("fakeboundserviceaccountsigningkey")),
+						BoundServiceAccountSigningKey: to.Ptr(api.SecureString("fakeboundserviceaccountsigningkey")),
 					},
 				},
 			},

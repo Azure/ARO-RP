@@ -11,8 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 )
@@ -51,7 +51,7 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.StringPtr(servingVMSS)},
+						{Name: to.Ptr(servingVMSS)},
 					},
 					nil,
 				)
@@ -63,7 +63,7 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.StringPtr(vmssToDelete)},
+						{Name: to.Ptr(vmssToDelete)},
 					},
 					nil,
 				)
@@ -74,8 +74,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.StringPtr(servingVMSS)},
-						{Name: to.StringPtr("otherVMSS")},
+						{Name: to.Ptr(servingVMSS)},
+						{Name: to.Ptr("otherVMSS")},
 					},
 					nil,
 				)
@@ -87,8 +87,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.StringPtr(servingVMSS)},
-						{Name: to.StringPtr(vmssToDelete)},
+						{Name: to.Ptr(servingVMSS)},
+						{Name: to.Ptr(vmssToDelete)},
 					},
 					nil,
 				)
@@ -100,8 +100,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: to.StringPtr(servingVMSS)},
-						{Name: to.StringPtr(vmssToDelete)},
+						{Name: to.Ptr(servingVMSS)},
+						{Name: to.Ptr(vmssToDelete)},
 					},
 					nil,
 				)

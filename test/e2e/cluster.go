@@ -17,10 +17,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
@@ -118,8 +118,8 @@ var _ = Describe("Cluster", Serial, func() {
 
 				if !subnetAlreadyHasStorageEndpoint {
 					storageEndpoint := armnetwork.ServiceEndpointPropertiesFormat{
-						Service:   to.StringPtr("Microsoft.Storage"),
-						Locations: []*string{to.StringPtr("*")},
+						Service:   to.Ptr("Microsoft.Storage"),
+						Locations: []*string{to.Ptr("*")},
 					}
 
 					subnet.Properties.ServiceEndpoints = append(subnet.Properties.ServiceEndpoints, &storageEndpoint)
@@ -331,7 +331,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace,
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						StorageClassName: to.StringPtr(storageClass),
+						StorageClassName: to.Ptr(storageClass),
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: pvcStorage,

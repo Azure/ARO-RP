@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -228,7 +228,7 @@ func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured
 									backupOrFixEtcd,
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: to.BoolPtr(true),
+									Privileged: to.Ptr(true),
 								},
 								Env: []corev1.EnvVar{
 									{
@@ -334,7 +334,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 func newServiceAccount(name, cluster string) *unstructured.Unstructured {
 	serviceAcc := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"automountServiceAccountToken": to.BoolPtr(true),
+			"automountServiceAccountToken": to.Ptr(true),
 		},
 	}
 	serviceAcc.SetAPIVersion("v1")
@@ -395,7 +395,7 @@ func newSecurityContextConstraint(name, cluster, usersAccount string) *unstructu
 			"groups":                   []string{},
 			"users":                    []string{usersAccount},
 			"allowPrivilegedContainer": true,
-			"allowPrivilegeEscalation": to.BoolPtr(true),
+			"allowPrivilegeEscalation": to.Ptr(true),
 			"allowedCapabilities":      []corev1.Capability{"*"},
 			"runAsUser": map[string]securityv1.RunAsUserStrategyType{
 				"type": securityv1.RunAsUserStrategyRunAsAny,
@@ -593,7 +593,7 @@ func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{"SYS_CHROOT"},
 									},
-									Privileged: to.BoolPtr(true),
+									Privileged: to.Ptr(true),
 								},
 								Env: []corev1.EnvVar{
 									{

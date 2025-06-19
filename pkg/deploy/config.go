@@ -15,7 +15,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
@@ -183,7 +183,7 @@ func (conf *RPConfig) validate() error {
 			return err
 		}
 		publicKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
-		conf.Configuration.SSHPublicKey = to.StringPtr(string(publicKeyBytes))
+		conf.Configuration.SSHPublicKey = to.Ptr(string(publicKeyBytes))
 	}
 
 	for i := 0; i < v.NumField(); i++ {

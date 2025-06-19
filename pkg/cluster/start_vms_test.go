@@ -11,8 +11,8 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
@@ -32,70 +32,70 @@ func TestStartVMs(t *testing.T) {
 			name: "start only stopped and deallocated VMs",
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vms := []mgmtcompute.VirtualMachine{
-					{Name: to.StringPtr("starting-vm")},
-					{Name: to.StringPtr("running-vm")},
-					{Name: to.StringPtr("stopping-vm")},
-					{Name: to.StringPtr("deallocating-vm")},
-					{Name: to.StringPtr("stopped-vm")},
-					{Name: to.StringPtr("deallocated-vm")},
+					{Name: to.Ptr("starting-vm")},
+					{Name: to.Ptr("running-vm")},
+					{Name: to.Ptr("stopping-vm")},
+					{Name: to.Ptr("deallocating-vm")},
+					{Name: to.Ptr("stopped-vm")},
+					{Name: to.Ptr("deallocated-vm")},
 				}
 				getResults := []mgmtcompute.VirtualMachine{
 					{
-						Name: to.StringPtr("starting-vm"),
+						Name: to.Ptr("starting-vm"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: to.StringPtr("PowerState/starting")},
+									{Code: to.Ptr("PowerState/starting")},
 								},
 							},
 						},
 					},
 					{
-						Name: to.StringPtr("running-vm"),
+						Name: to.Ptr("running-vm"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: to.StringPtr("PowerState/running")},
+									{Code: to.Ptr("PowerState/running")},
 								},
 							},
 						},
 					},
 					{
-						Name: to.StringPtr("stopping-vm"),
+						Name: to.Ptr("stopping-vm"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: to.StringPtr("PowerState/stopping")},
+									{Code: to.Ptr("PowerState/stopping")},
 								},
 							},
 						},
 					},
 					{
-						Name: to.StringPtr("deallocating-vm"),
+						Name: to.Ptr("deallocating-vm"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: to.StringPtr("PowerState/deallocating")},
+									{Code: to.Ptr("PowerState/deallocating")},
 								},
 							},
 						},
 					},
 					{
-						Name: to.StringPtr("stopped-vm"),
+						Name: to.Ptr("stopped-vm"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: to.StringPtr("PowerState/stopped")},
+									{Code: to.Ptr("PowerState/stopped")},
 								},
 							},
 						},
 					},
 					{
-						Name: to.StringPtr("deallocated-vm"),
+						Name: to.Ptr("deallocated-vm"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: to.StringPtr("PowerState/deallocated")},
+									{Code: to.Ptr("PowerState/deallocated")},
 								},
 							},
 						},
@@ -118,14 +118,14 @@ func TestStartVMs(t *testing.T) {
 			name: "vms do not have statuses",
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vms := []mgmtcompute.VirtualMachine{
-					{Name: to.StringPtr("nil-status-code")},
-					{Name: to.StringPtr("nil-statuses")},
-					{Name: to.StringPtr("nil-instanceview")},
-					{Name: to.StringPtr("nil-virtualmachineproperties")},
+					{Name: to.Ptr("nil-status-code")},
+					{Name: to.Ptr("nil-statuses")},
+					{Name: to.Ptr("nil-instanceview")},
+					{Name: to.Ptr("nil-virtualmachineproperties")},
 				}
 				getResults := []mgmtcompute.VirtualMachine{
 					{
-						Name: to.StringPtr("nil-status-code"),
+						Name: to.Ptr("nil-status-code"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{{}},
@@ -133,17 +133,17 @@ func TestStartVMs(t *testing.T) {
 						},
 					},
 					{
-						Name: to.StringPtr("nil-statuses"),
+						Name: to.Ptr("nil-statuses"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{},
 						},
 					},
 					{
-						Name:                     to.StringPtr("nil-instanceview"),
+						Name:                     to.Ptr("nil-instanceview"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 					{
-						Name: to.StringPtr("nil-virtualmachineproperties"),
+						Name: to.Ptr("nil-virtualmachineproperties"),
 					},
 				}
 
@@ -166,7 +166,7 @@ func TestStartVMs(t *testing.T) {
 			name: "failed to get VMs",
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vms := []mgmtcompute.VirtualMachine{
-					{Name: to.StringPtr("vm1")},
+					{Name: to.Ptr("vm1")},
 				}
 
 				vmClient.EXPECT().List(gomock.Any(), clusterRGName).Return(vms, nil)
@@ -180,18 +180,18 @@ func TestStartVMs(t *testing.T) {
 			name: "failed to start VMs",
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vms := []mgmtcompute.VirtualMachine{
-					{Name: to.StringPtr("vm1")},
+					{Name: to.Ptr("vm1")},
 				}
 
 				vmClient.EXPECT().List(gomock.Any(), clusterRGName).Return(vms, nil)
 				vmClient.EXPECT().
 					Get(gomock.Any(), clusterRGName, *vms[0].Name, mgmtcompute.InstanceView).
 					Return(mgmtcompute.VirtualMachine{
-						Name: to.StringPtr("vm1"),
+						Name: to.Ptr("vm1"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: to.StringPtr("PowerState/deallocated")},
+									{Code: to.Ptr("PowerState/deallocated")},
 								},
 							},
 						},

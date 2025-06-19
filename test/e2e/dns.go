@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -391,7 +391,7 @@ func toggleAcceleratedNetworking(ctx context.Context, interfaces armnetwork.Inte
 	if nic.Properties == nil {
 		return fmt.Errorf("NIC properties are nil")
 	}
-	nic.Properties.EnableAcceleratedNetworking = to.BoolPtr(enabled)
+	nic.Properties.EnableAcceleratedNetworking = to.Ptr(enabled)
 	err = clients.Interfaces.CreateOrUpdateAndWait(ctx, clusterResourceGroup, nicName(nodeName), nic, nil)
 	return err
 }

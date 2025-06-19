@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_containerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerregistry"
@@ -42,7 +42,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 	tokens.EXPECT().
 		CreateAndWait(ctx, "global", "arointsvc", gomock.Any(), mgmtcontainerregistry.Token{
 			TokenProperties: &mgmtcontainerregistry.TokenProperties{
-				ScopeMapID: to.StringPtr(registryResourceID + "/scopeMaps/_repositories_pull"),
+				ScopeMapID: to.Ptr(registryResourceID + "/scopeMaps/_repositories_pull"),
 				Status:     mgmtcontainerregistry.TokenStatusEnabled,
 			},
 		}).
@@ -54,7 +54,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 		Return(mgmtcontainerregistry.GenerateCredentialsResult{
 			Passwords: &[]mgmtcontainerregistry.TokenPassword{
 				{
-					Value: to.StringPtr("foo"),
+					Value: to.Ptr("foo"),
 				},
 			},
 		}, nil)
@@ -202,11 +202,11 @@ func fakeCredentialResult() mgmtcontainerregistry.GenerateCredentialsResult {
 		Passwords: &[]mgmtcontainerregistry.TokenPassword{
 			{
 				Name:  mgmtcontainerregistry.TokenPasswordNamePassword1,
-				Value: to.StringPtr("foo"),
+				Value: to.Ptr("foo"),
 			},
 			{
 				Name:  mgmtcontainerregistry.TokenPasswordNamePassword2,
-				Value: to.StringPtr("bar"),
+				Value: to.Ptr("bar"),
 			},
 		},
 	}
@@ -222,7 +222,7 @@ func fakeTokenProperties(tp *[]mgmtcontainerregistry.TokenPassword) mgmtcontaine
 
 func generateCredentialsParameters(tpn mgmtcontainerregistry.TokenPasswordName) mgmtcontainerregistry.GenerateCredentialsParameters {
 	return mgmtcontainerregistry.GenerateCredentialsParameters{
-		TokenID: to.StringPtr(registryResourceID + "/tokens/" + tokenName),
+		TokenID: to.Ptr(registryResourceID + "/tokens/" + tokenName),
 		Name:    tpn,
 	}
 }

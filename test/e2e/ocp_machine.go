@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -14,8 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -34,7 +33,7 @@ var _ = Describe("Scale machines", Label(smoke), Serial, Ordered, func() {
 
 		By("Scaling up the first machine set")
 		machineSet = &machineSets.Items[0]
-		machineSet.Spec.Replicas = pointerutils.ToPtr(int32(2))
+		machineSet.Spec.Replicas = to.Ptr(int32(2))
 		machineSet = UpdateK8sObjectWithRetry(ctx, clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Update,
 			machineSet, metav1.UpdateOptions{})
 	})
@@ -78,7 +77,7 @@ var _ = Describe("Scale machines", Label(smoke), Serial, Ordered, func() {
 		By("Scaling down the first machine set")
 		machineSet := GetK8sObjectWithRetry(ctx, clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get,
 			machineSet.Name, metav1.GetOptions{})
-		machineSet.Spec.Replicas = pointerutils.ToPtr(int32(1))
+		machineSet.Spec.Replicas = to.Ptr(int32(1))
 		_ = UpdateK8sObjectWithRetry(ctx, clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Update,
 			machineSet, metav1.UpdateOptions{})
 

@@ -10,8 +10,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
@@ -103,7 +103,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			// if rule was not found - we add it
 			if !found {
 				*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-					VirtualNetworkResourceID: to.StringPtr(subnet),
+					VirtualNetworkResourceID: to.Ptr(subnet),
 					Action:                   mgmtstorage.ActionAllow,
 				})
 				changed = true

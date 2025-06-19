@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"

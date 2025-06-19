@@ -11,8 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
@@ -26,11 +26,11 @@ var (
 
 func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
 	return &mgmtnetwork.LoadBalancer{
-		ID: to.StringPtr(lbID),
+		ID: to.Ptr(lbID),
 		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 				{
-					ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+					ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{},
@@ -42,84 +42,84 @@ func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
 
 func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 	return &mgmtnetwork.LoadBalancer{
-		ID: to.StringPtr(lbID),
+		ID: to.Ptr(lbID),
 		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 				{
-					ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+					ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 				{
-					Name: to.StringPtr("ssh-0"),
+					Name: to.Ptr("ssh-0"),
 				},
 				{
-					Name: to.StringPtr("ssh-1"),
+					Name: to.Ptr("ssh-1"),
 				},
 				{
-					Name: to.StringPtr("ssh-2"),
+					Name: to.Ptr("ssh-2"),
 				},
 			},
 			LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/backendAddressPools/ssh-0"),
+							ID: to.Ptr(lbID + "/backendAddressPools/ssh-0"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/probes/ssh"),
+							ID: to.Ptr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
 						FrontendPort:         to.Int32Ptr(2200),
 						BackendPort:          to.Int32Ptr(22),
 						IdleTimeoutInMinutes: to.Int32Ptr(30),
-						DisableOutboundSnat:  to.BoolPtr(true),
+						DisableOutboundSnat:  to.Ptr(true),
 					},
-					Name: to.StringPtr("ssh-0"),
+					Name: to.Ptr("ssh-0"),
 				},
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/backendAddressPools/ssh-1"),
+							ID: to.Ptr(lbID + "/backendAddressPools/ssh-1"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/probes/ssh"),
+							ID: to.Ptr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
 						FrontendPort:         to.Int32Ptr(2201),
 						BackendPort:          to.Int32Ptr(22),
 						IdleTimeoutInMinutes: to.Int32Ptr(30),
-						DisableOutboundSnat:  to.BoolPtr(true),
+						DisableOutboundSnat:  to.Ptr(true),
 					},
-					Name: to.StringPtr("ssh-1"),
+					Name: to.Ptr("ssh-1"),
 				},
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: to.Ptr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/backendAddressPools/ssh-2"),
+							ID: to.Ptr(lbID + "/backendAddressPools/ssh-2"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/probes/ssh"),
+							ID: to.Ptr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
 						FrontendPort:         to.Int32Ptr(2202),
 						BackendPort:          to.Int32Ptr(22),
 						IdleTimeoutInMinutes: to.Int32Ptr(30),
-						DisableOutboundSnat:  to.BoolPtr(true),
+						DisableOutboundSnat:  to.Ptr(true),
 					},
-					Name: to.StringPtr("ssh-2"),
+					Name: to.Ptr("ssh-2"),
 				},
 			},
 			Probes: &[]mgmtnetwork.Probe{
@@ -130,7 +130,7 @@ func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 						IntervalInSeconds: to.Int32Ptr(5),
 						NumberOfProbes:    to.Int32Ptr(2),
 					},
-					Name: to.StringPtr("ssh"),
+					Name: to.Ptr("ssh"),
 				},
 			},
 		},
@@ -141,7 +141,7 @@ func ifBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbBacke
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: &mgmtnetwork.SubResource{
-				ID: to.StringPtr(fmt.Sprintf("master-%d", i)),
+				ID: to.Ptr(fmt.Sprintf("master-%d", i)),
 			},
 			IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 				{
@@ -163,7 +163,7 @@ func ifNoVmBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbB
 					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
+								ID: to.Ptr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
 							},
 						},
 					},
@@ -183,20 +183,20 @@ func ifAfter(ilbID string, elbID string, i int, ilbBackendPool string, elbBacken
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: &mgmtnetwork.SubResource{
-				ID: to.StringPtr(fmt.Sprintf("master-%d", i)),
+				ID: to.Ptr(fmt.Sprintf("master-%d", i)),
 			},
 			IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 				{
 					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
+								ID: to.Ptr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
 							},
 							{
-								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/%s", ilbBackendPool)),
+								ID: to.Ptr(fmt.Sprintf(ilbID+"/backendAddressPools/%s", ilbBackendPool)),
 							},
 							{
-								ID: to.StringPtr(fmt.Sprintf(elbID+"/backendAddressPools/%s", elbBackendPool)),
+								ID: to.Ptr(fmt.Sprintf(elbID+"/backendAddressPools/%s", elbBackendPool)),
 							},
 						},
 					},

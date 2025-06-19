@@ -16,10 +16,10 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
@@ -77,7 +77,7 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 	for _, rule := range virtualNetworkResourceIDs {
 		*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: to.StringPtr(rule),
+			VirtualNetworkResourceID: to.Ptr(rule),
 			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
@@ -86,17 +86,17 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 func getValidSubnet(resourceId string) *mgmtnetwork.Subnet {
 	s := &mgmtnetwork.Subnet{
-		ID: to.StringPtr(resourceId),
+		ID: to.Ptr(resourceId),
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-				ID: to.StringPtr(nsgv1MasterResourceId),
+				ID: to.Ptr(nsgv1MasterResourceId),
 			},
 			ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
 		*s.ServiceEndpoints = append(*s.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
-			Service:           to.StringPtr(endpoint),
+			Service:           to.Ptr(endpoint),
 			Locations:         &[]string{location},
 			ProvisioningState: mgmtnetwork.Succeeded,
 		})

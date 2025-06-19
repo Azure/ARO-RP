@@ -15,8 +15,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -191,7 +191,7 @@ func TestDeletePrivateDNSVNetLinks(t *testing.T) {
 }
 
 func TestRemovePrivateDNSZone(t *testing.T) {
-	privateZone := []mgmtprivatedns.PrivateZone{{ID: to.StringPtr(id)}}
+	privateZone := []mgmtprivatedns.PrivateZone{{ID: to.Ptr(id)}}
 
 	doc := &api.OpenShiftClusterDocument{
 		OpenShiftCluster: &api.OpenShiftCluster{
@@ -245,7 +245,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 			name: "has private zone, dnsmasq config not yet reconciled",
 			doc:  doc,
 			mocks: func(privateZones *mock_privatedns.MockPrivateZonesClient, virtualNetworkLinks *mock_privatedns.MockVirtualNetworkLinksClient) {
-				privateZones.EXPECT().ListByResourceGroup(ctx, "testGroup", nil).Return([]mgmtprivatedns.PrivateZone{{ID: to.StringPtr(id)}}, nil)
+				privateZones.EXPECT().ListByResourceGroup(ctx, "testGroup", nil).Return([]mgmtprivatedns.PrivateZone{{ID: to.Ptr(id)}}, nil)
 			},
 			mcocli:    mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{}),
 			configcli: configfake.NewSimpleClientset(),
@@ -275,7 +275,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					List(ctx, "testGroup", "zone1", nil).
 					Return([]mgmtprivatedns.VirtualNetworkLink{
 						{
-							Name: to.StringPtr("link1"),
+							Name: to.Ptr("link1"),
 						},
 					}, nil)
 

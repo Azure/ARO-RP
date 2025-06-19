@@ -6,9 +6,9 @@ package generator
 import (
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -31,18 +31,18 @@ func (g *generator) oicStorageAccount() *arm.Resource {
 			Name: "Standard_LRS",
 		},
 		AccountProperties: &mgmtstorage.AccountProperties{
-			AllowBlobPublicAccess:  to.BoolPtr(false),
-			EnableHTTPSTrafficOnly: to.BoolPtr(true),
+			AllowBlobPublicAccess:  to.Ptr(false),
+			EnableHTTPSTrafficOnly: to.Ptr(true),
 			MinimumTLSVersion:      mgmtstorage.MinimumTLSVersionTLS12,
 			AccessTier:             mgmtstorage.AccessTierHot,
-			AllowSharedKeyAccess:   to.BoolPtr(false),
+			AllowSharedKeyAccess:   to.Ptr(false),
 			// Production has Public Network Access Disabled as OIDC Storage Account will be accessed via Azure Front Door
 		},
-		Name:     to.StringPtr(fmt.Sprintf("[%s]", storageAccountName)),
-		Location: to.StringPtr("[resourceGroup().location]"),
-		Type:     to.StringPtr(resourceTypeStorageAccount),
+		Name:     to.Ptr(fmt.Sprintf("[%s]", storageAccountName)),
+		Location: to.Ptr("[resourceGroup().location]"),
+		Type:     to.Ptr(resourceTypeStorageAccount),
 		Tags: map[string]*string{
-			tagKeyExemptPublicBlob: to.StringPtr(tagValueExemptPublicBlob),
+			tagKeyExemptPublicBlob: to.Ptr(tagValueExemptPublicBlob),
 		},
 	}
 

@@ -18,7 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )
@@ -107,32 +107,32 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 			Files: []ign3types.File{
 				{
 					Node: ign3types.Node{
-						Overwrite: to.BoolPtr(true),
+						Overwrite: to.Ptr(true),
 						Path:      "/etc/" + configFileName,
 						User: ign3types.NodeUser{
-							Name: to.StringPtr("root"),
+							Name: to.Ptr("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: to.StringPtr(dataurl.EncodeBytes(config)),
+							Source: to.Ptr(dataurl.EncodeBytes(config)),
 						},
-						Mode: to.IntPtr(0644),
+						Mode: to.Ptr(0644),
 					},
 				},
 				{
 					Node: ign3types.Node{
-						Overwrite: to.BoolPtr(true),
+						Overwrite: to.Ptr(true),
 						Path:      "/usr/local/bin/" + prescriptFileName,
 						User: ign3types.NodeUser{
-							Name: to.StringPtr("root"),
+							Name: to.Ptr("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: to.StringPtr(dataurl.EncodeBytes(startpre)),
+							Source: to.Ptr(dataurl.EncodeBytes(startpre)),
 						},
-						Mode: to.IntPtr(0744),
+						Mode: to.Ptr(0744),
 					},
 				},
 			},
@@ -141,7 +141,7 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 			Units: []ign3types.Unit{
 				{
 					Contents: &service,
-					Enabled:  to.BoolPtr(true),
+					Enabled:  to.Ptr(true),
 					Name:     unitFileName,
 				},
 			},

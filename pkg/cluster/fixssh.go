@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -292,17 +292,17 @@ loadBalancingRules:
 					ID: (*lb.FrontendIPConfigurations)[0].ID,
 				},
 				BackendAddressPool: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
+					ID: to.Ptr(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
 				},
 				Probe: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(*lb.ID + "/probes/ssh"),
+					ID: to.Ptr(*lb.ID + "/probes/ssh"),
 				},
 				Protocol:             mgmtnetwork.TransportProtocolTCP,
 				LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
 				FrontendPort:         to.Int32Ptr(2200 + int32(i)),
 				BackendPort:          to.Int32Ptr(22),
 				IdleTimeoutInMinutes: to.Int32Ptr(30),
-				DisableOutboundSnat:  to.BoolPtr(true),
+				DisableOutboundSnat:  to.Ptr(true),
 			},
 			Name: &name,
 		})
@@ -323,7 +323,7 @@ loadBalancingRules:
 			IntervalInSeconds: to.Int32Ptr(5),
 			NumberOfProbes:    to.Int32Ptr(2),
 		},
-		Name: to.StringPtr("ssh"),
+		Name: to.Ptr("ssh"),
 	})
 
 	return changed

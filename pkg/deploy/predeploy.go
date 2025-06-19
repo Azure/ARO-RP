@@ -18,11 +18,11 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
@@ -477,7 +477,7 @@ func (d *deployer) createSecret(ctx context.Context, kv azsecrets.Client, secret
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
+		Value: to.Ptr(base64.StdEncoding.EncodeToString(key)),
 	}, nil)
 	return err
 }
@@ -506,7 +506,7 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv azsecrets.Client, sec
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: to.StringPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
+		Value: to.Ptr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
 	}, nil)
 	return true, err
 }
@@ -548,7 +548,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 	for _, vm := range scalesetVMs {
 		d.log.Printf("waiting for restart script to complete on older rp vmss %s, instance %s", vmssName, *vm.InstanceID)
 		err = d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
-			CommandID: to.StringPtr("RunShellScript"),
+			CommandID: to.Ptr("RunShellScript"),
 			Script:    &[]string{rpRestartScript},
 		})
 

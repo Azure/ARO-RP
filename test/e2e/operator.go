@@ -22,9 +22,9 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
@@ -305,8 +305,8 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		subnetsToReconcile = map[string]*string{
-			masterSubnet: to.StringPtr(""),
-			workerSubnet: to.StringPtr(""),
+			masterSubnet: to.Ptr(""),
+			workerSubnet: to.Ptr(""),
 		}
 
 		r, err := azure.ParseResourceID(vnet)
@@ -346,8 +346,8 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		By("creating an empty test NSG")
 		testNSG = armnetwork.SecurityGroup{
 			Location:   &location,
-			Name:       to.StringPtr(nsg),
-			Type:       to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+			Name:       to.Ptr(nsg),
+			Type:       to.Ptr("Microsoft.Network/networkSecurityGroups"),
 			Properties: &armnetwork.SecurityGroupPropertiesFormat{},
 		}
 		err := clients.NetworkSecurityGroups.CreateOrUpdateAndWait(ctx, resourceGroup, nsg, testNSG, nil)

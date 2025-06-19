@@ -16,12 +16,12 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -30,7 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -75,8 +74,8 @@ func (m *manager) createOIDC(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
-		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = pointerutils.ToPtr(api.SecureString(oidcBuilder.GetPrivateKey()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = to.Ptr(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = to.Ptr(api.SecureString(oidcBuilder.GetPrivateKey()))
 		return nil
 	})
 
@@ -135,7 +134,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
-		group.Tags["purge"] = to.StringPtr("true")
+		group.Tags["purge"] = to.Ptr("true")
 	}
 
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
@@ -395,7 +394,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				}
 
 				s.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
-					ID: to.StringPtr(nsgID),
+					ID: to.Ptr(nsgID),
 				}
 
 				// Because we attempt to attach the NSG immediately after the base resource deployment
@@ -439,13 +438,13 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
 		if s.PrivateEndpointNetworkPolicies == nil || *s.PrivateEndpointNetworkPolicies != "Disabled" {
 			needsUpdate = true
-			s.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+			s.PrivateEndpointNetworkPolicies = to.Ptr("Disabled")
 		}
 	}
 
 	if s.PrivateLinkServiceNetworkPolicies == nil || *s.PrivateLinkServiceNetworkPolicies != "Disabled" {
 		needsUpdate = true
-		s.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+		s.PrivateLinkServiceNetworkPolicies = to.Ptr("Disabled")
 	}
 
 	// return if we do not need to update the subnet
@@ -489,7 +488,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 		return errors.New("OIDCIssuer is nil")
 	}
 
-	issuer := to.StringPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
+	issuer := to.Ptr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
 
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
@@ -518,9 +517,9 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 				federatedIdentityCredentialResourceName,
 				armmsi.FederatedIdentityCredential{
 					Properties: &armmsi.FederatedIdentityCredentialProperties{
-						Audiences: []*string{to.StringPtr("openshift")},
+						Audiences: []*string{to.Ptr("openshift")},
 						Issuer:    issuer,
-						Subject:   to.StringPtr(sa),
+						Subject:   to.Ptr(sa),
 					},
 				},
 				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},

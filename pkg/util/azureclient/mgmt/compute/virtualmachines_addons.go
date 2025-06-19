@@ -9,8 +9,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 )
 
 // VirtualMachinesClientAddons contains addons for VirtualMachinesClient
@@ -61,7 +61,7 @@ func (c *virtualMachinesClient) StartAndWait(ctx context.Context, resourceGroupN
 }
 
 func (c *virtualMachinesClient) StopAndWait(ctx context.Context, resourceGroupName string, VMName string, deallocateVM bool) error {
-	future, err := c.PowerOff(ctx, resourceGroupName, VMName, to.BoolPtr(false))
+	future, err := c.PowerOff(ctx, resourceGroupName, VMName, to.Ptr(false))
 	if err != nil {
 		return err
 	}
