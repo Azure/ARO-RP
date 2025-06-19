@@ -5,7 +5,6 @@ package subnets
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
@@ -26,6 +25,7 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 		if err != nil {
 			return err
 		}
+
 		subnetObject, err := r.subnets.Get(ctx, subnetID.ResourceGroupName, subnetID.Parent.Name, subnetID.Name, nil)
 		if err != nil {
 			if azureerrors.IsNotFoundError(err) {
@@ -33,9 +33,6 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 				return nil
 			}
 			return err
-		}
-		if r.subnets == nil { // just in case
-			return fmt.Errorf("subnet can't be nil")
 		}
 
 		var changed bool
