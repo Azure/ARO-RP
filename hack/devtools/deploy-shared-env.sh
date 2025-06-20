@@ -29,7 +29,8 @@ deploy_rp_dev() {
             "clusterParentDomainName=$PARENT_DOMAIN_NAME" \
             "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)" \
-            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" \
+            "globalDevopsServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_DEVOPS_ID'" --query '[].id' -o tsv)" >/dev/null
 }
 
 deploy_env_dev() {

@@ -29,6 +29,7 @@ func (g *generator) rpTemplate() *arm.Template {
 		"databaseAccountName",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
+		"globalDevopsServicePrincipalId",
 	}
 	if g.production {
 		params = append(params,
