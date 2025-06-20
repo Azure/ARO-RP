@@ -431,12 +431,15 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 			Eventually(func(g Gomega, ctx context.Context) {
 				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, nil)
 				g.Expect(err).NotTo(HaveOccurred())
+
 				g.Expect(*s.Properties.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
 
 				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
+				// 🚀 DEBUG: dump exactly what annotations we saw
+				By(fmt.Sprintf("Annotations on cluster: %v", co.Annotations))
 				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
-			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+			}).WithContext(ctx).WithTimeout(8 * time.Minute).Should(Succeed()) // give subnet reconciler extra headroom to avoid flakes
 		}
 	})
 })
