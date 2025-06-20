@@ -284,9 +284,9 @@ loadBalancingRules:
 func (m *manager) deleteOrphanedNIC(ctx context.Context, nic *armnetwork.Interface, resourceGroup string, masterSubnetID string) error {
 	// Delete any IPConfigurations and update the NIC
 	nic.Properties.IPConfigurations = []*armnetwork.InterfaceIPConfiguration{{
-		Name: to.StringPtr(*nic.Name),
+		Name: pointerutils.ToPtr(*nic.Name),
 		Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-			Subnet: &armnetwork.Subnet{ID: to.StringPtr(masterSubnetID)}}}}
+			Subnet: &armnetwork.Subnet{ID: pointerutils.ToPtr(masterSubnetID)}}}}
 	err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
 	if err != nil {
 		m.log.Errorf("Removing IPConfigurations from NIC %s has failed with err %s", *nic.Name, err)

@@ -147,29 +147,29 @@ func configureInterface(backendPools []string,
 	addVM bool,
 	addIPConfig bool) *armnetwork.InterfacesClientGetResponse {
 	iface := armnetwork.Interface{
-		Name:       to.StringPtr(name),
+		Name:       pointerutils.ToPtr(name),
 		Properties: &armnetwork.InterfacePropertiesFormat{},
 	}
 
 	if addVM {
-		iface.Properties.VirtualMachine = &armnetwork.SubResource{ID: to.StringPtr(strings.ReplaceAll(name, "-nic", ""))}
+		iface.Properties.VirtualMachine = &armnetwork.SubResource{ID: pointerutils.ToPtr(strings.ReplaceAll(name, "-nic", ""))}
 	} else {
 		iface.Properties.VirtualMachine = nil
 	}
 
 	if addIPConfig {
 		var ipConfigurations []*armnetwork.InterfaceIPConfiguration
-		ipConfig := armnetwork.InterfaceIPConfiguration{Name: to.StringPtr(name)}
+		ipConfig := armnetwork.InterfaceIPConfiguration{Name: pointerutils.ToPtr(name)}
 		ipConfig.Properties = &armnetwork.InterfaceIPConfigurationPropertiesFormat{}
 		if backendPools != nil {
 			var nicBackendPools []*armnetwork.BackendAddressPool
 			for _, backendPool := range backendPools {
-				nicBackendPools = append(nicBackendPools, &armnetwork.BackendAddressPool{ID: to.StringPtr(backendPool)})
+				nicBackendPools = append(nicBackendPools, &armnetwork.BackendAddressPool{ID: pointerutils.ToPtr(backendPool)})
 			}
 			ipConfig.Properties.LoadBalancerBackendAddressPools = nicBackendPools
 		}
 		if subnet != "" {
-			ipConfig.Properties.Subnet = &armnetwork.Subnet{ID: to.StringPtr(subnet)}
+			ipConfig.Properties.Subnet = &armnetwork.Subnet{ID: pointerutils.ToPtr(subnet)}
 		}
 		ipConfigurations = append(ipConfigurations, &ipConfig)
 		iface.Properties.IPConfigurations = ipConfigurations
