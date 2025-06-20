@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
@@ -151,11 +150,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				}
 
 				if tt.location == nil {
-					tt.location = to.StringPtr("location")
+					tt.location = pointerutils.ToPtr("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = to.StringPtr("resourceName")
+					tt.clusterName = pointerutils.ToPtr("resourceName")
 				}
 
 				v := &openShiftClusterStaticValidator{
@@ -722,7 +721,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 					},
 				}
 			},
-			architectureVersion: (*api.ArchitectureVersion)(to.IntPtr(int(api.ArchitectureVersionV1))),
+			architectureVersion: (*api.ArchitectureVersion)(pointerutils.ToPtr(int(api.ArchitectureVersionV1))),
 			wantErr:             "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.managedOutboundIps.count: The provided managedOutboundIps.count 20 is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.",
 		},
 	}

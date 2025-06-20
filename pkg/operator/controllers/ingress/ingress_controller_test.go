@@ -16,12 +16,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -87,7 +86,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(3),
+					Replicas: pointerutils.ToPtr(int32(3)),
 				},
 			},
 			expectedReplica: 3,
@@ -103,7 +102,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(minimumReplicas),
+					Replicas: pointerutils.ToPtr(minimumReplicas),
 				},
 			},
 			expectedReplica: minimumReplicas,
@@ -119,7 +118,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(1),
+					Replicas: pointerutils.ToPtr(int32(1)),
 				},
 			},
 			expectedReplica: minimumReplicas,
@@ -144,7 +143,7 @@ func TestReconciler(t *testing.T) {
 					Namespace: openshiftIngressControllerNamespace,
 				},
 				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(0),
+					Replicas: pointerutils.ToPtr(int32(0)),
 				},
 			},
 			expectedReplica: minimumReplicas,

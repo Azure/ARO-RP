@@ -15,11 +15,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -148,7 +148,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(5))
 
 		By("sending the PUT request to decrease Managed Outbound IPs")
-		oc.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = to.Int32Ptr(1)
+		oc.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = pointerutils.ToPtr(int32(1))
 		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -180,7 +180,7 @@ func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopen
 			NetworkProfile: &mgmtredhatopenshift20240812preview.NetworkProfile{
 				LoadBalancerProfile: &mgmtredhatopenshift20240812preview.LoadBalancerProfile{
 					ManagedOutboundIps: &mgmtredhatopenshift20240812preview.ManagedOutboundIPs{
-						Count: to.Int32Ptr(managedOutboundIPCount),
+						Count: pointerutils.ToPtr(managedOutboundIPCount),
 					},
 				},
 			},

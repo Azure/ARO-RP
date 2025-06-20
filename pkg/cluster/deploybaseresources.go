@@ -21,7 +21,6 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -135,7 +134,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
-		group.Tags["purge"] = to.StringPtr("true")
+		group.Tags["purge"] = pointerutils.ToPtr("true")
 	}
 
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
@@ -395,7 +394,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				}
 
 				s.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
-					ID: to.StringPtr(nsgID),
+					ID: pointerutils.ToPtr(nsgID),
 				}
 
 				// Because we attempt to attach the NSG immediately after the base resource deployment
@@ -439,13 +438,13 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
 		if s.PrivateEndpointNetworkPolicies == nil || *s.PrivateEndpointNetworkPolicies != "Disabled" {
 			needsUpdate = true
-			s.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+			s.PrivateEndpointNetworkPolicies = pointerutils.ToPtr("Disabled")
 		}
 	}
 
 	if s.PrivateLinkServiceNetworkPolicies == nil || *s.PrivateLinkServiceNetworkPolicies != "Disabled" {
 		needsUpdate = true
-		s.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+		s.PrivateLinkServiceNetworkPolicies = pointerutils.ToPtr("Disabled")
 	}
 
 	// return if we do not need to update the subnet
@@ -489,7 +488,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 		return errors.New("OIDCIssuer is nil")
 	}
 
-	issuer := to.StringPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
+	issuer := pointerutils.ToPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
 
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
@@ -518,9 +517,9 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 				federatedIdentityCredentialResourceName,
 				armmsi.FederatedIdentityCredential{
 					Properties: &armmsi.FederatedIdentityCredentialProperties{
-						Audiences: []*string{to.StringPtr("openshift")},
+						Audiences: []*string{pointerutils.ToPtr("openshift")},
 						Issuer:    issuer,
-						Subject:   to.StringPtr(sa),
+						Subject:   pointerutils.ToPtr(sa),
 					},
 				},
 				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},

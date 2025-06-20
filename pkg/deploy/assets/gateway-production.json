@@ -221,6 +221,9 @@
                         "enableAutomaticOSUpgrade": true
                     }
                 },
+                "automaticRepairsPolicy": {
+                    "enabled": true
+                },
                 "virtualMachineProfile": {
                     "osProfile": {
                         "computerNamePrefix": "[concat('gateway-', parameters('vmssName'), '-')]",

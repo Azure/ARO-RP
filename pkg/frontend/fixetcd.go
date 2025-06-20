@@ -26,8 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	operatorv1client "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
@@ -35,6 +33,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type degradedEtcd struct {
@@ -212,9 +211,9 @@ func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured
 						"namespace": namespaceEtcds,
 						"labels":    map[string]string{"app": jobNameFixPeers},
 					},
-					"activeDeadlineSeconds":   to.Int64Ptr(10),
-					"completions":             to.Int32Ptr(1),
-					"ttlSecondsAfterFinished": to.Int32Ptr(300),
+					"activeDeadlineSeconds":   pointerutils.ToPtr(int64(10)),
+					"completions":             pointerutils.ToPtr(int32(1)),
+					"ttlSecondsAfterFinished": pointerutils.ToPtr(int32(300)),
 					"spec": map[string]interface{}{
 						"restartPolicy":      corev1.RestartPolicyOnFailure,
 						"serviceAccountName": serviceAccountName,
@@ -228,7 +227,7 @@ func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured
 									backupOrFixEtcd,
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: to.BoolPtr(true),
+									Privileged: pointerutils.ToPtr(true),
 								},
 								Env: []corev1.EnvVar{
 									{
@@ -334,7 +333,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 func newServiceAccount(name, cluster string) *unstructured.Unstructured {
 	serviceAcc := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"automountServiceAccountToken": to.BoolPtr(true),
+			"automountServiceAccountToken": pointerutils.ToPtr(true),
 		},
 	}
 	serviceAcc.SetAPIVersion("v1")
@@ -395,7 +394,7 @@ func newSecurityContextConstraint(name, cluster, usersAccount string) *unstructu
 			"groups":                   []string{},
 			"users":                    []string{usersAccount},
 			"allowPrivilegedContainer": true,
-			"allowPrivilegeEscalation": to.BoolPtr(true),
+			"allowPrivilegeEscalation": pointerutils.ToPtr(true),
 			"allowedCapabilities":      []corev1.Capability{"*"},
 			"runAsUser": map[string]securityv1.RunAsUserStrategyType{
 				"type": securityv1.RunAsUserStrategyRunAsAny,
@@ -565,9 +564,9 @@ func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
 						"namespace": namespaceEtcds,
 						"labels":    map[string]string{"app": jobNameDataBackup},
 					},
-					"activeDeadlineSeconds":   to.Int64Ptr(10),
-					"completions":             to.Int32Ptr(1),
-					"ttlSecondsAfterFinished": to.Int32Ptr(300),
+					"activeDeadlineSeconds":   pointerutils.ToPtr(int64(10)),
+					"completions":             pointerutils.ToPtr(int32(1)),
+					"ttlSecondsAfterFinished": pointerutils.ToPtr(int32(300)),
 					"spec": map[string]interface{}{
 						"restartPolicy": corev1.RestartPolicyOnFailure,
 						"nodeName":      node,
@@ -593,7 +592,7 @@ func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{"SYS_CHROOT"},
 									},
-									Privileged: to.BoolPtr(true),
+									Privileged: pointerutils.ToPtr(true),
 								},
 								Env: []corev1.EnvVar{
 									{

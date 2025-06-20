@@ -11,22 +11,22 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 	return &arm.Resource{
 		Resource: mgmtinsights.ActionGroupResource{
 			ActionGroup: &mgmtinsights.ActionGroup{
-				Enabled:        to.BoolPtr(true),
+				Enabled:        pointerutils.ToPtr(true),
 				GroupShortName: &shortName,
 			},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Insights/actionGroups"),
-			Location: to.StringPtr("Global"),
+			Type:     pointerutils.ToPtr("Microsoft.Insights/actionGroups"),
+			Location: pointerutils.ToPtr("Global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
 	}
@@ -37,8 +37,8 @@ func (g *generator) dnsZone(name string) *arm.Resource {
 		Resource: &mgmtdns.Zone{
 			ZoneProperties: &mgmtdns.ZoneProperties{},
 			Name:           &name,
-			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
-			Location:       to.StringPtr("global"),
+			Type:           pointerutils.ToPtr("Microsoft.Network/dnsZones"),
+			Location:       pointerutils.ToPtr("global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
 	}
@@ -51,8 +51,8 @@ func (g *generator) securityGroup(name string, securityRules *[]mgmtnetwork.Secu
 				SecurityRules: securityRules,
 			},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		Condition:  condition,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -64,7 +64,7 @@ func (g *generator) securityRules(name string, properties *mgmtnetwork.SecurityR
 		Resource: &mgmtnetwork.SecurityRule{
 			SecurityRulePropertiesFormat: properties,
 			Name:                         &name,
-			Type:                         to.StringPtr("Microsoft.Network/networkSecurityGroups/securityRules"),
+			Type:                         pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups/securityRules"),
 		},
 		Location:   "[resourceGroup().location]",
 		Condition:  condition,
@@ -83,8 +83,8 @@ func (g *generator) publicIPAddress(name string) *arm.Resource {
 			},
 			Zones:    &[]string{},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
@@ -94,9 +94,9 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 	return &arm.Resource{
 		Resource: &mgmtstorage.Account{
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+			Type:     pointerutils.ToPtr("Microsoft.Storage/storageAccounts"),
 			Kind:     mgmtstorage.KindStorageV2,
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			Sku: &mgmtstorage.Sku{
 				Name: "Standard_LRS",
 			},
@@ -110,8 +110,8 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 func (g *generator) storageAccountBlobContainer(name string, storageAccountName string, containerProperties *mgmtstorage.ContainerProperties) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtstorage.BlobContainer{
-			Name:                to.StringPtr("[" + name + "]"),
-			Type:                to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+			Name:                pointerutils.ToPtr("[" + name + "]"),
+			Type:                pointerutils.ToPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 			ContainerProperties: containerProperties,
 		},
 		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Storage/storageAccounts', %s)]", storageAccountName)},
@@ -131,8 +131,8 @@ func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtne
 				Subnets: subnets,
 			},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/virtualNetworks"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		Condition:  condition,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -146,10 +146,10 @@ func (g *generator) virtualNetworkPeering(name, vnetB string, allowGatewayTransi
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetworkPeering{
 			VirtualNetworkPeeringPropertiesFormat: &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
-				AllowVirtualNetworkAccess: to.BoolPtr(true),
-				AllowForwardedTraffic:     to.BoolPtr(true),
-				AllowGatewayTransit:       to.BoolPtr(allowGatewayTransit),
-				UseRemoteGateways:         to.BoolPtr(useRemoteGateways),
+				AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
+				AllowForwardedTraffic:     pointerutils.ToPtr(true),
+				AllowGatewayTransit:       pointerutils.ToPtr(allowGatewayTransit),
+				UseRemoteGateways:         pointerutils.ToPtr(useRemoteGateways),
 				RemoteVirtualNetwork: &mgmtnetwork.SubResource{
 					ID: &vnetB,
 				},
@@ -167,20 +167,20 @@ func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessP
 	return &arm.Resource{
 		Resource: &mgmtkeyvault.Vault{
 			Properties: &mgmtkeyvault.VaultProperties{
-				EnableRbacAuthorization:  to.BoolPtr(enableEntraIdRbac),
-				EnablePurgeProtection:    to.BoolPtr(true),
-				EnabledForDiskEncryption: to.BoolPtr(true),
+				EnableRbacAuthorization:  pointerutils.ToPtr(enableEntraIdRbac),
+				EnablePurgeProtection:    pointerutils.ToPtr(true),
+				EnabledForDiskEncryption: pointerutils.ToPtr(true),
 				Sku: &mgmtkeyvault.Sku{
 					Name:   mgmtkeyvault.Standard,
-					Family: to.StringPtr("A"),
+					Family: pointerutils.ToPtr("A"),
 				},
 				// is later replaced by "[subscription().tenantId]"
 				TenantID:       &tenantUUIDHack,
 				AccessPolicies: accessPolicies,
 			},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 		Condition:  condition,

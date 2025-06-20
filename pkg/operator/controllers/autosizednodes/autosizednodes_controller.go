@@ -18,13 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type Reconciler struct {
@@ -120,7 +119,7 @@ func makeConfig() mcv1.KubeletConfig {
 			Name: configName,
 		},
 		Spec: mcv1.KubeletConfigSpec{
-			AutoSizingReserved: to.BoolPtr(true),
+			AutoSizingReserved: pointerutils.ToPtr(true),
 			MachineConfigPoolSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{

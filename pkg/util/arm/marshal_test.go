@@ -10,7 +10,6 @@ import (
 
 	armcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiljson "github.com/Azure/ARO-RP/test/util/json"
@@ -37,7 +36,7 @@ func TestResourceMarshal(t *testing.T) {
 						"zero": {Uint: 0, Unmarshaled: 1},
 						"one":  {Uint: 1, Unmarshaled: 1},
 					},
-					Ptr:         to.StringPtr("test"),
+					Ptr:         pointerutils.ToPtr("test"),
 					Slice:       []*testResource{{Float: 1.1, Unmarshaled: 1}},
 					ByteSlice:   []byte("test"),
 					String:      "test",

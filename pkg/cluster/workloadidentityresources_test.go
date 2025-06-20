@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -736,7 +735,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 						},
 					},
 				},
@@ -754,7 +753,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 					ID: clusterResourceID,
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 						},
 					},
 				},

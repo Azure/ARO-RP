@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
@@ -124,11 +124,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.location == nil {
-					tt.location = to.StringPtr("location")
+					tt.location = pointerutils.ToPtr("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = to.StringPtr("resourceName")
+					tt.clusterName = pointerutils.ToPtr("resourceName")
 				}
 
 				v := &openShiftClusterStaticValidator{

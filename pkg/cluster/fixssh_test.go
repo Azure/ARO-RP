@@ -14,11 +14,11 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var (
@@ -30,11 +30,11 @@ var (
 
 func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
 	return &mgmtnetwork.LoadBalancer{
-		ID: to.StringPtr(lbID),
+		ID: pointerutils.ToPtr(lbID),
 		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 				{
-					ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+					ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{},
@@ -46,95 +46,95 @@ func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
 
 func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 	return &mgmtnetwork.LoadBalancer{
-		ID: to.StringPtr(lbID),
+		ID: pointerutils.ToPtr(lbID),
 		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 				{
-					ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+					ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 				{
-					Name: to.StringPtr("ssh-0"),
+					Name: pointerutils.ToPtr("ssh-0"),
 				},
 				{
-					Name: to.StringPtr("ssh-1"),
+					Name: pointerutils.ToPtr("ssh-1"),
 				},
 				{
-					Name: to.StringPtr("ssh-2"),
+					Name: pointerutils.ToPtr("ssh-2"),
 				},
 			},
 			LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/backendAddressPools/ssh-0"),
+							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-0"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/probes/ssh"),
+							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-						FrontendPort:         to.Int32Ptr(2200),
-						BackendPort:          to.Int32Ptr(22),
-						IdleTimeoutInMinutes: to.Int32Ptr(30),
-						DisableOutboundSnat:  to.BoolPtr(true),
+						FrontendPort:         pointerutils.ToPtr(int32(2200)),
+						BackendPort:          pointerutils.ToPtr(int32(22)),
+						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+						DisableOutboundSnat:  pointerutils.ToPtr(true),
 					},
-					Name: to.StringPtr("ssh-0"),
+					Name: pointerutils.ToPtr("ssh-0"),
 				},
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/backendAddressPools/ssh-1"),
+							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-1"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/probes/ssh"),
+							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-						FrontendPort:         to.Int32Ptr(2201),
-						BackendPort:          to.Int32Ptr(22),
-						IdleTimeoutInMinutes: to.Int32Ptr(30),
-						DisableOutboundSnat:  to.BoolPtr(true),
+						FrontendPort:         pointerutils.ToPtr(int32(2201)),
+						BackendPort:          pointerutils.ToPtr(int32(22)),
+						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+						DisableOutboundSnat:  pointerutils.ToPtr(true),
 					},
-					Name: to.StringPtr("ssh-1"),
+					Name: pointerutils.ToPtr("ssh-1"),
 				},
 				{
 					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/backendAddressPools/ssh-2"),
+							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-2"),
 						},
 						Probe: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(lbID + "/probes/ssh"),
+							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
 						Protocol:             mgmtnetwork.TransportProtocolTCP,
 						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-						FrontendPort:         to.Int32Ptr(2202),
-						BackendPort:          to.Int32Ptr(22),
-						IdleTimeoutInMinutes: to.Int32Ptr(30),
-						DisableOutboundSnat:  to.BoolPtr(true),
+						FrontendPort:         pointerutils.ToPtr(int32(2202)),
+						BackendPort:          pointerutils.ToPtr(int32(22)),
+						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+						DisableOutboundSnat:  pointerutils.ToPtr(true),
 					},
-					Name: to.StringPtr("ssh-2"),
+					Name: pointerutils.ToPtr("ssh-2"),
 				},
 			},
 			Probes: &[]mgmtnetwork.Probe{
 				{
 					ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 						Protocol:          mgmtnetwork.ProbeProtocolTCP,
-						Port:              to.Int32Ptr(22),
-						IntervalInSeconds: to.Int32Ptr(5),
-						NumberOfProbes:    to.Int32Ptr(2),
+						Port:              pointerutils.ToPtr(int32(22)),
+						IntervalInSeconds: pointerutils.ToPtr(int32(5)),
+						NumberOfProbes:    pointerutils.ToPtr(int32(2)),
 					},
-					Name: to.StringPtr("ssh"),
+					Name: pointerutils.ToPtr("ssh"),
 				},
 			},
 		},
