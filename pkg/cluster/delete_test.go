@@ -572,7 +572,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -629,7 +631,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -689,7 +693,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -724,7 +730,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -783,7 +791,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -847,7 +857,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -877,7 +889,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -910,7 +924,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
