@@ -1148,7 +1148,7 @@ func getFakePublicIPAddress(name, location string) sdknetwork.PublicIPAddress {
 	}
 }
 
-// Returns a load balancer with config updated with desired outbound ips as it should be when m.loadBalancersClient.CreateOrUpdate is called.
+// Returns a load balancer with config updated with desired outbound ips as it should be when m.armLoadBalancersClient.CreateOrUpdate is called.
 // It is assumed that desired IPs include the default outbound IPs, however this won't work for transitions from
 // customer provided IPs/Prefixes to managed IPs if the api server is private since the default IP
 // would be deleted
@@ -1165,7 +1165,7 @@ func fakeUpdatedLoadBalancer(additionalIPCount int) sdknetwork.LoadBalancer {
 	return lb
 }
 
-// Returns lb as it would be returned via m.loadBalancersClient.Get.
+// Returns lb as it would be returned via m.armLoadBalancersClient.Get.
 func fakeLoadBalancersGet(additionalIPCount int, apiServerVisibility api.Visibility) sdknetwork.LoadBalancer {
 	defaultOutboundFIPConfig := sdknetwork.FrontendIPConfiguration{
 		Name: pointerutils.ToPtr("public-lb-ip-v4"),

@@ -215,13 +215,13 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
 	}
 
-	lb, err := m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+	lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, lbName, nil)
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *lb.Properties.FrontendIPConfigurations[0].Properties.PrivateIPAddress
 		return nil
 	})
 	return err

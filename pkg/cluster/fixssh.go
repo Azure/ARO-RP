@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -48,23 +48,24 @@ func (m *manager) fixSSH(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lbName string) (lb mgmtnetwork.LoadBalancer, err error) {
-	lb, err = m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lbName string) (*armnetwork.LoadBalancer, error) {
+	_lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, lbName, nil)
 	if err != nil {
-		return lb, err
+		return nil, err
 	}
 
-	if m.updateLB(ctx, &lb, lbName) {
+	lb := &_lb.LoadBalancer
+	if m.updateLB(ctx, lb, lbName) {
 		m.log.Printf("updating Load Balancer %s", lbName)
-		err = m.loadBalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, lb)
+		err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, *lb, nil)
 		if err != nil {
-			return lb, err
+			return nil, err
 		}
 	}
 	return lb, nil
 }
 
-func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, infraID string, lb mgmtnetwork.LoadBalancer) (err error) {
+func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, infraID string, lb *armnetwork.LoadBalancer) (err error) {
 	for i := 0; i < 3; i++ {
 		// NIC names might be different if customer re-created master nodes
 		// see https://bugzilla.redhat.com/show_bug.cgi?id=1882490 for more details
@@ -73,16 +74,16 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 		nicNameInstaller := fmt.Sprintf("%s-master%d-nic", infraID, i)
 		nicNameMachineAPI := fmt.Sprintf("%s-master-%d-nic", infraID, i)
 
-		var nic mgmtnetwork.Interface
+		var nic armnetwork.Interface
 		nicName := nicNameInstaller
 		fallbackNIC := false
 
-		nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
+		_nic, err := m.armInterfaces.Get(ctx, resourceGroup, nicName, nil)
 		if err != nil {
 			m.log.Warnf("Fetching details for NIC %s has failed with err %s", nicName, err)
 			fallbackNIC = true
-		} else if nic.InterfacePropertiesFormat != nil && nic.VirtualMachine == nil {
-			err = m.removeBackendPoolsFromNIC(ctx, resourceGroup, nicName, &nic)
+		} else if _nic.Properties != nil && _nic.Properties.VirtualMachine == nil {
+			err = m.removeBackendPoolsFromNIC(ctx, resourceGroup, nicName, _nic.Interface)
 			if err != nil {
 				m.log.Warnf("Removing BackendPools from NIC %s has failed with err %s", nicName, err)
 				return err
@@ -94,14 +95,17 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 		if fallbackNIC {
 			nicName = nicNameMachineAPI
 			m.log.Warnf("Fallback to check MachineAPI Nic name format for %s", nicName)
-			nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
+			_nic, err = m.armInterfaces.Get(ctx, resourceGroup, nicName, nil)
 			if err != nil {
 				m.log.Warnf("Fallback failed with err %s", err)
 				return err
 			}
+			nic = _nic.Interface
+		} else {
+			nic = _nic.Interface
 		}
 
-		err = m.updateILBAddressPool(ctx, &nic, nicName, &lb, i, resourceGroup, infraID)
+		err = m.updateILBAddressPool(ctx, nic, nicName, lb, i, resourceGroup, infraID)
 		if err != nil {
 			return err
 		}
@@ -119,12 +123,12 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 			elbName = infraID + "-public-lb"
 		}
 
-		elb, err := m.loadBalancers.Get(ctx, resourceGroup, elbName, "")
+		elb, err := m.armLoadBalancers.Get(ctx, resourceGroup, elbName, nil)
 		if err != nil {
 			return err
 		}
 
-		err = m.updateELBAddressPool(ctx, &nic, nicName, &elb, resourceGroup, infraID)
+		err = m.updateELBAddressPool(ctx, nic, nicName, &elb.LoadBalancer, resourceGroup, infraID)
 		if err != nil {
 			return err
 		}
@@ -133,21 +137,21 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 	return nil
 }
 
-func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, nicName string, nic *mgmtnetwork.Interface) error {
-	if nic.IPConfigurations == nil || len(*nic.IPConfigurations) == 0 {
+func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, nicName string, nic armnetwork.Interface) error {
+	if len(nic.Properties.IPConfigurations) == 0 {
 		return fmt.Errorf("unable to remove Backend Address Pools from NIC as there are no IP configurations for %s in resource group %s", nicName, resourceGroup)
 	}
-	ipc := (*nic.IPConfigurations)[0]
-	if ipc.LoadBalancerBackendAddressPools != nil {
+	ipc := nic.Properties.IPConfigurations[0]
+	if ipc.Properties.LoadBalancerBackendAddressPools != nil {
 		m.log.Printf("Removing Load balancer Backend Address Pools from NIC %s with no VMs attached", nicName)
-		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = []mgmtnetwork.BackendAddressPool{}
-		return m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic)
+		nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools = []*armnetwork.BackendAddressPool{}
+		return m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, nic, nil)
 	}
 	return nil
 }
 
-func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, lb *mgmtnetwork.LoadBalancer, i int, resourceGroup string, infraID string) error {
-	if nic.IPConfigurations == nil || len(*nic.IPConfigurations) == 0 {
+func (m *manager) updateILBAddressPool(ctx context.Context, nic armnetwork.Interface, nicName string, lb *armnetwork.LoadBalancer, i int, resourceGroup string, infraID string) error {
+	if len(nic.Properties.IPConfigurations) == 0 {
 		return fmt.Errorf("unable to update NIC as there are no IP configurations for %s", nicName)
 	}
 
@@ -162,12 +166,12 @@ func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 	updateSSHPool := true
 	updateILBPool := true
 
-	ipc := (*nic.IPConfigurations)[0]
-	if ipc.LoadBalancerBackendAddressPools == nil {
-		emptyBackendAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
-		(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = &emptyBackendAddressPool
+	ipc := nic.Properties.IPConfigurations[0]
+	if ipc.Properties.LoadBalancerBackendAddressPools == nil {
+		emptyBackendAddressPool := make([]*armnetwork.BackendAddressPool, 0)
+		nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools = emptyBackendAddressPool
 	} else {
-		for _, p := range *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools {
+		for _, p := range nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools {
 			if strings.EqualFold(*p.ID, sshBackendPoolID) {
 				updateSSHPool = false
 			}
@@ -179,37 +183,37 @@ func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 
 	if updateSSHPool {
 		m.log.Printf("Adding NIC %s to Internal Load Balancer SSH Backend Address Pool %s", nicName, sshBackendPoolID)
-		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+		nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools = append(nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools, &armnetwork.BackendAddressPool{
 			ID: &sshBackendPoolID,
 		})
 	}
 
 	if updateILBPool {
 		m.log.Printf("Adding NIC %s to Internal Load Balancer API Address Pool %s", nicName, ilbBackendPoolID)
-		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+		nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools = append(nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools, &armnetwork.BackendAddressPool{
 			ID: &ilbBackendPoolID,
 		})
 	}
 
 	if updateSSHPool || updateILBPool {
 		m.log.Printf("updating Network Interface %s", nicName)
-		return m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic)
+		return m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, nic, nil)
 	}
 	return nil
 }
 
-func (m *manager) updateV1ELBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, resourceGroup string, infraID string) error {
-	if nic.IPConfigurations == nil || len(*nic.IPConfigurations) == 0 {
+func (m *manager) updateV1ELBAddressPool(ctx context.Context, nic *armnetwork.Interface, nicName string, resourceGroup string, infraID string) error {
+	if len(nic.Properties.IPConfigurations) == 0 {
 		return fmt.Errorf("unable to update NIC as there are no IP configurations for %s", nicName)
 	}
 
-	lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID, "")
+	lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, infraID, nil)
 	if err != nil {
 		return err
 	}
 	elbBackendPoolID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, infraID)
-	currentPool := *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools
-	newPool := make([]mgmtnetwork.BackendAddressPool, 0, len(currentPool))
+	currentPool := nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools
+	newPool := make([]*armnetwork.BackendAddressPool, 0, len(currentPool))
 	for _, pool := range currentPool {
 		if strings.EqualFold(*pool.ID, elbBackendPoolID) {
 			m.log.Printf("Removing NIC %s from Public Load Balancer API Address Pool %s", nicName, elbBackendPoolID)
@@ -222,13 +226,13 @@ func (m *manager) updateV1ELBAddressPool(ctx context.Context, nic *mgmtnetwork.I
 		return nil
 	}
 
-	(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = &newPool
+	nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools = newPool
 	m.log.Printf("Updating Network Interface %s", nicName)
-	return m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic)
+	return m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic, nil)
 }
 
-func (m *manager) updateELBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, lb *mgmtnetwork.LoadBalancer, resourceGroup string, infraID string) error {
-	if nic.IPConfigurations == nil || len(*nic.IPConfigurations) == 0 {
+func (m *manager) updateELBAddressPool(ctx context.Context, nic armnetwork.Interface, nicName string, lb *armnetwork.LoadBalancer, resourceGroup string, infraID string) error {
+	if len(nic.Properties.IPConfigurations) == 0 {
 		return fmt.Errorf("unable to update NIC as there are no IP configurations for %s", nicName)
 	}
 
@@ -240,7 +244,7 @@ func (m *manager) updateELBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 	elbBackendPoolID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, elbBackendPool)
 
 	updateELBPool := true
-	for _, p := range *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools {
+	for _, p := range nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools {
 		if strings.EqualFold(*p.ID, elbBackendPoolID) {
 			updateELBPool = false
 		}
@@ -248,21 +252,21 @@ func (m *manager) updateELBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 
 	if updateELBPool {
 		m.log.Printf("Adding NIC %s to Public Load Balancer API Address Pool %s", nicName, elbBackendPoolID)
-		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+		nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools = append(nic.Properties.IPConfigurations[0].Properties.LoadBalancerBackendAddressPools, &armnetwork.BackendAddressPool{
 			ID: &elbBackendPoolID,
 		})
 		m.log.Printf("updating Network Interface %s", nicName)
-		return m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic)
+		return m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, nic, nil)
 	}
 
 	return nil
 }
 
-func (m *manager) updateLB(ctx context.Context, lb *mgmtnetwork.LoadBalancer, lbName string) (changed bool) {
+func (m *manager) updateLB(ctx context.Context, lb *armnetwork.LoadBalancer, lbName string) (changed bool) {
 backendAddressPools:
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("ssh-%d", i)
-		for _, p := range *lb.BackendAddressPools {
+		for _, p := range lb.Properties.BackendAddressPools {
 			if strings.EqualFold(*p.Name, name) {
 				continue backendAddressPools
 			}
@@ -270,7 +274,7 @@ backendAddressPools:
 
 		changed = true
 		m.log.Printf("Adding SSH Backend Address Pool %s to Internal Load Balancer %s", name, lbName)
-		*lb.BackendAddressPools = append(*lb.BackendAddressPools, mgmtnetwork.BackendAddressPool{
+		lb.Properties.BackendAddressPools = append(lb.Properties.BackendAddressPools, &armnetwork.BackendAddressPool{
 			Name: &name,
 		})
 	}
@@ -278,7 +282,7 @@ backendAddressPools:
 loadBalancingRules:
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("ssh-%d", i)
-		for _, r := range *lb.LoadBalancingRules {
+		for _, r := range lb.Properties.LoadBalancingRules {
 			if strings.EqualFold(*r.Name, name) {
 				continue loadBalancingRules
 			}
@@ -286,19 +290,19 @@ loadBalancingRules:
 
 		changed = true
 		m.log.Printf("Adding SSH Load Balancing Rule for %s to Internal Load Balancer %s", name, lbName)
-		*lb.LoadBalancingRules = append(*lb.LoadBalancingRules, mgmtnetwork.LoadBalancingRule{
-			LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-				FrontendIPConfiguration: &mgmtnetwork.SubResource{
-					ID: (*lb.FrontendIPConfigurations)[0].ID,
+		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &armnetwork.LoadBalancingRule{
+			Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+				FrontendIPConfiguration: &armnetwork.SubResource{
+					ID: lb.Properties.FrontendIPConfigurations[0].ID,
 				},
-				BackendAddressPool: &mgmtnetwork.SubResource{
+				BackendAddressPool: &armnetwork.SubResource{
 					ID: pointerutils.ToPtr(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
 				},
-				Probe: &mgmtnetwork.SubResource{
+				Probe: &armnetwork.SubResource{
 					ID: pointerutils.ToPtr(*lb.ID + "/probes/ssh"),
 				},
-				Protocol:             mgmtnetwork.TransportProtocolTCP,
-				LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+				Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+				LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 				FrontendPort:         pointerutils.ToPtr(int32(2200) + int32(i)),
 				BackendPort:          pointerutils.ToPtr(int32(22)),
 				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
@@ -308,7 +312,7 @@ loadBalancingRules:
 		})
 	}
 
-	for _, p := range *lb.Probes {
+	for _, p := range lb.Properties.Probes {
 		if strings.EqualFold(*p.Name, "ssh") {
 			return changed
 		}
@@ -316,9 +320,9 @@ loadBalancingRules:
 
 	changed = true
 	m.log.Printf("Adding ssh Health Probe to Internal Load Balancer %s", lbName)
-	*lb.Probes = append(*lb.Probes, mgmtnetwork.Probe{
-		ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-			Protocol:          mgmtnetwork.ProbeProtocolTCP,
+	lb.Properties.Probes = append(lb.Properties.Probes, &armnetwork.Probe{
+		Properties: &armnetwork.ProbePropertiesFormat{
+			Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
 			Port:              pointerutils.ToPtr(int32(22)),
 			IntervalInSeconds: pointerutils.ToPtr(int32(5)),
 			NumberOfProbes:    pointerutils.ToPtr(int32(2)),
