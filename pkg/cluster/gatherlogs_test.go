@@ -5,19 +5,15 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
@@ -89,17 +85,23 @@ func TestLogClusterDeployment(t *testing.T) {
 	}{
 		{
 			name: "no clusterdoc returns empty",
+			want: []string{
+				"skipping step",
+			},
 		},
 		{
 			name:    "no clusterdeployment returns error",
 			doc:     doc,
+			want:    []string{},
 			wantErr: `clusterdeployments.hive.openshift.io "cluster" not found`,
 		},
 		{
 			name: "clusterdeployment present returns clusterdeployment without managed fields",
 			doc:  doc,
 			cd:   cd,
-			want: &hivev1.ClusterDeployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}},
+			want: []string{
+				"clusterdeployment cluster - {'metadata':{'name':'cluster','creationTimestamp':null},'spec':{'clusterName':'','baseDomain':'','platform':{},'controlPlaneConfig':{'servingCertificates':{}},'installed':false},'status':{}}",
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -141,12 +143,15 @@ func TestLogClusterVersion(t *testing.T) {
 	}{
 		{
 			name:    "no cv resource returns err",
+			want:    []string{},
 			wantErr: `clusterversions.config.openshift.io "version" not found`,
 		},
 		{
 			name:    "returns cv resource if present",
 			objects: []kruntime.Object{cvv},
-			want:    &configv1.ClusterVersion{ObjectMeta: metav1.ObjectMeta{Name: "version"}},
+			want: []string{
+				"clusterversion version - {'metadata':{'name':'version','creationTimestamp':null},'spec':{'clusterID':''},'status':{'desired':{'version':'','image':''},'observedGeneration':0,'versionHash':'','capabilities':{},'availableUpdates':null}}",
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -171,31 +176,22 @@ func TestLogNodes(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		objects  []kruntime.Object
-		want     interface{}
+		want     []string
 		wantLogs []map[string]types.GomegaMatcher
 		wantErr  string
 	}{
 		{
 			name:    "returns simple node output and logs full node object",
 			objects: []kruntime.Object{master0Node, master1Node, master2Node},
-			want: fmt.Sprintf("%s - Ready: %s\n%s - Ready: %s\n%s - Ready: %s",
-				master0Node.Name, corev1.ConditionTrue,
-				master1Node.Name, corev1.ConditionFalse,
-				master2Node.Name, corev1.ConditionUnknown),
-			wantLogs: []map[string]types.GomegaMatcher{
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(asJson(master0Node)),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(asJson(master1Node)),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(asJson(master2Node)),
-				},
+			want: []string{
+				"node cluster-aaaaa-master-0 - Ready: True",
+				"node cluster-aaaaa-master-0 - {'metadata':{'name':'cluster-aaaaa-master-0','creationTimestamp':null},'spec':{},'status':{'conditions':[{'type':'Ready','status':'True','lastHeartbeatTime':null,'lastTransitionTime':null}],'daemonEndpoints':{'kubeletEndpoint':{'Port':0}},'nodeInfo':{'machineID':'','systemUUID':'','bootID':'','kernelVersion':'','osImage':'','containerRuntimeVersion':'','kubeletVersion':'','kubeProxyVersion':'','operatingSystem':'','architecture':''}}}",
+				"node cluster-aaaaa-master-1 - Ready: False",
+				"node cluster-aaaaa-master-1 - {'metadata':{'name':'cluster-aaaaa-master-1','creationTimestamp':null},'spec':{},'status':{'conditions':[{'type':'Ready','status':'False','lastHeartbeatTime':null,'lastTransitionTime':null}],'daemonEndpoints':{'kubeletEndpoint':{'Port':0}},'nodeInfo':{'machineID':'','systemUUID':'','bootID':'','kernelVersion':'','osImage':'','containerRuntimeVersion':'','kubeletVersion':'','kubeProxyVersion':'','operatingSystem':'','architecture':''}}}",
+				"node cluster-aaaaa-master-2 - Ready: Unknown",
+				"node cluster-aaaaa-master-2 - {'metadata':{'name':'cluster-aaaaa-master-2','creationTimestamp':null},'spec':{},'status':{'conditions':[{'type':'Ready','status':'Unknown','lastHeartbeatTime':null,'lastTransitionTime':null}],'daemonEndpoints':{'kubeletEndpoint':{'Port':0}},'nodeInfo':{'machineID':'','systemUUID':'','bootID':'','kernelVersion':'','osImage':'','containerRuntimeVersion':'','kubeletVersion':'','kubeProxyVersion':'','operatingSystem':'','architecture':''}}}",
 			},
+			wantLogs: []map[string]types.GomegaMatcher{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -221,26 +217,19 @@ func TestLogClusterOperators(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		objects  []kruntime.Object
-		want     interface{}
+		want     []string
 		wantLogs []map[string]types.GomegaMatcher
 		wantErr  string
 	}{
 		{
 			name:    "returns simple CO output and logs full CO object",
 			objects: []kruntime.Object{aroOperator, machineApiOperator},
-			want: fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s\n%s - Available: %s, Progressing: %s, Degraded: %s",
-				aroOperator.Name, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse,
-				machineApiOperator.Name, configv1.ConditionFalse, configv1.ConditionUnknown, configv1.ConditionTrue),
-			wantLogs: []map[string]types.GomegaMatcher{
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(asJson(aroOperator)),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(asJson(machineApiOperator)),
-				},
-			},
+			want: []string{
+				"clusteroperator aro - Available: True, Progressing: False, Degraded: False",
+				"clusteroperator aro - {'metadata':{'name':'aro','creationTimestamp':null},'spec':{},'status':{'conditions':[{'type':'Available','status':'True','lastTransitionTime':null},{'type':'Progressing','status':'False','lastTransitionTime':null},{'type':'Degraded','status':'False','lastTransitionTime':null}],'extension':null}}",
+				"clusteroperator machine-api - Available: False, Progressing: Unknown, Degraded: True",
+				"clusteroperator machine-api - {'metadata':{'name':'machine-api','creationTimestamp':null},'spec':{},'status':{'conditions':[{'type':'Available','status':'False','lastTransitionTime':null},{'type':'Progressing','status':'Unknown','lastTransitionTime':null},{'type':'Degraded','status':'True','lastTransitionTime':null}],'extension':null}}"},
+			wantLogs: []map[string]types.GomegaMatcher{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -266,21 +255,18 @@ func TestLogIngressControllers(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		objects  []kruntime.Object
-		want     interface{}
+		want     []string
 		wantLogs []map[string]types.GomegaMatcher
 		wantErr  string
 	}{
 		{
 			name:    "returns simple IC output and logs full IC object",
 			objects: []kruntime.Object{defaultIngressController},
-			want: fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s",
-				defaultIngressController.Name, operatorv1.ConditionTrue, operatorv1.ConditionFalse, operatorv1.ConditionFalse),
-			wantLogs: []map[string]types.GomegaMatcher{
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(asJson(defaultIngressController)),
-				},
+			want: []string{
+				"ingresscontroller default - Available: True, Progressing: False, Degraded: False",
+				"ingresscontroller default - {'metadata':{'name':'default','namespace':'openshift-ingress-operator','creationTimestamp':null},'spec':{'httpErrorCodePages':{'name':''},'clientTLS':{'clientCertificatePolicy':'','clientCA':{'name':''}},'tuningOptions':{'reloadInterval':'0s'},'unsupportedConfigOverrides':null,'httpCompression':{}},'status':{'availableReplicas':0,'selector':'','domain':'','conditions':[{'type':'Available','status':'True','lastTransitionTime':null},{'type':'Progressing','status':'False','lastTransitionTime':null},{'type':'Degraded','status':'False','lastTransitionTime':null}]}}",
 			},
+			wantLogs: []map[string]types.GomegaMatcher{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -306,33 +292,23 @@ func TestLogPodLogs(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		objects  []kruntime.Object
-		want     interface{}
+		want     []string
 		wantLogs []map[string]types.GomegaMatcher
 		wantErr  string
 	}{
 		{
 			name: "no pods returns empty and logs nothing",
-			want: []interface{}{},
+			want: []string{},
 		},
 		{
 			name:    "outputs status of aro-operator pods and directly logs pod logs",
 			objects: []kruntime.Object{aroOperatorMasterPod, aroOperatorWorkerPod},
-			want: []interface{}{
-				fmt.Sprintf("pod status %s: %v", aroOperatorMasterPod.Name, aroOperatorMasterPod.Status),
-				fmt.Sprintf("pod status %s: %v", aroOperatorWorkerPod.Name, aroOperatorWorkerPod.Status),
-			},
-			wantLogs: []map[string]types.GomegaMatcher{
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal("fake logs"),
-					"pod":   gomega.Equal(aroOperatorMasterPod.Name),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal("fake logs"),
-					"pod":   gomega.Equal(aroOperatorWorkerPod.Name),
-				},
-			},
+			want: []string{
+				"pod openshift-azure-operator/aro-operator-master-aaaaaaaaa-aaaaa - phase= reason= message=",
+				"pod openshift-azure-operator/aro-operator-master-aaaaaaaaa-aaaaa | fake logs",
+				"pod openshift-azure-operator/aro-operator-worker-bbbbbbbbb-bbbbb - phase= reason= message=",
+				"pod openshift-azure-operator/aro-operator-worker-bbbbbbbbb-bbbbb | fake logs"},
+			wantLogs: []map[string]types.GomegaMatcher{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -352,13 +328,4 @@ func TestLogPodLogs(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
-
-func asJson(r kruntime.Object) string {
-	r = r.DeepCopyObject()
-	a, _ := meta.Accessor(r)
-	a.SetManagedFields(nil)
-
-	json, _ := json.Marshal(r)
-	return string(json)
 }

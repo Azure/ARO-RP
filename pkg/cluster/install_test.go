@@ -113,39 +113,43 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterVersion:.*"name": "version"`),
+					"msg":   gomega.MatchRegexp(`clusterversion version`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`"name":"node"`),
+					"msg":   gomega.MatchRegexp(`node node - Ready: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes:.*node - Ready: Unknown`),
+					"msg":   gomega.MatchRegexp(`node node - {'metadata':.*`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`"name":"operator"`),
+					"msg":   gomega.MatchRegexp(`clusteroperator operator - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators:.*operator - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
+					"msg":   gomega.MatchRegexp(`clusteroperator operator - {'metadata':.*`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`"name":"ingress-controller"`),
+					"msg":   gomega.MatchRegexp(`ingresscontroller ingress-controller - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers:.*ingress-controller - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
+					"msg":   gomega.MatchRegexp(`ingresscontroller ingress-controller - {'metadata':.*`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogVMSerialConsole: vmclient missing`),
+					"msg":   gomega.Equal(`vmclient missing`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterDeployment: null`),
+					"msg":   gomega.Equal(`networkclient missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`skipping step`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
@@ -170,31 +174,31 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterVersion:.*"name": "version"`),
+					"msg":   gomega.MatchRegexp(`clusterversion version - {'metadata':.*`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`"name":"node"`),
+					"msg":   gomega.MatchRegexp(`node node - Ready: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes:.*node - Ready: Unknown`),
+					"msg":   gomega.MatchRegexp(`node node - {'metadata':.*`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`"name":"operator"`),
+					"msg":   gomega.MatchRegexp(`clusteroperator operator - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators:.*operator - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
+					"msg":   gomega.MatchRegexp(`clusteroperator operator - {'metadata':.*`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`"name":"ingress-controller"`),
+					"msg":   gomega.MatchRegexp(`ingresscontroller ingress-controller - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers:.*ingress-controller - Available: Unknown, Progressing: Unknown, Degraded: Unknown`),
+					"msg":   gomega.MatchRegexp(`ingresscontroller ingress-controller - {'metadata':.*`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
@@ -222,24 +226,28 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 					"msg":   gomega.Equal(`clusterversions.config.openshift.io "version" not found`),
 				},
 				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logNodes: `),
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal(`no nodes found`),
+				},
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal(`no cluster operators found`),
+				},
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal(`no ingress controllers found`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterOperators: `),
+					"msg":   gomega.Equal(`vmclient missing`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logIngressControllers: `),
+					"msg":   gomega.Equal(`networkclient missing`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogVMSerialConsole: vmclient missing`),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterDeployment: null`),
+					"msg":   gomega.Equal(`skipping step`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(),
