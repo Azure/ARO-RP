@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 func RemoveFrontendIPConfiguration(lb *armnetwork.LoadBalancer, resourceID string) error {
