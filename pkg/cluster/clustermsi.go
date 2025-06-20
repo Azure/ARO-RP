@@ -38,6 +38,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 			// if the secret's value is empty or the secret is for a different
 			// identity, we need to issue a new certificate
 			if existingMsiCertificate.Value == nil {
+				// MSI cert is empty for some reason, create a new cert
 				needsNewCert = true
 			} else {
 				keyvaultCredentials := &dataplane.ManagedIdentityCredentials{}
@@ -51,19 +52,22 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 					clusterIdentityResourceID = k
 				}
 				if *keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterIdentityResourceID {
+					// cluster update - identity updated, re-request and replace the MSI cert
 					needsNewCert = true
 				}
 			}
 
 			if m.isEligibleForRenewal(existingMsiCertificate) {
+				// cluster update - MSI cert is eligible for refresh
 				needsNewCert = true
 			}
 		}
-	} else if !azureerrors.IsNotFoundError(err) {
-		return err
-	} else {
-		// ie: if there's an error getting the secret but the error isn't a IsNotFoundError
+	} else if azureerrors.IsNotFoundError(err) {
+		// cluster create - request and persist MSI cert
 		needsNewCert = true
+	} else {
+		// ie: when there is an error in the dataplane
+		return err
 	}
 
 	if !needsNewCert {
