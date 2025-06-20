@@ -13,8 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	"k8s.io/utils/ptr"
-
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/checkaccess-v2-go-sdk/client"
@@ -460,7 +458,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
@@ -872,7 +870,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
@@ -899,7 +897,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.14.60")),
+						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.14.60")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
@@ -926,7 +924,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              ptr.To(api.UpgradeableTo("4.13.60")),
+						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.13.60")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,

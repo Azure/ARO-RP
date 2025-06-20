@@ -24,7 +24,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/tracing"
 )
 
@@ -348,7 +347,7 @@ func (oscl OpenShiftClusterList) openShiftClusterListPreparer(ctx context.Contex
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
 		autorest.AsJSON(),
 		autorest.AsGet(),
-		autorest.WithBaseURL(to.String(oscl.NextLink)))
+		autorest.WithBaseURL(*oscl.NextLink))
 }
 
 // OpenShiftClusterListPage contains a page of OpenShiftCluster values.
@@ -715,7 +714,7 @@ func (ol OperationList) operationListPreparer(ctx context.Context) (*http.Reques
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
 		autorest.AsJSON(),
 		autorest.AsGet(),
-		autorest.WithBaseURL(to.String(ol.NextLink)))
+		autorest.WithBaseURL(*ol.NextLink))
 }
 
 // OperationListPage contains a page of Operation values.

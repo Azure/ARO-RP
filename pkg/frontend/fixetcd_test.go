@@ -19,13 +19,12 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	ktesting "k8s.io/client-go/testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	operatorv1fake "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -636,7 +635,7 @@ func newEtcdPods(t *testing.T, doc *api.OpenShiftClusterDocument, healthy, multi
 		{
 			Name:         "etcd",
 			Ready:        false,
-			Started:      to.BoolPtr(false),
+			Started:      pointerutils.ToPtr(false),
 			RestartCount: 50,
 			State: corev1.ContainerState{
 				Waiting: &corev1.ContainerStateWaiting{

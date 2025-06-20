@@ -9,10 +9,10 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -29,9 +29,9 @@ func (g *generator) clusterRouteTable() *arm.Resource {
 		RouteTablePropertiesFormat: &mgmtnetwork.RouteTablePropertiesFormat{
 			Routes: &[]mgmtnetwork.Route{},
 		},
-		Name:     to.StringPtr("[concat(parameters('clusterName'), '-rt')]"),
-		Type:     to.StringPtr("Microsoft.Network/routeTables"),
-		Location: to.StringPtr("[resourceGroup().location]"),
+		Name:     pointerutils.ToPtr("[concat(parameters('clusterName'), '-rt')]"),
+		Type:     pointerutils.ToPtr("Microsoft.Network/routeTables"),
+		Location: pointerutils.ToPtr("[resourceGroup().location]"),
 	}
 
 	return &arm.Resource{
@@ -45,13 +45,13 @@ func (g *generator) clusterMasterSubnet() *arm.Resource {
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 				AddressPrefixes: &[]string{
-					*to.StringPtr("[parameters('masterAddressPrefix')]"),
+					*pointerutils.ToPtr("[parameters('masterAddressPrefix')]"),
 				},
 				RouteTable: &mgmtnetwork.RouteTable{
-					ID: to.StringPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
+					ID: pointerutils.ToPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
 				},
 			},
-			Name: to.StringPtr("[concat('dev-vnet/', parameters('clusterName'), '-master')]"),
+			Name: pointerutils.ToPtr("[concat('dev-vnet/', parameters('clusterName'), '-master')]"),
 		},
 		Type:       "Microsoft.Network/virtualNetworks/subnets",
 		Location:   "[resourceGroup().location]",
@@ -67,12 +67,12 @@ func (g *generator) clusterWorkerSubnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefix: to.StringPtr("[parameters('workerAddressPrefix')]"),
+				AddressPrefix: pointerutils.ToPtr("[parameters('workerAddressPrefix')]"),
 				RouteTable: &mgmtnetwork.RouteTable{
-					ID: to.StringPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
+					ID: pointerutils.ToPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
 				},
 			},
-			Name: to.StringPtr("[concat('dev-vnet/', parameters('clusterName'), '-worker')]"),
+			Name: pointerutils.ToPtr("[concat('dev-vnet/', parameters('clusterName'), '-worker')]"),
 		},
 		Type:       "Microsoft.Network/virtualNetworks/subnets",
 		Location:   "[resourceGroup().location]",
@@ -94,19 +94,19 @@ func (g *generator) diskEncryptionKey() *arm.Resource {
 	key := &mgmtkeyvault.Key{
 		KeyProperties: &mgmtkeyvault.KeyProperties{
 			Kty:     mgmtkeyvault.RSA,
-			KeySize: to.Int32Ptr(4096),
+			KeySize: pointerutils.ToPtr(int32(4096)),
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[concat(parameters('kvName'), '/', %s)]", diskEncryptionKeyName)),
-		Type:     to.StringPtr("Microsoft.KeyVault/vaults/keys"),
-		Location: to.StringPtr("[resourceGroup().location]"),
+		Name:     pointerutils.ToPtr(fmt.Sprintf("[concat(parameters('kvName'), '/', %s)]", diskEncryptionKeyName)),
+		Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults/keys"),
+		Location: pointerutils.ToPtr("[resourceGroup().location]"),
 	}
 
 	return &arm.Resource{
 		Resource:   key,
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 		DependsOn:  []string{"[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"},
-		Condition:  to.StringPtr("[parameters('ci')]"),
+		Condition:  pointerutils.ToPtr("[parameters('ci')]"),
 	}
 }
 
@@ -114,23 +114,23 @@ func (g *generator) diskEncryptionSet() *arm.Resource {
 	diskEncryptionSet := &mgmtcompute.DiskEncryptionSet{
 		EncryptionSetProperties: &mgmtcompute.EncryptionSetProperties{
 			ActiveKey: &mgmtcompute.KeyVaultAndKeyReference{
-				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), %s), '%s', 'Full').properties.keyUriWithVersion]", diskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
+				KeyURL: pointerutils.ToPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), %s), '%s', 'Full').properties.keyUriWithVersion]", diskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
 				SourceVault: &mgmtcompute.SourceVault{
-					ID: to.StringPtr("[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"),
+					ID: pointerutils.ToPtr("[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"),
 				},
 			},
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[%s]", diskEncryptionSetName)),
-		Type:     to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
-		Location: to.StringPtr("[resourceGroup().location]"),
+		Name:     pointerutils.ToPtr(fmt.Sprintf("[%s]", diskEncryptionSetName)),
+		Type:     pointerutils.ToPtr("Microsoft.Compute/diskEncryptionSets"),
+		Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.SystemAssigned},
 	}
 
 	return &arm.Resource{
 		Resource:   diskEncryptionSet,
 		APIVersion: azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"),
-		Condition:  to.StringPtr("[parameters('ci')]"),
+		Condition:  pointerutils.ToPtr("[parameters('ci')]"),
 		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), %s)]", diskEncryptionKeyName)},
 	}
 }
@@ -141,7 +141,7 @@ func (g *generator) diskEncryptionKeyVaultAccessPolicy() *arm.Resource {
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
 					TenantID: &tenantUUIDHack,
-					ObjectID: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", diskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))),
+					ObjectID: pointerutils.ToPtr(fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", diskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))),
 					Permissions: &mgmtkeyvault.Permissions{
 						Keys: &[]mgmtkeyvault.KeyPermissions{
 							mgmtkeyvault.KeyPermissionsGet,
@@ -153,15 +153,15 @@ func (g *generator) diskEncryptionKeyVaultAccessPolicy() *arm.Resource {
 			},
 		},
 
-		Name:     to.StringPtr("[concat(parameters('kvName'), '/add')]"),
-		Type:     to.StringPtr("Microsoft.KeyVault/vaults/accessPolicies"),
-		Location: to.StringPtr("[resourceGroup().location]"),
+		Name:     pointerutils.ToPtr("[concat(parameters('kvName'), '/add')]"),
+		Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults/accessPolicies"),
+		Location: pointerutils.ToPtr("[resourceGroup().location]"),
 	}
 
 	return &arm.Resource{
 		Resource:   accessPolicy,
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
-		Condition:  to.StringPtr("[parameters('ci')]"),
+		Condition:  pointerutils.ToPtr("[parameters('ci')]"),
 		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Compute/diskEncryptionSets', %s)]", diskEncryptionSetName)},
 	}
 }

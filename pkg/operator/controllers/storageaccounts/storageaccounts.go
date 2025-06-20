@@ -11,11 +11,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -93,7 +93,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 
 			if account.NetworkRuleSet != nil && account.NetworkRuleSet.VirtualNetworkRules != nil {
 				for _, rule := range *account.NetworkRuleSet.VirtualNetworkRules {
-					if strings.EqualFold(to.String(rule.VirtualNetworkResourceID), subnet) {
+					if rule.VirtualNetworkResourceID != nil && strings.EqualFold(*rule.VirtualNetworkResourceID, subnet) {
 						found = true
 						break
 					}
@@ -103,7 +103,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			// if rule was not found - we add it
 			if !found {
 				*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-					VirtualNetworkResourceID: to.StringPtr(subnet),
+					VirtualNetworkResourceID: pointerutils.ToPtr(subnet),
 					Action:                   mgmtstorage.ActionAllow,
 				})
 				changed = true

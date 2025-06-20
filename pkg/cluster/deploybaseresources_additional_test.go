@@ -14,12 +14,12 @@ import (
 	"go.uber.org/mock/gomock"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -51,8 +51,8 @@ func TestDenyAssignment(t *testing.T) {
 			},
 			ExpectedExcludePrincipals: &[]mgmtauthorization.Principal{
 				{
-					ID:   to.StringPtr(fakeClusterSPObjectId),
-					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+					ID:   pointerutils.ToPtr(fakeClusterSPObjectId),
+					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 			},
 		},
@@ -83,16 +83,16 @@ func TestDenyAssignment(t *testing.T) {
 			},
 			ExpectedExcludePrincipals: &[]mgmtauthorization.Principal{
 				{
-					ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
-					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+					ID:   pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
+					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 				{
-					ID:   to.StringPtr("88888888-8888-8888-8888-888888888888"),
-					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+					ID:   pointerutils.ToPtr("88888888-8888-8888-8888-888888888888"),
+					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 				{
-					ID:   to.StringPtr("77777777-7777-7777-7777-777777777777"),
-					Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+					ID:   pointerutils.ToPtr("77777777-7777-7777-7777-777777777777"),
+					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 			},
 		},
@@ -157,12 +157,12 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 			},
 			ExpectedArmResource: &arm.Resource{
 				Resource: mgmtauthorization.RoleAssignment{
-					Name: to.StringPtr("[concat('clustertest', '/Microsoft.Authorization/', guid(" + resourceID + "))]"),
-					Type: to.StringPtr(resourceType + "/providers/roleAssignments"),
+					Name: pointerutils.ToPtr("[concat('clustertest', '/Microsoft.Authorization/', guid(" + resourceID + "))]"),
+					Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						Scope:            to.StringPtr("[" + resourceID + "]"),
-						RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleStorageBlobDataContributor + "')]"),
-						PrincipalID:      to.StringPtr("['" + fakePrincipalID + "']"),
+						Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
+						RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleStorageBlobDataContributor + "')]"),
+						PrincipalID:      pointerutils.ToPtr("['" + fakePrincipalID + "']"),
 						PrincipalType:    mgmtauthorization.ServicePrincipal,
 					},
 				},
