@@ -265,7 +265,21 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(alternateCredentialsObject, nil)
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, secretNotFoundError).Times(1)
+				credentialsObjectBuffer, err := json.Marshal(alternateCredentialsObject)
+				if err != nil {
+					panic(err)
+				}
+
+				credentialsObjectString := string(credentialsObjectBuffer)
+				getSecretResponse := azsecrets.GetSecretResponse{
+					Secret: azsecrets.Secret{
+						Value: &credentialsObjectString,
+						Attributes: &azsecrets.SecretAttributes{
+							NotBefore: &placeholderNotEligibleForRotationTime,
+						},
+					},
+				}
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
 				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
 			},
 		},
