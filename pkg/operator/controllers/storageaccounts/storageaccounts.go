@@ -8,11 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
-
 	"k8s.io/apimachinery/pkg/types"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
@@ -55,8 +54,8 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			return err
 		}
 
-		if armSubnet.Subnet.Properties != nil && armSubnet.Subnet.Properties.ServiceEndpoints != nil {
-			for _, serviceEndpoint := range armSubnet.Subnet.Properties.ServiceEndpoints {
+		if armSubnet.Properties != nil && armSubnet.Properties.ServiceEndpoints != nil {
+			for _, serviceEndpoint := range armSubnet.Properties.ServiceEndpoints {
 				isStorageEndpoint := (serviceEndpoint.Service != nil) && (*serviceEndpoint.Service == "Microsoft.Storage")
 				matchesClusterLocation := false
 				if serviceEndpoint.Locations != nil {
