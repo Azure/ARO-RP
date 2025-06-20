@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	AnnotationTimestamp = "aro.openshift.io/lastSubnetReconcileTimestamp"
+	// AnnotationTimestamp is set on the Cluster after subnets are reconciled.
+	AnnotationTimestamp = "aro.openshift.io/subnet-reconciled-timestamp"
 )
 
 func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet) error {
@@ -43,7 +44,7 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 
 	// if the NSG is assigned && it's the correct NSG - do nothing
 	if subnetObject.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
-		return nil
+		return r.updateReconcileSubnetAnnotation(ctx)
 	}
 
 	// else the NSG assignment needs to be corrected
@@ -53,18 +54,30 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	}
 	r.log.Infof("Fixing NSG from %s to %s", oldNSG, correctNSGResourceID)
 	subnetObject.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{ID: &correctNSGResourceID}
-	err = r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject)
-	if err != nil {
+	if err := r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject); err != nil {
 		return err
 	}
-
+	// Stamp the Cluster CR with a reconciliation timestamp so the e2e test picks it up.
 	return r.updateReconcileSubnetAnnotation(ctx)
 }
 
+// updateReconcileSubnetAnnotation writes the current time into the cluster annotation.
 func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) error {
 	if r.instance.Annotations == nil {
 		r.instance.Annotations = make(map[string]string)
 	}
-	r.instance.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
-	return r.client.Update(ctx, r.instance)
+	// Generate RFC1123 GMT timestamp for the e2e test’s annotation check
+	ts := time.Now().UTC().Format(time.RFC1123)
+	r.log.Infof("Annotating Cluster CR with %s=%q", AnnotationTimestamp, ts)
+
+	if _, err := time.Parse(time.RFC1123, ts); err != nil {
+		r.log.Warnf("Failed to parse timestamp %q: %v", ts, err)
+	}
+
+	r.instance.Annotations[AnnotationTimestamp] = ts
+	if err := r.client.Update(ctx, r.instance); err != nil {
+		return fmt.Errorf("updating subnet-reconciled-timestamp: %w", err)
+	}
+
+	return nil
 }
