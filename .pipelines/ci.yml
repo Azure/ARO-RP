@@ -262,30 +262,6 @@ stages:
             displayName: Append must-gather to Pipeline
             condition: Failed()
 
-          - bash: |
-              echo "📥 Fetching ARO Operator logs"
-              docker compose logs rp > rp.log || true
-            displayName: Collect RP logs
-            condition: always()
-
-          - task: PublishBuildArtifacts@1
-            inputs:
-              PathtoPublish: rp.log
-              ArtifactName: rp-logs
-            displayName: Publish RP logs
-            condition: always()
-          # Collect E2E test container logs
-          - bash: |
-              echo "📥 Fetching E2E container logs"
-              docker compose logs e2e > e2e.log || true
-            displayName: 'Collect e2e.log'
-            condition: always()
-          - task: PublishBuildArtifacts@1
-            inputs:
-              PathtoPublish: e2e.log
-              ArtifactName: e2e-logs
-              displayName: 'Publish E2E logs'
-            condition: always()
           # Clean up Docker Compose services
           - bash: |
               docker compose down
