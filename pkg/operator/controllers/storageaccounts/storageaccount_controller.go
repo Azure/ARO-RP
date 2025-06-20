@@ -26,9 +26,14 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 )
 
 const (
@@ -51,7 +56,7 @@ type reconcileManager struct {
 
 	client      client.Client
 	kubeSubnets subnet.KubeManager
-	subnets     subnet.Manager
+	subnets     armnetwork.SubnetsClient
 	storage     storage.AccountsClient
 }
 
@@ -100,6 +105,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
+	tokenCredential, err := azidentity.NewEnvironmentCredential(nil)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	clientOptions := &arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: azEnv.Cloud,
+		},
+	}
+
+	subnetsClient, err := armnetwork.NewSubnetsClient(resource.SubscriptionID, tokenCredential, clientOptions)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	manager := reconcileManager{
 		log:            r.log,
 		instance:       instance,
@@ -107,7 +128,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		client:      r.client,
 		kubeSubnets: subnet.NewKubeManager(r.client, resource.SubscriptionID),
-		subnets:     subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
+		subnets:     subnetsClient,
 		storage:     storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
