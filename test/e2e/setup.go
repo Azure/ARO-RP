@@ -505,7 +505,7 @@ func setup(ctx context.Context) error {
 		_env.Environment(), _env.SubscriptionID(), authAdapter)
 
 	// Only check for leftover clusters in local dev CI, not in release E2E
-	if _env.IsLocalDevelopmentMode() && conf.IsCI {
+	if conf.IsLocalDevelopmentMode() && conf.IsCI {
 		const (
 			maxRetries  = 10
 			waitBetween = 30 * time.Second
