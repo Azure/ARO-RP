@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -33,29 +36,37 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 	// Check each of the cluster subnets for the Microsoft.Storage service endpoint. If the subnet has
 	// the service endpoint, it needs to be included in the storage account vnet rules.
 	for _, subnet := range subnets {
-		mgmtSubnet, err := r.subnets.Get(ctx, subnet.ResourceID)
+		vnetID, subnetName, err := apisubnet.Split(subnet.ResourceID)
+		if err != nil {
+			return err
+		}
+		vnetResource, err := azure.ParseResourceID(vnetID)
+		if err != nil {
+			return err
+		}
+		resourceGroupName := vnetResource.ResourceGroup
+		vnetName := vnetResource.ResourceName
+		armSubnet, err := r.subnets.Get(ctx, resourceGroupName, vnetName, subnetName, nil)
 		if err != nil {
 			if azureerrors.IsNotFoundError(err) {
 				r.log.Infof("Subnet %s not found, skipping", subnet.ResourceID)
-				break
+				continue
 			}
 			return err
 		}
 
-		if mgmtSubnet.SubnetPropertiesFormat != nil && mgmtSubnet.ServiceEndpoints != nil {
-			for _, serviceEndpoint := range *mgmtSubnet.ServiceEndpoints {
+		if armSubnet.Subnet.Properties != nil && armSubnet.Subnet.Properties.ServiceEndpoints != nil {
+			for _, serviceEndpoint := range armSubnet.Subnet.Properties.ServiceEndpoints {
 				isStorageEndpoint := (serviceEndpoint.Service != nil) && (*serviceEndpoint.Service == "Microsoft.Storage")
 				matchesClusterLocation := false
-
 				if serviceEndpoint.Locations != nil {
-					for _, l := range *serviceEndpoint.Locations {
-						if l == "*" || l == location {
+					for _, l := range serviceEndpoint.Locations {
+						if l != nil && (*l == "*" || *l == location) {
 							matchesClusterLocation = true
 							break
 						}
 					}
 				}
-
 				if isStorageEndpoint && matchesClusterLocation {
 					serviceSubnets = append(serviceSubnets, subnet.ResourceID)
 					break
