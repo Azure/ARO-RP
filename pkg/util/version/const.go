@@ -19,7 +19,6 @@ const (
 	DevRPGenevaLoggingConfigVersion      = "4.3"
 	DevRPGenevaLoggingNamespace          = "ARORPLogs"
 	DevRPGenevaMetricsAccount            = "AzureRedHatOpenShiftRP"
-
 	DevGatewayGenevaLoggingConfigVersion = "4.3"
 )
 
