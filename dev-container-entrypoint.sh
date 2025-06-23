@@ -7,7 +7,7 @@ if [ -f "/workspace/env" ]; then
   set +a
 fi
 
-# --- Ensure Go version matches go.mod ---
+# Ensure Go version matches go.mod
 GO_MOD_PATH="/workspace/go.mod"
 REQ_GO_VERSION=$(awk '/^go / {print $2}' "$GO_MOD_PATH")
 CURRENT_GO_VERSION=$(/usr/local/go/bin/go version 2>/dev/null | awk '{print $3}' | sed 's/go//')
@@ -19,6 +19,18 @@ if [ "$REQ_GO_VERSION" != "$CURRENT_GO_VERSION" ]; then
   rm /tmp/go.tar.gz
 fi
 export PATH="/usr/local/go/bin:$PATH"
+export PATH="/root/go/bin:$PATH"
+
+# Install Go tools using bingo if .bingo directory exists
+if [ -d "/workspace/.bingo" ]; then
+  if ! command -v bingo &> /dev/null; then
+    go install github.com/bwplotka/bingo@latest
+  fi
+  cd /workspace
+  bingo get
+  export PATH="/workspace/.bingo/bin:$PATH"
+  cd -
+fi
 
 # Run the command provided by docker-compose
 exec "$@"
