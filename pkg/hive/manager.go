@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -63,8 +62,10 @@ type clusterManager struct {
 }
 
 type SyncSetManager interface {
-	List(ctx context.Context, namespace string, label string, listType reflect.Type) (interface{}, error)
-	Get(ctx context.Context, namespace string, name string, getType reflect.Type) (interface{}, error)
+	ListSyncSets(ctx context.Context, namespace string, label string) ([]hivev1.SyncSet, error)
+	GetSyncSet(ctx context.Context, namespace string, name string) (*hivev1.SyncSet, error)
+	ListSelectorSyncSets(ctx context.Context, namespace string, label string) ([]hivev1.SelectorSyncSet, error)
+	GetSelectorSyncSet(ctx context.Context, namespace string, name string) (*hivev1.SelectorSyncSet, error)
 }
 
 type syncSetManager struct {
@@ -343,15 +344,10 @@ func (hr *clusterManager) GetClusterSync(ctx context.Context, doc *api.OpenShift
 	return clusterSync, nil
 }
 
-func (hr *syncSetManager) List(ctx context.Context, namespace string, label string, listType reflect.Type) (interface{}, error) {
-	list := reflect.New(listType).Interface()
-	objectList, ok := list.(client.ObjectList)
-	if !ok {
-		return nil, fmt.Errorf("provided type %T does not implement client.ObjectList", list)
-	}
-
+func (hr *syncSetManager) ListSyncSets(ctx context.Context, namespace string, label string) ([]hivev1.SyncSet, error) {
+	syncSetList := &hivev1.SyncSetList{}
 	selector, _ := labels.Parse(label)
-	err := hr.hiveClientset.List(ctx, objectList, &client.ListOptions{
+	err := hr.hiveClientset.List(ctx, syncSetList, &client.ListOptions{
 		Namespace:     namespace,
 		LabelSelector: selector,
 	})
@@ -359,16 +355,42 @@ func (hr *syncSetManager) List(ctx context.Context, namespace string, label stri
 		hr.log.WithError(err).Warn("could not list syncsets")
 		return nil, err
 	}
-
-	return list, nil
+	return syncSetList.Items, nil
 }
 
-func (hr *syncSetManager) Get(ctx context.Context, namespace string, name string, getType reflect.Type) (interface{}, error) {
-	get := reflect.New(getType).Interface()
+func (hr *syncSetManager) GetSyncSet(ctx context.Context, namespace string, name string) (*hivev1.SyncSet, error) {
+	get := &hivev1.SyncSet{}
 	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
 		Namespace: namespace,
 		Name:      name,
-	}, get.(client.Object))
+	}, get)
+	if err != nil {
+		return nil, err
+	}
+
+	return get, nil
+}
+
+func (hr *syncSetManager) ListSelectorSyncSets(ctx context.Context, namespace string, label string) ([]hivev1.SelectorSyncSet, error) {
+	selectorSyncSetList := &hivev1.SelectorSyncSetList{}
+	selector, _ := labels.Parse(label)
+	err := hr.hiveClientset.List(ctx, selectorSyncSetList, &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: selector,
+	})
+	if err != nil {
+		hr.log.WithError(err).Warn("could not list selectorsyncsets")
+		return nil, err
+	}
+	return selectorSyncSetList.Items, nil
+}
+
+func (hr *syncSetManager) GetSelectorSyncSet(ctx context.Context, namespace string, name string) (*hivev1.SelectorSyncSet, error) {
+	get := &hivev1.SelectorSyncSet{}
+	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}, get)
 	if err != nil {
 		return nil, err
 	}

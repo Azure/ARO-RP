@@ -5,14 +5,11 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
-	"reflect"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
-	"github.com/ugorji/go/codec"
-
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -42,16 +39,10 @@ func (f *frontend) listAdminHiveSyncSet(w http.ResponseWriter, r *http.Request) 
 }
 
 func (f *frontend) _listAdminHiveSyncSet(ctx context.Context, namespace string, label string, isSyncSet bool) ([]byte, error) {
-	// we have to check if the frontend has a valid syncSetManager since hive is not everywhere.
 	if f.hiveSyncSetManager == nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "hive is not enabled")
 	}
 
-	// defaults to listing selectorSyncSets for an AKS instance
-	ssType := reflect.TypeOf(hivev1.SelectorSyncSetList{})
-	if isSyncSet {
-		ssType = reflect.TypeOf(hivev1.SyncSetList{})
-	}
 	if isSyncSet && namespace == "" {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "namespace cannot be null for listing syncsets")
 	}
@@ -59,17 +50,61 @@ func (f *frontend) _listAdminHiveSyncSet(ctx context.Context, namespace string, 
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "namespace should be null for listing selectorsyncsets")
 	}
 
-	ss, err := f.hiveSyncSetManager.List(ctx, namespace, label, ssType)
-
-	if err != nil {
-		return nil, err
-	}
-
 	var b []byte
-	err = codec.NewEncoderBytes(&b, &codec.JsonHandle{}).Encode(ss)
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "unable to marshal response")
+	if isSyncSet {
+		items, err := f.hiveSyncSetManager.ListSyncSets(ctx, namespace, label)
+		if err != nil {
+			return nil, err
+		}
+		type minimalMeta struct {
+			Name      string `json:"name"`
+			Namespace string `json:"namespace"`
+		}
+		type minimalSyncSet struct {
+			Metadata minimalMeta `json:"metadata"`
+		}
+		var result []minimalSyncSet
+		for _, ss := range items {
+			result = append(result, minimalSyncSet{
+				Metadata: minimalMeta{
+					Name:      ss.Name,
+					Namespace: ss.Namespace,
+				},
+			})
+		}
+		b, err = json.Marshal(struct {
+			Items interface{} `json:"items"`
+		}{Items: result})
+		if err != nil {
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "unable to marshal response")
+		}
+	} else {
+		items, err := f.hiveSyncSetManager.ListSelectorSyncSets(ctx, namespace, label)
+		if err != nil {
+			return nil, err
+		}
+		type minimalMeta struct {
+			Name      string `json:"name"`
+			Namespace string `json:"namespace"`
+		}
+		type minimalSelectorSyncSet struct {
+			Metadata minimalMeta `json:"metadata"`
+		}
+		var result []minimalSelectorSyncSet
+		for _, ss := range items {
+			result = append(result, minimalSelectorSyncSet{
+				Metadata: minimalMeta{
+					Name:      ss.Name,
+					Namespace: ss.Namespace,
+				},
+			})
+		}
+		b, err = json.Marshal(struct {
+			Items interface{} `json:"items"`
+		}{Items: result})
+		if err != nil {
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "unable to marshal response")
+		}
 	}
-
 	return b, nil
 }

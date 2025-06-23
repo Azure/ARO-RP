@@ -203,32 +203,62 @@ func (m *MockSyncSetManager) EXPECT() *MockSyncSetManagerMockRecorder {
 	return m.recorder
 }
 
-// Get mocks base method.
-func (m *MockSyncSetManager) Get(ctx context.Context, namespace, name string, getType reflect.Type) (any, error) {
+// GetSelectorSyncSet mocks base method.
+func (m *MockSyncSetManager) GetSelectorSyncSet(ctx context.Context, namespace, name string) (*v1.SelectorSyncSet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, namespace, name, getType)
-	ret0, _ := ret[0].(any)
+	ret := m.ctrl.Call(m, "GetSelectorSyncSet", ctx, namespace, name)
+	ret0, _ := ret[0].(*v1.SelectorSyncSet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get.
-func (mr *MockSyncSetManagerMockRecorder) Get(ctx, namespace, name, getType any) *gomock.Call {
+// GetSelectorSyncSet indicates an expected call of GetSelectorSyncSet.
+func (mr *MockSyncSetManagerMockRecorder) GetSelectorSyncSet(ctx, namespace, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSyncSetManager)(nil).Get), ctx, namespace, name, getType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSelectorSyncSet", reflect.TypeOf((*MockSyncSetManager)(nil).GetSelectorSyncSet), ctx, namespace, name)
 }
 
-// List mocks base method.
-func (m *MockSyncSetManager) List(ctx context.Context, namespace, label string, listType reflect.Type) (any, error) {
+// GetSyncSet mocks base method.
+func (m *MockSyncSetManager) GetSyncSet(ctx context.Context, namespace, name string) (*v1.SyncSet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, namespace, label, listType)
-	ret0, _ := ret[0].(any)
+	ret := m.ctrl.Call(m, "GetSyncSet", ctx, namespace, name)
+	ret0, _ := ret[0].(*v1.SyncSet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// List indicates an expected call of List.
-func (mr *MockSyncSetManagerMockRecorder) List(ctx, namespace, label, listType any) *gomock.Call {
+// GetSyncSet indicates an expected call of GetSyncSet.
+func (mr *MockSyncSetManagerMockRecorder) GetSyncSet(ctx, namespace, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSyncSetManager)(nil).List), ctx, namespace, label, listType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncSet", reflect.TypeOf((*MockSyncSetManager)(nil).GetSyncSet), ctx, namespace, name)
+}
+
+// ListSelectorSyncSets mocks base method.
+func (m *MockSyncSetManager) ListSelectorSyncSets(ctx context.Context, namespace, label string) ([]v1.SelectorSyncSet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSelectorSyncSets", ctx, namespace, label)
+	ret0, _ := ret[0].([]v1.SelectorSyncSet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSelectorSyncSets indicates an expected call of ListSelectorSyncSets.
+func (mr *MockSyncSetManagerMockRecorder) ListSelectorSyncSets(ctx, namespace, label any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSelectorSyncSets", reflect.TypeOf((*MockSyncSetManager)(nil).ListSelectorSyncSets), ctx, namespace, label)
+}
+
+// ListSyncSets mocks base method.
+func (m *MockSyncSetManager) ListSyncSets(ctx context.Context, namespace, label string) ([]v1.SyncSet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSyncSets", ctx, namespace, label)
+	ret0, _ := ret[0].([]v1.SyncSet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSyncSets indicates an expected call of ListSyncSets.
+func (mr *MockSyncSetManagerMockRecorder) ListSyncSets(ctx, namespace, label any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSyncSets", reflect.TypeOf((*MockSyncSetManager)(nil).ListSyncSets), ctx, namespace, label)
 }
