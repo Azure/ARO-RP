@@ -506,6 +506,9 @@ func setup(ctx context.Context) error {
 
 	// Only check for leftover clusters in local dev CI, not in release E2E
 	if conf.IsLocalDevelopmentMode() && conf.IsCI {
+		// debug - don't merge
+		log.Infof("RP_MODE=%s, CI=%s", os.Getenv("RP_MODE"), os.Getenv("CI"))
+
 		const (
 			maxRetries  = 10
 			waitBetween = 30 * time.Second
