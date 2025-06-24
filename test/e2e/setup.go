@@ -504,7 +504,8 @@ func setup(ctx context.Context) error {
 	azOCClient := redhatopenshift20240812preview.NewOpenShiftClustersClient(
 		_env.Environment(), _env.SubscriptionID(), authAdapter)
 
-	if conf.IsCI {
+	// Only check for leftover clusters in local dev CI, not in release E2E
+	if conf.IsLocalDevelopmentMode() && conf.IsCI {
 		const (
 			maxRetries  = 10
 			waitBetween = 30 * time.Second
