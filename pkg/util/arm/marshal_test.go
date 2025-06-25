@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	armcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
-	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiljson "github.com/Azure/ARO-RP/test/util/json"
