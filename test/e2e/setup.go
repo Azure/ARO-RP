@@ -507,8 +507,13 @@ func setup(ctx context.Context) error {
 		_env.Environment(), _env.SubscriptionID(), authAdapter,
 	)
 
+	// Determine if this is a PR build:
+	buildReason := os.Getenv("BUILD_REASON")
+	sourceBranch := os.Getenv("BUILD_SOURCEBRANCH")
+	isPR := buildReason == "PullRequest" || strings.HasPrefix(sourceBranch, "refs/pull/")
+
 	// Only run leftover-cluster logic on PR-based E2E (skip in release builds)
-	if conf.IsLocalDevelopmentMode() && conf.IsCI && os.Getenv("SYSTEM_PULLREQUEST_PULLREQUESTID") != "" {
+	if conf.IsLocalDevelopmentMode() && conf.IsCI && isPR {
 		const (
 			maxRetries  = 10
 			waitBetween = 30 * time.Second
