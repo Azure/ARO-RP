@@ -435,7 +435,6 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 
 				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
-
 				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		}
