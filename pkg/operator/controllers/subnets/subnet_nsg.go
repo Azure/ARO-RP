@@ -43,8 +43,9 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	}
 
 	// if the NSG is assigned && it's the correct NSG - do nothing
+	// if the NSG is assigned && it's the correct NSG - do nothing
 	if subnetObject.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
-		return r.updateReconcileSubnetAnnotation(ctx)
+		return nil
 	}
 
 	// else the NSG assignment needs to be corrected
@@ -66,18 +67,6 @@ func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) 
 	if r.instance.Annotations == nil {
 		r.instance.Annotations = make(map[string]string)
 	}
-	// Generate RFC1123 GMT timestamp for the e2e test’s annotation check
-	ts := time.Now().UTC().Format(time.RFC1123)
-	r.log.Infof("Annotating Cluster CR with %s=%q", AnnotationTimestamp, ts)
-
-	if _, err := time.Parse(time.RFC1123, ts); err != nil {
-		r.log.Warnf("Failed to parse timestamp %q: %v", ts, err)
-	}
-
-	r.instance.Annotations[AnnotationTimestamp] = ts
-	if err := r.client.Update(ctx, r.instance); err != nil {
-		return fmt.Errorf("updating subnet-reconciled-timestamp: %w", err)
-	}
-
-	return nil
+	r.instance.Annotations[AnnotationTimestamp] = time.Now().UTC().Format(time.RFC1123)
+	return r.client.Update(ctx, r.instance)
 }
