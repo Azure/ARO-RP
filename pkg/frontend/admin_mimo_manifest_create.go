@@ -21,7 +21,7 @@ func (f *frontend) putAdminMaintManifestCreate(w http.ResponseWriter, r *http.Re
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	resourceID := resourceIdFromURLParams(r)
-	b, err := f._putAdminMaintManifestCreate(ctx, r, resourceID)
+	b, err := f._putAdminMaintManifestCreate(ctx, r, resourceID, "")
 
 	if cloudErr, ok := err.(*api.CloudError); ok {
 		api.WriteCloudError(w, cloudErr)
@@ -35,11 +35,6 @@ func (f *frontend) putAdminMaintManifestCreate(w http.ResponseWriter, r *http.Re
 func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Request, resourceID string, maintenanceTaskID string) ([]byte, error) {
 	converter := f.apis[admin.APIVersion].MaintenanceManifestConverter
 	validator := f.apis[admin.APIVersion].MaintenanceManifestStaticValidator
-
-	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	if len(body) == 0 || !json.Valid(body) {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized.")
-	}
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
@@ -61,18 +56,24 @@ func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Req
 	}
 
 	var ext *admin.MaintenanceManifest
-	err = json.Unmarshal(body, &ext)
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: "+err.Error())
+
+	if maintenanceTaskID != "" {
+		ext = &admin.MaintenanceManifest{}
+		ext.MaintenanceTaskID = maintenanceTaskID
+	} else {
+		body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+		if len(body) == 0 || !json.Valid(body) {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized.")
+		}
+		err = json.Unmarshal(body, &ext)
+		if err != nil {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: "+err.Error())
+		}
 	}
 
 	// fill in some defaults
 	ext.ID = dbMaintenanceManifests.NewUUID()
 	ext.State = admin.MaintenanceManifestStatePending
-
-	if maintenanceTaskID != "" {
-		ext.MaintenanceTaskID = maintenanceTaskID
-	}
 
 	if ext.RunAfter == 0 {
 		ext.RunAfter = int(f.now().Unix())
