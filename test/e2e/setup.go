@@ -6,8 +6,10 @@ package e2e
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"math"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -502,40 +504,51 @@ func setup(ctx context.Context) error {
 	scopes := []string{_env.Environment().ResourceManagerScope}
 	authAdapter := azidext.NewTokenCredentialAdapter(tokenCred, scopes)
 	azOCClient := redhatopenshift20240812preview.NewOpenShiftClustersClient(
-		_env.Environment(), _env.SubscriptionID(), authAdapter)
+		_env.Environment(), _env.SubscriptionID(), authAdapter,
+	)
 
-	// Only check for leftover clusters in local dev CI, not in release E2E
-	if conf.IsLocalDevelopmentMode() && conf.IsCI {
+	// Only run leftover-cluster logic on PR-based E2E (skip in release builds)
+	if conf.IsLocalDevelopmentMode() && conf.IsCI && os.Getenv("SYSTEM_PULLREQUEST_PULLREQUESTID") != "" {
 		const (
 			maxRetries  = 10
 			waitBetween = 30 * time.Second
 		)
-		totalWait := time.Duration(maxRetries) * waitBetween
 
 		for attempt := 1; attempt <= maxRetries; attempt++ {
 			doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
 			if err != nil {
-				if strings.Contains(err.Error(), "not found") {
-					log.Infof("No leftover cluster found on attempt %d; proceeding", attempt)
+				// Treat any ARM 404 as “no leftover cluster”
+				var respErr *azcore.ResponseError
+				if errors.As(err, &respErr) && respErr.StatusCode == http.StatusNotFound {
+					log.Infof("No leftover cluster found (404) on attempt %d; proceeding", attempt)
 					break
 				}
 				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
 			}
 
 			if doc.ProvisioningState != mgmtredhatopenshift20240812preview.Deleting {
-				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
+				return fmt.Errorf(
+					"unexpected state %s on attempt %d; aborting",
+					doc.ProvisioningState, attempt,
+				)
 			}
 
 			if attempt == maxRetries {
-				return fmt.Errorf("cluster still stuck in Deleting after %s; aborting", totalWait)
+				totalWait := time.Duration(maxRetries) * waitBetween
+				return fmt.Errorf(
+					"cluster still stuck in Deleting after %s; aborting",
+					totalWait,
+				)
 			}
 
-			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
+			log.Infof(
+				"Cluster still deleting (%d/%d); retrying in %s",
+				attempt, maxRetries, waitBetween,
+			)
 			time.Sleep(waitBetween)
 		}
 
 		// Old cluster is gone, create the new one
-
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
@@ -543,6 +556,9 @@ func setup(ctx context.Context) error {
 		if err = cluster.Create(ctx); err != nil {
 			return err
 		}
+	} else {
+		// This runs in release-E2E or non-CI runs
+		log.Infof("Skipping leftover-cluster check because this is not a PR build")
 	}
 
 	vnetResourceGroup = conf.VnetResourceGroup
