@@ -373,6 +373,18 @@ def validate_cluster_identity(cmd, namespace):
         raise InvalidArgumentValueError(f"Resource {namespace.mi_user_assigned} used for cluster user assigned identity is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
 
 
+def validate_cluster_identity_update(cmd, namespace):
+    if namespace.mi_user_assigned is None:
+        return
+
+    if not is_valid_resource_id(namespace.mi_user_assigned):
+        namespace.mi_user_assigned = identity_name_to_resource_id(
+            cmd, namespace, namespace.mi_user_assigned)
+
+    if not is_valid_identity_resource_id(namespace.mi_user_assigned):
+        raise InvalidArgumentValueError(f"Resource {namespace.mi_user_assigned} used for cluster user assigned identity is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
+
+
 def validate_delete_identities(namespace):
     if namespace.delete_identities is None:
         return

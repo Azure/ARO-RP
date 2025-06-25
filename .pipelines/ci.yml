@@ -78,7 +78,7 @@ stages:
           - checkout: self
           - task: Docker@2
             inputs:
-              command: 'login'
+              command: "login"
               containerRegistry: arointsvc #service connection name
 
           # Build and Test Az ARO Extension
@@ -91,8 +91,8 @@ stages:
           # Push the image to ACR
           - template: ./templates/template-acr-push.yml
             parameters:
-              acrFQDN: 'arosvcdev.azurecr.io'
-              repository: 'azext-aro'
+              acrFQDN: "arosvcdev.azurecr.io"
+              repository: "azext-aro"
               tag: $(TAG)
               pushLatest: true
 
@@ -103,7 +103,7 @@ stages:
           - template: ./templates/template-checkout.yml
           - task: Docker@2
             inputs:
-              command: 'login'
+              command: "login"
               containerRegistry: arointsvc #service connection name
 
           # Build and test RP and Portal
@@ -131,8 +131,8 @@ stages:
           # Push the RP image to ACR
           - template: ./templates/template-acr-push.yml
             parameters:
-              acrFQDN: 'arosvcdev.azurecr.io'
-              repository: 'aro'
+              acrFQDN: "arosvcdev.azurecr.io"
+              repository: "aro"
               tag: $(TAG)
               pushLatest: true
 
@@ -143,7 +143,7 @@ stages:
           - template: ./templates/template-checkout.yml
           - task: Docker@2
             inputs:
-              command: 'login'
+              command: "login"
               containerRegistry: arointsvc #service connection name
 
           # Build the E2E image
@@ -155,12 +155,12 @@ stages:
           # Push the E2E image to ACR
           - template: ./templates/template-acr-push.yml
             parameters:
-              acrFQDN: 'arosvcdev.azurecr.io'
-              repository: 'e2e'
+              acrFQDN: "arosvcdev.azurecr.io"
+              repository: "e2e"
               tag: $(TAG)
               pushLatest: true
 
-  - stage: E2E  # E2E Stage using Docker Compose
+  - stage: E2E # E2E Stage using Docker Compose
     dependsOn: [Set_Tag_Stage, Containerized_CI]
     variables:
       TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variable.outputs['SetTag.TAG'] ]
@@ -180,7 +180,7 @@ stages:
             displayName: Install Docker and Docker Compose
           - task: Docker@2
             inputs:
-              command: 'login'
+              command: "login"
               containerRegistry: arointsvc #service connection name
 
           # AZ CLI Login
@@ -226,6 +226,7 @@ stages:
 
               deploy_e2e_db
               register_sub
+              docker compose build vpn
               docker compose up --quiet-pull --exit-code-from e2e e2e
               # Check if the E2E tests failed
               E2E_EXIT_CODE=$?

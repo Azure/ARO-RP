@@ -16,17 +16,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"k8s.io/utils/ptr"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -182,17 +179,17 @@ func TestShouldDeleteResourceGroup(t *testing.T) {
 		},
 		{
 			name:             "resource group not managed (empty string)",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: to.StringPtr("")},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr("")},
 			wantShouldDelete: false,
 		},
 		{
 			name:             "resource group not managed by cluster",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: to.StringPtr("/somethingelse")},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr("/somethingelse")},
 			wantShouldDelete: false,
 		},
 		{
 			name:             "resource group managed by cluster",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: to.StringPtr(clusterResourceId)},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr(clusterResourceId)},
 			wantShouldDelete: true,
 		},
 	}
@@ -309,7 +306,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_subnet.MockManager) {
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
-						ID: ptr.To(nsgId),
+						ID: pointerutils.ToPtr(nsgId),
 						Properties: &armnetwork.SecurityGroupPropertiesFormat{
 							Subnets: []*armnetwork.Subnet{},
 						},
@@ -325,11 +322,11 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 				subnetId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
-						ID: ptr.To(nsgId),
+						ID: pointerutils.ToPtr(nsgId),
 						Properties: &armnetwork.SecurityGroupPropertiesFormat{
 							Subnets: []*armnetwork.Subnet{
 								{
-									ID: ptr.To(subnetId),
+									ID: pointerutils.ToPtr(subnetId),
 								},
 							},
 						},
@@ -337,15 +334,15 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 				}
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
 				subnets.EXPECT().Get(gomock.Any(), subnetId).Return(&mgmtnetwork.Subnet{
-					ID: ptr.To(subnetId),
+					ID: pointerutils.ToPtr(subnetId),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: ptr.To(nsgId),
+							ID: pointerutils.ToPtr(nsgId),
 						},
 					},
 				}, nil).Times(1)
 				subnets.EXPECT().CreateOrUpdate(gomock.Any(), subnetId, &mgmtnetwork.Subnet{
-					ID:                     ptr.To(subnetId),
+					ID:                     pointerutils.ToPtr(subnetId),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{},
 				}).Return(nil).Times(1)
 			},
@@ -571,11 +568,13 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -594,7 +593,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
@@ -627,12 +626,14 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -651,7 +652,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: nil,
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -680,7 +681,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -692,7 +693,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -715,7 +718,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -727,7 +730,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -777,7 +782,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -786,7 +791,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -841,7 +848,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
@@ -850,7 +857,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -871,7 +880,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -880,7 +889,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},
@@ -904,7 +915,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -913,7 +924,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 						},
 					},
 					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
 					},
 				},
 			},

@@ -12,12 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	"k8s.io/utils/ptr"
-
-	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -25,37 +22,38 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiljson "github.com/Azure/ARO-RP/test/util/json"
 )
 
 func validListByResourceGroupMock(resources *mock_features.MockResourcesClient) {
 	resources.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 		{
-			Name: to.StringPtr("vm-1"),
-			ID:   to.StringPtr("/subscriptions/id"),
-			Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
+			Name: pointerutils.ToPtr("vm-1"),
+			ID:   pointerutils.ToPtr("/subscriptions/id"),
+			Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
 		},
 		{
-			Name: to.StringPtr("storage"),
-			ID:   to.StringPtr("/subscriptions/id"),
-			Type: to.StringPtr("Microsoft.Storage/storageAccounts"),
+			Name: pointerutils.ToPtr("storage"),
+			ID:   pointerutils.ToPtr("/subscriptions/id"),
+			Type: pointerutils.ToPtr("Microsoft.Storage/storageAccounts"),
 		},
 	}, nil)
 
 	resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersion("Microsoft.Storage")).Return(mgmtfeatures.GenericResource{
-		Name:     to.StringPtr("storage"),
-		ID:       to.StringPtr("/subscriptions/id"),
-		Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
-		Location: to.StringPtr("eastus"),
+		Name:     pointerutils.ToPtr("storage"),
+		ID:       pointerutils.ToPtr("/subscriptions/id"),
+		Type:     pointerutils.ToPtr("Microsoft.Storage/storageAccounts"),
+		Location: pointerutils.ToPtr("eastus"),
 	}, nil)
 }
 
 func validVirtualMachinesMock(virtualMachines *mock_compute.MockVirtualMachinesClient) {
 	virtualMachines.EXPECT().Get(gomock.Any(), "test-cluster", "vm-1", mgmtcompute.InstanceView).Return(mgmtcompute.VirtualMachine{
-		ID:   to.StringPtr("/subscriptions/id"),
-		Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
+		ID:   pointerutils.ToPtr("/subscriptions/id"),
+		Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
 		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-			ProvisioningState: to.StringPtr("Succeeded"),
+			ProvisioningState: pointerutils.ToPtr("Succeeded"),
 		},
 	}, nil).AnyTimes()
 }
@@ -63,21 +61,21 @@ func validVirtualMachinesMock(virtualMachines *mock_compute.MockVirtualMachinesC
 func validVirtualNetworksMock(virtualNetworks *mock_armnetwork.MockVirtualNetworksClient, routeTables *mock_armnetwork.MockRouteTablesClient, mockSubID string) {
 	virtualNetworks.EXPECT().Get(gomock.Any(), "test-cluster", "test-vnet", nil).Return(sdknetwork.VirtualNetworksClientGetResponse{
 		VirtualNetwork: sdknetwork.VirtualNetwork{
-			ID:   ptr.To("/subscriptions/id"),
-			Type: ptr.To("Microsoft.Network/virtualNetworks"),
+			ID:   pointerutils.ToPtr("/subscriptions/id"),
+			Type: pointerutils.ToPtr("Microsoft.Network/virtualNetworks"),
 			Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
 				DhcpOptions: &sdknetwork.DhcpOptions{
 					DNSServers: []*string{},
 				},
 				Subnets: []*sdknetwork.Subnet{
 					{
-						ID: ptr.To(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID)),
+						ID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID)),
 						Properties: &sdknetwork.SubnetPropertiesFormat{
 							RouteTable: &sdknetwork.RouteTable{
-								ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"),
+								ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"),
 							},
 							NetworkSecurityGroup: &sdknetwork.SecurityGroup{
-								ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/networkSecurityGroups/test-nsg"),
+								ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/networkSecurityGroups/test-nsg"),
 							},
 						},
 					},
@@ -88,47 +86,47 @@ func validVirtualNetworksMock(virtualNetworks *mock_armnetwork.MockVirtualNetwor
 
 	routeTables.EXPECT().Get(gomock.Any(), "mockrg", "routetable1", nil).Return(sdknetwork.RouteTablesClientGetResponse{
 		RouteTable: sdknetwork.RouteTable{
-			ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"),
-			Name: ptr.To("routetable1"),
+			ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"),
+			Name: pointerutils.ToPtr("routetable1"),
 		},
 	}, nil)
 }
 
 func validDiskEncryptionSetsMock(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
 	diskEncryptionSets.EXPECT().Get(gomock.Any(), "test-cluster", "test-cluster-des").Return(mgmtcompute.DiskEncryptionSet{
-		ID:   to.StringPtr("/subscriptions/id"),
-		Type: to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
+		ID:   pointerutils.ToPtr("/subscriptions/id"),
+		Type: pointerutils.ToPtr("Microsoft.Compute/diskEncryptionSets"),
 	}, nil)
 }
 
 func networkSecurityGroupMock(virtualNetworks *mock_armnetwork.MockVirtualNetworksClient, securityGroups *mock_armnetwork.MockSecurityGroupsClient) {
 	virtualNetworks.EXPECT().Get(gomock.Any(), "test-cluster", "test-vnet", nil).Return(sdknetwork.VirtualNetworksClientGetResponse{
 		VirtualNetwork: sdknetwork.VirtualNetwork{
-			ID:   ptr.To("/subscriptions/id"),
-			Type: ptr.To("Microsoft.Network/virtualNetworks"),
+			ID:   pointerutils.ToPtr("/subscriptions/id"),
+			Type: pointerutils.ToPtr("Microsoft.Network/virtualNetworks"),
 			Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
 				DhcpOptions: &sdknetwork.DhcpOptions{
 					DNSServers: []*string{},
 				},
 				Subnets: []*sdknetwork.Subnet{
 					{
-						ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"),
+						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"),
 						Properties: &sdknetwork.SubnetPropertiesFormat{
 							NetworkSecurityGroup: &sdknetwork.SecurityGroup{
-								ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/networkSecurityGroups/test-nsg"),
+								ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/networkSecurityGroups/test-nsg"),
 							},
 						},
 					},
 					{
-						ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker1"),
+						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker1"),
 						Properties: &sdknetwork.SubnetPropertiesFormat{
 							NetworkSecurityGroup: &sdknetwork.SecurityGroup{
-								ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/byo-rg/providers/Microsoft.Network/networkSecurityGroups/byo-nsg"),
+								ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/byo-rg/providers/Microsoft.Network/networkSecurityGroups/byo-nsg"),
 							},
 						},
 					},
 					{
-						ID:         ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker2"),
+						ID:         pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker2"),
 						Properties: &sdknetwork.SubnetPropertiesFormat{},
 					},
 				},
@@ -137,13 +135,13 @@ func networkSecurityGroupMock(virtualNetworks *mock_armnetwork.MockVirtualNetwor
 	}, nil)
 	securityGroups.EXPECT().Get(gomock.Any(), "byo-rg", "byo-nsg", nil).Return(sdknetwork.SecurityGroupsClientGetResponse{
 		SecurityGroup: sdknetwork.SecurityGroup{
-			ID:   ptr.To("/subscriptions/id"),
-			Type: ptr.To("Microsoft.Network/networkSecurityGroups"),
-			Name: ptr.To("byo-nsg"),
+			ID:   pointerutils.ToPtr("/subscriptions/id"),
+			Type: pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups"),
+			Name: pointerutils.ToPtr("byo-nsg"),
 			Properties: &sdknetwork.SecurityGroupPropertiesFormat{
 				Subnets: []*sdknetwork.Subnet{
 					{
-						ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/byo-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker1"),
+						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/byo-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker1"),
 					},
 				},
 			},

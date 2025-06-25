@@ -61,7 +61,7 @@ func DefaultOperatorFlags() map[string]string {
 		MachineSetEnabled:                  FlagTrue,
 		MachineHealthCheckEnabled:          FlagTrue,
 		MachineHealthCheckManaged:          FlagTrue,
-		MonitoringEnabled:                  FlagTrue,
+		MonitoringEnabled:                  FlagFalse,
 		NodeDrainerEnabled:                 FlagTrue,
 		PullSecretEnabled:                  FlagTrue,
 		PullSecretManaged:                  FlagTrue,

@@ -18,14 +18,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -48,7 +47,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: to.Int32Ptr(replicas0), // Modify replicas accordingly
+				Replicas: pointerutils.ToPtr(replicas0), // Modify replicas accordingly
 			},
 		}
 		workerMachineSet1 := &machinev1beta1.MachineSet{
@@ -60,7 +59,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: to.Int32Ptr(replicas1),
+				Replicas: pointerutils.ToPtr(replicas1),
 			},
 		}
 		workerMachineSet2 := &machinev1beta1.MachineSet{
@@ -72,7 +71,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: to.Int32Ptr(replicas2),
+				Replicas: pointerutils.ToPtr(replicas2),
 			},
 		}
 		return []client.Object{workerMachineSet0, workerMachineSet1, workerMachineSet2}
@@ -126,7 +125,7 @@ func TestReconciler(t *testing.T) {
 							},
 						},
 						Spec: machinev1beta1.MachineSetSpec{
-							Replicas: to.Int32Ptr(0),
+							Replicas: pointerutils.ToPtr(int32(0)),
 						},
 					},
 				)

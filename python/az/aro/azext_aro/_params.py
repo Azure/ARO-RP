@@ -23,6 +23,7 @@ from azext_aro._validators import (
     validate_enable_managed_identity,
     validate_platform_workload_identities,
     validate_cluster_identity,
+    validate_cluster_identity_update,
     validate_delete_identities,
     validate_upgradeable_to_format,
 )
@@ -161,6 +162,10 @@ def load_arguments(self, _):
                    help='Refresh cluster application credentials.',
                    options_list=['--refresh-credentials'],
                    validator=validate_refresh_cluster_credentials)
+        c.argument('mi_user_assigned', arg_group='Identity', is_preview=True,
+                   help='Set the user managed identity on the cluster. Value must be an identity name or resource ID.',
+                   options_list=['--mi-user-assigned', '--assign-cluster-identity'],
+                   validator=validate_cluster_identity_update)
         c.argument('platform_workload_identities', arg_group='Identity', is_preview=True,
                    help='Assign a platform workload identity used within the cluster. Requires two values: \
                            an operator name and either the name or resource ID of the Azure identity to use for it.',

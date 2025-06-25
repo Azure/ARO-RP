@@ -13,7 +13,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -23,6 +22,7 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
@@ -266,8 +266,8 @@ func TestConditions(t *testing.T) {
 				APIVersion:         arov1alpha1.GroupVersion.Identifier(),
 				Kind:               "Cluster",
 				Name:               arov1alpha1.SingletonClusterName,
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(true),
+				Controller:         pointerutils.ToPtr(true),
+				BlockOwnerDeletion: pointerutils.ToPtr(true),
 			}}
 			if diff := cmp.Diff(wantOwnerReference, operator.OwnerReferences); diff != "" {
 				t.Error(diff)
