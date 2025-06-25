@@ -21,7 +21,7 @@ import (
 func TestAdminMdsdCertificateRenew(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
-	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/reesourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
 	ctx := context.Background()
 
 	type test struct {
@@ -144,7 +144,6 @@ func TestAdminMdsdCertificateRenew(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-
 		})
 	}
 }
