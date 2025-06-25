@@ -37,7 +37,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-jose/go-jose/v4 v4.0.5
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/go-test/deep v1.1.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.2
@@ -65,7 +65,7 @@ require (
 	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/cloud-credential-operator v0.0.0-20240910012137-a0245d57d1e6
-	github.com/openshift/hive/apis v0.0.0-20250412004227-87bff5947f6f
+	github.com/openshift/hive/apis v0.0.0-20250612193659-8796c4f5340c
 	github.com/openshift/library-go v0.0.0-20230620084201-504ca4bd5a83
 	github.com/openshift/machine-config-operator v0.0.0-00010101000000-000000000000
 	github.com/pires/go-proxyproto v0.6.2
@@ -90,15 +90,15 @@ require (
 	golang.org/x/sync v0.15.0
 	golang.org/x/text v0.26.0
 	golang.org/x/tools v0.34.0
-	k8s.io/api v0.31.1
+	k8s.io/api v0.33.1
 	k8s.io/apiextensions-apiserver v0.27.2
-	k8s.io/apimachinery v0.31.1
+	k8s.io/apimachinery v0.33.1
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.27.3
 	k8s.io/kubectl v0.24.17
 	k8s.io/kubernetes v1.28.4
 	k8s.io/metrics v0.25.16
-	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
+	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/controller-runtime v0.15.0
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -301,11 +301,11 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-aggregator v0.27.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
-	sigs.k8s.io/json v0.0.0-20241009153224-e386a8af8d30 // indirect
+	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kube-storage-version-migrator v0.0.4 // indirect
 	sigs.k8s.io/kustomize/api v0.12.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.9 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 	tags.cncf.io/container-device-interface v0.8.1 // indirect
 )
 
