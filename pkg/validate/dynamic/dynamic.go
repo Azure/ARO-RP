@@ -253,6 +253,9 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 	errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
 	if dv.authorizerType == AuthorizerClusterServicePrincipal {
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
+	} else if dv.authorizerType == AuthorizerFirstParty {
+		dv.log.Printf("skipping vnet permission validation for the FPSP")
+		return nil // temp for testing - skip vnet permission validation for FPSP
 	}
 
 	operatorName, err := dv.validateActions(ctx, &vnet, []string{
