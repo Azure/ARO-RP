@@ -32,8 +32,9 @@ import (
 
 type Feature int
 
-// At least to start with, features are intended to be used so that the
-// production default is not set (in production RP_FEATURES is unset).
+// RP Features are boolean options with defined on/off behaviour that is
+// required at the RP level. Most of them are only relevant for development
+// environments.
 const (
 	FeatureDisableDenyAssignments Feature = iota
 	FeatureDisableSignedCertificates
@@ -44,6 +45,10 @@ const (
 	FeatureUseMockMsiRp
 	FeatureEnableMISE
 	FeatureEnforceMISE
+	// Expanded Availability Zones are AZs in zonal regions above 3. This
+	// affects whether we allow it for created clusters, it does not affect the
+	// RP's deployments.
+	FeatureEnableClusterExpandedAvailabilityZones
 )
 
 const (
