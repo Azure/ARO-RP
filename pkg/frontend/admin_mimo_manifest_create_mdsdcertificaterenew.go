@@ -15,7 +15,12 @@ import (
 
 func (f *frontend) putAdminMaintManifestMdsdCertificateRenew(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
+	logIface := ctx.Value(middleware.ContextKeyLog)
+	log, ok := logIface.(*logrus.Entry)
+	if !ok {
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Log is nil. This is a fallback message.")
+	}
+
 	resourceID := resourceIdFromURLParams(r)
 	b, err := f._putAdminMaintManifestCreate(ctx, r, resourceID, mimo.MDSD_CERT_ROTATION_ID)
 
