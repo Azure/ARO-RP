@@ -552,18 +552,18 @@ func setup(ctx context.Context) error {
 			)
 			time.Sleep(waitBetween)
 		}
-
-		// Old cluster is gone, create the new one
-		cluster, err := utilcluster.New(log, conf)
-		if err != nil {
-			return err
-		}
-		if err = cluster.Create(ctx); err != nil {
-			return err
-		}
 	} else {
 		// This runs in release-E2E or non-CI runs
-		log.Infof("Skipping leftover-cluster check because this is not a PR build")
+		log.Infof("Skipping leftover-cluster cleanup because this is not a PR build")
+	}
+
+	// Old cluster is gone, create the new one
+	cluster, err := utilcluster.New(log, conf)
+	if err != nil {
+		return err
+	}
+	if err = cluster.Create(ctx); err != nil {
+		return err
 	}
 
 	vnetResourceGroup = conf.VnetResourceGroup
