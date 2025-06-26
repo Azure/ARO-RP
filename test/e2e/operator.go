@@ -442,15 +442,25 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 			pods := ListK8sObjectWithRetry(
 				ctx,
 				clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List,
-				metav1.ListOptions{LabelSelector: "app=openshift-azure-operator"},
+				metav1.ListOptions{
+					LabelSelector: "app=openshift-azure-operator",
+				},
 			)
 			for _, pod := range pods.Items {
-				log, err := clients.Kubernetes.CoreV1().
+				logBytes, err := clients.Kubernetes.CoreV1().
 					Pods(aroOperatorNamespace).
-					GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: pointerutils.ToPtr(int64(60))}).
+					GetLogs(
+						pod.Name,
+						&corev1.PodLogOptions{
+							SinceSeconds: pointerutils.ToPtr(int64(300)),
+						},
+					).
 					DoRaw(ctx)
 				Expect(err).NotTo(HaveOccurred())
-				fmt.Fprintf(GinkgoWriter, "=== operator logs from pod %s ===\n%s\n", pod.Name, string(log))
+				fmt.Fprintf(GinkgoWriter,
+					"=== operator logs from pod %s (last 5m) ===\n%s\n",
+					pod.Name, string(logBytes),
+				)
 			}
 
 		}
