@@ -508,9 +508,10 @@ func setup(ctx context.Context) error {
 	)
 
 	// Determine if this is a PR build:
+	azPR := os.Getenv("SYSTEM_PULLREQUEST_PULLREQUESTID")
 	buildReason := os.Getenv("BUILD_REASON")
 	sourceBranch := os.Getenv("BUILD_SOURCEBRANCH")
-	isPR := buildReason == "PullRequest" || strings.HasPrefix(sourceBranch, "refs/pull/")
+	isPR := azPR != "" || buildReason == "PullRequest" || strings.HasPrefix(sourceBranch, "refs/pull/")
 
 	// Only run leftover-cluster logic on PR-based E2E (skip in release builds)
 	if conf.IsLocalDevelopmentMode() && conf.IsCI && isPR {
