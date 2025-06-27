@@ -510,7 +510,7 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Print("deleting private endpoint")
-	err = m.fpPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID)
+	err = m.armFPPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, nil)
 	if err != nil {
 		return err
 	}

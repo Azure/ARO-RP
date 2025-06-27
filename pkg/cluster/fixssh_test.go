@@ -13,11 +13,9 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
@@ -28,32 +26,32 @@ var (
 	masterSubnetID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
 )
 
-func lbBefore(lbID string) *mgmtnetwork.LoadBalancer {
-	return &mgmtnetwork.LoadBalancer{
+func lbBefore(lbID string) armnetwork.LoadBalancer {
+	return armnetwork.LoadBalancer{
 		ID: pointerutils.ToPtr(lbID),
-		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+		Properties: &armnetwork.LoadBalancerPropertiesFormat{
+			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 				{
 					ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
-			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{},
-			LoadBalancingRules:  &[]mgmtnetwork.LoadBalancingRule{},
-			Probes:              &[]mgmtnetwork.Probe{},
+			BackendAddressPools: []*armnetwork.BackendAddressPool{},
+			LoadBalancingRules:  []*armnetwork.LoadBalancingRule{},
+			Probes:              []*armnetwork.Probe{},
 		},
 	}
 }
 
-func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
-	return &mgmtnetwork.LoadBalancer{
+func lbAfter(lbID string) armnetwork.LoadBalancer {
+	return armnetwork.LoadBalancer{
 		ID: pointerutils.ToPtr(lbID),
-		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+		Properties: &armnetwork.LoadBalancerPropertiesFormat{
+			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 				{
 					ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
-			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+			BackendAddressPools: []*armnetwork.BackendAddressPool{
 				{
 					Name: pointerutils.ToPtr("ssh-0"),
 				},
@@ -64,20 +62,20 @@ func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 					Name: pointerutils.ToPtr("ssh-2"),
 				},
 			},
-			LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+			LoadBalancingRules: []*armnetwork.LoadBalancingRule{
 				{
-					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-						FrontendIPConfiguration: &mgmtnetwork.SubResource{
+					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+						FrontendIPConfiguration: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
-						BackendAddressPool: &mgmtnetwork.SubResource{
+						BackendAddressPool: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-0"),
 						},
-						Probe: &mgmtnetwork.SubResource{
+						Probe: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
-						Protocol:             mgmtnetwork.TransportProtocolTCP,
-						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 						FrontendPort:         pointerutils.ToPtr(int32(2200)),
 						BackendPort:          pointerutils.ToPtr(int32(22)),
 						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
@@ -86,18 +84,18 @@ func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 					Name: pointerutils.ToPtr("ssh-0"),
 				},
 				{
-					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-						FrontendIPConfiguration: &mgmtnetwork.SubResource{
+					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+						FrontendIPConfiguration: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
-						BackendAddressPool: &mgmtnetwork.SubResource{
+						BackendAddressPool: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-1"),
 						},
-						Probe: &mgmtnetwork.SubResource{
+						Probe: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
-						Protocol:             mgmtnetwork.TransportProtocolTCP,
-						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 						FrontendPort:         pointerutils.ToPtr(int32(2201)),
 						BackendPort:          pointerutils.ToPtr(int32(22)),
 						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
@@ -106,18 +104,18 @@ func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 					Name: pointerutils.ToPtr("ssh-1"),
 				},
 				{
-					LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-						FrontendIPConfiguration: &mgmtnetwork.SubResource{
+					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+						FrontendIPConfiguration: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
 						},
-						BackendAddressPool: &mgmtnetwork.SubResource{
+						BackendAddressPool: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-2"),
 						},
-						Probe: &mgmtnetwork.SubResource{
+						Probe: &armnetwork.SubResource{
 							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
 						},
-						Protocol:             mgmtnetwork.TransportProtocolTCP,
-						LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 						FrontendPort:         pointerutils.ToPtr(int32(2202)),
 						BackendPort:          pointerutils.ToPtr(int32(22)),
 						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
@@ -126,10 +124,10 @@ func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 					Name: pointerutils.ToPtr("ssh-2"),
 				},
 			},
-			Probes: &[]mgmtnetwork.Probe{
+			Probes: []*armnetwork.Probe{
 				{
-					ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-						Protocol:          mgmtnetwork.ProbeProtocolTCP,
+					Properties: &armnetwork.ProbePropertiesFormat{
+						Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
 						Port:              pointerutils.ToPtr(int32(22)),
 						IntervalInSeconds: pointerutils.ToPtr(int32(5)),
 						NumberOfProbes:    pointerutils.ToPtr(int32(2)),
@@ -313,7 +311,7 @@ func TestFixSSH(t *testing.T) {
 		elb                                string
 		elbID                              string
 		elbV1ID                            string
-		loadbalancer                       func(string) *mgmtnetwork.LoadBalancer
+		loadbalancer                       func(string) armnetwork.LoadBalancer
 		interfaces                         func(string, string, bool) []*armnetwork.Interface
 		iNameNewF                          string
 		iNameOldF                          string
@@ -441,24 +439,24 @@ func TestFixSSH(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			loadBalancers := mock_network.NewMockLoadBalancersClient(ctrl)
 			armInterfaces := mock_armnetwork.NewMockInterfacesClient(ctrl)
+			loadBalancers := mock_armnetwork.NewMockLoadBalancersClient(ctrl)
 			createOrUpdateOptions := &armnetwork.InterfacesClientBeginCreateOrUpdateOptions{ResumeToken: ""}
 
 			if tt.lbErrorExpected {
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.ilb, "").Return(mgmtnetwork.LoadBalancer{}, fmt.Errorf("load balancer not found"))
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.ilb, nil).Return(armnetwork.LoadBalancersClientGetResponse{}, fmt.Errorf("load balancer not found"))
 			} else {
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.ilb, "").Return(*tt.loadbalancer(tt.ilbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.ilb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.ilbID)}, nil)
 				if tt.writeExpected {
-					loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.ilb, *lbAfter(tt.ilbID))
+					loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.ilb, lbAfter(tt.ilbID), nil)
 				}
 			}
 
 			if tt.newCluster {
 				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(tt.interfaces(tt.ilbID, tt.elbID, true), nil)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 			}
 
 			if tt.afterFirstCPMSUpdate {
@@ -466,11 +464,11 @@ func TestFixSSH(t *testing.T) {
 				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListAfterFirstCPMSUpdate(tt.ilbID, tt.elbID, false), nil)
 				// New interfaces post CPMS update
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 0), *ifList[0], createOrUpdateOptions)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 1), *ifList[1], createOrUpdateOptions)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 2), *ifList[2], createOrUpdateOptions)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 				// Old interfaces from origin cluster install, orphaned and expected to be deleted
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), *ifList[3], createOrUpdateOptions)
 				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), nil)
@@ -484,11 +482,11 @@ func TestFixSSH(t *testing.T) {
 				ifList := ifListAfterFirstCPMSUpdatePrivateCluster(tt.ilbID, tt.elbID, true)
 				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(ifListAfterFirstCPMSUpdatePrivateCluster(tt.ilbID, tt.elbID, false), nil)
 				// New interfaces post CPMS update
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 1), *ifList[1], createOrUpdateOptions)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 2), *ifList[2], createOrUpdateOptions)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 				// Old interfaces from origin cluster install, orphaned and expected to be deleted
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), *ifList[3], createOrUpdateOptions)
 				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), nil)
@@ -502,11 +500,11 @@ func TestFixSSH(t *testing.T) {
 				ifList := ifListAfterMultipleCPMSUpdates(tt.ilbID, tt.elbID, true)
 				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(tt.interfaces(tt.ilbID, tt.elbID, false), nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 0), *ifList[0], createOrUpdateOptions)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 1), *ifList[1], createOrUpdateOptions)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameNewF, infraID, 2), *ifList[2], createOrUpdateOptions)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 			}
 
 			if tt.interfacesListError {
@@ -538,8 +536,8 @@ func TestFixSSH(t *testing.T) {
 						},
 					},
 				},
-				armInterfaces: armInterfaces,
-				loadBalancers: loadBalancers,
+				armInterfaces:    armInterfaces,
+				armLoadBalancers: loadBalancers,
 			}
 
 			err := m.fixSSH(context.Background())

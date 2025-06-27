@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -48,7 +47,7 @@ func (m *manager) fixSSH(ctx context.Context) error {
 		return err
 	}
 
-	err = m.checkAndUpdateNICsInResourceGroup(ctx, resourceGroup, infraID, &lb)
+	err = m.checkAndUpdateNICsInResourceGroup(ctx, resourceGroup, infraID, lb)
 	if err != nil {
 		return err
 	}
@@ -56,7 +55,7 @@ func (m *manager) fixSSH(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) checkAndUpdateNICsInResourceGroup(ctx context.Context, resourceGroup string, infraID string, lb *mgmtnetwork.LoadBalancer) (err error) {
+func (m *manager) checkAndUpdateNICsInResourceGroup(ctx context.Context, resourceGroup string, infraID string, lb *armnetwork.LoadBalancer) (err error) {
 	masterSubnetID := m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
 	interfaces, err := m.armInterfaces.List(ctx, resourceGroup, &armnetwork.InterfacesClientListOptions{})
 	if err != nil {
@@ -115,7 +114,7 @@ NICs:
 				elbName = infraID + "-public-lb"
 			}
 
-			elb, err := m.loadBalancers.Get(ctx, resourceGroup, elbName, "")
+			elb, err := m.armLoadBalancers.Get(ctx, resourceGroup, elbName, nil)
 			if err != nil {
 				return err
 			}
@@ -194,27 +193,29 @@ func (m *manager) updateELBBackendPools(ipc armnetwork.InterfaceIPConfiguration,
 	return updated
 }
 
-func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lbName string) (lb mgmtnetwork.LoadBalancer, err error) {
-	lb, err = m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lbName string) (lb *armnetwork.LoadBalancer, err error) {
+	_lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, lbName, nil)
 	if err != nil {
-		return lb, err
+		return nil, err
 	}
 
-	if m.updateLB(&lb, lbName) {
+	lb = &_lb.LoadBalancer
+
+	if m.updateLB(lb, lbName) {
 		m.log.Infof("Updating Load Balancer %s", lbName)
-		err = m.loadBalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, lb)
+		err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, *lb, nil)
 		if err != nil {
-			return lb, err
+			return nil, err
 		}
 	}
 	return lb, nil
 }
 
-func (m *manager) updateLB(lb *mgmtnetwork.LoadBalancer, lbName string) (changed bool) {
+func (m *manager) updateLB(lb *armnetwork.LoadBalancer, lbName string) (changed bool) {
 backendAddressPools:
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("ssh-%d", i)
-		for _, p := range *lb.BackendAddressPools {
+		for _, p := range lb.Properties.BackendAddressPools {
 			if strings.EqualFold(*p.Name, name) {
 				continue backendAddressPools
 			}
@@ -222,7 +223,7 @@ backendAddressPools:
 
 		changed = true
 		m.log.Infof("Adding SSH Backend Address Pool %s to Internal Load Balancer %s", name, lbName)
-		*lb.BackendAddressPools = append(*lb.BackendAddressPools, mgmtnetwork.BackendAddressPool{
+		lb.Properties.BackendAddressPools = append(lb.Properties.BackendAddressPools, &armnetwork.BackendAddressPool{
 			Name: &name,
 		})
 	}
@@ -230,7 +231,7 @@ backendAddressPools:
 loadBalancingRules:
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("ssh-%d", i)
-		for _, r := range *lb.LoadBalancingRules {
+		for _, r := range lb.Properties.LoadBalancingRules {
 			if strings.EqualFold(*r.Name, name) {
 				continue loadBalancingRules
 			}
@@ -238,19 +239,19 @@ loadBalancingRules:
 
 		changed = true
 		m.log.Infof("Adding SSH Load Balancing Rule for %s to Internal Load Balancer %s", name, lbName)
-		*lb.LoadBalancingRules = append(*lb.LoadBalancingRules, mgmtnetwork.LoadBalancingRule{
-			LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-				FrontendIPConfiguration: &mgmtnetwork.SubResource{
-					ID: (*lb.FrontendIPConfigurations)[0].ID,
+		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &armnetwork.LoadBalancingRule{
+			Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+				FrontendIPConfiguration: &armnetwork.SubResource{
+					ID: lb.Properties.FrontendIPConfigurations[0].ID,
 				},
-				BackendAddressPool: &mgmtnetwork.SubResource{
+				BackendAddressPool: &armnetwork.SubResource{
 					ID: pointerutils.ToPtr(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
 				},
-				Probe: &mgmtnetwork.SubResource{
+				Probe: &armnetwork.SubResource{
 					ID: pointerutils.ToPtr(*lb.ID + "/probes/ssh"),
 				},
-				Protocol:             mgmtnetwork.TransportProtocolTCP,
-				LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+				Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+				LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 				FrontendPort:         pointerutils.ToPtr(int32(2200) + int32(i)),
 				BackendPort:          pointerutils.ToPtr(int32(22)),
 				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
@@ -260,7 +261,7 @@ loadBalancingRules:
 		})
 	}
 
-	for _, p := range *lb.Probes {
+	for _, p := range lb.Properties.Probes {
 		if strings.EqualFold(*p.Name, "ssh") {
 			return changed
 		}
@@ -268,9 +269,9 @@ loadBalancingRules:
 
 	changed = true
 	m.log.Infof("Adding ssh Health Probe to Internal Load Balancer %s", lbName)
-	*lb.Probes = append(*lb.Probes, mgmtnetwork.Probe{
-		ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-			Protocol:          mgmtnetwork.ProbeProtocolTCP,
+	lb.Properties.Probes = append(lb.Properties.Probes, &armnetwork.Probe{
+		Properties: &armnetwork.ProbePropertiesFormat{
+			Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
 			Port:              pointerutils.ToPtr(int32(22)),
 			IntervalInSeconds: pointerutils.ToPtr(int32(5)),
 			NumberOfProbes:    pointerutils.ToPtr(int32(2)),
