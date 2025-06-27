@@ -58,8 +58,7 @@ func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Req
 	var ext *admin.MaintenanceManifest
 
 	if maintenanceTaskID != "" {
-		ext = &admin.MaintenanceManifest{}
-		ext.MaintenanceTaskID = maintenanceTaskID
+		ext = &admin.MaintenanceManifest{MaintenanceTaskID: maintenanceTaskID}
 	} else {
 		body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 		if len(body) == 0 || !json.Valid(body) {
