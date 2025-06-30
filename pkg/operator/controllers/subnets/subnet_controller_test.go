@@ -19,7 +19,6 @@ import (
 
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -73,14 +72,14 @@ func getValidSubnet() *armnetwork.Subnet {
 	s := &armnetwork.Subnet{
 		Properties: &armnetwork.SubnetPropertiesFormat{
 			NetworkSecurityGroup: &armnetwork.SecurityGroup{
-				ID: to.StringPtr(nsgv1MasterResourceId),
+				ID: pointerutils.ToPtr(nsgv1MasterResourceId),
 			},
 			ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
 		s.Properties.ServiceEndpoints = append(s.Properties.ServiceEndpoints, &armnetwork.ServiceEndpointPropertiesFormat{
-			Service:           to.StringPtr(endpoint),
+			Service:           pointerutils.ToPtr(endpoint),
 			ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
 		})
 	}
@@ -122,7 +121,7 @@ func TestReconcileManager(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetObjectWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 			},
 		},
@@ -147,7 +146,7 @@ func TestReconcileManager(t *testing.T) {
 				subnetObjectMaster := getValidSubnet()
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 			},
 		},
@@ -170,19 +169,19 @@ func TestReconcileManager(t *testing.T) {
 				}, nil)
 
 				subnetObjectMaster := getValidSubnet()
-				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1MasterResourceId + "new")
+				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1MasterResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectMasterUpdate := getValidSubnet()
-				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1MasterResourceId)
+				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1MasterResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, *subnetObjectMasterUpdate, nil).Return(nil)
 
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId + "new")
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
-				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
+				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
 			},
 		},
@@ -209,19 +208,19 @@ func TestReconcileManager(t *testing.T) {
 				}, nil)
 
 				subnetObjectMaster := getValidSubnet()
-				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1MasterResourceId + "new")
+				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1MasterResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectMasterUpdate := getValidSubnet()
-				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1MasterResourceId)
+				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1MasterResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, *subnetObjectMasterUpdate, nil).Return(nil)
 
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId + "new")
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
-				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
+				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
 
 				notFoundErr := autorest.DetailedError{
@@ -254,11 +253,11 @@ func TestReconcileManager(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId + "new")
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
-				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
+				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
 			},
 		},
@@ -281,11 +280,11 @@ func TestReconcileManager(t *testing.T) {
 				}, nil)
 
 				subnetObjectMaster := getValidSubnet()
-				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 			},
 			instance: func(instance *arov1alpha1.Cluster) {
@@ -311,19 +310,19 @@ func TestReconcileManager(t *testing.T) {
 				}, nil)
 
 				subnetObjectMaster := getValidSubnet()
-				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId + "new")
+				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectMasterUpdate := getValidSubnet()
-				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, *subnetObjectMasterUpdate, nil).Return(nil)
 
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId + "new")
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
-				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
 			},
 			instance: func(instance *arov1alpha1.Cluster) {
@@ -353,19 +352,19 @@ func TestReconcileManager(t *testing.T) {
 				}, nil)
 
 				subnetObjectMaster := getValidSubnet()
-				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId + "new")
+				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectMasterUpdate := getValidSubnet()
-				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, *subnetObjectMasterUpdate, nil).Return(nil)
 
 				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId + "new")
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId + "new")
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
-				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
 
 				notFoundErr := autorest.DetailedError{
@@ -400,12 +399,12 @@ func TestReconcileManager(t *testing.T) {
 				// master
 				subnetObjectMaster := getValidSubnet()
 				subnetObjectMaster.Properties.ServiceEndpoints = nil
-				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectMasterUpdate := getValidSubnet()
-				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				for i := range subnetObjectMasterUpdate.Properties.ServiceEndpoints {
 					subnetObjectMasterUpdate.Properties.ServiceEndpoints[i].Locations = []*string{pointerutils.ToPtr("*")}
 					subnetObjectMasterUpdate.Properties.ServiceEndpoints[i].ProvisioningState = nil
@@ -415,12 +414,12 @@ func TestReconcileManager(t *testing.T) {
 				// worker
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.Properties.ServiceEndpoints = nil
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
 
-				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				for i := range subnetObjectWorkerUpdate.Properties.ServiceEndpoints {
 					subnetObjectWorkerUpdate.Properties.ServiceEndpoints[i].Locations = []*string{pointerutils.ToPtr("*")}
 					subnetObjectWorkerUpdate.Properties.ServiceEndpoints[i].ProvisioningState = nil
@@ -452,13 +451,13 @@ func TestReconcileManager(t *testing.T) {
 				// master
 				subnetObjectMaster := getValidSubnet()
 				subnetObjectMaster.Properties.ServiceEndpoints = nil
-				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectMaster.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				// worker
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.Properties.ServiceEndpoints = nil
-				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 			},
 			instance: func(instance *arov1alpha1.Cluster) {
@@ -489,7 +488,7 @@ func TestReconcileManager(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectMaster}, nil).MaxTimes(2)
 
 				subnetObjectMasterUpdate := getValidSubnet()
-				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectMasterUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, *subnetObjectMasterUpdate, nil).Return(nil)
 
 				subnetObjectWorker := getValidSubnet()
@@ -497,7 +496,7 @@ func TestReconcileManager(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
-				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv2ResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
 			},
 			instance: func(instance *arov1alpha1.Cluster) {

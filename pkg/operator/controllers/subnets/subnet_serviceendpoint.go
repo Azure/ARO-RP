@@ -9,11 +9,11 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -53,8 +53,8 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 			}
 			if !found {
 				subnetObject.Properties.ServiceEndpoints = append(subnetObject.Properties.ServiceEndpoints, &armnetwork.ServiceEndpointPropertiesFormat{
-					Service:   to.StringPtr(endpoint),
-					Locations: []*string{to.StringPtr("*")},
+					Service:   pointerutils.ToPtr(endpoint),
+					Locations: []*string{pointerutils.ToPtr("*")},
 				})
 				changed = true
 			}
