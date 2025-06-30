@@ -16,7 +16,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 
@@ -26,6 +26,7 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/storage"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -84,22 +85,23 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 	return account
 }
 
-func getValidSubnet(resourceId string) *mgmtnetwork.Subnet {
-	s := &mgmtnetwork.Subnet{
+func getValidSubnet(resourceId string) *armnetwork.Subnet {
+	s := &armnetwork.Subnet{
 		ID: pointerutils.ToPtr(resourceId),
-		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+		Properties: &armnetwork.SubnetPropertiesFormat{
+			NetworkSecurityGroup: &armnetwork.SecurityGroup{
 				ID: pointerutils.ToPtr(nsgv1MasterResourceId),
 			},
-			ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{},
+			ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
-		*s.ServiceEndpoints = append(*s.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
+		se := &armnetwork.ServiceEndpointPropertiesFormat{
 			Service:           pointerutils.ToPtr(endpoint),
-			Locations:         &[]string{location},
-			ProvisioningState: mgmtnetwork.Succeeded,
-		})
+			Locations:         []*string{pointerutils.ToPtr(location)},
+			ProvisioningState: (*armnetwork.ProvisioningState)(pointerutils.ToPtr(string(armnetwork.ProvisioningStateSucceeded))),
+		}
+		s.Properties.ServiceEndpoints = append(s.Properties.ServiceEndpoints, se)
 	}
 	return s
 }
@@ -109,7 +111,7 @@ func TestReconcileManager(t *testing.T) {
 
 	for _, tt := range []struct {
 		name         string
-		mocks        func(*mock_storage.MockAccountsClient, *mock_subnet.MockKubeManager, *mock_subnet.MockManager)
+		mocks        func(*mock_storage.MockAccountsClient, *mock_subnet.MockKubeManager, *mock_armnetwork.MockSubnetsClient)
 		instance     func(*arov1alpha1.Cluster)
 		operatorFlag bool
 		wantErr      error
@@ -117,13 +119,13 @@ func TestReconcileManager(t *testing.T) {
 		{
 			name:         "Operator Flag enabled - nothing to do",
 			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_armnetwork.MockSubnetsClient) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
 				workerSubnet := getValidSubnet(resourceIdWorker)
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *masterSubnet}, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *workerSubnet}, nil)
 
 				// cluster subnets
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -146,13 +148,13 @@ func TestReconcileManager(t *testing.T) {
 		{
 			name:         "Operator Flag disabled - nothing to do",
 			operatorFlag: false,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_armnetwork.MockSubnetsClient) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
 				workerSubnet := getValidSubnet(resourceIdWorker)
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *masterSubnet}, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *workerSubnet}, nil)
 
 				// cluster subnets
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -175,13 +177,13 @@ func TestReconcileManager(t *testing.T) {
 		{
 			name:         "Operator Flag enabled - all rules to all accounts",
 			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_armnetwork.MockSubnetsClient) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
 				workerSubnet := getValidSubnet(resourceIdWorker)
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *masterSubnet}, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *workerSubnet}, nil)
 
 				// cluster subnets
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -222,7 +224,7 @@ func TestReconcileManager(t *testing.T) {
 		{
 			name:         "Operator Flag enabled - not found error on getting worker subnet skips subnet",
 			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_armnetwork.MockSubnetsClient) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
 
@@ -230,8 +232,8 @@ func TestReconcileManager(t *testing.T) {
 					StatusCode: http.StatusNotFound,
 				}
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(nil, notFoundErr)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *masterSubnet}, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{}, notFoundErr)
 
 				// cluster subnets
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -272,15 +274,15 @@ func TestReconcileManager(t *testing.T) {
 		{
 			name:         "Operator flag enabled - worker subnet rule to all accounts because storage service endpoint on worker subnet",
 			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_armnetwork.MockSubnetsClient) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
 				workerSubnet := getValidSubnet(resourceIdWorker)
 
-				masterSubnet.ServiceEndpoints = nil
+				masterSubnet.Properties.ServiceEndpoints = nil
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *masterSubnet}, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *workerSubnet}, nil)
 
 				// cluster subnets
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -321,16 +323,16 @@ func TestReconcileManager(t *testing.T) {
 		{
 			name:         "Operator flag enabled - nothing to do because no service endpoints",
 			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_armnetwork.MockSubnetsClient) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
 				workerSubnet := getValidSubnet(resourceIdWorker)
 
-				masterSubnet.ServiceEndpoints = nil
-				workerSubnet.ServiceEndpoints = nil
+				masterSubnet.Properties.ServiceEndpoints = nil
+				workerSubnet.Properties.ServiceEndpoints = nil
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *masterSubnet}, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *workerSubnet}, nil)
 
 				// cluster subnets
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -353,31 +355,31 @@ func TestReconcileManager(t *testing.T) {
 		{
 			name:         "Operator flag enabled - nothing to do because the storage endpoint is there but the location does not match the cluster",
 			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_armnetwork.MockSubnetsClient) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
 				workerSubnet := getValidSubnet(resourceIdWorker)
 
-				newMasterServiceEndpoints := []mgmtnetwork.ServiceEndpointPropertiesFormat{}
+				newMasterServiceEndpoints := []*armnetwork.ServiceEndpointPropertiesFormat{}
 
-				for _, se := range *masterSubnet.ServiceEndpoints {
-					se.Locations = &[]string{"not_a_real_place"}
+				for _, se := range masterSubnet.Properties.ServiceEndpoints {
+					se.Locations = []*string{pointerutils.ToPtr("not_a_real_place")}
 					newMasterServiceEndpoints = append(newMasterServiceEndpoints, se)
 				}
 
-				masterSubnet.ServiceEndpoints = &newMasterServiceEndpoints
+				masterSubnet.Properties.ServiceEndpoints = newMasterServiceEndpoints
 
-				newWorkerServiceEndpoints := []mgmtnetwork.ServiceEndpointPropertiesFormat{}
+				newWorkerServiceEndpoints := []*armnetwork.ServiceEndpointPropertiesFormat{}
 
-				for _, se := range *workerSubnet.ServiceEndpoints {
-					se.Locations = &[]string{"not_a_real_place"}
+				for _, se := range workerSubnet.Properties.ServiceEndpoints {
+					se.Locations = []*string{pointerutils.ToPtr("not_a_real_place")}
 					newWorkerServiceEndpoints = append(newWorkerServiceEndpoints, se)
 				}
 
-				workerSubnet.ServiceEndpoints = &newWorkerServiceEndpoints
+				workerSubnet.Properties.ServiceEndpoints = newWorkerServiceEndpoints
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *masterSubnet}, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *workerSubnet}, nil)
 
 				// cluster subnets
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -404,7 +406,7 @@ func TestReconcileManager(t *testing.T) {
 
 			storage := mock_storage.NewMockAccountsClient(controller)
 			kubeSubnet := mock_subnet.NewMockKubeManager(controller)
-			subnet := mock_subnet.NewMockManager(controller)
+			subnet := mock_armnetwork.NewMockSubnetsClient(controller)
 
 			if tt.mocks != nil {
 				tt.mocks(storage, kubeSubnet, subnet)
@@ -444,7 +446,7 @@ func TestReconcileManager(t *testing.T) {
 				if tt.wantErr == nil {
 					t.Fatal(err)
 				}
-				if err.Error() != tt.wantErr.Error() || err == nil && tt.wantErr != nil {
+				if err.Error() != tt.wantErr.Error() {
 					t.Errorf("Expected Error %s, got %s when processing %s testcase", tt.wantErr.Error(), err.Error(), tt.name)
 				}
 			}
