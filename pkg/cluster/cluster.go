@@ -38,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azmetrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -99,6 +100,7 @@ type manager struct {
 	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
 	armSubnets               armnetwork.SubnetsClient
 	userAssignedIdentities   armmsi.UserAssignedIdentitiesClient
+	metrics                  azmetrics.MetricsClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -250,6 +252,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	azmetricsClient, err := azmetrics.NewMetricsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
 
 	m := &manager{
@@ -283,6 +290,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
 		armSubnets:               armSubnetsClient,
+		metrics:                  azmetricsClient,
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,

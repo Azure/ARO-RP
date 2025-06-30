@@ -244,7 +244,7 @@ func (dv *dynamic) ValidateVnet(
 }
 
 func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resource) error {
-	dv.log.Printf("validateVnetPermissions")
+	dv.log.Infof("validateVnetPermissions: %v", vnet)
 
 	errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
 	if dv.authorizerType == AuthorizerClusterServicePrincipal {
@@ -312,7 +312,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 }
 
 func (dv *dynamic) validateSubnetPermissions(ctx context.Context, s Subnet) error {
-	dv.log.Printf("validateSubnetPermissions")
+	dv.log.Infof("validateSubnetPermissions: %v", s)
 
 	vnetID, _, err := apisubnet.Split(s.ID)
 	if err != nil {
@@ -402,7 +402,7 @@ func (dv *dynamic) validateSubnetPermissions(ctx context.Context, s Subnet) erro
 
 // validateRouteTablesPermissions will validate permissions on provided subnet
 func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) error {
-	dv.log.Printf("validateRouteTablePermissions")
+	dv.log.Infof("validateRouteTablePermissions: %v", s)
 
 	vnetID, _, err := apisubnet.Split(s.ID)
 	if err != nil {
@@ -477,7 +477,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 
 // validateNatGatewayPermissions will validate permissions on provided subnet
 func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) error {
-	dv.log.Printf("validateNatGatewayPermissions")
+	dv.log.Infof("validateNatGatewayPermissions: %v", s)
 
 	vnetID, _, err := apisubnet.Split(s.ID)
 	if err != nil {
@@ -597,7 +597,7 @@ func (c *closure) checkAccessAuthReqToken() error {
 
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
 func (c closure) usingCheckAccessV2() (result bool, err error) {
-	c.dv.log.Info("validateActions with CheckAccessV2")
+	c.dv.log.Infof("CheckAccessV2: validate actions %v", c.actions)
 
 	var authReq *client.AuthorizationRequest
 	//ensure token and oid is available during retries
@@ -649,7 +649,7 @@ func (c closure) usingCheckAccessV2() (result bool, err error) {
 }
 
 func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, additionalCIDRs ...string) error {
-	dv.log.Print("ValidateCIDRRanges")
+	dv.log.Infof("validateCIDRRanges: %v; additional %v", subnets, additionalCIDRs)
 
 	// During cluster runtime they get enriched and contains multiple
 	// duplicate values for multiple worker pools. CIDRRange validation
@@ -722,7 +722,7 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 }
 
 func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resource, location string) error {
-	dv.log.Print("validateVnetLocation")
+	dv.log.Infof("validateVnetLocation: %s", location)
 
 	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, nil)
 	if err != nil {
@@ -812,7 +812,7 @@ func (dv *dynamic) checkPreconfiguredNSG(subnetByID map[string]*sdknetwork.Subne
 }
 
 func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
-	dv.log.Printf("validateSubnet")
+	dv.log.Infof("validateSubnets: %v", subnets)
 	subnetByID, err := dv.createSubnetMapByID(ctx, subnets)
 	if err != nil {
 		return err
@@ -928,7 +928,7 @@ func validateSubnetSize(s Subnet, address string) error {
 }
 
 func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
-	dv.log.Print("ValidatePreConfiguredNSGs")
+	dv.log.Infof("ValidatePreConfiguredNSGs: %v", subnets)
 
 	if oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
 		return nil // exit early
@@ -977,6 +977,7 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 }
 
 func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) error {
+	dv.log.Infof("validateNSGPermissions: %s", nsgID)
 	nsg, err := azure.ParseResourceID(nsgID)
 	if err != nil {
 		return err

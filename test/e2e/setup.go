@@ -52,6 +52,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azmetrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -95,6 +96,7 @@ type clientSet struct {
 	Subnet                armnetwork.SubnetsClient
 	VirtualNetworks       armnetwork.VirtualNetworksClient
 	Storage               storage.AccountsClient
+	Metrics               azmetrics.MetricsClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
@@ -435,6 +437,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	metricsClient, err := azmetrics.NewMetricsClient(_env.Location(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return &clientSet{
 		Operations:        redhatopenshift20240812preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		OpenshiftClusters: redhatopenshift20240812preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -449,6 +456,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Subnet:                subnetsClient,
 		VirtualNetworks:       virtualNetworksClient,
 		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Metrics:               metricsClient,
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
