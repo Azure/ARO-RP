@@ -5,7 +5,6 @@ package frontend
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -70,7 +69,7 @@ func Test_listAdminHiveSyncSet(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:           "selectorSyncSets are not namespaced",
+			name:           "Trying to get a SelectorSyncSet with a namespace specified results in 400",
 			namespace:      "aro-" + fakeUUID,
 			syncsetname:    "syncsetTest",
 			isSyncSet:      false,
@@ -95,8 +94,8 @@ func Test_listAdminHiveSyncSet(t *testing.T) {
 			syncsetname: "selectorSyncSetTest",
 			mocks: func(tt *test, s *mock_hive.MockSyncSetManager) {
 				s.EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeOf(hivev1.SelectorSyncSetList{}))).
-					Return(&selectorSyncSetTest, nil).Times(1)
+					ListSelectorSyncSets(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(selectorSyncSetTest.Items, nil).Times(1)
 			},
 			isSyncSet:      false,
 			hiveEnabled:    true,
@@ -110,8 +109,8 @@ func Test_listAdminHiveSyncSet(t *testing.T) {
 			syncsetname: "syncSetTest",
 			mocks: func(tt *test, s *mock_hive.MockSyncSetManager) {
 				s.EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeOf(hivev1.SyncSetList{}))).
-					Return(&syncsetTest, nil).Times(1)
+					ListSyncSets(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(syncsetTest.Items, nil).Times(1)
 			},
 			isSyncSet:      true,
 			hiveEnabled:    true,
