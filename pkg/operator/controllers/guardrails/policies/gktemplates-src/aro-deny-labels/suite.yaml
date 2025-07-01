@@ -20,3 +20,20 @@ tests:
     object: gator-test/no-label-machine-allowed.yaml
     assertions:
     - violations: no
+  - name: nodes-deny
+    template: ../../gktemplates/aro-deny-labels.yaml
+    constraint: ../../gkconstraints-test/aro-nodes-deny.yaml
+    cases:
+    - name: master-node-deny
+      object: gator-test/master-node-deny.yaml
+      assertions:
+      - violations: yes
+        message: "Operation not allowed. Label <node-role.kubernetes.io/master: > matches deny regex: <>"
+    # - name: worker-node-allowed
+    #   object: gator-test/worker-node-allowed.yaml
+    #   assertions:
+    #   - violations: no
+    # - name: no-label-node-allowed
+    #   object: gator-test/no-label-node-allowed.yaml
+    #   assertions:
+    #   - violations: no
