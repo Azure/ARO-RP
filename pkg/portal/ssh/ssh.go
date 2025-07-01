@@ -78,7 +78,17 @@ func New(env env.Core,
 
 		dialer: dialer,
 
-		baseServerConfig: &cryptossh.ServerConfig{},
+		baseServerConfig: &cryptossh.ServerConfig{
+			Config: cryptossh.Config{
+				// Per security baseline requirements,
+				// https://learn.microsoft.com/en-us/azure/governance/policy/samples/guest-configuration-baseline-linux
+				Ciphers: []string{
+					cryptossh.CipherAES128CTR,
+					cryptossh.CipherAES192CTR,
+					cryptossh.CipherAES256CTR,
+				},
+			},
+		},
 
 		hostPubKey: hostPubKey,
 	}
