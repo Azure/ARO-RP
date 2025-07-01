@@ -491,6 +491,54 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 			},
 		},
 		{
+			name: "v2 with migrated zonal frontend IP",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ArchitectureVersion: api.ArchitectureVersionV2,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = privateIP
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
+				loadBalancers.EXPECT().
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", nil).
+					Return(armnetwork.LoadBalancersClientGetResponse{
+						LoadBalancer: armnetwork.LoadBalancer{
+							Properties: &armnetwork.LoadBalancerPropertiesFormat{
+								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+									{
+										Name: pointerutils.ToPtr("old"),
+										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+											PrivateIPAddress: pointerutils.ToPtr("127.0.0.1"),
+										},
+									},
+									{
+										Name: pointerutils.ToPtr(zonalFrontendIPName),
+										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+											PrivateIPAddress: pointerutils.ToPtr(privateIP),
+										},
+									},
+								},
+							},
+						},
+					}, nil)
+			},
+		},
+		{
 			name: "v2 with zonal frontend IP from create",
 			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
 				doc := &api.OpenShiftClusterDocument{
