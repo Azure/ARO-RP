@@ -90,7 +90,13 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 			}
 			return nil, nil
 		},
-		Config: cryptossh.Config{},
+		Config: cryptossh.Config{
+			Ciphers: []string{
+				cryptossh.CipherAES128CTR,
+				cryptossh.CipherAES192CTR,
+				cryptossh.CipherAES256CTR,
+			},
+		},
 	}
 
 	key, _, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
@@ -423,7 +429,7 @@ func TestProxy(t *testing.T) {
 			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for client to server cipher;",
 			wantLogs:      []map[string]types.GomegaMatcher{},
 			ciphers: ciphers{
-				Ciphers:           []string{cryptossh.InsecureCipherTripleDESCBC},
+				Ciphers:           []string{cryptossh.CipherChaCha20Poly1305},
 				KexAlgorithms:     []string{cryptossh.KeyExchangeMLKEM768X25519},
 				MACs:              []string{cryptossh.HMACSHA256ETM},
 				HostKeyAlgorithms: []string{cryptossh.KeyAlgoRSASHA512},
