@@ -104,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	tokenCredential, err := azidentity.NewEnvironmentCredential(nil)
+	tokenCredential, err := azidentity.NewDefaultAzureCredential(azEnv.DefaultAzureCredentialOptions())
 	if err != nil {
 		return reconcile.Result{}, err
 	}
