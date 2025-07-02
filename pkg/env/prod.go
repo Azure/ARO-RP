@@ -151,7 +151,9 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 	if err := ValidateVars(KeyvaultPrefix); err != nil {
 		return nil, err
 	}
-	keyVaultPrefix := os.Getenv(KeyvaultPrefix)
+	// Hackiest hacking ever to sub in my own mock FPSP without using a different keyvault for other stuff...
+	//keyVaultPrefix := os.Getenv(KeyvaultPrefix)
+	keyVaultPrefix := "kimorris-dev"
 	serviceKeyvaultURI := azsecrets.URI(p, ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvaultClient, err := azsecrets.NewClient(serviceKeyvaultURI, msiCredential, p.Environment().AzureClientOptions())
 	if err != nil {
@@ -169,6 +171,9 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 	if err != nil {
 		return nil, err
 	}
+
+	// Revert the hack for other usages of the keyvault prefix
+	keyVaultPrefix = os.Getenv(KeyvaultPrefix)
 
 	clusterKeyvaultURI := azsecrets.URI(p, ClusterKeyvaultSuffix, keyVaultPrefix)
 	clusterKeyvaultClient, err := azsecrets.NewClient(clusterKeyvaultURI, localFPKVCredential, p.Environment().AzureClientOptions())

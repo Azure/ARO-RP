@@ -387,7 +387,8 @@ func (m *manager) bootstrap() []steps.Step {
 	}
 
 	s = append(s,
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		// Hack - skip dynamic validation while using my custom mock FPSP
+		//steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateZones),
 	)
 
