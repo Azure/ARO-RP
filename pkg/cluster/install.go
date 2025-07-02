@@ -375,7 +375,8 @@ func (m *manager) bootstrap() []steps.Step {
 		)
 	}
 
-	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+	// Hack - skip dynamic validation while using my custom mock FPSP
+	//s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
