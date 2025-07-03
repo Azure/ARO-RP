@@ -6,9 +6,6 @@ function clean() {
 
   rm -rf pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"
   mkdir pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"
-
-  rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"
-  mkdir -p python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"
 }
 
 function checksum() {
@@ -54,32 +51,6 @@ function generate_golang() {
   goimports -w -local=github.com/Azure/ARO-RP pkg/client
 }
 
-function generate_python() {
-  local AUTOREST_IMAGE=$1
-  local API_VERSION=$2
-  local FOLDER=$3
-
-  # Generating Track 2 Python SDK
-  docker run \
-    --platform=linux/amd64 \
-    --rm \
-    -v $PWD/python/client:/python/client:z \
-    -v $PWD/swagger:/swagger:z \
-    "${AUTOREST_IMAGE}" \
-    --use=@autorest/python@~6.35.5 \
-    --use=@autorest/modelerfour@~4.27.1 \
-    --modelerfour.lenient-model-deduplication=true \
-    --python \
-    --azure-arm \
-    --license-header=MICROSOFT_APACHE_NO_VERSION \
-    --namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
-    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
-    --output-folder=/python/client
-
-  rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
-  >python/client/__init__.py
-}
-
 if [ -f .sha256sum ]; then
   rm .sha256sum
 fi
@@ -106,12 +77,8 @@ for API_VERSION in "${@:2}"; do
   printf "GENERATING GOLANG SDK...\n"
   generate_golang "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
   printf "[\u2714] SUCCESS\n\n"
-
-  printf "GENERATING PYTHON SDK...\n"
-  generate_python "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
-  printf "[\u2714] SUCCESS\n\n"
   printf "%*s\n" "${COLUMNS:-$(tput cols)}" "" | tr " " -
   printf "\n"
 done
 
-printf "[\u2714] CLIENT GENERATION COMPLETED SUCCESSFULLY\n"
+printf "[\u2714] GOLANG CLIENT GENERATION COMPLETED SUCCESSFULLY\n"
