@@ -20,27 +20,31 @@ import (
 const zonalFrontendIPName = "internal-lb-ip-zonal-v4"
 
 func (m *manager) fixInternalLoadBalancerZones(ctx context.Context) error {
-	// todo: architecture v1
-	if m.doc.OpenShiftCluster.Properties.ArchitectureVersion != api.ArchitectureVersionV2 {
-		m.log.Info("skipping internal load balancer zonality fixing because cluster is not architecture v2")
-		return nil
-	}
 	location := m.doc.OpenShiftCluster.Location
-
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
-	lb, err := m.armLoadBalancers.Get(ctx, resourceGroupName, infraID+"-internal", nil)
+	var lbName string
+	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
+	case api.ArchitectureVersionV1:
+		lbName = infraID + "-internal-lb"
+	case api.ArchitectureVersionV2:
+		lbName = infraID + "-internal"
+	default:
+		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
+	}
+
+	lb, err := m.armLoadBalancers.Get(ctx, resourceGroupName, lbName, nil)
 	if err != nil {
 		return err
 	}
 
 	for _, config := range lb.Properties.FrontendIPConfigurations {
 		if *config.Name == "internal-lb-ip-zonal-v4" {
-			m.log.Info("zonal frontend IP already exists, no need to continue")
+			m.log.Info("zone-redundant frontend IP already exists, no need to continue")
 			return nil
 		} else if *config.Name == "internal-lb-ip-v4" && len(config.Zones) > 0 {
-			m.log.Info("frontend IP already created with zones, no need to continue")
+			m.log.Info("internal load balancer frontend IP already zone-redundant, no need to continue")
 			return nil
 		}
 	}
@@ -52,7 +56,10 @@ func (m *manager) fixInternalLoadBalancerZones(ctx context.Context) error {
 
 	controlPlaneSKU, err := checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
 	if err != nil {
-		return err
+		err = fmt.Errorf("error determining the VM SKU availability, skipping: %w", err)
+		m.log.Error(err)
+		// Don't return an error because this will stop the whole adminupdate
+		return nil
 	}
 
 	// Set RP-level options for expanded AZs
@@ -62,7 +69,7 @@ func (m *manager) fixInternalLoadBalancerZones(ctx context.Context) error {
 	controlPlaneZones := zoneChecker.FilterZones(computeskus.Zones(controlPlaneSKU))
 
 	if len(controlPlaneZones) == 0 {
-		m.log.Info("Non-zonal control plane SKU, not adding zonal frontend IP")
+		m.log.Info("non-zonal control plane SKU, not adding zone-redundant frontend IP")
 		return nil
 	}
 
@@ -143,7 +150,8 @@ func (m *manager) fixInternalLoadBalancerZones(ctx context.Context) error {
 		},
 	)
 
-	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-internal", lb.LoadBalancer, nil)
+	m.log.Info("updating internal load balancer with zone-redundant frontend IP")
+	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, lb.LoadBalancer, nil)
 	if err != nil {
 		return fmt.Errorf("failure updating internal load balancer: %w", err)
 	}
