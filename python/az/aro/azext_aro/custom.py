@@ -771,7 +771,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
             for resource in resources[role]:
                 rid_parts = parse_resource_id(resource)
                 aad = AADManager(cli_ctx) 
-                if rid_parts['type'].lower() == 'virtualnetworks' and sp_id == aad.get_service_principal_id(resolve_rp_client_id()):
+                if sp_id == aad.get_service_principal_id(resolve_rp_client_id()):
                     logger.info("skipping network contributor role assignment at vnet level for FPSP")
                     continue # temp for testing - skip network contributor role assignment at vnet level
                 # Create the role assignment if it doesn't exist
