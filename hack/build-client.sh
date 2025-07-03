@@ -66,10 +66,9 @@ function generate_python() {
     -v $PWD/python/client:/python/client:z \
     -v $PWD/swagger:/swagger:z \
     "${AUTOREST_IMAGE}" \
-    --use=@autorest/python@~5.12.0 \
-    --use=@autorest/modelerfour@~4.20.0 \
+    --use=@autorest/python@~6.35.5 \
+    --use=@autorest/modelerfour@~4.27.1 \
     --modelerfour.lenient-model-deduplication=true \
-    --version=~3.6.2 \
     --python \
     --azure-arm \
     --license-header=MICROSOFT_APACHE_NO_VERSION \

@@ -13,7 +13,7 @@ export GOFLAGS=$(GO_FLAGS)
 MARINER_VERSION = 20240301
 FLUENTBIT_VERSION = 1.9.10
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
-AUTOREST_VERSION = 3.6.3
+AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
 
@@ -160,7 +160,7 @@ image-aro-multistage:
 
 .PHONY: image-autorest
 image-autorest:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 .PHONY: image-fluentbit
 image-fluentbit:
