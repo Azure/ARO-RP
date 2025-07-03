@@ -18,8 +18,8 @@ from azure.cli.core.azclierror import (
 )
 from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
-from msrestazure.azure_exceptions import CloudError
-from msrestazure.tools import is_valid_resource_id, parse_resource_id, resource_id
+from azure.core.exceptions import HttpResponseError
+from azure.mgmt.core.tools import is_valid_resource_id, parse_resource_id, resource_id
 from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 
 logger = get_logger(__name__)
@@ -98,7 +98,7 @@ def validate_disk_encryption_set(cmd, namespace):
     try:
         compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'],
                                                 disk_encryption_set_name=desid['name'])
-    except CloudError as err:
+    except HttpResponseError as err:
         raise InvalidArgumentValueError(
             f"Invalid --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
             f" {str(err)}") from err

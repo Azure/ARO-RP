@@ -16,8 +16,8 @@ from azure.cli.core.azclierror import (
 )
 from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
-from msrestazure.tools import is_valid_resource_id, parse_resource_id
-from msrestazure.azure_exceptions import CloudError
+from azure.mgmt.core.tools import is_valid_resource_id, parse_resource_id
+from azure.core.exceptions import HttpResponseError
 from azext_aro._validators import validate_vnet, validate_cidr
 from azext_aro._rbac import has_role_assignment_on_resource
 from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
@@ -315,7 +315,7 @@ def dyn_validate_resource_permissions(service_principal_ids, resources):
                                            f"Resource {parts['name']} is missing role assignment " +
                                            f"{role} for service principal {sp_id} " +
                                            "(These roles will be automatically added during cluster creation)"])
-                    except CloudError as e:
+                    except HttpResponseError as e:
                         logger.error(e.message)
                         raise
         return errors
