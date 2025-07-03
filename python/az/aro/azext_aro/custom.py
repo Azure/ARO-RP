@@ -24,7 +24,11 @@ from azure.cli.core.azclierror import (
     UnauthorizedError,
     ValidationError
 )
-from azure.core.exceptions import ResourceNotFoundError as CoreResourceNotFoundError
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError as CoreResourceNotFoundError
+from azure.mgmt.core.tools import (
+    resource_id,
+    parse_resource_id
+)
 from azext_aro._aad import AADManager
 from azext_aro._rbac import (
     assign_role_to_resource,
@@ -41,11 +45,6 @@ from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 
 from knack.log import get_logger
 
-from azure.core.exceptions import HttpResponseError
-from azure.mgmt.core.tools import (
-    resource_id,
-    parse_resource_id
-)
 from msrest.exceptions import HttpOperationError
 
 from tabulate import tabulate

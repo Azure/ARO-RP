@@ -14,10 +14,9 @@ from azure.cli.core.azclierror import (
     InvalidArgumentValueError,
     RequiredArgumentMissingError
 )
-from azure.core.exceptions import ResourceNotFoundError
-from knack.log import get_logger
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from azure.mgmt.core.tools import is_valid_resource_id, parse_resource_id
-from azure.core.exceptions import HttpResponseError
+from knack.log import get_logger
 from azext_aro._validators import validate_vnet, validate_cidr
 from azext_aro._rbac import has_role_assignment_on_resource
 from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show

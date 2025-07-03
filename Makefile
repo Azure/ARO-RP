@@ -338,6 +338,15 @@ test-python: pyenv az
 		azdev style && \
 		hack/unit-test-python.sh
 
+.PHONY: test-python-podman
+test-python-podman:
+	rm -rf pyenv
+	docker run --platform=linux/amd64 -t --rm \
+	    -v ./:/app:z \
+		--user=0 \
+	 	$(REGISTRY)/ubi9/python-312:latest \
+		bash -c "cd /app && ls && make test-python"
+
 .PHONY: shared-cluster-login
 shared-cluster-login:
 	@oc login $(shell az aro show -g sre-shared-cluster -n sre-shared-cluster -ojson --query apiserverProfile.url) \
