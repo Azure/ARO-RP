@@ -437,6 +437,32 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+			// dump operator logs so we can see our timing lines in CI
+			By("dumping operator pod logs")
+			pods := ListK8sObjectWithRetry(
+				ctx,
+				clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List,
+				metav1.ListOptions{
+					LabelSelector: "app=openshift-azure-operator",
+				},
+			)
+			for _, pod := range pods.Items {
+				logBytes, err := clients.Kubernetes.CoreV1().
+					Pods(aroOperatorNamespace).
+					GetLogs(
+						pod.Name,
+						&corev1.PodLogOptions{
+							SinceSeconds: pointerutils.ToPtr(int64(300)),
+						},
+					).
+					DoRaw(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				fmt.Fprintf(GinkgoWriter,
+					"=== operator logs from pod %s (last 5m) ===\n%s\n",
+					pod.Name, string(logBytes),
+				)
+			}
+
 		}
 	})
 })
