@@ -33,7 +33,7 @@ func (c *core) NewMSITokenCredential() (azcore.TokenCredential, error) {
 			return azidentity.NewWorkloadIdentityCredential(options)
 		}
 
-		options := c.Environment().ManagedIdentityCredentialOptions()
+		options := c.Environment().ManagedIdentityCredentialOptions("")
 		return azidentity.NewManagedIdentityCredential(options)
 	}
 
