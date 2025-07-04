@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
@@ -46,19 +45,21 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name           string
-		expectedOutput interface{}
-		mock           func(vmClient *mock_compute.MockVirtualMachinesClient)
-		expectedLogs   []map[string]types.GomegaMatcher
+		name         string
+		mock         func(vmClient *mock_compute.MockVirtualMachinesClient)
+		expectedLogs []map[string]types.GomegaMatcher
 	}{
 		{
 			name: "failure to fetch VMs",
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return(nil, errors.New("vm explod"))
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
-				"vm listing error: vm explod",
+			expectedLogs: []map[string]types.GomegaMatcher{
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("failed to list VMs in resource group resourceGroupCluster"),
+					"error": gomega.MatchError("vm explod"),
+				},
 			},
 		},
 		{
@@ -66,9 +67,11 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{}, nil)
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
-				"no VMs found",
+			expectedLogs: []map[string]types.GomegaMatcher{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("no VMs found in resource group resourceGroupCluster"),
+				},
 			},
 		},
 		{
@@ -92,10 +95,17 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
 				).Times(1).Return(errors.New("explod"))
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
-				`vm somename: {"location":"eastus","properties":{}}`,
-				"vm boot diagnostics retrieval error for somename: explod",
+			expectedLogs: []map[string]types.GomegaMatcher{
+				{
+					"level":              gomega.Equal(logrus.InfoLevel),
+					"msg":                gomega.Equal("VM: {'location':'eastus','properties':{}}"),
+					"failedRoleInstance": gomega.Equal("somename"),
+				},
+				{
+					"level":              gomega.Equal(logrus.ErrorLevel),
+					"msg":                gomega.Equal("vm boot diagnostics retrieval error for somename"),
+					"failedRoleInstance": gomega.Equal("somename"),
+				},
 			},
 		},
 		{
@@ -121,6 +131,11 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			expectedLogs: []map[string]types.GomegaMatcher{
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
+					"msg":                gomega.Equal("VM: {'location':'eastus','properties':{}}"),
+					"failedRoleInstance": gomega.Equal("somename"),
+				},
+				{
+					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`hello`),
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
@@ -129,9 +144,6 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"msg":                gomega.Equal(`there :)`),
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
-			},
-			expectedOutput: []interface{}{
-				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
 		{
@@ -157,6 +169,11 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			expectedLogs: []map[string]types.GomegaMatcher{
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
+					"msg":                gomega.Equal("VM: {'location':'eastus','properties':{}}"),
+					"failedRoleInstance": gomega.Equal("somename"),
+				},
+				{
+					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`hello`),
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
@@ -165,9 +182,6 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"msg":                gomega.Equal(`there :)`),
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
-			},
-			expectedOutput: []interface{}{
-				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
 		{
@@ -190,9 +204,12 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
-				`vm somename: {"location":"eastus","properties":{}}`,
+			expectedLogs: []map[string]types.GomegaMatcher{
+				{
+					"level":              gomega.Equal(logrus.InfoLevel),
+					"msg":                gomega.Equal("VM: {'location':'eastus','properties':{}}"),
+					"failedRoleInstance": gomega.Equal("somename"),
+				},
 			},
 		},
 		{
@@ -223,6 +240,11 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				})
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{
+				{
+					"level":              gomega.Equal(logrus.InfoLevel),
+					"msg":                gomega.Equal("VM: {'location':'eastus','properties':{}}"),
+					"failedRoleInstance": gomega.Equal("somename"),
+				},
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`),
@@ -274,9 +296,6 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
-				`vm somename: {"location":"eastus","properties":{}}`,
-			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -296,7 +315,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				virtualMachines: vmClient,
 			}
 
-			out, err := d.logVMSerialConsole(ctx, 1)
+			err := d.logVMSerialConsole(ctx, 1)
 			if err != nil {
 				t.Errorf("returned %s, should never return an error", err)
 			}
@@ -304,10 +323,6 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			err = testlog.AssertLoggingOutput(hook, tt.expectedLogs)
 			if err != nil {
 				t.Error(err)
-			}
-
-			for _, e := range deep.Equal(out, tt.expectedOutput) {
-				t.Error(e)
 			}
 		})
 	}

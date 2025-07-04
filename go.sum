@@ -14,6 +14,8 @@ github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry v0.2.2 h1:w
 github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry v0.2.2/go.mod h1:zzmu18cpAinSbhC86oWd47nmgbb91Fl+Yac2PE8NdYk=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 h1:ywEEhmNahHBihViHepv3xPBn1663uRv2t2q/ESv9seY=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0/go.mod h1:iZDifYGJTIgIIkYRNWPENUnqx6bJ2xnSDFI2tjwZNuY=
+github.com/Azure/azure-sdk-for-go/sdk/monitor/query/azmetrics v1.2.0 h1:Q1e5HxbItK2gKfup/+zNUeh9uvSvhQhTNZ+FAhSl0sc=
+github.com/Azure/azure-sdk-for-go/sdk/monitor/query/azmetrics v1.2.0/go.mod h1:k+PHBNek6P1XYcJzik0W8kI1u2n09oLfECmAbRVw69o=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3 v3.0.0-beta.2 h1:qiir/pptnHqp6hV8QwV+IExYIf6cPsXBfUDUXQ27t2Y=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3 v3.0.0-beta.2/go.mod h1:jVRrRDLCOuif95HDYC23ADTMlvahB7tMdl519m9Iyjc=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v5 v5.0.0 h1:5n7dPVqsWfVKw+ZiEKSd3Kzu7gwBkbEBkeXb8rgaE9Q=
