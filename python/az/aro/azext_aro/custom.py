@@ -24,7 +24,11 @@ from azure.cli.core.azclierror import (
     UnauthorizedError,
     ValidationError
 )
-from azure.core.exceptions import ResourceNotFoundError as CoreResourceNotFoundError
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError as CoreResourceNotFoundError
+from azure.mgmt.core.tools import (
+    resource_id,
+    parse_resource_id
+)
 from azext_aro._aad import AADManager
 from azext_aro._rbac import (
     assign_role_to_resource,
@@ -41,11 +45,6 @@ from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 
 from knack.log import get_logger
 
-from msrestazure.azure_exceptions import CloudError
-from msrestazure.tools import (
-    resource_id,
-    parse_resource_id
-)
 from msrest.exceptions import HttpOperationError
 
 from tabulate import tabulate
@@ -287,7 +286,7 @@ def validate(*,  # pylint: disable=too-many-locals,too-many-statements
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
         resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cmd.cli_ctx, cluster, True)),
                      ROLE_READER: sorted(get_disk_encryption_resources(cluster))}
-    except (CloudError, HttpOperationError) as e:
+    except (HttpResponseError, HttpOperationError) as e:
         logger.error(e.message)
         raise
 
@@ -400,7 +399,7 @@ def aro_delete(*, cmd, client, resource_group_name, resource_name, no_wait=False
 
     try:
         oc = client.open_shift_clusters.get(resource_group_name, resource_name)
-    except CloudError as e:
+    except HttpResponseError as e:
         if e.status_code == 404:
             raise ResourceNotFoundError(e.message) from e
         logger.info(e.message)
@@ -764,7 +763,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
         resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc, fail)),
                      ROLE_READER: sorted(get_disk_encryption_resources(oc))}
-    except (CloudError, HttpOperationError) as e:
+    except (HttpResponseError, HttpOperationError) as e:
         if fail:
             logger.error(e.message)
             raise
@@ -779,7 +778,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
                 resource_contributor_exists = True
                 try:
                     resource_contributor_exists = has_role_assignment_on_resource(cli_ctx, resource, sp_id, role)
-                except CloudError as e:
+                except HttpResponseError as e:
                     if fail:
                         logger.error(e.message)
                         raise
