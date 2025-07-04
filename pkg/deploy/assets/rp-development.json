@@ -11,6 +11,9 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
+        "globalDevopsServicePrincipalId": {
+            "type": "string"
+        },
         "rpServicePrincipalId": {
             "type": "string"
         }
