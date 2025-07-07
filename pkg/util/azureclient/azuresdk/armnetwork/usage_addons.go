@@ -6,7 +6,7 @@ package armnetwork
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 // UsageClientAddons contains addons to UsageClient
@@ -15,7 +15,7 @@ type UsageClientAddons interface {
 }
 
 func (c *usagesClient) List(ctx context.Context, location string, options *armnetwork.UsagesClientListOptions) (result []*armnetwork.Usage, err error) {
-	pager := c.UsagesClient.NewListPager(location, options)
+	pager := c.NewListPager(location, options)
 
 	for pager.More() {
 		page, err := pager.NextPage(ctx)

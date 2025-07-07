@@ -7,7 +7,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,6 +15,7 @@ import (
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestEmitAroOperatorHeartbeat(t *testing.T) {
@@ -29,7 +29,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 				Generation: 4,
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: to.Int32Ptr(1),
+				Replicas: pointerutils.ToPtr(int32(1)),
 			},
 			Status: appsv1.DeploymentStatus{
 				Replicas:            1,
@@ -45,7 +45,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 				Generation: 4,
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: to.Int32Ptr(1),
+				Replicas: pointerutils.ToPtr(int32(1)),
 			},
 			Status: appsv1.DeploymentStatus{
 				Replicas:            1,

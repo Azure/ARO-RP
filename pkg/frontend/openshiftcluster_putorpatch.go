@@ -12,12 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/api/v20240812preview"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -202,12 +204,41 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			// OperatorFlagsMergeStrategy==reset will place the default flags in
 			// the external object and then merge in the body's flags when the
 			// request is unmarshaled below.
-			err = admin.OperatorFlagsMergeStrategy(doc.OpenShiftCluster, putOrPatchClusterParameters.body)
+			err = admin.OperatorFlagsMergeStrategy(doc.OpenShiftCluster, putOrPatchClusterParameters.body, operator.DefaultOperatorFlags())
 			if err != nil {
 				// OperatorFlagsMergeStrategy returns CloudErrors
 				return nil, err
 			}
 		}
+
+		// This block is here to enable changing the cluster identity. Without it,
+		// there would be multiple identities contained in the resulting
+		// doc.OpenShiftCluster.Identity.UserAssignedIdentities because json.Unrmashal
+		// will merge dictionaries. So when doc.OpenShiftCluster.Identity.UserAssignedIdentities
+		// contains an identity and a different identity is provided via putOrPatchClusterParameters,
+		// their dictonary keys will not collide (since the identities have
+		// different names) and the dictionary will end up with two entries
+		if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+			tempPatchParameters := &v20240812preview.OpenShiftCluster{}
+			err := json.Unmarshal(putOrPatchClusterParameters.body, tempPatchParameters)
+			if err != nil {
+				return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
+			}
+
+			// if the patch parameters contain a new identity, remove the old
+			// identity from the cluster doc so that the new one will be the
+			// only identity
+			if tempPatchParameters.Identity != nil && len(tempPatchParameters.Identity.UserAssignedIdentities) > 0 {
+				doc.OpenShiftCluster.Identity.UserAssignedIdentities = map[string]api.UserAssignedIdentity{}
+				for k := range tempPatchParameters.Identity.UserAssignedIdentities {
+					doc.OpenShiftCluster.Identity.UserAssignedIdentities[k] = api.UserAssignedIdentity{
+						ClientID:    "",
+						PrincipalID: "",
+					}
+				}
+			}
+		}
+
 		ext = putOrPatchClusterParameters.converter.ToExternal(doc.OpenShiftCluster)
 	}
 
@@ -225,7 +256,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 	} else {
-		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), putOrPatchClusterParameters.path)
+		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, putOrPatchClusterParameters.path)
 		if err != nil {
 			return nil, err
 		}
@@ -279,23 +310,31 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
 
-		// Persist identity URL and tenant ID only for managed/workload identity cluster create
-		// We don't support updating cluster managed identity after cluster creation
-		if doc.OpenShiftCluster.UsesWorkloadIdentity() {
-			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
-				return nil, err
-			}
-			if err := validateIdentityTenantID(doc.OpenShiftCluster, putOrPatchClusterParameters.identityTenantID); err != nil {
-				return nil, err
-			}
-		}
-
 		doc.Bucket, err = f.bucketAllocator.Allocate()
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		setUpdateProvisioningState(doc, putOrPatchClusterParameters.apiVersion)
+	}
+
+	// Persist identity URL and tenant ID for managed/workload identity clusters
+	// We do support updating cluster managed identity after cluster creation
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		// A PATCH will only have a non-empty identityURL if the PATCH includes a new cluster identity
+		skip := putOrPatchClusterParameters.method == http.MethodPatch && putOrPatchClusterParameters.identityURL == ""
+		if !skip {
+			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
+				return nil, err
+			}
+		}
+		// A PATCH will only have a non-empty identityURL if the PATCH includes a new cluster identity
+		skip = putOrPatchClusterParameters.method == http.MethodPatch && putOrPatchClusterParameters.identityTenantID == ""
+		if !skip {
+			if err := validateIdentityTenantID(doc.OpenShiftCluster, putOrPatchClusterParameters.identityTenantID); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// SetDefaults will set defaults on cluster document
@@ -399,7 +438,7 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 }
 
 func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext interface{}, path string) error {
-	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), path)
+	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, path)
 	if err != nil {
 		return err
 	}

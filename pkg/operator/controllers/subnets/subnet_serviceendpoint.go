@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -38,21 +38,21 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 		if subnetObject.SubnetPropertiesFormat == nil {
 			subnetObject.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
 		}
-		if subnetObject.SubnetPropertiesFormat.ServiceEndpoints == nil {
-			subnetObject.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+		if subnetObject.ServiceEndpoints == nil {
+			subnetObject.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
 		}
 
 		for _, endpoint := range api.SubnetsEndpoints {
 			var found bool
-			for _, se := range *subnetObject.SubnetPropertiesFormat.ServiceEndpoints {
+			for _, se := range *subnetObject.ServiceEndpoints {
 				if strings.EqualFold(*se.Service, endpoint) &&
 					se.ProvisioningState == mgmtnetwork.Succeeded {
 					found = true
 				}
 			}
 			if !found {
-				*subnetObject.SubnetPropertiesFormat.ServiceEndpoints = append(*subnetObject.SubnetPropertiesFormat.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
-					Service:   to.StringPtr(endpoint),
+				*subnetObject.ServiceEndpoints = append(*subnetObject.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
+					Service:   pointerutils.ToPtr(endpoint),
 					Locations: &[]string{"*"},
 				})
 				changed = true

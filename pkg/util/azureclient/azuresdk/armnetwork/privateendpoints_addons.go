@@ -6,7 +6,7 @@ package armnetwork
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 // PrivateEndpointsClientAddons contains addons for PrivateEndpointsClient
@@ -16,7 +16,7 @@ type PrivateEndpointsClientAddons interface {
 }
 
 func (c *privateEndpointsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, privateEndpointName string, parameters armnetwork.PrivateEndpoint, options *armnetwork.PrivateEndpointsClientBeginCreateOrUpdateOptions) error {
-	poller, err := c.PrivateEndpointsClient.BeginCreateOrUpdate(ctx, resourceGroupName, privateEndpointName, parameters, options)
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, privateEndpointName, parameters, options)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (c *privateEndpointsClient) CreateOrUpdateAndWait(ctx context.Context, reso
 }
 
 func (c *privateEndpointsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, publicIPAddressName string, options *armnetwork.PrivateEndpointsClientBeginDeleteOptions) error {
-	poller, err := c.PrivateEndpointsClient.BeginDelete(ctx, resourceGroupName, publicIPAddressName, options)
+	poller, err := c.BeginDelete(ctx, resourceGroupName, publicIPAddressName, options)
 	if err != nil {
 		return err
 	}

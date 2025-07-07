@@ -16,10 +16,9 @@ from azure.cli.core.azclierror import (
     RequiredArgumentMissingError,
     MutuallyExclusiveArgumentError
 )
-from azure.core.exceptions import ResourceNotFoundError
+from azure.core.exceptions import ResourceNotFoundError, HttpResponseError
+from azure.mgmt.core.tools import is_valid_resource_id, parse_resource_id, resource_id
 from knack.log import get_logger
-from msrestazure.azure_exceptions import CloudError
-from msrestazure.tools import is_valid_resource_id, parse_resource_id, resource_id
 from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 
 logger = get_logger(__name__)
@@ -98,7 +97,7 @@ def validate_disk_encryption_set(cmd, namespace):
     try:
         compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'],
                                                 disk_encryption_set_name=desid['name'])
-    except CloudError as err:
+    except HttpResponseError as err:
         raise InvalidArgumentValueError(
             f"Invalid --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
             f" {str(err)}") from err
@@ -325,13 +324,6 @@ def validate_enable_managed_identity(namespace):
     if namespace.client_secret is not None:
         raise InvalidArgumentValueError('Must not specify --client-secret when --enable-managed-identity is True')
 
-    if namespace.version is None or not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
-        raise InvalidArgumentValueError('Enabling managed identity requires --version >= 4.14.z')
-
-    _, versionY, _ = namespace.version.split('.', 2)
-    if int(versionY) < 14:
-        raise InvalidArgumentValueError('Enabling managed identity requires --version >= 4.14.z')
-
     if not namespace.platform_workload_identities:
         raise RequiredArgumentMissingError('Enabling managed identity requires platform workload identities to be provided')  # pylint: disable=line-too-long
 
@@ -371,6 +363,18 @@ def validate_cluster_identity(cmd, namespace):
 
     if not namespace.enable_managed_identity:
         raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing a cluster identity')  # pylint: disable=line-too-long
+
+    if not is_valid_resource_id(namespace.mi_user_assigned):
+        namespace.mi_user_assigned = identity_name_to_resource_id(
+            cmd, namespace, namespace.mi_user_assigned)
+
+    if not is_valid_identity_resource_id(namespace.mi_user_assigned):
+        raise InvalidArgumentValueError(f"Resource {namespace.mi_user_assigned} used for cluster user assigned identity is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
+
+
+def validate_cluster_identity_update(cmd, namespace):
+    if namespace.mi_user_assigned is None:
+        return
 
     if not is_valid_resource_id(namespace.mi_user_assigned):
         namespace.mi_user_assigned = identity_name_to_resource_id(

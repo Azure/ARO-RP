@@ -26,19 +26,52 @@ var (
 
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
 // backing certificate (if needed) and store the certificate in the cluster MSI key
-// vault. If the certificate stored in keyvault is eligible for renewal, this function will request and persist
-// a new certificate.
+// vault. If the certificate stored in keyvault is eligible for renewal, the
+// certificate is empty or the certificate is for a different identity, this
+// function will request and persist a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
+	needsNewCert := false
 
 	if existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
-		if existingMsiCertificate.Secret.Attributes != nil {
-			if !m.isEligibleForRenewal(existingMsiCertificate) {
-				return nil
+		if existingMsiCertificate.Attributes != nil {
+			// if the secret's value is empty or the secret is for a different
+			// identity, we need to issue a new certificate
+			if existingMsiCertificate.Value == nil {
+				// MSI cert is empty for some reason, create a new cert
+				needsNewCert = true
+			} else {
+				keyvaultCredentials := &dataplane.ManagedIdentityCredentials{}
+				err := json.Unmarshal([]byte(*existingMsiCertificate.Value), keyvaultCredentials)
+				if err != nil {
+					return err
+				}
+
+				clusterIdentityResourceID := ""
+				for k := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
+					clusterIdentityResourceID = k
+				}
+				if *keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterIdentityResourceID {
+					// cluster update - identity updated, re-request and replace the MSI cert
+					needsNewCert = true
+				}
+			}
+
+			if m.isEligibleForRenewal(existingMsiCertificate) {
+				// cluster update - MSI cert is eligible for refresh
+				needsNewCert = true
 			}
 		}
-	} else if !azureerrors.IsNotFoundError(err) {
+	} else if azureerrors.IsNotFoundError(err) {
+		// cluster create - request and persist MSI cert
+		needsNewCert = true
+	} else {
+		// ie: when there is an error in the dataplane
 		return err
+	}
+
+	if !needsNewCert {
+		return nil
 	}
 
 	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
@@ -72,7 +105,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 // https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation
 // The cert is eligible to be refreshed after the 46 day mark, and expires at 90 days
 func (m *manager) isEligibleForRenewal(secret azsecrets.GetSecretResponse) bool {
-	renewAfter := time.Time.AddDate(*secret.Secret.Attributes.NotBefore, 0, 0, 46)
+	renewAfter := time.Time.AddDate(*secret.Attributes.NotBefore, 0, 0, 46)
 	return time.Now().After(renewAfter)
 }
 

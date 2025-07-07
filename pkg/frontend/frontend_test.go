@@ -298,7 +298,7 @@ func routeIsAllLowercase(route chi.Route) bool {
 	}
 
 	for _, v := range route.SubRoutes.Routes() {
-		if !(pattern == strings.ToLower(pattern)) || !routeIsAllLowercase(v) {
+		if (pattern != strings.ToLower(pattern)) || !routeIsAllLowercase(v) {
 			return false
 		}
 	}

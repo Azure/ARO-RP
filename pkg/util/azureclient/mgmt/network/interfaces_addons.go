@@ -16,7 +16,7 @@ type InterfacesClientAddons interface {
 }
 
 func (c *interfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, parameters mgmtnetwork.Interface) error {
-	future, err := c.InterfacesClient.CreateOrUpdate(ctx, resourceGroupName, networkInterfaceName, parameters)
+	future, err := c.CreateOrUpdate(ctx, resourceGroupName, networkInterfaceName, parameters)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (c *interfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGr
 }
 
 func (c *interfacesClient) DeleteAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string) error {
-	future, err := c.InterfacesClient.Delete(ctx, resourceGroupName, networkInterfaceName)
+	future, err := c.Delete(ctx, resourceGroupName, networkInterfaceName)
 	if err != nil {
 		return err
 	}

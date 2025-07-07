@@ -12,13 +12,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/go-multierror"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-	"github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -31,8 +32,9 @@ import (
 
 type Feature int
 
-// At least to start with, features are intended to be used so that the
-// production default is not set (in production RP_FEATURES is unset).
+// RP Features are boolean options with defined on/off behaviour that is
+// required at the RP level. Most of them are only relevant for development
+// environments.
 const (
 	FeatureDisableDenyAssignments Feature = iota
 	FeatureDisableSignedCertificates
@@ -43,6 +45,10 @@ const (
 	FeatureUseMockMsiRp
 	FeatureEnableMISE
 	FeatureEnforceMISE
+	// Expanded Availability Zones are AZs in zonal regions above 3. This
+	// affects whether we allow it for created clusters, it does not affect the
+	// RP's deployments.
+	FeatureEnableClusterExpandedAvailabilityZones
 )
 
 const (

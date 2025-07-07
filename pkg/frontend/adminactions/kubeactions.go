@@ -7,7 +7,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
@@ -20,10 +19,12 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -176,7 +177,7 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 
 	resourceDeleteOptions := metav1.DeleteOptions{}
 	if force {
-		resourceDeleteOptions.GracePeriodSeconds = to.Int64Ptr(0)
+		resourceDeleteOptions.GracePeriodSeconds = pointerutils.ToPtr(int64(0))
 	}
 
 	if propagationPolicy != nil {

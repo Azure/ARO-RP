@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ugorji/go/codec"
 	"go.uber.org/mock/gomock"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -635,7 +635,7 @@ func newEtcdPods(t *testing.T, doc *api.OpenShiftClusterDocument, healthy, multi
 		{
 			Name:         "etcd",
 			Ready:        false,
-			Started:      to.BoolPtr(false),
+			Started:      pointerutils.ToPtr(false),
 			RestartCount: 50,
 			State: corev1.ContainerState{
 				Waiting: &corev1.ContainerStateWaiting{

@@ -24,7 +24,11 @@ from azure.cli.core.azclierror import (
     UnauthorizedError,
     ValidationError
 )
-from azure.core.exceptions import ResourceNotFoundError as CoreResourceNotFoundError
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError as CoreResourceNotFoundError
+from azure.mgmt.core.tools import (
+    resource_id,
+    parse_resource_id
+)
 from azext_aro._aad import AADManager
 from azext_aro._rbac import (
     assign_role_to_resource,
@@ -41,11 +45,6 @@ from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 
 from knack.log import get_logger
 
-from msrestazure.azure_exceptions import CloudError
-from msrestazure.tools import (
-    resource_id,
-    parse_resource_id
-)
 from msrest.exceptions import HttpOperationError
 
 from tabulate import tabulate
@@ -59,7 +58,8 @@ def rp_mode_development():
     return os.environ.get('RP_MODE', '').lower() == 'development'
 
 
-def aro_create(cmd,  # pylint: disable=too-many-locals
+def aro_create(*,  # pylint: disable=too-many-locals
+               cmd,
                client,
                resource_group_name,
                resource_name,
@@ -104,12 +104,12 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     validate_subnets(master_subnet, worker_subnet)
 
-    validate(cmd,
-             client,
-             resource_group_name,
-             resource_name,
-             master_subnet,
-             worker_subnet,
+    validate(cmd=cmd,
+             client=client,
+             resource_group_name=resource_group_name,
+             resource_name=resource_name,
+             master_subnet=master_subnet,
+             worker_subnet=worker_subnet,
              vnet=vnet,
              enable_preconfigured_nsg=enable_preconfigured_nsg,
              cluster_resource_group=cluster_resource_group,
@@ -233,7 +233,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
+def validate(*,  # pylint: disable=too-many-locals,too-many-statements
+             cmd,
              client,  # pylint: disable=unused-argument
              resource_group_name,  # pylint: disable=unused-argument
              resource_name,  # pylint: disable=unused-argument
@@ -285,7 +286,7 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
         resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cmd.cli_ctx, cluster, True)),
                      ROLE_READER: sorted(get_disk_encryption_resources(cluster))}
-    except (CloudError, HttpOperationError) as e:
+    except (HttpResponseError, HttpOperationError) as e:
         logger.error(e.message)
         raise
 
@@ -348,7 +349,8 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
         raise ValidationError(full_msg)
 
 
-def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
+def aro_validate(*,  # pylint: disable=too-many-locals,too-many-statements
+                 cmd,
                  client,
                  resource_group_name,
                  resource_name,
@@ -369,12 +371,12 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
                  mi_user_assigned=None,
                  ):
 
-    validate(cmd,
-             client,
-             resource_group_name,
-             resource_name,
-             master_subnet,
-             worker_subnet,
+    validate(cmd=cmd,
+             client=client,
+             resource_group_name=resource_group_name,
+             resource_name=resource_name,
+             master_subnet=master_subnet,
+             worker_subnet=worker_subnet,
              vnet=vnet,
              cluster_resource_group=cluster_resource_group,
              client_id=client_id,
@@ -391,13 +393,13 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
              warnings_as_text=False)
 
 
-def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False, delete_identities=None):
+def aro_delete(*, cmd, client, resource_group_name, resource_name, no_wait=False, delete_identities=None):
     # TODO: clean up rbac
     rp_client_sp_id = None
 
     try:
         oc = client.open_shift_clusters.get(resource_group_name, resource_name)
-    except CloudError as e:
+    except HttpResponseError as e:
         if e.status_code == 404:
             raise ResourceNotFoundError(e.message) from e
         logger.info(e.message)
@@ -508,13 +510,14 @@ def aro_get_versions(client, location):
     return sorted(versions)
 
 
-def aro_update(cmd,
+def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
                client,
                resource_group_name,
                resource_name,
                refresh_cluster_credentials=False,
                client_id=None,
                client_secret=None,
+               mi_user_assigned=None,
                platform_workload_identities=None,
                load_balancer_managed_outbound_ip_count=None,
                upgradeable_to=None,
@@ -525,6 +528,11 @@ def aro_update(cmd,
     oc_update = openshiftcluster.OpenShiftClusterUpdate()
 
     if platform_workload_identities is not None and oc.service_principal_profile is not None:
+        raise InvalidArgumentValueError(
+            "Cannot assign platform workload identities to a cluster with service principal"
+        )
+
+    if mi_user_assigned is not None and oc.service_principal_profile is not None:
         raise InvalidArgumentValueError(
             "Cannot assign platform workload identities to a cluster with service principal"
         )
@@ -541,6 +549,12 @@ def aro_update(cmd,
 
             if client_id is not None:
                 oc_update.service_principal_profile.client_id = client_id
+
+    if mi_user_assigned is not None:
+        oc_update.identity = openshiftcluster.ManagedServiceIdentity(
+            type='UserAssigned',
+            user_assigned_identities={mi_user_assigned: {}}
+        )
 
     if oc.platform_workload_identity_profile is not None:
         if platform_workload_identities is not None or upgradeable_to is not None:
@@ -627,8 +641,11 @@ def get_cluster_network_resources(cli_ctx, oc, fail):
 
     # Ensure that worker_profiles_status exists
     # it will not be returned if the cluster resources do not exist
+
+    # We filter nonexistent subnets here as we only propagate subnet values for
+    # worker profiles/machinesets considered valid.
     if oc.worker_profiles_status is not None:
-        worker_subnets |= {w.subnet_id for w in oc.worker_profiles_status}
+        worker_subnets |= {w.subnet_id for w in oc.worker_profiles_status if w.subnet_id is not None}
 
     master_parts = parse_resource_id(master_subnet)
     vnet = resource_id(
@@ -746,7 +763,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
         resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc, fail)),
                      ROLE_READER: sorted(get_disk_encryption_resources(oc))}
-    except (CloudError, HttpOperationError) as e:
+    except (HttpResponseError, HttpOperationError) as e:
         if fail:
             logger.error(e.message)
             raise
@@ -761,7 +778,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
                 resource_contributor_exists = True
                 try:
                     resource_contributor_exists = has_role_assignment_on_resource(cli_ctx, resource, sp_id, role)
-                except CloudError as e:
+                except HttpResponseError as e:
                     if fail:
                         logger.error(e.message)
                         raise

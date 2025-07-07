@@ -9,15 +9,16 @@ import (
 	"strconv"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/Azure/go-autorest/autorest"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
@@ -27,6 +28,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/storage"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -74,8 +76,8 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 	}
 
 	for _, rule := range virtualNetworkResourceIDs {
-		*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules = append(*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: to.StringPtr(rule),
+		*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+			VirtualNetworkResourceID: pointerutils.ToPtr(rule),
 			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
@@ -84,17 +86,17 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 
 func getValidSubnet(resourceId string) *mgmtnetwork.Subnet {
 	s := &mgmtnetwork.Subnet{
-		ID: to.StringPtr(resourceId),
+		ID: pointerutils.ToPtr(resourceId),
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-				ID: to.StringPtr(nsgv1MasterResourceId),
+				ID: pointerutils.ToPtr(nsgv1MasterResourceId),
 			},
 			ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
 	for _, endpoint := range api.SubnetsEndpoints {
-		*s.SubnetPropertiesFormat.ServiceEndpoints = append(*s.SubnetPropertiesFormat.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
-			Service:           to.StringPtr(endpoint),
+		*s.ServiceEndpoints = append(*s.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
+			Service:           pointerutils.ToPtr(endpoint),
 			Locations:         &[]string{location},
 			ProvisioningState: mgmtnetwork.Succeeded,
 		})

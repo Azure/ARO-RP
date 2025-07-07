@@ -14,7 +14,7 @@ import (
 )
 
 func TestKeyIDFromPublicKey(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 256)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}

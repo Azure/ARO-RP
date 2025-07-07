@@ -6,7 +6,6 @@ package frontend
 import (
 	"bytes"
 	"context"
-	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,7 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	_ "embed"
+
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -33,6 +33,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type degradedEtcd struct {
@@ -118,8 +119,8 @@ func (f *frontend) fixEtcd(ctx context.Context, log *logrus.Entry, env env.Inter
 		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	etcd.Spec.OperatorSpec.UnsupportedConfigOverrides.Raw = existingOverrides
-	err = patchEtcd(ctx, log, etcdcli, etcd, patchOverides+string(etcd.Spec.OperatorSpec.UnsupportedConfigOverrides.Raw))
+	etcd.Spec.UnsupportedConfigOverrides.Raw = existingOverrides
+	err = patchEtcd(ctx, log, etcdcli, etcd, patchOverides+string(etcd.Spec.UnsupportedConfigOverrides.Raw))
 	if err != nil {
 		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
@@ -210,9 +211,9 @@ func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured
 						"namespace": namespaceEtcds,
 						"labels":    map[string]string{"app": jobNameFixPeers},
 					},
-					"activeDeadlineSeconds":   to.Int64Ptr(10),
-					"completions":             to.Int32Ptr(1),
-					"ttlSecondsAfterFinished": to.Int32Ptr(300),
+					"activeDeadlineSeconds":   pointerutils.ToPtr(int64(10)),
+					"completions":             pointerutils.ToPtr(int32(1)),
+					"ttlSecondsAfterFinished": pointerutils.ToPtr(int32(300)),
 					"spec": map[string]interface{}{
 						"restartPolicy":      corev1.RestartPolicyOnFailure,
 						"serviceAccountName": serviceAccountName,
@@ -226,7 +227,7 @@ func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured
 									backupOrFixEtcd,
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: to.BoolPtr(true),
+									Privileged: pointerutils.ToPtr(true),
 								},
 								Env: []corev1.EnvVar{
 									{
@@ -332,7 +333,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 func newServiceAccount(name, cluster string) *unstructured.Unstructured {
 	serviceAcc := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"automountServiceAccountToken": to.BoolPtr(true),
+			"automountServiceAccountToken": pointerutils.ToPtr(true),
 		},
 	}
 	serviceAcc.SetAPIVersion("v1")
@@ -393,7 +394,7 @@ func newSecurityContextConstraint(name, cluster, usersAccount string) *unstructu
 			"groups":                   []string{},
 			"users":                    []string{usersAccount},
 			"allowPrivilegedContainer": true,
-			"allowPrivilegeEscalation": to.BoolPtr(true),
+			"allowPrivilegeEscalation": pointerutils.ToPtr(true),
 			"allowedCapabilities":      []corev1.Capability{"*"},
 			"runAsUser": map[string]securityv1.RunAsUserStrategyType{
 				"type": securityv1.RunAsUserStrategyRunAsAny,
@@ -522,9 +523,10 @@ func waitForJobSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Int
 	case event := <-watcher.ResultChan():
 		pod := event.Object.(*corev1.Pod)
 
-		if pod.Status.Phase == corev1.PodSucceeded {
+		switch pod.Status.Phase {
+		case corev1.PodSucceeded:
 			log.Infof("Job %s completed with %s", pod.GetName(), pod.Status.Message)
-		} else if pod.Status.Phase == corev1.PodFailed {
+		case corev1.PodFailed:
 			log.Infof("Job %s reached phase %s with message: %s", pod.GetName(), pod.Status.Phase, pod.Status.Message)
 			waitErr = fmt.Errorf("pod %s event %s received with message %s", pod.Name, pod.Status.Phase, pod.Status.Message)
 		}
@@ -562,9 +564,9 @@ func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
 						"namespace": namespaceEtcds,
 						"labels":    map[string]string{"app": jobNameDataBackup},
 					},
-					"activeDeadlineSeconds":   to.Int64Ptr(10),
-					"completions":             to.Int32Ptr(1),
-					"ttlSecondsAfterFinished": to.Int32Ptr(300),
+					"activeDeadlineSeconds":   pointerutils.ToPtr(int64(10)),
+					"completions":             pointerutils.ToPtr(int32(1)),
+					"ttlSecondsAfterFinished": pointerutils.ToPtr(int32(300)),
 					"spec": map[string]interface{}{
 						"restartPolicy": corev1.RestartPolicyOnFailure,
 						"nodeName":      node,
@@ -590,7 +592,7 @@ func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{"SYS_CHROOT"},
 									},
-									Privileged: to.BoolPtr(true),
+									Privileged: pointerutils.ToPtr(true),
 								},
 								Env: []corev1.EnvVar{
 									{

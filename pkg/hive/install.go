@@ -13,8 +13,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -25,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -98,7 +97,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	if boundSASigningKeySecret != nil {
 		resources = append(resources, boundSASigningKeySecret)
 		cd.Spec.BoundServiceAccountSignkingKeySecretRef = &corev1.LocalObjectReference{
-			Name: boundSASigningKeySecret.ObjectMeta.Name,
+			Name: boundSASigningKeySecret.Name,
 		}
 	}
 
@@ -238,7 +237,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
-			InstallAttemptsLimit: to.Int32Ptr(1),
+			InstallAttemptsLimit: pointerutils.ToPtr(int32(1)),
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
 			},

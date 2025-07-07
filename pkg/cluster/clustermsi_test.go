@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -32,7 +33,9 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	mockGuid := "00000000-0000-0000-0000-000000000000"
 	clusterRGName := "aro-cluster"
 	miName := "aro-cluster-msi"
+	altName := "aro-cluster-msi2"
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+	altResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, altName)
 	secretName := dataplane.ManagedIdentityCredentialsStoragePrefix + mockGuid
 
 	secretNotFoundError := autorest.DetailedError{
@@ -50,6 +53,28 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ClientSecret:               &placeholderString,
 				TenantID:                   &placeholderString,
 				ResourceID:                 &miResourceId,
+				AuthenticationEndpoint:     &placeholderString,
+				CannotRenewAfter:           &placeholderTime,
+				ClientSecretURL:            &placeholderString,
+				MtlsAuthenticationEndpoint: &placeholderString,
+				NotAfter:                   &placeholderTime,
+				NotBefore:                  &placeholderTime,
+				RenewAfter:                 &placeholderTime,
+				CustomClaims: &dataplane.CustomClaims{
+					XMSAzNwperimid: []string{placeholderString},
+					XMSAzTm:        &placeholderString,
+				},
+				ObjectID: &placeholderString,
+			},
+		},
+	}
+	alternateCredentialsObject := &dataplane.ManagedIdentityCredentials{
+		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
+			{
+				ClientID:                   &placeholderString,
+				ClientSecret:               &placeholderString,
+				TenantID:                   &placeholderString,
+				ResourceID:                 &altResourceId,
 				AuthenticationEndpoint:     &placeholderString,
 				CannotRenewAfter:           &placeholderTime,
 				ClientSecretURL:            &placeholderString,
@@ -216,6 +241,45 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
 				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, secretNotFoundError).Times(1)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
+			},
+		},
+		{
+			name: "success - successfully update cluster identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.ManagedServiceIdentity{
+						IdentityURL: middleware.MockIdentityURL,
+						TenantID:    mockGuid,
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {
+								ClientID:    mockGuid,
+								PrincipalID: mockGuid,
+							},
+						},
+					},
+				},
+			},
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(alternateCredentialsObject, nil)
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				credentialsObjectBuffer, err := json.Marshal(alternateCredentialsObject)
+				if err != nil {
+					panic(err)
+				}
+
+				credentialsObjectString := string(credentialsObjectBuffer)
+				getSecretResponse := azsecrets.GetSecretResponse{
+					Secret: azsecrets.Secret{
+						Value: &credentialsObjectString,
+						Attributes: &azsecrets.SecretAttributes{
+							NotBefore: &placeholderNotEligibleForRotationTime,
+						},
+					},
+				}
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
 				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
 			},
 		},

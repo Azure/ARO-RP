@@ -9,16 +9,16 @@ import (
 	"strings"
 	"testing"
 
-	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"k8s.io/utils/ptr"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -229,31 +229,31 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 							Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
 									{
-										Name: ptr.To("ae3506385907e44eba9ef9bf76eac973"),
-										ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+										Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+										ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
 										Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 											PublicIPAddress: &sdknetwork.PublicIPAddress{
-												ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+												ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
 											},
 										},
 									},
 									{
-										Name: ptr.To("customer-ip"),
-										ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/customer-ip"),
+										Name: pointerutils.ToPtr("customer-ip"),
+										ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/customer-ip"),
 										Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 											PublicIPAddress: &sdknetwork.PublicIPAddress{
-												ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/publicIPAddresses/customer-ip"),
+												ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/publicIPAddresses/customer-ip"),
 											},
 										},
 									},
 								},
 								OutboundRules: []*sdknetwork.OutboundRule{
 									{
-										Name: ptr.To(outboundRuleV4),
+										Name: pointerutils.ToPtr(outboundRuleV4),
 										Properties: &sdknetwork.OutboundRulePropertiesFormat{
 											FrontendIPConfigurations: []*sdknetwork.SubResource{
 												{
-													ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/customer-ip"),
+													ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/customer-ip"),
 												},
 											},
 										},
@@ -308,51 +308,51 @@ func TestAddOutboundIPsToLB(t *testing.T) {
 			},
 			currentLB: getClearedLB(),
 			expectedLB: sdknetwork.LoadBalancer{
-				Name: ptr.To("infraID"),
+				Name: pointerutils.ToPtr("infraID"),
 				Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 					FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
 						{
-							Name: ptr.To("ae3506385907e44eba9ef9bf76eac973"),
-							ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+							Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
 							Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 								LoadBalancingRules: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
 									},
 									{
-										ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
 									},
 								},
 								PublicIPAddress: &sdknetwork.PublicIPAddress{
-									ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
 								},
 							},
 						},
 						{
-							Name: ptr.To("public-lb-ip-v4"),
-							ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+							Name: pointerutils.ToPtr("public-lb-ip-v4"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
 							Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 								LoadBalancingRules: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("api-internal-v4"),
+										ID: pointerutils.ToPtr("api-internal-v4"),
 									},
 								},
 								OutboundRules: []*sdknetwork.SubResource{{
-									ID: ptr.To(outboundRuleV4),
+									ID: pointerutils.ToPtr(outboundRuleV4),
 								}},
 								PublicIPAddress: &sdknetwork.PublicIPAddress{
-									ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
 								},
 							},
 						},
 					},
 					OutboundRules: []*sdknetwork.OutboundRule{
 						{
-							Name: ptr.To(outboundRuleV4),
+							Name: pointerutils.ToPtr(outboundRuleV4),
 							Properties: &sdknetwork.OutboundRulePropertiesFormat{
 								FrontendIPConfigurations: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+										ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
 									},
 								},
 							},
@@ -373,63 +373,63 @@ func TestAddOutboundIPsToLB(t *testing.T) {
 			},
 			currentLB: getClearedLB(),
 			expectedLB: sdknetwork.LoadBalancer{
-				Name: ptr.To("infraID"),
+				Name: pointerutils.ToPtr("infraID"),
 				Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 					FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
 						{
-							Name: ptr.To("ae3506385907e44eba9ef9bf76eac973"),
-							ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+							Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
 							Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 								LoadBalancingRules: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
 									},
 									{
-										ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
 									},
 								},
 								PublicIPAddress: &sdknetwork.PublicIPAddress{
-									ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
 								},
 							},
 						},
 						{
-							Name: ptr.To("public-lb-ip-v4"),
-							ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+							Name: pointerutils.ToPtr("public-lb-ip-v4"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
 							Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 								LoadBalancingRules: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("api-internal-v4"),
+										ID: pointerutils.ToPtr("api-internal-v4"),
 									},
 								},
 								OutboundRules: []*sdknetwork.SubResource{{
-									ID: ptr.To(outboundRuleV4),
+									ID: pointerutils.ToPtr(outboundRuleV4),
 								}},
 								PublicIPAddress: &sdknetwork.PublicIPAddress{
-									ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
 								},
 							},
 						},
 						{
-							Name: ptr.To("uuid1-outbound-pip-v4"),
-							ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
+							Name: pointerutils.ToPtr("uuid1-outbound-pip-v4"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
 							Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 								PublicIPAddress: &sdknetwork.PublicIPAddress{
-									ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
 								},
 							},
 						},
 					},
 					OutboundRules: []*sdknetwork.OutboundRule{
 						{
-							Name: ptr.To(outboundRuleV4),
+							Name: pointerutils.ToPtr(outboundRuleV4),
 							Properties: &sdknetwork.OutboundRulePropertiesFormat{
 								FrontendIPConfigurations: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+										ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
 									},
 									{
-										ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
+										ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
 									},
 								},
 							},
@@ -458,47 +458,47 @@ func TestRemoveOutboundIPsFromLB(t *testing.T) {
 			name:      "remove all outbound-rule-v4 fip config except api server",
 			currentLB: fakeLoadBalancersGet(1, api.VisibilityPublic),
 			expectedLB: sdknetwork.LoadBalancer{
-				Name: ptr.To("infraID"),
+				Name: pointerutils.ToPtr("infraID"),
 				Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 					FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
 						{
-							Name: ptr.To("ae3506385907e44eba9ef9bf76eac973"),
-							ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+							Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
 							Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 								LoadBalancingRules: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
 									},
 									{
-										ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
 									},
 								},
 								PublicIPAddress: &sdknetwork.PublicIPAddress{
-									ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
 								},
 							},
 						},
 						{
-							Name: ptr.To("public-lb-ip-v4"),
-							ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+							Name: pointerutils.ToPtr("public-lb-ip-v4"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
 							Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 								LoadBalancingRules: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("api-internal-v4"),
+										ID: pointerutils.ToPtr("api-internal-v4"),
 									},
 								},
 								OutboundRules: []*sdknetwork.SubResource{{
-									ID: ptr.To(outboundRuleV4),
+									ID: pointerutils.ToPtr(outboundRuleV4),
 								}},
 								PublicIPAddress: &sdknetwork.PublicIPAddress{
-									ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
 								},
 							},
 						},
 					},
 					OutboundRules: []*sdknetwork.OutboundRule{
 						{
-							Name: ptr.To(outboundRuleV4),
+							Name: pointerutils.ToPtr(outboundRuleV4),
 							Properties: &sdknetwork.OutboundRulePropertiesFormat{
 								FrontendIPConfigurations: []*sdknetwork.SubResource{},
 							},
@@ -511,30 +511,30 @@ func TestRemoveOutboundIPsFromLB(t *testing.T) {
 			name:      "remove all outbound-rule-v4 fip config",
 			currentLB: fakeLoadBalancersGet(1, api.VisibilityPrivate),
 			expectedLB: sdknetwork.LoadBalancer{
-				Name: ptr.To("infraID"),
+				Name: pointerutils.ToPtr("infraID"),
 				Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 					FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
 						{
-							Name: ptr.To("ae3506385907e44eba9ef9bf76eac973"),
-							ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+							Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
 							Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 								LoadBalancingRules: []*sdknetwork.SubResource{
 									{
-										ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
 									},
 									{
-										ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
 									},
 								},
 								PublicIPAddress: &sdknetwork.PublicIPAddress{
-									ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
 								},
 							},
 						},
 					},
 					OutboundRules: []*sdknetwork.OutboundRule{
 						{
-							Name: ptr.To(outboundRuleV4),
+							Name: pointerutils.ToPtr(outboundRuleV4),
 							Properties: &sdknetwork.OutboundRulePropertiesFormat{
 								FrontendIPConfigurations: []*sdknetwork.SubResource{},
 							},
@@ -1137,18 +1137,18 @@ func getFakePublicIPAddress(name, location string) sdknetwork.PublicIPAddress {
 	return sdknetwork.PublicIPAddress{
 		Name:     &name,
 		ID:       &id,
-		Location: ptr.To(location),
+		Location: pointerutils.ToPtr(location),
 		Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-			PublicIPAllocationMethod: ptr.To(sdknetwork.IPAllocationMethodStatic),
-			PublicIPAddressVersion:   ptr.To(sdknetwork.IPVersionIPv4),
+			PublicIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodStatic),
+			PublicIPAddressVersion:   pointerutils.ToPtr(sdknetwork.IPVersionIPv4),
 		},
 		SKU: &sdknetwork.PublicIPAddressSKU{
-			Name: ptr.To(sdknetwork.PublicIPAddressSKUNameStandard),
+			Name: pointerutils.ToPtr(sdknetwork.PublicIPAddressSKUNameStandard),
 		},
 	}
 }
 
-// Returns a load balancer with config updated with desired outbound ips as it should be when m.loadBalancersClient.CreateOrUpdate is called.
+// Returns a load balancer with config updated with desired outbound ips as it should be when m.armLoadBalancersClient.CreateOrUpdate is called.
 // It is assumed that desired IPs include the default outbound IPs, however this won't work for transitions from
 // customer provided IPs/Prefixes to managed IPs if the api server is private since the default IP
 // would be deleted
@@ -1165,45 +1165,45 @@ func fakeUpdatedLoadBalancer(additionalIPCount int) sdknetwork.LoadBalancer {
 	return lb
 }
 
-// Returns lb as it would be returned via m.loadBalancersClient.Get.
+// Returns lb as it would be returned via m.armLoadBalancersClient.Get.
 func fakeLoadBalancersGet(additionalIPCount int, apiServerVisibility api.Visibility) sdknetwork.LoadBalancer {
 	defaultOutboundFIPConfig := sdknetwork.FrontendIPConfiguration{
-		Name: ptr.To("public-lb-ip-v4"),
-		ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+		Name: pointerutils.ToPtr("public-lb-ip-v4"),
+		ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
 		Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 			OutboundRules: []*sdknetwork.SubResource{{
-				ID: ptr.To(outboundRuleV4),
+				ID: pointerutils.ToPtr(outboundRuleV4),
 			}},
 			PublicIPAddress: &sdknetwork.PublicIPAddress{
-				ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
+				ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
 			},
 		},
 	}
 	if apiServerVisibility == api.VisibilityPublic {
 		defaultOutboundFIPConfig.Properties.LoadBalancingRules = []*sdknetwork.SubResource{
 			{
-				ID: ptr.To("api-internal-v4"),
+				ID: pointerutils.ToPtr("api-internal-v4"),
 			},
 		}
 	}
 	lb := sdknetwork.LoadBalancer{
-		Name: ptr.To("infraID"),
+		Name: pointerutils.ToPtr("infraID"),
 		Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
 				{
-					Name: ptr.To("ae3506385907e44eba9ef9bf76eac973"),
-					ID:   ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+					Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+					ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
 					Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 						LoadBalancingRules: []*sdknetwork.SubResource{
 							{
-								ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+								ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
 							},
 							{
-								ID: ptr.To("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+								ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
 							},
 						},
 						PublicIPAddress: &sdknetwork.PublicIPAddress{
-							ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
 						},
 					},
 				},
@@ -1211,11 +1211,11 @@ func fakeLoadBalancersGet(additionalIPCount int, apiServerVisibility api.Visibil
 			},
 			OutboundRules: []*sdknetwork.OutboundRule{
 				{
-					Name: ptr.To(outboundRuleV4),
+					Name: pointerutils.ToPtr(outboundRuleV4),
 					Properties: &sdknetwork.OutboundRulePropertiesFormat{
 						FrontendIPConfigurations: []*sdknetwork.SubResource{
 							{
-								ID: ptr.To("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+								ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
 							},
 						},
 					},
@@ -1232,7 +1232,7 @@ func fakeLoadBalancersGet(additionalIPCount int, apiServerVisibility api.Visibil
 			ID:   &fipID,
 			Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
 				OutboundRules: []*sdknetwork.SubResource{{
-					ID: ptr.To(outboundRuleV4),
+					ID: pointerutils.ToPtr(outboundRuleV4),
 				}},
 				PublicIPAddress: &sdknetwork.PublicIPAddress{
 					ID: &ipID,
@@ -1263,8 +1263,8 @@ func getFakePublicIPList(managedCount int) []*sdknetwork.PublicIPAddress {
 			Name: &defaultOutboundIPName,
 		},
 		{
-			ID:   ptr.To(clusterRGID + "/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
-			Name: ptr.To("infraID-default-v4"),
+			ID:   pointerutils.ToPtr(clusterRGID + "/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+			Name: pointerutils.ToPtr("infraID-default-v4"),
 		},
 	}
 	for i := 0; i < managedCount; i++ {

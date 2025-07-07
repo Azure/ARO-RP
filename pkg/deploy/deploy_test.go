@@ -9,15 +9,16 @@ import (
 	"reflect"
 	"testing"
 
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -283,8 +284,8 @@ func TestCheckForKnownError(t *testing.T) {
 }
 
 func TestGetParameters(t *testing.T) {
-	databaseAccountName := to.StringPtr("databaseAccountName")
-	adminApiCaBundle := to.StringPtr("adminApiCaBundle")
+	databaseAccountName := pointerutils.ToPtr("databaseAccountName")
+	adminApiCaBundle := pointerutils.ToPtr("adminApiCaBundle")
 	extraClusterKeyVaultAccessPolicies := []interface{}{"a", "b", 1}
 	for _, tt := range []struct {
 		name   string

@@ -11,12 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
@@ -34,15 +33,15 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 	return azcertificates.CreateCertificateParameters{
 		CertificatePolicy: &azcertificates.CertificatePolicy{
 			KeyProperties: &azcertificates.KeyProperties{
-				Exportable: to.BoolPtr(true),
+				Exportable: pointerutils.ToPtr(true),
 				KeyType:    pointerutils.ToPtr(azcertificates.KeyTypeRSA),
-				KeySize:    to.Int32Ptr(2048),
+				KeySize:    pointerutils.ToPtr(int32(2048)),
 			},
 			SecretProperties: &azcertificates.SecretProperties{
-				ContentType: to.StringPtr("application/x-pem-file"),
+				ContentType: pointerutils.ToPtr("application/x-pem-file"),
 			},
 			X509CertificateProperties: &azcertificates.X509CertificateProperties{
-				Subject: to.StringPtr(pkix.Name{CommonName: getShortCommonName(commonName)}.String()),
+				Subject: pointerutils.ToPtr(pkix.Name{CommonName: getShortCommonName(commonName)}.String()),
 				EnhancedKeyUsage: []*string{
 					pointerutils.ToPtr(string(eku)),
 				},
@@ -55,12 +54,12 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 					pointerutils.ToPtr(azcertificates.KeyUsageTypeDigitalSignature),
 					pointerutils.ToPtr(azcertificates.KeyUsageTypeKeyEncipherment),
 				},
-				ValidityInMonths: to.Int32Ptr(12),
+				ValidityInMonths: pointerutils.ToPtr(int32(12)),
 			},
 			LifetimeActions: []*azcertificates.LifetimeAction{
 				{
 					Trigger: &azcertificates.LifetimeActionTrigger{
-						DaysBeforeExpiry: to.Int32Ptr(365 - 90),
+						DaysBeforeExpiry: pointerutils.ToPtr(int32(365 - 90)),
 					},
 					Action: &azcertificates.LifetimeActionType{
 						ActionType: pointerutils.ToPtr(azcertificates.CertificatePolicyActionAutoRenew),
@@ -68,7 +67,7 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 				},
 			},
 			IssuerParameters: &azcertificates.IssuerParameters{
-				Name: to.StringPtr(issuer),
+				Name: pointerutils.ToPtr(issuer),
 			},
 		},
 	}

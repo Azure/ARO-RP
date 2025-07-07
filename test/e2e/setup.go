@@ -13,16 +13,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/jongio/azidext/go/azidext"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/jongio/azidext/go/azidext"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"
@@ -32,7 +30,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/latest"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -42,6 +46,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -465,36 +470,77 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 }
 
 func setup(ctx context.Context) error {
-	err := env.ValidateVars(
+	if err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
 		"CLUSTER",
-		"LOCATION")
-
-	if err != nil {
+		"LOCATION"); err != nil {
 		return err
 	}
 
+	// Core ARO env
+	var err error
 	_env, err = env.NewCoreForCI(ctx, log)
 	if err != nil {
 		return err
 	}
 
+	// Read out your test config
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
 		return err
 	}
 
-	if conf.IsCI { // always create cluster in CI
+	// Build a bare‐bones Azure SDK client for OpenshiftClusters
+	credOptions := _env.Environment().EnvironmentCredentialOptions()
+	tokenCred, err := azidentity.NewEnvironmentCredential(credOptions)
+	if err != nil {
+		return err
+	}
+	scopes := []string{_env.Environment().ResourceManagerScope}
+	authAdapter := azidext.NewTokenCredentialAdapter(tokenCred, scopes)
+	azOCClient := redhatopenshift20240812preview.NewOpenShiftClustersClient(
+		_env.Environment(), _env.SubscriptionID(), authAdapter)
+
+	// Only check for leftover clusters in local dev CI, not in release E2E
+	if conf.IsLocalDevelopmentMode() && conf.IsCI {
+		const (
+			maxRetries  = 10
+			waitBetween = 30 * time.Second
+		)
+		totalWait := time.Duration(maxRetries) * waitBetween
+
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					log.Infof("No leftover cluster found on attempt %d; proceeding", attempt)
+					break
+				}
+				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
+			}
+
+			if doc.ProvisioningState != mgmtredhatopenshift20240812preview.Deleting {
+				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
+			}
+
+			if attempt == maxRetries {
+				return fmt.Errorf("cluster still stuck in Deleting after %s; aborting", totalWait)
+			}
+
+			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
+			time.Sleep(waitBetween)
+		}
+
+		// Old cluster is gone, create the new one
+
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
 		}
-
-		err = cluster.Create(ctx)
-		if err != nil {
+		if err = cluster.Create(ctx); err != nil {
 			return err
 		}
 	}
@@ -513,20 +559,27 @@ func setup(ctx context.Context) error {
 }
 
 func done(ctx context.Context) error {
-	// terminate early if delete flag is set to false
+	// Load the usual cluster config (to pick up IsCI, etc.)
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
 		return err
 	}
 
+	// Only delete in CI if the flag isn’t set to false
 	if conf.IsCI && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
 		}
 
-		err = cluster.Delete(ctx, cluster.Config.VnetResourceGroup, cluster.Config.ClusterName)
+		// Attempt deletion
+		err = cluster.Delete(ctx, conf.VnetResourceGroup, conf.ClusterName)
 		if err != nil {
+			// If the cluster truly isn’t there, that’s fine—skip without panicking
+			if strings.Contains(err.Error(), "not found") {
+				log.Infof("Cluster %s already gone, skipping delete", conf.ClusterName)
+				return nil
+			}
 			return err
 		}
 	}

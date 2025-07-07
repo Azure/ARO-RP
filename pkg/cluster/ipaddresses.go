@@ -11,12 +11,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/apparentlymart/go-cidr/cidr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -121,7 +121,7 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		subnet, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, &armnetwork.SubnetsClientGetOptions{Expand: to.StringPtr("ipConfigurations")})
+		subnet, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, &armnetwork.SubnetsClientGetOptions{Expand: pointerutils.ToPtr("ipConfigurations")})
 		if err != nil {
 			return err
 		}
@@ -215,13 +215,13 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
 	}
 
-	lb, err := m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+	lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, lbName, nil)
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *lb.Properties.FrontendIPConfigurations[0].Properties.PrivateIPAddress
 		return nil
 	})
 	return err
@@ -298,8 +298,8 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 		linkIdentifier = *conn.Properties.LinkIdentifier
 
 		if !strings.EqualFold(*conn.Properties.PrivateLinkServiceConnectionState.Status, "Approved") {
-			conn.Properties.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
-			conn.Properties.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
+			conn.Properties.PrivateLinkServiceConnectionState.Status = pointerutils.ToPtr("Approved")
+			conn.Properties.PrivateLinkServiceConnectionState.Description = pointerutils.ToPtr("Approved")
 
 			_, err = m.armRPPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, *conn, nil)
 			if err != nil {
@@ -362,13 +362,13 @@ func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 				// TODO: in the future we will need multiple vnets for our PEs.
 				// It will be necessary to decide the vnet for a cluster's PE
 				// somewhere around here.
-				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+				ID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
 			},
 			ManualPrivateLinkServiceConnections: []*armnetwork.PrivateLinkServiceConnection{
 				{
-					Name: to.StringPtr("rp-plsconnection"),
+					Name: pointerutils.ToPtr("rp-plsconnection"),
 					Properties: &armnetwork.PrivateLinkServiceConnectionProperties{
-						PrivateLinkServiceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
+						PrivateLinkServiceID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
 					},
 				},
 			},
@@ -379,7 +379,7 @@ func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 		return err
 	}
 
-	pe, err := m.armFPPrivateEndpoints.Get(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, &armnetwork.PrivateEndpointsClientGetOptions{Expand: to.StringPtr("networkInterfaces")})
+	pe, err := m.armFPPrivateEndpoints.Get(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")})
 	if err != nil {
 		return err
 	}

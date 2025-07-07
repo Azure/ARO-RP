@@ -10,9 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -22,7 +19,11 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	ktesting "k8s.io/client-go/testing"
+
 	"sigs.k8s.io/yaml"
+
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
@@ -31,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	"github.com/Azure/ARO-RP/test/util/serversideapply"
@@ -72,11 +74,11 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			name: "noop",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
-					Name: to.StringPtr(assignmentName),
+					Name: pointerutils.ToPtr(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						RoleDefinitionID: to.StringPtr(rbac.RoleContributor),
-						Scope:            to.StringPtr(resourceGroupID),
-						PrincipalID:      to.StringPtr(fakeClusterSPObjectId),
+						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
+						Scope:            pointerutils.ToPtr(resourceGroupID),
+						PrincipalID:      pointerutils.ToPtr(fakeClusterSPObjectId),
 					},
 				},
 			},
@@ -112,11 +114,11 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			name: "needs delete & create",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
-					Name: to.StringPtr(assignmentName),
+					Name: pointerutils.ToPtr(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						RoleDefinitionID: to.StringPtr(rbac.RoleContributor),
-						Scope:            to.StringPtr(resourceGroupID),
-						PrincipalID:      to.StringPtr("00000000-0000-0000-0000-000000000001"),
+						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
+						Scope:            pointerutils.ToPtr(resourceGroupID),
+						PrincipalID:      pointerutils.ToPtr("00000000-0000-0000-0000-000000000001"),
 					},
 				},
 			},

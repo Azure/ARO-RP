@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/test/validate"
 )
 
 type validateTest struct {
@@ -125,11 +125,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.location == nil {
-					tt.location = to.StringPtr("location")
+					tt.location = pointerutils.ToPtr("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = to.StringPtr("resourceName")
+					tt.clusterName = pointerutils.ToPtr("resourceName")
 				}
 
 				v := &openShiftClusterStaticValidator{
@@ -165,7 +165,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
 				}
 
-				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sWorkers, v.resourceID)
+				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sWorkers, api.ArchitectureVersionV2, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Error(err)

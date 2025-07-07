@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +29,7 @@ import (
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -121,7 +121,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          to.StringPtr(phaseRunning),
+						Phase:          pointerutils.ToPtr(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -134,7 +134,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          to.StringPtr(phaseRunning),
+						Phase:          pointerutils.ToPtr(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -147,7 +147,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          to.StringPtr(phaseFailed),
+						Phase:          pointerutils.ToPtr(phaseFailed),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},

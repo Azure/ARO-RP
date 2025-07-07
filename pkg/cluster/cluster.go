@@ -8,15 +8,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
 
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
@@ -41,7 +42,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/blob"
@@ -81,10 +81,9 @@ type manager struct {
 	spGraphClient            *utilgraph.GraphServiceClient
 	disks                    compute.DisksClient
 	virtualMachines          compute.VirtualMachinesClient
-	interfaces               network.InterfacesClient // TODO: use armInterfaces instead. https://issues.redhat.com/browse/ARO-4665
+	resourceSkus             compute.ResourceSkusClient
 	armInterfaces            armnetwork.InterfacesClient
 	armPublicIPAddresses     armnetwork.PublicIPAddressesClient
-	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead. https://issues.redhat.com/browse/ARO-4665
 	armLoadBalancers         armnetwork.LoadBalancersClient
 	armPrivateEndpoints      armnetwork.PrivateEndpointsClient
 	armSecurityGroups        armnetwork.SecurityGroupsClient
@@ -97,7 +96,6 @@ type manager struct {
 	roleDefinitions          authorization.RoleDefinitionsClient
 	armRoleDefinitions       armauthorization.RoleDefinitionsClient
 	denyAssignments          authorization.DenyAssignmentClient
-	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead. https://issues.redhat.com/browse/ARO-4665
 	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
 	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
 	armSubnets               armnetwork.SubnetsClient
@@ -269,10 +267,9 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		metricsEmitter:           metricsEmitter,
 		disks:                    compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualMachines:          compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		interfaces:               network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resourceSkus:             compute.NewResourceSkusClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armInterfaces:            armInterfacesClient,
 		armPublicIPAddresses:     armPublicIPAddressesClient,
-		loadBalancers:            network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armLoadBalancers:         armLoadBalancersClient,
 		armPrivateEndpoints:      armPrivateEndpoints,
 		armSecurityGroups:        armSecurityGroupsClient,
@@ -285,7 +282,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		roleDefinitions:          authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armRoleDefinitions:       armRoleDefinitionsClient,
 		denyAssignments:          authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		fpPrivateEndpoints:       network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
 		armSubnets:               armSubnetsClient,

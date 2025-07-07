@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 )
 
 func TestBody(t *testing.T) {

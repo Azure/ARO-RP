@@ -13,12 +13,12 @@ export GOFLAGS=$(GO_FLAGS)
 MARINER_VERSION = 20240301
 FLUENTBIT_VERSION = 1.9.10
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
-AUTOREST_VERSION = 3.6.3
+AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
-GATEKEEPER_VERSION = v3.15.1
+GATEKEEPER_VERSION = v3.19.2
 
 # Golang version go mod tidy compatibility
-GOLANG_VERSION ?= 1.22.9
+GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
 
 include .bingo/Variables.mk
 
@@ -96,8 +96,13 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 .PHONY: client
-client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25
+client: generate client-generate lint-go-fix lint-go
+
+.PHONY: client-generate
+client-generate:
+	hack/apiclients/generate-swagger-checksum.sh 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25
+# Only generate the clients we use in our dev Python extension or in e2e clients
+	hack/apiclients/build-dev-api-clients.sh "${AUTOREST_IMAGE}" 2024-08-12-preview 2025-07-25
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -140,8 +145,7 @@ generate-kiota:
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
 .PHONY: imports
-imports: $(OPENSHIFT_GOIMPORTS)
-	$(OPENSHIFT_GOIMPORTS) --module github.com/Azure/ARO-RP
+imports: lint-go-fix
 
 .PHONY: validate-imports
 validate-imports: imports
@@ -161,7 +165,7 @@ image-aro-multistage:
 
 .PHONY: image-autorest
 image-autorest:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 .PHONY: image-fluentbit
 image-fluentbit:
@@ -283,7 +287,7 @@ validate-go: validate-imports
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 .PHONY: validate-go-action
-validate-go-action: validate-imports
+validate-go-action: validate-imports validate-lint-go-fix
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -304,8 +308,20 @@ unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 .PHONY: lint-go
-lint-go:
+lint-go: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --verbose
+
+.PHONY: lint-go-fix
+lint-go-fix: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run --verbose --fix
+
+.PHONY: validate-lint-go-fix
+validate-lint-go-fix: lint-go-fix
+	if ! git diff --quiet HEAD; then \
+		git diff; \
+		echo "You need to run 'make lint-go-fix' to update the codebase and commit the changes"; \
+		exit 1; \
+	fi
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
@@ -318,6 +334,15 @@ test-python: pyenv az
 		azdev linter && \
 		azdev style && \
 		hack/unit-test-python.sh
+
+.PHONY: test-python-podman
+test-python-podman:
+	rm -rf pyenv
+	docker run --platform=linux/amd64 -t --rm \
+	    -v ./:/app:z \
+		--user=0 \
+	 	$(REGISTRY)/ubi9/python-312:latest \
+		bash -c "cd /app && ls && make test-python"
 
 .PHONY: shared-cluster-login
 shared-cluster-login:

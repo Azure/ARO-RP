@@ -5,12 +5,12 @@ package dnsmasq
 
 import (
 	"bytes"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"text/template"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	_ "embed"
+
 	"github.com/coreos/go-semver/semver"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	"github.com/vincent-petithory/dataurl"
@@ -19,6 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -105,32 +107,32 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 			Files: []ign3types.File{
 				{
 					Node: ign3types.Node{
-						Overwrite: to.BoolPtr(true),
+						Overwrite: pointerutils.ToPtr(true),
 						Path:      "/etc/" + configFileName,
 						User: ign3types.NodeUser{
-							Name: to.StringPtr("root"),
+							Name: pointerutils.ToPtr("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: to.StringPtr(dataurl.EncodeBytes(config)),
+							Source: pointerutils.ToPtr(dataurl.EncodeBytes(config)),
 						},
-						Mode: to.IntPtr(0644),
+						Mode: pointerutils.ToPtr(0644),
 					},
 				},
 				{
 					Node: ign3types.Node{
-						Overwrite: to.BoolPtr(true),
+						Overwrite: pointerutils.ToPtr(true),
 						Path:      "/usr/local/bin/" + prescriptFileName,
 						User: ign3types.NodeUser{
-							Name: to.StringPtr("root"),
+							Name: pointerutils.ToPtr("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: to.StringPtr(dataurl.EncodeBytes(startpre)),
+							Source: pointerutils.ToPtr(dataurl.EncodeBytes(startpre)),
 						},
-						Mode: to.IntPtr(0744),
+						Mode: pointerutils.ToPtr(0744),
 					},
 				},
 			},
@@ -139,7 +141,7 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 			Units: []ign3types.Unit{
 				{
 					Contents: &service,
-					Enabled:  to.BoolPtr(true),
+					Enabled:  pointerutils.ToPtr(true),
 					Name:     unitFileName,
 				},
 			},

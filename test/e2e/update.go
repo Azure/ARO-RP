@@ -8,17 +8,18 @@ import (
 	"math/rand"
 	"strconv"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/go-autorest/autorest/to"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -59,7 +60,7 @@ var _ = Describe("Update clusters", func() {
 
 		Expect(deployment.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
 
-		oldRevision, err := strconv.Atoi(deployment.ObjectMeta.Annotations["deployment.kubernetes.io/revision"])
+		oldRevision, err := strconv.Atoi(deployment.Annotations["deployment.kubernetes.io/revision"])
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
@@ -72,7 +73,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(deployment.Spec.Template.Annotations).To(HaveKey("kubectl.kubernetes.io/restartedAt"))
 		Expect(deployment.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
 
-		newRevision, err := strconv.Atoi(deployment.ObjectMeta.Annotations["deployment.kubernetes.io/revision"])
+		newRevision, err := strconv.Atoi(deployment.Annotations["deployment.kubernetes.io/revision"])
 		Expect(err).NotTo(HaveOccurred())
 		Expect(newRevision).To(Equal(oldRevision + 1))
 	})
@@ -147,7 +148,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(5))
 
 		By("sending the PUT request to decrease Managed Outbound IPs")
-		oc.OpenShiftClusterProperties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = to.Int32Ptr(1)
+		oc.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = pointerutils.ToPtr(int32(1))
 		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -179,7 +180,7 @@ func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopen
 			NetworkProfile: &mgmtredhatopenshift20240812preview.NetworkProfile{
 				LoadBalancerProfile: &mgmtredhatopenshift20240812preview.LoadBalancerProfile{
 					ManagedOutboundIps: &mgmtredhatopenshift20240812preview.ManagedOutboundIPs{
-						Count: to.Int32Ptr(managedOutboundIPCount),
+						Count: pointerutils.ToPtr(managedOutboundIPCount),
 					},
 				},
 			},

@@ -10,7 +10,8 @@ import (
 	"net/http"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // VirtualMachinesClientAddons contains addons for VirtualMachinesClient
@@ -61,7 +62,7 @@ func (c *virtualMachinesClient) StartAndWait(ctx context.Context, resourceGroupN
 }
 
 func (c *virtualMachinesClient) StopAndWait(ctx context.Context, resourceGroupName string, VMName string, deallocateVM bool) error {
-	future, err := c.PowerOff(ctx, resourceGroupName, VMName, to.BoolPtr(false))
+	future, err := c.PowerOff(ctx, resourceGroupName, VMName, pointerutils.ToPtr(false))
 	if err != nil {
 		return err
 	}
@@ -103,7 +104,7 @@ func (c *virtualMachinesClient) List(ctx context.Context, resourceGroupName stri
 // retrieveBootDiagnosticsData returns the boot diagnostics data for the given
 // VM by RG and VMName.
 func (c *virtualMachinesClient) retrieveBootDiagnosticsData(ctx context.Context, resourceGroupName string, VMName string) (serialConsoleURI string, err error) {
-	resp, err := c.VirtualMachinesClient.RetrieveBootDiagnosticsData(ctx, resourceGroupName, VMName, to.Int32Ptr(60))
+	resp, err := c.RetrieveBootDiagnosticsData(ctx, resourceGroupName, VMName, pointerutils.ToPtr(int32(60)))
 	if err != nil {
 		return "", err
 	}

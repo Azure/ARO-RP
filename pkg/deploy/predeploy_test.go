@@ -10,6 +10,10 @@ import (
 	"testing"
 	"time"
 
+	gofrsuuid "github.com/gofrs/uuid"
+	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -17,10 +21,6 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
-	gofrsuuid "github.com/gofrs/uuid"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -63,15 +63,18 @@ var (
 
 	healthyVMSS = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
 		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{Code: to.StringPtr("HealthState/healthy")},
+			Status: &mgmtcompute.InstanceViewStatus{Code: pointerutils.ToPtr("HealthState/healthy")},
 		},
 	}
 	unhealthyVMSS = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
 		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
 			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.StringPtr("HealthState/unhealthy"),
+				Code: pointerutils.ToPtr("HealthState/unhealthy"),
 			},
 		},
+	}
+	nilVMHealth = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
+		VMHealth: nil,
 	}
 
 	newSecretBundle = azsecretssdk.GetSecretResponse{
@@ -92,9 +95,9 @@ var (
 		return mock_azuresdk.NewPager(listForItems([]*azsecretssdk.SecretProperties{{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/secretExists/whatever"))}}), []error{err})
 	}
 
-	vmsss        = []mgmtcompute.VirtualMachineScaleSet{{Name: to.StringPtr(vmssName)}}
+	vmsss        = []mgmtcompute.VirtualMachineScaleSet{{Name: pointerutils.ToPtr(vmssName)}}
 	invalidVMSSs = []mgmtcompute.VirtualMachineScaleSet{{Name: &invalidVMSSName}}
-	vms          = []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: to.StringPtr(instanceID)}}
+	vms          = []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: pointerutils.ToPtr(instanceID)}}
 )
 
 func TestPreDeploy(t *testing.T) {
@@ -180,7 +183,7 @@ func TestPreDeploy(t *testing.T) {
 	}
 	vmRestartMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, gomock.Any(), tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
-			CommandID: to.StringPtr("RunShellScript"),
+			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
 		}).Return(nil)
 	}
@@ -824,7 +827,7 @@ func TestDeployRPGlobal(t *testing.T) {
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				config: &RPConfig{
 					Configuration: &Configuration{
-						GlobalResourceGroupName: to.StringPtr(tt.testParams.resourceGroup),
+						GlobalResourceGroupName: pointerutils.ToPtr(tt.testParams.resourceGroup),
 					},
 					Location: tt.testParams.location,
 				},
@@ -889,7 +892,7 @@ func TestDeployRPGlobalACRReplication(t *testing.T) {
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				config: &RPConfig{
 					Configuration: &Configuration{
-						GlobalResourceGroupName: to.StringPtr(tt.testParams.resourceGroup),
+						GlobalResourceGroupName: pointerutils.ToPtr(tt.testParams.resourceGroup),
 					},
 					Location: tt.testParams.location,
 				},
@@ -1032,7 +1035,7 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	}
 	vmRestartMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, tp.resourceGroup, tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
-			CommandID: to.StringPtr("RunShellScript"),
+			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
 		}).Return(nil).AnyTimes()
 	}
@@ -1461,7 +1464,7 @@ func TestRestartOldScalesets(t *testing.T) {
 	}
 	vmRestartMock := func(vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, tp.resourceGroup, tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
-			CommandID: to.StringPtr("RunShellScript"),
+			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
 		}).Return(nil)
 	}
@@ -1554,7 +1557,7 @@ func TestRestartOldScaleset(t *testing.T) {
 	vmRestartMock := func(returnError error) mock {
 		return func(c *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			c.EXPECT().RunCommandAndWait(ctx, tp.resourceGroup, tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
-				CommandID: to.StringPtr("RunShellScript"),
+				CommandID: pointerutils.ToPtr("RunShellScript"),
 				Script:    &[]string{tp.restartScript},
 			}).Return(returnError)
 		}
@@ -1762,6 +1765,16 @@ func TestIsVMInstanceHealthy(t *testing.T) {
 			},
 			mocks:    []mock{getInstanceViewMock(healthyVMSS, nil)},
 			wantBool: true,
+		},
+		{
+			name: "return false if GetInstanceView has nil VMHealth field",
+			testParams: testParams{
+				resourceGroup: rpRGName,
+				vmssName:      vmssName,
+				instanceID:    instanceID,
+			},
+			mocks:    []mock{getInstanceViewMock(nilVMHealth, nil)},
+			wantBool: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

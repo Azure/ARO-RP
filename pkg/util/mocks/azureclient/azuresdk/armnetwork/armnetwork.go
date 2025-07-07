@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	gomock "go.uber.org/mock/gomock"
+
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 // MockFlowLogsClientInterface is a mock of FlowLogsClientInterface interface.
@@ -149,6 +150,21 @@ func (m *MockInterfacesClient) Get(ctx context.Context, resourceGroupName, netwo
 func (mr *MockInterfacesClientMockRecorder) Get(ctx, resourceGroupName, networkInterfaceName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterfacesClient)(nil).Get), ctx, resourceGroupName, networkInterfaceName, options)
+}
+
+// List mocks base method.
+func (m *MockInterfacesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) ([]*armnetwork.Interface, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, options)
+	ret0, _ := ret[0].([]*armnetwork.Interface)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockInterfacesClientMockRecorder) List(ctx, resourceGroupName, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterfacesClient)(nil).List), ctx, resourceGroupName, options)
 }
 
 // MockLoadBalancersClient is a mock of LoadBalancersClient interface.

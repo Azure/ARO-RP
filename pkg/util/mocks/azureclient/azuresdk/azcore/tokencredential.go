@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockTokenCredential is a mock of TokenCredential interface.

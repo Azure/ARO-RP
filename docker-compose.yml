@@ -38,6 +38,7 @@ x-aro-common-env:
 services:
   vpn:
     image: ${LOCAL_VPN_IMAGE}:${VERSION}
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile.vpn

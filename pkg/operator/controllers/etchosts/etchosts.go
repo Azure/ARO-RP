@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	"github.com/pkg/errors"
 	"github.com/vincent-petithory/dataurl"
@@ -18,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -165,31 +166,31 @@ func EtcHostsIgnitionConfig(clusterDomain string, apiIntIP string, gatewayDomain
 				{
 					Node: ign3types.Node{
 						Path:      "/etc/hosts.d/" + configFileName,
-						Overwrite: to.BoolPtr(true),
+						Overwrite: pointerutils.ToPtr(true),
 						User: ign3types.NodeUser{
-							Name: to.StringPtr("root"),
+							Name: pointerutils.ToPtr("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: to.StringPtr(dataurl.EncodeBytes(aroconf)),
+							Source: pointerutils.ToPtr(dataurl.EncodeBytes(aroconf)),
 						},
-						Mode: to.IntPtr(0644),
+						Mode: pointerutils.ToPtr(0644),
 					},
 				},
 				{
 					Node: ign3types.Node{
-						Overwrite: to.BoolPtr(true),
+						Overwrite: pointerutils.ToPtr(true),
 						Path:      "/usr/local/bin/" + scriptFileName,
 						User: ign3types.NodeUser{
-							Name: to.StringPtr("root"),
+							Name: pointerutils.ToPtr("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: to.StringPtr(dataurl.EncodeBytes(aroscript)),
+							Source: pointerutils.ToPtr(dataurl.EncodeBytes(aroscript)),
 						},
-						Mode: to.IntPtr(0744),
+						Mode: pointerutils.ToPtr(0744),
 					},
 				},
 			},
@@ -198,7 +199,7 @@ func EtcHostsIgnitionConfig(clusterDomain string, apiIntIP string, gatewayDomain
 			Units: []ign3types.Unit{
 				{
 					Contents: &arounit,
-					Enabled:  to.BoolPtr(true),
+					Enabled:  pointerutils.ToPtr(true),
 					Name:     unitFileName,
 				},
 			},

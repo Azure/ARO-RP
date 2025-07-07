@@ -9,11 +9,12 @@ import (
 	"reflect"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -38,7 +39,7 @@ func TestGet(t *testing.T) {
 					Return(*tt.wantSubnet, nil)
 			},
 			wantSubnet: &mgmtnetwork.Subnet{
-				Name: to.StringPtr("subnet"),
+				Name: pointerutils.ToPtr("subnet"),
 			},
 		},
 		{

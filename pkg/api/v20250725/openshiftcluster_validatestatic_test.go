@@ -11,12 +11,11 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
-	"github.com/Azure/ARO-RP/test/validate"
 )
 
 type validateTest struct {
@@ -87,7 +86,7 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:           `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:               "cluster.location.aroapp.io",
-				Version:              version.DefaultInstallStream.Version.String(),
+				Version:              "4.10.0",
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 				FipsValidatedModules: FipsValidatedModulesDisabled,
 			},
@@ -147,15 +146,15 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.architectureVersion == nil {
-					tt.architectureVersion = (*api.ArchitectureVersion)(to.IntPtr(int(version.InstallArchitectureVersion)))
+					tt.architectureVersion = pointerutils.ToPtr(api.ArchitectureVersionV2)
 				}
 
 				if tt.location == nil {
-					tt.location = to.StringPtr("location")
+					tt.location = pointerutils.ToPtr("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = to.StringPtr("resourceName")
+					tt.clusterName = pointerutils.ToPtr("resourceName")
 				}
 
 				v := &openShiftClusterStaticValidator{
@@ -200,7 +199,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(ext, current)
 				}
 
-				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sWorkers, v.resourceID)
+				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sWorkers, api.ArchitectureVersionV2, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Errorf("Expected error %s, got nil", tt.wantErr)
@@ -722,7 +721,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 					},
 				}
 			},
-			architectureVersion: (*api.ArchitectureVersion)(to.IntPtr(int(api.ArchitectureVersionV1))),
+			architectureVersion: (*api.ArchitectureVersion)(pointerutils.ToPtr(int(api.ArchitectureVersionV1))),
 			wantErr:             "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.managedOutboundIps.count: The provided managedOutboundIps.count 20 is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.",
 		},
 	}

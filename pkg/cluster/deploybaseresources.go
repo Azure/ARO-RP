@@ -13,15 +13,14 @@ import (
 	"strings"
 	"time"
 
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
-
-	utilrand "k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -135,7 +134,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
-		group.Tags["purge"] = to.StringPtr("true")
+		group.Tags["purge"] = pointerutils.ToPtr("true")
 	}
 
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
@@ -179,6 +178,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, resourceGroup)
 }
 
+// deployBaseResourceTemplate is only called during bootstrap
 func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
@@ -386,16 +386,16 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				// subnets and our validation code. We try to catch this early, but
 				// these errors is propagated to make the user-facing error more clear incase
 				// modification happened after we ran validation code and we lost the race
-				if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-					if strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+				if s.NetworkSecurityGroup != nil {
+					if strings.EqualFold(*s.NetworkSecurityGroup.ID, nsgID) {
 						continue
 					}
 
 					return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", fmt.Sprintf("The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID))
 				}
 
-				s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
-					ID: to.StringPtr(nsgID),
+				s.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
+					ID: pointerutils.ToPtr(nsgID),
 				}
 
 				// Because we attempt to attach the NSG immediately after the base resource deployment
@@ -437,15 +437,15 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	var needsUpdate bool
 
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		if s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies == nil || *s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies != "Disabled" {
+		if s.PrivateEndpointNetworkPolicies == nil || *s.PrivateEndpointNetworkPolicies != "Disabled" {
 			needsUpdate = true
-			s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+			s.PrivateEndpointNetworkPolicies = pointerutils.ToPtr("Disabled")
 		}
 	}
 
-	if s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies == nil || *s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies != "Disabled" {
+	if s.PrivateLinkServiceNetworkPolicies == nil || *s.PrivateLinkServiceNetworkPolicies != "Disabled" {
 		needsUpdate = true
-		s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+		s.PrivateLinkServiceNetworkPolicies = pointerutils.ToPtr("Disabled")
 	}
 
 	// return if we do not need to update the subnet
@@ -489,7 +489,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 		return errors.New("OIDCIssuer is nil")
 	}
 
-	issuer := to.StringPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
+	issuer := pointerutils.ToPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
 
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
@@ -518,9 +518,9 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 				federatedIdentityCredentialResourceName,
 				armmsi.FederatedIdentityCredential{
 					Properties: &armmsi.FederatedIdentityCredentialProperties{
-						Audiences: []*string{to.StringPtr("openshift")},
+						Audiences: []*string{pointerutils.ToPtr("openshift")},
 						Issuer:    issuer,
-						Subject:   to.StringPtr(sa),
+						Subject:   pointerutils.ToPtr(sa),
 					},
 				},
 				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},

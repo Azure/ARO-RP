@@ -21,11 +21,12 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
-	"github.com/gofrs/uuid"
 )
 
 // PlatformWorkloadIdentityRoleSetsClient is the rest API for Azure Red Hat OpenShift 4
@@ -54,7 +55,7 @@ func (client PlatformWorkloadIdentityRoleSetsClient) List(ctx context.Context, l
 		defer func() {
 			sc := -1
 			if result.pwirsl.Response.Response != nil {
-				sc = result.pwirsl.Response.Response.StatusCode
+				sc = result.pwirsl.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -62,7 +63,7 @@ func (client PlatformWorkloadIdentityRoleSetsClient) List(ctx context.Context, l
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetsClient", "List", err.Error())
+		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetsClient", "List", "%s", err.Error())
 	}
 
 	result.fn = client.listNextResults
@@ -158,7 +159,7 @@ func (client PlatformWorkloadIdentityRoleSetsClient) ListComplete(ctx context.Co
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.Response.StatusCode
+				sc = result.page.Response().StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()

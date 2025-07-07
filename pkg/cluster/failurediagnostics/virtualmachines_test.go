@@ -12,16 +12,17 @@ import (
 	"strings"
 	"testing"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/go-test/deep"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -75,12 +76,12 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:     to.StringPtr("somename"),
-						Location: to.StringPtr("eastus"),
+						Name:     pointerutils.ToPtr("somename"),
+						Location: pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								BootDiagnostics: &mgmtcompute.BootDiagnosticsInstanceView{
-									SerialConsoleLogBlobURI: to.StringPtr("bogusurl"),
+									SerialConsoleLogBlobURI: pointerutils.ToPtr("bogusurl"),
 								},
 							},
 						},
@@ -102,8 +103,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     to.StringPtr("somename"),
-						Location:                 to.StringPtr("eastus"),
+						Name:                     pointerutils.ToPtr("somename"),
+						Location:                 pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -138,8 +139,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     to.StringPtr("somename"),
-						Location:                 to.StringPtr("eastus"),
+						Name:                     pointerutils.ToPtr("somename"),
+						Location:                 pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -174,8 +175,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     to.StringPtr("somename"),
-						Location:                 to.StringPtr("eastus"),
+						Name:                     pointerutils.ToPtr("somename"),
+						Location:                 pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -199,15 +200,15 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     to.StringPtr("somename"),
-						Location:                 to.StringPtr("eastus"),
+						Name:                     pointerutils.ToPtr("somename"),
+						Location:                 pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
 
 				iothing := bytes.NewBufferString("")
 				for i := 0; i < 11; i++ {
-					iothing.WriteString(fmt.Sprintf("%d", i))
+					fmt.Fprintf(iothing, "%d", i)
 					for x := 0; x < 98; x++ {
 						iothing.WriteByte('a')
 					}

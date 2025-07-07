@@ -8,15 +8,16 @@ import (
 	"strconv"
 	"testing"
 
-	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -80,10 +81,10 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: pointerutils.ToPtr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(4),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: pointerutils.ToPtr(int64(4)),
+							Limit:        pointerutils.ToPtr(int64(10)),
 						},
 					}, nil)
 				loadBalancerBackendAddressPoolsClient.EXPECT().
@@ -166,10 +167,10 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: pointerutils.ToPtr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(4),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: pointerutils.ToPtr(int64(4)),
+							Limit:        pointerutils.ToPtr(int64(10)),
 						},
 					}, nil)
 			},
@@ -209,10 +210,10 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: pointerutils.ToPtr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(8),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: pointerutils.ToPtr(int64(8)),
+							Limit:        pointerutils.ToPtr(int64(10)),
 						},
 					}, nil)
 			},
@@ -248,10 +249,10 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: pointerutils.ToPtr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(4),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: pointerutils.ToPtr(int64(4)),
+							Limit:        pointerutils.ToPtr(int64(10)),
 						},
 					}, nil)
 			},
@@ -286,10 +287,10 @@ func TestValidatePublicIPQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: to.StringPtr("PublicIPAddresses"),
+								Value: pointerutils.ToPtr("PublicIPAddresses"),
 							},
-							CurrentValue: to.Int64Ptr(8),
-							Limit:        to.Int64Ptr(10),
+							CurrentValue: pointerutils.ToPtr(int64(8)),
+							Limit:        pointerutils.ToPtr(int64(10)),
 						},
 					}, nil)
 			},
@@ -438,7 +439,7 @@ func getFakeBackendIPConfigs(ipConfigCount int) *[]mgmtnetwork.InterfaceIPConfig
 	ipConfigs := []mgmtnetwork.InterfaceIPConfiguration{}
 	for i := 0; i < ipConfigCount; i++ {
 		ipConfigName := "ip-" + strconv.Itoa(i)
-		ipConfigs = append(ipConfigs, mgmtnetwork.InterfaceIPConfiguration{Name: to.StringPtr(ipConfigName)})
+		ipConfigs = append(ipConfigs, mgmtnetwork.InterfaceIPConfiguration{Name: pointerutils.ToPtr(ipConfigName)})
 	}
 	return &ipConfigs
 }
