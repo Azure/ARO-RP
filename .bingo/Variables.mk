@@ -77,11 +77,11 @@ $(GOJQ): $(BINGO_DIR)/gojq.mod
 	@echo "(re)installing $(GOBIN)/gojq-v0.12.16"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gojq.mod -o=$(GOBIN)/gojq-v0.12.16 "github.com/itchyny/gojq/cmd/gojq"
 
-GOLANGCI_LINT := $(GOBIN)/golangci-lint-v2.1.6
+GOLANGCI_LINT := $(GOBIN)/golangci-lint-v2.2.1
 $(GOLANGCI_LINT): $(BINGO_DIR)/golangci-lint.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/golangci-lint-v2.1.6"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v2.1.6 "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
+	@echo "(re)installing $(GOBIN)/golangci-lint-v2.2.1"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v2.2.1 "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
 
 GOTESTSUM := $(GOBIN)/gotestsum-v1.11.0
 $(GOTESTSUM): $(BINGO_DIR)/gotestsum.mod
@@ -95,9 +95,9 @@ $(GOVULNCHECK): $(BINGO_DIR)/govulncheck.mod
 	@echo "(re)installing $(GOBIN)/govulncheck-v1.1.4"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=govulncheck.mod -o=$(GOBIN)/govulncheck-v1.1.4 "golang.org/x/vuln/cmd/govulncheck"
 
-MOCKGEN := $(GOBIN)/mockgen-v0.5.0
+MOCKGEN := $(GOBIN)/mockgen-v0.5.2
 $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/mockgen-v0.5.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.5.0 "go.uber.org/mock/mockgen"
+	@echo "(re)installing $(GOBIN)/mockgen-v0.5.2"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.5.2 "go.uber.org/mock/mockgen"
 
