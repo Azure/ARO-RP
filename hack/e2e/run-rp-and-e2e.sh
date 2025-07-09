@@ -252,6 +252,7 @@ echo
 echo "CLUSTER=$CLUSTER"
 echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
+set
 echo "######################################"
 
 [[ $LOCATION ]] || (

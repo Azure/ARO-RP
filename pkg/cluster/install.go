@@ -11,8 +11,11 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 
+	corev1 "k8s.io/api/core/v1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
@@ -522,6 +525,7 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic str
 		if err == nil {
 			var totalInstallTime int64
 			for stepName, duration := range stepsTimeRun {
+				m.log.Infof("step %s took %d seconds", stepName, duration)
 				metricName := fmt.Sprintf("backend.openshiftcluster.%s.%s.duration.seconds", metricsTopic, stepName)
 				m.metricsEmitter.EmitGauge(metricName, duration, nil)
 				totalInstallTime += duration
@@ -533,7 +537,7 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic str
 	} else {
 		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
 	}
-	if err != nil {
+	if err != nil || (m.env != nil && (m.env.IsCI() || m.env.IsLocalDevelopmentMode())) {
 		m.gatherFailureLogs(ctx, metricsTopic)
 	}
 	return err
@@ -572,6 +576,41 @@ func (m *manager) finishInstallation(ctx context.Context) error {
 	return err
 }
 
+func (m *manager) startMCDPodWatcher(ctx context.Context, watcher watch.Interface) {
+	go func() {
+		defer watcher.Stop()
+		m.log.Info("starting machine-config-daemon pod watcher")
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case ev, ok := <-watcher.ResultChan():
+				if !ok {
+					m.log.Info("machine-config-daemon pod watcher closed")
+					return
+				}
+
+				pod, ok := ev.Object.(*corev1.Pod)
+				if !ok || pod == nil {
+					continue
+				}
+
+				// Log namespace/name, event type (Added/Modified/Deleted), current phase, and any reason/message.
+				m.log.Infof("%s/pod/%s event=%s node=%s phase=%s reason=%s message=%s",
+					pod.Namespace,
+					pod.Name,
+					ev.Type,
+					pod.Spec.NodeName,
+					pod.Status.Phase,
+					pod.Status.Reason,
+					pod.Status.Message,
+				)
+			}
+		}
+	}()
+}
+
 // initializeKubernetesClients initializes clients which are used
 // once the cluster is up later on in the install process.
 func (m *manager) initializeKubernetesClients(ctx context.Context) error {
@@ -583,6 +622,12 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return err
+	}
+	watcher, err := m.kubernetescli.CoreV1().Pods("openshift-machine-config-operator").Watch(ctx, metav1.ListOptions{LabelSelector: "k8s-app=machine-config-daemon"})
+	if err != nil {
+		m.log.WithError(err).Error("failed to create watcher for machine-config-daemon pods")
+	} else {
+		m.startMCDPodWatcher(ctx, watcher) // <-- launch watcher
 	}
 
 	m.dynamiccli, err = dynamic.NewForConfig(restConfig)
