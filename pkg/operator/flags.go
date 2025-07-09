@@ -39,6 +39,17 @@ const (
 	EtcHostsManaged                    = "aro.etchosts.managed" // true = apply etchosts mc | false = remove etchosts mc
 	FlagTrue                           = "true"
 	FlagFalse                          = "false"
+
+	// Guardrails policies switches
+	GuardrailsPolicyMachineDenyManaged              = "aro.guardrails.policies.aro-machines-deny.managed"
+	GuardrailsPolicyMachineDenyEnforcement          = "aro.guardrails.policies.aro-machines-deny.enforcement"
+	GuardrailsPolicyMachineConfigDenyManaged        = "aro.guardrails.policies.aro-machine-config-deny.managed"
+	GuardrailsPolicyMachineConfigDenyEnforcement  	= "aro.guardrails.policies.aro-machine-config-deny.enforcement"
+	GuardrailsPolicyPrivNamespaceDenyManaged        = "aro.guardrails.policies.aro-privileged-namespace-deny.managed"
+	GuardrailsPolicyPrivNamespaceDenyEnforcement    = "aro.guardrails.policies.aro-privileged-namespace-deny.enforcement"
+	GuardrailsPolicyDryrun                          = "dryrun"
+	GuardrailsPolicyWarn                            = "warn"
+	GuardrailsPolicyDeny                            = "deny"
 )
 
 // DefaultOperatorFlags returns flags for new clusters
@@ -72,11 +83,19 @@ func DefaultOperatorFlags() map[string]string {
 		AutosizedNodesEnabled:              FlagTrue,
 		MuoEnabled:                         FlagTrue,
 		MuoManaged:                         FlagTrue,
-		GuardrailsEnabled:                  FlagFalse,
-		GuardrailsDeployManaged:            FlagFalse,
+		GuardrailsEnabled:                  FlagTrue,
+		GuardrailsDeployManaged:            FlagTrue,
 		CloudProviderConfigEnabled:         FlagTrue,
 		ForceReconciliation:                FlagFalse,
 		EtcHostsEnabled:                    FlagTrue,
 		EtcHostsManaged:                    FlagTrue,
+
+		// Guardrails policies switches
+		GuardrailsPolicyMachineDenyManaged:           FlagTrue,
+		GuardrailsPolicyMachineDenyEnforcement:       GuardrailsPolicyDeny,
+		GuardrailsPolicyMachineConfigDenyManaged:     FlagTrue,
+		GuardrailsPolicyMachineConfigDenyEnforcement: GuardrailsPolicyDryrun,
+		GuardrailsPolicyPrivNamespaceDenyManaged:     FlagTrue,
+		GuardrailsPolicyPrivNamespaceDenyEnforcement: GuardrailsPolicyDryrun,
 	}
 }
