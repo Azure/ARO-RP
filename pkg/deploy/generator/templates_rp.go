@@ -58,7 +58,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"gatewayDomains",
 			"gatewayResourceGroupName",
 			"gatewayServicePrincipalId",
-			"globalDevopsServicePrincipalId",
 			"ipRules",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
