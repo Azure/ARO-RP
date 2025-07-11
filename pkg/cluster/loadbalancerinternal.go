@@ -19,7 +19,7 @@ import (
 
 const zonalFrontendIPName = "internal-lb-ip-zonal-v4"
 
-func (m *manager) fixInternalLoadBalancerZones(ctx context.Context) error {
+func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	location := m.doc.OpenShiftCluster.Location
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
