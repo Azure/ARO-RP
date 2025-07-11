@@ -437,7 +437,7 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 				env:              env,
 			}
 
-			err = manager.fixInternalLoadBalancerZones(ctx)
+			err = manager.migrateInternalLoadBalancerZones(ctx)
 			assert.Equal(t, tt.wantErr, err)
 
 			err = testlog.AssertLoggingOutput(hook, tt.expectedLogs)

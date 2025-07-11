@@ -680,6 +680,19 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 		},
 		{
+			name: "maintenanceTask change to MigrateLB is allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceTask: "",
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = MaintenanceTaskMigrateLoadBalancer
+			},
+		},
+		{
 			name: "maintenanceTask change to blank allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
