@@ -76,6 +76,8 @@ func (m *manager) adminUpdate() []steps.Step {
 		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
 	case api.MaintenanceTaskSyncClusterObject:
 		stepsToRun = append(stepsToRun, m.getSyncClusterObjectSteps()...)
+	case api.MaintenanceTaskMigrateLoadBalancer:
+		stepsToRun = append(stepsToRun, m.getMigrateLoadBalancerSteps()...)
 	}
 
 	return stepsToRun
@@ -191,6 +193,17 @@ func (m *manager) getOperatorUpdateSteps() []steps.Step {
 
 func (m *manager) getSyncClusterObjectSteps() []steps.Step {
 	steps := []steps.Step{
+		steps.Action(m.initializeOperatorDeployer),
+		steps.Action(m.syncClusterObject),
+	}
+	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
+}
+
+func (m *manager) getMigrateLoadBalancerSteps() []steps.Step {
+	steps := []steps.Step{
+		steps.Action(m.migrateInternalLoadBalancerZones),
+		// We sync the cluster object to update the internal IP that goes into
+		// dnsmasq/etchosts
 		steps.Action(m.initializeOperatorDeployer),
 		steps.Action(m.syncClusterObject),
 	}
