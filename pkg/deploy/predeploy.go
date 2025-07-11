@@ -35,9 +35,8 @@ import (
 const (
 	// Rotate the secret on every deploy of the RP if the most recent
 	// secret is greater than 7 days old
-	rotateSecretAfter              = time.Hour * 24 * 7
-	rpRestartScript                = "systemctl restart aro-monitor; systemctl restart aro-portal; systemctl restart aro-rp"
-	productionGlobalSubscriptionID = "0923c7de-9fca-4d9e-baf3-131d0c5b2ea4"
+	rotateSecretAfter = time.Hour * 24 * 7
+	rpRestartScript   = "systemctl restart aro-monitor; systemctl restart aro-portal; systemctl restart aro-rp"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
@@ -251,15 +250,6 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalSubscription)
 	if err != nil {
 		return err
-	}
-
-	// skip deployment only if targeting prod subscription from staging
-	if d.env.Environment().Name != "production" &&
-		d.config.Configuration.GlobalSubscriptionID != nil &&
-		*d.config.Configuration.GlobalSubscriptionID == productionGlobalSubscriptionID {
-
-		d.log.Infof("Skipping deployRPGlobalSubscription to production subscription in non-prod environment (%s)", d.env.Environment().Name)
-		return nil
 	}
 
 	var template map[string]interface{}
