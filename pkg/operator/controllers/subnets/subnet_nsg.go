@@ -18,10 +18,18 @@ import (
 )
 
 const (
-	AnnotationTimestamp = "aro.openshift.io/lastSubnetReconcileTimestamp"
+	// AnnotationTimestamp is set on the Cluster after subnets are reconciled.
+	AnnotationTimestamp = "aro.openshift.io/subnet-reconciled-timestamp"
 )
 
 func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet) error {
+	// ── START TIMER ──
+	opStart := time.Now()
+	defer func() {
+		// log the full ResourceID—it's unique and unambiguous
+		r.log.Infof("ensureSubnetNSG(%s) took %s", s.ResourceID, time.Since(opStart))
+	}()
+	// ── END TIMER SETUP ──
 	architectureVersion := api.ArchitectureVersion(r.instance.Spec.ArchitectureVersion)
 
 	subnetObject, err := r.subnets.Get(ctx, s.ResourceID)
@@ -41,7 +49,6 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 		return err
 	}
 
-	// if the NSG is assigned && it's the correct NSG - do nothing
 	if subnetObject.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
 		return nil
 	}
@@ -53,18 +60,24 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	}
 	r.log.Infof("Fixing NSG from %s to %s", oldNSG, correctNSGResourceID)
 	subnetObject.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{ID: &correctNSGResourceID}
-	err = r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject)
-	if err != nil {
+	if err := r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject); err != nil {
 		return err
 	}
-
+	// Stamp the Cluster CR with a reconciliation timestamp so the e2e test picks it up.
 	return r.updateReconcileSubnetAnnotation(ctx)
 }
 
+// updateReconcileSubnetAnnotation writes the current time into the cluster annotation.
 func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) error {
+	// ── START TIMER ──
+	annStart := time.Now()
+	defer func() {
+		r.log.Infof("updateReconcileSubnetAnnotation took %s", time.Since(annStart))
+	}()
+	// ── END TIMER SETUP ──
 	if r.instance.Annotations == nil {
 		r.instance.Annotations = make(map[string]string)
 	}
-	r.instance.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
+	r.instance.Annotations[AnnotationTimestamp] = time.Now().UTC().Format(time.RFC1123)
 	return r.client.Update(ctx, r.instance)
 }
