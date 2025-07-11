@@ -78,16 +78,6 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 		lbZones = append(lbZones, pointerutils.ToPtr(z))
 	}
 
-	// Update the document with the internal LB zones
-	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
-		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones = controlPlaneZones
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("failure updating cluster doc with load balancer zones: %w", err)
-	}
-	m.doc = updatedDoc
-
 	// Add a new zonal LB frontend IP
 	frontendConfigID := fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, zonalFrontendIPName)
 
@@ -155,5 +145,15 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failure updating internal load balancer: %w", err)
 	}
+
+	// Update the document with the internal LB zones
+	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
+		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones = controlPlaneZones
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failure updating cluster doc with load balancer zones: %w", err)
+	}
+	m.doc = updatedDoc
 	return nil
 }
