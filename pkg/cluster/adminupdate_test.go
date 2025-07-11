@@ -102,6 +102,14 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action syncClusterObject]",
 	}
 
+	migrateLoadBalancerSteps := []string{
+		"[Action startVMs]",
+		"[Condition apiServersReady, timeout 30m0s]",
+		"[Action migrateInternalLoadBalancerZones]",
+		"[Action initializeOperatorDeployer]",
+		"[Action syncClusterObject]",
+	}
+
 	hiveSteps := []string{
 		"[Action hiveCreateNamespace]",
 		"[Action hiveEnsureResources]",
@@ -219,6 +227,16 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, syncClusterObjectSteps),
+		},
+		{
+			name: "MigrateLoadBalancer steps",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskMigrateLoadBalancer
+				return doc, true
+			},
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, migrateLoadBalancerSteps),
 		},
 		{
 			name: "adminUpdate() does not adopt Hive-created clusters",
