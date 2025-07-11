@@ -224,10 +224,9 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 				Parameters: parameters.Parameters,
 			},
 		})
-		if serviceErr, ok := err.(*azure.ServiceError); ok {
-			d.log.Errorf("Azure ServiceError: Code=%s, Message=%s, Target=%s, Details=%v", serviceErr.Code, serviceErr.Message, serviceErr.Target, serviceErr.Details)
-			if serviceErr.Code == "DeploymentFailed" &&
-				i < 1 {
+		if serviceErr, ok := err.(*azure.ServiceError); ok &&
+			serviceErr.Code == "DeploymentFailed" &&
+			i < 1 {
 			// Can get a Conflict ("Another operation is in progress") on the
 			// ACR.  Retry once.
 			d.log.Print(err)
