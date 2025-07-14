@@ -297,9 +297,9 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	if d.config.Configuration.GlobalResourceGroupName != nil {
 		globalRGName = *d.config.Configuration.GlobalResourceGroupName
 	}
+
 	d.log.Infof("Global Resource Group Name: %s", globalRGName)
 	d.log.Infof("Global Resource Group Location: %s", *d.config.Configuration.GlobalResourceGroupLocation)
-	d.log.Infof("Entire Configuration: %s", *d.config.Configuration)
 
 	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
