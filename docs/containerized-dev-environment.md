@@ -15,6 +15,7 @@ The following files, located at the project root, are used for this setup:
 1.  Docker installed on your host system ([https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/)).
 2.  Docker Compose plugin installed.
 3.  Azure CLI installed on your host system.
+4. You've followed the steps to [prepare your environment.](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#prepare-your-environment)
 
 ## Setup Steps
 
