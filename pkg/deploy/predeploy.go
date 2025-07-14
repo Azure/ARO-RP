@@ -164,6 +164,7 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 }
 
 func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID, devopsServicePrincipalId string) error {
+	d.log.Infof("=== ENTERED deployRPGlobal() ===")
 	deploymentName := "rp-global-" + d.config.Location
 
 	// Log deployment context to help debug incorrect subscription usage
