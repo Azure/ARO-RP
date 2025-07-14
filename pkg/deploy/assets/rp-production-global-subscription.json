@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "resources": [
         {
-            "name": "48983534-3d06-4dcb-a566-08a694eb1279",
+            "name": "ED74E0DA-C7DF-498B-BB75-3DFDA4890C50",
             "type": "Microsoft.Authorization/roleDefinitions",
             "properties": {
                 "roleName": "ARO v4 ContainerRegistry Token Contributor",
