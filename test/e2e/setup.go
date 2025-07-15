@@ -536,12 +536,16 @@ func setup(ctx context.Context) error {
 		// Old cluster is gone, create the new one
 	}
 
-	cluster, err := utilcluster.New(log, conf)
-	if err != nil {
-		return err
-	}
-	if err = cluster.Create(ctx); err != nil {
-		return err
+
+	// we only create a cluster when running this in CI
+	if conf.IsCI {
+		cluster, err := utilcluster.New(log, conf)
+		if err != nil {
+			return err
+		}
+		if err = cluster.Create(ctx); err != nil {
+			return err
+		}
 	}
 
 	vnetResourceGroup = conf.VnetResourceGroup
