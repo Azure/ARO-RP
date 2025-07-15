@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -274,8 +275,14 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	// Log deployment context to help debug incorrect subscription usage
 	d.log.Infof("======== DEBUG DEPLOYMENT CONTEXT ========")
 	d.log.Infof("RP Location: %s", d.config.Location)
-	d.log.Infof("FileRPProductionGlobalSubscription: %s", generator.FileRPProductionGlobalSubscription)
-	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalSubscription)
+	// Use environment variable instead of config.go
+	env := strings.ToLower(os.Getenv("DEPLOY_ENVIRONMENT"))
+	subscriptionFile := generator.FileRPProductionGlobalSubscription
+	if env == "stage" {
+		subscriptionFile = generator.FileRPStageGlobalSubscription
+	}
+
+	asset, err := assets.EmbeddedFiles.ReadFile(subscriptionFile)
 	if err != nil {
 		return err
 	}
