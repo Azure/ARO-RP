@@ -5,9 +5,12 @@ package loadbalancer
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func RemoveFrontendIPConfiguration(lb *armnetwork.LoadBalancer, resourceID string) error {
@@ -27,4 +30,21 @@ func RemoveFrontendIPConfiguration(lb *armnetwork.LoadBalancer, resourceID strin
 
 func isFrontendIPConfigReferenced(fipConfig *armnetwork.FrontendIPConfiguration) bool {
 	return fipConfig.Properties.LoadBalancingRules != nil || fipConfig.Properties.InboundNatPools != nil || fipConfig.Properties.InboundNatRules != nil || fipConfig.Properties.OutboundRules != nil
+}
+
+func RemoveHealthProbe(lb *armnetwork.LoadBalancer, resourceID string) error {
+	newProbes := make([]*armnetwork.Probe, 0)
+
+	// Iterate over probes, build a list without the targeted resourceID, if possible
+	for _, probe := range lb.Properties.Probes {
+		if strings.EqualFold(*probe.ID, resourceID) {
+			if probe.Properties.LoadBalancingRules != nil {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("probe %s is used by load balancing rules, remove the referencing load balancing rules before removing the probe", resourceID))
+			}
+			continue
+		}
+		newProbes = append(newProbes, probe)
+	}
+	lb.Properties.Probes = newProbes
+	return nil
 }

@@ -19,6 +19,7 @@ import (
 
 var (
 	frontendIPConfigurationPattern = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/frontendIPConfigurations/([^/]+)$`
+	healthProbePattern             = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/probes/([^/]+)$`
 	denyList                       = []string{
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateLinkServices/([^/]+)$`,
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateEndpoints/([^/]+)$`,
@@ -52,6 +53,14 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 		return a.deleteFrontendIPConfiguration(ctx, resourceID)
 	}
 
+	re = regexp.MustCompile(healthProbePattern)
+	// HealthProbes cannot be deleted with DeleteByIDAndWait either.
+	matches := re.FindStringSubmatch(resourceID)
+	if len(matches) > 0 {
+		loadBalancerName := matches[3]
+		return a.deleteHealthProbe(ctx, resourceID, loadBalancerName)
+	}
+
 	return a.resources.DeleteByIDAndWait(ctx, resourceID, apiVersion)
 }
 
@@ -71,4 +80,23 @@ func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resour
 	}
 
 	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, lbName, lb.LoadBalancer, nil)
+}
+
+func (a *azureActions) deleteHealthProbe(ctx context.Context, resourceID string, loadBalancerName string) error {
+	id, err := azure.ParseResourceID(resourceID)
+	if err != nil {
+		return err
+	}
+
+	lb, err := a.loadBalancers.Get(ctx, id.ResourceGroup, loadBalancerName, nil)
+	if err != nil {
+		return err
+	}
+
+	err = loadbalancer.RemoveHealthProbe(&lb.LoadBalancer, resourceID)
+	if err != nil {
+		return err
+	}
+
+	return a.loadBalancers.CreateOrUpdateAndWait(ctx, id.ResourceGroup, loadBalancerName, lb.LoadBalancer, nil)
 }
