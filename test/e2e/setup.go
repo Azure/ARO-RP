@@ -533,9 +533,11 @@ func setup(ctx context.Context) error {
 			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
 			time.Sleep(waitBetween)
 		}
-
 		// Old cluster is gone, create the new one
+	}
 
+	// we only create a cluster when running this in CI
+	if conf.IsCI {
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
