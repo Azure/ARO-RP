@@ -91,7 +91,7 @@
             "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '48983534-3d06-4dcb-a566-08a694eb1279')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ED74E0DA-C7DF-498B-BB75-3DFDA4890C50')]",
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
