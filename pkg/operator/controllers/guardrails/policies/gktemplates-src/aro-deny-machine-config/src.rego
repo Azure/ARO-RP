@@ -6,7 +6,7 @@ import data.lib.common.get_username
 violation[{"msg": msg}] {
     input.review.operation in ["CREATE", "UPDATE", "DELETE"]
 
-    # Check if it is a exempted user
+    # Check if it is an exempted user
     not is_exempted_account(input.review)
     username := get_username(input.review)
 
