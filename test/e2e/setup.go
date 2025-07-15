@@ -533,16 +533,15 @@ func setup(ctx context.Context) error {
 			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
 			time.Sleep(waitBetween)
 		}
-
 		// Old cluster is gone, create the new one
+	}
 
-		cluster, err := utilcluster.New(log, conf)
-		if err != nil {
-			return err
-		}
-		if err = cluster.Create(ctx); err != nil {
-			return err
-		}
+	cluster, err := utilcluster.New(log, conf)
+	if err != nil {
+		return err
+	}
+	if err = cluster.Create(ctx); err != nil {
+		return err
 	}
 
 	vnetResourceGroup = conf.VnetResourceGroup
