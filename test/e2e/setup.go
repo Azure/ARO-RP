@@ -536,7 +536,6 @@ func setup(ctx context.Context) error {
 		// Old cluster is gone, create the new one
 	}
 
-
 	// we only create a cluster when running this in CI
 	if conf.IsCI {
 		cluster, err := utilcluster.New(log, conf)
