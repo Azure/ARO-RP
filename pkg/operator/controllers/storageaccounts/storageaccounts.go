@@ -10,8 +10,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
@@ -39,12 +39,12 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		vnetResource, err := azure.ParseResourceID(vnetID)
+		vnetResource, err := arm.ParseResourceID(vnetID)
 		if err != nil {
 			return err
 		}
-		resourceGroupName := vnetResource.ResourceGroup
-		vnetName := vnetResource.ResourceName
+		resourceGroupName := vnetResource.ResourceGroupName
+		vnetName := vnetResource.Name
 		armSubnet, err := r.subnets.Get(ctx, resourceGroupName, vnetName, subnetName, nil)
 		if err != nil {
 			if azureerrors.IsNotFoundError(err) {
