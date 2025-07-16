@@ -203,9 +203,70 @@ func (s *SSH) internalServerError(w http.ResponseWriter, err error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
+// as of 30 Jun 2025 / go 1.24.4, this server supports the following algorithms
+//
+// $ nmap --script ssh2-enum-algos localhost -p 2222
+// Starting Nmap 7.92 ( https://nmap.org ) at 2025-06-30 16:17 PDT
+// Nmap scan report for localhost (127.0.0.1)
+// Host is up (0.00021s latency).
+// Other addresses for localhost (not scanned): ::1
+
+// PORT     STATE SERVICE
+// Starting Nmap 7.92 ( https://nmap.org ) at 2025-07-01 09:55 PDT
+// Nmap scan report for localhost (127.0.0.1)
+// Host is up (0.00021s latency).
+// Other addresses for localhost (not scanned): ::1
+
+// PORT     STATE SERVICE
+// 2222/tcp open  EtherNetIP-1
+// | ssh2-enum-algos:
+// |   kex_algorithms: (9)
+// |       mlkem768x25519-sha256
+// |       curve25519-sha256
+// |       curve25519-sha256@libssh.org
+// |       ecdh-sha2-nistp256
+// |       ecdh-sha2-nistp384
+// |       ecdh-sha2-nistp521
+// |       diffie-hellman-group14-sha256
+// |       diffie-hellman-group14-sha1
+// |       kex-strict-s-v00@openssh.com
+// |   server_host_key_algorithms: (3)
+// |       rsa-sha2-256
+// |       rsa-sha2-512
+// |       ssh-rsa
+// |   encryption_algorithms: (3)
+// |       aes256-ctr
+// |       aes192-ctr
+// |       aes192-ctr
+// |   mac_algorithms: (6)
+// |       hmac-sha2-256-etm@openssh.com
+// |       hmac-sha2-512-etm@openssh.com
+// |       hmac-sha2-256
+// |       hmac-sha2-512
+// |       hmac-sha1
+// |       hmac-sha1-96
+// |   compression_algorithms: (1)
+// |_      none
+//
+// To update the selected algorithms, refer to the Azure security baselines, keeping in mind
+// any FIPS requirements.
+// https://learn.microsoft.com/en-us/azure/governance/policy/samples/guest-configuration-baseline-linux
+// and
+// https://liquid.microsoft.com/Web/Views/View/873720#Zrex-3A-2F-2Fsecurityconfigbaselines-2FRequirements-2Fbl-2E00250-2F
+//   - In section bl.00250: Linux OS, review the attached "Linux OS Baseline" Excel file
 const (
 	sshCommand = "echo '{{ .KnownHostLine }}' > {{.Hostname}}_known_host ; " +
-		"ssh -o UserKnownHostsFile={{.Hostname}}_known_host{{if .IsLocalDevelopmentMode}} -p 2222{{end}} {{.User}}@{{.Hostname}}"
+		"ssh " +
+		"-o UserKnownHostsFile={{.Hostname}}_known_host " +
+		"-o Ciphers={{ .Ciphers }} " +
+		"-o HostKeyAlgorithms={{ .HostKeyAlgorithms }} " +
+		"-o KexAlgorithms={{ .KexAlgorithms }} " +
+		"-o MACs={{ .MACs }}" +
+		"{{if .IsLocalDevelopmentMode}} -p 2222{{end}} {{.User}}@{{.Hostname}}"
+	sshCiphers           = cryptossh.CipherAES256CTR
+	sshHostKeyAlgorithms = cryptossh.KeyAlgoRSASHA512
+	sshKexAlgorithms     = cryptossh.KeyExchangeMLKEM768X25519
+	sshMACs              = cryptossh.HMACSHA256ETM
 )
 
 func createLoginCommand(isLocalDevelopmentMode bool, user, host string, publicKey cryptossh.PublicKey) (string, error) {
@@ -220,8 +281,21 @@ func createLoginCommand(isLocalDevelopmentMode bool, user, host string, publicKe
 		Hostname               string
 		KnownHostLine          string
 		IsLocalDevelopmentMode bool
+		Ciphers                string
+		HostKeyAlgorithms      string
+		KexAlgorithms          string
+		MACs                   string
 	}
 	var buff bytes.Buffer
-	err = tmp.Execute(&buff, fields{user, host, line, isLocalDevelopmentMode})
+	err = tmp.Execute(&buff, fields{
+		user,
+		host,
+		line,
+		isLocalDevelopmentMode,
+		sshCiphers,
+		sshHostKeyAlgorithms,
+		sshKexAlgorithms,
+		sshMACs,
+	})
 	return buff.String(), err
 }

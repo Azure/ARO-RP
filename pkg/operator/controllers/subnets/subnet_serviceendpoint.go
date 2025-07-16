@@ -5,10 +5,10 @@ package subnets
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -21,7 +21,12 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 	if !operator.GatewayEnabled(r.instance) {
 		r.log.Debug("Reconciling service endpoints on subnet ", s.ResourceID)
 
-		subnetObject, err := r.subnets.Get(ctx, s.ResourceID)
+		subnetID, err := arm.ParseResourceID(s.ResourceID)
+		if err != nil {
+			return err
+		}
+
+		subnetObject, err := r.subnets.Get(ctx, subnetID.ResourceGroupName, subnetID.Parent.Name, subnetID.Name, nil)
 		if err != nil {
 			if azureerrors.IsNotFoundError(err) {
 				r.log.Infof("Subnet %s not found, skipping. err: %v", s.ResourceID, err)
@@ -30,37 +35,33 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 			return err
 		}
 
-		if subnetObject == nil { // just in case
-			return fmt.Errorf("subnet can't be nil")
-		}
-
 		var changed bool
-		if subnetObject.SubnetPropertiesFormat == nil {
-			subnetObject.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+		if subnetObject.Properties == nil {
+			subnetObject.Properties = &armnetwork.SubnetPropertiesFormat{}
 		}
-		if subnetObject.ServiceEndpoints == nil {
-			subnetObject.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+		if subnetObject.Properties.ServiceEndpoints == nil {
+			subnetObject.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{}
 		}
 
 		for _, endpoint := range api.SubnetsEndpoints {
 			var found bool
-			for _, se := range *subnetObject.ServiceEndpoints {
+			for _, se := range subnetObject.Properties.ServiceEndpoints {
 				if strings.EqualFold(*se.Service, endpoint) &&
-					se.ProvisioningState == mgmtnetwork.Succeeded {
+					*se.ProvisioningState == armnetwork.ProvisioningStateSucceeded {
 					found = true
 				}
 			}
 			if !found {
-				*subnetObject.ServiceEndpoints = append(*subnetObject.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
+				subnetObject.Properties.ServiceEndpoints = append(subnetObject.Properties.ServiceEndpoints, &armnetwork.ServiceEndpointPropertiesFormat{
 					Service:   pointerutils.ToPtr(endpoint),
-					Locations: &[]string{"*"},
+					Locations: []*string{pointerutils.ToPtr("*")},
 				})
 				changed = true
 			}
 		}
 
 		if changed {
-			err = r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject)
+			err = r.subnets.CreateOrUpdateAndWait(ctx, subnetID.ResourceGroupName, subnetID.Parent.Name, subnetID.Name, subnetObject.Subnet, nil)
 			if err != nil {
 				return err
 			}
