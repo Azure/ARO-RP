@@ -5,10 +5,12 @@ package azurezones
 
 import (
 	"fmt"
+	"net/http"
 	"slices"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
@@ -60,7 +62,7 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 
 	if (len(controlPlaneZones) == 0 && len(workerZones) > 0) ||
 		(len(workerZones) == 0 && len(controlPlaneZones) > 0) {
-		return nil, nil, nil, fmt.Errorf("cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: %d, worker zones: %d)", len(controlPlaneZones), len(workerZones))
+		return nil, nil, nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidZoneConfiguration, "properties.workerProfiles[0].VMSize", fmt.Sprintf("cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: %d, worker zones: %d)", len(controlPlaneZones), len(workerZones)))
 	}
 
 	// Once we've removed the expanded AZs (if applicable), get the super-set of
@@ -76,7 +78,7 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	if controlPlaneZones == nil {
 		controlPlaneZones = []string{"", "", ""}
 	} else if len(controlPlaneZones) < CONTROL_PLANE_MACHINE_COUNT {
-		return nil, nil, nil, fmt.Errorf("control plane SKU '%s' only available in %d zones, need %d", *controlPlaneSKU.Name, len(controlPlaneZones), CONTROL_PLANE_MACHINE_COUNT)
+		return nil, nil, nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidZoneConfiguration, "properties.masterProfile.VMSize", fmt.Sprintf("control plane SKU '%s' only available in %d zones, need %d", *controlPlaneSKU.Name, len(controlPlaneZones), CONTROL_PLANE_MACHINE_COUNT))
 	} else if len(controlPlaneZones) >= CONTROL_PLANE_MACHINE_COUNT {
 		// Pick lower zones first
 		controlPlaneZones = controlPlaneZones[:CONTROL_PLANE_MACHINE_COUNT]
@@ -93,7 +95,7 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	if workerZones == nil {
 		workerZones = []string{""}
 	} else if len(workerZones) < 3 {
-		return nil, nil, nil, fmt.Errorf("worker SKU '%s' only available in %d zones, need %d", *workerSKU.Name, len(workerZones), 3)
+		return nil, nil, nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidZoneConfiguration, "properties.workerProfiles[0].VMSize", fmt.Sprintf("worker SKU '%s' only available in %d zones, need %d", *workerSKU.Name, len(workerZones), 3))
 	}
 
 	// We don't want [""] for passing to the ARM template, just make it blank
