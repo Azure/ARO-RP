@@ -30,8 +30,6 @@ RUN dnf update -y && dnf install -y \
     wget \
     python3-pip \
     which \
-    binutils \
-    gcc \
     && dnf clean all
 
 # Extract Go version and install it
