@@ -1,0 +1,159 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "acrLocationOverride": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "acrResourceId": {
+            "type": "string"
+        },
+        "clusterParentDomainName": {
+            "type": "string"
+        },
+        "fpServicePrincipalId": {
+            "type": "string"
+        },
+        "gatewayServicePrincipalId": {
+            "type": "string"
+        },
+        "globalDevopsServicePrincipalId": {
+            "type": "string"
+        },
+        "rpParentDomainName": {
+            "type": "string"
+        },
+        "rpServicePrincipalId": {
+            "type": "string"
+        },
+        "rpVersionStorageAccountName": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "sku": {
+                "name": "Premium"
+            },
+            "properties": {
+                "dataEndpointEnabled": true
+            },
+            "name": "[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]",
+            "type": "Microsoft.ContainerRegistry/registries",
+            "location": "[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]",
+            "apiVersion": "2020-11-01-preview"
+        },
+        {
+            "properties": {},
+            "name": "[parameters('rpParentDomainName')]",
+            "type": "Microsoft.Network/dnsZones",
+            "location": "global",
+            "apiVersion": "2018-05-01"
+        },
+        {
+            "properties": {},
+            "name": "[parameters('clusterParentDomainName')]",
+            "type": "Microsoft.Network/dnsZones",
+            "location": "global",
+            "apiVersion": "2018-05-01"
+        },
+        {
+            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]",
+            "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]"
+            ]
+        },
+        {
+            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('gatewayServicePrincipalId'), 'RP / AcrPull')))]",
+            "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+                "principalId": "[parameters('gatewayServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]"
+            ]
+        },
+        {
+            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))]",
+            "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ED74E0DA-C7DF-498B-BB75-3DFDA4890C50')]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]"
+            ]
+        },
+        {
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "allowSharedKeyAccess": false
+            },
+            "tags": {},
+            "location": "[resourceGroup().location]",
+            "name": "[parameters('rpVersionStorageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-09-01"
+        },
+        {
+            "name": "[concat(parameters('rpVersionStorageAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))))]",
+            "type": "Microsoft.Storage/storageAccounts/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')]",
+                "principalId": "[parameters('globalDevopsServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "metadata": null
+            },
+            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default', '/$web')]",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2021-09-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/$web/Microsoft.Authorization/', guid(parameters('rpVersionStorageAccountName')))]",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers/providers/roleAssignments",
+            "properties": {
+                "scope": "[concat(resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName')), '/blobServices/default/containers/$web')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+                "principalId": "[parameters('globalDevopsServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[concat(resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName')), '/blobServices/default/containers/$web')]"
+            ]
+        }
+    ]
+}
