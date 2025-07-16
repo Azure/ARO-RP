@@ -1417,7 +1417,7 @@ func (g *generator) rpRoleDefinitionTokenContributor() *arm.Resource {
 			Name: pointerutils.ToPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
 			Type: pointerutils.ToPtr("Microsoft.Authorization/roleDefinitions"),
 			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-				RoleName:         pointerutils.ToPtr("ARO v4 ContainerRegistry Token Contributor Stage"),
+				RoleName:         pointerutils.ToPtr("ARO v4 ContainerRegistry Token Contributor"),
 				AssignableScopes: &[]string{"[subscription().id]"},
 				Permissions: &[]mgmtauthorization.Permission{
 					{
