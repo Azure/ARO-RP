@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -18,9 +18,7 @@ import (
 )
 
 var (
-	frontendIPConfigurationPattern = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/frontendIPConfigurations/([^/]+)$`
-	healthProbePattern             = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/probes/([^/]+)$`
-	denyList                       = []string{
+	denyList = []string{
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateLinkServices/([^/]+)$`,
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateEndpoints/([^/]+)$`,
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Storage/(.+)$`,
@@ -28,7 +26,7 @@ var (
 )
 
 func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID string) error {
-	idParts, err := azure.ParseResourceID(resourceID)
+	idParts, err := arm.ParseResourceID(resourceID)
 	if err != nil {
 		return err
 	}
@@ -40,36 +38,28 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 		}
 	}
 
-	apiVersion := azureclient.APIVersion(strings.ToLower(idParts.Provider + "/" + idParts.ResourceType))
+	apiVersion := azureclient.APIVersion(strings.ToLower(idParts.ResourceType.String()))
 
 	_, err = a.resources.GetByID(ctx, resourceID, apiVersion)
 	if err != nil {
 		return err
 	}
 
-	re := regexp.MustCompile(frontendIPConfigurationPattern)
 	// FrontendIPConfiguration cannot be deleted with DeleteByIDAndWait (DELETE method is invalid on frontendIPConfiguration resourceID)
-	if re.MatchString(resourceID) {
-		return a.deleteFrontendIPConfiguration(ctx, resourceID)
+	if idParts.ResourceType.String() == "Microsoft.Network/loadBalancers/frontendIPConfigurations" {
+		return a.deleteFrontendIPConfiguration(ctx, resourceID, idParts.ResourceGroupName, idParts.Parent.Name)
 	}
 
-	re = regexp.MustCompile(healthProbePattern)
 	// HealthProbes cannot be deleted with DeleteByIDAndWait either.
-	resourceIDParts := re.FindStringSubmatch(resourceID)
-	if len(resourceIDParts) > 0 {
-		loadBalancerName := resourceIDParts[3]
-		return a.deleteHealthProbe(ctx, resourceID, loadBalancerName)
+	if idParts.ResourceType.String() == "Microsoft.Network/loadBalancers/probes" {
+		return a.deleteHealthProbe(ctx, resourceID, idParts.ResourceGroupName, idParts.Parent.Name)
 	}
 
 	return a.resources.DeleteByIDAndWait(ctx, resourceID, apiVersion)
 }
 
-func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resourceID string) error {
-	idParts := strings.Split(resourceID, "/")
-	rg := idParts[4]
-	lbName := idParts[8]
-
-	lb, err := a.loadBalancers.Get(ctx, rg, lbName, nil)
+func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resourceID string, rg string, loadBalancerName string) error {
+	lb, err := a.loadBalancers.Get(ctx, rg, loadBalancerName, nil)
 	if err != nil {
 		return err
 	}
@@ -79,16 +69,11 @@ func (a *azureActions) deleteFrontendIPConfiguration(ctx context.Context, resour
 		return err
 	}
 
-	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, lbName, lb.LoadBalancer, nil)
+	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
 }
 
-func (a *azureActions) deleteHealthProbe(ctx context.Context, resourceID string, loadBalancerName string) error {
-	id, err := azure.ParseResourceID(resourceID)
-	if err != nil {
-		return err
-	}
-
-	lb, err := a.loadBalancers.Get(ctx, id.ResourceGroup, loadBalancerName, nil)
+func (a *azureActions) deleteHealthProbe(ctx context.Context, resourceID string, rg string, loadBalancerName string) error {
+	lb, err := a.loadBalancers.Get(ctx, rg, loadBalancerName, nil)
 	if err != nil {
 		return err
 	}
@@ -98,5 +83,5 @@ func (a *azureActions) deleteHealthProbe(ctx context.Context, resourceID string,
 		return err
 	}
 
-	return a.loadBalancers.CreateOrUpdateAndWait(ctx, id.ResourceGroup, loadBalancerName, lb.LoadBalancer, nil)
+	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
 }
