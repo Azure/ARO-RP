@@ -349,11 +349,6 @@ func (m *manager) networkPrivateEndpoint() *arm.Resource {
 }
 
 func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.Resource {
-	zones := []string{}
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones != nil {
-		zones = m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones
-	}
-
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -362,7 +357,6 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 				PublicIPAllocationMethod: mgmtnetwork.Static,
 			},
-			Zones:    &zones,
 			Name:     &name,
 			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 			Location: &azureRegion,
@@ -373,13 +367,6 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 
 // networkInternalLoadBalancer creates a new internal LB (not to be used for updates)
 func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource {
-	zones := []*string{}
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones != nil {
-		for _, z := range m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones {
-			zones = append(zones, pointerutils.ToPtr(z))
-		}
-	}
-
 	return &arm.Resource{
 		Resource: &sdknetwork.LoadBalancer{
 			SKU: &sdknetwork.LoadBalancerSKU{
@@ -394,8 +381,6 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 								ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
 						},
-						Zones: zones,
-
 						Name: pointerutils.ToPtr("internal-lb-ip-v4"),
 					},
 				},

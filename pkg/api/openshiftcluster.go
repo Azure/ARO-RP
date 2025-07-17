@@ -369,8 +369,6 @@ type LoadBalancerProfile struct {
 	OutboundIPs []OutboundIP `json:"outboundIps,omitempty"`
 	// The desired outbound IP Prefix resources for the cluster load balancer.
 	OutboundIPPrefixes []OutboundIPPrefix `json:"outboundIpPrefixes,omitempty"`
-	// The desired availability zones for the load balancer frontend IPs/RP-created PIPs
-	Zones []string `json:"outboundIpAvailabilityZones,omitempty"`
 	// The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.
 	AllocatedOutboundPorts *int `json:"allocatedOutboundPorts,omitempty"`
 }
@@ -827,7 +825,7 @@ type ArchitectureVersion int
 const (
 	// ArchitectureVersionV1: 4.3, 4.4: 2 load balancers, 2 NSGs
 	ArchitectureVersionV1 ArchitectureVersion = iota
-	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG. Non-zonal + zonal frontend IP
+	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG
 	ArchitectureVersionV2
 )
 

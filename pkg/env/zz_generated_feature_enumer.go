@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-const _FeatureName = "FeatureDisableDenyAssignmentsFeatureDisableSignedCertificatesFeatureEnableDevelopmentAuthorizerFeatureRequireD2sWorkersFeatureDisableReadinessDelayFeatureRequireOIDCStorageWebEndpointFeatureUseMockMsiRpFeatureEnableMISEFeatureEnforceMISEFeatureEnableClusterExpandedAvailabilityZones"
+const _FeatureName = "FeatureDisableDenyAssignmentsFeatureDisableSignedCertificatesFeatureEnableDevelopmentAuthorizerFeatureRequireD2sWorkersFeatureDisableReadinessDelayFeatureRequireOIDCStorageWebEndpointFeatureUseMockMsiRpFeatureEnableMISEFeatureEnforceMISE"
 
-var _FeatureIndex = [...]uint16{0, 29, 61, 95, 119, 147, 183, 202, 219, 237, 282}
+var _FeatureIndex = [...]uint8{0, 29, 61, 95, 119, 147, 183, 202, 219, 237}
 
-const _FeatureLowerName = "featuredisabledenyassignmentsfeaturedisablesignedcertificatesfeatureenabledevelopmentauthorizerfeaturerequired2sworkersfeaturedisablereadinessdelayfeaturerequireoidcstoragewebendpointfeatureusemockmsirpfeatureenablemisefeatureenforcemisefeatureenableclusterexpandedavailabilityzones"
+const _FeatureLowerName = "featuredisabledenyassignmentsfeaturedisablesignedcertificatesfeatureenabledevelopmentauthorizerfeaturerequired2sworkersfeaturedisablereadinessdelayfeaturerequireoidcstoragewebendpointfeatureusemockmsirpfeatureenablemisefeatureenforcemise"
 
 func (i Feature) String() string {
 	if i < 0 || i >= Feature(len(_FeatureIndex)-1) {
@@ -33,10 +33,9 @@ func _FeatureNoOp() {
 	_ = x[FeatureUseMockMsiRp-(6)]
 	_ = x[FeatureEnableMISE-(7)]
 	_ = x[FeatureEnforceMISE-(8)]
-	_ = x[FeatureEnableClusterExpandedAvailabilityZones-(9)]
 }
 
-var _FeatureValues = []Feature{FeatureDisableDenyAssignments, FeatureDisableSignedCertificates, FeatureEnableDevelopmentAuthorizer, FeatureRequireD2sWorkers, FeatureDisableReadinessDelay, FeatureRequireOIDCStorageWebEndpoint, FeatureUseMockMsiRp, FeatureEnableMISE, FeatureEnforceMISE, FeatureEnableClusterExpandedAvailabilityZones}
+var _FeatureValues = []Feature{FeatureDisableDenyAssignments, FeatureDisableSignedCertificates, FeatureEnableDevelopmentAuthorizer, FeatureRequireD2sWorkers, FeatureDisableReadinessDelay, FeatureRequireOIDCStorageWebEndpoint, FeatureUseMockMsiRp, FeatureEnableMISE, FeatureEnforceMISE}
 
 var _FeatureNameToValueMap = map[string]Feature{
 	_FeatureName[0:29]:         FeatureDisableDenyAssignments,
@@ -57,8 +56,6 @@ var _FeatureNameToValueMap = map[string]Feature{
 	_FeatureLowerName[202:219]: FeatureEnableMISE,
 	_FeatureName[219:237]:      FeatureEnforceMISE,
 	_FeatureLowerName[219:237]: FeatureEnforceMISE,
-	_FeatureName[237:282]:      FeatureEnableClusterExpandedAvailabilityZones,
-	_FeatureLowerName[237:282]: FeatureEnableClusterExpandedAvailabilityZones,
 }
 
 var _FeatureNames = []string{
@@ -71,7 +68,6 @@ var _FeatureNames = []string{
 	_FeatureName[183:202],
 	_FeatureName[202:219],
 	_FeatureName[219:237],
-	_FeatureName[237:282],
 }
 
 // FeatureString retrieves an enum value from the enum constants string name.
