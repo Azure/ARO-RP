@@ -117,7 +117,7 @@ create_platform_identity_and_assign_role() {
 
     if ! identity=$(az identity show --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null); then
         echo "INFO: Creating platform identity for operator: ${operatorName}"
-        identity=$(az identity create --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+        identity=$(az identity create --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json --location ${LOCATION})
     fi
 
     # Extract the client ID, principal Id, resource ID and name from the result
