@@ -1,5 +1,5 @@
 # Use Fedora as base image since the project documentation mentions Fedora/RHEL dependencies
-FROM fedora:41
+FROM fedora:42
 
 # Install system dependencies
 RUN dnf update -y && dnf install -y \
@@ -30,6 +30,7 @@ RUN dnf update -y && dnf install -y \
     wget \
     python3-pip \
     which \
+    binutils-gold \
     && dnf clean all
 
 # Extract Go version and install it
