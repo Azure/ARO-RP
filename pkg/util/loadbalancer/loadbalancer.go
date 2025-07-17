@@ -39,7 +39,7 @@ func RemoveHealthProbe(lb *armnetwork.LoadBalancer, resourceID string) error {
 	for _, probe := range lb.Properties.Probes {
 		if strings.EqualFold(*probe.ID, resourceID) {
 			if probe.Properties.LoadBalancingRules != nil {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("probe %s is used by load balancing rules, remove the referencing load balancing rules before removing the probe", resourceID))
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("Load balancer health probe %s is used by load balancing rules, remove the referencing load balancing rules before removing the health probe", resourceID))
 			}
 			continue
 		}

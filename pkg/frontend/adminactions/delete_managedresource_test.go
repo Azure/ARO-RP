@@ -216,7 +216,7 @@ func TestDeleteManagedResource(t *testing.T) {
 		{
 			name:        "deletion of health probes in use is forbidden",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse",
-			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "probe /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse is used by load balancing rules, remove the referencing load balancing rules before removing the probe").Error(),
+			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "Load balancer health probe /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse is used by load balancing rules, remove the referencing load balancing rules before removing the health probe").Error(),
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)

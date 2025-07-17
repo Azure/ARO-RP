@@ -279,7 +279,7 @@ func TestRemoveLoadBalancerProbe(t *testing.T) {
 			fipResourceID: testProbeInUse,
 			currentLB:     probesLB,
 			expectedLB:    probesLB,
-			expectedErr:   api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("probe %s is used by load balancing rules, remove the referencing load balancing rules before removing the probe", testProbeInUse)).Error(),
+			expectedErr:   api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("Load balancer health probe %s is used by load balancing rules, remove the referencing load balancing rules before removing the health probe", testProbeInUse)).Error(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

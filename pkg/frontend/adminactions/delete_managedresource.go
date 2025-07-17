@@ -55,9 +55,9 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 
 	re = regexp.MustCompile(healthProbePattern)
 	// HealthProbes cannot be deleted with DeleteByIDAndWait either.
-	matches := re.FindStringSubmatch(resourceID)
-	if len(matches) > 0 {
-		loadBalancerName := matches[3]
+	resourceIDParts := re.FindStringSubmatch(resourceID)
+	if len(resourceIDParts) > 0 {
+		loadBalancerName := resourceIDParts[3]
 		return a.deleteHealthProbe(ctx, resourceID, loadBalancerName)
 	}
 
