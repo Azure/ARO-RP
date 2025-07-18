@@ -68,7 +68,7 @@ func GateKeeperImage(acrDomain string) string {
 
 // MiseImage contains the location of the Mise container image
 func MiseImage(acrDomain string) string {
-	return acrDomain + "/mise:1.0.02773.115-mise-cbl-mariner2.0-distroless"
+	return acrDomain + "/mise:1.0.03103.537-mise-cbl-mariner2.0-distroless"
 }
 
 func OTelImage(acrDomain string) string {
