@@ -839,6 +839,20 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 			name: "valid",
 		},
 		{
+			name: "missing profiles invalid",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles = nil
+			},
+			wantErr: "400: InvalidParameter: properties.ingressProfiles: There should be exactly one ingress profile.",
+		},
+		{
+			name: "no profiles invalid",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles = []IngressProfile{}
+			},
+			wantErr: "400: InvalidParameter: properties.ingressProfiles: There should be exactly one ingress profile.",
+		},
+		{
 			name: "name invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].Name = "invalid"
