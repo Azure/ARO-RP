@@ -76,7 +76,7 @@ Follow these steps from the **root directory** of the ARO-RP repository:
 
     ```bash
     # Example: Run tests
-    make test
+    make test-go
     
     # Example: Build a specific component
     make build-component
