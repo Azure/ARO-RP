@@ -258,6 +258,14 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["TokenContributorRoleID"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleID,
+	}
+	parameters.Parameters["TokenContributorRoleName"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleName,
+	}
+
 	d.log.Infof("deploying %s", deploymentName)
 	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
