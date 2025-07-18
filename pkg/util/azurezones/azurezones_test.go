@@ -34,23 +34,30 @@ func TestDetermineZones(t *testing.T) {
 		},
 		{
 			name:                  "non-zonal",
-			controlPlaneSkuZones:  nil,
-			workerSkuZones:        nil,
-			wantControlPlaneZones: []string{"", "", ""},
-			wantWorkerZones:       []string{""},
+			controlPlaneSkuZones:  []string{},
+			workerSkuZones:        []string{},
+			wantControlPlaneZones: []string{},
+			wantWorkerZones:       []string{},
 			wantPIPZones:          []string{},
 		},
-
+		{
+			name:                  "non-zonal but API returns a nil slice",
+			controlPlaneSkuZones:  nil,
+			workerSkuZones:        nil,
+			wantControlPlaneZones: []string{},
+			wantWorkerZones:       []string{},
+			wantPIPZones:          []string{},
+		},
 		{
 			name:                 "non-zonal control plane, zonal workers",
-			controlPlaneSkuZones: nil,
+			controlPlaneSkuZones: []string{},
 			workerSkuZones:       []string{"1", "2", "3"},
 			wantErr:              "cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: 0, worker zones: 3)",
 		},
 		{
 			name:                 "zonal control plane, non-zonal workers",
 			controlPlaneSkuZones: []string{"1", "2", "3"},
-			workerSkuZones:       nil,
+			workerSkuZones:       []string{},
 			wantErr:              "cluster creation with mix of zonal and non-zonal resources is unsupported (control plane zones: 3, worker zones: 0)",
 		},
 		{
