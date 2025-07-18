@@ -72,10 +72,34 @@ var originalLB = armnetwork.LoadBalancer{
 				},
 			},
 		},
+		Probes: []*armnetwork.Probe{
+			{
+				Name: pointerutils.ToPtr("testProbeInUse"),
+				ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse"),
+				Properties: &armnetwork.ProbePropertiesFormat{
+					Port: pointerutils.ToPtr(int32(8443)),
+					LoadBalancingRules: []*armnetwork.SubResource{
+						{
+							ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+						},
+						{
+							ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+						},
+					},
+				},
+			},
+			{
+				Name: pointerutils.ToPtr("testProbeToDelete"),
+				ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeToDelete"),
+				Properties: &armnetwork.ProbePropertiesFormat{
+					Port: pointerutils.ToPtr(int32(8080)),
+				},
+			},
+		},
 	},
-	Name:     pointerutils.ToPtr(infraID),
+	Name:     &infraID,
 	Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-	Location: pointerutils.ToPtr(location),
+	Location: &location,
 }
 
 func TestDeleteManagedResource(t *testing.T) {
@@ -128,10 +152,34 @@ func TestDeleteManagedResource(t *testing.T) {
 								},
 							},
 						},
+						Probes: []*armnetwork.Probe{
+							{
+								Name: pointerutils.ToPtr("testProbeInUse"),
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse"),
+								Properties: &armnetwork.ProbePropertiesFormat{
+									Port: pointerutils.ToPtr(int32(8443)),
+									LoadBalancingRules: []*armnetwork.SubResource{
+										{
+											ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+										},
+										{
+											ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+										},
+									},
+								},
+							},
+							{
+								Name: pointerutils.ToPtr("testProbeToDelete"),
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeToDelete"),
+								Properties: &armnetwork.ProbePropertiesFormat{
+									Port: pointerutils.ToPtr(int32(8080)),
+								},
+							},
+						},
 					},
-					Name:     pointerutils.ToPtr(infraID),
+					Name:     &infraID,
 					Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-					Location: pointerutils.ToPtr(location),
+					Location: &location,
 				}, nil).Return(nil)
 			},
 		},
@@ -163,6 +211,79 @@ func TestDeleteManagedResource(t *testing.T) {
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Storage/someStorageType/infraID",
 			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "deletion of resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Storage/someStorageType/infraID is forbidden").Error(),
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
+			},
+		},
+		{
+			name:        "deletion of health probes in use is forbidden",
+			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse",
+			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "Load balancer health probe /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse is used by load balancing rules, remove the referencing load balancing rules before removing the health probe").Error(),
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)
+			},
+		},
+		{
+			name:        "health probe delete",
+			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeToDelete",
+			expectedErr: "",
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeToDelete", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)
+				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, armnetwork.LoadBalancer{
+					SKU: &armnetwork.LoadBalancerSKU{
+						Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+					},
+					Properties: &armnetwork.LoadBalancerPropertiesFormat{
+						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+							{
+								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+									PublicIPAddress: &armnetwork.PublicIPAddress{
+										ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
+									},
+								},
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+								Name: pointerutils.ToPtr("public-lb-ip-v4"),
+							},
+							{
+								Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+									LoadBalancingRules: []*armnetwork.SubResource{
+										{
+											ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+										},
+										{
+											ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+										},
+									},
+									PublicIPAddress: &armnetwork.PublicIPAddress{
+										ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+									},
+								},
+							},
+						},
+						Probes: []*armnetwork.Probe{
+							{
+								Name: pointerutils.ToPtr("testProbeInUse"),
+								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse"),
+								Properties: &armnetwork.ProbePropertiesFormat{
+									Port: pointerutils.ToPtr(int32(8443)),
+									LoadBalancingRules: []*armnetwork.SubResource{
+										{
+											ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+										},
+										{
+											ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Name:     &infraID,
+					Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+					Location: &location,
+				}, nil).Return(nil)
 			},
 		},
 	} {
