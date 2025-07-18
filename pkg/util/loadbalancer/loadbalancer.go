@@ -35,16 +35,20 @@ func isFrontendIPConfigReferenced(fipConfig *armnetwork.FrontendIPConfiguration)
 func RemoveHealthProbe(lb *armnetwork.LoadBalancer, resourceID string) error {
 	newProbes := make([]*armnetwork.Probe, 0)
 
-	// Iterate over probes, build a list without the targeted resourceID, if possible
-	for _, probe := range lb.Properties.Probes {
-		if strings.EqualFold(*probe.ID, resourceID) {
-			if probe.Properties.LoadBalancingRules != nil {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("Load balancer health probe %s is used by load balancing rules, remove the referencing load balancing rules before removing the health probe", resourceID))
+	if lb.Properties.Probes != nil {
+		// Iterate over probes, build a list without the targeted resourceID, if possible
+		for _, probe := range lb.Properties.Probes {
+			if strings.EqualFold(*probe.ID, resourceID) {
+				if probe.Properties.LoadBalancingRules != nil {
+					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("Load balancer health probe %s is used by load balancing rules, remove the referencing load balancing rules before removing the health probe", resourceID))
+				}
+				continue
 			}
-			continue
+			newProbes = append(newProbes, probe)
 		}
-		newProbes = append(newProbes, probe)
+		lb.Properties.Probes = newProbes
+	} else {
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeInvalidParameter, "", "No health probes found for this loadbalancer")
 	}
-	lb.Properties.Probes = newProbes
 	return nil
 }
