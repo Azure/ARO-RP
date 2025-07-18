@@ -3,20 +3,38 @@ set -e
 LC_ALL=C
 
 git_username_lower="$(git config github.user | tr '[:upper:]' '[:lower:]')"
-if [[ -z "${git_username_lower}" ]]
-then
-    echo "Please set github.user (git config github.user) locally or globally before issuing commits to this repo."
+if [[ -z "${git_username_lower}" ]]; then
+    echo -e "Error: GitHub username is not set.
+
+Please set your GitHub username using one of the following commands:
+
+1. To set it globally (for all repos):
+        \033[1mgit config --global github.user \"<USERNAME>\"\033[0m
+
+2. To set it locally (for this repo only):
+        \033[1mgit config github.user \"<USERNAME>\"\033[0m
+
+Replace <USERNAME> with your GitHub username (e.g., 'gh-username').
+
+Once set, try committing again."
     exit 1
 fi
 
-# e.g. "USERNAME/ARO-1234", "USERNAME/hotfix-v20240321.00", or "USERNAME/gh-issue-123"
-valid_branch_regex="^${git_username_lower}\/(ARO-[0-9]{4}[a-z0-9._-]*|hotfix-[a-z0-9._-]+|gh-issue-[0-9]+[a-z0-9._-]*)$"
-
+# e.g. "USERNAME/ARO-1234", "USERNAME/hotfix-v20240321.00", "USERNAME/gh-issue-123" and appended descriptions: "USERNAME/ARO-1234/description-here"
+valid_branch_regex="^${git_username_lower}\/(ARO-[0-9]{4,}|hotfix-v[0-9]{8}(\.[0-9]+)*|gh-issue-[0-9]{1,})(\/[a-zA-Z0-9][a-zA-Z0-9.-]*)?$"
 local_branch="$(git rev-parse --abbrev-ref HEAD)"
 
-if [[ ! $local_branch =~ $valid_branch_regex ]]
-then
-    echo "There is something wrong with your branch name. Branch names in this project must adhere to this contract: $valid_branch_regex. Your commit will be rejected. Please rename your branch (git branch --move) to a valid name and try again."
+if [[ ! $local_branch =~ $valid_branch_regex ]]; then
+    current_branch=$(git branch --show-current)
+    echo -e "Your commit has been rejected because the branch name is invalid.
+
+Branch names in this project must adhere to the following contract:
+    \033[3m$valid_branch_regex\033[0m
+
+To rename your current branch, run:
+    \033[1mgit branch --move $current_branch <NEW-BRANCH-NAME>\033[0m
+
+Replace <NEW-BRANCH-NAME> with a valid branch name and try again."
     exit 1
 fi
 
