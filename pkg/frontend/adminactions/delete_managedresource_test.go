@@ -97,9 +97,9 @@ var originalLB = armnetwork.LoadBalancer{
 			},
 		},
 	},
-	Name:     pointerutils.ToPtr(infraID),
+	Name:     &infraID,
 	Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-	Location: pointerutils.ToPtr(location),
+	Location: &location,
 }
 
 func TestDeleteManagedResource(t *testing.T) {
@@ -177,9 +177,9 @@ func TestDeleteManagedResource(t *testing.T) {
 							},
 						},
 					},
-					Name:     pointerutils.ToPtr(infraID),
+					Name:     &infraID,
 					Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-					Location: pointerutils.ToPtr(location),
+					Location: &location,
 				}, nil).Return(nil)
 			},
 		},
@@ -280,9 +280,9 @@ func TestDeleteManagedResource(t *testing.T) {
 							},
 						},
 					},
-					Name:     pointerutils.ToPtr(infraID),
+					Name:     &infraID,
 					Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-					Location: pointerutils.ToPtr(location),
+					Location: &location,
 				}, nil).Return(nil)
 			},
 		},
