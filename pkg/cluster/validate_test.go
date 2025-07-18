@@ -43,6 +43,31 @@ func TestValidateZones(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
+			name:                 "non-zonal",
+			controlPlaneSkuZones: []string{},
+			workerSkuZones:       []string{},
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
+						},
+					},
+					NetworkProfile: api.NetworkProfile{
+						LoadBalancerProfile: &api.LoadBalancerProfile{
+							Zones: []string{},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:                 "zonal, all available",
 			controlPlaneSkuZones: []string{"1", "2", "3"},
 			workerSkuZones:       []string{"1", "2", "3"},
