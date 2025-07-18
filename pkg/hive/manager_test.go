@@ -570,6 +570,7 @@ func TestGetClusterDeployment(t *testing.T) {
 		})
 	}
 }
+
 func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	doc := &api.OpenShiftClusterDocument{
@@ -656,7 +657,7 @@ func TestListSyncSet(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := s.List(context.Background(), tt.namespace, tt.label, reflect.TypeOf(hivev1.SyncSetList{}))
+			result, err := s.ListSyncSets(context.Background(), tt.namespace, tt.label)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
@@ -697,7 +698,7 @@ func TestGetSyncSet(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := s.Get(context.Background(), tt.namespace, tt.syncsetname, reflect.TypeOf(hivev1.SyncSet{}))
+			result, err := s.GetSyncSet(context.Background(), tt.namespace, tt.syncsetname)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
