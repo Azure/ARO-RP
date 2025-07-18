@@ -68,13 +68,16 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	allAvailableZones := slices.Concat(controlPlaneZones, workerZones)
 	slices.Sort(allAvailableZones)
 	allAvailableZones = slices.Compact(allAvailableZones)
+	if len(allAvailableZones) == 0 {
+		allAvailableZones = []string{}
+	}
 
 	// We handle the case where regions have no zones or >= zones than replicas,
 	// but not when replicas > zones. We (currently) only support 3 control
 	// plane replicas and Azure AZs will always be a minimum of 3, see
 	// https://azure.microsoft.com/en-us/blog/our-commitment-to-expand-azure-availability-zones-to-more-regions/
-	if controlPlaneZones == nil {
-		controlPlaneZones = []string{"", "", ""}
+	if len(controlPlaneZones) == 0 {
+		controlPlaneZones = []string{}
 	} else if len(controlPlaneZones) < CONTROL_PLANE_MACHINE_COUNT {
 		return nil, nil, nil, fmt.Errorf("control plane SKU '%s' only available in %d zones, need %d", *controlPlaneSKU.Name, len(controlPlaneZones), CONTROL_PLANE_MACHINE_COUNT)
 	} else if len(controlPlaneZones) >= CONTROL_PLANE_MACHINE_COUNT {
@@ -90,17 +93,10 @@ func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, wo
 	// such, prevent situations where 2 workers may be deployed on one zone and
 	// 1 on another, even though OpenShift treats that as a theoretically valid
 	// configuration.
-	if workerZones == nil {
-		workerZones = []string{""}
+	if len(workerZones) == 0 {
+		workerZones = []string{}
 	} else if len(workerZones) < 3 {
 		return nil, nil, nil, fmt.Errorf("worker SKU '%s' only available in %d zones, need %d", *workerSKU.Name, len(workerZones), 3)
-	}
-
-	// We don't want [""] for passing to the ARM template, just make it blank
-	if len(allAvailableZones) == 1 && allAvailableZones[0] == "" {
-		allAvailableZones = []string{}
-	} else if allAvailableZones == nil {
-		allAvailableZones = []string{}
 	}
 
 	return controlPlaneZones, workerZones, allAvailableZones, nil
