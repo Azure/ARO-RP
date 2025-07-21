@@ -304,721 +304,72 @@ require (
 	tags.cncf.io/container-device-interface v1.0.1 // indirect
 )
 
-// strip cloud.google.com/go dependencies -- these are not required as dependencies
+// Exclude google cloud APIs from the go sum tree
 exclude (
-	cloud.google.com/go v0.37.4
+	cloud.google.com/go v0.26.0
 	cloud.google.com/go v0.41.0
-	cloud.google.com/go v0.44.1
-	cloud.google.com/go v0.44.2
-	cloud.google.com/go v0.44.3
-	cloud.google.com/go v0.45.1
-	cloud.google.com/go v0.46.3
-	cloud.google.com/go v0.50.0
-	cloud.google.com/go v0.52.0
-	cloud.google.com/go v0.53.0
-	cloud.google.com/go v0.54.0
-	cloud.google.com/go v0.56.0
-	cloud.google.com/go v0.57.0
-	cloud.google.com/go v0.58.0
-	cloud.google.com/go v0.75.0
-	cloud.google.com/go v0.81.0
-	cloud.google.com/go v0.97.0
-	cloud.google.com/go v0.99.0
-	cloud.google.com/go v0.100.1
-	cloud.google.com/go v0.100.2
-	cloud.google.com/go v0.102.0
-	cloud.google.com/go v0.102.1
-	cloud.google.com/go v0.104.0
-	cloud.google.com/go v0.105.0
-	cloud.google.com/go v0.107.0
-	cloud.google.com/go v0.110.0
-	cloud.google.com/go/accessapproval v1.4.0
-	cloud.google.com/go/accessapproval v1.5.0
-	cloud.google.com/go/accessapproval v1.6.0
-	cloud.google.com/go/accesscontextmanager v1.3.0
-	cloud.google.com/go/accesscontextmanager v1.4.0
-	cloud.google.com/go/accesscontextmanager v1.6.0
-	cloud.google.com/go/accesscontextmanager v1.7.0
-	cloud.google.com/go/aiplatform v1.22.0
-	cloud.google.com/go/aiplatform v1.24.0
-	cloud.google.com/go/aiplatform v1.27.0
-	cloud.google.com/go/aiplatform v1.35.0
-	cloud.google.com/go/aiplatform v1.36.1
-	cloud.google.com/go/aiplatform v1.37.0
-	cloud.google.com/go/analytics v0.11.0
-	cloud.google.com/go/analytics v0.12.0
-	cloud.google.com/go/analytics v0.17.0
-	cloud.google.com/go/analytics v0.18.0
-	cloud.google.com/go/analytics v0.19.0
-	cloud.google.com/go/apigateway v1.3.0
-	cloud.google.com/go/apigateway v1.4.0
-	cloud.google.com/go/apigateway v1.5.0
-	cloud.google.com/go/apigeeconnect v1.3.0
-	cloud.google.com/go/apigeeconnect v1.4.0
-	cloud.google.com/go/apigeeconnect v1.5.0
-	cloud.google.com/go/apigeeregistry v0.4.0
-	cloud.google.com/go/apigeeregistry v0.5.0
-	cloud.google.com/go/apigeeregistry v0.6.0
-	cloud.google.com/go/apikeys v0.4.0
-	cloud.google.com/go/apikeys v0.5.0
-	cloud.google.com/go/apikeys v0.6.0
-	cloud.google.com/go/appengine v1.4.0
-	cloud.google.com/go/appengine v1.5.0
-	cloud.google.com/go/appengine v1.6.0
-	cloud.google.com/go/appengine v1.7.0
-	cloud.google.com/go/appengine v1.7.1
-	cloud.google.com/go/area120 v0.5.0
-	cloud.google.com/go/area120 v0.6.0
-	cloud.google.com/go/area120 v0.7.0
-	cloud.google.com/go/area120 v0.7.1
-	cloud.google.com/go/artifactregistry v1.6.0
-	cloud.google.com/go/artifactregistry v1.7.0
-	cloud.google.com/go/artifactregistry v1.8.0
-	cloud.google.com/go/artifactregistry v1.9.0
-	cloud.google.com/go/artifactregistry v1.11.1
-	cloud.google.com/go/artifactregistry v1.11.2
-	cloud.google.com/go/artifactregistry v1.12.0
-	cloud.google.com/go/artifactregistry v1.13.0
-	cloud.google.com/go/asset v1.5.0
-	cloud.google.com/go/asset v1.7.0
-	cloud.google.com/go/asset v1.8.0
-	cloud.google.com/go/asset v1.9.0
-	cloud.google.com/go/asset v1.10.0
-	cloud.google.com/go/asset v1.11.1
-	cloud.google.com/go/asset v1.12.0
-	cloud.google.com/go/asset v1.13.0
-	cloud.google.com/go/assuredworkloads v1.5.0
-	cloud.google.com/go/assuredworkloads v1.6.0
-	cloud.google.com/go/assuredworkloads v1.7.0
-	cloud.google.com/go/assuredworkloads v1.8.0
-	cloud.google.com/go/assuredworkloads v1.9.0
-	cloud.google.com/go/assuredworkloads v1.10.0
-	cloud.google.com/go/automl v1.5.0
-	cloud.google.com/go/automl v1.6.0
-	cloud.google.com/go/automl v1.7.0
-	cloud.google.com/go/automl v1.8.0
-	cloud.google.com/go/automl v1.12.0
-	cloud.google.com/go/baremetalsolution v0.3.0
-	cloud.google.com/go/baremetalsolution v0.4.0
-	cloud.google.com/go/baremetalsolution v0.5.0
-	cloud.google.com/go/batch v0.3.0
-	cloud.google.com/go/batch v0.4.0
-	cloud.google.com/go/batch v0.7.0
-	cloud.google.com/go/beyondcorp v0.2.0
-	cloud.google.com/go/beyondcorp v0.3.0
-	cloud.google.com/go/beyondcorp v0.4.0
-	cloud.google.com/go/beyondcorp v0.5.0
-	cloud.google.com/go/bigquery v1.0.1
-	cloud.google.com/go/bigquery v1.8.0
-	cloud.google.com/go/bigquery v1.42.0
-	cloud.google.com/go/bigquery v1.43.0
-	cloud.google.com/go/bigquery v1.44.0
-	cloud.google.com/go/bigquery v1.47.0
-	cloud.google.com/go/bigquery v1.48.0
-	cloud.google.com/go/bigquery v1.49.0
-	cloud.google.com/go/bigquery v1.50.0
-	cloud.google.com/go/billing v1.4.0
-	cloud.google.com/go/billing v1.5.0
-	cloud.google.com/go/billing v1.6.0
-	cloud.google.com/go/billing v1.7.0
-	cloud.google.com/go/billing v1.12.0
-	cloud.google.com/go/billing v1.13.0
-	cloud.google.com/go/binaryauthorization v1.1.0
-	cloud.google.com/go/binaryauthorization v1.2.0
-	cloud.google.com/go/binaryauthorization v1.3.0
-	cloud.google.com/go/binaryauthorization v1.4.0
-	cloud.google.com/go/binaryauthorization v1.5.0
-	cloud.google.com/go/certificatemanager v1.3.0
-	cloud.google.com/go/certificatemanager v1.4.0
-	cloud.google.com/go/certificatemanager v1.6.0
-	cloud.google.com/go/channel v1.8.0
-	cloud.google.com/go/channel v1.9.0
-	cloud.google.com/go/channel v1.11.0
-	cloud.google.com/go/channel v1.12.0
-	cloud.google.com/go/cloudbuild v1.3.0
-	cloud.google.com/go/cloudbuild v1.4.0
-	cloud.google.com/go/cloudbuild v1.6.0
-	cloud.google.com/go/cloudbuild v1.7.0
-	cloud.google.com/go/cloudbuild v1.9.0
-	cloud.google.com/go/clouddms v1.3.0
-	cloud.google.com/go/clouddms v1.4.0
-	cloud.google.com/go/clouddms v1.5.0
-	cloud.google.com/go/cloudtasks v1.5.0
-	cloud.google.com/go/cloudtasks v1.6.0
-	cloud.google.com/go/cloudtasks v1.7.0
-	cloud.google.com/go/cloudtasks v1.8.0
-	cloud.google.com/go/cloudtasks v1.9.0
-	cloud.google.com/go/cloudtasks v1.10.0
-	cloud.google.com/go/compute v0.1.0
-	cloud.google.com/go/compute v1.3.0
-	cloud.google.com/go/compute v1.5.0
-	cloud.google.com/go/compute v1.6.0
-	cloud.google.com/go/compute v1.6.1
-	cloud.google.com/go/compute v1.7.0
-	cloud.google.com/go/compute v1.10.0
-	cloud.google.com/go/compute v1.12.0
-	cloud.google.com/go/compute v1.12.1
-	cloud.google.com/go/compute v1.13.0
-	cloud.google.com/go/compute v1.14.0
-	cloud.google.com/go/compute v1.18.0
-	cloud.google.com/go/compute v1.19.0
-	cloud.google.com/go/compute v1.19.1
-	cloud.google.com/go/compute/metadata v0.1.0
-	cloud.google.com/go/compute/metadata v0.2.1
-	cloud.google.com/go/compute/metadata v0.2.3
-	cloud.google.com/go/contactcenterinsights v1.3.0
-	cloud.google.com/go/contactcenterinsights v1.4.0
-	cloud.google.com/go/contactcenterinsights v1.6.0
-	cloud.google.com/go/container v1.6.0
-	cloud.google.com/go/container v1.7.0
-	cloud.google.com/go/container v1.13.1
-	cloud.google.com/go/container v1.14.0
-	cloud.google.com/go/container v1.15.0
-	cloud.google.com/go/containeranalysis v0.5.1
-	cloud.google.com/go/containeranalysis v0.6.0
-	cloud.google.com/go/containeranalysis v0.7.0
-	cloud.google.com/go/containeranalysis v0.9.0
-	cloud.google.com/go/datacatalog v1.3.0
-	cloud.google.com/go/datacatalog v1.5.0
-	cloud.google.com/go/datacatalog v1.6.0
-	cloud.google.com/go/datacatalog v1.7.0
-	cloud.google.com/go/datacatalog v1.8.0
-	cloud.google.com/go/datacatalog v1.8.1
-	cloud.google.com/go/datacatalog v1.12.0
-	cloud.google.com/go/datacatalog v1.13.0
-	cloud.google.com/go/dataflow v0.6.0
-	cloud.google.com/go/dataflow v0.7.0
-	cloud.google.com/go/dataflow v0.8.0
-	cloud.google.com/go/dataform v0.3.0
-	cloud.google.com/go/dataform v0.4.0
-	cloud.google.com/go/dataform v0.5.0
-	cloud.google.com/go/dataform v0.6.0
-	cloud.google.com/go/dataform v0.7.0
-	cloud.google.com/go/datafusion v1.4.0
-	cloud.google.com/go/datafusion v1.5.0
-	cloud.google.com/go/datafusion v1.6.0
-	cloud.google.com/go/datalabeling v0.5.0
-	cloud.google.com/go/datalabeling v0.6.0
-	cloud.google.com/go/datalabeling v0.7.0
-	cloud.google.com/go/dataplex v1.3.0
-	cloud.google.com/go/dataplex v1.4.0
-	cloud.google.com/go/dataplex v1.5.2
-	cloud.google.com/go/dataplex v1.6.0
-	cloud.google.com/go/dataproc v1.7.0
-	cloud.google.com/go/dataproc v1.8.0
-	cloud.google.com/go/dataproc v1.12.0
-	cloud.google.com/go/dataqna v0.5.0
-	cloud.google.com/go/dataqna v0.6.0
-	cloud.google.com/go/dataqna v0.7.0
-	cloud.google.com/go/datastore v1.0.0
-	cloud.google.com/go/datastore v1.10.0
-	cloud.google.com/go/datastore v1.11.0
-	cloud.google.com/go/datastream v1.2.0
-	cloud.google.com/go/datastream v1.3.0
-	cloud.google.com/go/datastream v1.4.0
-	cloud.google.com/go/datastream v1.5.0
-	cloud.google.com/go/datastream v1.6.0
-	cloud.google.com/go/datastream v1.7.0
-	cloud.google.com/go/deploy v1.4.0
-	cloud.google.com/go/deploy v1.5.0
-	cloud.google.com/go/deploy v1.6.0
-	cloud.google.com/go/deploy v1.8.0
-	cloud.google.com/go/dialogflow v1.15.0
-	cloud.google.com/go/dialogflow v1.16.1
-	cloud.google.com/go/dialogflow v1.17.0
-	cloud.google.com/go/dialogflow v1.18.0
-	cloud.google.com/go/dialogflow v1.19.0
-	cloud.google.com/go/dialogflow v1.29.0
-	cloud.google.com/go/dialogflow v1.31.0
-	cloud.google.com/go/dialogflow v1.32.0
-	cloud.google.com/go/dlp v1.6.0
-	cloud.google.com/go/dlp v1.7.0
-	cloud.google.com/go/dlp v1.9.0
-	cloud.google.com/go/documentai v1.7.0
-	cloud.google.com/go/documentai v1.8.0
-	cloud.google.com/go/documentai v1.9.0
-	cloud.google.com/go/documentai v1.10.0
-	cloud.google.com/go/documentai v1.16.0
-	cloud.google.com/go/documentai v1.18.0
-	cloud.google.com/go/domains v0.6.0
-	cloud.google.com/go/domains v0.7.0
-	cloud.google.com/go/domains v0.8.0
-	cloud.google.com/go/edgecontainer v0.1.0
-	cloud.google.com/go/edgecontainer v0.2.0
-	cloud.google.com/go/edgecontainer v0.3.0
-	cloud.google.com/go/edgecontainer v1.0.0
-	cloud.google.com/go/errorreporting v0.3.0
-	cloud.google.com/go/essentialcontacts v1.3.0
-	cloud.google.com/go/essentialcontacts v1.4.0
-	cloud.google.com/go/essentialcontacts v1.5.0
-	cloud.google.com/go/eventarc v1.7.0
-	cloud.google.com/go/eventarc v1.8.0
-	cloud.google.com/go/eventarc v1.10.0
-	cloud.google.com/go/eventarc v1.11.0
-	cloud.google.com/go/filestore v1.3.0
-	cloud.google.com/go/filestore v1.4.0
-	cloud.google.com/go/filestore v1.5.0
-	cloud.google.com/go/filestore v1.6.0
-	cloud.google.com/go/firestore v1.1.0
-	cloud.google.com/go/firestore v1.9.0
-	cloud.google.com/go/functions v1.6.0
-	cloud.google.com/go/functions v1.7.0
-	cloud.google.com/go/functions v1.8.0
-	cloud.google.com/go/functions v1.9.0
-	cloud.google.com/go/functions v1.10.0
-	cloud.google.com/go/functions v1.12.0
-	cloud.google.com/go/functions v1.13.0
-	cloud.google.com/go/gaming v1.5.0
-	cloud.google.com/go/gaming v1.6.0
-	cloud.google.com/go/gaming v1.7.0
-	cloud.google.com/go/gaming v1.8.0
-	cloud.google.com/go/gaming v1.9.0
-	cloud.google.com/go/gkebackup v0.2.0
-	cloud.google.com/go/gkebackup v0.3.0
-	cloud.google.com/go/gkebackup v0.4.0
-	cloud.google.com/go/gkeconnect v0.5.0
-	cloud.google.com/go/gkeconnect v0.6.0
-	cloud.google.com/go/gkeconnect v0.7.0
-	cloud.google.com/go/gkehub v0.9.0
-	cloud.google.com/go/gkehub v0.10.0
-	cloud.google.com/go/gkehub v0.11.0
-	cloud.google.com/go/gkehub v0.12.0
-	cloud.google.com/go/gkemulticloud v0.3.0
-	cloud.google.com/go/gkemulticloud v0.4.0
-	cloud.google.com/go/gkemulticloud v0.5.0
-	cloud.google.com/go/grafeas v0.2.0
-	cloud.google.com/go/gsuiteaddons v1.3.0
-	cloud.google.com/go/gsuiteaddons v1.4.0
-	cloud.google.com/go/gsuiteaddons v1.5.0
-	cloud.google.com/go/iam v0.1.0
-	cloud.google.com/go/iam v0.3.0
-	cloud.google.com/go/iam v0.5.0
-	cloud.google.com/go/iam v0.6.0
-	cloud.google.com/go/iam v0.7.0
-	cloud.google.com/go/iam v0.8.0
-	cloud.google.com/go/iam v0.11.0
-	cloud.google.com/go/iam v0.12.0
-	cloud.google.com/go/iam v0.13.0
-	cloud.google.com/go/iap v1.4.0
-	cloud.google.com/go/iap v1.5.0
-	cloud.google.com/go/iap v1.6.0
-	cloud.google.com/go/iap v1.7.0
-	cloud.google.com/go/iap v1.7.1
-	cloud.google.com/go/ids v1.1.0
-	cloud.google.com/go/ids v1.2.0
-	cloud.google.com/go/ids v1.3.0
-	cloud.google.com/go/iot v1.3.0
-	cloud.google.com/go/iot v1.4.0
-	cloud.google.com/go/iot v1.5.0
-	cloud.google.com/go/iot v1.6.0
-	cloud.google.com/go/kms v1.4.0
-	cloud.google.com/go/kms v1.5.0
-	cloud.google.com/go/kms v1.6.0
-	cloud.google.com/go/kms v1.8.0
-	cloud.google.com/go/kms v1.9.0
-	cloud.google.com/go/kms v1.10.0
-	cloud.google.com/go/kms v1.10.1
-	cloud.google.com/go/language v1.4.0
-	cloud.google.com/go/language v1.6.0
-	cloud.google.com/go/language v1.7.0
-	cloud.google.com/go/language v1.8.0
-	cloud.google.com/go/language v1.9.0
-	cloud.google.com/go/lifesciences v0.5.0
-	cloud.google.com/go/lifesciences v0.6.0
-	cloud.google.com/go/lifesciences v0.8.0
-	cloud.google.com/go/logging v1.6.1
-	cloud.google.com/go/logging v1.7.0
-	cloud.google.com/go/longrunning v0.1.1
-	cloud.google.com/go/longrunning v0.3.0
-	cloud.google.com/go/longrunning v0.4.1
-	cloud.google.com/go/managedidentities v1.3.0
-	cloud.google.com/go/managedidentities v1.4.0
-	cloud.google.com/go/managedidentities v1.5.0
-	cloud.google.com/go/maps v0.1.0
-	cloud.google.com/go/maps v0.6.0
-	cloud.google.com/go/maps v0.7.0
-	cloud.google.com/go/mediatranslation v0.5.0
-	cloud.google.com/go/mediatranslation v0.6.0
-	cloud.google.com/go/mediatranslation v0.7.0
-	cloud.google.com/go/memcache v1.4.0
-	cloud.google.com/go/memcache v1.5.0
-	cloud.google.com/go/memcache v1.6.0
-	cloud.google.com/go/memcache v1.7.0
-	cloud.google.com/go/memcache v1.9.0
-	cloud.google.com/go/metastore v1.5.0
-	cloud.google.com/go/metastore v1.6.0
-	cloud.google.com/go/metastore v1.7.0
-	cloud.google.com/go/metastore v1.8.0
-	cloud.google.com/go/metastore v1.10.0
-	cloud.google.com/go/monitoring v1.7.0
-	cloud.google.com/go/monitoring v1.8.0
-	cloud.google.com/go/monitoring v1.12.0
-	cloud.google.com/go/monitoring v1.13.0
-	cloud.google.com/go/networkconnectivity v1.4.0
-	cloud.google.com/go/networkconnectivity v1.5.0
-	cloud.google.com/go/networkconnectivity v1.6.0
-	cloud.google.com/go/networkconnectivity v1.7.0
-	cloud.google.com/go/networkconnectivity v1.10.0
-	cloud.google.com/go/networkconnectivity v1.11.0
-	cloud.google.com/go/networkmanagement v1.4.0
-	cloud.google.com/go/networkmanagement v1.5.0
-	cloud.google.com/go/networkmanagement v1.6.0
-	cloud.google.com/go/networksecurity v0.5.0
-	cloud.google.com/go/networksecurity v0.6.0
-	cloud.google.com/go/networksecurity v0.7.0
-	cloud.google.com/go/networksecurity v0.8.0
-	cloud.google.com/go/notebooks v1.2.0
-	cloud.google.com/go/notebooks v1.3.0
-	cloud.google.com/go/notebooks v1.4.0
-	cloud.google.com/go/notebooks v1.5.0
-	cloud.google.com/go/notebooks v1.7.0
-	cloud.google.com/go/notebooks v1.8.0
-	cloud.google.com/go/optimization v1.1.0
-	cloud.google.com/go/optimization v1.2.0
-	cloud.google.com/go/optimization v1.3.1
-	cloud.google.com/go/orchestration v1.3.0
-	cloud.google.com/go/orchestration v1.4.0
-	cloud.google.com/go/orchestration v1.6.0
-	cloud.google.com/go/orgpolicy v1.4.0
-	cloud.google.com/go/orgpolicy v1.5.0
-	cloud.google.com/go/orgpolicy v1.10.0
-	cloud.google.com/go/osconfig v1.7.0
-	cloud.google.com/go/osconfig v1.8.0
-	cloud.google.com/go/osconfig v1.9.0
-	cloud.google.com/go/osconfig v1.10.0
-	cloud.google.com/go/osconfig v1.11.0
-	cloud.google.com/go/oslogin v1.4.0
-	cloud.google.com/go/oslogin v1.5.0
-	cloud.google.com/go/oslogin v1.6.0
-	cloud.google.com/go/oslogin v1.7.0
-	cloud.google.com/go/oslogin v1.9.0
-	cloud.google.com/go/phishingprotection v0.5.0
-	cloud.google.com/go/phishingprotection v0.6.0
-	cloud.google.com/go/phishingprotection v0.7.0
-	cloud.google.com/go/policytroubleshooter v1.3.0
-	cloud.google.com/go/policytroubleshooter v1.4.0
-	cloud.google.com/go/policytroubleshooter v1.5.0
-	cloud.google.com/go/policytroubleshooter v1.6.0
-	cloud.google.com/go/privatecatalog v0.5.0
-	cloud.google.com/go/privatecatalog v0.6.0
-	cloud.google.com/go/privatecatalog v0.7.0
-	cloud.google.com/go/privatecatalog v0.8.0
-	cloud.google.com/go/pubsub v1.26.0
-	cloud.google.com/go/pubsub v1.27.1
-	cloud.google.com/go/pubsub v1.28.0
-	cloud.google.com/go/pubsub v1.30.0
-	cloud.google.com/go/pubsublite v1.5.0
-	cloud.google.com/go/pubsublite v1.6.0
-	cloud.google.com/go/pubsublite v1.7.0
-	cloud.google.com/go/recaptchaenterprise v1.3.1
-	cloud.google.com/go/recaptchaenterprise/v2 v2.1.0
-	cloud.google.com/go/recaptchaenterprise/v2 v2.2.0
-	cloud.google.com/go/recaptchaenterprise/v2 v2.3.0
-	cloud.google.com/go/recaptchaenterprise/v2 v2.4.0
-	cloud.google.com/go/recaptchaenterprise/v2 v2.5.0
-	cloud.google.com/go/recaptchaenterprise/v2 v2.6.0
-	cloud.google.com/go/recaptchaenterprise/v2 v2.7.0
-	cloud.google.com/go/recommendationengine v0.5.0
-	cloud.google.com/go/recommendationengine v0.6.0
-	cloud.google.com/go/recommendationengine v0.7.0
-	cloud.google.com/go/recommender v1.5.0
-	cloud.google.com/go/recommender v1.6.0
-	cloud.google.com/go/recommender v1.7.0
-	cloud.google.com/go/recommender v1.8.0
-	cloud.google.com/go/recommender v1.9.0
-	cloud.google.com/go/redis v1.7.0
-	cloud.google.com/go/redis v1.8.0
-	cloud.google.com/go/redis v1.9.0
-	cloud.google.com/go/redis v1.10.0
-	cloud.google.com/go/redis v1.11.0
-	cloud.google.com/go/resourcemanager v1.3.0
-	cloud.google.com/go/resourcemanager v1.4.0
-	cloud.google.com/go/resourcemanager v1.5.0
-	cloud.google.com/go/resourcemanager v1.6.0
-	cloud.google.com/go/resourcemanager v1.7.0
-	cloud.google.com/go/resourcesettings v1.3.0
-	cloud.google.com/go/resourcesettings v1.4.0
-	cloud.google.com/go/resourcesettings v1.5.0
-	cloud.google.com/go/retail v1.8.0
-	cloud.google.com/go/retail v1.9.0
-	cloud.google.com/go/retail v1.10.0
-	cloud.google.com/go/retail v1.11.0
-	cloud.google.com/go/retail v1.12.0
-	cloud.google.com/go/run v0.2.0
-	cloud.google.com/go/run v0.3.0
-	cloud.google.com/go/run v0.8.0
-	cloud.google.com/go/run v0.9.0
-	cloud.google.com/go/scheduler v1.4.0
-	cloud.google.com/go/scheduler v1.5.0
-	cloud.google.com/go/scheduler v1.6.0
-	cloud.google.com/go/scheduler v1.7.0
-	cloud.google.com/go/scheduler v1.8.0
-	cloud.google.com/go/scheduler v1.9.0
-	cloud.google.com/go/secretmanager v1.6.0
-	cloud.google.com/go/secretmanager v1.8.0
-	cloud.google.com/go/secretmanager v1.9.0
-	cloud.google.com/go/secretmanager v1.10.0
-	cloud.google.com/go/security v1.5.0
-	cloud.google.com/go/security v1.7.0
-	cloud.google.com/go/security v1.8.0
-	cloud.google.com/go/security v1.9.0
-	cloud.google.com/go/security v1.10.0
-	cloud.google.com/go/security v1.12.0
-	cloud.google.com/go/security v1.13.0
-	cloud.google.com/go/securitycenter v1.13.0
-	cloud.google.com/go/securitycenter v1.14.0
-	cloud.google.com/go/securitycenter v1.15.0
-	cloud.google.com/go/securitycenter v1.16.0
-	cloud.google.com/go/securitycenter v1.18.1
-	cloud.google.com/go/securitycenter v1.19.0
-	cloud.google.com/go/servicecontrol v1.4.0
-	cloud.google.com/go/servicecontrol v1.5.0
-	cloud.google.com/go/servicecontrol v1.10.0
-	cloud.google.com/go/servicecontrol v1.11.0
-	cloud.google.com/go/servicecontrol v1.11.1
-	cloud.google.com/go/servicedirectory v1.4.0
-	cloud.google.com/go/servicedirectory v1.5.0
-	cloud.google.com/go/servicedirectory v1.6.0
-	cloud.google.com/go/servicedirectory v1.7.0
-	cloud.google.com/go/servicedirectory v1.8.0
-	cloud.google.com/go/servicedirectory v1.9.0
-	cloud.google.com/go/servicemanagement v1.4.0
-	cloud.google.com/go/servicemanagement v1.5.0
-	cloud.google.com/go/servicemanagement v1.6.0
-	cloud.google.com/go/servicemanagement v1.8.0
-	cloud.google.com/go/serviceusage v1.3.0
-	cloud.google.com/go/serviceusage v1.4.0
-	cloud.google.com/go/serviceusage v1.5.0
-	cloud.google.com/go/serviceusage v1.6.0
-	cloud.google.com/go/shell v1.3.0
-	cloud.google.com/go/shell v1.4.0
-	cloud.google.com/go/shell v1.6.0
-	cloud.google.com/go/spanner v1.41.0
-	cloud.google.com/go/spanner v1.44.0
-	cloud.google.com/go/spanner v1.45.0
-	cloud.google.com/go/speech v1.6.0
-	cloud.google.com/go/speech v1.7.0
-	cloud.google.com/go/speech v1.8.0
-	cloud.google.com/go/speech v1.9.0
-	cloud.google.com/go/speech v1.14.1
-	cloud.google.com/go/speech v1.15.0
-	cloud.google.com/go/storage v1.0.0
-	cloud.google.com/go/storage v1.5.0
-	cloud.google.com/go/storage v1.6.0
-	cloud.google.com/go/storage v1.8.0
-	cloud.google.com/go/storage v1.9.0
-	cloud.google.com/go/storage v1.14.0
-	cloud.google.com/go/storage v1.23.0
-	cloud.google.com/go/storage v1.27.0
-	cloud.google.com/go/storage v1.28.1
-	cloud.google.com/go/storage v1.29.0
-	cloud.google.com/go/storagetransfer v1.5.0
-	cloud.google.com/go/storagetransfer v1.6.0
-	cloud.google.com/go/storagetransfer v1.7.0
-	cloud.google.com/go/storagetransfer v1.8.0
-	cloud.google.com/go/talent v1.1.0
-	cloud.google.com/go/talent v1.2.0
-	cloud.google.com/go/talent v1.3.0
-	cloud.google.com/go/talent v1.4.0
-	cloud.google.com/go/talent v1.5.0
-	cloud.google.com/go/texttospeech v1.4.0
-	cloud.google.com/go/texttospeech v1.5.0
-	cloud.google.com/go/texttospeech v1.6.0
-	cloud.google.com/go/tpu v1.3.0
-	cloud.google.com/go/tpu v1.4.0
-	cloud.google.com/go/tpu v1.5.0
-	cloud.google.com/go/trace v1.3.0
-	cloud.google.com/go/trace v1.4.0
-	cloud.google.com/go/trace v1.8.0
-	cloud.google.com/go/trace v1.9.0
-	cloud.google.com/go/translate v1.3.0
-	cloud.google.com/go/translate v1.4.0
-	cloud.google.com/go/translate v1.5.0
-	cloud.google.com/go/translate v1.6.0
-	cloud.google.com/go/translate v1.7.0
-	cloud.google.com/go/video v1.8.0
-	cloud.google.com/go/video v1.9.0
-	cloud.google.com/go/video v1.12.0
-	cloud.google.com/go/video v1.13.0
-	cloud.google.com/go/video v1.14.0
-	cloud.google.com/go/video v1.15.0
-	cloud.google.com/go/videointelligence v1.6.0
-	cloud.google.com/go/videointelligence v1.7.0
-	cloud.google.com/go/videointelligence v1.8.0
-	cloud.google.com/go/videointelligence v1.9.0
-	cloud.google.com/go/videointelligence v1.10.0
-	cloud.google.com/go/vision v1.2.0
-	cloud.google.com/go/vision/v2 v2.2.0
-	cloud.google.com/go/vision/v2 v2.3.0
-	cloud.google.com/go/vision/v2 v2.4.0
-	cloud.google.com/go/vision/v2 v2.5.0
-	cloud.google.com/go/vision/v2 v2.6.0
-	cloud.google.com/go/vision/v2 v2.7.0
-	cloud.google.com/go/vmmigration v1.2.0
-	cloud.google.com/go/vmmigration v1.3.0
-	cloud.google.com/go/vmmigration v1.5.0
-	cloud.google.com/go/vmmigration v1.6.0
-	cloud.google.com/go/vmwareengine v0.1.0
-	cloud.google.com/go/vmwareengine v0.2.2
-	cloud.google.com/go/vmwareengine v0.3.0
-	cloud.google.com/go/vpcaccess v1.4.0
-	cloud.google.com/go/vpcaccess v1.5.0
-	cloud.google.com/go/vpcaccess v1.6.0
-	cloud.google.com/go/webrisk v1.4.0
-	cloud.google.com/go/webrisk v1.5.0
-	cloud.google.com/go/webrisk v1.6.0
-	cloud.google.com/go/webrisk v1.7.0
-	cloud.google.com/go/webrisk v1.8.0
-	cloud.google.com/go/websecurityscanner v1.3.0
-	cloud.google.com/go/websecurityscanner v1.4.0
-	cloud.google.com/go/websecurityscanner v1.5.0
-	cloud.google.com/go/workflows v1.6.0
-	cloud.google.com/go/workflows v1.7.0
-	cloud.google.com/go/workflows v1.8.0
-	cloud.google.com/go/workflows v1.9.0
-	cloud.google.com/go/workflows v1.10.0
 )
 
 // remove old github.com/google, github.com/googleapis/ google.golang.org dependencies
 exclude (
+	github.com/google/gnostic v0.5.5
+	github.com/google/go-cmp v0.2.0
 	github.com/google/go-cmp v0.3.0
 	github.com/google/go-cmp v0.3.1
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-cmp v0.5.0
 	github.com/google/go-cmp v0.5.1
-	github.com/google/go-cmp v0.5.2
 	github.com/google/go-cmp v0.5.3
-	github.com/google/go-cmp v0.5.4
 	github.com/google/go-cmp v0.5.5
-	github.com/google/go-cmp v0.5.6
 	github.com/google/go-cmp v0.5.8
 	github.com/google/go-cmp v0.5.9
-	github.com/google/go-containerregistry v0.5.1
+	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.0.0
 	github.com/google/gofuzz v1.1.0
-	github.com/google/pprof v0.0.0-20181127221834-b4f47329b966
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38
-	github.com/google/uuid v0.0.0-20170306145142-6a5e28554805
-	github.com/google/uuid v1.1.1
 	github.com/google/uuid v1.1.2
 	github.com/google/uuid v1.2.0
-	github.com/googleapis/google-cloud-go-testing v0.0.0-20200911160855-bcd43fbb19e8
-	google.golang.org/api v0.3.1
-	google.golang.org/api v0.3.2
-	google.golang.org/api v0.4.0
+	github.com/google/uuid v1.3.0
 	google.golang.org/api v0.7.0
-	google.golang.org/api v0.8.0
-	google.golang.org/api v0.9.0
-	google.golang.org/api v0.13.0
-	google.golang.org/api v0.14.0
-	google.golang.org/api v0.15.0
-	google.golang.org/api v0.17.0
-	google.golang.org/api v0.18.0
-	google.golang.org/api v0.19.0
-	google.golang.org/api v0.20.0
-	google.golang.org/api v0.22.0
-	google.golang.org/api v0.24.0
-	google.golang.org/api v0.26.0
-	google.golang.org/api v0.28.0
-	google.golang.org/api v0.29.0
-	google.golang.org/api v0.30.0
-	google.golang.org/api v0.35.0
-	google.golang.org/api v0.36.0
-	google.golang.org/api v0.40.0
-	google.golang.org/api v0.41.0
-	google.golang.org/api v0.43.0
-	google.golang.org/api v0.44.0
-	google.golang.org/api v0.46.0
-	google.golang.org/api v0.47.0
-	google.golang.org/api v0.48.0
-	google.golang.org/api v0.50.0
-	google.golang.org/api v0.51.0
-	google.golang.org/api v0.54.0
-	google.golang.org/api v0.55.0
-	google.golang.org/api v0.56.0
-	google.golang.org/api v0.57.0
-	google.golang.org/api v0.59.0
-	google.golang.org/api v0.61.0
-	google.golang.org/api v0.62.0
 	google.golang.org/appengine v1.1.0
-	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
+	google.golang.org/appengine v1.5.0
+	google.golang.org/appengine v1.6.5
+	google.golang.org/appengine v1.6.7
+	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
+	google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
-	google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63
 	google.golang.org/genproto v0.0.0-20200423170343-7949de9c1215
 	google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884
-	google.golang.org/genproto v0.0.0-20200527145253-8367513e4ece
-	google.golang.org/genproto v0.0.0-20200610104632-a5b850bcf112
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/genproto v0.0.0-20201019141844-1ed22bb0c154
-	// trim dependency tree from old grpcs
-	google.golang.org/grpc v1.17.0
+	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
+	google.golang.org/genproto v0.0.0-20220502173005-c8bf987b8c21
 	google.golang.org/grpc v1.19.0
-	google.golang.org/grpc v1.20.0
 	google.golang.org/grpc v1.20.1
-	google.golang.org/grpc v1.21.0
-	google.golang.org/grpc v1.21.1
-	google.golang.org/grpc v1.22.1
-	google.golang.org/grpc v1.23.1
-	google.golang.org/grpc v1.24.0
+	google.golang.org/grpc v1.23.0
 	google.golang.org/grpc v1.25.1
-	google.golang.org/grpc v1.26.0
 	google.golang.org/grpc v1.27.0
-	google.golang.org/grpc v1.27.1
-	google.golang.org/grpc v1.28.0
 	google.golang.org/grpc v1.29.1
-	// trim dependency tree from old protobufs
-	google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd
-	google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64
-	google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60
-	google.golang.org/protobuf v1.20.1-0.20200309200217-e05f789c0967
-	google.golang.org/protobuf v1.21.0
-	google.golang.org/protobuf v1.22.0
-	google.golang.org/protobuf v1.23.0
-	google.golang.org/protobuf v1.23.1-0.20200526195155-81db48ad09cc
+	google.golang.org/grpc v1.33.1
+	google.golang.org/grpc v1.33.2
+	google.golang.org/grpc v1.36.0
+	google.golang.org/grpc v1.37.0
+	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.47.0
+	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.24.0
 	google.golang.org/protobuf v1.25.0
 	google.golang.org/protobuf v1.26.0-rc.1
 	google.golang.org/protobuf v1.26.0
 	google.golang.org/protobuf v1.27.1
 	google.golang.org/protobuf v1.28.0
-	google.golang.org/protobuf v1.28.1
-	google.golang.org/protobuf v1.29.1
-	google.golang.org/protobuf v1.30.0
 )
 
 exclude (
-	// exclude Azure SDKs that we are not compatible with
-	github.com/Azure/azure-sdk-for-go v48.0.0+incompatible
-	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible
-	github.com/Azure/azure-sdk-for-go v63.2.0+incompatible
-	github.com/Azure/azure-sdk-for-go v63.3.0+incompatible
-	github.com/Azure/azure-sdk-for-go v63.4.0+incompatible
-	github.com/Azure/azure-sdk-for-go v64.0.0+incompatible
-	github.com/Azure/azure-sdk-for-go v64.1.0+incompatible
-	github.com/Azure/azure-sdk-for-go v64.2.0+incompatible
-	github.com/Azure/azure-sdk-for-go v65.0.0+incompatible
-	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
-	github.com/Azure/azure-sdk-for-go v67.0.0+incompatible
-	github.com/Azure/azure-sdk-for-go v67.1.0+incompatible
-	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible
-	github.com/Azure/azure-sdk-for-go v67.3.0+incompatible
-	github.com/Azure/azure-sdk-for-go v67.4.0+incompatible
-	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
 	github.com/Azure/go-ansiterm v0.0.0-20210608223527-2377c96fe795
-	github.com/Azure/go-autorest/autorest v0.9.0
-	github.com/Azure/go-autorest/autorest v0.11.12
-	github.com/Azure/go-autorest/autorest v0.11.18
-	github.com/Azure/go-autorest/autorest v0.11.24
-	github.com/Azure/go-autorest/autorest v0.11.27
-	github.com/Azure/go-autorest/autorest/adal v0.9.5
-	github.com/Azure/go-autorest/autorest/adal v0.9.13
-	github.com/Azure/go-autorest/autorest/adal v0.9.18
-	github.com/Azure/go-autorest/autorest/adal v0.9.20
 	github.com/Azure/go-autorest/autorest/adal v0.9.22
 	github.com/Azure/go-autorest/autorest/mocks v0.4.1
-	github.com/Azure/go-autorest/autorest/to v0.3.0
-	github.com/Azure/go-autorest/autorest/validation v0.1.0
-	github.com/BurntSushi/toml v0.3.1
 	github.com/BurntSushi/toml v1.2.0
 	github.com/Microsoft/go-winio v0.4.14
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
@@ -1026,102 +377,41 @@ exclude (
 	github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 	github.com/cilium/ebpf v0.4.0
-	// exclude old containerd versions
-	github.com/containerd/cgroups v1.0.1
-	github.com/containerd/containerd v1.2.7
-	github.com/containerd/containerd v1.2.10
-	github.com/containerd/containerd v1.3.0
-	github.com/containerd/containerd v1.3.2
-	github.com/containerd/containerd v1.4.1
-	github.com/containerd/containerd v1.4.3
-	github.com/containerd/containerd v1.4.4
-	github.com/containerd/containerd v1.4.9
-	github.com/containerd/containerd v1.5.0-beta.1
-	github.com/containerd/containerd v1.5.0-beta.3
-	github.com/containerd/containerd v1.5.0-beta.4
-	github.com/containerd/containerd v1.5.0-rc.0
-	github.com/containerd/containerd v1.5.1
-	github.com/containerd/containerd v1.5.2
-	github.com/containerd/containerd v1.5.7
-	github.com/containerd/containerd v1.5.9
-	github.com/containerd/stargz-snapshotter/estargz v0.4.1
-	github.com/containerd/stargz-snapshotter/estargz v0.12.0
-	github.com/containers/storage v1.43.0
-	// remove ancient dockers
-	github.com/docker/distribution v0.0.0-20180920194744-16128bbac47f
-	github.com/docker/distribution v0.0.0-20191216044856-a8371794149d
-	github.com/docker/distribution v2.7.0+incompatible
-	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v1.4.2-0.20190924003213-a8608b5b67c7
-	github.com/docker/docker-credential-helpers v0.6.3
-	github.com/docker/go-connections v0.4.0
-	github.com/docker/go-units v0.4.0
-	// Remove old goproxy versions
-	github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153
-	github.com/elazarl/goproxy v0.0.0-20190911111923-ecfe977594f1
 	// Remove unneeded go-restful v2
 	github.com/emicklei/go-restful v2.15.0+incompatible
-	github.com/go-logr/logr v0.2.0
-	github.com/go-logr/logr v0.4.0
-	github.com/go-logr/logr v1.2.0
 	github.com/go-logr/logr v1.2.2
-	github.com/go-logr/logr v1.2.3
-	// exclude github.com/golang/protobuf < 1.3.2 https://nvd.nist.gov/vuln/detail/CVE-2021-3121
-	github.com/gogo/protobuf v1.0.0
-	github.com/gogo/protobuf v1.1.1
-	github.com/gogo/protobuf v1.2.0
-	github.com/gogo/protobuf v1.2.1
-	github.com/gogo/protobuf v1.3.0
-	github.com/gogo/protobuf v1.3.1
+	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.4
+	github.com/golang/protobuf v1.4.0-rc.1
+	github.com/golang/protobuf v1.4.0-rc.1.0.20200221234624-67d41d38c208
+	github.com/golang/protobuf v1.4.0-rc.2
+	github.com/golang/protobuf v1.4.0-rc.4.0.20200313231945-b860323f09d0
+	github.com/golang/protobuf v1.4.0
+	github.com/golang/protobuf v1.4.1
+	github.com/moby/spdystream v0.2.0
+	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
+	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742
+	github.com/modern-go/reflect2 v1.0.1
 	github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
-	// remove old runc
-	github.com/opencontainers/runc v1.0.2
-	github.com/opencontainers/runc v1.1.4
 	// exclude old openshift library-go
-	github.com/openshift/library-go v0.0.0-20211220195323-eca2c467c492
-	github.com/openshift/library-go v0.0.0-20220121154930-b7889002d63e
 	github.com/pkg/errors v0.8.1
 	github.com/pkg/sftp v1.10.1
 	github.com/pkg/sftp v1.13.1
 	// remove old prometheus deps
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.44.1
+	github.com/prometheus/client_golang v0.9.1
 	github.com/prometheus/client_golang v1.0.0
-	github.com/prometheus/client_golang v1.11.0
-	github.com/prometheus/client_golang v1.11.1
-	github.com/prometheus/client_golang v1.12.1
-	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
-	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/client_model v0.2.0
-	github.com/prometheus/client_model v0.3.0
-	github.com/prometheus/common v0.4.1
-	github.com/prometheus/common v0.10.0
-	github.com/prometheus/common v0.15.0
-	github.com/prometheus/common v0.26.0
-	github.com/prometheus/common v0.28.0
-	github.com/prometheus/common v0.32.1
-	github.com/prometheus/procfs v0.0.2
-	github.com/prometheus/procfs v0.6.0
-	github.com/prometheus/procfs v0.7.3
-	github.com/russross/blackfriday v1.5.2
-	github.com/sirupsen/logrus v1.4.1
-	github.com/sirupsen/logrus v1.6.0
-	github.com/sirupsen/logrus v1.7.0
-	github.com/sirupsen/logrus v1.8.1
-	github.com/sirupsen/logrus v1.9.0
 	// trip dependency tree from old cobra
 	github.com/spf13/cobra v0.0.5
-	github.com/spf13/cobra v1.0.0
-	github.com/spf13/cobra v1.1.1
-	github.com/spf13/cobra v1.1.3
 	github.com/spf13/cobra v1.2.1
-	github.com/spf13/cobra v1.4.0
-	github.com/spf13/pflag v1.0.3
 	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/objx v0.1.0
-	github.com/stretchr/objx v0.1.1
 	github.com/stretchr/objx v0.2.0
 	github.com/stretchr/objx v0.4.0
-	github.com/stretchr/testify v1.2.2
+	github.com/stretchr/objx v0.5.0
+	github.com/stretchr/testify v0.0.0-20161117074351-18a02ba4a312
 	github.com/stretchr/testify v1.3.0
 	github.com/stretchr/testify v1.4.0
 	github.com/stretchr/testify v1.5.1
@@ -1131,54 +421,18 @@ exclude (
 	github.com/stretchr/testify v1.8.0
 	github.com/stretchr/testify v1.8.1
 	github.com/stretchr/testify v1.8.2
-	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f
-	go.mozilla.org/pkcs7 v0.0.0-20200128120323-432b2356ecb1
-	// trim dependency tree from old opencensus
-	go.opencensus.io v0.20.1
-	go.opencensus.io v0.20.2
-	go.opencensus.io v0.21.0
-	go.opencensus.io v0.22.0
-	go.opencensus.io v0.22.2
-	go.opencensus.io v0.22.3
-	go.opencensus.io v0.22.4
-	go.opencensus.io v0.22.5
-	go.opencensus.io v0.23.0
-	// old otel deps
-	go.opentelemetry.io/contrib v0.20.0
-	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/metric v0.20.0
-	go.opentelemetry.io/otel/sdk v0.20.0
-	go.opentelemetry.io/otel/sdk/metric v0.20.0
-	go.opentelemetry.io/otel/trace v0.20.0
-	go.opentelemetry.io/proto/otlp v0.7.0
-	go.opentelemetry.io/proto/otlp v0.19.0
-	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5
-	go.uber.org/atomic v1.4.0
-	go.uber.org/atomic v1.7.0
-	go.uber.org/goleak v1.1.10
-	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
-	go.uber.org/goleak v1.1.12
-	go.uber.org/goleak v1.2.0
-	go.uber.org/multierr v1.1.0
-	go.uber.org/multierr v1.6.0
-	go.uber.org/zap v1.10.0
-	go.uber.org/zap v1.17.0
-	go.uber.org/zap v1.19.0
-	go.uber.org/zap v1.19.1
 	gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
-	gopkg.in/yaml.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.3
 	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.5
 	gopkg.in/yaml.v2 v2.2.8
 	gopkg.in/yaml.v2 v2.3.0
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
-	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	gopkg.in/yaml.v3 v3.0.0
 )
 
 // trim old golang.org/x/ and github.com/golang/ items
@@ -1209,7 +463,12 @@ exclude (
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838
 	golang.org/x/crypto v0.6.0
+	golang.org/x/crypto v0.13.0
 	golang.org/x/crypto v0.14.0
+	golang.org/x/crypto v0.17.0
+	golang.org/x/crypto v0.19.0
+	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.31.0
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	golang.org/x/lint v0.0.0-20190930215403-16217165b5de
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
@@ -1229,6 +488,7 @@ exclude (
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
@@ -1250,6 +510,7 @@ exclude (
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
 	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
 	golang.org/x/net v0.2.0
+	golang.org/x/net v0.3.0
 	golang.org/x/net v0.4.0
 	golang.org/x/net v0.6.0
 	golang.org/x/net v0.7.0
@@ -1301,6 +562,9 @@ exclude (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/sync v0.1.0
+	golang.org/x/sync v0.3.0
+	golang.org/x/sync v0.6.0
+	golang.org/x/sync v0.7.0
 	golang.org/x/sys v0.0.0-20180903190138-2b024373dcd9
 	golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33
 	golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e
@@ -1427,6 +691,7 @@ exclude (
 	golang.org/x/tools v0.1.10
 	golang.org/x/tools v0.1.12
 	golang.org/x/tools v0.3.0
+	golang.org/x/tools v0.4.0
 	golang.org/x/tools v0.6.0
 	golang.org/x/tools v0.7.0
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
@@ -1437,150 +702,46 @@ exclude (
 
 // exclude ancient k8s versions
 exclude (
-	k8s.io/api v0.0.0
 	k8s.io/api v0.18.0-beta.2
 	k8s.io/api v0.18.3
-	k8s.io/api v0.19.2
-	k8s.io/api v0.19.3
-	k8s.io/api v0.19.4
-	k8s.io/api v0.20.0
-	k8s.io/api v0.20.6
-	k8s.io/api v0.21.0
-	k8s.io/api v0.21.1
-	k8s.io/api v0.22.1
-	k8s.io/api v0.23.0
-	k8s.io/api v0.23.1
+	k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver v0.0.0
 	k8s.io/apiextensions-apiserver v0.18.0-beta.2
 	k8s.io/apiextensions-apiserver v0.18.3
-	k8s.io/apiextensions-apiserver v0.19.2
-	k8s.io/apiextensions-apiserver v0.19.3
-	k8s.io/apiextensions-apiserver v0.21.0
-	k8s.io/apiextensions-apiserver v0.21.1
-	k8s.io/apiextensions-apiserver v0.22.1
-	k8s.io/apiextensions-apiserver v0.23.0
 	k8s.io/apiextensions-apiserver v0.23.1
-	k8s.io/apiextensions-apiserver v0.23.5
-	k8s.io/apimachinery v0.0.0
+	k8s.io/apiextensions-apiserver v0.24.0
 	k8s.io/apimachinery v0.18.0-beta.2
 	k8s.io/apimachinery v0.18.3
 	k8s.io/apimachinery v0.19.2
-	k8s.io/apimachinery v0.19.3
-	k8s.io/apimachinery v0.19.4
-	k8s.io/apimachinery v0.20.0
-	k8s.io/apimachinery v0.20.2
-	k8s.io/apimachinery v0.20.6
-	k8s.io/apimachinery v0.21.0
-	k8s.io/apimachinery v0.21.1
-	k8s.io/apimachinery v0.22.1
-	k8s.io/apimachinery v0.23.0
-	k8s.io/apimachinery v0.23.1
-	k8s.io/apimachinery v0.23.5
-	k8s.io/apiserver v0.0.0
-	k8s.io/apiserver v0.20.6
-	k8s.io/apiserver v0.21.0
-	k8s.io/apiserver v0.22.1
-	k8s.io/apiserver v0.23.0
-	k8s.io/apiserver v0.23.1
-	k8s.io/apiserver v0.23.5
-	k8s.io/cli-runtime v0.0.0
-	k8s.io/cli-runtime v0.21.0
-	k8s.io/cli-runtime v0.23.0
-	k8s.io/cli-runtime v0.23.1
-	k8s.io/client-go v0.0.0
+	k8s.io/apimachinery v0.23.3
 	k8s.io/client-go v0.18.0-beta.2
 	k8s.io/client-go v0.19.2
-	k8s.io/client-go v0.19.3
-	k8s.io/client-go v0.19.4
-	k8s.io/client-go v0.20.0
-	k8s.io/client-go v0.20.6
-	k8s.io/client-go v0.21.0
-	k8s.io/client-go v0.21.1
-	k8s.io/client-go v0.22.1
-	k8s.io/client-go v0.23.0
-	k8s.io/client-go v0.23.1
-	k8s.io/client-go v0.23.5
-	k8s.io/code-generator v0.0.0
 	k8s.io/code-generator v0.18.0-beta.2
-	k8s.io/code-generator v0.19.7
-	k8s.io/code-generator v0.20.0
-	k8s.io/code-generator v0.21.0
-	k8s.io/code-generator v0.23.0
-	k8s.io/component-base v0.0.0
-	k8s.io/component-base v0.19.2
-	k8s.io/component-base v0.19.4
-	k8s.io/component-base v0.20.6
-	k8s.io/component-base v0.21.0
-	k8s.io/component-base v0.21.1
-	k8s.io/component-base v0.22.1
-	k8s.io/component-base v0.23.0
-	k8s.io/component-base v0.23.1
-	k8s.io/component-base v0.23.5
-	k8s.io/controller-manager v0.0.0
-	k8s.io/cri-api v0.0.0
-	k8s.io/cri-api v0.20.6
-	k8s.io/gengo v0.0.0-20201113003025-83324d819ded
+	k8s.io/code-generator v0.23.3
+	k8s.io/code-generator v0.25.16
 	k8s.io/gengo v0.0.0-20210813121822-485abfe95c7c
+	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.0.0
 	k8s.io/klog/v2 v2.2.0
-	k8s.io/klog/v2 v2.4.0
-	k8s.io/klog/v2 v2.8.0
-	k8s.io/klog/v2 v2.9.0
-	k8s.io/klog/v2 v2.30.0
 	k8s.io/klog/v2 v2.40.1
-	k8s.io/klog/v2 v2.60.1
 	k8s.io/klog/v2 v2.70.1
-	k8s.io/kube-aggregator v0.0.0
 	k8s.io/kube-aggregator v0.18.0-beta.2
-	k8s.io/kube-aggregator v0.23.0
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
-	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf
-	k8s.io/kube-scheduler v0.0.0
-	k8s.io/kubectl v0.0.0
-	k8s.io/kubectl v0.21.0
-	k8s.io/kubectl v0.22.0
-	k8s.io/kubectl v0.23.0
-	k8s.io/kubectl v0.23.1
-	k8s.io/kubelet v0.0.0
-	k8s.io/legacy-cloud-providers v0.0.0
-	k8s.io/metrics v0.0.0
-	k8s.io/mount-utils v0.0.0
-	k8s.io/pod-security-admission v0.0.0
-	k8s.io/sample-apiserver v0.0.0
-	k8s.io/system-validators v1.6.0
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
-	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
+	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1
+	k8s.io/kubernetes v0.0.0-00010101000000-000000000000
 	k8s.io/utils v0.0.0-20210802155522-efc7438f0176
-	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
-	k8s.io/utils v0.0.0-20211116205334-6203023598ed
-	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704
-	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.22
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.25
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.30
-	sigs.k8s.io/controller-runtime v0.7.0
-	sigs.k8s.io/controller-runtime v0.9.0-beta.1.0.20210512131817-ce2f0c92d77e
-	sigs.k8s.io/controller-runtime v0.9.0
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.37
 	sigs.k8s.io/controller-tools v0.2.8
-	sigs.k8s.io/controller-tools v0.3.0
-	sigs.k8s.io/controller-tools v0.4.1
-	sigs.k8s.io/controller-tools v0.6.0
-	sigs.k8s.io/controller-tools v0.6.2
-	sigs.k8s.io/controller-tools v0.7.0
-	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2
-	sigs.k8s.io/kubebuilder/v3 v3.3.0
-	sigs.k8s.io/kustomize/api v0.10.1
-	sigs.k8s.io/kustomize/kyaml v0.10.21
-	sigs.k8s.io/kustomize/kyaml v0.13.0
-	sigs.k8s.io/structured-merge-diff/v4 v4.0.2
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.0
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.1
+	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.3
+	sigs.k8s.io/yaml v1.1.0
 	sigs.k8s.io/yaml v1.2.0
+	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 // k8s.io and sigs.k8s.io pins
