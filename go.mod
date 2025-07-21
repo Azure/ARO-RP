@@ -80,7 +80,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tebeka/selenium v0.9.9
-	github.com/ugorji/go/codec v1.3.0
+	github.com/ugorji/go/codec v1.2.14
 	github.com/vincent-petithory/dataurl v1.0.0
 	go.uber.org/mock v0.5.2
 	golang.org/x/crypto v0.40.0
