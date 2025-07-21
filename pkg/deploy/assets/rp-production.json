@@ -207,6 +207,12 @@
         "subscriptionResourceGroupName": {
             "type": "string"
         },
+        "tokenContributorRoleID": {
+            "type": "string"
+        },
+        "tokenContributorRoleName": {
+            "type": "string"
+        },
         "vmSize": {
             "type": "string",
             "defaultValue": "Standard_D2s_v3"

@@ -11,10 +11,10 @@
     },
     "resources": [
         {
-            "name": "parameters('tokenContributorRoleID')",
+            "name": "[parameters('tokenContributorRoleID')]",
             "type": "Microsoft.Authorization/roleDefinitions",
             "properties": {
-                "roleName": "parameters('tokenContributorRoleName')",
+                "roleName": "[parameters('tokenContributorRoleName')]",
                 "permissions": [
                     {
                         "actions": [

@@ -187,6 +187,9 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
 		Value: devopsServicePrincipalId,
 	}
+	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleID,
+	}
 
 	for i := 0; i < 2; i++ {
 		d.log.Infof("deploying %s", deploymentName)
@@ -259,10 +262,11 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-	parameters.Parameters["TokenContributorRoleID"] = &arm.ParametersParameter{
+
+	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
 		Value: d.config.Configuration.TokenContributorRoleID,
 	}
-	parameters.Parameters["TokenContributorRoleName"] = &arm.ParametersParameter{
+	parameters.Parameters["tokenContributorRoleName"] = &arm.ParametersParameter{
 		Value: d.config.Configuration.TokenContributorRoleName,
 	}
 
@@ -270,8 +274,9 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
-				Template: template,
-				Mode:     mgmtfeatures.Incremental,
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
 			},
 			Location: d.config.Configuration.GlobalResourceGroupLocation,
 		})

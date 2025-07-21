@@ -83,6 +83,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"oidcStorageAccountName",
 			"otelAuditQueueSize",
 			"msiRpEndpoint",
+			"tokenContributorRoleID",
+			"tokenContributorRoleName",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
@@ -204,6 +206,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
 		"globalDevopsServicePrincipalId",
+		"tokenContributorRoleID",
 	}
 
 	for _, param := range params {

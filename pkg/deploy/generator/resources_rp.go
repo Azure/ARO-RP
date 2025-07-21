@@ -1416,10 +1416,10 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 func (g *generator) rpRoleDefinitionTokenContributor() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleDefinition{
-			Name: pointerutils.ToPtr("parameters('tokenContributorRoleID')"),
+			Name: pointerutils.ToPtr("[parameters('tokenContributorRoleID')]"),
 			Type: pointerutils.ToPtr("Microsoft.Authorization/roleDefinitions"),
 			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-				RoleName:         pointerutils.ToPtr("parameters('tokenContributorRoleName')"),
+				RoleName:         pointerutils.ToPtr("[parameters('tokenContributorRoleName')]"),
 				AssignableScopes: &[]string{"[subscription().id]"},
 				Permissions: &[]mgmtauthorization.Permission{
 					{
@@ -1515,7 +1515,7 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('gatewayServicePrincipalId'), 'RP / AcrPull')))",
 		),
 		rbac.ResourceRoleAssignmentWithName(
-			"parameters('tokenContributorRoleID')", // ARO v4 ContainerRegistry Token Contributor
+			"[parameters('tokenContributorRoleID')]",
 			"parameters('fpServicePrincipalId')",
 			"Microsoft.ContainerRegistry/registries",
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
