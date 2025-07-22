@@ -2,6 +2,7 @@
 # Licensed under the Apache License 2.0.
 
 import os
+import re
 from random import randint
 from unittest import mock
 
@@ -16,6 +17,23 @@ logger = get_logger(__name__)
 
 
 class AroScenarioTests(ScenarioTest):
+    def test_aro_get_versions(self):
+        """Test aro get-versions command returns valid version format."""
+        
+        # Test get-versions - this is a lightweight test that doesn't create resources
+        versions_output = self.cmd('aro get-versions --location eastus').get_output_in_json()
+        
+        # Validate we got a list
+        self.assertTrue(isinstance(versions_output, list), "get-versions should return a list")
+        self.assertGreater(len(versions_output), 0, "get-versions should return at least one version")
+        
+        # Validate each version matches semantic versioning format (x.y.z)
+        version_pattern = re.compile(r'^\d+\.\d+\.\d+$')
+        for version in versions_output:
+            self.assertTrue(isinstance(version, str), f"Version {version} should be a string")
+            self.assertTrue(version_pattern.match(version), 
+                           f"Version {version} should match x.y.z format")
+        
     @AllowLargeResponse()
     @ResourceGroupPreparer(random_name_length=28, name_prefix='cli_test_aro', location='eastus')
     @AROClusterServicePrincipalPreparer(name_prefix='cli_test_aro')
