@@ -45,32 +45,6 @@ func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, con
 // deployed, to preserve the name and avoid a RoleAssignmentExists error.
 func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, name string, condition ...interface{}) *arm.Resource {
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
-	r := &arm.Resource{
-		Resource: mgmtauthorization.RoleAssignment{
-			Name: pointerutils.ToPtr("[" + name + "]"),
-			Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
-			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
-				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
-				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
-			},
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
-		DependsOn: []string{
-			"[" + resourceID + "]",
-		},
-	}
-
-	if len(condition) > 0 {
-		r.Condition = condition[0]
-	}
-
-	return r
-}
-
-func ResourceRoleAssignmentWithCustomName(roleID, spID, resourceType, resourceName, name string, condition ...interface{}) *arm.Resource {
-	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
 
 	var roleDefinitionID string
 	if strings.HasPrefix(roleID, "parameters") {
