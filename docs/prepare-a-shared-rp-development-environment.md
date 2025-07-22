@@ -165,8 +165,15 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 1. Create an AAD application which will fake up the RP identity.
 
    ```bash
-   AZURE_RP_CLIENT_SECRET="$(uuidgen)"
-   AZURE_RP_CLIENT_ID="$(az ad app create --display-name ${PREFIX}-rp-shared --end-date '2299-12-31T11:59:59+00:00' --key-type Password --key-value "$AZURE_RP_CLIENT_SECRET" --query appId -o tsv)"
+   AZURE_RP_CLIENT_ID="$(az ad app create 
+    --display-name ${PREFIX}-rp-shared \
+    --query appId \
+    --output tsv)"
+   AZURE_RP_CLIENT_SECRET="$(az ad app credential reset \
+     --id "$AZURE_RP_CLIENT_ID" \
+     --end-date '2299-12-31T11:59:59+00:00' \
+     --query password \
+     --output tsv)"
    az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
    ```
 
@@ -179,14 +186,16 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 1. Create an AAD application which will fake up the gateway identity.
 
    ```bash
-   AZURE_GATEWAY_CLIENT_SECRET="$(uuidgen)"
+
    AZURE_GATEWAY_CLIENT_ID="$(az ad app create \
      --display-name ${PREFIX}-gateway-shared \
-     --end-date '2299-12-31T11:59:59+00:00' \
-     --key-type password \
-     --password "$AZURE_GATEWAY_CLIENT_SECRET" \
      --query appId \
-     -o tsv)"
+     --output tsv)"
+   AZURE_GATEWAY_CLIENT_SECRET="$(az ad app credential reset \
+     --id "$AZURE_GATEWAY_CLIENT_ID" \
+     --end-date '2299-12-31T11:59:59+00:00' \
+     --query password \
+     --output tsv)"
    az ad sp create --id "$AZURE_GATEWAY_CLIENT_ID" >/dev/null
    ```
 
@@ -201,6 +210,15 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
      --password "$AZURE_CLIENT_SECRET" \
      --query appId \
      -o tsv)"
+   AZURE_CLIENT_ID="$(az ad app create \
+     --display-name ${PREFIX}-tooling-shared \
+     --query appId \
+     --output tsv)"
+   AZURE_CLIENT_SECRET="$(az ad app credential reset \
+     --id "$AZURE_CLIENT_ID" \
+     --end-date '2299-12-31T11:59:59+00:00' \
+     --query password \
+     --output tsv)"
    az ad sp create --id "$AZURE_CLIENT_ID" >/dev/null
    ```
 
@@ -221,6 +239,15 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    - Search for 'Application' and select `Application.ReadWrite.OwnedBy`
    - Click 'Add permissions'
    - This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
+
+   You can also do the same with following command:
+   ```
+   az ad app permission add \
+     --id $AZURE_CLIENT_ID \
+     --api 00000003-0000-0000-c000-000000000000 \
+     --api-permissions $(az ad sp show --id 00000003-0000-0000-c000-000000000000 --query "appRoles[?value=='Application.ReadWrite.OwnedBy'].id" --output tsv)=Role
+   ```
+   But, this request will still need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
 
 1. Set up the RP role definitions and subscription role assignments in your Azure subscription. The usage of "uuidgen" for fpRoleDefinitionId is simply there to keep from interfering with any linked resources and to create the role net new. This mimics the RBAC that ARM sets up. With at least `User Access Administrator` permissions on your subscription, do:
 

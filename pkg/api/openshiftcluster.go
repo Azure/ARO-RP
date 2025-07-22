@@ -825,9 +825,9 @@ type ArchitectureVersion int
 
 // ArchitectureVersion constants
 const (
-	// ArchitectureVersionV1: 4.3, 4.4: 2 load balancers, 2 NSGs
+	// ArchitectureVersionV1: 4.3, 4.4: 3 load balancers (internal, control-plane egress, public), 2 NSGs
 	ArchitectureVersionV1 ArchitectureVersion = iota
-	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG. Non-zonal + zonal frontend IP
+	// ArchitectureVersionV2: 4.5: 2 load balancers (internal, public), 1 NSG.
 	ArchitectureVersionV2
 )
 
