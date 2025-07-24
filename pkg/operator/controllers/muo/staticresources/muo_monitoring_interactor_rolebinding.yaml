@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: muo-monitoring-interactor
+  namespace: openshift-monitoring
+roleRef:
+  kind: Role
+  name: muo-monitoring-interactor
+subjects:
+- kind: ServiceAccount
+  name: managed-upgrade-operator
+  namespace: openshift-managed-upgrade-operator
