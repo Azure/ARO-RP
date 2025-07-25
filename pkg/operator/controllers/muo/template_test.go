@@ -78,8 +78,8 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		"CustomResourceDefinition": 1,
 		"Deployment":               1,
 		"Namespace":                1,
-		"Role":                     4,
-		"RoleBinding":              4,
+		"Role":                     5,
+		"RoleBinding":              5,
 		"ServiceAccount":           1,
 		"PrometheusRule":           1,
 	}
