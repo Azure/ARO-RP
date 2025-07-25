@@ -143,9 +143,13 @@ func skipIfMIMOActuatorNotEnabled() {
 }
 
 func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
-	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
+	if !isHiveManagedCluster(adminAPICluster) {
 		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")
 	}
+}
+
+func isHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) bool {
+	return adminAPICluster.Properties.HiveProfile != (admin.HiveProfile{})
 }
 
 func SaveScreenshot(wd selenium.WebDriver, e error) {
@@ -374,7 +378,9 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	var hiveAKS *kubernetes.Clientset
 	var hiveCM hive.ClusterManager
 
-	if _env.IsLocalDevelopmentMode() {
+	oc := adminGetCluster(Default, ctx, clusterResourceID)
+
+	if _env.IsLocalDevelopmentMode() && isHiveManagedCluster(oc) {
 		liveCfg, err := _env.NewLiveConfigManager(ctx)
 		if err != nil {
 			return nil, err

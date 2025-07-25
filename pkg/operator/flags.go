@@ -41,15 +41,15 @@ const (
 	FlagFalse                          = "false"
 
 	// Guardrails policies switches
-	GuardrailsPolicyMachineDenyManaged              = "aro.guardrails.policies.aro-machines-deny.managed"
-	GuardrailsPolicyMachineDenyEnforcement          = "aro.guardrails.policies.aro-machines-deny.enforcement"
-	GuardrailsPolicyMachineConfigDenyManaged        = "aro.guardrails.policies.aro-machine-config-deny.managed"
-	GuardrailsPolicyMachineConfigDenyEnforcement  	= "aro.guardrails.policies.aro-machine-config-deny.enforcement"
-	GuardrailsPolicyPrivNamespaceDenyManaged        = "aro.guardrails.policies.aro-privileged-namespace-deny.managed"
-	GuardrailsPolicyPrivNamespaceDenyEnforcement    = "aro.guardrails.policies.aro-privileged-namespace-deny.enforcement"
-	GuardrailsPolicyDryrun                          = "dryrun"
-	GuardrailsPolicyWarn                            = "warn"
-	GuardrailsPolicyDeny                            = "deny"
+	GuardrailsPolicyMachineDenyManaged           = "aro.guardrails.policies.aro-machines-deny.managed"
+	GuardrailsPolicyMachineDenyEnforcement       = "aro.guardrails.policies.aro-machines-deny.enforcement"
+	GuardrailsPolicyMachineConfigDenyManaged     = "aro.guardrails.policies.aro-machine-config-deny.managed"
+	GuardrailsPolicyMachineConfigDenyEnforcement = "aro.guardrails.policies.aro-machine-config-deny.enforcement"
+	GuardrailsPolicyPrivNamespaceDenyManaged     = "aro.guardrails.policies.aro-privileged-namespace-deny.managed"
+	GuardrailsPolicyPrivNamespaceDenyEnforcement = "aro.guardrails.policies.aro-privileged-namespace-deny.enforcement"
+	GuardrailsPolicyDryrun                       = "dryrun"
+	GuardrailsPolicyWarn                         = "warn"
+	GuardrailsPolicyDeny                         = "deny"
 )
 
 // DefaultOperatorFlags returns flags for new clusters
