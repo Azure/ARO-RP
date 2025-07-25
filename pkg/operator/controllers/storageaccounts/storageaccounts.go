@@ -15,7 +15,6 @@ import (
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
-	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -35,16 +34,14 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 	// Check each of the cluster subnets for the Microsoft.Storage service endpoint. If the subnet has
 	// the service endpoint, it needs to be included in the storage account vnet rules.
 	for _, subnet := range subnets {
-		vnetID, subnetName, err := apisubnet.Split(subnet.ResourceID)
+		subnetResource, err := arm.ParseResourceID(subnet.ResourceID)
 		if err != nil {
 			return err
 		}
-		vnetResource, err := arm.ParseResourceID(vnetID)
-		if err != nil {
-			return err
-		}
-		resourceGroupName := vnetResource.ResourceGroupName
-		vnetName := vnetResource.Name
+		subnetName := subnetResource.Name
+		resourceGroupName := subnetResource.ResourceGroupName
+		vnetName := subnetResource.Parent.Name
+
 		armSubnet, err := r.subnets.Get(ctx, resourceGroupName, vnetName, subnetName, nil)
 		if err != nil {
 			if azureerrors.IsNotFoundError(err) {
