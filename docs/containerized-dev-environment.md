@@ -7,15 +7,25 @@ This document describes how to set up and use a containerized development enviro
 The following files, located at the project root, are used for this setup:
 
 - `Dockerfile.dev-env`: Defines the container image with necessary dependencies and tools.
-- `dev-container-entrypoint.sh`: Script executed when the container starts to set up the environment (Go version, source env).
 - `docker-compose.yml`: Contains the definition for the `aro-dev-env` service.
+
+## How the Local Workspace is Mounted
+
+The containerized development environment mounts your local workspace and configuration into the container for seamless development:
+
+- **Local repository**: Your entire ARO-RP repository (`.`) is mounted to `/workspace` inside the container
+- **Azure CLI config**: Your local `~/.azure` directory is mounted read-only to `/root/.azure` for authentication
+- **SSH keys**: Your local `~/.ssh` directory is mounted read-only to `/root/.ssh` for Git operations
+- **Secrets**: Your local `./secrets` directory is mounted read-only to `/workspace/secrets` for RP configuration
+
+This means any changes you make to files in your local repository are immediately available inside the container, and vice versa. The container's working directory is set to `/workspace`, so you're working directly with your local code.
 
 ## Prerequisites
 
 1.  Docker installed on your host system ([https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/)).
 2.  Docker Compose plugin installed.
 3.  Azure CLI installed on your host system.
-4. You've followed the steps to [prepare your environment.](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#prepare-your-environment)
+4. You've followed the steps to [prepare your development environment](prepare-your-dev-environment.md).
 
 ## Setup Steps
 
@@ -46,11 +56,14 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     ```
 
 4.  **Start the container:**
-    Start the `aro-dev-env` service. The container's main command will be to run the RP.
+    Start the `aro-dev-env` service. The container will automatically source your environment file and start the RP on port 8443.
 
     ```bash
     docker compose up -d aro-dev-env
     ```
+    
+    **Note:** The container runs the command `. /workspace/env && make runlocal-rp`, which sources your environment variables and starts the RP in local development mode.
+    
     Verify the container is running:
     ```bash
     docker compose ps
@@ -69,7 +82,6 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     ```bash
     docker compose exec aro-dev-env bash
     ```
-    *Note: The entrypoint script has already ensured the correct Go version is installed and sourced environment variables from `/workspace/env`.*
 
 7.  **Run other development commands (Inside container shell):**
     From inside the container, you can run project-specific `make` commands or scripts that expect the Go environment to be set up.
@@ -78,8 +90,8 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     # Example: Run tests
     make test-go
     
-    # Example: Build a specific component
-    make build-component
+    # Example: Build all components
+    make build-all
     ```
 
 ## Using Local Azure CLI with the Development RP
@@ -114,5 +126,5 @@ docker compose down aro-dev-env
 If you also want to remove the built image:
 
 ```bash
-docker rmi aro-rp_aro-dev:latest
+docker rmi aro-rp_aro-dev
 ```
