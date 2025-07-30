@@ -25,6 +25,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
@@ -33,11 +34,11 @@ type Reconciler struct {
 	log              *logrus.Entry
 	deployer         deployer.Deployer
 	gkPolicyTemplate deployer.Deployer
-	client           client.Client
 
 	readinessPollTime     time.Duration
 	readinessTimeout      time.Duration
 	dh                    dynamichelper.Interface
+	ch                    clienthelper.Interface
 	namespace             string
 	policyTickerDone      chan bool
 	reconciliationMinutes int
@@ -49,11 +50,10 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 	return &Reconciler{
 		log: log,
 
-		deployer:         deployer.NewDeployer(client, dh, staticFiles, gkDeploymentPath),
-		gkPolicyTemplate: deployer.NewDeployer(client, dh, gkPolicyTemplates, gkTemplatePath),
+		deployer:         deployer.NewDeployer(log, client, staticFiles, gkDeploymentPath),
+		gkPolicyTemplate: deployer.NewDeployer(log, client, gkPolicyTemplates, gkTemplatePath),
 		dh:               dh,
-
-		client: client,
+		ch:               clienthelper.NewWithClient(log, client),
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -64,7 +64,7 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.ch.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
