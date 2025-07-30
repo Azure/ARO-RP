@@ -53,7 +53,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 			return nil
 		})
 
-	deployer := deployer.NewDeployer(log, ch, nil, staticFiles, "staticresources")
+	deployer := deployer.NewDeployer(log, ch, staticFiles, "staticresources")
 	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
 	if err != nil {
 		t.Error(err)
@@ -120,7 +120,7 @@ func TestDeployConfig(t *testing.T) {
 				return nil
 			})
 
-		deployer := deployer.NewDeployer(log, ch, nil, staticFiles, "staticresources")
+		deployer := deployer.NewDeployer(log, ch, staticFiles, "staticresources")
 		err := deployer.CreateOrUpdate(context.Background(), cluster, tt.deploymentConfig)
 		if err != nil {
 			t.Error(err)

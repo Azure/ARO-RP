@@ -29,7 +29,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -56,11 +55,11 @@ type Reconciler struct {
 	readinessTimeout  time.Duration
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
 		log: log,
 
-		deployer: deployer.NewDeployer(log, client, dh, staticFiles, "staticresources"),
+		deployer: deployer.NewDeployer(log, client, staticFiles, "staticresources"),
 
 		client: client,
 
