@@ -52,7 +52,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 			return nil
 		})
 
-	deployer := deployer.NewDeployer(log, ch, nil, staticFiles, "staticresources")
+	deployer := deployer.NewDeployer(log, ch, staticFiles, "staticresources")
 	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.GuardRailsDeploymentConfig{Pullspec: setPullSpec, Namespace: "test-namespace"})
 	if err != nil {
 		t.Error(err)
