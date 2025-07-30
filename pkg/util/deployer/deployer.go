@@ -18,6 +18,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -25,8 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+	"github.com/sirupsen/logrus"
 )
 
 type Deployer interface {
@@ -40,13 +43,15 @@ type Deployer interface {
 type deployer struct {
 	client    client.Client
 	dh        dynamichelper.Interface
+	ch        clienthelper.Interface
 	fs        fs.FS
 	directory string
 }
 
-func NewDeployer(client client.Client, dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
+func NewDeployer(log *logrus.Entry, client client.Client, dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
 	return &deployer{
 		client:    client,
+		ch:        clienthelper.NewWithClient(log, client),
 		dh:        dh,
 		fs:        fs,
 		directory: directory,
@@ -73,9 +78,15 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 
 		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(bytes, nil, nil)
 		if err != nil {
-			return nil, err
+			o := &unstructured.Unstructured{}
+			obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(bytes, nil, o)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, obj)
+		} else {
+			results = append(results, obj)
 		}
-		results = append(results, obj)
 		buffer.Reset()
 	}
 
@@ -98,7 +109,7 @@ func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.C
 		return err
 	}
 
-	return depl.dh.Ensure(ctx, resources...)
+	return depl.ch.Ensure(ctx, resources...)
 }
 
 func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
