@@ -11,30 +11,25 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 //go:embed test_files/local.yaml
 var expectedLocalConfig []byte
 
 func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	setPullSpec := "MyMUOPullSpec"
 	cluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -43,30 +38,22 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	}
 
 	clientFake := ctrlfake.NewClientBuilder().Build()
-	dh := mock_dynamichelper.NewMockInterface(controller)
 	log := logrus.NewEntry(logrus.StandardLogger())
+	deployedObjects := make(map[string]int)
 
 	// When the DynamicHelper is called, count the number of objects it creates
 	// and capture any deployments so that we can check the pullspec
 	var deployments []*appsv1.Deployment
-	deployedObjects := make(map[string]int)
-	check := func(ctx context.Context, objs ...kruntime.Object) error {
-		m := meta.NewAccessor()
-		for _, i := range objs {
-			kind, err := m.Kind(i)
-			if err != nil {
-				return err
-			}
-			if d, ok := i.(*appsv1.Deployment); ok {
+	ch := testclienthelper.NewHookingClient(clientFake).
+		WithPostCreateHook(testclienthelper.TallyCounts(deployedObjects)).
+		WithPostCreateHook(func(o client.Object) error {
+			if d, ok := o.(*appsv1.Deployment); ok {
 				deployments = append(deployments, d)
 			}
-			deployedObjects[kind] = deployedObjects[kind] + 1
-		}
-		return nil
-	}
-	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
+			return nil
+		})
 
-	deployer := deployer.NewDeployer(log, clientFake, dh, staticFiles, "staticresources")
+	deployer := deployer.NewDeployer(log, ch, nil, staticFiles, "staticresources")
 	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
 	if err != nil {
 		t.Error(err)
@@ -101,9 +88,6 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 }
 
 func TestDeployConfig(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	cluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
@@ -123,22 +107,20 @@ func TestDeployConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		clientFake := ctrlfake.NewClientBuilder().Build()
-		dh := mock_dynamichelper.NewMockInterface(controller)
 		log := logrus.NewEntry(logrus.StandardLogger())
 
 		// When the DynamicHelper is called, capture configmaps to inspect them
 		var configs []*corev1.ConfigMap
-		check := func(ctx context.Context, objs ...kruntime.Object) error {
-			for _, i := range objs {
-				if cm, ok := i.(*corev1.ConfigMap); ok {
+
+		ch := testclienthelper.NewHookingClient(clientFake).
+			WithPostCreateHook(func(o client.Object) error {
+				if cm, ok := o.(*corev1.ConfigMap); ok {
 					configs = append(configs, cm)
 				}
-			}
-			return nil
-		}
-		dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
+				return nil
+			})
 
-		deployer := deployer.NewDeployer(log, clientFake, dh, staticFiles, "staticresources")
+		deployer := deployer.NewDeployer(log, ch, nil, staticFiles, "staticresources")
 		err := deployer.CreateOrUpdate(context.Background(), cluster, tt.deploymentConfig)
 		if err != nil {
 			t.Error(err)

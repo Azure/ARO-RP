@@ -16,24 +16,21 @@ import (
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 //go:embed staticresources
 var staticFiles embed.FS
 
 func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	setPullSpec := "MyMUOPullSpec"
 	cluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -42,7 +39,7 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 	}
 
 	clientFake := ctrlfake.NewClientBuilder().Build()
-	dh := mock_dynamichelper.NewMockInterface(controller)
+	hookClient := testclienthelper.NewHookingClient(clientFake)
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	// the OwnerReference that we expect to be set on each object we Ensure
@@ -57,32 +54,19 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 		Controller:         truePtr,
 	}
 
-	// save the list of OwnerReferences on each of the Ensured objects
-	var ownerReferences [][]metav1.OwnerReference
-	check := func(ctx context.Context, objs ...kruntime.Object) error {
-		for _, i := range objs {
-			obj, err := meta.Accessor(i)
-			if err != nil {
-				return err
-			}
-			ownerReferences = append(ownerReferences, obj.GetOwnerReferences())
-		}
-		return nil
-	}
-	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
-
-	deployer := NewDeployer(log, clientFake, dh, staticFiles, "staticresources")
-	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Check that each list of OwnerReferences contains our controller
-	for _, references := range ownerReferences {
-		errs := deep.Equal([]metav1.OwnerReference{expectedOwner}, references)
+	hookClient = hookClient.WithPostCreateHook(func(obj client.Object) error {
+		// Check that each list of OwnerReferences contains our controller
+		errs := deep.Equal([]metav1.OwnerReference{expectedOwner}, obj.GetOwnerReferences())
 		for _, e := range errs {
 			t.Error(e)
 		}
+		return nil
+	})
+
+	deployer := NewDeployer(log, hookClient, nil, staticFiles, "staticresources")
+	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
+	if err != nil {
+		t.Error(err)
 	}
 }
 

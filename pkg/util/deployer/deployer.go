@@ -192,7 +192,7 @@ func getField(obj interface{}, fieldName string) (reflect.Value, error) {
 
 func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName string) (bool, error) {
 	d := &appsv1.Deployment{}
-	err := depl.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: deploymentName}, d)
+	err := depl.ch.Get(ctx, types.NamespacedName{Namespace: namespace, Name: deploymentName}, d)
 	switch {
 	case kerrors.IsNotFound(err):
 		return false, nil
