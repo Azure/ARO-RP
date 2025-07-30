@@ -93,7 +93,6 @@ func TestDeployDelete(t *testing.T) {
 	for _, err := range deep.Equal(expected, tally) {
 		t.Error(err)
 	}
-
 }
 
 func TestDeployDeleteFailure(t *testing.T) {

@@ -24,6 +24,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -506,12 +507,13 @@ func (o *operator) CreateOrUpdateCredentialsRequest(ctx context.Context) error {
 		return err
 	}
 
-	crUnstructured, err := dynamichelper.DecodeUnstructured(buff.Bytes())
+	uns := &unstructured.Unstructured{}
+	_, _, err = scheme.Codecs.UniversalDeserializer().Decode(buff.Bytes(), nil, uns)
 	if err != nil {
 		return err
 	}
 
-	return o.dh.Ensure(ctx, crUnstructured)
+	return o.dh.Ensure(ctx, uns)
 }
 
 func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
