@@ -23,7 +23,6 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
@@ -63,7 +62,7 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 		return nil
 	})
 
-	deployer := NewDeployer(log, hookClient, nil, staticFiles, "staticresources")
+	deployer := NewDeployer(log, hookClient, staticFiles, "staticresources")
 	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
 	if err != nil {
 		t.Error(err)
@@ -74,33 +73,42 @@ func TestDeployDelete(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	log := logrus.NewEntry(logrus.StandardLogger())
-	clientFake := ctrlfake.NewClientBuilder().Build()
-	dh := mock_dynamichelper.NewMockInterface(controller)
-	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), "Deployment.apps", "openshift-managed-upgrade-operator", "managed-upgrade-operator", gomock.Any()).Return(nil)
+	tally := make(map[string]int)
 
-	deployer := NewDeployer(log, clientFake, dh, staticFiles, "staticresources")
+	log := logrus.NewEntry(logrus.StandardLogger())
+	ch := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().Build()).WithPreDeleteHook(testclienthelper.TallyCountsAndKey(tally))
+
+	deployer := NewDeployer(log, ch, staticFiles, "staticresources")
 	err := deployer.Remove(context.Background(), config.MUODeploymentConfig{})
 	if err != nil {
 		t.Error(err)
 	}
+
+	expected := map[string]int{
+		"Deployment/openshift-managed-upgrade-operator/managed-upgrade-operator": 1,
+		"Namespace//openshift-managed-upgrade-operator":                          1,
+		"bogon/openshift-managed-upgrade-operator/bogerus":                       1,
+	}
+
+	for _, err := range deep.Equal(expected, tally) {
+		t.Error(err)
+	}
+
 }
 
 func TestDeployDeleteFailure(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	clientFake := ctrlfake.NewClientBuilder().Build()
 	log := logrus.NewEntry(logrus.StandardLogger())
-	dh := mock_dynamichelper.NewMockInterface(controller)
-	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), "Deployment.apps", "openshift-managed-upgrade-operator", "managed-upgrade-operator", gomock.Any()).Return(errors.New("fail"))
+	ch := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().Build()).
+		WithPreDeleteHook(func(o client.Object) error {
+			return errors.New("fail")
+		})
 
-	deployer := NewDeployer(log, clientFake, dh, staticFiles, "staticresources")
+	deployer := NewDeployer(log, ch, staticFiles, "staticresources")
 	err := deployer.Remove(context.Background(), config.MUODeploymentConfig{})
 	if err == nil {
 		t.Error(err)
 	}
-	if err.Error() != "error removing resource:\nfail" {
+	if err.Error() != "error removing resource:\nfail\nfail\nfail" {
 		t.Error(err)
 	}
 }
@@ -127,7 +135,7 @@ func TestDeployIsReady(t *testing.T) {
 		},
 	}).Build()
 
-	deployer := NewDeployer(log, clientFake, nil, staticFiles, "staticresources")
+	deployer := NewDeployer(log, clientFake, staticFiles, "staticresources")
 	ready, err := deployer.IsReady(context.Background(), "openshift-managed-upgrade-operator", "managed-upgrade-operator")
 	if err != nil {
 		t.Error(err)
@@ -140,7 +148,7 @@ func TestDeployIsReady(t *testing.T) {
 func TestDeployIsReadyMissing(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 	clientFake := ctrlfake.NewClientBuilder().Build()
-	deployer := NewDeployer(log, clientFake, nil, staticFiles, "staticresources")
+	deployer := NewDeployer(log, clientFake, staticFiles, "staticresources")
 	ready, err := deployer.IsReady(context.Background(), "openshift-managed-upgrade-operator", "managed-upgrade-operator")
 	if err != nil {
 		t.Error(err)

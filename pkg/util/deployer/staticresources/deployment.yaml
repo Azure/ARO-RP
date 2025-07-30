@@ -18,5 +18,5 @@ spec:
         - name: managed-upgrade-operator
           image: "{{ .Pullspec }}"
           command:
-          - managed-upgrade-operator
+            - managed-upgrade-operator
           imagePullPolicy: Always
