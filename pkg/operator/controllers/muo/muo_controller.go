@@ -60,7 +60,7 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 	return &Reconciler{
 		log: log,
 
-		deployer: deployer.NewDeployer(client, dh, staticFiles, "staticresources"),
+		deployer: deployer.NewDeployer(log, client, dh, staticFiles, "staticresources"),
 
 		client: client,
 

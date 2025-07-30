@@ -10,6 +10,7 @@ import (
 	_ "embed"
 
 	"github.com/go-test/deep"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -43,6 +44,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 
 	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
+	log := logrus.NewEntry(logrus.StandardLogger())
 
 	// When the DynamicHelper is called, count the number of objects it creates
 	// and capture any deployments so that we can check the pullspec
@@ -64,7 +66,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	}
 	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
 
-	deployer := deployer.NewDeployer(clientFake, dh, staticFiles, "staticresources")
+	deployer := deployer.NewDeployer(log, clientFake, dh, staticFiles, "staticresources")
 	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
 	if err != nil {
 		t.Error(err)
@@ -122,6 +124,7 @@ func TestDeployConfig(t *testing.T) {
 	for _, tt := range tests {
 		clientFake := ctrlfake.NewClientBuilder().Build()
 		dh := mock_dynamichelper.NewMockInterface(controller)
+		log := logrus.NewEntry(logrus.StandardLogger())
 
 		// When the DynamicHelper is called, capture configmaps to inspect them
 		var configs []*corev1.ConfigMap
@@ -135,7 +138,7 @@ func TestDeployConfig(t *testing.T) {
 		}
 		dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
 
-		deployer := deployer.NewDeployer(clientFake, dh, staticFiles, "staticresources")
+		deployer := deployer.NewDeployer(log, clientFake, dh, staticFiles, "staticresources")
 		err := deployer.CreateOrUpdate(context.Background(), cluster, tt.deploymentConfig)
 		if err != nil {
 			t.Error(err)
