@@ -47,7 +47,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 	}
 
 	instance := &arov1alpha1.Cluster{}
-	err = r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err = r.ch.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 		}
 
 		if managed != "true" {
-			err := r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
+			err := r.ch.EnsureDeleted(ctx, uns.GroupVersionKind(), types.NamespacedName{Namespace: uns.GetNamespace(), Name: uns.GetName()})
 			if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 				return err
 			}
@@ -83,7 +83,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 
 		creates = append(creates, uns)
 	}
-	err = r.dh.Ensure(ctx, creates...)
+	err = r.ch.Ensure(ctx, creates...)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 		if err != nil {
 			return err
 		}
-		err = r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
+		err = r.ch.EnsureDeleted(ctx, uns.GroupVersionKind(), types.NamespacedName{Namespace: uns.GetNamespace(), Name: uns.GetName()})
 		if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 			return err
 		}
