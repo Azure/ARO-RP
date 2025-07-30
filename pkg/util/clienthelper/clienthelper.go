@@ -20,6 +20,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -76,11 +77,11 @@ func (ch *clientHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersi
 	})
 	a.SetGroupVersionKind(gvk)
 
-	ch.log.Infof("Delete kind %s ns %s name %s", gvk.Kind, key.Namespace, key.Name)
 	err := ch.Delete(ctx, a)
 	if kerrors.IsNotFound(err) {
 		return nil
 	}
+	ch.log.Infof("Delete kind %s ns %s name %s", gvk.Kind, key.Namespace, key.Name)
 	return err
 }
 
@@ -270,6 +271,13 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 	case *machinev1beta1.MachineHealthCheck:
 		old, new := old.(*machinev1beta1.MachineHealthCheck), new.(*machinev1beta1.MachineHealthCheck)
 		new.Status = old.Status
+
+	case *unstructured.Unstructured:
+		old, new := old.(*unstructured.Unstructured), new.(*unstructured.Unstructured)
+
+		if _, ok := old.Object["status"]; ok {
+			new.Object["status"] = old.Object["status"]
+		}
 	}
 
 	var diff string
