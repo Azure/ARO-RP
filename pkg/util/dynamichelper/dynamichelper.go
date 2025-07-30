@@ -5,7 +5,7 @@ package dynamichelper
 
 import (
 	"context"
-	"strings"
+	"errors"
 
 	"github.com/sirupsen/logrus"
 
@@ -30,7 +30,6 @@ type Interface interface {
 	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error
 	EnsureDeletedGVR(ctx context.Context, groupKind, namespace, name, optionalVersion string) error
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
-	IsConstraintTemplateReady(ctx context.Context, name string) (bool, error)
 }
 
 type dynamicHelper struct {
@@ -78,11 +77,6 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 		return err
 	}
 
-	// gatekeeper policies are unstructured and should be deleted differently
-	if isKindUnstructured(groupKind) {
-		dh.log.Infof("Delete unstructured obj kind %s ns %s name %s version %s", groupKind, namespace, name, optionalVersion)
-		return dh.deleteUnstructuredObj(ctx, groupKind, namespace, name)
-	}
 	dh.log.Infof("Delete kind %s ns %s name %s", groupKind, namespace, name)
 	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 	if kerrors.IsNotFound(err) {
@@ -95,12 +89,8 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 // objects that need to be updated.
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
-		if un, ok := o.(*unstructured.Unstructured); ok {
-			err := dh.ensureUnstructuredObj(ctx, un)
-			if err != nil {
-				return err
-			}
-			continue
+		if _, ok := o.(*unstructured.Unstructured); ok {
+			return errors.New("unstructured objects are unsupported by dynamichelper, use clienthelper instead")
 		}
 		err := dh.ensureOne(ctx, o)
 		if err != nil {
@@ -148,14 +138,6 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 }
 
 func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntime.Object) (kruntime.Object, bool, string, error) {
-	if strings.HasPrefix(name, "gatekeeper") {
-		dh.log.Debugf("Skip updating %s: %s", name, groupKind)
-		return nil, false, "", nil
-	}
-	if strings.HasPrefix(groupKind, "ConstraintTemplate.templates.gatekeeper") {
-		return mergeGK(old, new)
-	}
-
 	return clienthelper.Merge(old.(client.Object), new.(client.Object))
 }
 
