@@ -20,6 +20,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -117,9 +118,14 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		var old kruntime.Object
+
 		old, err := scheme.Scheme.New(gvk)
 		if err != nil {
-			return err
+			old, err = unstructuredscheme.NewUnstructuredCreator().New(gvk)
+			if err != nil {
+				return err
+			}
 		}
 
 		oldObj, ok := old.(client.Object)
