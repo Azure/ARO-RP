@@ -5,14 +5,14 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/kubelet/events"
 
-	"github.com/Azure/ARO-RP/pkg/util/namespace"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var podConditionsExpected = map[corev1.PodConditionType]corev1.ConditionStatus{
@@ -25,38 +25,33 @@ var podConditionsExpected = map[corev1.PodConditionType]corev1.ConditionStatus{
 var restartCounterThreshold int32 = 10
 
 func (mon *Monitor) emitPodConditions(ctx context.Context) error {
-	// to list pods once
-	var cont string
-	var count int64
-	for {
-		ps, err := mon.cli.CoreV1().Pods("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
-		if err != nil {
-			return err
-		}
+	// Only fetch in the namespaces we manage
+	for _, ns := range mon.namespacesToMonitor {
+		var cont string
+		ps := &corev1.PodList{}
 
-		count += int64(len(ps.Items))
+		for {
+			err := mon.ocpclientset.List(ctx, ps, client.InNamespace(ns), client.Continue(cont), client.Limit(mon.queryLimit))
+			if err != nil {
+				return fmt.Errorf("error in list operation: %w", err)
+			}
 
-		mon._emitPodConditions(ps)
-		mon._emitPodContainerStatuses(ps)
-		mon._emitPodContainerRestartCounter(ps)
+			mon._emitPodConditions(ps)
+			mon._emitPodContainerStatuses(ps)
+			mon._emitPodContainerRestartCounter(ps)
 
-		cont = ps.Continue
-		if cont == "" {
-			break
+			cont = ps.Continue
+			if cont == "" {
+				break
+			}
 		}
 	}
-
-	mon.emitGauge("pod.count", count, nil)
 
 	return nil
 }
 
 func (mon *Monitor) _emitPodConditions(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.IsOpenShiftNamespace(p.Namespace) {
-			continue
-		}
-
 		if p.Status.Phase == corev1.PodSucceeded {
 			continue
 		}
@@ -95,10 +90,6 @@ func (mon *Monitor) _emitPodConditions(ps *corev1.PodList) {
 
 func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.IsOpenShiftNamespace(p.Namespace) {
-			continue
-		}
-
 		if p.Status.Phase == corev1.PodSucceeded {
 			continue
 		}
@@ -139,10 +130,6 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 
 func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.IsOpenShiftNamespace(p.Namespace) {
-			continue
-		}
-
 		//Sum up the total number of restarts in the pod to match the number of restarts shown in the 'oc get pods' display
 		t := int32(0)
 		for _, cs := range p.Status.ContainerStatuses {
