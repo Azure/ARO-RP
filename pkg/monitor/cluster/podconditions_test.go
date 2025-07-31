@@ -60,6 +60,39 @@ func TestEmitPodConditions(t *testing.T) {
 				},
 			},
 		},
+		&corev1.Pod{ // metrics not expected, customer namespace
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "customer",
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+			Status: corev1.PodStatus{
+				Conditions: []corev1.PodCondition{
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   corev1.PodInitialized,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   corev1.PodScheduled,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   corev1.ContainersReady,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionTrue,
+					},
+				},
+			},
+		},
 	}
 
 	controller := gomock.NewController(t)
@@ -127,6 +160,27 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
 				Namespace: "openshift",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name: "containername",
+						State: corev1.ContainerState{
+							Waiting: &corev1.ContainerStateWaiting{
+								Reason: "ImagePullBackOff",
+							},
+						},
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // metrics not expected, customer pod
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "customer",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -222,6 +276,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	objects := []client.Object{
 		namespaceObject("openshift"),
 		namespaceObject("customer"),
+		namespaceObject("default"),
 		&corev1.Pod{ // #1 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname1",
@@ -321,6 +376,23 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 					{
 						Name:         "secondcontainer",
 						RestartCount: restartCounterThreshold,
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // #7 metrics not expected, customer pod
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podname1",
+				Namespace: "customer",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "containername",
+						RestartCount: 42,
 					},
 				},
 			},
