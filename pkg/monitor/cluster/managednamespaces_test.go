@@ -73,3 +73,11 @@ func TestGetManagedNamespaces(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func namespaceObject(name string) *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+}

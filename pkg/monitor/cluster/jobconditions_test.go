@@ -12,13 +12,21 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitJobConditions(t *testing.T) {
-	cli := fake.NewSimpleClientset(
+	ctx := context.Background()
+
+	objects := []client.Object{
+		namespaceObject("openshift"),
+		namespaceObject("customer"),
 		&batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{ // will generate no metric
 				Name:      "job-running",
@@ -69,19 +77,50 @@ func TestEmitJobConditions(t *testing.T) {
 				},
 			},
 		},
-	)
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
-	mon := &Monitor{
-		cli: cli,
-		m:   m,
+		&batchv1.Job{ // no metric expected, customer namespace
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "job-failing",
+				Namespace: "customer",
+			},
+			Status: batchv1.JobStatus{
+				Active: 0,
+				Conditions: []batchv1.JobCondition{
+					{
+						Type:   batchv1.JobFailed,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   batchv1.JobComplete,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   batchv1.JobFailed,
+						Status: corev1.ConditionTrue,
+					},
+				},
+			},
+		},
 	}
 
-	m.EXPECT().EmitGauge("job.count", int64(2), map[string]string{})
+	controller := gomock.NewController(t)
+	m := mock_metrics.NewMockEmitter(controller)
+
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
+	mon := &Monitor{
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	err := mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	m.EXPECT().EmitGauge("job.conditions", int64(1), map[string]string{
 		"name":      "job-failing",
@@ -90,9 +129,7 @@ func TestEmitJobConditions(t *testing.T) {
 		"type":      "Failed",
 	})
 
-	ctx := context.Background()
-
-	err := mon.emitJobConditions(ctx)
+	err = mon.emitJobConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

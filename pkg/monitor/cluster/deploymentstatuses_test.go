@@ -12,15 +12,21 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitDeploymentStatuses(t *testing.T) {
 	ctx := context.Background()
 
-	cli := fake.NewSimpleClientset(
+	objects := []client.Object{
+		namespaceObject("openshift"),
+		namespaceObject("customer"),
 		&appsv1.Deployment{ // metrics expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name1",
@@ -49,19 +55,27 @@ func TestEmitDeploymentStatuses(t *testing.T) {
 				AvailableReplicas: 1,
 			},
 		},
-	)
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
-	mon := &Monitor{
-		cli: cli,
-		m:   m,
 	}
 
-	m.EXPECT().EmitGauge("deployment.count", int64(3), map[string]string{})
+	controller := gomock.NewController(t)
+	m := mock_metrics.NewMockEmitter(controller)
+
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
+	mon := &Monitor{
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	err := mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	m.EXPECT().EmitGauge("deployment.statuses", int64(1), map[string]string{
 		"availableReplicas": strconv.Itoa(1),
@@ -70,7 +84,7 @@ func TestEmitDeploymentStatuses(t *testing.T) {
 		"replicas":          strconv.Itoa(2),
 	})
 
-	err := mon.emitDeploymentStatuses(ctx)
+	err = mon.emitDeploymentStatuses(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
