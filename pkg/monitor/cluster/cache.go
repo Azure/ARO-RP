@@ -19,6 +19,9 @@ import (
 // memory usage.  Don't add caches here: work to remove them.
 
 func (mon *Monitor) getClusterVersion(ctx context.Context) (*configv1.ClusterVersion, error) {
+	mon.cache.mu.cv.Lock()
+	defer mon.cache.mu.cv.Unlock()
+
 	if mon.cache.cv != nil {
 		return mon.cache.cv, nil
 	}
@@ -30,6 +33,9 @@ func (mon *Monitor) getClusterVersion(ctx context.Context) (*configv1.ClusterVer
 
 // TODO: remove this function and paginate
 func (mon *Monitor) listClusterOperators(ctx context.Context) (*configv1.ClusterOperatorList, error) {
+	mon.cache.mu.cos.Lock()
+	defer mon.cache.mu.cos.Unlock()
+
 	if mon.cache.cos != nil {
 		return mon.cache.cos, nil
 	}
@@ -41,6 +47,9 @@ func (mon *Monitor) listClusterOperators(ctx context.Context) (*configv1.Cluster
 
 // TODO: remove this function and paginate
 func (mon *Monitor) listNodes(ctx context.Context) (*corev1.NodeList, error) {
+	mon.cache.mu.ns.Lock()
+	defer mon.cache.mu.ns.Unlock()
+
 	if mon.cache.ns != nil {
 		return mon.cache.ns, nil
 	}
@@ -52,6 +61,9 @@ func (mon *Monitor) listNodes(ctx context.Context) (*corev1.NodeList, error) {
 
 // TODO: remove this function and paginate
 func (mon *Monitor) listARODeployments(ctx context.Context) (*appsv1.DeploymentList, error) {
+	mon.cache.mu.arodl.Lock()
+	defer mon.cache.mu.arodl.Unlock()
+
 	if mon.cache.arodl != nil {
 		return mon.cache.arodl, nil
 	}
