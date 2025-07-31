@@ -7,20 +7,26 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitPodConditions(t *testing.T) {
-	cli := fake.NewSimpleClientset(
+	ctx := context.Background()
+
+	objects := []client.Object{
+		namespaceObject("openshift"),
+		namespaceObject("customer"),
 		&corev1.Pod{ // metrics expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
@@ -54,16 +60,26 @@ func TestEmitPodConditions(t *testing.T) {
 				},
 			},
 		},
-	)
+	}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	m := mock_metrics.NewMockEmitter(controller)
 
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
 	mon := &Monitor{
-		cli: cli,
-		m:   m,
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	err := mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
@@ -95,12 +111,18 @@ func TestEmitPodConditions(t *testing.T) {
 		"type":      "Ready",
 	})
 
-	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
-	mon._emitPodConditions(ps)
+	err = mon.emitPodConditions(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestEmitPodContainerStatuses(t *testing.T) {
-	cli := fake.NewSimpleClientset(
+	ctx := context.Background()
+
+	objects := []client.Object{
+		namespaceObject("openshift"),
+		namespaceObject("customer"),
 		&corev1.Pod{ // metrics expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
@@ -149,16 +171,26 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 				NodeName: "fake-node-name",
 			},
 		},
-	)
+	}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	m := mock_metrics.NewMockEmitter(controller)
 
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
 	mon := &Monitor{
-		cli: cli,
-		m:   m,
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	err := mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
@@ -178,12 +210,18 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		"lastTerminationState": "OOMKilled",
 	})
 
-	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
-	mon._emitPodContainerStatuses(ps)
+	err = mon.emitPodConditions(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestEmitPodContainerRestartCounter(t *testing.T) {
-	cli := fake.NewSimpleClientset(
+	ctx := context.Background()
+
+	objects := []client.Object{
+		namespaceObject("openshift"),
+		namespaceObject("customer"),
 		&corev1.Pod{ // #1 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname1",
@@ -290,21 +328,29 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 				NodeName: "fake-node-name",
 			},
 		},
-	)
+	}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	m := mock_metrics.NewMockEmitter(controller)
 
+	hook, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
 	mon := &Monitor{
-		cli:       cli,
-		m:         m,
-		hourlyRun: true,
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+		hourlyRun:    true,
+		log:          log,
 	}
-	logger, hook := test.NewNullLogger()
-	log := logrus.NewEntry(logger)
-	mon.log = log
+
+	err := mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(42), map[string]string{
 		"name":      "podname1",
@@ -325,8 +371,10 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		"namespace": "openshift",
 	})
 
-	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
-	mon._emitPodContainerRestartCounter(ps)
+	err = mon.emitPodConditions(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Matches the number of emitted messages
 	assert.Len(t, hook.Entries, 3)
