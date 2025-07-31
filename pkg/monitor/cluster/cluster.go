@@ -77,7 +77,8 @@ type Monitor struct {
 
 	// Namespaces that are OpenShift or ARO managed that we want to monitor
 	namespacesToMonitor []string
-	queryLimit          int
+	// Limit for items per pagination query
+	queryLimit int
 }
 
 func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, doc *api.OpenShiftClusterDocument, env env.Interface, tenantID string, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
