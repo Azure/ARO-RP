@@ -5,48 +5,45 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appsv1 "k8s.io/api/apps/v1"
 
-	"github.com/Azure/ARO-RP/pkg/util/namespace"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (mon *Monitor) emitStatefulsetStatuses(ctx context.Context) error {
-	var cont string
-	var count int64
-	for {
-		sss, err := mon.cli.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
-		if err != nil {
-			return err
-		}
+	// Only fetch in the namespaces we manage
+	for _, ns := range mon.namespacesToMonitor {
+		var cont string
+		l := &appsv1.StatefulSetList{}
 
-		count += int64(len(sss.Items))
-
-		for _, ss := range sss.Items {
-			if !namespace.IsOpenShiftNamespace(ss.Namespace) {
-				continue
+		for {
+			err := mon.ocpclientset.List(ctx, l, client.InNamespace(ns), client.Continue(cont), client.Limit(mon.queryLimit))
+			if err != nil {
+				return fmt.Errorf("error in list operation: %w", err)
 			}
 
-			if ss.Status.Replicas == ss.Status.ReadyReplicas {
-				continue
+			for _, ss := range l.Items {
+				if ss.Status.Replicas == ss.Status.ReadyReplicas {
+					continue
+				}
+
+				mon.emitGauge("statefulset.statuses", 1, map[string]string{
+					"name":          ss.Name,
+					"namespace":     ss.Namespace,
+					"replicas":      strconv.Itoa(int(ss.Status.Replicas)),
+					"readyReplicas": strconv.Itoa(int(ss.Status.ReadyReplicas)),
+				})
 			}
 
-			mon.emitGauge("statefulset.statuses", 1, map[string]string{
-				"name":          ss.Name,
-				"namespace":     ss.Namespace,
-				"replicas":      strconv.Itoa(int(ss.Status.Replicas)),
-				"readyReplicas": strconv.Itoa(int(ss.Status.ReadyReplicas)),
-			})
-		}
-
-		cont = sss.Continue
-		if cont == "" {
-			break
+			cont = l.Continue
+			if cont == "" {
+				break
+			}
 		}
 	}
-
-	mon.emitGauge("statefulset.count", count, nil)
 
 	return nil
 }
