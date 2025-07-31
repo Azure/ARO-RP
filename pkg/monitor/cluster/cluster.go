@@ -35,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -58,7 +59,7 @@ type Monitor struct {
 	env         env.Interface
 	tenantID    string
 
-	ocpclientset  client.Client
+	ocpclientset  clienthelper.Interface
 	hiveclientset client.Client
 
 	// access below only via the helper functions in cache.go
@@ -73,6 +74,10 @@ type Monitor struct {
 	wg                 *sync.WaitGroup
 	hiveClusterManager hive.ClusterManager
 	doc                *api.OpenShiftClusterDocument
+
+	// Namespaces that are OpenShift or ARO managed that we want to monitor
+	namespacesToMonitor []string
+	queryLimit          int
 }
 
 func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, doc *api.OpenShiftClusterDocument, env env.Interface, tenantID string, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
@@ -142,21 +147,23 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		oc:   oc,
 		dims: dims,
 
-		restconfig:         restConfig,
-		cli:                cli,
-		configcli:          configcli,
-		operatorcli:        operatorcli,
-		maocli:             maocli,
-		mcocli:             mcocli,
-		arocli:             arocli,
-		env:                env,
-		tenantID:           tenantID,
-		m:                  m,
-		ocpclientset:       ocpclientset,
-		hiveclientset:      hiveclientset,
-		wg:                 wg,
-		hiveClusterManager: hiveClusterManager,
-		doc:                doc,
+		restconfig:          restConfig,
+		cli:                 cli,
+		configcli:           configcli,
+		operatorcli:         operatorcli,
+		maocli:              maocli,
+		mcocli:              mcocli,
+		arocli:              arocli,
+		env:                 env,
+		tenantID:            tenantID,
+		m:                   m,
+		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
+		hiveclientset:       hiveclientset,
+		wg:                  wg,
+		hiveClusterManager:  hiveClusterManager,
+		doc:                 doc,
+		namespacesToMonitor: []string{},
+		queryLimit:          50,
 	}, nil
 }
 
@@ -208,6 +215,16 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		}
 		return
 	}
+
+	// Determine the list of OpenShift (or ARO) managed namespaces that we will
+	// query for -- this needs to succeed
+	err = mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		errs = append(errs, err)
+		mon.emitFailureToGatherMetric(steps.FriendlyName(mon.fetchManagedNamespaces), err)
+		return
+	}
+
 	for _, f := range []func(context.Context) error{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
