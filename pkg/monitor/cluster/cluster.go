@@ -118,6 +118,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	if err != nil {
 		return nil, err
 	}
+
 	operatorcli, err := operatorclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
