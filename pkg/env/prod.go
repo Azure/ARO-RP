@@ -38,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
+	"github.com/Azure/ARO-RP/pkg/util/pki"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -260,9 +261,20 @@ func (p *prod) InitializeAuthorizers() error {
 		if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
 			p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
 		} else {
+			caBundle, err := os.ReadFile(ARMCABundlePath)
+			if err != nil {
+				return err
+			}
+
+			armCertPool := x509.NewCertPool()
+			ok := armCertPool.AppendCertsFromPEM(caBundle)
+			if !ok {
+				return fmt.Errorf("cannot decode CA bundle from %s", ARMCABundlePath)
+			}
+
 			armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 				p.log,
-				ARMCABundlePath,
+				armCertPool,
 				os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
 			)
 			if err != nil {
@@ -273,9 +285,24 @@ func (p *prod) InitializeAuthorizers() error {
 		}
 	}
 
+	var issuerPkiUrls []string
+	for _, ca := range p.Environment().PkiCaNames {
+		issuerPkiUrls = append(issuerPkiUrls, fmt.Sprintf(p.Environment().PkiIssuerUrlTemplate, ca))
+	}
+
+	rootCAs, err := pki.FetchDataFromGetIssuerPkiUrls(issuerPkiUrls)
+	if err != nil {
+		return err
+	}
+
+	adminCertPool, err := pki.BuildCertPoolFromCAData(rootCAs)
+	if err != nil {
+		return err
+	}
+
 	adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 		p.log,
-		AdminCABundlePath,
+		adminCertPool,
 		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
 	)
 	if err != nil {
