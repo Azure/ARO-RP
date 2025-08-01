@@ -170,6 +170,12 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 			cryptossh.PublicKeys(signer),
 		},
 		HostKeyCallback: cryptossh.InsecureIgnoreHostKey(),
+		Config: cryptossh.Config{
+			KeyExchanges: sshKexAlgorithms(),
+			Ciphers:      sshCiphers(),
+			MACs:         sshMACs(),
+		},
+		HostKeyAlgorithms: sshHostKeyAlgorithms(),
 	})
 	if err != nil {
 		return err
