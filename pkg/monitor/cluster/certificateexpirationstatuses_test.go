@@ -22,9 +22,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utilcert "github.com/Azure/ARO-RP/pkg/util/cert"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -95,10 +97,11 @@ func TestEmitMDSDCertificateExpiry(t *testing.T) {
 
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 
-			ocpclientset := fake.
+			_, log := testlog.New()
+			ocpclientset := clienthelper.NewWithClient(log, fake.
 				NewClientBuilder().
 				WithObjects(secrets...).
-				Build()
+				Build())
 
 			mon := &Monitor{
 				ocpclientset: ocpclientset,
@@ -232,11 +235,12 @@ func TestEmitIngressAndAPIServerCertificateExpiry(t *testing.T) {
 
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 
-			ocpclientset := fake.
+			_, log := testlog.New()
+			ocpclientset := clienthelper.NewWithClient(log, fake.
 				NewClientBuilder().
 				WithObjects(tt.ingressController).
 				WithObjects(secrets...).
-				Build()
+				Build())
 
 			mon := &Monitor{
 				ocpclientset: ocpclientset,
