@@ -24,6 +24,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
+	machinev1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -68,6 +69,15 @@ type Monitor struct {
 		cv    *configv1.ClusterVersion
 		ns    *corev1.NodeList
 		arodl *appsv1.DeploymentList
+		mcps  *machinev1.MachineConfigPoolList
+		mu    struct {
+			cos   sync.Mutex
+			cs    sync.Mutex
+			cv    sync.Mutex
+			ns    sync.Mutex
+			arodl sync.Mutex
+			mcps  sync.Mutex
+		}
 	}
 
 	wg                 *sync.WaitGroup
@@ -208,7 +218,8 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		}
 		return
 	}
-	for _, f := range []func(context.Context) error{
+
+	checks := []func(context.Context) error{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
 		mon.emitNSGReconciliation,
@@ -216,16 +227,12 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitClusterOperatorVersions,
 		mon.emitClusterVersionConditions,
 		mon.emitClusterVersions,
-		mon.emitDaemonsetStatuses,
-		mon.emitDeploymentStatuses,
+		mon.emitWorkloadStatuses,
 		mon.emitMachineConfigPoolConditions,
 		mon.emitMachineConfigPoolUnmanagedNodeCounts,
 		mon.emitNodeConditions,
-		mon.emitPodConditions,
 		mon.emitDebugPodsCount,
 		mon.detectQuotaFailure,
-		mon.emitReplicasetStatuses,
-		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
 		mon.emitSummary,
 		mon.emitHiveRegistrationStatus,
@@ -238,13 +245,27 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 		mon.emitCWPStatus,
 		mon.emitClusterAuthenticationType,
-	} {
-		err = f(ctx)
-		if err != nil {
-			errs = append(errs, err)
-			mon.emitFailureToGatherMetric(steps.FriendlyName(f), err)
-			// keep going
-		}
+	}
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(checks))
+	wg.Add(len(checks))
+
+	for _, f := range checks {
+		go func(f func(context.Context) error) {
+			defer wg.Done()
+			if err := f(ctx); err != nil {
+				mon.emitFailureToGatherMetric(steps.FriendlyName(f), err)
+				errChan <- err
+			}
+		}(f)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		errs = append(errs, err)
 	}
 
 	return
