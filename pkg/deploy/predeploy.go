@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -166,6 +167,30 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID, devopsServicePrincipalId string) error {
 	deploymentName := "rp-global-" + d.config.Location
 
+	// Log deployment context to help debug incorrect subscription usage
+	d.log.Infof("======== DEBUG DEPLOYMENT CONTEXT ========")
+	d.log.Infof("RP Location: %s", d.config.Location)
+
+	globalRGLocation := "<nil>"
+	if d.config.Configuration.GlobalResourceGroupLocation != nil {
+		globalRGLocation = *d.config.Configuration.GlobalResourceGroupLocation
+	}
+	d.log.Infof("Global Resource Group Location: %s", globalRGLocation)
+
+	globalRGName := "<nil>"
+	if d.config.Configuration.GlobalResourceGroupName != nil {
+		globalRGName = *d.config.Configuration.GlobalResourceGroupName
+	}
+	d.log.Infof("Global Resource Group Name: %s", globalRGName)
+
+	d.log.Infof("rpServicePrincipalID: %s", rpServicePrincipalID)
+	d.log.Infof("gatewayServicePrincipalID: %s", gatewayServicePrincipalID)
+	d.log.Infof("devopsServicePrincipalId: %s", devopsServicePrincipalId)
+
+	d.log.Infof("Template 'assignableScopes' is set to [subscription().id] — expected to resolve to the current deployment subscription.")
+	d.log.Infof("About to run CreateOrUpdateAndWait on: %s", globalRGName)
+	d.log.Infof("==========================================")
+
 	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobal)
 	if err != nil {
 		return err
@@ -247,7 +272,17 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	deploymentName := "rp-global-subscription-" + d.config.Location
 
-	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalSubscription)
+	// Log deployment context to help debug incorrect subscription usage
+	d.log.Infof("======== DEBUG DEPLOYMENT CONTEXT ========")
+	d.log.Infof("RP Location: %s", d.config.Location)
+	// Use environment variable instead of config.go
+	env := strings.ToLower(os.Getenv("DEPLOY_ENVIRONMENT"))
+	subscriptionFile := generator.FileRPProductionGlobalSubscription
+	if env == "stage" {
+		subscriptionFile = generator.FileRPStageGlobalSubscription
+	}
+
+	asset, err := assets.EmbeddedFiles.ReadFile(subscriptionFile)
 	if err != nil {
 		return err
 	}
@@ -259,6 +294,20 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
+	globalRGLocation := "<nil>"
+	if d.config.Configuration.GlobalResourceGroupLocation != nil {
+		globalRGLocation = *d.config.Configuration.GlobalResourceGroupLocation
+	}
+	d.log.Infof("Global Resource Group Location: %s", globalRGLocation)
+
+	globalRGName := "<nil>"
+	if d.config.Configuration.GlobalResourceGroupName != nil {
+		globalRGName = *d.config.Configuration.GlobalResourceGroupName
+	}
+
+	d.log.Infof("Global Resource Group Name: %s", globalRGName)
+	d.log.Infof("Global Resource Group Location: %s", *d.config.Configuration.GlobalResourceGroupLocation)
+
 	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
