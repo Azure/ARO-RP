@@ -18,6 +18,15 @@ import (
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 )
 
+// Because these values are the same between Public and GovCloud
+var (
+	pkiIssuerUrlTemplate = "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s"
+	pkiCaNames           = []string{
+		"ame",  // AMEv1
+		"ccme", // AMEv2; see https://aka.ms/AzureTLSCAs
+	}
+)
+
 // AROEnvironment contains additional, cloud-specific information needed by ARO.
 type AROEnvironment struct {
 	azure.Environment
@@ -28,7 +37,7 @@ type AROEnvironment struct {
 	AppLensScope             string
 	AppLensTenantID          string
 	PkiIssuerUrlTemplate     string
-	PkiCaName                string
+	PkiCaNames               []string
 	AuthzRemotePDPEndPoint   string
 	AzureRbacPDPEnvironment
 	Cloud cloud.Configuration
@@ -56,8 +65,8 @@ var (
 		AppLensEndpoint:          "https://diag-runtimehost-prod.trafficmanager.net/api/invoke",
 		AppLensScope:             "0d7b6142-46a3-426a-ad6d-eed97c2a48ee",
 		AppLensTenantID:          "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
-		PkiIssuerUrlTemplate:     "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s",
-		PkiCaName:                "ame",
+		PkiIssuerUrlTemplate:     pkiIssuerUrlTemplate,
+		PkiCaNames:               pkiCaNames,
 		Cloud:                    cloud.AzurePublic,
 		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
 			Endpoint:   "https://%s.authorization.azure.net/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
@@ -78,10 +87,9 @@ var (
 		AppLensEndpoint:          "https://diag-runtimehost-prod-bn1-001.azurewebsites.us/api/invoke",
 		AppLensScope:             "https://microsoft.onmicrosoft.com/runtimehost",
 		AppLensTenantID:          "cab8a31a-1906-4287-a0d8-4eef66b95f6e",
+		PkiIssuerUrlTemplate:     pkiIssuerUrlTemplate,
+		PkiCaNames:               pkiCaNames,
 		Cloud:                    cloud.AzureGovernment,
-		// the .us tls cert is issued by DigiCerts, and no additional certs are needed from pki
-		PkiIssuerUrlTemplate: "",
-		PkiCaName:            "",
 		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
 			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.us/.default",
