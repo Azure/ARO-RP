@@ -196,7 +196,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (muo.NewReconciler(
 			log.WithField("controller", muo.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", muo.ControllerName, err)
 		}
 		if err = (autosizednodes.NewReconciler(
