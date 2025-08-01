@@ -91,12 +91,11 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 			return nil, nil
 		},
 		Config: cryptossh.Config{
-			Ciphers: []string{
-				cryptossh.CipherAES128CTR,
-				cryptossh.CipherAES192CTR,
-				cryptossh.CipherAES256CTR,
-			},
+			Ciphers:      sshCiphers(),
+			KeyExchanges: sshKexAlgorithms(),
+			MACs:         sshMACs(),
 		},
+		PublicKeyAuthAlgorithms: sshPublicKeyAlgorithms(),
 	}
 
 	key, _, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
@@ -202,18 +201,12 @@ func TestProxy(t *testing.T) {
 		}
 	}
 
-	type ciphers struct {
-		Ciphers           []string
-		KexAlgorithms     []string
-		MACs              []string
-		HostKeyAlgorithms []string
-	}
-
-	goodCiphers := ciphers{
-		Ciphers:           []string{cryptossh.CipherAES256CTR},
-		KexAlgorithms:     []string{cryptossh.KeyExchangeMLKEM768X25519},
-		MACs:              []string{cryptossh.HMACSHA256ETM},
-		HostKeyAlgorithms: []string{cryptossh.KeyAlgoRSASHA512},
+	goodCiphers := cryptossh.Algorithms{
+		KeyExchanges:   sshKexAlgorithms(),
+		Ciphers:        sshCiphers(),
+		MACs:           sshMACs(),
+		HostKeys:       sshHostKeyAlgorithms(),
+		PublicKeyAuths: sshPublicKeyAlgorithms(),
 	}
 
 	type test struct {
@@ -224,7 +217,7 @@ func TestProxy(t *testing.T) {
 		mocks          func(*mock_proxy.MockDialer)
 		wantErrPrefix  string
 		wantLogs       []map[string]types.GomegaMatcher
-		ciphers        ciphers
+		ciphers        cryptossh.Algorithms
 	}
 
 	for _, tt := range []*test{
@@ -428,11 +421,11 @@ func TestProxy(t *testing.T) {
 			},
 			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for client to server cipher;",
 			wantLogs:      []map[string]types.GomegaMatcher{},
-			ciphers: ciphers{
-				Ciphers:           []string{cryptossh.CipherChaCha20Poly1305},
-				KexAlgorithms:     []string{cryptossh.KeyExchangeMLKEM768X25519},
-				MACs:              []string{cryptossh.HMACSHA256ETM},
-				HostKeyAlgorithms: []string{cryptossh.KeyAlgoRSASHA512},
+			ciphers: cryptossh.Algorithms{
+				Ciphers:      []string{cryptossh.CipherChaCha20Poly1305},
+				KeyExchanges: []string{cryptossh.KeyExchangeMLKEM768X25519},
+				MACs:         []string{cryptossh.HMACSHA256ETM},
+				HostKeys:     []string{cryptossh.KeyAlgoRSASHA512},
 			},
 		},
 		{
@@ -446,11 +439,11 @@ func TestProxy(t *testing.T) {
 			},
 			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for key exchange;",
 			wantLogs:      []map[string]types.GomegaMatcher{},
-			ciphers: ciphers{
-				Ciphers:           []string{cryptossh.CipherAES256CTR},
-				KexAlgorithms:     []string{cryptossh.InsecureKeyExchangeDHGEXSHA1},
-				MACs:              []string{cryptossh.HMACSHA256ETM},
-				HostKeyAlgorithms: []string{cryptossh.KeyAlgoRSASHA512},
+			ciphers: cryptossh.Algorithms{
+				Ciphers:      []string{cryptossh.CipherAES256CTR},
+				KeyExchanges: []string{cryptossh.InsecureKeyExchangeDHGEXSHA1},
+				MACs:         []string{cryptossh.HMACSHA256ETM},
+				HostKeys:     []string{cryptossh.KeyAlgoRSASHA512},
 			},
 		},
 		// FIXME: Make this test fail properly
@@ -464,7 +457,7 @@ func TestProxy(t *testing.T) {
 		// 		checker.AddPortalDocuments(portalDocument)
 		// 	},
 		// 	wantErrPrefix: "ssh: handshake failed: no common algorithm for mac;",
-		// 	wantLogs: []map[string]types.GomegaMatcher{},
+		// 	wantLogs:      []map[string]types.GomegaMatcher{},
 		// 	ciphers: ciphers{
 		// 		Ciphers:           []string{cryptossh.CipherAES256CTR},
 		// 		KexAlgorithms:     []string{cryptossh.KeyExchangeMLKEM768X25519},
@@ -483,11 +476,11 @@ func TestProxy(t *testing.T) {
 			},
 			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for host key;",
 			wantLogs:      []map[string]types.GomegaMatcher{},
-			ciphers: ciphers{
-				Ciphers:           []string{cryptossh.CipherAES256CTR},
-				KexAlgorithms:     []string{cryptossh.KeyExchangeMLKEM768X25519},
-				MACs:              []string{cryptossh.HMACSHA256ETM},
-				HostKeyAlgorithms: []string{cryptossh.KeyAlgoED25519},
+			ciphers: cryptossh.Algorithms{
+				Ciphers:      []string{cryptossh.CipherAES256CTR},
+				KeyExchanges: []string{cryptossh.KeyExchangeMLKEM768X25519},
+				MACs:         []string{cryptossh.HMACSHA256ETM},
+				HostKeys:     []string{cryptossh.KeyAlgoED25519},
 			},
 		},
 	} {
@@ -538,7 +531,7 @@ func TestProxy(t *testing.T) {
 				close(done)
 			}()
 
-			err = fakeClient(client, &hostKey.PublicKey, tt.username, tt.password, tt.ciphers.Ciphers, tt.ciphers.KexAlgorithms, tt.ciphers.MACs, tt.ciphers.HostKeyAlgorithms)
+			err = fakeClient(client, &hostKey.PublicKey, tt.username, tt.password, tt.ciphers.Ciphers, tt.ciphers.KeyExchanges, tt.ciphers.MACs, tt.ciphers.HostKeys)
 			if err != nil && !strings.HasPrefix(err.Error(), tt.wantErrPrefix) ||
 				err == nil && tt.wantErrPrefix != "" {
 				t.Error(err)
