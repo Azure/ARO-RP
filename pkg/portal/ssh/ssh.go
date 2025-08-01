@@ -82,14 +82,12 @@ func New(env env.Core,
 			Config: cryptossh.Config{
 				// Per security baseline requirements,
 				// https://learn.microsoft.com/en-us/azure/governance/policy/samples/guest-configuration-baseline-linux
-				Ciphers: []string{
-					cryptossh.CipherAES128CTR,
-					cryptossh.CipherAES192CTR,
-					cryptossh.CipherAES256CTR,
-				},
+				Ciphers:      sshCiphers(),
+				KeyExchanges: sshKexAlgorithms(),
+				MACs:         sshMACs(),
 			},
+			PublicKeyAuthAlgorithms: sshPublicKeyAlgorithms(),
 		},
-
 		hostPubKey: hostPubKey,
 	}
 
@@ -273,11 +271,60 @@ const (
 		"-o KexAlgorithms={{ .KexAlgorithms }} " +
 		"-o MACs={{ .MACs }}" +
 		"{{if .IsLocalDevelopmentMode}} -p 2222{{end}} {{.User}}@{{.Hostname}}"
-	sshCiphers           = cryptossh.CipherAES256CTR
-	sshHostKeyAlgorithms = cryptossh.KeyAlgoRSASHA512
-	sshKexAlgorithms     = cryptossh.KeyExchangeMLKEM768X25519
-	sshMACs              = cryptossh.HMACSHA256ETM
 )
+
+// These lists are intentionally not leveraging the cryptossh package's
+// constants, as those may change in the future, and they may not be FIPS compliant.
+
+func sshKexAlgorithms() []string {
+	return []string{
+		cryptossh.KeyExchangeMLKEM768X25519,
+		cryptossh.KeyExchangeECDHP256,
+		cryptossh.KeyExchangeECDHP384,
+		cryptossh.KeyExchangeECDHP521,
+		cryptossh.KeyExchangeDH14SHA256,
+	}
+}
+
+func sshHostKeyAlgorithms() []string {
+	return []string{
+		cryptossh.KeyAlgoRSASHA512,
+		cryptossh.KeyAlgoRSASHA256,
+		cryptossh.KeyAlgoRSA,
+	}
+}
+
+func sshCiphers() []string {
+	return []string{
+		cryptossh.CipherAES256CTR,
+		cryptossh.CipherAES192CTR,
+		cryptossh.CipherAES128CTR,
+	}
+}
+
+func sshMACs() []string {
+	return []string{
+		cryptossh.HMACSHA256ETM,
+		cryptossh.HMACSHA512ETM,
+		cryptossh.HMACSHA256,
+		cryptossh.HMACSHA512,
+		cryptossh.HMACSHA1,
+	}
+}
+
+func sshPublicKeyAlgorithms() []string {
+	return []string{
+		cryptossh.KeyAlgoED25519,
+		cryptossh.KeyAlgoSKED25519,
+		cryptossh.KeyAlgoSKECDSA256,
+		cryptossh.KeyAlgoECDSA256,
+		cryptossh.KeyAlgoECDSA384,
+		cryptossh.KeyAlgoECDSA521,
+		cryptossh.KeyAlgoRSASHA256,
+		cryptossh.KeyAlgoRSASHA512,
+		cryptossh.KeyAlgoRSA,
+	}
+}
 
 func createLoginCommand(isLocalDevelopmentMode bool, user, host string, publicKey cryptossh.PublicKey) (string, error) {
 	line := knownhosts.Line([]string{host}, publicKey)
@@ -302,10 +349,11 @@ func createLoginCommand(isLocalDevelopmentMode bool, user, host string, publicKe
 		host,
 		line,
 		isLocalDevelopmentMode,
-		sshCiphers,
-		sshHostKeyAlgorithms,
-		sshKexAlgorithms,
-		sshMACs,
+		// Assume we want to use the first supported algorithm
+		sshCiphers()[0],
+		sshHostKeyAlgorithms()[0],
+		sshKexAlgorithms()[0],
+		sshMACs()[0],
 	})
 	return buff.String(), err
 }
