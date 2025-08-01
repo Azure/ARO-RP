@@ -378,14 +378,22 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	var hiveAKS *kubernetes.Clientset
 	var hiveCM hive.ClusterManager
 
-	oc := adminGetCluster(Default, ctx, clusterResourceID)
+	liveCfg, err := _env.NewLiveConfigManager(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	if _env.IsLocalDevelopmentMode() && isHiveManagedCluster(oc) {
-		liveCfg, err := _env.NewLiveConfigManager(ctx)
-		if err != nil {
-			return nil, err
-		}
+	adoptByHive, err := liveCfg.AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	installViaHive, err := liveCfg.InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if _env.IsLocalDevelopmentMode() && (adoptByHive || installViaHive) {
 		hiveShard := 1
 		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
 		if err != nil {
