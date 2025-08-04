@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -257,6 +258,8 @@ func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
 func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	defer mon.wg.Done()
 
+	now := time.Now()
+
 	mon.log.Debug("monitoring")
 
 	if mon.hourlyRun {
@@ -323,6 +326,11 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		errs = append(errs, e)
 	}
 
+	// emit a metric with how long we took when we have no errors
+	if len(errs) == 0 {
+		mon.emitFloat("monitor.cluster.duration", time.Since(now).Seconds(), map[string]string{})
+	}
+
 	return
 }
 
@@ -333,4 +341,8 @@ func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
 	emitter.EmitGauge(mon.m, m, value, mon.dims, dims)
+}
+
+func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
+	emitter.EmitFloat(mon.m, m, value, mon.dims, dims)
 }
