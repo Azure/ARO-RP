@@ -45,6 +45,8 @@ const MONITOR_GOROUTINES_PER_CLUSTER = 5
 var _ monitoring.Monitor = (*Monitor)(nil)
 
 type Monitor struct {
+	collectors []func(context.Context) error
+
 	log       *logrus.Entry
 	hourlyRun bool
 
@@ -60,6 +62,7 @@ type Monitor struct {
 	m           metrics.Emitter
 	arocli      aroclient.Interface
 	env         env.Interface
+	rawClient   rest.Interface
 	tenantID    string
 
 	ocpclientset  clienthelper.Interface
@@ -145,20 +148,22 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		log.Error(err)
 	}
 
-	return &Monitor{
+	mon := &Monitor{
 		log:       log,
 		hourlyRun: hourlyRun,
 
 		oc:   oc,
 		dims: dims,
 
-		restconfig:          restConfig,
-		cli:                 cli,
-		configcli:           configcli,
-		operatorcli:         operatorcli,
-		maocli:              maocli,
-		mcocli:              mcocli,
-		arocli:              arocli,
+		restconfig:  restConfig,
+		cli:         cli,
+		configcli:   configcli,
+		operatorcli: operatorcli,
+		maocli:      maocli,
+		mcocli:      mcocli,
+		arocli:      arocli,
+		rawClient:   rawClient,
+
 		env:                 env,
 		tenantID:            tenantID,
 		m:                   m,
@@ -169,7 +174,40 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		doc:                 doc,
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
-	}, nil
+	}
+	mon.collectors = []func(context.Context) error{
+		mon.emitAroOperatorHeartbeat,
+		mon.emitAroOperatorConditions,
+		mon.emitNSGReconciliation,
+		mon.emitClusterOperatorConditions,
+		mon.emitClusterOperatorVersions,
+		mon.emitClusterVersionConditions,
+		mon.emitClusterVersions,
+		mon.emitDaemonsetStatuses,
+		mon.emitDeploymentStatuses,
+		mon.emitMachineConfigPoolConditions,
+		mon.emitMachineConfigPoolUnmanagedNodeCounts,
+		mon.emitNodeConditions,
+		mon.emitPodConditions,
+		mon.emitDebugPodsCount,
+		mon.detectQuotaFailure,
+		mon.emitReplicasetStatuses,
+		mon.emitStatefulsetStatuses,
+		mon.emitJobConditions,
+		mon.emitSummary,
+		mon.emitHiveRegistrationStatus,
+		mon.emitClusterSync,
+		mon.emitOperatorFlagsAndSupportBanner,
+		mon.emitMaintenanceState,
+		mon.emitMDSDCertificateExpiry,
+		mon.emitIngressAndAPIServerCertificateExpiry,
+		mon.emitEtcdCertificateExpiry,
+		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
+		mon.emitCWPStatus,
+		mon.emitClusterAuthenticationType,
+	}
+
+	return mon, nil
 }
 
 func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
@@ -235,47 +273,10 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	wg := new(errgroup.Group)
 	wg.SetLimit(MONITOR_GOROUTINES_PER_CLUSTER)
 
-	// Consume the errors from the goroutines that we're spawning
-	errChan := make(chan error)
-	go func() {
-		for e := range errChan {
-			if e != nil {
-				errs = append(errs, e)
-			}
-		}
-	}()
+	// Create a channel big enough to buffer an error from every collector
+	errChan := make(chan error, len(mon.collectors))
 
-	for _, f := range []func(context.Context) error{
-		mon.emitAroOperatorHeartbeat,
-		mon.emitAroOperatorConditions,
-		mon.emitNSGReconciliation,
-		mon.emitClusterOperatorConditions,
-		mon.emitClusterOperatorVersions,
-		mon.emitClusterVersionConditions,
-		mon.emitClusterVersions,
-		mon.emitDaemonsetStatuses,
-		mon.emitDeploymentStatuses,
-		mon.emitMachineConfigPoolConditions,
-		mon.emitMachineConfigPoolUnmanagedNodeCounts,
-		mon.emitNodeConditions,
-		mon.emitPodConditions,
-		mon.emitDebugPodsCount,
-		mon.detectQuotaFailure,
-		mon.emitReplicasetStatuses,
-		mon.emitStatefulsetStatuses,
-		mon.emitJobConditions,
-		mon.emitSummary,
-		mon.emitHiveRegistrationStatus,
-		mon.emitClusterSync,
-		mon.emitOperatorFlagsAndSupportBanner,
-		mon.emitMaintenanceState,
-		mon.emitMDSDCertificateExpiry,
-		mon.emitIngressAndAPIServerCertificateExpiry,
-		mon.emitEtcdCertificateExpiry,
-		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
-		mon.emitCWPStatus,
-		mon.emitClusterAuthenticationType,
-	} {
+	for _, f := range mon.collectors {
 		wg.Go(func() error {
 			mon.log.Debugf("running %s", steps.FriendlyName(f))
 			innerErr := f(ctx)
