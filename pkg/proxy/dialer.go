@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Dialer interface {
@@ -45,12 +47,16 @@ type dev struct {
 	proxyPool       *x509.CertPool
 	proxyClientCert []byte
 	proxyClientKey  *rsa.PrivateKey
+
+	log *logrus.Entry
 }
 
 func (d *dev) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	if network != "tcp" {
 		return nil, fmt.Errorf("unimplemented network %q", network)
 	}
+
+	d.log.Debugf("dialing to %s", address)
 
 	c, err := (&net.Dialer{
 		Timeout:   30 * time.Second,
@@ -112,12 +118,14 @@ func (d *dev) DialContext(ctx context.Context, network, address string) (net.Con
 // mode, this dials the development proxy, which proxies to the requested
 // endpoint.  This enables the RP to run without routeability to its vnet in
 // local development mode.
-func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
+func NewDialer(isLocalDevelopmentMode bool, log *logrus.Entry) (Dialer, error) {
 	if !isLocalDevelopmentMode {
 		return &prod{}, nil
 	}
 
-	d := &dev{}
+	d := &dev{
+		log: log,
+	}
 
 	basepath := os.Getenv("ARO_CHECKOUT_PATH")
 	if basepath == "" {
