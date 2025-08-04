@@ -302,6 +302,11 @@ func TestMonitor(t *testing.T) {
 				m.EXPECT().EmitGauge(gauge.name, gauge.value, gauge.labels).Times(1)
 			}
 
+			// we only emit duration when no errors
+			if len(tt.expectedErrors) == 0 {
+				m.EXPECT().EmitFloat("monitor.cluster.duration", gomock.Any(), gomock.Any()).Times(1)
+			}
+
 			errs := mon.Monitor(ctx)
 			assert.Equal(t, tt.expectedErrors, errs)
 		})

@@ -14,3 +14,13 @@ func EmitGauge(emitter metrics.Emitter, name string, value int64, existing map[s
 	}
 	emitter.EmitGauge(name, value, additional)
 }
+
+func EmitFloat(emitter metrics.Emitter, name string, value float64, existing map[string]string, additional map[string]string) {
+	if additional == nil {
+		additional = map[string]string{}
+	}
+	for k, v := range existing {
+		additional[k] = v
+	}
+	emitter.EmitFloat(name, value, additional)
+}
