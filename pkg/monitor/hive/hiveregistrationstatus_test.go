@@ -5,6 +5,7 @@ package hive
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -16,13 +17,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive"
+	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -31,21 +30,15 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 	fakeNamespace := "fake-namespace"
 
 	for _, tt := range []struct {
-		name       string
-		oc         *api.OpenShiftCluster
-		cd         kruntime.Object
-		withClient bool
-		wantErr    string
-		wantLog    string
+		name                      string
+		oc                        *api.OpenShiftCluster
+		cd                        kruntime.Object
+		getClusterDeploymentError error
+		wantErr                   string
+		wantLog                   string
 	}{
 		{
-			name:       "no hiveclient",
-			withClient: false,
-			wantLog:    "skipping: no hive cluster manager",
-		},
-		{
-			name:       "no namespace in cosmosDB - not adopted yet",
-			withClient: true,
+			name: "no namespace in cosmosDB - not adopted yet",
 			oc: &api.OpenShiftCluster{
 				Name: "testcluster",
 				Properties: api.OpenShiftClusterProperties{
@@ -57,8 +50,7 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 			wantErr: "cluster testcluster not adopted. No namespace in the clusterdocument",
 		},
 		{
-			name:       "clusterdeployment can not be retrieved",
-			withClient: true,
+			name: "clusterdeployment can not be retrieved",
 			oc: &api.OpenShiftCluster{
 				Name: "testcluster",
 				Properties: api.OpenShiftClusterProperties{
@@ -67,11 +59,11 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "clusterdeployments.hive.openshift.io \"cluster\" not found",
+			getClusterDeploymentError: errors.New("not found"),
+			wantErr:                   "not found",
 		},
 		{
-			name:       "send metrics data",
-			withClient: true,
+			name: "send metrics data",
 			oc: &api.OpenShiftCluster{
 				Name: "testcluster",
 				Properties: api.OpenShiftClusterProperties{
@@ -89,22 +81,19 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var hiveclient client.Client
-			if tt.withClient {
-				fakeclient := fakeclient.NewClientBuilder()
-				if tt.cd != nil {
-					fakeclient = fakeclient.WithRuntimeObjects(tt.cd)
-				}
-				hiveclient = fakeclient.Build()
-			}
+			ctrl := gomock.NewController(t)
+
+			ctx := context.Background()
+			mockHiveClusterManager := mock_hive.NewMockClusterManager(ctrl)
+			mockHiveClusterManager.EXPECT().GetClusterDeployment(ctx, gomock.Any()).Return(tt.cd, tt.getClusterDeploymentError).AnyTimes()
 
 			logger, hook := test.NewNullLogger()
 			log := logrus.NewEntry(logger)
 
 			mon := &Monitor{
-				hiveclientset: hiveclient,
-				oc:            tt.oc,
-				log:           log,
+				hiveClusterManager: mockHiveClusterManager,
+				oc:                 tt.oc,
+				log:                log,
 			}
 
 			err := mon.emitHiveRegistrationStatus(context.Background())
