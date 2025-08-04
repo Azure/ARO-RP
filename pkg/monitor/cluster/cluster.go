@@ -91,7 +91,7 @@ type Monitor struct {
 	queryLimit int
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, doc *api.OpenShiftClusterDocument, env env.Interface, tenantID string, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, doc *api.OpenShiftClusterDocument, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -167,11 +167,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	hiveclientset, err := getHiveClientSet(hiveRestConfig)
-	if err != nil {
-		log.Error(err)
-	}
-
 	mon := &Monitor{
 		log:       log,
 		hourlyRun: hourlyRun,
@@ -192,9 +187,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		tenantID:            tenantID,
 		m:                   m,
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
-		hiveclientset:       hiveclientset,
 		wg:                  wg,
-		hiveClusterManager:  hiveClusterManager,
 		doc:                 doc,
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
@@ -219,8 +212,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
 		mon.emitSummary,
-		mon.emitHiveRegistrationStatus,
-		mon.emitClusterSync,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitMaintenanceState,
 		mon.emitMDSDCertificateExpiry,
@@ -232,26 +223,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	}
 
 	return mon, nil
-}
-
-func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
-	if hiveRestConfig == nil {
-		return nil, nil
-	}
-
-	// lazy discovery will not attempt to reach out to the apiserver immediately
-	mapper, err := apiutil.NewDynamicRESTMapper(hiveRestConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	hiveclientset, err := client.New(hiveRestConfig, client.Options{
-		Mapper: mapper,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return hiveclientset, nil
 }
 
 // Monitor checks the API server health of a cluster
