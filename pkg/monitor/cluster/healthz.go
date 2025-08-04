@@ -10,7 +10,7 @@ import (
 
 func (mon *Monitor) emitAPIServerHealthzCode(ctx context.Context) (int, error) {
 	var statusCode int
-	err := mon.cli.Discovery().RESTClient().
+	err := mon.rawClient.
 		Get().
 		AbsPath("/healthz").
 		Do(ctx).
@@ -26,7 +26,7 @@ func (mon *Monitor) emitAPIServerHealthzCode(ctx context.Context) (int, error) {
 
 func (mon *Monitor) emitAPIServerPingCode(ctx context.Context) error {
 	var statusCode int
-	err := mon.cli.Discovery().RESTClient().
+	err := mon.rawClient.
 		Get().
 		AbsPath("/healthz/ping").
 		Do(ctx).
