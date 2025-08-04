@@ -78,7 +78,7 @@ func (m *manager) logClusterDeployment(ctx context.Context) (interface{}, error)
 		return nil, nil
 	}
 
-	cd, err := m.hiveClusterManager.GetClusterDeployment(ctx, m.doc)
+	cd, err := m.hiveClusterManager.GetClusterDeployment(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
 		return nil, err
 	}
