@@ -14,18 +14,21 @@ import (
 )
 
 type getFunc func(key client.ObjectKey, obj client.Object) error
+type listFunc func(obj client.ObjectList, opts *client.ListOptions) error
 type hookFunc func(obj client.Object) error
 
 type HookingClient struct {
 	f client.WithWatch
 
 	preGetHook    []getFunc
+	preListHook   []listFunc
 	preDeleteHook []hookFunc
 	preCreateHook []hookFunc
 	preUpdateHook []hookFunc
 	prePatchHook  []hookFunc
 
 	postGetHook    []getFunc
+	postListHook   []listFunc
 	postDeleteHook []hookFunc
 	postCreateHook []hookFunc
 	postUpdateHook []hookFunc
@@ -43,12 +46,14 @@ func NewHookingClient(c client.WithWatch) *HookingClient {
 	return &HookingClient{
 		f:             c,
 		preGetHook:    []getFunc{},
+		preListHook:   []listFunc{},
 		preDeleteHook: []hookFunc{},
 		preCreateHook: []hookFunc{},
 		preUpdateHook: []hookFunc{},
 		prePatchHook:  []hookFunc{},
 
 		postGetHook:    []getFunc{},
+		postListHook:   []listFunc{},
 		postDeleteHook: []hookFunc{},
 		postCreateHook: []hookFunc{},
 		postUpdateHook: []hookFunc{},
@@ -58,6 +63,11 @@ func NewHookingClient(c client.WithWatch) *HookingClient {
 
 func (c *HookingClient) WithPostGetHook(f getFunc) *HookingClient {
 	c.postGetHook = append(c.postGetHook, f)
+	return c
+}
+
+func (c *HookingClient) WithPostListHook(f listFunc) *HookingClient {
+	c.postListHook = append(c.postListHook, f)
 	return c
 }
 
@@ -83,6 +93,11 @@ func (c *HookingClient) WithPostPatchHook(f hookFunc) *HookingClient {
 
 func (c *HookingClient) WithPreGetHook(f getFunc) *HookingClient {
 	c.preGetHook = append(c.preGetHook, f)
+	return c
+}
+
+func (c *HookingClient) WithPreListHook(f listFunc) *HookingClient {
+	c.preListHook = append(c.preListHook, f)
 	return c
 }
 
@@ -130,7 +145,30 @@ func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj clien
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.List]
 func (c *HookingClient) List(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
-	return c.f.List(ctx, obj, opts...)
+	listOpts := &client.ListOptions{}
+	for _, i := range opts {
+		i.ApplyToList(listOpts)
+	}
+
+	for _, h := range c.preListHook {
+		err := h(obj, listOpts)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := c.f.List(ctx, obj, opts...)
+	if err != nil {
+		return err
+	}
+
+	for _, h := range c.postListHook {
+		err := h(obj, listOpts)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.WithWatch.Watch]
