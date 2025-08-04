@@ -1,4 +1,4 @@
-package cluster
+package hive
 
 import (
 	"context"
@@ -111,20 +111,4 @@ func TestEmitHiveRegistrationDoesNotPanicWhenWeAssignLiteralNil(t *testing.T) {
 
 	// no panic
 	_ = mon.emitHiveRegistrationStatus(context.Background())
-}
-
-// TestGetHiveClientSetNeverReturnsError will test that the creation
-// of the non-typed kubernetes client will not return an error as it's
-// now leveraging a lazy fetch mechanism where it will only discover
-// the preexisting schema and apiversions during explicit CRUD operations
-// against the apiserver
-func TestGetHiveClientSetNeverReturnsError(t *testing.T) {
-	hiveClientSet, err := getHiveClientSet(&rest.Config{})
-	if err != nil {
-		t.Fatalf("error should not be nil")
-	}
-
-	if hiveClientSet == nil {
-		t.Fatalf("hive client set should not be nil")
-	}
 }
