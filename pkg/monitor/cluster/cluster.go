@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +39,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
+
+const MONITOR_GOROUTINES_PER_CLUSTER = 5
 
 var _ monitoring.Monitor = (*Monitor)(nil)
 
@@ -227,6 +230,21 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		return
 	}
 
+	// Run up to MONITOR_GOROUTINES_PER_CLUSTER goroutines for collecting
+	// metrics
+	wg := new(errgroup.Group)
+	wg.SetLimit(MONITOR_GOROUTINES_PER_CLUSTER)
+
+	// Consume the errors from the goroutines that we're spawning
+	errChan := make(chan error)
+	go func() {
+		for e := range errChan {
+			if e != nil {
+				errs = append(errs, e)
+			}
+		}
+	}()
+
 	for _, f := range []func(context.Context) error{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
@@ -258,12 +276,23 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitCWPStatus,
 		mon.emitClusterAuthenticationType,
 	} {
-		err = f(ctx)
-		if err != nil {
-			errs = append(errs, err)
-			mon.emitFailureToGatherMetric(steps.FriendlyName(f), err)
-			// keep going
-		}
+		wg.Go(func() error {
+			mon.log.Debugf("running %s", steps.FriendlyName(f))
+			innerErr := f(ctx)
+			if innerErr != nil {
+				// emit metrics collection failures and collect the err, but
+				// don't stop running other metric collections
+				mon.emitFailureToGatherMetric(steps.FriendlyName(f), innerErr)
+				errChan <- innerErr
+			}
+			return nil
+		})
+	}
+
+	err = wg.Wait()
+	close(errChan)
+	if err != nil {
+		errs = append(errs, err)
 	}
 
 	return
