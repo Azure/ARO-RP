@@ -32,7 +32,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
@@ -69,8 +68,7 @@ type Monitor struct {
 	rawClient   rest.Interface
 	tenantID    string
 
-	ocpclientset  clienthelper.Interface
-	hiveclientset client.Client
+	ocpclientset clienthelper.Interface
 
 	// access below only via the helper functions in cache.go
 	cache struct {
@@ -81,9 +79,7 @@ type Monitor struct {
 		arodl *appsv1.DeploymentList
 	}
 
-	wg                 *sync.WaitGroup
-	hiveClusterManager hive.ClusterManager
-	doc                *api.OpenShiftClusterDocument
+	wg *sync.WaitGroup
 
 	// Namespaces that are OpenShift or ARO managed that we want to monitor
 	namespacesToMonitor []string
@@ -91,7 +87,7 @@ type Monitor struct {
 	queryLimit int
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, doc *api.OpenShiftClusterDocument, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -188,7 +184,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		m:                   m,
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
 		wg:                  wg,
-		doc:                 doc,
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
 	}
