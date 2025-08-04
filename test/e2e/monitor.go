@@ -26,7 +26,7 @@ var _ = Describe("Monitor", func() {
 		}, &api.OpenShiftClusterDocument{
 			OpenShiftCluster: &api.OpenShiftCluster{},
 			ID:               resourceIDFromEnv(),
-		}, nil, "", &noop.Noop{}, nil, true, &wg, nil)
+		}, nil, "", &noop.Noop{}, true, &wg)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("running the monitor once")
