@@ -18,12 +18,6 @@ var clusterDeploymentConditionsExpected = map[hivev1.ClusterDeploymentConditionT
 }
 
 func (mon *Monitor) emitHiveRegistrationStatus(ctx context.Context) error {
-	if mon.hiveclientset == nil {
-		// TODO(hive): remove this once we have Hive everywhere
-		mon.log.Info("skipping: no hive cluster manager")
-		return nil
-	}
-
 	if mon.oc.Properties.HiveProfile.Namespace == "" {
 		return fmt.Errorf("cluster %s not adopted. No namespace in the clusterdocument", mon.oc.Name)
 	}
