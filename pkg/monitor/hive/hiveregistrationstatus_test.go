@@ -1,11 +1,10 @@
-package cluster
+package hive
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -115,49 +114,6 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 				x := hook.LastEntry()
 				assert.Equal(t, tt.wantLog, x.Message)
 			}
-		})
-	}
-}
-
-func TestRetrieveClusterDeployment(t *testing.T) {
-	fakeNamespace := "fake-namespace"
-
-	for _, tt := range []struct {
-		name    string
-		cd      *hivev1.ClusterDeployment
-		wantErr string
-	}{{
-		name: "clusterdeployment available in hive",
-		cd: &hivev1.ClusterDeployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      hive.ClusterDeploymentName,
-				Namespace: fakeNamespace,
-			},
-		},
-	}, {
-		name:    "no cluster deployment found in hive",
-		wantErr: fmt.Sprintf("clusterdeployments.hive.openshift.io %q not found", hive.ClusterDeploymentName),
-	}} {
-		t.Run(tt.name, func(t *testing.T) {
-			fakeclient := fakeclient.NewClientBuilder()
-			if tt.cd != nil {
-				fakeclient = fakeclient.WithRuntimeObjects(tt.cd)
-			}
-
-			mon := &Monitor{
-				hiveclientset: fakeclient.Build(),
-				oc: &api.OpenShiftCluster{
-					Name: "testcluster",
-					Properties: api.OpenShiftClusterProperties{
-						HiveProfile: api.HiveProfile{
-							Namespace: fakeNamespace,
-						},
-					},
-				},
-			}
-
-			_, err := mon.retrieveClusterDeployment(context.Background())
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
