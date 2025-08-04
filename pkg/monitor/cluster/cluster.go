@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -13,6 +14,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -36,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
@@ -311,9 +314,13 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	}
 
 	err = wg.Wait()
-	close(errChan)
 	if err != nil {
 		errs = append(errs, err)
+	}
+	// collect up the errors in the buffered channel
+	close(errChan)
+	for e := range errChan {
+		errs = append(errs, e)
 	}
 
 	return
