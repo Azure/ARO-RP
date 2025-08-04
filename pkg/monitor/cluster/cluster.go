@@ -100,22 +100,42 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		dimension.ResourceName:         r.ResourceName,
 	}
 
-	cli, err := kubernetes.NewForConfig(restConfig)
+	// configure the shared rest clients
+	configShallowCopy := *restConfig
+	configShallowCopy.UserAgent = rest.DefaultKubernetesUserAgent()
+
+	// share the transport between all clients
+	httpClient, err := rest.HTTPClientFor(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
 
-	configcli, err := configclient.NewForConfig(restConfig)
+	// set up the raw rest client that we use for healthz scraping
+	configShallowCopyRaw := *restConfig
+	configShallowCopyRaw.GroupVersion = &schema.GroupVersion{}
+	configShallowCopyRaw.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	configShallowCopyRaw.UserAgent = rest.DefaultKubernetesUserAgent()
+	rawClient, err := rest.RESTClientForConfigAndClient(&configShallowCopyRaw, httpClient)
 	if err != nil {
 		return nil, err
 	}
 
-	maocli, err := machineclient.NewForConfig(restConfig)
+	cli, err := kubernetes.NewForConfigAndClient(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
 
-	mcocli, err := mcoclient.NewForConfig(restConfig)
+	configcli, err := configclient.NewForConfigAndClient(restConfig, httpClient)
+	if err != nil {
+		return nil, err
+	}
+
+	maocli, err := machineclient.NewForConfigAndClient(restConfig, httpClient)
+	if err != nil {
+		return nil, err
+	}
+
+	mcocli, err := mcoclient.NewForConfigAndClient(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +145,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	operatorcli, err := operatorclient.NewForConfig(restConfig)
+	operatorcli, err := operatorclient.NewForConfigAndClient(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
