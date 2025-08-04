@@ -159,7 +159,7 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 		return err
 	}
 
-	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
+	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), log)
 	if err != nil {
 		return err
 	}
