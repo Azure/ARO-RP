@@ -94,7 +94,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		WithSubscriptions(dbSubscriptions).
 		WithMonitors(dbMonitors)
 
-	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
+	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), log)
 	if err != nil {
 		return err
 	}
