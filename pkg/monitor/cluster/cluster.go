@@ -267,14 +267,14 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerHealthzCode), err)
+		mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerHealthzCode), err)
 	}
 	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
 	if statusCode != http.StatusOK {
 		err := mon.emitAPIServerPingCode(ctx)
 		if err != nil {
 			errs = append(errs, err)
-			mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerPingCode), err)
+			mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerPingCode), err)
 		}
 		return
 	}
@@ -284,7 +284,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	err = mon.fetchManagedNamespaces(ctx)
 	if err != nil {
 		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.FriendlyName(mon.fetchManagedNamespaces), err)
+		mon.emitFailureToGatherMetric(steps.ShortName(mon.fetchManagedNamespaces), err)
 		return
 	}
 
@@ -298,13 +298,13 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 
 	for _, f := range mon.collectors {
 		wg.Go(func() error {
-			mon.log.Debugf("running %s", steps.FriendlyName(f))
+			mon.log.Debugf("running %s", steps.ShortName(f))
 			innerErr := f(ctx)
 			if innerErr != nil {
 				// emit metrics collection failures and collect the err, but
 				// don't stop running other metric collections
-				mon.emitFailureToGatherMetric(steps.FriendlyName(f), innerErr)
-				errChan <- innerErr
+				mon.emitFailureToGatherMetric(steps.ShortName(f), innerErr)
+				errChan <- fmt.Errorf("failure running cluster collector '%s': %w", steps.ShortName(f), innerErr)
 			}
 			return nil
 		})
