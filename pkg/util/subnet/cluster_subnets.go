@@ -22,6 +22,11 @@ const (
 	machineSetsNamespace = "openshift-machine-api"
 )
 
+type Subnet struct {
+	ResourceID string
+	IsMaster   bool
+}
+
 // KubeManager interface interact with kubernetes layer to extract required information
 type KubeManager interface {
 	List(ctx context.Context) ([]Subnet, error)
