@@ -41,6 +41,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const MONITOR_GOROUTINES_PER_CLUSTER = 5
@@ -83,6 +84,11 @@ type Monitor struct {
 
 	// Namespaces that are OpenShift or ARO managed that we want to monitor
 	namespacesToMonitor []string
+
+	// OpenShift version of the cluster being monitored
+	clusterDesiredVersion *version.Version
+	clusterActualVersion  *version.Version
+
 	// Limit for items per pagination query
 	queryLimit int
 }
