@@ -5,25 +5,32 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )
 
 func (mon *Monitor) getMachineConfigPoolNodeCounts(ctx context.Context) (int64, error) {
 	var cont string
 	var count int64
+	l := &mcv1.MachineConfigPoolList{}
 
 	for {
-		mcps, err := mon.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
+		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
 		if err != nil {
 			return 0, err
 		}
 
-		for _, mcp := range mcps.Items {
+		for _, mcp := range l.Items {
 			count += int64(mcp.Status.MachineCount)
 		}
 
-		cont = mcps.Continue
+		cont = l.Continue
 		if cont == "" {
 			break
 		}
@@ -33,12 +40,27 @@ func (mon *Monitor) getMachineConfigPoolNodeCounts(ctx context.Context) (int64, 
 }
 
 func (mon *Monitor) getNodeCounts(ctx context.Context) (int64, error) {
-	ns, err := mon.listNodes(ctx)
-	if err != nil {
-		return 0, err
+	var cont string
+	var count int
+
+	l := &metav1.PartialObjectMetadataList{}
+	l.SetGroupVersionKind(schema.GroupVersionKind{Version: "v1", Group: "", Kind: "NodeList"})
+
+	for {
+		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
+		if err != nil {
+			return 0, fmt.Errorf("error in Node metadata list operation: %w", err)
+		}
+
+		count += len(l.Items)
+
+		cont = l.Continue
+		if cont == "" {
+			break
+		}
 	}
 
-	return int64(len(ns.Items)), nil
+	return int64(count), nil
 }
 
 // Count the number of nodes available
