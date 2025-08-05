@@ -254,13 +254,18 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 
 	for _, f := range mon.collectors {
 		wg.Go(func() error {
-			mon.log.Debugf("running %s", steps.ShortName(f))
+			innerNow := time.Now()
+			collectorName := steps.ShortName(f)
+			mon.log.Debugf("running %s", collectorName)
 			innerErr := f(ctx)
 			if innerErr != nil {
+				mon.log.Debugf("failed to run %s: %s", collectorName, innerErr.Error())
 				// emit metrics collection failures and collect the err, but
 				// don't stop running other metric collections
-				mon.emitFailureToGatherMetric(steps.ShortName(f), innerErr)
-				errChan <- fmt.Errorf("failure running cluster collector '%s': %w", steps.ShortName(f), innerErr)
+				mon.emitFailureToGatherMetric(collectorName, innerErr)
+				errChan <- fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
+			} else {
+				mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, time.Since(innerNow).Seconds())
 			}
 			return nil
 		})
