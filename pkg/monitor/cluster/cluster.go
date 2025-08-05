@@ -13,8 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -24,11 +22,8 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -36,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
@@ -61,8 +55,6 @@ type Monitor struct {
 	cli         kubernetes.Interface
 	configcli   configclient.Interface
 	operatorcli operatorclient.Interface
-	maocli      machineclient.Interface
-	mcocli      mcoclient.Interface
 	m           metrics.Emitter
 	arocli      aroclient.Interface
 	env         env.Interface
@@ -70,15 +62,6 @@ type Monitor struct {
 	tenantID    string
 
 	ocpclientset clienthelper.Interface
-
-	// access below only via the helper functions in cache.go
-	cache struct {
-		cos   *configv1.ClusterOperatorList
-		cs    *arov1alpha1.ClusterList
-		cv    *configv1.ClusterVersion
-		ns    *corev1.NodeList
-		arodl *appsv1.DeploymentList
-	}
 
 	wg *sync.WaitGroup
 
@@ -136,16 +119,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	maocli, err := machineclient.NewForConfigAndClient(restConfig, httpClient)
-	if err != nil {
-		return nil, err
-	}
-
-	mcocli, err := mcoclient.NewForConfigAndClient(restConfig, httpClient)
-	if err != nil {
-		return nil, err
-	}
-
 	arocli, err := aroclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -180,8 +153,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		cli:         cli,
 		configcli:   configcli,
 		operatorcli: operatorcli,
-		maocli:      maocli,
-		mcocli:      mcocli,
 		arocli:      arocli,
 		rawClient:   rawClient,
 
@@ -254,6 +225,13 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 			errs = append(errs, err)
 			mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerPingCode), err)
 		}
+		return
+	}
+
+	err = mon.prefetchClusterVersion(ctx)
+	if err != nil {
+		errs = append(errs, err)
+		mon.emitFailureToGatherMetric(steps.ShortName(mon.prefetchClusterVersion), err)
 		return
 	}
 
