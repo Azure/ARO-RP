@@ -24,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	configv1 "github.com/openshift/api/config/v1"
+
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
@@ -232,6 +234,19 @@ func TestMonitor(t *testing.T) {
 			objects := []client.Object{
 				namespaceObject("openshift"),
 				namespaceObject("customer"),
+				&configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "version",
+					},
+					Status: configv1.ClusterVersionStatus{
+						History: []configv1.UpdateHistory{
+							{
+								State:   configv1.CompletedUpdate,
+								Version: "4.16.1",
+							},
+						},
+					},
+				},
 				&appsv1.ReplicaSet{ // metrics expected
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "name1",
