@@ -5,21 +5,29 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
 func (mon *Monitor) emitAroOperatorHeartbeat(ctx context.Context) error {
 	aroOperatorDeploymentsReady := map[string]bool{
 		"aro-operator-master": false,
-		"aro-operator-worker": false}
-
-	aroDeployments, err := mon.listARODeployments(ctx)
-	if err != nil {
-		return err
+		"aro-operator-worker": false,
 	}
 
-	for _, d := range aroDeployments.Items {
+	l := &appsv1.DeploymentList{}
+	err := mon.ocpclientset.List(ctx, l, client.InNamespace(pkgoperator.Namespace))
+	if err != nil {
+		return fmt.Errorf("failed listing ARO Operator deployments: %w", err)
+	}
+
+	for _, d := range l.Items {
 		_, present := aroOperatorDeploymentsReady[d.Name]
 		if present {
 			deploymentIsReady := ready.DeploymentIsReady(&d)
