@@ -9,7 +9,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )
@@ -25,15 +26,17 @@ var machineConfigPoolConditionsExpected = map[mcv1.MachineConfigPoolConditionTyp
 func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {
 	var cont string
 	var count int64
+	l := &mcv1.MachineConfigPoolList{}
+
 	for {
-		mcps, err := mon.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
+		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
 		if err != nil {
 			return err
 		}
 
-		count += int64(len(mcps.Items))
+		count += int64(len(l.Items))
 
-		for _, mcp := range mcps.Items {
+		for _, mcp := range l.Items {
 			for _, c := range mcp.Status.Conditions {
 				if c.Status == machineConfigPoolConditionsExpected[c.Type] {
 					continue
@@ -57,7 +60,7 @@ func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {
 			}
 		}
 
-		cont = mcps.Continue
+		cont = l.Continue
 		if cont == "" {
 			break
 		}
