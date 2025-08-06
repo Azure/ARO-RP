@@ -245,15 +245,9 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, resour
 }
 
 func pullsecretSecret(namespace string, oc *api.OpenShiftCluster) (*corev1.Secret, error) {
-	pullSecret, err := pullsecret.Build(oc, string(oc.Properties.ClusterProfile.PullSecret))
+	pullSecret, err := pullsecret.Build(oc, "")
 	if err != nil {
 		return nil, err
-	}
-	for _, key := range []string{"cloud.openshift.com"} {
-		pullSecret, err = pullsecret.RemoveKey(pullSecret, key)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &corev1.Secret{
@@ -261,8 +255,8 @@ func pullsecretSecret(namespace string, oc *api.OpenShiftCluster) (*corev1.Secre
 			Namespace: namespace,
 			Name:      pullsecretSecretName,
 		},
-		StringData: map[string]string{
-			".dockerconfigjson": pullSecret,
+		Data: map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(pullSecret),
 		},
 	}, nil
 }
