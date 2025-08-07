@@ -221,154 +221,152 @@
     },
     "resources": [
         {
-            "sku": {
-                "name": "Standard"
-            },
-            "properties": {
-                "publicIPAllocationMethod": "Static"
-            },
-            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
             "name": "rp-pip",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
-        },
-        {
-            "sku": {
-                "name": "Standard"
-            },
             "properties": {
                 "publicIPAllocationMethod": "Static"
             },
-            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]",
-            "name": "portal-pip",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
-        },
-        {
             "sku": {
                 "name": "Standard"
             },
+            "type": "Microsoft.Network/publicIPAddresses",
+            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
+        },
+        {
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "portal-pip",
             "properties": {
-                "frontendIPConfigurations": [
-                    {
-                        "properties": {
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
-                                "tags": null
-                            }
-                        },
-                        "name": "rp-frontend"
-                    },
-                    {
-                        "properties": {
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
-                                "tags": null
-                            }
-                        },
-                        "name": "portal-frontend"
-                    }
-                ],
+                "publicIPAllocationMethod": "Static"
+            },
+            "sku": {
+                "name": "Standard"
+            },
+            "type": "Microsoft.Network/publicIPAddresses",
+            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
+        },
+        {
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "rp-lb",
+            "properties": {
                 "backendAddressPools": [
                     {
                         "name": "rp-backend"
                     }
                 ],
+                "frontendIPConfigurations": [
+                    {
+                        "name": "rp-frontend",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "portal-frontend",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]"
+                            }
+                        }
+                    }
+                ],
                 "loadBalancingRules": [
                     {
+                        "name": "rp-lbrule",
                         "properties": {
+                            "backendAddressPool": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
+                            },
+                            "backendPort": 443,
                             "frontendIPConfiguration": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"
                             },
-                            "backendAddressPool": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
-                            },
+                            "frontendPort": 443,
+                            "loadDistribution": "Default",
                             "probe": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"
                             },
-                            "protocol": "Tcp",
-                            "loadDistribution": "Default",
-                            "frontendPort": 443,
-                            "backendPort": 443
-                        },
-                        "name": "rp-lbrule"
+                            "protocol": "Tcp"
+                        }
                     },
                     {
+                        "name": "portal-lbrule",
                         "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"
-                            },
                             "backendAddressPool": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
                             },
+                            "backendPort": 444,
+                            "frontendIPConfiguration": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"
+                            },
+                            "frontendPort": 443,
+                            "loadDistribution": "Default",
                             "probe": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"
                             },
-                            "protocol": "Tcp",
-                            "loadDistribution": "Default",
-                            "frontendPort": 443,
-                            "backendPort": 444
-                        },
-                        "name": "portal-lbrule"
+                            "protocol": "Tcp"
+                        }
                     },
                     {
+                        "name": "portal-lbrule-ssh",
                         "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"
-                            },
                             "backendAddressPool": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
                             },
+                            "backendPort": 2222,
+                            "frontendIPConfiguration": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"
+                            },
+                            "frontendPort": 22,
+                            "loadDistribution": "Default",
                             "probe": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh')]"
                             },
-                            "protocol": "Tcp",
-                            "loadDistribution": "Default",
-                            "frontendPort": 22,
-                            "backendPort": 2222
-                        },
-                        "name": "portal-lbrule-ssh"
+                            "protocol": "Tcp"
+                        }
                     }
                 ],
                 "probes": [
                     {
+                        "name": "rp-probe",
                         "properties": {
-                            "protocol": "Https",
+                            "numberOfProbes": 2,
                             "port": 443,
-                            "numberOfProbes": 2,
-                            "requestPath": "/healthz/ready"
-                        },
-                        "name": "rp-probe"
-                    },
-                    {
-                        "properties": {
                             "protocol": "Https",
-                            "port": 444,
-                            "numberOfProbes": 2,
                             "requestPath": "/healthz/ready"
-                        },
-                        "name": "portal-probe-https"
+                        }
                     },
                     {
+                        "name": "portal-probe-https",
                         "properties": {
-                            "protocol": "Tcp",
+                            "numberOfProbes": 2,
+                            "port": 444,
+                            "protocol": "Https",
+                            "requestPath": "/healthz/ready"
+                        }
+                    },
+                    {
+                        "name": "portal-probe-ssh",
+                        "properties": {
+                            "numberOfProbes": 2,
                             "port": 2222,
-                            "numberOfProbes": 2
-                        },
-                        "name": "portal-probe-ssh"
+                            "protocol": "Tcp"
+                        }
                     }
                 ]
             },
-            "name": "rp-lb",
-            "type": "Microsoft.Network/loadBalancers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"
-            ]
+            "sku": {
+                "name": "Standard"
+            },
+            "type": "Microsoft.Network/loadBalancers"
         },
         {
             "sku": {
@@ -643,34 +641,30 @@
             "apiVersion": "2018-05-01"
         },
         {
+            "apiVersion": "2020-08-01",
+            "name": "rp-vnet/peering-rp-pe-vnet-001",
             "properties": {
-                "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
                 "allowGatewayTransit": false,
-                "useRemoteGateways": false,
+                "allowVirtualNetworkAccess": true,
                 "remoteVirtualNetwork": {
                     "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
-                }
-            },
-            "name": "rp-vnet/peering-rp-pe-vnet-001",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "apiVersion": "2020-08-01",
-            "location": "[resourceGroup().location]"
+                },
+                "useRemoteGateways": false
+            }
         },
         {
+            "apiVersion": "2020-08-01",
+            "name": "rp-pe-vnet-001/peering-rp-vnet",
             "properties": {
-                "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
                 "allowGatewayTransit": false,
-                "useRemoteGateways": false,
+                "allowVirtualNetworkAccess": true,
                 "remoteVirtualNetwork": {
                     "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
-                }
-            },
-            "name": "rp-pe-vnet-001/peering-rp-vnet",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "apiVersion": "2020-08-01",
-            "location": "[resourceGroup().location]"
+                },
+                "useRemoteGateways": false
+            }
         },
         {
             "apiVersion": "2023-04-15",
