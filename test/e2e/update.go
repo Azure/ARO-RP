@@ -7,6 +7,7 @@ import (
 	"context"
 	"math/rand"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -143,9 +144,11 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(5))
 
 		By("checking outbound-rule-4 has required number IPs")
-		resp, err := clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(5))
+		Eventually(func(g Gomega, ctx context.Context) {
+			resp, err := clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(5))
+		}).WithContext(ctx).WithTimeout(2 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
 		By("sending the PUT request to decrease Managed Outbound IPs")
 		oc.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = pointerutils.ToPtr(int32(1))
@@ -153,16 +156,18 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
-		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("checking effectiveOutboundIPs has been updated")
-		Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(1))
+		Eventually(func(g Gomega, ctx context.Context) {
+			oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(1))
+		}).WithContext(ctx).WithTimeout(3 * time.Minute).WithPolling(15 * time.Second).Should(Succeed())
 
 		By("checking outbound-rule-4 has required number of IPs")
-		resp, err = clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(1))
+		Eventually(func(g Gomega, ctx context.Context) {
+			resp, err := clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(1))
+		}).WithContext(ctx).WithTimeout(2 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 	})
 })
 

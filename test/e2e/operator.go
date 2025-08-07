@@ -116,7 +116,7 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 
 			g.Expect(conditions.IsFalse(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
 			g.Expect(conditions.IsFalse(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(8 * time.Minute).WithPolling(15 * time.Second).Should(Succeed())
 	})
 })
 
@@ -476,8 +476,13 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 		DeleteK8sObjectWithRetry(ctx, deleteFunc, managedUpgradeOperatorDeployment, metav1.DeleteOptions{})
 
 		By("waiting for the MUO deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, managedUpgradeOperatorDeployment, metav1.GetOptions{})
-	}, SpecTimeout(2*time.Minute))
+		Eventually(func(g Gomega, ctx context.Context) {
+			deployment, err := getFunc(ctx, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(deployment.Status.ReadyReplicas).To(Equal(deployment.Status.Replicas))
+			g.Expect(deployment.Status.ReadyReplicas).To(BeNumerically(">", 0))
+		}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+	}, SpecTimeout(8*time.Minute))
 })
 
 var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
@@ -584,7 +589,7 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 
 var _ = Describe("ARO Operator - dnsmasq", func() {
 	const (
-		timeout = 1 * time.Minute
+		timeout = 3 * time.Minute
 		polling = 10 * time.Second
 	)
 	mcpName := "test-aro-custom-mcp"

@@ -84,6 +84,10 @@ func TestSystemreservedEnsure(t *testing.T) {
 				},
 			},
 			kc: &mcv1.KubeletConfig{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KubeletConfig",
+					APIVersion: "machineconfiguration.openshift.io/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            kubeletConfigName,
 					ResourceVersion: "1",
@@ -100,6 +104,10 @@ func TestSystemreservedEnsure(t *testing.T) {
 				},
 			},
 			kc: &mcv1.KubeletConfig{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KubeletConfig",
+					APIVersion: "machineconfiguration.openshift.io/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            kubeletConfigName,
 					ResourceVersion: "1",

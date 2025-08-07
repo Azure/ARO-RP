@@ -332,7 +332,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace,
 							corev1.ReadWriteOnce,
 						},
 						StorageClassName: pointerutils.ToPtr(storageClass),
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: pvcStorage,
 							},
