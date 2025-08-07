@@ -14,22 +14,31 @@ import (
 )
 
 type xChaCha20Poly1305 struct {
-	aead       cipher.AEAD
-	randReader io.Reader
+	aead          cipher.AEAD
+	randReader    io.Reader
+	secretVersion string
 }
 
 var _ AEAD = (*xChaCha20Poly1305)(nil)
 
-func NewXChaCha20Poly1305(ctx context.Context, key []byte) (AEAD, error) {
+func NewXChaCha20Poly1305(ctx context.Context, key []byte, secretVersion string) (AEAD, error) {
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
 	}
 
 	return &xChaCha20Poly1305{
-		aead:       aead,
-		randReader: rand.Reader,
+		aead:          aead,
+		randReader:    rand.Reader,
+		secretVersion: secretVersion,
 	}, nil
+}
+
+func (c *xChaCha20Poly1305) Name() string {
+	if c.secretVersion == "" {
+		return "ChaCha20Poly1305 (latest)"
+	}
+	return fmt.Sprintf("ChaCha20Poly1305 (ver '%s')", c.secretVersion)
 }
 
 func (c *xChaCha20Poly1305) Open(input []byte) ([]byte, error) {

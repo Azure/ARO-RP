@@ -5,6 +5,8 @@ package encryption
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 )
@@ -27,7 +29,7 @@ func NewMulti(ctx context.Context, serviceKeyvault azsecrets.Client, secretName,
 		return nil, err
 	}
 
-	aead, err := NewAES256SHA512(ctx, key)
+	aead, err := NewAES256SHA512(ctx, key, "")
 	if err != nil {
 		return nil, err
 	}
@@ -38,12 +40,11 @@ func NewMulti(ctx context.Context, serviceKeyvault azsecrets.Client, secretName,
 
 	for _, x := range []struct {
 		secretName  string
-		aeadFactory func(context.Context, []byte) (AEAD, error)
+		aeadFactory func(context.Context, []byte, string) (AEAD, error)
 	}{
 		{secretName, NewAES256SHA512},
 		{legacySecretName, NewXChaCha20Poly1305},
 	} {
-		var keys [][]byte
 		pager := serviceKeyvault.NewListSecretPropertiesVersionsPager(x.secretName, nil)
 		for pager.More() {
 			page, err := pager.NextPage(ctx)
@@ -52,7 +53,8 @@ func NewMulti(ctx context.Context, serviceKeyvault azsecrets.Client, secretName,
 			}
 			for _, properties := range page.Value {
 				if properties != nil && properties.ID != nil && properties.Attributes != nil {
-					raw, err := serviceKeyvault.GetSecret(ctx, (*properties.ID).Name(), (*properties.ID).Version(), nil)
+					secretVersion := (*properties.ID).Version()
+					raw, err := serviceKeyvault.GetSecret(ctx, (*properties.ID).Name(), secretVersion, nil)
 					if err != nil {
 						return nil, err
 					}
@@ -60,33 +62,49 @@ func NewMulti(ctx context.Context, serviceKeyvault azsecrets.Client, secretName,
 					if err != nil {
 						return nil, err
 					}
-					keys = append(keys, version)
+
+					aead, err = x.aeadFactory(ctx, version, secretVersion)
+					if err != nil {
+						return nil, err
+					}
+
+					m.openers = append(m.openers, aead)
 				}
 			}
-		}
-
-		for _, key := range keys {
-			aead, err = x.aeadFactory(ctx, key)
-			if err != nil {
-				return nil, err
-			}
-
-			m.openers = append(m.openers, aead)
 		}
 	}
 
 	return m, nil
 }
 
-func (c *multi) Open(input []byte) (b []byte, err error) {
+func (c *multi) Name() string {
+	var openerNames []string
+
+	for _, i := range c.openers {
+		openerNames = append(openerNames, i.Name())
+	}
+
+	return fmt.Sprintf("Multi(sealer=%s, openers=%s)", c.sealer.Name(), strings.Join(openerNames, ","))
+}
+
+func (c *multi) Open(input []byte) ([]byte, error) {
+	var errs []error
+
 	for _, opener := range c.openers {
-		b, err = opener.Open(input)
+		b, err := opener.Open(input)
 		if err == nil {
-			return
+			return b, nil
+		} else {
+			errs = append(errs, fmt.Errorf("%s: %w", opener.Name(), err))
 		}
 	}
 
-	return nil, err
+	errStrings := ""
+	for _, err := range errs {
+		errStrings = errStrings + fmt.Sprintf("\n\t* %s", err)
+	}
+
+	return nil, fmt.Errorf("no openers succeeded:%s", errStrings)
 }
 
 func (c *multi) Seal(input []byte) ([]byte, error) {

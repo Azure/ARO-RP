@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	mock_encryption "github.com/Azure/ARO-RP/pkg/util/mocks/encryption"
@@ -46,15 +47,16 @@ func TestOpen(t *testing.T) {
 				firstOpener.EXPECT().Open(mockInput).Return(nil, errors.New("fake error from the first opener"))
 				secondOpener.EXPECT().Open(mockInput).Return(nil, errors.New("fake error from the second opener"))
 			},
-			wantErr: "fake error from the second opener",
+			wantErr: "no openers succeeded:\n\t* first: fake error from the first opener\n\t* second: fake error from the second opener",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			firstOpener := mock_encryption.NewMockAEAD(controller)
+			firstOpener.EXPECT().Name().Return("first").AnyTimes()
 			secondOpener := mock_encryption.NewMockAEAD(controller)
+			secondOpener.EXPECT().Name().Return("second").AnyTimes()
 
 			multi := multi{
 				openers: []AEAD{
@@ -73,4 +75,25 @@ func TestOpen(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMultiName(t *testing.T) {
+	controller := gomock.NewController(t)
+
+	firstOpener := mock_encryption.NewMockAEAD(controller)
+	firstOpener.EXPECT().Name().Return("first").AnyTimes()
+	secondOpener := mock_encryption.NewMockAEAD(controller)
+	secondOpener.EXPECT().Name().Return("second").AnyTimes()
+
+	multi := multi{
+		sealer: firstOpener,
+		openers: []AEAD{
+			firstOpener,
+			secondOpener,
+		},
+	}
+
+	expected := "Multi(sealer=first, openers=first,second)"
+
+	assert.Equal(t, expected, multi.Name())
 }

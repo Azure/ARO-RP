@@ -63,7 +63,7 @@ func testExtensionsConcurrency(i int, h *codec.JsonHandle) error {
 func TestExtensionsConcurrency(t *testing.T) {
 	const n = 100
 
-	aead, err := encryption.NewXChaCha20Poly1305(context.Background(), make([]byte, 32))
+	aead, err := encryption.NewXChaCha20Poly1305(context.Background(), make([]byte, 32), "")
 	if err != nil {
 		t.Fatal(err)
 	}

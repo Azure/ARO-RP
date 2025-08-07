@@ -10,6 +10,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -35,7 +37,7 @@ func TestNewAES256SHA512(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewAES256SHA512(context.Background(), tt.key)
+			_, err := NewAES256SHA512(context.Background(), tt.key, "")
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -75,7 +77,7 @@ func TestAES256SHA512Open(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			cipher, err := NewAES256SHA512(context.Background(), tt.key)
+			cipher, err := NewAES256SHA512(context.Background(), tt.key, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -120,7 +122,7 @@ func TestAES256SHA512Seal(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			cipher, err := NewAES256SHA512(context.Background(), tt.key)
+			cipher, err := NewAES256SHA512(context.Background(), tt.key, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -135,4 +137,20 @@ func TestAES256SHA512Seal(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAESName(t *testing.T) {
+	key := []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e\xab\x79\x86\x50\xfb\xce\xdc\x9d\xdd\x1c\x01\x32\xd6\x03\x99\xe6\x59\x81\x37\xb3\xdb\x67\x6f\x12\x34\x1d\xb9\x58\x18\x31\x30\x57")
+
+	cipher, err := NewAES256SHA512(context.Background(), key, "notlatest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "AES256SHA512 (ver 'notlatest')", cipher.Name())
+
+	cipher, err = NewAES256SHA512(context.Background(), key, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "AES256SHA512 (latest)", cipher.Name())
 }
