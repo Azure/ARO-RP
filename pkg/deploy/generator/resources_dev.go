@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -21,50 +21,50 @@ import (
 // VMSS with auto upgrademode requires a healthprobe from an LB.
 func (g *generator) devLBInternal() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.LoadBalancer{
-			Sku: &mgmtnetwork.LoadBalancerSku{
-				Name: mgmtnetwork.LoadBalancerSkuNameBasic,
+		Resource: &armnetwork.LoadBalancer{
+			SKU: &armnetwork.LoadBalancerSKU{
+				Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameBasic),
 			},
-			LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-				FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+			Properties: &armnetwork.LoadBalancerPropertiesFormat{
+				FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 					{
-						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-							Subnet: &mgmtnetwork.Subnet{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							Subnet: &armnetwork.Subnet{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 							},
 						},
 						Name: pointerutils.ToPtr("not-used"),
 					},
 				},
-				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+				BackendAddressPools: []*armnetwork.BackendAddressPool{
 					{
 						Name: pointerutils.ToPtr("dev-backend"),
 					},
 				},
-				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+				LoadBalancingRules: []*armnetwork.LoadBalancingRule{
 					{
-						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'dev-lb-internal', 'not-used')]"),
 							},
-							BackendAddressPool: &mgmtnetwork.SubResource{
+							BackendAddressPool: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'dev-lb-internal', 'dev-backend')]"),
 							},
-							Probe: &mgmtnetwork.SubResource{
+							Probe: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"),
 							},
-							Protocol:         mgmtnetwork.TransportProtocolTCP,
-							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 							FrontendPort:     pointerutils.ToPtr(int32(443)),
 							BackendPort:      pointerutils.ToPtr(int32(443)),
 						},
 						Name: pointerutils.ToPtr("dev-lbrule"),
 					},
 				},
-				Probes: &[]mgmtnetwork.Probe{
+				Probes: []*armnetwork.Probe{
 					{
-						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-							Protocol:       mgmtnetwork.ProbeProtocolTCP,
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
 							Port:           pointerutils.ToPtr(int32(443)),
 							NumberOfProbes: pointerutils.ToPtr(int32(3)),
 						},
@@ -268,12 +268,12 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 
 func (g *generator) devVPNPip() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.PublicIPAddress{
-			Sku: &mgmtnetwork.PublicIPAddressSku{
-				Name: "[parameters('publicIPAddressSkuName')]",
+		Resource: &armnetwork.PublicIPAddress{
+			SKU: &armnetwork.PublicIPAddressSKU{
+				Name: pointerutils.ToPtr(armnetwork.PublicIPAddressSKUName("[parameters('publicIPAddressSkuName')]")),
 			},
-			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: "[parameters('publicIPAddressAllocationMethod')]",
+			Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+				PublicIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethod("[parameters('publicIPAddressAllocationMethod')]")),
 			},
 			Name:     pointerutils.ToPtr("dev-vpn-pip"),
 			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
@@ -284,11 +284,11 @@ func (g *generator) devVPNPip() *arm.Resource {
 }
 
 func (g *generator) devVnet() *arm.Resource {
-	return g.virtualNetwork("dev-vnet", "10.0.0.0/16", &[]mgmtnetwork.Subnet{
+	return g.virtualNetwork("dev-vnet", "10.0.0.0/16", []*armnetwork.Subnet{
 		{
-			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+			Properties: &armnetwork.SubnetPropertiesFormat{
 				AddressPrefix: pointerutils.ToPtr("10.0.1.0/24"),
-				NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+				NetworkSecurityGroup: &armnetwork.SecurityGroup{
 					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
 				},
 			},
@@ -298,9 +298,9 @@ func (g *generator) devVnet() *arm.Resource {
 }
 
 func (g *generator) devVPNVnet() *arm.Resource {
-	return g.virtualNetwork("dev-vpn-vnet", "10.2.0.0/24", &[]mgmtnetwork.Subnet{
+	return g.virtualNetwork("dev-vpn-vnet", "10.2.0.0/24", []*armnetwork.Subnet{
 		{
-			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+			Properties: &armnetwork.SubnetPropertiesFormat{
 				AddressPrefix: pointerutils.ToPtr("10.2.0.0/24"),
 			},
 			Name: pointerutils.ToPtr("GatewaySubnet"),
@@ -310,40 +310,40 @@ func (g *generator) devVPNVnet() *arm.Resource {
 
 func (g *generator) devVPN() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetworkGateway{
-			VirtualNetworkGatewayPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayPropertiesFormat{
-				IPConfigurations: &[]mgmtnetwork.VirtualNetworkGatewayIPConfiguration{
+		Resource: &armnetwork.VirtualNetworkGateway{
+			Properties: &armnetwork.VirtualNetworkGatewayPropertiesFormat{
+				IPConfigurations: []*armnetwork.VirtualNetworkGatewayIPConfiguration{
 					{
-						VirtualNetworkGatewayIPConfigurationPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayIPConfigurationPropertiesFormat{
-							Subnet: &mgmtnetwork.SubResource{
+						Properties: &armnetwork.VirtualNetworkGatewayIPConfigurationPropertiesFormat{
+							Subnet: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vpn-vnet', 'GatewaySubnet')]"),
 							},
-							PublicIPAddress: &mgmtnetwork.SubResource{
+							PublicIPAddress: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"),
 							},
 						},
 						Name: pointerutils.ToPtr("default"),
 					},
 				},
-				VpnType: mgmtnetwork.RouteBased,
-				Sku: &mgmtnetwork.VirtualNetworkGatewaySku{
-					Name: mgmtnetwork.VirtualNetworkGatewaySkuNameVpnGw1,
-					Tier: mgmtnetwork.VirtualNetworkGatewaySkuTierVpnGw1,
+				VPNType: pointerutils.ToPtr(armnetwork.VPNTypeRouteBased),
+				SKU: &armnetwork.VirtualNetworkGatewaySKU{
+					Name: pointerutils.ToPtr(armnetwork.VirtualNetworkGatewaySKUNameVPNGw1),
+					Tier: pointerutils.ToPtr(armnetwork.VirtualNetworkGatewaySKUTierVPNGw1),
 				},
-				VpnClientConfiguration: &mgmtnetwork.VpnClientConfiguration{
-					VpnClientAddressPool: &mgmtnetwork.AddressSpace{
-						AddressPrefixes: &[]string{"192.168.255.0/24"},
+				VPNClientConfiguration: &armnetwork.VPNClientConfiguration{
+					VPNClientAddressPool: &armnetwork.AddressSpace{
+						AddressPrefixes: []*string{pointerutils.ToPtr("192.168.255.0/24")},
 					},
-					VpnClientRootCertificates: &[]mgmtnetwork.VpnClientRootCertificate{
+					VPNClientRootCertificates: []*armnetwork.VPNClientRootCertificate{
 						{
-							VpnClientRootCertificatePropertiesFormat: &mgmtnetwork.VpnClientRootCertificatePropertiesFormat{
+							Properties: &armnetwork.VPNClientRootCertificatePropertiesFormat{
 								PublicCertData: pointerutils.ToPtr("[parameters('vpnCACertificate')]"),
 							},
 							Name: pointerutils.ToPtr("dev-vpn-ca"),
 						},
 					},
-					VpnClientProtocols: &[]mgmtnetwork.VpnClientProtocol{
-						mgmtnetwork.OpenVPN,
+					VPNClientProtocols: []*armnetwork.VPNClientProtocol{
+						pointerutils.ToPtr(armnetwork.VPNClientProtocolOpenVPN),
 					},
 				},
 			},
