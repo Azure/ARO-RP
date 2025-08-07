@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"strconv"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -20,33 +22,37 @@ func (mon *Monitor) emitSummary(ctx context.Context) error {
 		return nil
 	}
 
-	cv, err := mon.getClusterVersion(ctx)
-	if err != nil {
-		return err
+	var desiredVersion, actualVersion, actualMinorVersion string
+	if mon.clusterActualVersion != nil {
+		actualVersion = mon.clusterActualVersion.String()
+		actualMinorVersion = mon.clusterActualVersion.MinorVersion()
 	}
 
-	ns, err := mon.listNodes(ctx)
-	if err != nil {
-		return err
+	if mon.clusterDesiredVersion != nil {
+		desiredVersion = mon.clusterDesiredVersion.String()
 	}
 
 	var masterCount, workerCount int
-	for _, node := range ns.Items {
-		if _, ok := node.Labels[masterRoleLabel]; ok {
+	err := mon.iterateOverNodes(ctx, func(n *corev1.Node) {
+		if _, ok := n.Labels[masterRoleLabel]; ok {
 			masterCount++
 		}
-		if _, ok := node.Labels[workerRoleLabel]; ok {
+		if _, ok := n.Labels[workerRoleLabel]; ok {
 			workerCount++
 		}
+	})
+	if err != nil {
+		return err
 	}
 
 	mon.emitGauge("cluster.summary", 1, map[string]string{
-		"actualVersion":     actualVersion(cv),
-		"desiredVersion":    desiredVersion(cv),
-		"masterCount":       strconv.Itoa(masterCount),
-		"workerCount":       strconv.Itoa(workerCount),
-		"provisioningState": mon.oc.Properties.ProvisioningState.String(),
-		"createdAt":         mon.oc.Properties.CreatedAt.String(),
+		"actualVersion":      actualVersion,
+		"actualMinorVersion": actualMinorVersion,
+		"desiredVersion":     desiredVersion,
+		"masterCount":        strconv.Itoa(masterCount),
+		"workerCount":        strconv.Itoa(workerCount),
+		"provisioningState":  mon.oc.Properties.ProvisioningState.String(),
+		"createdAt":          mon.oc.Properties.CreatedAt.String(),
 	})
 
 	return nil

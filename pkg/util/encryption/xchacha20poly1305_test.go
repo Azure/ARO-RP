@@ -10,6 +10,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -35,7 +37,7 @@ func TestNewXChaCha20Poly1305(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewXChaCha20Poly1305(context.Background(), tt.key)
+			_, err := NewXChaCha20Poly1305(context.Background(), tt.key, "")
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -69,7 +71,7 @@ func TestXChaCha20Poly1305Open(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			aead, err := NewXChaCha20Poly1305(context.Background(), tt.key)
+			aead, err := NewXChaCha20Poly1305(context.Background(), tt.key, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -114,7 +116,7 @@ func TestXChaCha20Poly1305Seal(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			aead, err := NewXChaCha20Poly1305(context.Background(), tt.key)
+			aead, err := NewXChaCha20Poly1305(context.Background(), tt.key, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -129,4 +131,20 @@ func TestXChaCha20Poly1305Seal(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestChaChaName(t *testing.T) {
+	key := []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e")
+
+	cipher, err := NewXChaCha20Poly1305(context.Background(), key, "notlatest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "ChaCha20Poly1305 (ver 'notlatest')", cipher.Name())
+
+	cipher, err = NewXChaCha20Poly1305(context.Background(), key, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "ChaCha20Poly1305 (latest)", cipher.Name())
 }

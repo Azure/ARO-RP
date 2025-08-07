@@ -12,7 +12,7 @@ const (
 )
 
 func (mon *Monitor) emitClusterAuthenticationType(ctx context.Context) error {
-	if mon.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+	if mon.oc.UsesWorkloadIdentity() {
 		mon.emitGauge(authenticationTypeMetricsTopic, 1, map[string]string{
 			"type": "managedIdentity",
 		})

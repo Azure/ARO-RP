@@ -1,4 +1,4 @@
-package cluster
+package hive
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -13,13 +13,7 @@ import (
 )
 
 func (mon *Monitor) emitClusterSync(ctx context.Context) error {
-	if mon.hiveClusterManager == nil {
-		// TODO(hive): remove this once we have HiveManager available everywhere
-		mon.log.Info("skipping: no hive cluster manager")
-		return nil
-	}
-
-	clusterSync, err := mon.hiveClusterManager.GetClusterSync(ctx, mon.doc)
+	clusterSync, err := mon.hiveClusterManager.GetClusterSync(ctx, mon.oc)
 	if err != nil {
 		mon.log.Errorf("Error in getting the clustersync data: %v", err)
 		return err

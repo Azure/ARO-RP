@@ -29,6 +29,13 @@ func FriendlyName(f interface{}) string {
 	return strings.TrimPrefix(strings.TrimSuffix(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), "-fm"), "github.com/Azure/ARO-RP/")
 }
 
+// ShortName returns a shorter "friendly" stringified name of the given
+// function. This should be used when all calls are either uniquely named or
+// methods on the same struct to avoid the need for disambiguation.
+func ShortName(f any) string {
+	return shortName(FriendlyName(f))
+}
+
 func shortName(fullName string) string {
 	sepCheck := func(c rune) bool {
 		return c == '/' || c == '.'

@@ -14,22 +14,31 @@ import (
 )
 
 type aes256Sha512 struct {
-	aead       cipher.AEAD
-	randReader io.Reader
+	aead          cipher.AEAD
+	randReader    io.Reader
+	secretVersion string
 }
 
 var _ AEAD = (*aes256Sha512)(nil)
 
-func NewAES256SHA512(ctx context.Context, key []byte) (AEAD, error) {
+func NewAES256SHA512(ctx context.Context, key []byte, secretVersion string) (AEAD, error) {
 	aead, err := etm.NewAES256SHA512(key)
 	if err != nil {
 		return nil, err
 	}
 
 	return &aes256Sha512{
-		aead:       aead,
-		randReader: rand.Reader,
+		aead:          aead,
+		randReader:    rand.Reader,
+		secretVersion: secretVersion,
 	}, nil
+}
+
+func (c *aes256Sha512) Name() string {
+	if c.secretVersion == "" {
+		return "AES256SHA512 (latest)"
+	}
+	return fmt.Sprintf("AES256SHA512 (ver '%s')", c.secretVersion)
 }
 
 func (c *aes256Sha512) Open(input []byte) ([]byte, error) {

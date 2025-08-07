@@ -7,6 +7,10 @@ var fakeCode []byte = []byte{'F', 'A', 'K', 'E'}
 
 type fakeAEAD struct{}
 
+func (fakeAEAD) Name() string {
+	return "fakeAEAD"
+}
+
 func (fakeAEAD) Open(in []byte) ([]byte, error) {
 	return in[4:], nil
 }

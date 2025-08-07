@@ -48,9 +48,9 @@ type ClusterManager interface {
 	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]kruntime.Object) error
 	IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
-	GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error)
+	GetClusterDeployment(ctx context.Context, oc *api.OpenShiftCluster) (*hivev1.ClusterDeployment, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
-	GetClusterSync(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1alpha1.ClusterSync, error)
+	GetClusterSync(ctx context.Context, oc *api.OpenShiftCluster) (*hivev1alpha1.ClusterSync, error)
 }
 
 type clusterManager struct {
@@ -212,7 +212,7 @@ func (hr *clusterManager) Delete(ctx context.Context, doc *api.OpenShiftClusterD
 }
 
 func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
-	cd, err := hr.GetClusterDeployment(ctx, doc)
+	cd, err := hr.GetClusterDeployment(ctx, doc.OpenShiftCluster)
 	if err != nil {
 		return false, hr.handleClusterDeploymentGetError(err)
 	}
@@ -239,7 +239,7 @@ func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api
 }
 
 func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
-	cd, err := hr.GetClusterDeployment(ctx, doc)
+	cd, err := hr.GetClusterDeployment(ctx, doc.OpenShiftCluster)
 	if err != nil {
 		return false, hr.handleClusterDeploymentGetError(err)
 	}
@@ -261,10 +261,10 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 	return false, nil
 }
 
-func (hr *clusterManager) GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error) {
+func (hr *clusterManager) GetClusterDeployment(ctx context.Context, oc *api.OpenShiftCluster) (*hivev1.ClusterDeployment, error) {
 	cd := &hivev1.ClusterDeployment{}
 	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
-		Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		Namespace: oc.Properties.HiveProfile.Namespace,
 		Name:      ClusterDeploymentName,
 	}, cd)
 	if err != nil {
@@ -289,7 +289,7 @@ func (hr *clusterManager) handleClusterDeploymentGetError(err error) error {
 
 func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cd, err := hr.GetClusterDeployment(ctx, doc)
+		cd, err := hr.GetClusterDeployment(ctx, doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}
@@ -328,12 +328,12 @@ func (hr *clusterManager) installLogsForLatestDeployment(ctx context.Context, cd
 	return latestProvision.Spec.InstallLog, nil
 }
 
-func (hr *clusterManager) GetClusterSync(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1alpha1.ClusterSync, error) {
+func (hr *clusterManager) GetClusterSync(ctx context.Context, oc *api.OpenShiftCluster) (*hivev1alpha1.ClusterSync, error) {
 	clusterSync := &hivev1alpha1.ClusterSync{}
 
 	key := client.ObjectKey{
 		Name:      ClusterDeploymentName, // "cluster",
-		Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		Namespace: oc.Properties.HiveProfile.Namespace,
 	}
 
 	err := hr.hiveClientset.Get(ctx, key, clusterSync)

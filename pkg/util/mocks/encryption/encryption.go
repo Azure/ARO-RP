@@ -39,6 +39,20 @@ func (m *MockAEAD) EXPECT() *MockAEADMockRecorder {
 	return m.recorder
 }
 
+// Name mocks base method.
+func (m *MockAEAD) Name() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockAEADMockRecorder) Name() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockAEAD)(nil).Name))
+}
+
 // Open mocks base method.
 func (m *MockAEAD) Open(arg0 []byte) ([]byte, error) {
 	m.ctrl.T.Helper()

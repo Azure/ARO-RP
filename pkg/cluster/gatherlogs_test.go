@@ -110,13 +110,15 @@ func TestLogClusterDeployment(t *testing.T) {
 			_, log := testlog.New()
 
 			mockHiveManager := mock_hive.NewMockClusterManager(controller)
-			if tt.cd == nil {
-				mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc)).
-					Return(nil, fmt.Errorf(`clusterdeployments.hive.openshift.io "cluster" not found`)).
-					AnyTimes()
-			} else {
-				mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc)).
-					Return(tt.cd, nil)
+			if tt.doc != nil {
+				if tt.cd == nil {
+					mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc.OpenShiftCluster)).
+						Return(nil, fmt.Errorf(`clusterdeployments.hive.openshift.io "cluster" not found`)).
+						AnyTimes()
+				} else {
+					mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc.OpenShiftCluster)).
+						Return(tt.cd, nil)
+				}
 			}
 
 			m := &manager{
