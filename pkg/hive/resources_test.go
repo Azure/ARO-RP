@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -170,5 +171,44 @@ func TestBoundSASigningKeySecret(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			assert.Equal(t, tt.wantSecret, secret)
 		})
+	}
+}
+
+func TestUserPullSecretNotUsedToPull(t *testing.T) {
+	t.Setenv("PULL_SECRET", "{\"auths\": {\"otherenv\": {\"auth\": \"YTpiCg==\"}}}")
+	oc := &api.OpenShiftCluster{
+		Properties: api.OpenShiftClusterProperties{
+			ClusterProfile: api.ClusterProfile{
+				PullSecret: "{\"auths\": {\"foobar\": {\"auth\": \"YjpjCg==\"}}}",
+			},
+			RegistryProfiles: []*api.RegistryProfile{
+				{
+					Name:     "goodsecret",
+					Username: "sekrit",
+					Password: api.SecureString("sekriter"),
+				},
+			},
+		},
+	}
+
+	secret, err := pullsecretSecret("testns", oc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ps, err := pullsecret.UnmarshalSecretData(secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Should have the pull secret pulled from the environment variable and from
+	// the cluster RegistryProfiles (e.g. the ACR token)
+	expected := map[string]string{
+		"otherenv":   "YTpiCg==",
+		"goodsecret": "c2Vrcml0OnNla3JpdGVy",
+	}
+
+	for _, err := range deep.Equal(ps, expected) {
+		t.Error(err)
 	}
 }
