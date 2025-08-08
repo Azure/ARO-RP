@@ -38,18 +38,21 @@
     },
     "resources": [
         {
-            "sku": {
-                "name": "[parameters('publicIPAddressSkuName')]"
-            },
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "dev-vpn-pip",
             "properties": {
                 "publicIPAllocationMethod": "[parameters('publicIPAddressAllocationMethod')]"
             },
-            "name": "dev-vpn-pip",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
+            "sku": {
+                "name": "[parameters('publicIPAddressSkuName')]"
+            },
+            "type": "Microsoft.Network/publicIPAddresses"
         },
         {
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "dev-vnet",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -58,23 +61,22 @@
                 },
                 "subnets": [
                     {
+                        "name": "ToolingSubnet",
                         "properties": {
                             "addressPrefix": "10.0.1.0/24",
                             "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
-                                "tags": null
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
                             }
-                        },
-                        "name": "ToolingSubnet"
+                        }
                     }
                 ]
             },
-            "name": "dev-vnet",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
+            "type": "Microsoft.Network/virtualNetworks"
         },
         {
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "dev-vpn-vnet",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -83,34 +85,37 @@
                 },
                 "subnets": [
                     {
+                        "name": "GatewaySubnet",
                         "properties": {
                             "addressPrefix": "10.2.0.0/24"
-                        },
-                        "name": "GatewaySubnet"
+                        }
                     }
                 ]
             },
-            "name": "dev-vpn-vnet",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
+            "type": "Microsoft.Network/virtualNetworks"
         },
         {
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "dev-vpn",
             "properties": {
                 "ipConfigurations": [
                     {
+                        "name": "default",
                         "properties": {
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vpn-vnet', 'GatewaySubnet')]"
-                            },
                             "publicIPAddress": {
                                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vpn-vnet', 'GatewaySubnet')]"
                             }
-                        },
-                        "name": "default"
+                        }
                     }
                 ],
-                "vpnType": "RouteBased",
                 "sku": {
                     "name": "VpnGw1",
                     "tier": "VpnGw1"
@@ -121,83 +126,77 @@
                             "192.168.255.0/24"
                         ]
                     },
-                    "vpnClientRootCertificates": [
-                        {
-                            "properties": {
-                                "publicCertData": "[parameters('vpnCACertificate')]"
-                            },
-                            "name": "dev-vpn-ca"
-                        }
-                    ],
                     "vpnClientProtocols": [
                         "OpenVPN"
+                    ],
+                    "vpnClientRootCertificates": [
+                        {
+                            "name": "dev-vpn-ca",
+                            "properties": {
+                                "publicCertData": "[parameters('vpnCACertificate')]"
+                            }
+                        }
                     ]
-                }
+                },
+                "vpnType": "RouteBased"
             },
-            "name": "dev-vpn",
-            "type": "Microsoft.Network/virtualNetworkGateways",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
-                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
-            ]
+            "type": "Microsoft.Network/virtualNetworkGateways"
         },
         {
-            "sku": {
-                "name": "Basic"
-            },
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "dev-lb-internal",
             "properties": {
-                "frontendIPConfigurations": [
-                    {
-                        "properties": {
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
-                            }
-                        },
-                        "name": "not-used"
-                    }
-                ],
                 "backendAddressPools": [
                     {
                         "name": "dev-backend"
                     }
                 ],
+                "frontendIPConfigurations": [
+                    {
+                        "name": "not-used",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
+                            }
+                        }
+                    }
+                ],
                 "loadBalancingRules": [
                     {
+                        "name": "dev-lbrule",
                         "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'dev-lb-internal', 'not-used')]"
-                            },
                             "backendAddressPool": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'dev-lb-internal', 'dev-backend')]"
                             },
+                            "backendPort": 443,
+                            "frontendIPConfiguration": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'dev-lb-internal', 'not-used')]"
+                            },
+                            "frontendPort": 443,
+                            "loadDistribution": "Default",
                             "probe": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"
                             },
-                            "protocol": "Tcp",
-                            "loadDistribution": "Default",
-                            "frontendPort": 443,
-                            "backendPort": 443
-                        },
-                        "name": "dev-lbrule"
+                            "protocol": "Tcp"
+                        }
                     }
                 ],
                 "probes": [
                     {
+                        "name": "dev-probe",
                         "properties": {
-                            "protocol": "Tcp",
+                            "numberOfProbes": 3,
                             "port": 443,
-                            "numberOfProbes": 3
-                        },
-                        "name": "dev-probe"
+                            "protocol": "Tcp"
+                        }
                     }
                 ]
             },
-            "name": "dev-lb-internal",
-            "type": "Microsoft.Network/loadBalancers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
+            "sku": {
+                "name": "Basic"
+            },
+            "type": "Microsoft.Network/loadBalancers"
         },
         {
             "name": "[concat(take(resourceGroup().name,10), '-dev-disk-enc')]",
@@ -430,82 +429,74 @@
             ]
         },
         {
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
+            ],
+            "name": "dev-vpn-vnet/peering-dev-vnet",
             "properties": {
-                "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
                 "allowGatewayTransit": true,
-                "useRemoteGateways": false,
+                "allowVirtualNetworkAccess": true,
                 "remoteVirtualNetwork": {
                     "id": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
-                }
-            },
-            "name": "dev-vpn-vnet/peering-dev-vnet",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+                },
+                "useRemoteGateways": false
+            }
+        },
+        {
             "apiVersion": "2020-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
                 "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
             ],
-            "location": "[resourceGroup().location]"
-        },
-        {
+            "name": "dev-vnet/peering-dev-vpn-vnet",
             "properties": {
-                "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
                 "allowGatewayTransit": false,
-                "useRemoteGateways": true,
+                "allowVirtualNetworkAccess": true,
                 "remoteVirtualNetwork": {
                     "id": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
-                }
-            },
-            "name": "dev-vnet/peering-dev-vpn-vnet",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+                },
+                "useRemoteGateways": true
+            }
+        },
+        {
             "apiVersion": "2020-08-01",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
                 "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
             ],
-            "location": "[resourceGroup().location]"
-        },
-        {
+            "name": "dev-vpn-vnet/peering-rp-vnet",
             "properties": {
-                "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
                 "allowGatewayTransit": true,
-                "useRemoteGateways": false,
+                "allowVirtualNetworkAccess": true,
                 "remoteVirtualNetwork": {
                     "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
-                }
-            },
-            "name": "dev-vpn-vnet/peering-rp-vnet",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
-                "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
-            ],
-            "location": "[resourceGroup().location]"
+                },
+                "useRemoteGateways": false
+            }
         },
         {
-            "properties": {
-                "allowVirtualNetworkAccess": true,
-                "allowForwardedTraffic": true,
-                "allowGatewayTransit": false,
-                "useRemoteGateways": true,
-                "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
-                }
-            },
-            "name": "rp-vnet/peering-dev-vpn-vnet",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "apiVersion": "2020-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
                 "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
             ],
-            "location": "[resourceGroup().location]"
+            "name": "rp-vnet/peering-dev-vpn-vnet",
+            "properties": {
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "allowVirtualNetworkAccess": true,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
+                },
+                "useRemoteGateways": true
+            }
         }
     ]
 }

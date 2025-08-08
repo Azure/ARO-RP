@@ -16,8 +16,9 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -297,19 +298,25 @@ func (m *manager) subnetsWithServiceEndpoint(ctx context.Context, serviceEndpoin
 	for subnetId := range subnetsMap {
 		// We purposefully fail if we can't fetch the subnet as the FPSP most likely
 		// lost read permission over the subnet.
-		subnet, err := m.subnet.Get(ctx, subnetId)
+		r, err := armsdk.ParseResourceID(subnetId)
 		if err != nil {
 			return nil, err
 		}
 
-		if subnet.SubnetPropertiesFormat == nil || subnet.ServiceEndpoints == nil {
+		subnetResponse, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+		if err != nil {
+			return nil, err
+		}
+		subnet := subnetResponse.Subnet
+
+		if subnet.Properties == nil || subnet.Properties.ServiceEndpoints == nil {
 			continue
 		}
 
-		for _, endpoint := range *subnet.ServiceEndpoints {
+		for _, endpoint := range subnet.Properties.ServiceEndpoints {
 			if endpoint.Service != nil && strings.EqualFold(*endpoint.Service, serviceEndpoint) && endpoint.Locations != nil {
-				for _, loc := range *endpoint.Locations {
-					if loc == "*" || strings.EqualFold(loc, m.doc.OpenShiftCluster.Location) {
+				for _, loc := range endpoint.Locations {
+					if loc != nil && (*loc == "*" || strings.EqualFold(*loc, m.doc.OpenShiftCluster.Location)) {
 						subnets = append(subnets, subnetId)
 					}
 				}
@@ -368,13 +375,19 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				// We use the outer context, not the timeout context, as we do not want
 				// to time out the condition function itself, only stop retrying once
 				// timeoutCtx's timeout has fired.
-				s, err := m.subnet.Get(ctx, subnetID)
+				r, err := armsdk.ParseResourceID(subnetID)
 				if err != nil {
 					return false, err
 				}
 
-				if s.SubnetPropertiesFormat == nil {
-					s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+				subnetResponse, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+				if err != nil {
+					return false, err
+				}
+				s := subnetResponse.Subnet
+
+				if s.Properties == nil {
+					s.Properties = &armnetwork.SubnetPropertiesFormat{}
 				}
 
 				nsgID, err := apisubnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
@@ -386,15 +399,15 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				// subnets and our validation code. We try to catch this early, but
 				// these errors is propagated to make the user-facing error more clear incase
 				// modification happened after we ran validation code and we lost the race
-				if s.NetworkSecurityGroup != nil {
-					if strings.EqualFold(*s.NetworkSecurityGroup.ID, nsgID) {
+				if s.Properties.NetworkSecurityGroup != nil {
+					if strings.EqualFold(*s.Properties.NetworkSecurityGroup.ID, nsgID) {
 						continue
 					}
 
 					return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", fmt.Sprintf("The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID))
 				}
 
-				s.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
+				s.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{
 					ID: pointerutils.ToPtr(nsgID),
 				}
 
@@ -402,7 +415,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				// finishes, the NSG is sometimes not yet ready to be referenced and used, causing
 				// an error to occur here. So if this particular error occurs, return nil to retry.
 				// But if some other type of error occurs, just return that error.
-				err = m.subnet.CreateOrUpdate(ctx, subnetID, s)
+				err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 				if err != nil {
 					if nsgNotReadyErrorRegex.MatchString(err.Error()) {
 						return false, nil
@@ -422,13 +435,19 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	// TODO: there is probably an undesirable race condition here - check if etags can help.
 	subnetId := m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
-	s, err := m.subnet.Get(ctx, subnetId)
+	r, err := armsdk.ParseResourceID(subnetId)
 	if err != nil {
 		return err
 	}
 
-	if s.SubnetPropertiesFormat == nil {
-		s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+	subnetResp, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+	if err != nil {
+		return err
+	}
+	s := subnetResp.Subnet
+
+	if s.Properties == nil {
+		s.Properties = &armnetwork.SubnetPropertiesFormat{}
 	}
 
 	// we need to track whether or not we need to send an update to the AzureRM API based on whether
@@ -437,15 +456,15 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	var needsUpdate bool
 
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		if s.PrivateEndpointNetworkPolicies == nil || *s.PrivateEndpointNetworkPolicies != "Disabled" {
+		if s.Properties.PrivateEndpointNetworkPolicies == nil || *s.Properties.PrivateEndpointNetworkPolicies != armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled {
 			needsUpdate = true
-			s.PrivateEndpointNetworkPolicies = pointerutils.ToPtr("Disabled")
+			s.Properties.PrivateEndpointNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
 		}
 	}
 
-	if s.PrivateLinkServiceNetworkPolicies == nil || *s.PrivateLinkServiceNetworkPolicies != "Disabled" {
+	if s.Properties.PrivateLinkServiceNetworkPolicies == nil || *s.Properties.PrivateLinkServiceNetworkPolicies != armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled {
 		needsUpdate = true
-		s.PrivateLinkServiceNetworkPolicies = pointerutils.ToPtr("Disabled")
+		s.Properties.PrivateLinkServiceNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled)
 	}
 
 	// return if we do not need to update the subnet
@@ -453,7 +472,7 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 		return nil
 	}
 
-	err = m.subnet.CreateOrUpdate(ctx, subnetId, s)
+	err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
