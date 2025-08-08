@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 
@@ -282,31 +281,31 @@ func (m *manager) storageAccountBlobContainer(storageAccountName, name string) *
 
 func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.PrivateLinkService{
-			PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
-				LoadBalancerFrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+		Resource: &sdknetwork.PrivateLinkService{
+			Properties: &sdknetwork.PrivateLinkServiceProperties{
+				LoadBalancerFrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
 					{
 						ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 					},
 				},
-				IPConfigurations: &[]mgmtnetwork.PrivateLinkServiceIPConfiguration{
+				IPConfigurations: []*sdknetwork.PrivateLinkServiceIPConfiguration{
 					{
-						PrivateLinkServiceIPConfigurationProperties: &mgmtnetwork.PrivateLinkServiceIPConfigurationProperties{
-							Subnet: &mgmtnetwork.Subnet{
+						Properties: &sdknetwork.PrivateLinkServiceIPConfigurationProperties{
+							Subnet: &sdknetwork.Subnet{
 								ID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 							},
 						},
 						Name: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls-nic"),
 					},
 				},
-				Visibility: &mgmtnetwork.PrivateLinkServicePropertiesVisibility{
-					Subscriptions: &[]string{
-						m.env.SubscriptionID(),
+				Visibility: &sdknetwork.PrivateLinkServicePropertiesVisibility{
+					Subscriptions: []*string{
+						pointerutils.ToPtr(m.env.SubscriptionID()),
 					},
 				},
-				AutoApproval: &mgmtnetwork.PrivateLinkServicePropertiesAutoApproval{
-					Subscriptions: &[]string{
-						m.env.SubscriptionID(),
+				AutoApproval: &sdknetwork.PrivateLinkServicePropertiesAutoApproval{
+					Subscriptions: []*string{
+						pointerutils.ToPtr(m.env.SubscriptionID()),
 					},
 				},
 			},
@@ -323,15 +322,15 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 
 func (m *manager) networkPrivateEndpoint() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.PrivateEndpoint{
-			PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
-				Subnet: &mgmtnetwork.Subnet{
+		Resource: &sdknetwork.PrivateEndpoint{
+			Properties: &sdknetwork.PrivateEndpointProperties{
+				Subnet: &sdknetwork.Subnet{
 					ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 				},
-				ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
+				ManualPrivateLinkServiceConnections: []*sdknetwork.PrivateLinkServiceConnection{
 					{
 						Name: pointerutils.ToPtr("gateway-plsconnection"),
-						PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
+						Properties: &sdknetwork.PrivateLinkServiceConnectionProperties{
 							// TODO: in the future we will need multiple PLSes.
 							// It will be necessary to decide which the PLS for
 							// a cluster somewhere around here.
@@ -354,15 +353,21 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 		zones = m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones
 	}
 
+	// Convert []string to []*string for zones
+	zonePointers := make([]*string, len(zones))
+	for i, zone := range zones {
+		zonePointers[i] = pointerutils.ToPtr(zone)
+	}
+
 	return &arm.Resource{
-		Resource: &mgmtnetwork.PublicIPAddress{
-			Sku: &mgmtnetwork.PublicIPAddressSku{
-				Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+		Resource: &sdknetwork.PublicIPAddress{
+			SKU: &sdknetwork.PublicIPAddressSKU{
+				Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 			},
-			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: mgmtnetwork.Static,
+			Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+				PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 			},
-			Zones:    &zones,
+			Zones:    zonePointers,
 			Name:     &name,
 			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 			Location: &azureRegion,

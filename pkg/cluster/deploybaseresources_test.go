@@ -23,7 +23,6 @@ import (
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	azstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -32,11 +31,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azblob"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_blob "github.com/Azure/ARO-RP/pkg/util/mocks/blob"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -257,7 +256,7 @@ func TestAttachNSGs(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		oc      *api.OpenShiftClusterDocument
-		mocks   func(*mock_subnet.MockManager)
+		mocks   func(*mock_armnetwork.MockSubnetsClient)
 		wantErr string
 	}{
 		{
@@ -271,33 +270,37 @@ func TestAttachNSGs(t *testing.T) {
 							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
 						},
 						MasterProfile: api.MasterProfile{
-							SubnetID: "masterSubnetID",
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
 						},
 						WorkerProfiles: []api.WorkerProfile{
 							{
-								SubnetID: "workerSubnetID",
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
 							},
 						},
 					},
 				},
 			},
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
 						},
 					},
-				}).Return(nil)
-				subnet.EXPECT().Get(ctx, "workerSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "workerSubnetID", &mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+				}, nil).Return(nil)
+				subnet.EXPECT().Get(ctx, "subscription-rg", "worker-vnet", "worker-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "worker-vnet", "worker-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
 						},
 					},
-				}).Return(nil)
+				}, nil).Return(nil)
 			},
 		},
 		{
@@ -311,11 +314,11 @@ func TestAttachNSGs(t *testing.T) {
 							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
 						},
 						MasterProfile: api.MasterProfile{
-							SubnetID: "masterSubnetID",
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
 						},
 						WorkerProfiles: []api.WorkerProfile{
 							{
-								SubnetID: "workerSubnetID",
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
 							},
 						},
 						NetworkProfile: api.NetworkProfile{
@@ -324,7 +327,7 @@ func TestAttachNSGs(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(subnet *mock_subnet.MockManager) {},
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {},
 		},
 		{
 			name: "Failure - unable to get a subnet",
@@ -337,18 +340,18 @@ func TestAttachNSGs(t *testing.T) {
 							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
 						},
 						MasterProfile: api.MasterProfile{
-							SubnetID: "masterSubnetID",
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
 						},
 						WorkerProfiles: []api.WorkerProfile{
 							{
-								SubnetID: "workerSubnetID",
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
 							},
 						},
 					},
 				},
 			},
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, fmt.Errorf("subnet not found"))
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{}, fmt.Errorf("subnet not found"))
 			},
 			wantErr: "subnet not found",
 		},
@@ -363,26 +366,28 @@ func TestAttachNSGs(t *testing.T) {
 							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
 						},
 						MasterProfile: api.MasterProfile{
-							SubnetID: "masterSubnetID",
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
 						},
 						WorkerProfiles: []api.WorkerProfile{
 							{
-								SubnetID: "workerSubnetID",
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
 							},
 						},
 					},
 				},
 			},
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: pointerutils.ToPtr("I shouldn't be here!"),
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+								ID: pointerutils.ToPtr("I shouldn't be here!"),
+							},
 						},
 					},
 				}, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet 'masterSubnetID' is invalid: must not have a network security group attached.",
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet' is invalid: must not have a network security group attached.",
 		},
 		{
 			name: "Failure - failed to CreateOrUpdate subnet because NSG not yet ready for use",
@@ -395,25 +400,27 @@ func TestAttachNSGs(t *testing.T) {
 							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
 						},
 						MasterProfile: api.MasterProfile{
-							SubnetID: "masterSubnetID",
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
 						},
 						WorkerProfiles: []api.WorkerProfile{
 							{
-								SubnetID: "workerSubnetID",
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
 							},
 						},
 					},
 				},
 			},
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
 						},
 					},
-				}).Return(fmt.Errorf("Some random stuff followed by the important part that we're trying to match: Resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg referenced by resource masterSubnetID was not found. and here's some more stuff that's at the end past the important part"))
+				}, nil).Return(fmt.Errorf("Some random stuff followed by the important part that we're trying to match: Resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg referenced by resource /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet was not found. and here's some more stuff that's at the end past the important part"))
 			},
 		},
 		{
@@ -427,25 +434,27 @@ func TestAttachNSGs(t *testing.T) {
 							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
 						},
 						MasterProfile: api.MasterProfile{
-							SubnetID: "masterSubnetID",
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
 						},
 						WorkerProfiles: []api.WorkerProfile{
 							{
-								SubnetID: "workerSubnetID",
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
 							},
 						},
 					},
 				},
 			},
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
 						},
 					},
-				}).Return(fmt.Errorf("I'm an arbitrary error here to make life harder"))
+				}, nil).Return(fmt.Errorf("I'm an arbitrary error here to make life harder"))
 			},
 			wantErr: "I'm an arbitrary error here to make life harder",
 		},
@@ -453,13 +462,13 @@ func TestAttachNSGs(t *testing.T) {
 		controller := gomock.NewController(t)
 		defer controller.Finish()
 
-		subnet := mock_subnet.NewMockManager(controller)
-		tt.mocks(subnet)
+		armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
+		tt.mocks(armSubnets)
 
 		m := &manager{
-			log:    logrus.NewEntry(logrus.StandardLogger()),
-			doc:    tt.oc,
-			subnet: subnet,
+			log:        logrus.NewEntry(logrus.StandardLogger()),
+			doc:        tt.oc,
+			armSubnets: armSubnets,
 		}
 
 		err := m._attachNSGs(ctx, 1*time.Millisecond, 30*time.Second)
@@ -472,62 +481,70 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 
 	for _, tt := range []struct {
 		name           string
-		mocks          func(*mock_subnet.MockManager)
+		mocks          func(*mock_armnetwork.MockSubnetsClient)
 		gatewayEnabled bool
 		wantErr        string
 	}{
 		{
 			name: "ok, !gatewayEnabled",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "subnetID", &mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "test-rg", "test-vnet", "test-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 					},
-				}).Return(nil)
+				}, nil).Return(nil)
 			},
 		},
 		{
 			name: "ok, gatewayEnabled",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{}, nil)
-				subnet.EXPECT().CreateOrUpdate(ctx, "subnetID", &mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						PrivateEndpointNetworkPolicies:    pointerutils.ToPtr("Disabled"),
-						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "test-rg", "test-vnet", "test-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 					},
-				}).Return(nil)
+				}, nil).Return(nil)
 			},
 			gatewayEnabled: true,
 		},
 		{
 			name: "ok, skipCreateOrUpdate, !gatewayEnabled",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+						},
 					},
 				}, nil)
-				subnet.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				subnet.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		{
 			name: "ok, skipCreateOrUpdate, gatewayEnabled",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						PrivateEndpointNetworkPolicies:    pointerutils.ToPtr("Disabled"),
-						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+							PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+						},
 					},
 				}, nil)
-				subnet.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				subnet.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			gatewayEnabled: true,
 		},
 		{
 			name: "error",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, "subnetID").Return(nil, fmt.Errorf("sad"))
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{}, fmt.Errorf("sad"))
 			},
 			wantErr: "sad",
 		},
@@ -536,15 +553,15 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			subnet := mock_subnet.NewMockManager(controller)
-			tt.mocks(subnet)
+			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
+			tt.mocks(armSubnets)
 
 			m := &manager{
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
-								SubnetID: "subnetID",
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet",
 							},
 							FeatureProfile: api.FeatureProfile{
 								GatewayEnabled: tt.gatewayEnabled,
@@ -552,7 +569,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 						},
 					},
 				},
-				subnet: subnet,
+				armSubnets: armSubnets,
 			}
 
 			err := m.setMasterSubnetPolicies(ctx)
@@ -671,34 +688,40 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 
 	for _, tt := range []struct {
 		name          string
-		mocks         func(subnet *mock_subnet.MockManager)
+		mocks         func(subnet *mock_armnetwork.MockSubnetsClient)
 		workerSubnets []string
 		wantSubnets   []string
 		wantErr       string
 	}{
 		{
 			name: "no service endpoints set returns empty string slice",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{}, nil)
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
 			},
 			wantSubnets: []string{},
 		},
 		{
 			name: "master subnet has service endpoint, but incorrect location",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-							{
-								Service: &serviceEndpoint,
-								Locations: &[]string{
-									"bad-location",
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							ServiceEndpoints: []*sdknetwork.ServiceEndpointPropertiesFormat{
+								{
+									Service: &serviceEndpoint,
+									Locations: []*string{
+										pointerutils.ToPtr("bad-location"),
+									},
 								},
 							},
 						},
 					},
 				}, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "worker-subnet-001", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -707,20 +730,24 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		},
 		{
 			name: "master subnet has service endpoint with correct location",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-							{
-								Service: &serviceEndpoint,
-								Locations: &[]string{
-									location,
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							ServiceEndpoints: []*sdknetwork.ServiceEndpointPropertiesFormat{
+								{
+									Service: &serviceEndpoint,
+									Locations: []*string{
+										&location,
+									},
 								},
 							},
 						},
 					},
 				}, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "worker-subnet-001", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -729,20 +756,24 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		},
 		{
 			name: "master subnet has service endpoint with all location",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-							{
-								Service: &serviceEndpoint,
-								Locations: &[]string{
-									"*",
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{
+						Properties: &sdknetwork.SubnetPropertiesFormat{
+							ServiceEndpoints: []*sdknetwork.ServiceEndpointPropertiesFormat{
+								{
+									Service: &serviceEndpoint,
+									Locations: []*string{
+										pointerutils.ToPtr("*"),
+									},
 								},
 							},
 						},
 					},
 				}, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "worker-subnet-001", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -751,22 +782,26 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		},
 		{
 			name: "all subnets have service endpoint with correct locations",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnetWithServiceEndpoint := &mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnetWithServiceEndpoint := sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						ServiceEndpoints: []*sdknetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service: &serviceEndpoint,
-								Locations: &[]string{
-									"*",
+								Locations: []*string{
+									pointerutils.ToPtr("*"),
 								},
 							},
 						},
 					},
 				}
 
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(subnetWithServiceEndpoint, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(subnetWithServiceEndpoint, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: subnetWithServiceEndpoint,
+				}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "worker-subnet-001", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: subnetWithServiceEndpoint,
+				}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -778,23 +813,29 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		},
 		{
 			name: "mixed subnets with service endpoint",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnetWithServiceEndpoint := &mgmtnetwork.Subnet{
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnetWithServiceEndpoint := sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						ServiceEndpoints: []*sdknetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service: &serviceEndpoint,
-								Locations: &[]string{
-									location,
+								Locations: []*string{
+									&location,
 								},
 							},
 						},
 					},
 				}
 
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(subnetWithServiceEndpoint, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(subnetWithServiceEndpoint, nil)
-				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-002")).Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: subnetWithServiceEndpoint,
+				}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "worker-subnet-001", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: subnetWithServiceEndpoint,
+				}, nil)
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "worker-subnet-002", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
 			},
 			workerSubnets: []string{
 				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
@@ -808,8 +849,8 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 		},
 		{
 			name: "Get subnet returns error",
-			mocks: func(subnet *mock_subnet.MockManager) {
-				subnet.EXPECT().Get(ctx, masterSubnet).Return(nil, errors.New("generic error"))
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "resourcegroup", "vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{}, errors.New("generic error"))
 			},
 			workerSubnets: []string{},
 			wantErr:       "generic error",
@@ -819,8 +860,8 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			subnet := mock_subnet.NewMockManager(controller)
-			tt.mocks(subnet)
+			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
+			tt.mocks(armSubnets)
 
 			workerProfiles := []api.WorkerProfile{}
 			if tt.workerSubnets != nil {
@@ -848,7 +889,7 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 						},
 					},
 				},
-				subnet: subnet,
+				armSubnets: armSubnets,
 			}
 
 			subnets, err := m.subnetsWithServiceEndpoint(ctx, serviceEndpoint)
@@ -917,16 +958,16 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 			},
 			expectedARMResources: []*arm.Resource{
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     pointerutils.ToPtr(infraID + "-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
-						Zones:    pointerutils.ToPtr([]string{}),
+						Zones:    []*string{},
 						Location: &location,
 					},
 					APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -1053,14 +1094,14 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 			},
 			expectedARMResources: []*arm.Resource{
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
-						Zones:    pointerutils.ToPtr([]string{"1", "2", "3"}),
+						Zones:    []*string{pointerutils.ToPtr("1"), pointerutils.ToPtr("2"), pointerutils.ToPtr("3")},
 						Name:     pointerutils.ToPtr(infraID + "-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 						Location: &location,
@@ -1188,31 +1229,31 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 			},
 			expectedARMResources: []*arm.Resource{
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     pointerutils.ToPtr(infraID + "-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
-						Zones:    pointerutils.ToPtr([]string{}),
+						Zones:    []*string{},
 						Location: &location,
 					},
 					APIVersion: azureclient.APIVersion("Microsoft.Network"),
 				},
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     pointerutils.ToPtr("uuid1-outbound-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
-						Zones:    pointerutils.ToPtr([]string{}),
+						Zones:    []*string{},
 						Location: &location,
 					},
 					APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -1351,14 +1392,14 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 			},
 			expectedARMResources: []*arm.Resource{
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
-						Zones:    pointerutils.ToPtr([]string{}),
+						Zones:    []*string{},
 						Name:     pointerutils.ToPtr("uuid1-outbound-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 						Location: &location,
@@ -1456,14 +1497,14 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 			},
 			expectedARMResources: []*arm.Resource{
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
-						Zones:    pointerutils.ToPtr([]string{}),
+						Zones:    []*string{},
 						Name:     pointerutils.ToPtr("uuid1-outbound-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 						Location: &location,
@@ -1561,14 +1602,14 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 			},
 			expectedARMResources: []*arm.Resource{
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
-						Zones:    pointerutils.ToPtr([]string{"1", "2", "3"}),
+						Zones:    []*string{pointerutils.ToPtr("1"), pointerutils.ToPtr("2"), pointerutils.ToPtr("3")},
 						Name:     pointerutils.ToPtr("uuid1-outbound-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 						Location: &location,
@@ -1665,31 +1706,31 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 			},
 			expectedARMResources: []*arm.Resource{
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     pointerutils.ToPtr("uuid1-outbound-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
-						Zones:    pointerutils.ToPtr([]string{}),
+						Zones:    []*string{},
 						Location: &location,
 					},
 					APIVersion: azureclient.APIVersion("Microsoft.Network"),
 				},
 				{
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+					Resource: &sdknetwork.PublicIPAddress{
+						SKU: &sdknetwork.PublicIPAddressSKU{
+							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
+						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     pointerutils.ToPtr("uuid2-outbound-pip-v4"),
 						Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
-						Zones:    pointerutils.ToPtr([]string{}),
+						Zones:    []*string{},
 						Location: &location,
 					},
 					APIVersion: azureclient.APIVersion("Microsoft.Network"),

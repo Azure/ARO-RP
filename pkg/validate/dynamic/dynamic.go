@@ -31,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
@@ -110,7 +109,7 @@ type dynamic struct {
 	diskEncryptionSets                    compute.DiskEncryptionSetsClient
 	resourceSkusClient                    compute.ResourceSkusClient
 	spNetworkUsage                        armnetwork.UsagesClient
-	loadBalancerBackendAddressPoolsClient network.LoadBalancerBackendAddressPoolsClient
+	loadBalancerBackendAddressPoolsClient armnetwork.LoadBalancerBackendAddressPoolsClient
 	pdpClient                             client.RemotePDPClient
 }
 
@@ -146,6 +145,11 @@ func NewValidator(
 		return nil, err
 	}
 
+	loadBalancerBackendAddressPoolsClient, err := armnetwork.NewLoadBalancerBackendAddressPoolsClient(subscriptionID, cred, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &dynamic{
 		log:                        log,
 		appID:                      appID,
@@ -159,7 +163,7 @@ func NewValidator(
 		diskEncryptionSets:                    compute.NewDiskEncryptionSetsClientWithAROEnvironment(azEnv, subscriptionID, authorizer),
 		resourceSkusClient:                    compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpClient:                             pdpClient,
-		loadBalancerBackendAddressPoolsClient: network.NewLoadBalancerBackendAddressPoolsClient(azEnv, subscriptionID, authorizer),
+		loadBalancerBackendAddressPoolsClient: loadBalancerBackendAddressPoolsClient,
 	}, nil
 }
 
