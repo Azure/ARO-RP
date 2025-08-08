@@ -14,6 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -87,14 +88,30 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		// Note: subnet only has value in the ID field,
 		// so we have to make another API request to get full subnet struct
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		s, err := m.subnet.Get(ctx, *subnet.ID)
+		r, err := arm.ParseResourceID(*subnet.ID)
+		if err != nil {
+			return &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInvalidLinkedSubnet,
+					Message: fmt.Sprintf("Failed to parse subnet ID '%s'.", *subnet.ID),
+					Details: []api.CloudErrorBody{
+						{
+							Message: err.Error(),
+						},
+					},
+				},
+			}
+		}
+
+		subnetResp, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
 		if err != nil {
 			b, _ := json.Marshal(err)
 
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidLinkedVNet,
+					Code:    api.CloudErrorCodeInvalidLinkedSubnet,
 					Message: fmt.Sprintf("Failed to get subnet '%s'.", *subnet.ID),
 					Details: []api.CloudErrorBody{
 						{
@@ -105,22 +122,24 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 			}
 		}
 
-		if s.SubnetPropertiesFormat == nil || s.NetworkSecurityGroup == nil ||
-			!strings.EqualFold(*s.NetworkSecurityGroup.ID, *nsg.ID) {
+		s := subnetResp.Subnet
+
+		if s.Properties == nil || s.Properties.NetworkSecurityGroup == nil ||
+			!strings.EqualFold(*s.Properties.NetworkSecurityGroup.ID, *nsg.ID) {
 			continue
 		}
 
-		s.NetworkSecurityGroup = nil
+		s.Properties.NetworkSecurityGroup = nil
 
 		m.log.Printf("disconnecting network security group from subnet %s", *s.ID)
-		err = m.subnet.CreateOrUpdate(ctx, *s.ID, s)
+		err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 		if err != nil {
 			b, _ := json.Marshal(err)
 
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidLinkedVNet,
+					Code:    api.CloudErrorCodeInvalidLinkedSubnet,
 					Message: fmt.Sprintf("Failed to update subnet '%s'.", *subnet.ID),
 					Details: []api.CloudErrorBody{
 						{
