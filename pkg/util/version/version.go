@@ -69,6 +69,10 @@ func (v *Version) Lt(w *Version) bool {
 	return false
 }
 
+func (v *Version) Gt(w *Version) bool {
+	return !v.Lt(w)
+}
+
 func (v *Version) Eq(w *Version) bool {
 	for i := 0; i < 3; i++ {
 		if v.V[i] != w.V[i] {
