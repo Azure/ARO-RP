@@ -99,7 +99,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = false
 		case "ipRules":
 			p.Type = "array"
-		case "armApiCaBundle",
+		case "adminApiCaBundle",
+			"armApiCaBundle",
 			"armApiClientCertCommonName",
 			"armClientId",
 			"gatewayDomains",
