@@ -249,7 +249,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	wg := new(errgroup.Group)
 	wg.SetLimit(MONITOR_GOROUTINES_PER_CLUSTER)
 
-	// Create a channel big enough to buffer an error from every collector
+	// Create a channel capable of buffering one error from every collector
 	errChan := make(chan error, len(mon.collectors))
 
 	for _, f := range mon.collectors {
@@ -263,6 +263,10 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 				// emit metrics collection failures and collect the err, but
 				// don't stop running other metric collections
 				mon.emitFailureToGatherMetric(collectorName, innerErr)
+				// NOTE: The channel only has room to accommodate one error per
+				// collector, so if a collector needs to return multiple errors
+				// they should be joined into a single one (see errors.Join)
+				// before being added.
 				errChan <- fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
 			} else {
 				mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, time.Since(innerNow).Seconds())
