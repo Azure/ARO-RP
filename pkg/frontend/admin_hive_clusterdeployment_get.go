@@ -50,7 +50,7 @@ func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, resourceI
 		return nil, api.NewCloudError(http.StatusNoContent, api.CloudErrorCodeResourceNotFound, "", "cluster is not managed by hive")
 	}
 
-	cd, err := f.hiveClusterManager.GetClusterDeployment(ctx, doc)
+	cd, err := f.hiveClusterManager.GetClusterDeployment(ctx, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster deployment not found")
 	}

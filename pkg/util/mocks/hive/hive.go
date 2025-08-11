@@ -92,33 +92,33 @@ func (mr *MockClusterManagerMockRecorder) Delete(ctx, doc any) *gomock.Call {
 }
 
 // GetClusterDeployment mocks base method.
-func (m *MockClusterManager) GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1.ClusterDeployment, error) {
+func (m *MockClusterManager) GetClusterDeployment(ctx context.Context, oc *api.OpenShiftCluster) (*v1.ClusterDeployment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterDeployment", ctx, doc)
+	ret := m.ctrl.Call(m, "GetClusterDeployment", ctx, oc)
 	ret0, _ := ret[0].(*v1.ClusterDeployment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClusterDeployment indicates an expected call of GetClusterDeployment.
-func (mr *MockClusterManagerMockRecorder) GetClusterDeployment(ctx, doc any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) GetClusterDeployment(ctx, oc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterDeployment", reflect.TypeOf((*MockClusterManager)(nil).GetClusterDeployment), ctx, doc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterDeployment", reflect.TypeOf((*MockClusterManager)(nil).GetClusterDeployment), ctx, oc)
 }
 
 // GetClusterSync mocks base method.
-func (m *MockClusterManager) GetClusterSync(ctx context.Context, doc *api.OpenShiftClusterDocument) (*v1alpha1.ClusterSync, error) {
+func (m *MockClusterManager) GetClusterSync(ctx context.Context, oc *api.OpenShiftCluster) (*v1alpha1.ClusterSync, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterSync", ctx, doc)
+	ret := m.ctrl.Call(m, "GetClusterSync", ctx, oc)
 	ret0, _ := ret[0].(*v1alpha1.ClusterSync)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClusterSync indicates an expected call of GetClusterSync.
-func (mr *MockClusterManagerMockRecorder) GetClusterSync(ctx, doc any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) GetClusterSync(ctx, oc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSync", reflect.TypeOf((*MockClusterManager)(nil).GetClusterSync), ctx, doc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSync", reflect.TypeOf((*MockClusterManager)(nil).GetClusterSync), ctx, oc)
 }
 
 // Install mocks base method.

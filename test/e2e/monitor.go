@@ -23,10 +23,7 @@ var _ = Describe("Monitor", func() {
 		wg.Add(1)
 		mon, err := cluster.NewMonitor(log, clients.RestConfig, &api.OpenShiftCluster{
 			ID: resourceIDFromEnv(),
-		}, &api.OpenShiftClusterDocument{
-			OpenShiftCluster: &api.OpenShiftCluster{},
-			ID:               resourceIDFromEnv(),
-		}, nil, "", &noop.Noop{}, nil, true, &wg, nil)
+		}, nil, "", &noop.Noop{}, true, &wg)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("running the monitor once")
