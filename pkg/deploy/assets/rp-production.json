@@ -19,7 +19,8 @@
             "type": "string"
         },
         "adminApiCaBundle": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "adminApiClientCertCommonName": {
             "type": "string"
