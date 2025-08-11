@@ -110,7 +110,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 					return errors.New("list error")
 				})
 			},
-			wantErr: listAROOperatorDeploymentsError,
+			wantErr: errListAROOperatorDeployments,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -329,7 +329,7 @@ func TestPrefetchClusterVersion(t *testing.T) {
 		},
 		{
 			name:    "missing clusterversion",
-			wantErr: fetchClusterVersionError,
+			wantErr: errFetchClusterVersion,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
