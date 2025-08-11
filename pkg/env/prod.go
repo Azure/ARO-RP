@@ -285,19 +285,34 @@ func (p *prod) InitializeAuthorizers() error {
 		}
 	}
 
-	var issuerPkiUrls []string
-	for _, ca := range p.Environment().PkiCaNames {
-		issuerPkiUrls = append(issuerPkiUrls, fmt.Sprintf(p.Environment().PkiIssuerUrlTemplate, ca))
-	}
+	var adminCertPool *x509.CertPool
 
-	rootCAs, err := pki.FetchDataFromGetIssuerPkiUrls(issuerPkiUrls)
-	if err != nil {
-		return err
-	}
+	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
+		var issuerPkiUrls []string
+		for _, ca := range p.Environment().PkiCaNames {
+			issuerPkiUrls = append(issuerPkiUrls, fmt.Sprintf(p.Environment().PkiIssuerUrlTemplate, ca))
+		}
 
-	adminCertPool, err := pki.BuildCertPoolFromCAData(rootCAs)
-	if err != nil {
-		return err
+		rootCAs, err := pki.FetchDataFromGetIssuerPkiUrls(issuerPkiUrls)
+		if err != nil {
+			return err
+		}
+
+		adminCertPool, err = pki.BuildCertPoolFromCAData(rootCAs)
+		if err != nil {
+			return err
+		}
+	} else {
+		caBundle, err := os.ReadFile(AdminCABundlePath)
+		if err != nil {
+			return err
+		}
+
+		adminCertPool = x509.NewCertPool()
+		ok := adminCertPool.AppendCertsFromPEM(caBundle)
+		if !ok {
+			return fmt.Errorf("cannot decode CA bundle from %s", AdminCABundlePath)
+		}
 	}
 
 	adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
@@ -310,6 +325,7 @@ func (p *prod) InitializeAuthorizers() error {
 	}
 
 	p.adminClientAuthorizer = adminClientAuthorizer
+
 	return nil
 }
 
