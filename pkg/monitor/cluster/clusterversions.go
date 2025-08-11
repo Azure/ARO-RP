@@ -5,7 +5,7 @@ package cluster
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -24,7 +24,7 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 		if kerrors.IsNotFound(err) {
 			mon.log.Info("aro-operator-master deployment not found")
 		} else {
-			return fmt.Errorf("error fetching ARO Operator deployment: %w", err)
+			return errors.Join(fetchAROOperatorMasterDeploymentError, err)
 		}
 	}
 	operatorVersion := "unknown"
@@ -68,20 +68,20 @@ func (mon *Monitor) prefetchClusterVersion(ctx context.Context) error {
 	cv := &configv1.ClusterVersion{}
 	err := mon.ocpclientset.Get(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
-		return fmt.Errorf("failure fetching ClusterVersion: %w", err)
+		return errors.Join(fetchClusterVersionError, err)
 	}
 
 	av := actualVersion(cv)
 	mon.clusterActualVersion, err = version.ParseVersion(av)
 	if err != nil {
-		mon.log.Errorf("failure parsing ClusterVersion '%s': %s", av, err.Error())
+		mon.log.Errorf("failure parsing ClusterVersion: %s", err.Error())
 	}
 
 	dv := desiredVersion(cv)
 	if dv != "" {
 		mon.clusterDesiredVersion, err = version.ParseVersion(dv)
 		if err != nil {
-			mon.log.Errorf("failure parsing desired ClusterVersion '%s': %s", dv, err.Error())
+			mon.log.Errorf("failure parsing desired ClusterVersion: %s", err.Error())
 		}
 	}
 
