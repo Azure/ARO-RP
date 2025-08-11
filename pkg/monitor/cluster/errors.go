@@ -5,6 +5,6 @@ package cluster
 
 import "errors"
 
-var fetchClusterVersionError = errors.New("error fetching ClusterVersion")
-var fetchAROOperatorMasterDeploymentError = errors.New("error fetching ARO Operator master deployment")
-var listAROOperatorDeploymentsError = errors.New("error listing ARO Operator deployments")
+var errFetchClusterVersion = errors.New("error fetching ClusterVersion")
+var errFetchAROOperatorMasterDeployment = errors.New("error fetching ARO Operator master deployment")
+var errListAROOperatorDeployments = errors.New("error listing ARO Operator deployments")

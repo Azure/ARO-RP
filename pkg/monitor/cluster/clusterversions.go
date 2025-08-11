@@ -24,7 +24,7 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 		if kerrors.IsNotFound(err) {
 			mon.log.Info("aro-operator-master deployment not found")
 		} else {
-			return errors.Join(fetchAROOperatorMasterDeploymentError, err)
+			return errors.Join(errFetchAROOperatorMasterDeployment, err)
 		}
 	}
 	operatorVersion := "unknown"
@@ -68,7 +68,7 @@ func (mon *Monitor) prefetchClusterVersion(ctx context.Context) error {
 	cv := &configv1.ClusterVersion{}
 	err := mon.ocpclientset.Get(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
-		return errors.Join(fetchClusterVersionError, err)
+		return errors.Join(errFetchClusterVersion, err)
 	}
 
 	av := actualVersion(cv)
