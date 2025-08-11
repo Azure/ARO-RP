@@ -33,6 +33,12 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
+type expectedGauge struct {
+	name   string
+	value  int64
+	labels map[string]string
+}
+
 func TestMonitor(t *testing.T) {
 	ctx := context.Background()
 
@@ -41,20 +47,12 @@ func TestMonitor(t *testing.T) {
 		expectedErrors []error
 		hooks          func(*testclienthelper.HookingClient)
 		healthzCall    func(*http.Request) (*http.Response, error)
-		expectedGauges []struct {
-			name   string
-			value  int64
-			labels map[string]string
-		}
+		expectedGauges []expectedGauge
 	}{
 		{
 			name:        "happy path",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
-			expectedGauges: []struct {
-				name   string
-				value  int64
-				labels map[string]string
-			}{
+			expectedGauges: []expectedGauge{
 				{
 					name:  "apiserver.healthz.code",
 					value: 1,
@@ -89,11 +87,7 @@ func TestMonitor(t *testing.T) {
 			expectedErrors: []error{
 				fmt.Errorf("error in list operation: %w", errors.New("failure with ns")),
 			},
-			expectedGauges: []struct {
-				name   string
-				value  int64
-				labels map[string]string
-			}{
+			expectedGauges: []expectedGauge{
 				{
 					name:  "apiserver.healthz.code",
 					value: 1,
@@ -125,11 +119,7 @@ func TestMonitor(t *testing.T) {
 			expectedErrors: []error{
 				fmt.Errorf("failure running cluster collector 'emitReplicasetStatuses': %w", fmt.Errorf("error in list operation: %w", errors.New("failure with replicaset"))),
 			},
-			expectedGauges: []struct {
-				name   string
-				value  int64
-				labels map[string]string
-			}{
+			expectedGauges: []expectedGauge{
 				{
 					name:  "apiserver.healthz.code",
 					value: 1,
@@ -155,11 +145,7 @@ func TestMonitor(t *testing.T) {
 				kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true),
 				kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true),
 			},
-			expectedGauges: []struct {
-				name   string
-				value  int64
-				labels map[string]string
-			}{
+			expectedGauges: []expectedGauge{
 				{
 					name:  "apiserver.healthz.code",
 					value: 1,
@@ -201,11 +187,7 @@ func TestMonitor(t *testing.T) {
 			expectedErrors: []error{
 				kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true),
 			},
-			expectedGauges: []struct {
-				name   string
-				value  int64
-				labels map[string]string
-			}{
+			expectedGauges: []expectedGauge{
 				{
 					name:  "apiserver.healthz.code",
 					value: 1,
