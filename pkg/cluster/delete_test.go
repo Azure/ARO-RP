@@ -335,7 +335,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 				subnets.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
 				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
 			},
-			wantErr: "400: InvalidLinkedSubnet: invalid-subnet-id: Invalid subnet resource ID format. Details: InvalidResourceID: : Resource ID must start with '/subscriptions/'.",
+			wantErr: "400: InvalidLinkedSubnet: invalid-subnet-id: Invalid subnet resource ID format. For more details, please refer to https://docs.microsoft.com/azure/azure-resource-manager/management/resource-name-rules",
 		},
 		{
 			name: "disconnects subnets",
