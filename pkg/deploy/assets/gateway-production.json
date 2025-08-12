@@ -343,6 +343,7 @@
         },
         {
             "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
             "name": "gateway-vnet/peering-rp-vnet",
             "properties": {
                 "allowForwardedTraffic": true,
@@ -352,7 +353,8 @@
                     "id": "[resourceId(parameters('rpResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'rp-vnet')]"
                 },
                 "useRemoteGateways": false
-            }
+            },
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings"
         },
         {
             "name": "[concat('gateway-pls-001', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/privateLinkServices', 'gateway-pls-001'), parameters('rpServicePrincipalId'), '4d97b98b-1d4f-4787-a291-c67834d212e7'))]",
