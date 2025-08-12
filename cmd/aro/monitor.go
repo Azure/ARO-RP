@@ -94,17 +94,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		WithSubscriptions(dbSubscriptions).
 		WithMonitors(dbMonitors)
 
-	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
+	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), log)
 	if err != nil {
 		return err
 	}
 
-	liveConfig, err := _env.NewLiveConfigManager(ctx)
-	if err != nil {
-		return err
-	}
-
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbg, m, clusterm, liveConfig, _env)
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbg, m, clusterm, _env)
 
 	return mon.Run(ctx)
 }

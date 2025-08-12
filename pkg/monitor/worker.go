@@ -5,22 +5,19 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
-	"k8s.io/client-go/rest"
-
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/monitor/azure/nsg"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
+	hivemon "github.com/Azure/ARO-RP/pkg/monitor/hive"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
@@ -29,30 +26,6 @@ import (
 
 // nsgMonitoringFrequency is used for initializing NSG monitoring ticker
 var nsgMonitoringFrequency = 10 * time.Minute
-
-// This function will continue to run until such time as it has a config to add to the global Hive shard map
-// Note that because the mon.hiveShardConfigs[shard] is set to `nil` when its created, the cluster
-// monitors will simply ignore Hive stats until this function populates the config
-func (mon *monitor) populateHiveShardRestConfig(ctx context.Context, shard int) {
-	var hiveRestConfig *rest.Config
-	var err error
-
-	for {
-		hiveRestConfig, err = mon.liveConfig.HiveRestConfig(ctx, shard)
-		if hiveRestConfig != nil {
-			mon.setHiveShardConfig(shard, hiveRestConfig)
-			return
-		}
-
-		mon.baseLog.Warn(fmt.Sprintf("error fetching Hive kubeconfig for shard %d", shard))
-		if err != nil {
-			mon.baseLog.Error(err.Error())
-		}
-
-		mon.baseLog.Info("pausing for a minute before retrying...")
-		time.Sleep(60 * time.Second)
-	}
-}
 
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
@@ -135,18 +108,6 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 							fps == api.ProvisioningStateDeleting):
 					mon.deleteDoc(doc)
 				default:
-					// in the future we will have the shard index set on the api.OpenShiftClusterDocument
-					// but for now we simply select Hive (AKS) shard 1
-					// e.g. shard := mon.hiveShardConfigs[doc.shardIndex]
-					shard := 1
-
-					_, exists := mon.getHiveShardConfig(shard)
-					if !exists {
-						// set this to `nil` so cluster monitors will ignore it until its populated with config
-						mon.setHiveShardConfig(shard, nil)
-						go mon.populateHiveShardRestConfig(ctx, shard)
-					}
-
 					// TODO: improve memory usage by storing a subset of doc in mon.docs
 					mon.upsertDoc(doc)
 				}
@@ -267,14 +228,6 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	// once sharding is implemented, we will have the shard set on the api.OpenShiftClusterDocument
-	// e.g. shard := mon.hiveShardConfigs[doc.shardIndex]
-	shard := 1
-	hiveRestConfig, exists := mon.getHiveShardConfig(shard)
-	if !exists {
-		log.Warnf("no hiveShardConfigs set for shard %d", shard)
-	}
-
 	dims := map[string]string{
 		dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
 		dimension.Location:          doc.OpenShiftCluster.Location,
@@ -284,19 +237,24 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	var monitors []monitoring.Monitor
 	var wg sync.WaitGroup
 
-	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, log, mon.env)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	if hiveClusterManager == nil {
+	hiveClusterManager, ok := mon.hiveClusterManagers[1]
+	if !ok {
 		log.Info("skipping: no hive cluster manager")
+	} else {
+		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, &wg, hiveClusterManager)
+		if err != nil {
+			log.Error(err)
+			mon.m.EmitGauge("monitor.hive.failedworker", 1, map[string]string{
+				"resourceId": doc.OpenShiftCluster.ID,
+			})
+		} else {
+			monitors = append(monitors, h)
+		}
 	}
 
 	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, doc, mon.env, sub.Subscription.Properties.TenantID, mon.clusterm, hiveRestConfig, hourlyRun, &wg, hiveClusterManager)
+	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, sub.Subscription.Properties.TenantID, mon.clusterm, hourlyRun, &wg)
 	if err != nil {
 		log.Error(err)
 		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{

@@ -12,56 +12,97 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitMachineConfigPoolConditions(t *testing.T) {
 	ctx := context.Background()
 
-	mcocli := mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "machine-config-pool",
-		},
-		Status: mcv1.MachineConfigPoolStatus{
-			Conditions: []mcv1.MachineConfigPoolCondition{
-				{
-					Type:   mcv1.MachineConfigPoolDegraded,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:   mcv1.MachineConfigPoolNodeDegraded,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:   mcv1.MachineConfigPoolRenderDegraded,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:   mcv1.MachineConfigPoolUpdated,
-					Status: corev1.ConditionFalse,
-				},
-				{
-					Type:   mcv1.MachineConfigPoolUpdating,
-					Status: corev1.ConditionTrue,
+	objects := []client.Object{
+		&mcv1.MachineConfigPool{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "machine-config-pool",
+			},
+			Status: mcv1.MachineConfigPoolStatus{
+				Conditions: []mcv1.MachineConfigPoolCondition{
+					{
+						Type:   mcv1.MachineConfigPoolDegraded,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   mcv1.MachineConfigPoolNodeDegraded,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   mcv1.MachineConfigPoolRenderDegraded,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   mcv1.MachineConfigPoolUpdated,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   mcv1.MachineConfigPoolUpdating,
+						Status: corev1.ConditionTrue,
+					},
 				},
 			},
 		},
-	})
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	m := mock_metrics.NewMockEmitter(controller)
-
-	mon := &Monitor{
-		mcocli: mcocli,
-		m:      m,
+		&mcv1.MachineConfigPool{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "machine-config-pool-1",
+			},
+			Status: mcv1.MachineConfigPoolStatus{
+				Conditions: []mcv1.MachineConfigPoolCondition{
+					{
+						Type:   mcv1.MachineConfigPoolDegraded,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   mcv1.MachineConfigPoolNodeDegraded,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   mcv1.MachineConfigPoolRenderDegraded,
+						Status: corev1.ConditionFalse,
+					},
+					{
+						Type:   mcv1.MachineConfigPoolUpdated,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   mcv1.MachineConfigPoolUpdating,
+						Status: corev1.ConditionFalse,
+					},
+				},
+			},
+		},
 	}
 
-	m.EXPECT().EmitGauge("machineconfigpool.count", int64(1), map[string]string{})
+	controller := gomock.NewController(t)
+	m := mock_metrics.NewMockEmitter(controller)
+
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
+	mon := &Monitor{
+		log:          log,
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	m.EXPECT().EmitGauge("machineconfigpool.count", int64(2), map[string]string{})
 
 	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
 		"name":   "machine-config-pool",

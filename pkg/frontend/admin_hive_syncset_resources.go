@@ -54,7 +54,7 @@ func (f *frontend) _getAdminHiveClusterSync(ctx context.Context, resourceId stri
 		return nil, api.NewCloudError(http.StatusNoContent, api.CloudErrorCodeResourceNotFound, "", "cluster is not managed by hive")
 	}
 
-	cd, err := f.hiveClusterManager.GetClusterSync(ctx, doc)
+	cd, err := f.hiveClusterManager.GetClusterSync(ctx, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", err.Error())
 	}
