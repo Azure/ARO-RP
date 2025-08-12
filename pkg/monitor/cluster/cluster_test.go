@@ -16,9 +16,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	restfake "k8s.io/client-go/rest/fake"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +39,8 @@ type expectedGauge struct {
 
 func TestMonitor(t *testing.T) {
 	ctx := context.Background()
+
+	innerFailure := errors.New("failure inside")
 
 	for _, tt := range []struct {
 		name           string
@@ -128,7 +128,7 @@ func TestMonitor(t *testing.T) {
 				})
 			},
 			expectedErrors: []error{
-				fmt.Errorf("failure running cluster collector 'fetchManagedNamespaces': %w", fmt.Errorf("error in list operation: %w", errors.New("failure with ns"))),
+				errListNamespaces,
 			},
 			expectedGauges: []expectedGauge{
 				{
@@ -174,13 +174,15 @@ func TestMonitor(t *testing.T) {
 				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
 					_, ok := obj.(*appsv1.ReplicaSetList)
 					if ok {
-						return errors.New("failure with replicaset")
+						return innerFailure
 					}
 					return nil
 				})
 			},
 			expectedErrors: []error{
-				fmt.Errorf("failure running cluster collector 'emitReplicasetStatuses': %w", fmt.Errorf("error in list operation: %w", errors.New("failure with replicaset"))),
+				&failureToRunClusterCollector{collectorName: "emitReplicasetStatuses"},
+				errListReplicaSets,
+				innerFailure,
 			},
 			expectedGauges: []expectedGauge{
 				{
@@ -232,8 +234,8 @@ func TestMonitor(t *testing.T) {
 				return &http.Response{StatusCode: http.StatusInternalServerError}, nil
 			},
 			expectedErrors: []error{
-				fmt.Errorf("failure running cluster collector 'emitAPIServerHealthzCode': %w", kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true)),
-				fmt.Errorf("failure running cluster collector 'emitAPIServerPingCode': %w", kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true)),
+				errAPIServerHealthzFailure,
+				errAPIServerPingFailure,
 			},
 			expectedGauges: []expectedGauge{
 				{
@@ -280,7 +282,7 @@ func TestMonitor(t *testing.T) {
 				return &http.Response{StatusCode: http.StatusInternalServerError}, nil
 			},
 			expectedErrors: []error{
-				fmt.Errorf("failure running cluster collector 'emitAPIServerHealthzCode': %w", kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true)),
+				errAPIServerHealthzFailure,
 			},
 			expectedGauges: []expectedGauge{
 				{
@@ -415,8 +417,15 @@ func TestMonitor(t *testing.T) {
 				m.EXPECT().EmitFloat("monitor.cluster.duration", gomock.Any(), gomock.Any()).Times(1)
 			}
 
-			errs := mon.Monitor(ctx)
-			assert.Equal(t, tt.expectedErrors, errs)
+			err := mon.Monitor(ctx)
+			if len(tt.expectedErrors) != 0 {
+				for _, expectedErr := range tt.expectedErrors {
+					fmt.Println(expectedErr)
+					assert.ErrorIs(t, err, expectedErr)
+				}
+			} else if err != nil {
+				t.Error(err)
+			}
 		})
 	}
 }

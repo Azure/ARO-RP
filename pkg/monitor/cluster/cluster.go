@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -217,8 +218,9 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 }
 
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
+func (mon *Monitor) Monitor(ctx context.Context) error {
 	defer mon.wg.Done()
+	errs := []error{}
 
 	now := time.Now()
 	mon.log.Debug("monitoring")
@@ -240,7 +242,8 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		if err != nil {
 			errs = append(errs, err)
 		}
-		return
+
+		return errors.Join(errs...)
 	}
 
 	err = mon.timeCall(ctx, mon.prefetchClusterVersion)
@@ -294,7 +297,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitFloat("monitor.cluster.duration", time.Since(now).Seconds(), map[string]string{})
 	}
 
-	return
+	return errors.Join(errs...)
 }
 
 func (mon *Monitor) emitMonitorCollectorError(collectorName string) {

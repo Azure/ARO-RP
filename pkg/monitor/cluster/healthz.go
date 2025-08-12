@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"strconv"
 )
 
@@ -36,6 +37,10 @@ func (mon *Monitor) emitAPIServerPingCode(ctx context.Context) error {
 	mon.emitGauge("apiserver.healthz.ping.code", 1, map[string]string{
 		"code": strconv.FormatInt(int64(statusCode), 10),
 	})
+
+	if err != nil {
+		return errors.Join(errAPIServerPingFailure, err)
+	}
 
 	return err
 }

@@ -579,8 +579,8 @@ func TestMonitor(t *testing.T) {
 			case <-time.After(1 * time.Second):
 				t.Error("Timeout waiting for the monitor to finish")
 			}
-			if len(err) != 0 {
-				utilerror.AssertErrorMessage(t, err[0], tt.wantErr)
+			if err != nil {
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			}
 		})
 	}
