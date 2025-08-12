@@ -13,12 +13,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitNodeConditions(t *testing.T) {
@@ -27,13 +30,13 @@ func TestEmitNodeConditions(t *testing.T) {
 
 	for _, tt := range []struct {
 		name        string
-		nodes       []kruntime.Object
-		machines    []kruntime.Object
+		nodes       []client.Object
+		machines    []client.Object
 		wantEmitted func(m *mock_metrics.MockEmitter)
 	}{
 		{
 			name: "control plane - emits conditions only when unexpected",
-			nodes: []kruntime.Object{
+			nodes: []client.Object{
 				&corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-master-0",
@@ -89,7 +92,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					},
 				},
 			},
-			machines: []kruntime.Object{
+			machines: []client.Object{
 				&machinev1beta1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-master-0",
@@ -165,7 +168,7 @@ func TestEmitNodeConditions(t *testing.T) {
 		},
 		{
 			name: "worker/infra nodes - emits spotVM and machineset information",
-			nodes: []kruntime.Object{
+			nodes: []client.Object{
 				&corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-worker",
@@ -215,7 +218,7 @@ func TestEmitNodeConditions(t *testing.T) {
 					},
 				},
 			},
-			machines: []kruntime.Object{
+			machines: []client.Object{
 				&machinev1beta1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "aro-worker",
@@ -300,7 +303,7 @@ func TestEmitNodeConditions(t *testing.T) {
 		},
 		{
 			name: "node missing machine - emits empty dimensions for machine values",
-			nodes: []kruntime.Object{
+			nodes: []client.Object{
 				&corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "aro-impossible-node",
@@ -338,20 +341,24 @@ func TestEmitNodeConditions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			cli := fake.NewSimpleClientset(tt.nodes...)
-			maocli := machinefake.NewSimpleClientset(tt.machines...)
-
 			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			m := mock_metrics.NewMockEmitter(controller)
-			tt.wantEmitted(m)
+
+			_, log := testlog.New()
+			ocpclientset := clienthelper.NewWithClient(log, fake.
+				NewClientBuilder().
+				WithObjects(tt.nodes...).
+				WithObjects(tt.machines...).
+				Build())
 
 			mon := &Monitor{
-				cli:    cli,
-				maocli: maocli,
-				m:      m,
+				log:          log,
+				ocpclientset: ocpclientset,
+				m:            m,
+				queryLimit:   1,
 			}
+
+			tt.wantEmitted(m)
 
 			err := mon.emitNodeConditions(ctx)
 			if err != nil {

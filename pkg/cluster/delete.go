@@ -93,13 +93,9 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidLinkedSubnet,
-					Message: fmt.Sprintf("Failed to parse subnet ID '%s'.", *subnet.ID),
-					Details: []api.CloudErrorBody{
-						{
-							Message: err.Error(),
-						},
-					},
+					Code:    api.CloudErrorCodeInvalidResourceID,
+					Message: "Invalid subnet resource ID format. For more details, please refer to https://docs.microsoft.com/azure/azure-resource-manager/management/resource-name-rules",
+					Target:  *subnet.ID,
 				},
 			}
 		}
