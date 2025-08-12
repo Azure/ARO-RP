@@ -876,7 +876,24 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		}
 	}
 
-	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
+	var err error
+	// [0]: master size, [1]: worker size
+	var vmSizesV3 = []api.VMSize{api.VMSizeStandardD8sV3, api.VMSizeStandardD2sV3}
+	var vmSizesV4 = []api.VMSize{api.VMSizeStandardD8sV4, api.VMSizeStandardD2sV4}
+	var vmSizesV5 = []api.VMSize{api.VMSizeStandardD8sV5, api.VMSizeStandardD2sV5}
+
+	for _, sizes := range [][]api.VMSize{vmSizesV3, vmSizesV4, vmSizesV5} {
+		oc.Properties.MasterProfile.VMSize = sizes[0]
+		oc.Properties.WorkerProfiles[0].VMSize = sizes[1]
+		c.log.Infof("Creating cluster with master VM size %s and worker VM size %s", oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
+		err = c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
+		c.log.WithError(err).Infof("Creation failed, retrying")
+		if err == nil {
+			return err
+		}
+	}
+
+	return err
 }
 
 func (c *Cluster) registerSubscription() error {

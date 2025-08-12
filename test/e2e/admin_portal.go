@@ -153,11 +153,13 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		Expect(resourceId).To(ContainSubstring("/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + os.Getenv("CLUSTER")))
 	})
 
+	var sshCommand selenium.WebElement
+
 	It("Should be able to open ssh panel and get ssh details", func() {
 		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='SSH']"))
 
 		button, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='SSH']")
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred(), "SSH button should have been found")
 
 		button.Click()
 
@@ -165,25 +167,42 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshDropdown"))
 
 		sshDropdown, err := wd.FindElement(selenium.ByID, "sshDropdown")
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred(), "SSH dropdown should have been found")
 
 		sshDropdown.Click()
 
 		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshDropdown-list0"))
 		machine, err := wd.FindElement(selenium.ByID, "sshDropdown-list0")
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred(), "SSH machine should have been found")
 
 		machine.Click()
 
 		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshButton"))
 		requestBtn, err := wd.FindElement(selenium.ByID, "sshButton")
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred(), "SSH request button should have been found")
 
 		requestBtn.Click()
 
 		// Test fails if these labels aren't present
-		err = wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshCommand"))
-		Expect(err).ToNot(HaveOccurred())
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshCommand"))
+		sshCommand, err = wd.FindElement(selenium.ByID, "sshCommand")
+		Expect(err).ToNot(HaveOccurred(), "SSH command element should have been found")
+	})
+
+	It("Should be able to ssh to a cluster", Pending, func() {
+		Expect(sshCommand).ToNot(BeNil(), "SSH command element should have been found in the previous test")
+		command, err := sshCommand.FindElement(selenium.ByXPATH, "//input[@type='text']")
+		Expect(err).ToNot(HaveOccurred(), "SSH command input should have been found")
+		commandTxt, err := command.Text()
+		Expect(err).ToNot(HaveOccurred(), "SSH command text should have been retrieved")
+		passwd, err := sshCommand.FindElement(selenium.ByXPATH, "//input[@type='password']")
+		Expect(err).ToNot(HaveOccurred(), "SSH password input should have been found")
+		passwdTxt, err := passwd.Text()
+		Expect(err).ToNot(HaveOccurred(), "SSH password text should have been retrieved")
+
+		Expect(commandTxt).ToNot(BeEmpty(), "SSH command should not be empty")
+		Expect(passwdTxt).ToNot(BeEmpty(), "SSH password should not be empty")
+		log.Infof("SSH command: %s", commandTxt)
 	})
 
 	It("Should be able to navigate to other regions", func() {
