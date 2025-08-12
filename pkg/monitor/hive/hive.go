@@ -5,6 +5,7 @@ package hive
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -72,11 +73,13 @@ func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitt
 }
 
 // Monitor checks the health of Hive resources associated with a cluster
-func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
+func (mon *Monitor) Monitor(ctx context.Context) error {
 	defer mon.wg.Done()
 	now := time.Now()
 
 	mon.log.Debug("hive monitoring")
+
+	errs := []error{}
 
 	for _, f := range mon.collectors {
 		mon.log.Debugf("running %s", steps.ShortName(f))
@@ -94,7 +97,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitFloat("monitor.hive.duration", time.Since(now).Seconds(), map[string]string{})
 	}
 
-	return
+	return errors.Join(errs...)
 }
 
 func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error) {
