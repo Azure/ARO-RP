@@ -5,6 +5,7 @@ package env
 
 import (
 	"context"
+	"crypto/fips140"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -102,6 +103,13 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 	componentLog := log.WithField("component", strings.ReplaceAll(strings.ToLower(string(component)), "_", "-"))
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
+	}
+
+	// https://go.dev/doc/security/fips140
+	if fips140.Enabled() {
+		log.Infof("running in FIPS 140-3 mode")
+	} else {
+		log.Infof("running without FIPS 140-3 mode")
 	}
 
 	im, err := instancemetadata.New(ctx, log, isLocalDevelopmentMode)
