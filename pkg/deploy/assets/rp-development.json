@@ -16,6 +16,19 @@
         },
         "rpServicePrincipalId": {
             "type": "string"
+        },
+        "vmssIpTags": {
+            "type": "array",
+            "defaultValue": [
+                {
+                    "type": "FirstPartyUsage",
+                    "value": "/NonProd"
+                }
+            ]
+        },
+        "vmssIpTagsDisabledRegions": {
+            "type": "array",
+            "defaultValue": []
         }
     },
     "resources": [

@@ -34,6 +34,8 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"gatewayServicePrincipalId",
 		"gatewayVmSize",
 		"gatewayVmssCapacity",
+		"vmssIpTags",
+		"vmssIpTagsDisabledRegions",
 		"keyvaultDNSSuffix",
 		"keyvaultPrefix",
 		"mdmFrontendUrl",
@@ -61,6 +63,17 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		case "gatewayVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3
+		case "vmssIpTags":
+			p.Type = "array"
+			p.DefaultValue = []interface{}{
+				map[string]interface{}{
+					"type":  "FirstPartyUsage",
+					"value": "/NonProd",
+				},
+			}
+		case "vmssIpTagsDisabledRegions":
+			p.Type = "array"
+			p.DefaultValue = []string{}
 		case "vmssCleanupEnabled":
 			p.Type = "bool"
 			p.DefaultValue = true

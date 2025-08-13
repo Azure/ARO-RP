@@ -188,6 +188,17 @@
         "vmssCleanupEnabled": {
             "value": true
         },
+        "vmssIpTags": {
+            "value": [
+                {
+                    "type": "FirstPartyUsage",
+                    "value": "/NonProd"
+                }
+            ]
+        },
+        "vmssIpTagsDisabledRegions": {
+            "value": []
+        },
         "vmssName": {
             "value": ""
         }
