@@ -27,7 +27,7 @@ func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, 
 		log.Fatalf("failed to load cluster from cosmosDB: %v", err)
 	}
 
-	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
+	doc, _ := dbOpenShiftClusters.Get(ctx, resourceID)
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 
@@ -61,7 +61,7 @@ func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, 
 		log.Fatalf("failed to pull the result: %v", err)
 	}
 
-	e, err := res.EffectiveRouteListResult.MarshalJSON()
+	e, err := res.MarshalJSON()
 
 	reply(log, w, nil, e, err)
 

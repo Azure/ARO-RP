@@ -254,7 +254,7 @@ func TestEffectiveRouteTableAzureClientMocking(t *testing.T) {
 		}
 
 		// Test that we can extract the data the same way the implementation does
-		jsonData, err := response.EffectiveRouteListResult.MarshalJSON()
+		jsonData, err := response.MarshalJSON()
 		if err != nil {
 			t.Fatalf("Failed to marshal response to JSON: %v", err)
 		}
@@ -523,7 +523,7 @@ func TestEffectiveRouteTableResponseErrorHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Test the exact same processing that the implementation does
-			jsonData, err := tt.responseData.EffectiveRouteListResult.MarshalJSON()
+			jsonData, err := tt.responseData.MarshalJSON()
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")

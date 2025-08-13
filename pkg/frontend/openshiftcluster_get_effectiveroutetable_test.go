@@ -361,12 +361,12 @@ func TestGetOpenshiftClusterEffectiveRouteTableAzureAPICall(t *testing.T) {
 			}
 
 			// Verify the result
-			if len(result.EffectiveRouteListResult.Value) != tt.expectedRouteCount {
-				t.Errorf("Expected %d routes, got %d", tt.expectedRouteCount, len(result.EffectiveRouteListResult.Value))
+			if len(result.Value) != tt.expectedRouteCount {
+				t.Errorf("Expected %d routes, got %d", tt.expectedRouteCount, len(result.Value))
 			}
 
 			// Test JSON marshaling (final step in implementation)
-			jsonData, err := result.EffectiveRouteListResult.MarshalJSON()
+			jsonData, err := result.MarshalJSON()
 			if err != nil {
 				t.Fatalf("Failed to marshal result to JSON: %v", err)
 			}
