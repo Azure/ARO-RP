@@ -585,6 +585,14 @@ const (
 	VMSizeStandardL48sV3 VMSize = "Standard_L48s_v3"
 	VMSizeStandardL64sV3 VMSize = "Standard_L64s_v3"
 
+	VMSizeStandardL4sV4  VMSize = "Standard_L4s_v4"
+	VMSizeStandardL8sV4  VMSize = "Standard_L8s_v4"
+	VMSizeStandardL16sV4 VMSize = "Standard_L16s_v4"
+	VMSizeStandardL32sV4 VMSize = "Standard_L32s_v4"
+	VMSizeStandardL48sV4 VMSize = "Standard_L48s_v4"
+	VMSizeStandardL64sV4 VMSize = "Standard_L64s_v4"
+	VMSizeStandardL80sV4 VMSize = "Standard_L80s_v4"
+
 	VMSizeStandardD4lsV6  VMSize = "Standard_D4ls_v6"
 	VMSizeStandardD8lsV6  VMSize = "Standard_D8ls_v6"
 	VMSizeStandardD16lsV6 VMSize = "Standard_D16ls_v6"
@@ -750,6 +758,14 @@ var (
 	VMSizeStandardL48sV3Struct = VMSizeStruct{CoreCount: 48, Family: standardLSv3}
 	VMSizeStandardL64sV3Struct = VMSizeStruct{CoreCount: 64, Family: standardLSv3}
 
+	VMSizeStandardL4sV4Struct  = VMSizeStruct{CoreCount: 4, Family: standardLSv4}
+	VMSizeStandardL8sV4Struct  = VMSizeStruct{CoreCount: 8, Family: standardLSv4}
+	VMSizeStandardL16sV4Struct = VMSizeStruct{CoreCount: 16, Family: standardLSv4}
+	VMSizeStandardL32sV4Struct = VMSizeStruct{CoreCount: 32, Family: standardLSv4}
+	VMSizeStandardL48sV4Struct = VMSizeStruct{CoreCount: 48, Family: standardLSv4}
+	VMSizeStandardL64sV4Struct = VMSizeStruct{CoreCount: 64, Family: standardLSv4}
+	VMSizeStandardL80sV4Struct = VMSizeStruct{CoreCount: 80, Family: standardLSv4}
+
 	VMSizeStandardD4lsV6Struct  = VMSizeStruct{CoreCount: 4, Family: standardDLSv6}
 	VMSizeStandardD8lsV6Struct  = VMSizeStruct{CoreCount: 8, Family: standardDLSv6}
 	VMSizeStandardD16lsV6Struct = VMSizeStruct{CoreCount: 16, Family: standardDLSv6}
@@ -804,6 +820,7 @@ const (
 	standardMS     = "standardMSFamily"
 	standardLSv2   = "standardLsv2Family"
 	standardLSv3   = "standardLsv3Family"
+	standardLSv4   = "standardLsv4Family"
 	standardDLSv6  = "standardDLSv6Family"
 	standardDLDSv6 = "standardDLDSv6Family"
 	standardNCAS   = "Standard NCASv3_T4 Family"

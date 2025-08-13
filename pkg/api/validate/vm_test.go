@@ -107,6 +107,13 @@ func TestVMSizeIsValid(t *testing.T) {
 			isMaster:          true,
 			desiredResult:     true,
 		},
+		{
+			name:              "Lsv4 vmSize is supported for use in ARO as worker node",
+			vmSize:            api.VMSizeStandardL8sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			desiredResult:     true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			result := VMSizeIsValid(tt.vmSize, tt.requireD2sWorkers, tt.isMaster)
@@ -405,6 +412,55 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			version:           "4.19.0",
 			desiredResult:     true,
 		},
+		// 4.19+ Worker VM sizes - LSv4 series
+		{
+			name:              "Standard_L8s_v4 is valid for 4.19 worker",
+			vmSize:            api.VMSizeStandardL8sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			version:           "4.19.0",
+			desiredResult:     true,
+		},
+		{
+			name:              "Standard_L16s_v4 is valid for 4.19 worker",
+			vmSize:            api.VMSizeStandardL16sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			version:           "4.19.0",
+			desiredResult:     true,
+		},
+		{
+			name:              "Standard_L32s_v4 is valid for 4.19 worker",
+			vmSize:            api.VMSizeStandardL32sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			version:           "4.19.0",
+			desiredResult:     true,
+		},
+		{
+			name:              "Standard_L48s_v4 is valid for 4.19 worker",
+			vmSize:            api.VMSizeStandardL48sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			version:           "4.19.0",
+			desiredResult:     true,
+		},
+		{
+			name:              "Standard_L64s_v4 is valid for 4.19 worker",
+			vmSize:            api.VMSizeStandardL64sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			version:           "4.19.0",
+			desiredResult:     true,
+		},
+		{
+			name:              "Standard_L80s_v4 is valid for 4.19 worker",
+			vmSize:            api.VMSizeStandardL80sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			version:           "4.19.0",
+			desiredResult:     true,
+		},
 		// DLSv6 and DLDSv6 are not supported for master/control plane
 		{
 			name:              "Standard_D4ls_v6 is not valid for 4.19 master",
@@ -490,6 +546,23 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			isMaster:          false,
 			version:           "4.18.0",
 			desiredResult:     true,
+		},
+		// Test LSv4 instances with older versions (< 4.19) - should not be supported
+		{
+			name:              "Standard_L8s_v4 falls back to standard validation for 4.18 worker",
+			vmSize:            api.VMSizeStandardL8sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			version:           "4.18.0",
+			desiredResult:     false,
+		},
+		{
+			name:              "Standard_L80s_v4 falls back to standard validation for 4.18 worker",
+			vmSize:            api.VMSizeStandardL80sV4,
+			requireD2sWorkers: false,
+			isMaster:          false,
+			version:           "4.18.0",
+			desiredResult:     false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
