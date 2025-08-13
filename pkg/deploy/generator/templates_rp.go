@@ -75,6 +75,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"rpMdsdNamespace",
 			"rpParentDomainName",
 			"rpVmssCapacity",
+			"rpVmssIpTags",
 			"sshPublicKey",
 			"subscriptionResourceGroupName",
 			"vmSize",
@@ -124,6 +125,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.Type = "array"
 		case "miseValidAppIDs":
 			p.Type = "array"
+		case "rpVmssIpTags":
+			p.Type = "array"
+			p.DefaultValue = []interface{}{}
 		case "nonZonalRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{
