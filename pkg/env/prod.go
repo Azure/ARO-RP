@@ -109,7 +109,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	dialer, err := proxy.NewDialer(core.IsLocalDevelopmentMode())
+	dialer, err := proxy.NewDialer(core.IsLocalDevelopmentMode(), log)
 	if err != nil {
 		return nil, err
 	}

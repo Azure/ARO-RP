@@ -315,6 +315,29 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 			},
 		},
 		{
+			name: "fails to parse subnet ID",
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
+				invalidSubnetId := "invalid-subnet-id"
+				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
+					SecurityGroup: armnetwork.SecurityGroup{
+						ID: pointerutils.ToPtr(nsgId),
+						Properties: &armnetwork.SecurityGroupPropertiesFormat{
+							Subnets: []*armnetwork.Subnet{
+								{
+									ID: pointerutils.ToPtr(invalidSubnetId),
+								},
+							},
+						},
+					},
+				}
+				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
+				// Should not call subnets.Get or CreateOrUpdateAndWait due to parse error
+				subnets.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
+			},
+			wantErr: "400: InvalidResourceID: invalid-subnet-id: Invalid subnet resource ID format. For more details, please refer to https://docs.microsoft.com/azure/azure-resource-manager/management/resource-name-rules",
+		},
+		{
 			name: "disconnects subnets",
 			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
 				subnetId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)

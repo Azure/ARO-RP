@@ -449,7 +449,7 @@ func TestResetCorrelationData(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if err == nil {
-				cd, err := c.GetClusterDeployment(context.Background(), doc)
+				cd, err := c.GetClusterDeployment(context.Background(), doc.OpenShiftCluster)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -558,7 +558,7 @@ func TestGetClusterDeployment(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := c.GetClusterDeployment(context.Background(), doc)
+			result, err := c.GetClusterDeployment(context.Background(), doc.OpenShiftCluster)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
@@ -606,7 +606,7 @@ func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := c.GetClusterSync(context.Background(), doc)
+			result, err := c.GetClusterSync(context.Background(), doc.OpenShiftCluster)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

@@ -5,6 +5,9 @@ package cluster
 
 import (
 	"context"
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	configv1 "github.com/openshift/api/config/v1"
 )
@@ -17,9 +20,10 @@ var clusterVersionConditionsExpected = map[configv1.ClusterStatusConditionType]c
 }
 
 func (mon *Monitor) emitClusterVersionConditions(ctx context.Context) error {
-	cv, err := mon.getClusterVersion(ctx)
+	cv := &configv1.ClusterVersion{}
+	err := mon.ocpclientset.Get(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
-		return err
+		return fmt.Errorf("failure fetching ClusterVersion: %w", err)
 	}
 
 	for _, c := range cv.Status.Conditions {

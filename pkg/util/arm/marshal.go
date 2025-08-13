@@ -42,6 +42,12 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		if r.DependsOn != nil {
 			dataMap["dependsOn"] = r.DependsOn
 		}
+		if r.Type != "" {
+			dataMap["type"] = r.Type
+		}
+		if r.Location != "" {
+			dataMap["location"] = r.Location
+		}
 		return json.Marshal(dataMap)
 	}
 

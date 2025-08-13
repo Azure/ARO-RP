@@ -28,6 +28,9 @@
     },
     "resources": [
         {
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "dev-vnet",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -35,11 +38,7 @@
                     ]
                 }
             },
-            "name": "dev-vnet",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "condition": "[parameters('ci')]",
-            "apiVersion": "2020-08-01"
+            "type": "Microsoft.Network/virtualNetworks"
         },
         {
             "apiVersion": "2020-08-01",
@@ -56,6 +55,7 @@
                 "[resourceid('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
                 "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
             ],
+            "location": "[resourceGroup().location]",
             "name": "[concat('dev-vnet/', parameters('clusterName'), '-master')]",
             "properties": {
                 "addressPrefixes": [
@@ -64,7 +64,8 @@
                 "routeTable": {
                     "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
                 }
-            }
+            },
+            "type": "Microsoft.Network/virtualNetworks/subnets"
         },
         {
             "apiVersion": "2020-08-01",
@@ -72,13 +73,15 @@
                 "[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]",
                 "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
             ],
+            "location": "[resourceGroup().location]",
             "name": "[concat('dev-vnet/', parameters('clusterName'), '-worker')]",
             "properties": {
                 "addressPrefix": "[parameters('workerAddressPrefix')]",
                 "routeTable": {
                     "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
                 }
-            }
+            },
+            "type": "Microsoft.Network/virtualNetworks/subnets"
         },
         {
             "name": "[parameters('kvName')]",
