@@ -1,12 +1,16 @@
 package frontend
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"net/http"
-	"strings" //nolint:gci
+	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6" //nolint:gci
-	"github.com/sirupsen/logrus"                                                  //nolint:gci
+	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, w http.ResponseWriter, r *http.Request, log *logrus.Entry) ([]byte, error) {

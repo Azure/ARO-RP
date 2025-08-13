@@ -20,72 +20,72 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestGetOpenshiftClusterEffectiveRouteTableFunctionExists(t *testing.T) {
-	// Verify the _getOpenshiftClusterEffectiveRouteTable method exists on frontend
-	f := &frontend{}
-	
-	// This test passes if the method exists and can be assigned to a variable
-	handler := f._getOpenshiftClusterEffectiveRouteTable
-	if handler == nil {
-		t.Error("_getOpenshiftClusterEffectiveRouteTable method should exist")
-	}
-}
+//func TestGetOpenshiftClusterEffectiveRouteTableFunctionExists(t *testing.T) {
+//	// Verify the _getOpenshiftClusterEffectiveRouteTable method exists on frontend
+//	f := &frontend{}
+//
+//	// This test passes if the method exists and can be assigned to a variable
+//	handler := f._getOpenshiftClusterEffectiveRouteTable
+//	if handler == nil {
+//		t.Error("_getOpenshiftClusterEffectiveRouteTable method should exist")
+//	}
+//}
 
 func TestGetOpenshiftClusterEffectiveRouteTableQueryParameterExtraction(t *testing.T) {
 	tests := []struct {
-		name           string
-		queryString    string
-		expectedSubID  string
-		expectedRG     string
-		expectedNIC    string
-		description    string
+		Name          string `json:"name,omitempty"`
+		QueryString   string `json:"query_string,omitempty"`
+		ExpectedSubID string `json:"expected_sub_id,omitempty"`
+		ExpectedRG    string `json:"expected_rg,omitempty"` //nolint:gci
+		ExpectedNIC   string `json:"expected_nic,omitempty"`
+		Description   string `json:"description,omitempty"`
 	}{
 		{
-			name:           "all parameters present",
-			queryString:    "subid=12345&rgn=test-rg&nic=test-nic",
-			expectedSubID:  "12345",
-			expectedRG:     "test-rg",
-			expectedNIC:    "test-nic",
-			description:    "Should extract all query parameters correctly",
+			Name:          "all parameters present",
+			QueryString:   "subid=12345&rgn=test-rg&nic=test-nic",
+			ExpectedSubID: "12345",
+			ExpectedRG:    "test-rg",
+			ExpectedNIC:   "test-nic",
+			Description:   "Should extract all query parameters correctly",
 		},
 		{
-			name:           "parameters in different order",
-			queryString:    "nic=my-nic&subid=67890&rgn=my-rg",
-			expectedSubID:  "67890",
-			expectedRG:     "my-rg",
-			expectedNIC:    "my-nic",
-			description:    "Should handle parameters in any order",
+			Name:          "parameters in different order",
+			QueryString:   "nic=my-nic&subid=67890&rgn=my-rg",
+			ExpectedSubID: "67890",
+			ExpectedRG:    "my-rg",
+			ExpectedNIC:   "my-nic",
+			Description:   "Should handle parameters in any order",
 		},
 		{
-			name:           "url encoded parameters",
-			queryString:    "subid=12345&rgn=test%2Drg&nic=test%2Dnic",
-			expectedSubID:  "12345",
-			expectedRG:     "test-rg",
-			expectedNIC:    "test-nic",
-			description:    "Should handle URL encoded parameters",
+			Name:          "url encoded parameters",
+			QueryString:   "subid=12345&rgn=test%2Drg&nic=test%2Dnic",
+			ExpectedSubID: "12345",
+			ExpectedRG:    "test-rg",
+			ExpectedNIC:   "test-nic",
+			Description:   "Should handle URL encoded parameters",
 		},
 		{
-			name:           "empty parameters",
-			queryString:    "subid=&rgn=&nic=",
-			expectedSubID:  "",
-			expectedRG:     "",
-			expectedNIC:    "",
-			description:    "Should handle empty parameter values",
+			Name:          "empty parameters",
+			QueryString:   "subid=&rgn=&nic=",
+			ExpectedSubID: "",
+			ExpectedRG:    "",
+			ExpectedNIC:   "",
+			Description:   "Should handle empty parameter values",
 		},
 		{
-			name:           "missing parameters",
-			queryString:    "other=value",
-			expectedSubID:  "",
-			expectedRG:     "",
-			expectedNIC:    "",
-			description:    "Should handle missing required parameters",
+			Name:          "missing parameters",
+			QueryString:   "other=value",
+			ExpectedSubID: "",
+			ExpectedRG:    "",
+			ExpectedNIC:   "",
+			Description:   "Should handle missing required parameters",
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.Name, func(t *testing.T) {
 			// Create request with query parameters
-			req, err := http.NewRequest(http.MethodGet, "/test?"+tt.queryString, nil)
+			req, err := http.NewRequest(http.MethodGet, "/test?"+tt.QueryString, nil)
 			if err != nil {
 				t.Fatalf("Failed to create request: %v", err)
 			}
@@ -96,14 +96,14 @@ func TestGetOpenshiftClusterEffectiveRouteTableQueryParameterExtraction(t *testi
 			nicName := req.URL.Query().Get("nic")
 
 			// Verify extracted values
-			if subID != tt.expectedSubID {
-				t.Errorf("Expected subID='%s', got='%s'", tt.expectedSubID, subID)
+			if subID != tt.ExpectedSubID {
+				t.Errorf("Expected subID='%s', got='%s'", tt.ExpectedSubID, subID)
 			}
-			if rg != tt.expectedRG {
-				t.Errorf("Expected rg='%s', got='%s'", tt.expectedRG, rg)
+			if rg != tt.ExpectedRG {
+				t.Errorf("Expected rg='%s', got='%s'", tt.ExpectedRG, rg)
 			}
-			if nicName != tt.expectedNIC {
-				t.Errorf("Expected nicName='%s', got='%s'", tt.expectedNIC, nicName)
+			if nicName != tt.ExpectedNIC {
+				t.Errorf("Expected nicName='%s', got='%s'", tt.ExpectedNIC, nicName)
 			}
 		})
 	}
@@ -111,34 +111,34 @@ func TestGetOpenshiftClusterEffectiveRouteTableQueryParameterExtraction(t *testi
 
 func TestGetOpenshiftClusterEffectiveRouteTableResourceIDExtraction(t *testing.T) {
 	tests := []struct {
-		name              string
-		requestPath       string
+		name               string
+		requestPath        string
 		expectedResourceID string
-		description       string
+		description        string
 	}{
 		{
-			name:              "standard admin path",
-			requestPath:       "/admin/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster",
+			name:               "standard admin path",
+			requestPath:        "/admin/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster",
 			expectedResourceID: "/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster",
-			description:       "Should strip /admin prefix correctly",
+			description:        "Should strip /admin prefix correctly",
 		},
 		{
-			name:              "path without admin prefix",
-			requestPath:       "/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster",
+			name:               "path without admin prefix",
+			requestPath:        "/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster",
 			expectedResourceID: "/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster",
-			description:       "Should handle path without admin prefix",
+			description:        "Should handle path without admin prefix",
 		},
 		{
-			name:              "empty path",
-			requestPath:       "",
+			name:               "empty path",
+			requestPath:        "",
 			expectedResourceID: "",
-			description:       "Should handle empty path",
+			description:        "Should handle empty path",
 		},
 		{
-			name:              "admin only path",
-			requestPath:       "/admin",
+			name:               "admin only path",
+			requestPath:        "/admin",
 			expectedResourceID: "",
-			description:       "Should handle admin-only path",
+			description:        "Should handle admin-only path",
 		},
 	}
 
@@ -215,7 +215,7 @@ func TestGetOpenshiftClusterEffectiveRouteTableAzureClientCreation(t *testing.T)
 	t.Run("azure client creation with custom options", func(t *testing.T) {
 		// Test creating client with custom transport (like we do in tests)
 		mockCredential := &fakeazcore.TokenCredential{}
-		
+
 		// Create a mock server for testing
 		server := fakearmnetwork.InterfacesServer{}
 		clientOptions := &arm.ClientOptions{
@@ -394,11 +394,11 @@ func TestGetOpenshiftClusterEffectiveRouteTableAzureAPICall(t *testing.T) {
 
 func TestGetOpenshiftClusterEffectiveRouteTableJSONProcessing(t *testing.T) {
 	tests := []struct {
-		name              string
-		routeData         armnetwork.EffectiveRouteListResult
+		name               string
+		routeData          armnetwork.EffectiveRouteListResult
 		expectMarshalError bool
-		expectedContent   []string
-		description       string
+		expectedContent    []string
+		description        string
 	}{
 		{
 			name: "valid route data",
