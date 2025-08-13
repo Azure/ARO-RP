@@ -4,11 +4,10 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
-	"net/http"
-	"path/filepath"
-
-	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/sirupsen/logrus"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware" //nolint:gci
+	"github.com/sirupsen/logrus"                      //nolint:gci
+	"net/http"                                        //nolint:gci
+	"path/filepath"                                   //nolint:gci
 )
 
 func (f *frontend) getAdminOpenshiftClusterEffectiveRouteTable(w http.ResponseWriter, r *http.Request) {

@@ -167,7 +167,6 @@ func stringPtr(s string) *string {
 }
 
 func TestEffectiveRouteTableAzureClientMocking(t *testing.T) {
-
 	// Create mock effective route table response
 	mockEffectiveRoutes := []*armnetwork.EffectiveRoute{
 		{
@@ -279,12 +278,12 @@ func TestEffectiveRouteTableAzureClientMocking(t *testing.T) {
 
 func TestEffectiveRouteTableErrorScenarios(t *testing.T) {
 	tests := []struct {
-		name                    string
-		routeTableData          *armnetwork.EffectiveRouteListResult
-		expectError             bool
-		expectEmptyResult       bool
-		expectMarshalError      bool
-		description             string
+		name               string //nolint:gci
+		routeTableData     *armnetwork.EffectiveRouteListResult
+		expectError        bool
+		expectEmptyResult  bool
+		expectMarshalError bool
+		description        string
 	}{
 		{
 			name: "empty route table",
@@ -296,11 +295,11 @@ func TestEffectiveRouteTableErrorScenarios(t *testing.T) {
 			description:       "Should handle empty route table gracefully",
 		},
 		{
-			name:                    "nil route table",
-			routeTableData:          nil,
-			expectError:             true,
-			expectMarshalError:      true,
-			description:             "Should handle nil route table",
+			name:               "nil route table", //nolint:gci
+			routeTableData:     nil,
+			expectError:        true,
+			expectMarshalError: true,
+			description:        "Should handle nil route table",
 		},
 		{
 			name: "nil routes array",
@@ -420,7 +419,6 @@ func TestEffectiveRouteTableErrorScenarios(t *testing.T) {
 
 			// Test JSON structure
 			jsonStr := string(jsonData)
-			
 			// Verify it's valid JSON
 			var jsonObj map[string]interface{}
 			err = json.Unmarshal(jsonData, &jsonObj)
@@ -472,11 +470,11 @@ func TestEffectiveRouteTableErrorScenarios(t *testing.T) {
 
 func TestEffectiveRouteTableResponseErrorHandling(t *testing.T) {
 	tests := []struct {
-		name            string
-		responseData    armnetwork.InterfacesClientGetEffectiveRouteTableResponse
-		expectError     bool
-		expectEmpty     bool
-		description     string
+		name         string //nolint:gci
+		responseData armnetwork.InterfacesClientGetEffectiveRouteTableResponse
+		expectError  bool
+		expectEmpty  bool
+		description  string
 	}{
 		{
 			name: "response with empty effective route list",
@@ -539,11 +537,12 @@ func TestEffectiveRouteTableResponseErrorHandling(t *testing.T) {
 
 			// Verify the JSON is valid and can be processed
 			jsonStr := string(jsonData)
-			
 			// Check if it's empty as expected
-			isEmpty := strings.Contains(jsonStr, "\"value\":[]") || strings.Contains(jsonStr, "\"value\": []") || 
-					  strings.Contains(jsonStr, "\"value\":null") || strings.Contains(jsonStr, "\"value\": null") ||
-					  jsonStr == "{}" || !strings.Contains(jsonStr, "\"value\"")
+			isEmpty := strings.Contains(jsonStr, "\"value\":[]") ||
+				strings.Contains(jsonStr, "\"value\": []") ||
+				strings.Contains(jsonStr, "\"value\":null") ||
+				strings.Contains(jsonStr, "\"value\": null") || jsonStr == "{}" ||
+				!strings.Contains(jsonStr, "\"value\"")
 			if tt.expectEmpty && !isEmpty {
 				t.Errorf("Expected empty result, but JSON contains: %s", jsonStr)
 			}
@@ -648,7 +647,7 @@ func TestEffectiveRouteTableQueryParameterValidation(t *testing.T) {
 			hasAllParams := subID != "" && rg != "" && nicName != ""
 
 			if hasAllParams != tt.wantValid {
-				t.Errorf("Expected valid params=%v, got valid params=%v (subid='%s', rgn='%s', nic='%s')", 
+				t.Errorf("Expected valid params=%v, got valid params=%v (subid='%s', rgn='%s', nic='%s')",
 					tt.wantValid, hasAllParams, subID, rg, nicName)
 			}
 		})
@@ -691,33 +690,10 @@ func TestAdminGetOpenshiftClusterEffectiveRouteTablePathHandling(t *testing.T) {
 // TestHandlerExists verifies that the handler function is properly defined
 func TestHandlerExists(t *testing.T) {
 	f := &frontend{}
-	
+
 	// Verify the handler method exists and can be referenced
 	handler := f.getAdminOpenshiftClusterEffectiveRouteTable
 	_ = handler // Use the handler to prove it exists
-	
+
 	// This test passes if the method exists and can be assigned to a variable
-}
-
-// mockResponseWriter is a simple implementation for testing
-type mockResponseWriter struct {
-	headers http.Header
-	body    []byte
-	status  int
-}
-
-func (m *mockResponseWriter) Header() http.Header {
-	if m.headers == nil {
-		m.headers = make(http.Header)
-	}
-	return m.headers
-}
-
-func (m *mockResponseWriter) Write(data []byte) (int, error) {
-	m.body = append(m.body, data...)
-	return len(data), nil
-}
-
-func (m *mockResponseWriter) WriteHeader(statusCode int) {
-	m.status = statusCode
 }
