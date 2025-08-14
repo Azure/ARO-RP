@@ -136,7 +136,7 @@ func (r *Reconciler) gatekeeperDeploymentIsReady(ctx context.Context, deployConf
 
 func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
 	cv := &configv1.ClusterVersion{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	err := r.ch.Get(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
 		return false, err
 	}
