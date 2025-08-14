@@ -6,14 +6,11 @@ package frontend
 import (
 	"context"
 	"net/http"
-	"reflect"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
-
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -48,10 +45,6 @@ func (f *frontend) _getAdminHiveSyncSet(ctx context.Context, namespace string, s
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "hive is not enabled")
 	}
 
-	ssType := reflect.TypeOf(hivev1.SelectorSyncSet{})
-	if isSyncSet {
-		ssType = reflect.TypeOf(hivev1.SyncSet{})
-	}
 	if isSyncSet && namespace == "" {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "namespace cannot be null for getting a syncset")
 	}
@@ -62,7 +55,13 @@ func (f *frontend) _getAdminHiveSyncSet(ctx context.Context, namespace string, s
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "syncsetname cannot be null")
 	}
 
-	ss, err := f.hiveSyncSetManager.Get(ctx, namespace, syncsetname, ssType)
+	var ss interface{}
+	var err error
+	if isSyncSet {
+		ss, err = f.hiveSyncSetManager.GetSyncSet(ctx, namespace, syncsetname)
+	} else {
+		ss, err = f.hiveSyncSetManager.GetSelectorSyncSet(ctx, namespace, syncsetname)
+	}
 	if err != nil {
 		return nil, err
 	}
