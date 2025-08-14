@@ -5,7 +5,7 @@ package cluster
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 
@@ -24,7 +24,7 @@ func (mon *Monitor) emitAroOperatorHeartbeat(ctx context.Context) error {
 	l := &appsv1.DeploymentList{}
 	err := mon.ocpclientset.List(ctx, l, client.InNamespace(pkgoperator.Namespace))
 	if err != nil {
-		return fmt.Errorf("failed listing ARO Operator deployments: %w", err)
+		return errors.Join(errListAROOperatorDeployments, err)
 	}
 
 	for _, d := range l.Items {

@@ -5,7 +5,7 @@ package cluster
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -198,8 +198,9 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 }
 
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
+func (mon *Monitor) Monitor(ctx context.Context) error {
 	defer mon.wg.Done()
+	errs := []error{}
 
 	now := time.Now()
 
@@ -225,14 +226,15 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 			errs = append(errs, err)
 			mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerPingCode), err)
 		}
-		return
+
+		return errors.Join(errs...)
 	}
 
 	err = mon.prefetchClusterVersion(ctx)
 	if err != nil {
 		errs = append(errs, err)
 		mon.emitFailureToGatherMetric(steps.ShortName(mon.prefetchClusterVersion), err)
-		return
+		return errors.Join(errs...)
 	}
 
 	// Determine the list of OpenShift (or ARO) managed namespaces that we will
@@ -241,7 +243,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	if err != nil {
 		errs = append(errs, err)
 		mon.emitFailureToGatherMetric(steps.ShortName(mon.fetchManagedNamespaces), err)
-		return
+		return errors.Join(errs...)
 	}
 
 	// Run up to MONITOR_GOROUTINES_PER_CLUSTER goroutines for collecting
@@ -267,7 +269,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 				// collector, so if a collector needs to return multiple errors
 				// they should be joined into a single one (see errors.Join)
 				// before being added.
-				errChan <- fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
+				errChan <- errors.Join(&failureToRunClusterCollector{collectorName: collectorName}, innerErr)
 			} else {
 				mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, time.Since(innerNow).Seconds())
 			}
@@ -290,7 +292,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitFloat("monitor.cluster.duration", time.Since(now).Seconds(), map[string]string{})
 	}
 
-	return
+	return errors.Join(errs...)
 }
 
 func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error) {

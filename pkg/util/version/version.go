@@ -11,6 +11,14 @@ import (
 	"strings"
 )
 
+type VersionParseError struct {
+	version string
+}
+
+func (e VersionParseError) Error() string {
+	return fmt.Sprintf("could not parse version %q", e.version)
+}
+
 var rxVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)`)
 
 type Version struct {
@@ -37,7 +45,7 @@ func NewVersion(vs ...uint32) *Version {
 func ParseVersion(vsn string) (*Version, error) {
 	m := rxVersion.FindStringSubmatch(strings.TrimSpace(vsn))
 	if m == nil {
-		return nil, fmt.Errorf("could not parse version %q", vsn)
+		return nil, VersionParseError{version: vsn}
 	}
 
 	v := &Version{

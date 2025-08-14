@@ -145,10 +145,10 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 }
 
 // Monitor checks the custom NSGs customers attach to their ARO subnets
-func (n *NSGMonitor) Monitor(ctx context.Context) []error {
+func (n *NSGMonitor) Monitor(ctx context.Context) error {
 	defer n.wg.Done()
 
-	errors := []error{}
+	errs := []error{}
 
 	// to make sure each NSG is processed only once
 	nsgSet := map[string]*armnetwork.SecurityGroup{}
@@ -156,7 +156,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	masterSubnet, err := n.toSubnetConfig(ctx, n.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		// FP has no access to the subnet
-		errors = append(errors, err)
+		errs = append(errs, err)
 	} else {
 		if masterSubnet.nsg != nil && masterSubnet.nsg.ID != nil {
 			nsgSet[*masterSubnet.nsg.ID] = masterSubnet.nsg
@@ -182,7 +182,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 		s, err := n.toSubnetConfig(ctx, subnetID)
 		if err != nil {
 			// FP has no access to the subnet
-			errors = append(errors, err)
+			errs = append(errs, err)
 		} else {
 			workerPrefixes = append(workerPrefixes, s.prefix...)
 			if s.nsg != nil && s.nsg.ID != nil {
@@ -201,7 +201,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 			nsgResource, err := arm.ParseResourceID(nsgID)
 			if err != nil {
 				n.log.Errorf("Unable to parse NSG resource ID: %s. %s", nsgID, err)
-				errors = append(errors, err)
+				errs = append(errs, err)
 				continue
 			}
 
@@ -221,5 +221,5 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 			}
 		}
 	}
-	return errors
+	return errors.Join(errs...)
 }
