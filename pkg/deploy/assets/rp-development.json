@@ -12,7 +12,8 @@
             "type": "string"
         },
         "globalDevopsServicePrincipalId": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "rpServicePrincipalId": {
             "type": "string"
@@ -95,6 +96,7 @@
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[not(equals(parameters('rpServicePrincipalId'), ''))]",
             "apiVersion": "2023-04-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
@@ -109,6 +111,7 @@
                 "principalId": "[parameters('globalDevopsServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[not(equals(parameters('globalDevopsServicePrincipalId'), ''))]",
             "apiVersion": "2023-04-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
