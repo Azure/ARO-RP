@@ -1632,3 +1632,5 @@ replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/
 
 // ARO-RP sub-packages
 replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api
+
+replace golang.org/x/crypto v0.39.0 => github.com/ventifus/go-crypto v0.39.1-0.20250813173330-afe5f257f3b4
