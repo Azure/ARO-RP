@@ -165,6 +165,28 @@ var workerVmSizesWithMinimumVersion = map[api.VMSize]version.Version{
 	api.VMSizeStandardD96ldsV6: {
 		V: [3]uint32{4, 19, 0},
 	},
+
+	api.VMSizeStandardL4sV4: {
+		V: [3]uint32{4, 19, 0},
+	},
+	api.VMSizeStandardL8sV4: {
+		V: [3]uint32{4, 19, 0},
+	},
+	api.VMSizeStandardL16sV4: {
+		V: [3]uint32{4, 19, 0},
+	},
+	api.VMSizeStandardL32sV4: {
+		V: [3]uint32{4, 19, 0},
+	},
+	api.VMSizeStandardL48sV4: {
+		V: [3]uint32{4, 19, 0},
+	},
+	api.VMSizeStandardL64sV4: {
+		V: [3]uint32{4, 19, 0},
+	},
+	api.VMSizeStandardL80sV4: {
+		V: [3]uint32{4, 19, 0},
+	},
 }
 
 var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
@@ -376,6 +398,14 @@ var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardL32sV3: api.VMSizeStandardL32sV3Struct,
 	api.VMSizeStandardL48sV3: api.VMSizeStandardL48sV3Struct,
 	api.VMSizeStandardL64sV3: api.VMSizeStandardL64sV3Struct,
+
+	api.VMSizeStandardL4sV4:  api.VMSizeStandardL4sV4Struct,
+	api.VMSizeStandardL8sV4:  api.VMSizeStandardL8sV4Struct,
+	api.VMSizeStandardL16sV4: api.VMSizeStandardL16sV4Struct,
+	api.VMSizeStandardL32sV4: api.VMSizeStandardL32sV4Struct,
+	api.VMSizeStandardL48sV4: api.VMSizeStandardL48sV4Struct,
+	api.VMSizeStandardL64sV4: api.VMSizeStandardL64sV4Struct,
+	api.VMSizeStandardL80sV4: api.VMSizeStandardL80sV4Struct,
 
 	// GPU nodes
 	// the formatting of the ncasv3_t4 family is different.  This can be seen through a
