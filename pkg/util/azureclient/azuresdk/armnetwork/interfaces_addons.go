@@ -14,6 +14,7 @@ type InterfacesClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, parameters armnetwork.Interface, options *armnetwork.InterfacesClientBeginCreateOrUpdateOptions) (err error)
 	DeleteAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginDeleteOptions) (err error)
 	List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) (result []*armnetwork.Interface, err error)
+	GetEffectiveRouteTableAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (*armnetwork.EffectiveRouteListResult, error)
 }
 
 func (c *interfacesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, parameters armnetwork.Interface, options *armnetwork.InterfacesClientBeginCreateOrUpdateOptions) error {
@@ -46,4 +47,18 @@ func (c *interfacesClient) List(ctx context.Context, resourceGroupName string, o
 	}
 
 	return result, nil
+}
+
+func (c *interfacesClient) GetEffectiveRouteTableAndWait(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (*armnetwork.EffectiveRouteListResult, error) {
+	poller, err := c.BeginGetEffectiveRouteTable(ctx, resourceGroupName, networkInterfaceName, options)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := poller.PollUntilDone(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result.EffectiveRouteListResult, nil
 }
