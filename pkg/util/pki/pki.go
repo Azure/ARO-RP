@@ -34,7 +34,7 @@ type IntermediateInfo struct {
 	PEM              string `json:"PEM"`
 }
 
-func BuildCertPoolForCaName(data *RootCAs) (*x509.CertPool, error) {
+func BuildCertPoolFromCAData(data *RootCAs) (*x509.CertPool, error) {
 	caCertPool, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, err
