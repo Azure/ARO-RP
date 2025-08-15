@@ -13,7 +13,7 @@ import (
 
 // NewSubjectNameAndIssuer creates a new instance of ClientAuthorizer which
 // allows connections only if they contain a valid client certificate signed by
-// a CA in `CertPool` and the client certificate's CommonName equals `clientCertCommonName`.
+// a CA in `certPool` and the client certificate's CommonName equals `clientCertCommonName`.
 func NewSubjectNameAndIssuer(log *logrus.Entry, certPool *x509.CertPool, clientCertCommonName string) (ClientAuthorizer, error) {
 	if clientCertCommonName == "" {
 		return nil, fmt.Errorf("client cert common name is empty")
