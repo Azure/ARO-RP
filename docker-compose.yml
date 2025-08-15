@@ -85,6 +85,7 @@ services:
           soft: 4096
           hard: 4096
     container_name: aro-rp
+    user: root
     depends_on:
       vpn:
         condition: service_healthy
@@ -128,6 +129,7 @@ services:
     depends_on:
       rp:
         condition: service_healthy
+    user: root
     environment:
       <<: *common-env
       NO_NPM: 1
