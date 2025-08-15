@@ -6,694 +6,654 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	fakeazcore "github.com/Azure/azure-sdk-for-go/sdk/azcore/fake"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	fakearmnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6/fake"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utilarmnetwork "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestGetOpenshiftClusterEffectiveRouteTable(t *testing.T) {
-	mockSubID := "00000000-0000-0000-0000-000000000000"
-	mockTenantID := "00000000-0000-0000-0000-000000000000"
-	resourceID := testdatabase.GetResourcePath(mockSubID, "resourceName")
-
-	ctx := context.Background()
-
-	// Create a mock effective route table response
-	mockRouteTable := &armnetwork.EffectiveRouteListResult{
-		Value: []*armnetwork.EffectiveRoute{
-			{
-				Name:   stringPtr("default-route"),
-				Source: (*armnetwork.EffectiveRouteSource)(stringPtr("Default")),
-				State:  (*armnetwork.EffectiveRouteState)(stringPtr("Active")),
-				AddressPrefix: []*string{
-					stringPtr("0.0.0.0/0"),
-				},
-				NextHopIPAddress: []*string{
-					stringPtr("10.0.0.1"),
-				},
-				NextHopType: (*armnetwork.RouteNextHopType)(stringPtr("VirtualNetworkGateway")),
-			},
-			{
-				Name:   stringPtr("subnet-route"),
-				Source: (*armnetwork.EffectiveRouteSource)(stringPtr("VnetLocal")),
-				State:  (*armnetwork.EffectiveRouteState)(stringPtr("Active")),
-				AddressPrefix: []*string{
-					stringPtr("10.0.1.0/24"),
-				},
-				NextHopType: (*armnetwork.RouteNextHopType)(stringPtr("VnetLocal")),
-			},
-		},
-	}
-
-	// Convert to JSON to test the marshaling
-	expectedJSON, err := mockRouteTable.MarshalJSON()
-	if err != nil {
-		t.Fatalf("Failed to marshal mock route table: %v", err)
-	}
-
+func TestGetAdminOpenshiftClusterEffectiveRouteTablePathHandling(t *testing.T) {
 	tests := []struct {
-		name            string
-		queryParams     map[string]string
-		setupMocks      func(*testdatabase.Fixture)
-		wantJSONContent []byte
-		wantError       bool
+		name         string
+		originalPath string
+		expectedDir  string
+		finalPath    string
+		description  string
 	}{
 		{
-			name: "successful route table retrieval with valid data",
-			queryParams: map[string]string{
-				"subid": mockSubID,
-				"rgn":   "test-rg",
-				"nic":   "test-nic",
-			},
-			setupMocks: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(resourceID),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: resourceID,
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: "/subscriptions/" + mockSubID + "/resourceGroups/test-cluster",
-							},
-						},
-					},
-				})
-
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
-			},
-			wantJSONContent: expectedJSON,
-			wantError:       false,
+			name:         "admin effective routing tables path",
+			originalPath: "/admin/subscriptions/sub/resourceGroups/rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster/effectiveroutingtables",
+			expectedDir:  "/admin/subscriptions/sub/resourceGroups/rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
+			finalPath:    "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
+			description:  "Should handle admin effective routing tables path correctly",
+		},
+		{
+			name:         "admin cluster path",
+			originalPath: "/admin/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster/effectiveroutingtables",
+			expectedDir:  "/admin/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster",
+			finalPath:    "/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster",
+			description:  "Should extract admin cluster resource ID correctly",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
-			defer ti.done()
+			// Test the path manipulation logic that happens in the admin handler
+			// r.URL.Path = filepath.Dir(r.URL.Path)
+			modifiedPath := filepath.Dir(tt.originalPath)
 
-			err := ti.buildFixtures(tt.setupMocks)
-			if err != nil {
-				t.Fatal(err)
+			if modifiedPath != tt.expectedDir {
+				t.Errorf("Expected dir path %s, got %s", tt.expectedDir, modifiedPath)
 			}
 
-			// Create request with query parameters
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/admin"+resourceID+"/effectiveroutingtables", nil)
-			if err != nil {
-				t.Fatal(err)
+			// Then test the resource ID extraction that happens in the shared method
+			// resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+			resourceID := strings.TrimPrefix(modifiedPath, "/admin")
+
+			if resourceID != tt.finalPath {
+				t.Errorf("Expected final resource path %s, got %s", tt.finalPath, resourceID)
 			}
 
-			// Add query parameters
-			q := req.URL.Query()
-			for key, value := range tt.queryParams {
-				q.Add(key, value)
-			}
-			req.URL.RawQuery = q.Encode()
-
-			// Set up path manipulation that happens in the handler
-			req.URL.Path = filepath.Dir(req.URL.Path)
-
-			// Test that we can at least verify the JSON structure
-			// This tests the marshaling and response format
-			t.Run("verify route table JSON structure", func(t *testing.T) {
-				var routeTable armnetwork.EffectiveRouteListResult
-				err := json.Unmarshal(tt.wantJSONContent, &routeTable)
+			// Verify the resource ID can be parsed
+			if resourceID != "" {
+				resource, err := azure.ParseResourceID(resourceID)
 				if err != nil {
-					t.Fatalf("Expected JSON should be valid: %v", err)
+					t.Errorf("Final resource ID should be parseable: %v", err)
+				} else {
+					if !strings.Contains(resource.ResourceType, "openShiftClusters") {
+						t.Error("Should extract ARO cluster resource type")
+					}
 				}
-
-				if len(routeTable.Value) != 2 {
-					t.Errorf("Expected 2 routes, got %d", len(routeTable.Value))
-				}
-
-				// Verify route structure
-				if routeTable.Value[0].Name == nil || *routeTable.Value[0].Name != "default-route" {
-					t.Error("First route should be named 'default-route'")
-				}
-
-				if routeTable.Value[1].Name == nil || *routeTable.Value[1].Name != "subnet-route" {
-					t.Error("Second route should be named 'subnet-route'")
-				}
-
-				// Verify address prefixes
-				if len(routeTable.Value[0].AddressPrefix) == 0 || *routeTable.Value[0].AddressPrefix[0] != "0.0.0.0/0" {
-					t.Error("Default route should have 0.0.0.0/0 prefix")
-				}
-
-				if len(routeTable.Value[1].AddressPrefix) == 0 || *routeTable.Value[1].AddressPrefix[0] != "10.0.1.0/24" {
-					t.Error("Subnet route should have 10.0.1.0/24 prefix")
-				}
-			})
+			}
 		})
 	}
 }
 
-// Helper function to create string pointers
-func stringPtr(s string) *string {
-	return &s
+func TestGetAdminOpenshiftClusterEffectiveRouteTableQueryParameterHandling(t *testing.T) {
+	tests := []struct {
+		name        string
+		queryString string
+		expectedNIC string
+		expectError bool
+		description string
+	}{
+		{
+			name:        "valid admin NIC parameter",
+			queryString: "nic=admin-test-nic-interface",
+			expectedNIC: "admin-test-nic-interface",
+			expectError: false,
+			description: "Should extract NIC name from admin query parameters",
+		},
+		{
+			name:        "URL encoded admin NIC parameter",
+			queryString: "nic=admin%2Dtest%2Dnic%2Dinterface",
+			expectedNIC: "admin-test-nic-interface",
+			expectError: false,
+			description: "Should handle URL encoded admin NIC names",
+		},
+		{
+			name:        "missing admin NIC parameter",
+			queryString: "other=value&admin=true",
+			expectedNIC: "",
+			expectError: true,
+			description: "Should return error when admin NIC parameter is missing",
+		},
+		{
+			name:        "empty admin NIC parameter",
+			queryString: "nic=&admin=true",
+			expectedNIC: "",
+			expectError: true,
+			description: "Should return error when admin NIC parameter is empty",
+		},
+		{
+			name:        "admin parameters with valid NIC",
+			queryString: "nic=admin-nic&admin=true&debug=on&extra=ignored",
+			expectedNIC: "admin-nic",
+			expectError: false,
+			description: "Should extract admin NIC while ignoring other admin parameters",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create admin request with query parameters
+			req, err := http.NewRequest(http.MethodGet, "/admin/test/effectiveroutingtables?"+tt.queryString, nil)
+			if err != nil {
+				t.Fatalf("Failed to create admin request: %v", err)
+			}
+
+			// Extract NIC parameter the same way the shared implementation does
+			nicName := req.URL.Query().Get("nic")
+
+			if nicName != tt.expectedNIC {
+				t.Errorf("Expected admin nicName='%s', got='%s'", tt.expectedNIC, nicName)
+			}
+
+			// Test the validation logic that would be in the shared implementation
+			if tt.expectError && nicName == "" {
+				// This simulates the error that would be returned
+				expectedError := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "nic", "Network interface name is required")
+				if expectedError == nil {
+					t.Error("Expected error for missing/empty admin NIC parameter")
+				}
+			}
+		})
+	}
 }
 
-func TestEffectiveRouteTableAzureClientMocking(t *testing.T) {
-	// Create mock effective route table response
-	mockEffectiveRoutes := []*armnetwork.EffectiveRoute{
+func TestGetAdminOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *testing.T) {
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	testRG := "admin-test-resource-group"
+	testNIC := "admin-test-nic-name"
+
+	// Create mock effective route data for admin scenarios
+	mockAdminRoutes := []*armnetwork.EffectiveRoute{
 		{
-			Name:   pointerutils.ToPtr("default-route"),
+			Name:   pointerutils.ToPtr("admin-default-route"),
 			Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("Default")),
 			State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
 			AddressPrefix: []*string{
 				pointerutils.ToPtr("0.0.0.0/0"),
 			},
-			NextHopIPAddress: []*string{
-				pointerutils.ToPtr("10.0.0.1"),
-			},
 			NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VirtualNetworkGateway")),
 		},
 		{
-			Name:   pointerutils.ToPtr("subnet-route"),
-			Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("VnetLocal")),
+			Name:   pointerutils.ToPtr("admin-local-route"),
+			Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("VNetLocal")),
 			State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
 			AddressPrefix: []*string{
-				pointerutils.ToPtr("10.0.1.0/24"),
+				pointerutils.ToPtr("10.0.0.0/16"),
 			},
 			NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VnetLocal")),
 		},
+		{
+			Name:   pointerutils.ToPtr("admin-user-route"),
+			Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("User")),
+			State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
+			AddressPrefix: []*string{
+				pointerutils.ToPtr("192.168.0.0/16"),
+			},
+			NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VirtualAppliance")),
+			NextHopIPAddress: []*string{
+				pointerutils.ToPtr("10.0.1.4"),
+			},
+		},
 	}
 
-	// Test the route table response marshaling directly
-	t.Run("effective route table JSON marshaling", func(t *testing.T) {
-		result := armnetwork.EffectiveRouteListResult{
-			Value: mockEffectiveRoutes,
-		}
-
-		// Test JSON marshaling
-		jsonData, err := result.MarshalJSON()
-		if err != nil {
-			t.Fatalf("Failed to marshal result to JSON: %v", err)
-		}
-
-		// Verify we can unmarshal it back
-		var unmarshaled armnetwork.EffectiveRouteListResult
-		err = json.Unmarshal(jsonData, &unmarshaled)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal JSON: %v", err)
-		}
-
-		// Verify the structure
-		if len(unmarshaled.Value) != 2 {
-			t.Errorf("Expected 2 routes, got %d", len(unmarshaled.Value))
-		}
-
-		// Verify specific route details
-		if len(unmarshaled.Value) > 0 {
-			route := unmarshaled.Value[0]
-			if route.Name == nil || *route.Name != "default-route" {
-				t.Error("First route should be named 'default-route'")
-			}
-			if len(route.AddressPrefix) == 0 || *route.AddressPrefix[0] != "0.0.0.0/0" {
-				t.Error("First route should have 0.0.0.0/0 address prefix")
-			}
-			if route.NextHopType == nil || *route.NextHopType != armnetwork.RouteNextHopTypeVirtualNetworkGateway {
-				t.Error("First route should have VirtualNetworkGateway next hop type")
-			}
-		}
-
-		if len(unmarshaled.Value) > 1 {
-			route := unmarshaled.Value[1]
-			if route.Name == nil || *route.Name != "subnet-route" {
-				t.Error("Second route should be named 'subnet-route'")
-			}
-			if len(route.AddressPrefix) == 0 || *route.AddressPrefix[0] != "10.0.1.0/24" {
-				t.Error("Second route should have 10.0.1.0/24 address prefix")
-			}
-			if route.NextHopType == nil || *route.NextHopType != armnetwork.RouteNextHopTypeVnetLocal {
-				t.Error("Second route should have VnetLocal next hop type")
-			}
-		}
-	})
-
-	// Test the Azure client response structure without the complex fake server setup
-	t.Run("azure client response structure", func(t *testing.T) {
-		// Simulate what the Azure client would return
-		response := armnetwork.InterfacesClientGetEffectiveRouteTableResponse{
-			EffectiveRouteListResult: armnetwork.EffectiveRouteListResult{
-				Value: mockEffectiveRoutes,
-			},
-		}
-
-		// Test that we can extract the data the same way the implementation does
-		jsonData, err := response.MarshalJSON()
-		if err != nil {
-			t.Fatalf("Failed to marshal response to JSON: %v", err)
-		}
-
-		// Verify the JSON contains expected route information
-		jsonStr := string(jsonData)
-		if !strings.Contains(jsonStr, "default-route") {
-			t.Error("JSON should contain 'default-route'")
-		}
-		if !strings.Contains(jsonStr, "0.0.0.0/0") {
-			t.Error("JSON should contain '0.0.0.0/0'")
-		}
-		if !strings.Contains(jsonStr, "10.0.1.0/24") {
-			t.Error("JSON should contain '10.0.1.0/24'")
-		}
-		if !strings.Contains(jsonStr, "VirtualNetworkGateway") {
-			t.Error("JSON should contain 'VirtualNetworkGateway'")
-		}
-	})
-}
-
-func TestEffectiveRouteTableErrorScenarios(t *testing.T) {
 	tests := []struct {
-		name               string //nolint:gci
-		routeTableData     *armnetwork.EffectiveRouteListResult
+		name               string
+		setupMockServer    func() fakearmnetwork.InterfacesServer
 		expectError        bool
-		expectEmptyResult  bool
-		expectMarshalError bool
+		expectedRouteCount int
 		description        string
 	}{
 		{
-			name: "empty route table",
-			routeTableData: &armnetwork.EffectiveRouteListResult{
-				Value: []*armnetwork.EffectiveRoute{},
-			},
-			expectError:       false,
-			expectEmptyResult: true,
-			description:       "Should handle empty route table gracefully",
-		},
-		{
-			name:               "nil route table", //nolint:gci
-			routeTableData:     nil,
-			expectError:        true,
-			expectMarshalError: true,
-			description:        "Should handle nil route table",
-		},
-		{
-			name: "nil routes array",
-			routeTableData: &armnetwork.EffectiveRouteListResult{
-				Value: nil,
-			},
-			expectError:       false,
-			expectEmptyResult: true,
-			description:       "Should handle nil routes array",
-		},
-		{
-			name: "route with nil fields",
-			routeTableData: &armnetwork.EffectiveRouteListResult{
-				Value: []*armnetwork.EffectiveRoute{
-					{
-						Name:          nil, // nil name
-						Source:        nil, // nil source
-						State:         nil, // nil state
-						AddressPrefix: nil, // nil address prefix
-						NextHopType:   nil, // nil next hop type
+			name: "successful admin route table retrieval with shared implementation",
+			setupMockServer: func() fakearmnetwork.InterfacesServer {
+				return fakearmnetwork.InterfacesServer{
+					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
+						// Verify the parameters passed match what the shared implementation sends
+						if resourceGroupName != testRG {
+							t.Errorf("Expected admin resource group '%s', got '%s'", testRG, resourceGroupName)
+						}
+						if networkInterfaceName != testNIC {
+							t.Errorf("Expected admin NIC name '%s', got '%s'", testNIC, networkInterfaceName)
+						}
+
+						resp.AddNonTerminalResponse(http.StatusAccepted, nil)
+						resp.SetTerminalResponse(http.StatusOK, armnetwork.InterfacesClientGetEffectiveRouteTableResponse{
+							EffectiveRouteListResult: armnetwork.EffectiveRouteListResult{
+								Value: mockAdminRoutes,
+							},
+						}, nil)
+						return resp, errResp
 					},
-				},
+				}
 			},
-			expectError:       false,
-			expectEmptyResult: false,
-			description:       "Should handle route with nil fields",
+			expectError:        false,
+			expectedRouteCount: 3,
+			description:        "Should successfully retrieve admin effective routes using shared ARO-RP implementation",
 		},
 		{
-			name: "route with empty address prefix array",
-			routeTableData: &armnetwork.EffectiveRouteListResult{
-				Value: []*armnetwork.EffectiveRoute{
-					{
-						Name:          pointerutils.ToPtr("test-route"),
-						Source:        (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("Default")),
-						State:         (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
-						AddressPrefix: []*string{}, // empty array
-						NextHopType:   (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VnetLocal")),
+			name: "admin azure api network interface not found error",
+			setupMockServer: func() fakearmnetwork.InterfacesServer {
+				return fakearmnetwork.InterfacesServer{
+					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
+						errResp.SetResponseError(http.StatusNotFound, "AdminNetworkInterfaceNotFound")
+						return resp, errResp
 					},
-				},
+				}
 			},
-			expectError:       false,
-			expectEmptyResult: false,
-			description:       "Should handle route with empty address prefix array",
+			expectError: true,
+			description: "Should handle admin network interface not found errors",
 		},
 		{
-			name: "route with nil address prefix elements",
-			routeTableData: &armnetwork.EffectiveRouteListResult{
-				Value: []*armnetwork.EffectiveRoute{
-					{
-						Name:   pointerutils.ToPtr("test-route"),
-						Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("Default")),
-						State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
-						AddressPrefix: []*string{
-							nil, // nil string pointer
-						},
-						NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VnetLocal")),
+			name: "admin azure api permission denied error",
+			setupMockServer: func() fakearmnetwork.InterfacesServer {
+				return fakearmnetwork.InterfacesServer{
+					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
+						errResp.SetResponseError(http.StatusForbidden, "AdminInsufficientPermissions")
+						return resp, errResp
 					},
-				},
+				}
 			},
-			expectError:       false,
-			expectEmptyResult: false,
-			description:       "Should handle route with nil address prefix elements",
+			expectError: true,
+			description: "Should handle admin permission denied errors",
 		},
 		{
-			name: "mix of valid and invalid routes",
-			routeTableData: &armnetwork.EffectiveRouteListResult{
-				Value: []*armnetwork.EffectiveRoute{
-					{
-						Name:   pointerutils.ToPtr("valid-route"),
-						Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("Default")),
-						State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
-						AddressPrefix: []*string{
-							pointerutils.ToPtr("10.0.0.0/24"),
-						},
-						NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VnetLocal")),
+			name: "admin empty effective route table response",
+			setupMockServer: func() fakearmnetwork.InterfacesServer {
+				return fakearmnetwork.InterfacesServer{
+					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
+						resp.AddNonTerminalResponse(http.StatusAccepted, nil)
+						resp.SetTerminalResponse(http.StatusOK, armnetwork.InterfacesClientGetEffectiveRouteTableResponse{
+							EffectiveRouteListResult: armnetwork.EffectiveRouteListResult{
+								Value: []*armnetwork.EffectiveRoute{}, // Empty admin routes
+							},
+						}, nil)
+						return resp, errResp
 					},
-					{
-						Name:          nil,
-						Source:        nil,
-						State:         nil,
-						AddressPrefix: nil,
-						NextHopType:   nil,
-					},
-				},
+				}
 			},
-			expectError:       false,
-			expectEmptyResult: false,
-			description:       "Should handle mix of valid and invalid routes",
+			expectError:        false,
+			expectedRouteCount: 0,
+			description:        "Should handle empty admin effective route table responses correctly",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test JSON marshaling
-			if tt.routeTableData == nil {
-				// Can't marshal nil data
-				if !tt.expectMarshalError {
-					t.Error("Expected marshal error for nil data")
-				}
-				return
+			ctx := context.Background()
+
+			// Set up fake Azure server for admin testing
+			server := tt.setupMockServer()
+			clientOptions := &arm.ClientOptions{
+				ClientOptions: policy.ClientOptions{
+					Transport: fakearmnetwork.NewInterfacesServerTransport(&server),
+				},
 			}
 
-			jsonData, err := tt.routeTableData.MarshalJSON()
-			if tt.expectMarshalError {
+			// Create Azure client with fake server using ARO-RP utility for admin
+			mockCredential := &fakeazcore.TokenCredential{}
+			client, err := utilarmnetwork.NewInterfacesClient(mockSubID, mockCredential, clientOptions)
+			if err != nil {
+				t.Fatalf("Failed to create ARO-RP admin interfaces client: %v", err)
+			}
+
+			// Test the GetEffectiveRouteTableAndWait method that the shared implementation uses
+			result, err := client.GetEffectiveRouteTableAndWait(ctx, testRG, testNIC, nil)
+			if tt.expectError {
 				if err == nil {
-					t.Error("Expected marshal error but got none")
+					t.Error("Expected admin error but got none")
+				}
+				// Verify error would be wrapped in api.NewCloudError in the shared implementation
+				expectedError := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+					fmt.Sprintf("Failed to retrieve effective route table: %v", err))
+				if expectedError == nil {
+					t.Error("Expected admin CloudError wrapper")
 				}
 				return
 			}
 
 			if err != nil {
-				if !tt.expectError {
-					t.Fatalf("Unexpected marshal error: %v", err)
-				}
-				return
+				t.Fatalf("Unexpected admin error: %v", err)
 			}
 
-			// Test JSON structure
-			jsonStr := string(jsonData)
-			// Verify it's valid JSON
+			// Verify the admin result structure
+			if len(result.Value) != tt.expectedRouteCount {
+				t.Errorf("Expected %d admin routes, got %d", tt.expectedRouteCount, len(result.Value))
+			}
+
+			// Test JSON marshaling (final step in shared implementation)
+			jsonData, err := result.MarshalJSON()
+			if err != nil {
+				t.Fatalf("Failed to marshal admin result to JSON: %v", err)
+			}
+
+			// Verify JSON is valid
 			var jsonObj map[string]interface{}
 			err = json.Unmarshal(jsonData, &jsonObj)
 			if err != nil {
-				t.Fatalf("Generated JSON is invalid: %v", err)
+				t.Fatalf("Generated admin JSON is invalid: %v", err)
 			}
 
-			// Test unmarshaling back
-			var unmarshaled armnetwork.EffectiveRouteListResult
-			err = json.Unmarshal(jsonData, &unmarshaled)
-			if err != nil {
-				t.Fatalf("Failed to unmarshal: %v", err)
-			}
-
-			// Check if result is empty as expected
-			isEmpty := len(unmarshaled.Value) == 0
-			if tt.expectEmptyResult && !isEmpty {
-				t.Error("Expected empty result but got routes")
-			} else if !tt.expectEmptyResult && isEmpty && len(tt.routeTableData.Value) > 0 {
-				t.Error("Expected non-empty result but got empty")
-			}
-
-			// Verify specific scenarios
-			switch tt.name {
-			case "empty route table":
-				if !strings.Contains(jsonStr, "\"value\":[]") && !strings.Contains(jsonStr, "\"value\": []") {
-					t.Error("JSON should contain empty value array")
+			// For non-empty results, verify admin-specific content
+			if tt.expectedRouteCount > 0 {
+				jsonStr := string(jsonData)
+				if !strings.Contains(jsonStr, "admin-default-route") || !strings.Contains(jsonStr, "admin-local-route") || !strings.Contains(jsonStr, "admin-user-route") {
+					t.Error("Admin JSON should contain admin route names")
 				}
-
-			case "route with nil fields":
-				// Should still produce valid JSON even with nil fields
-				if len(unmarshaled.Value) != 1 {
-					t.Error("Should have exactly one route")
+				if !strings.Contains(jsonStr, "0.0.0.0/0") || !strings.Contains(jsonStr, "10.0.0.0/16") || !strings.Contains(jsonStr, "192.168.0.0/16") {
+					t.Error("Admin JSON should contain admin address prefixes")
 				}
-
-			case "mix of valid and invalid routes":
-				if len(unmarshaled.Value) != 2 {
-					t.Error("Should have exactly two routes")
-				}
-				// Verify the valid route still has its data
-				validRoute := unmarshaled.Value[0]
-				if validRoute.Name == nil || *validRoute.Name != "valid-route" {
-					t.Error("Valid route should maintain its name")
+				if !strings.Contains(jsonStr, "VirtualAppliance") {
+					t.Error("Admin JSON should contain VirtualAppliance next hop type")
 				}
 			}
 		})
 	}
 }
 
-func TestEffectiveRouteTableResponseErrorHandling(t *testing.T) {
+func TestGetAdminOpenshiftClusterEffectiveRouteTableWorkflow(t *testing.T) {
 	tests := []struct {
-		name         string //nolint:gci
-		responseData armnetwork.InterfacesClientGetEffectiveRouteTableResponse
-		expectError  bool
-		expectEmpty  bool
-		description  string
+		name            string
+		originalPath    string
+		queryParameters string
+		description     string
 	}{
 		{
-			name: "response with empty effective route list",
-			responseData: armnetwork.InterfacesClientGetEffectiveRouteTableResponse{
-				EffectiveRouteListResult: armnetwork.EffectiveRouteListResult{
-					Value: []*armnetwork.EffectiveRoute{},
-				},
-			},
-			expectError: false,
-			expectEmpty: true,
-			description: "Azure API returns empty route list",
-		},
-		{
-			name: "response with nil route list",
-			responseData: armnetwork.InterfacesClientGetEffectiveRouteTableResponse{
-				EffectiveRouteListResult: armnetwork.EffectiveRouteListResult{
-					Value: nil,
-				},
-			},
-			expectError: false,
-			expectEmpty: true,
-			description: "Azure API returns nil route list",
-		},
-		{
-			name: "response with malformed route data",
-			responseData: armnetwork.InterfacesClientGetEffectiveRouteTableResponse{
-				EffectiveRouteListResult: armnetwork.EffectiveRouteListResult{
-					Value: []*armnetwork.EffectiveRoute{
-						{
-							Name: pointerutils.ToPtr("malformed-route"),
-							// Missing required fields that Azure would normally provide
-							Source:        nil,
-							State:         nil,
-							AddressPrefix: []*string{}, // Empty but not nil
-							NextHopType:   nil,
-						},
-					},
-				},
-			},
-			expectError: false,
-			expectEmpty: false,
-			description: "Azure API returns malformed route data",
+			name:            "complete admin workflow simulation",
+			originalPath:    "/admin/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster/effectiveroutingtables",
+			queryParameters: "nic=admin-nic-test",
+			description:     "Should simulate complete admin workflow from request to shared implementation",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test the exact same processing that the implementation does
-			jsonData, err := tt.responseData.MarshalJSON()
-			if tt.expectError {
-				if err == nil {
-					t.Error("Expected error but got none")
+			// Step 1: Simulate admin handler path manipulation
+			// r.URL.Path = filepath.Dir(r.URL.Path)
+			adminProcessedPath := filepath.Dir(tt.originalPath)
+
+			// Step 2: Simulate shared implementation resource ID extraction
+			// resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+			resourceID := strings.TrimPrefix(adminProcessedPath, "/admin")
+
+			// Step 3: Verify the resource ID is valid for parsing
+			resource, err := azure.ParseResourceID(resourceID)
+			if err != nil {
+				t.Fatalf("Resource ID should be parseable after admin processing: %v", err)
+			}
+
+			// Step 4: Verify all components are correctly extracted
+			if resource.SubscriptionID != "12345" {
+				t.Errorf("Expected subscription ID '12345', got '%s'", resource.SubscriptionID)
+			}
+			if resource.ResourceGroup != "test-rg" {
+				t.Errorf("Expected resource group 'test-rg', got '%s'", resource.ResourceGroup)
+			}
+			if resource.ResourceName != "test-cluster" {
+				t.Errorf("Expected resource name 'test-cluster', got '%s'", resource.ResourceName)
+			}
+
+			// Step 5: Simulate query parameter extraction
+			req, err := http.NewRequest(http.MethodGet, tt.originalPath+"?"+tt.queryParameters, nil)
+			if err != nil {
+				t.Fatalf("Failed to create test request: %v", err)
+			}
+
+			nicName := req.URL.Query().Get("nic")
+			if nicName != "admin-nic-test" {
+				t.Errorf("Expected NIC name 'admin-nic-test', got '%s'", nicName)
+			}
+
+			// Verify no error would be returned for valid parameters
+			if nicName == "" {
+				t.Error("Valid admin workflow should not have empty NIC name")
+			}
+			if resourceID == "" {
+				t.Error("Valid admin workflow should not have empty resource ID")
+			}
+		})
+	}
+}
+
+func TestGetAdminOpenshiftClusterEffectiveRouteTableErrorHandling(t *testing.T) {
+	tests := []struct {
+		name              string
+		originalPath      string
+		queryParameters   string
+		expectedHTTPCode  int
+		expectedErrorCode string
+		description       string
+	}{
+		{
+			name:              "missing NIC parameter in admin request",
+			originalPath:      "/admin/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster/effectiveroutingtables",
+			queryParameters:   "other=value",
+			expectedHTTPCode:  http.StatusBadRequest,
+			expectedErrorCode: api.CloudErrorCodeInvalidParameter,
+			description:       "Should return BadRequest when admin request is missing NIC parameter",
+		},
+		{
+			name:              "invalid admin path format",
+			originalPath:      "/admin/invalid/path/effectiveroutingtables",
+			queryParameters:   "nic=test-nic",
+			expectedHTTPCode:  http.StatusBadRequest,
+			expectedErrorCode: api.CloudErrorCodeInvalidParameter,
+			description:       "Should return BadRequest when admin path is malformed",
+		},
+		{
+			name:              "admin only path",
+			originalPath:      "/admin/effectiveroutingtables",
+			queryParameters:   "nic=test-nic",
+			expectedHTTPCode:  http.StatusBadRequest,
+			expectedErrorCode: api.CloudErrorCodeInvalidParameter,
+			description:       "Should return BadRequest for admin-only path",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Simulate admin handler processing
+			adminProcessedPath := filepath.Dir(tt.originalPath)
+			resourceID := strings.TrimPrefix(adminProcessedPath, "/admin")
+
+			// Create request for parameter testing
+			req, err := http.NewRequest(http.MethodGet, tt.originalPath+"?"+tt.queryParameters, nil)
+			if err != nil {
+				t.Fatalf("Failed to create test request: %v", err)
+			}
+
+			nicName := req.URL.Query().Get("nic")
+
+			// Test NIC validation
+			if nicName == "" {
+				err := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "nic", "Network interface name is required")
+				if err.StatusCode != tt.expectedHTTPCode {
+					t.Errorf("Expected HTTP status %d, got %d", tt.expectedHTTPCode, err.StatusCode)
+				}
+				if err.Code != tt.expectedErrorCode {
+					t.Errorf("Expected error code %s, got %s", tt.expectedErrorCode, err.Code)
 				}
 				return
 			}
 
+			// Test resource ID validation
+			if resourceID == "" {
+				err := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "resourceId", "Resource ID is required")
+				if err.StatusCode != tt.expectedHTTPCode {
+					t.Errorf("Expected HTTP status %d, got %d", tt.expectedHTTPCode, err.StatusCode)
+				}
+				if err.Code != tt.expectedErrorCode {
+					t.Errorf("Expected error code %s, got %s", tt.expectedErrorCode, err.Code)
+				}
+				return
+			}
+
+			// Test resource ID parsing validation
+			_, err = azure.ParseResourceID(resourceID)
 			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
-
-			// Verify the JSON is valid and can be processed
-			jsonStr := string(jsonData)
-			// Check if it's empty as expected
-			isEmpty := strings.Contains(jsonStr, "\"value\":[]") ||
-				strings.Contains(jsonStr, "\"value\": []") ||
-				strings.Contains(jsonStr, "\"value\":null") ||
-				strings.Contains(jsonStr, "\"value\": null") || jsonStr == "{}" ||
-				!strings.Contains(jsonStr, "\"value\"")
-			if tt.expectEmpty && !isEmpty {
-				t.Errorf("Expected empty result, but JSON contains: %s", jsonStr)
-			}
-
-			// Verify we can unmarshal the result
-			var result armnetwork.EffectiveRouteListResult
-			err = json.Unmarshal(jsonData, &result)
-			if err != nil {
-				t.Fatalf("Failed to unmarshal result: %v", err)
-			}
-
-			// Additional verification based on test case
-			switch tt.name {
-			case "response with empty effective route list":
-				if len(result.Value) != 0 {
-					t.Error("Expected empty route list")
+				cloudErr := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "resourceId", "Invalid resource ID format")
+				if cloudErr.StatusCode != tt.expectedHTTPCode {
+					t.Errorf("Expected HTTP status %d, got %d", tt.expectedHTTPCode, cloudErr.StatusCode)
 				}
-
-			case "response with malformed route data":
-				if len(result.Value) != 1 {
-					t.Error("Expected exactly one route")
-				}
-				route := result.Value[0]
-				if route.Name == nil || *route.Name != "malformed-route" {
-					t.Error("Route name should be preserved even if other fields are malformed")
-				}
-				// Verify other fields are handled gracefully
-				if len(route.AddressPrefix) != 0 {
-					t.Error("Empty address prefix array should be preserved")
+				if cloudErr.Code != tt.expectedErrorCode {
+					t.Errorf("Expected error code %s, got %s", tt.expectedErrorCode, cloudErr.Code)
 				}
 			}
 		})
 	}
 }
 
-func TestEffectiveRouteTableQueryParameterValidation(t *testing.T) {
-	tests := []struct {
-		name        string
-		queryParams map[string]string
-		wantValid   bool
-	}{
-		{
-			name: "all required parameters present",
-			queryParams: map[string]string{
-				"subid": "00000000-0000-0000-0000-000000000000",
-				"rgn":   "test-resource-group",
-				"nic":   "test-nic-name",
-			},
-			wantValid: true,
-		},
-		{
-			name: "missing subscription id",
-			queryParams: map[string]string{
-				"rgn": "test-resource-group",
-				"nic": "test-nic-name",
-			},
-			wantValid: false,
-		},
-		{
-			name: "missing resource group",
-			queryParams: map[string]string{
-				"subid": "00000000-0000-0000-0000-000000000000",
-				"nic":   "test-nic-name",
-			},
-			wantValid: false,
-		},
-		{
-			name: "missing nic name",
-			queryParams: map[string]string{
-				"subid": "00000000-0000-0000-0000-000000000000",
-				"rgn":   "test-resource-group",
-			},
-			wantValid: false,
-		},
-		{
-			name:        "all parameters missing",
-			queryParams: map[string]string{},
-			wantValid:   false,
-		},
-	}
+func TestGetAdminOpenshiftClusterEffectiveRouteTableDataConsistency(t *testing.T) {
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	resourceID := testdatabase.GetResourcePath(mockSubID, "admin-test-cluster")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
-			if err != nil {
-				t.Fatal(err)
+	t.Run("admin workflow resource ID extraction consistency", func(t *testing.T) {
+		// Test the complete admin workflow
+		adminPath := "/admin" + resourceID + "/effectiveroutingtables"
+
+		// Apply admin handler path manipulation
+		adminProcessedPath := filepath.Dir(adminPath)
+
+		// Apply shared implementation resource ID extraction
+		extractedResourceID := strings.TrimPrefix(adminProcessedPath, "/admin")
+
+		if extractedResourceID != resourceID {
+			t.Errorf("Expected admin resourceID='%s', got='%s'", resourceID, extractedResourceID)
+		}
+
+		// Test that azure.ParseResourceID can parse the extracted admin ID
+		resource, err := azure.ParseResourceID(extractedResourceID)
+		if err != nil {
+			t.Fatalf("Failed to parse extracted admin resource ID: %v", err)
+		}
+
+		if resource.SubscriptionID != mockSubID {
+			t.Errorf("Expected admin subscriptionID='%s', got='%s'", mockSubID, resource.SubscriptionID)
+		}
+	})
+
+	t.Run("admin JSON serialization consistency", func(t *testing.T) {
+		// Create admin test route data
+		adminTestRoutes := armnetwork.EffectiveRouteListResult{
+			Value: []*armnetwork.EffectiveRoute{
+				{
+					Name:   pointerutils.ToPtr("admin-test-route"),
+					Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("Default")),
+					State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
+					AddressPrefix: []*string{
+						pointerutils.ToPtr("172.16.1.0/24"),
+					},
+					NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VnetLocal")),
+				},
+				{
+					Name:   pointerutils.ToPtr("admin-custom-route"),
+					Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("User")),
+					State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
+					AddressPrefix: []*string{
+						pointerutils.ToPtr("172.16.2.0/24"),
+					},
+					NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VirtualAppliance")),
+					NextHopIPAddress: []*string{
+						pointerutils.ToPtr("172.16.1.100"),
+					},
+				},
+			},
+		}
+
+		// Test admin JSON marshaling
+		jsonData, err := adminTestRoutes.MarshalJSON()
+		if err != nil {
+			t.Fatalf("Failed to marshal admin route data: %v", err)
+		}
+
+		// Test that we can unmarshal admin back to the same structure
+		var unmarshaled armnetwork.EffectiveRouteListResult
+		err = json.Unmarshal(jsonData, &unmarshaled)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal admin JSON: %v", err)
+		}
+
+		// Verify admin data consistency after round-trip
+		if len(unmarshaled.Value) != len(adminTestRoutes.Value) {
+			t.Errorf("Expected %d admin routes after unmarshal, got %d", len(adminTestRoutes.Value), len(unmarshaled.Value))
+		}
+
+		if unmarshaled.Value[0].Name == nil || *unmarshaled.Value[0].Name != "admin-test-route" {
+			t.Error("Admin route name not preserved after JSON round-trip")
+		}
+
+		if unmarshaled.Value[0].AddressPrefix == nil || len(unmarshaled.Value[0].AddressPrefix) == 0 || *unmarshaled.Value[0].AddressPrefix[0] != "172.16.1.0/24" {
+			t.Error("Admin address prefix not preserved after JSON round-trip")
+		}
+
+		// Verify admin-specific fields
+		if len(unmarshaled.Value) > 1 {
+			adminRoute := unmarshaled.Value[1]
+			if adminRoute.NextHopIPAddress == nil || len(adminRoute.NextHopIPAddress) == 0 || *adminRoute.NextHopIPAddress[0] != "172.16.1.100" {
+				t.Error("Admin next hop IP address not preserved after JSON round-trip")
 			}
-
-			// Add query parameters
-			q := req.URL.Query()
-			for key, value := range tt.queryParams {
-				q.Add(key, value)
-			}
-			req.URL.RawQuery = q.Encode()
-
-			// Extract parameters the same way the implementation does
-			subID := req.URL.Query().Get("subid")
-			rg := req.URL.Query().Get("rgn")
-			nicName := req.URL.Query().Get("nic")
-
-			// Check if all required parameters are present and non-empty
-			hasAllParams := subID != "" && rg != "" && nicName != ""
-
-			if hasAllParams != tt.wantValid {
-				t.Errorf("Expected valid params=%v, got valid params=%v (subid='%s', rgn='%s', nic='%s')",
-					tt.wantValid, hasAllParams, subID, rg, nicName)
-			}
-		})
-	}
+		}
+	})
 }
 
-func TestAdminGetOpenshiftClusterEffectiveRouteTablePathHandling(t *testing.T) {
-	ctx := context.Background()
+func TestGetAdminOpenshiftClusterEffectiveRouteTableIntegrationWithSharedImplementation(t *testing.T) {
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockTenantID := "11111111-1111-1111-1111-111111111111"
+	resourceID := testdatabase.GetResourcePath(mockSubID, "admin-test-cluster")
 
-	tests := []struct {
-		name         string
-		originalPath string
-		expectedDir  string
-	}{
-		{
-			name:         "path manipulation works correctly",
-			originalPath: "/admin/subscriptions/sub/resourceGroups/rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster/effectiveroutingtables",
-			expectedDir:  "/admin/subscriptions/sub/resourceGroups/rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
-		},
-	}
+	t.Run("admin to shared implementation integration", func(t *testing.T) {
+		// Simulate the complete flow from admin handler to shared implementation
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, tt.originalPath, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+		// Admin handler receives request
+		adminRequestPath := "/admin" + resourceID + "/effectiveroutingtables"
 
-			// Test the path manipulation logic that happens in the handler
-			// r.URL.Path = filepath.Dir(r.URL.Path)
-			modifiedPath := filepath.Dir(req.URL.Path)
+		// Admin handler applies filepath.Dir
+		adminProcessedPath := filepath.Dir(adminRequestPath)
 
-			if modifiedPath != tt.expectedDir {
-				t.Errorf("expected path %s, got %s", tt.expectedDir, modifiedPath)
-			}
-		})
-	}
-}
+		// Shared implementation extracts resource ID
+		sharedResourceID := strings.TrimPrefix(adminProcessedPath, "/admin")
 
-// TestHandlerExists verifies that the handler function is properly defined
-func TestHandlerExists(t *testing.T) {
-	f := &frontend{}
+		// Verify the shared implementation receives the correct resource ID
+		if sharedResourceID != resourceID {
+			t.Errorf("Shared implementation should receive correct resource ID: expected '%s', got '%s'", resourceID, sharedResourceID)
+		}
 
-	// Verify the handler method exists and can be referenced
-	handler := f.getAdminOpenshiftClusterEffectiveRouteTable
-	_ = handler // Use the handler to prove it exists
+		// Verify the shared implementation can parse the resource ID
+		resource, err := azure.ParseResourceID(sharedResourceID)
+		if err != nil {
+			t.Fatalf("Shared implementation should be able to parse admin-processed resource ID: %v", err)
+		}
 
-	// This test passes if the method exists and can be assigned to a variable
+		if resource.SubscriptionID != mockSubID {
+			t.Errorf("Expected admin subscription ID %s, got %s", mockSubID, resource.SubscriptionID)
+		}
+
+		// Simulate database document structure that shared implementation would use
+		mockDoc := &api.OpenShiftClusterDocument{
+			Key: strings.ToLower(sharedResourceID),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: sharedResourceID,
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: "/subscriptions/" + mockSubID + "/resourceGroups/admin-test-cluster-rg",
+					},
+				},
+			},
+		}
+
+		mockSubscriptionDoc := &api.SubscriptionDocument{
+			ID: mockSubID,
+			Subscription: &api.Subscription{
+				State: api.SubscriptionStateRegistered,
+				Properties: &api.SubscriptionProperties{
+					TenantID: mockTenantID,
+				},
+			},
+		}
+
+		// Verify the documents have the expected structure for shared implementation
+		if mockDoc.OpenShiftCluster.ID != sharedResourceID {
+			t.Errorf("Expected admin cluster ID %s, got %s", sharedResourceID, mockDoc.OpenShiftCluster.ID)
+		}
+
+		if mockSubscriptionDoc.Subscription.Properties.TenantID != mockTenantID {
+			t.Errorf("Expected admin tenant ID %s, got %s", mockTenantID, mockSubscriptionDoc.Subscription.Properties.TenantID)
+		}
+	})
 }

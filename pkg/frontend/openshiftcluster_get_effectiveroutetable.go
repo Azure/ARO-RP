@@ -5,65 +5,86 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/Azure/go-autorest/autorest/azure"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	utilarmnetwork "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 )
 
-func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, w http.ResponseWriter, r *http.Request, log *logrus.Entry) ([]byte, error) {
-	subID := r.URL.Query().Get("subid")
-	rg := r.URL.Query().Get("rgn")
+func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, r *http.Request) ([]byte, error) {
+	// Extract NIC name from query parameters (this is still required as it's not in the cluster doc)
 	nicName := r.URL.Query().Get("nic")
+	if nicName == "" {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "nic", "Network interface name is required")
+	}
 
+	// Extract resource ID from path
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+	if resourceID == "" {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "resourceId", "Resource ID is required")
+	}
 
+	// Parse the resource ID to extract subscription and resource group
+	resource, err := azure.ParseResourceID(resourceID)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "resourceId", "Invalid resource ID format")
+	}
+
+	// Get cluster document from database
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
-
 	if err != nil {
-		//return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
-		log.Fatalf("failed to load cluster from cosmosDB: %v", err)
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	doc, _ := dbOpenShiftClusters.Get(ctx, resourceID)
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
+			fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.",
+				resource.ResourceType, resource.ResourceName, resource.ResourceGroup))
+	case err != nil:
+		return nil, err
+	}
 
+	// Get subscription document to obtain tenant ID for authentication
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-
 	if err != nil {
-		//return nil, err
-		log.Fatalf("failed to retrieve subscription document: %v", err)
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Failed to retrieve subscription document: %v", err))
 	}
 
+	// Create Azure credentials using the environment's helper
 	credential, err := f.env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
-
 	if err != nil {
-		//return nil, err
-		log.Fatalf("failed to create client: %v", err)
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Failed to create Azure credentials: %v", err))
 	}
 
-	clientFactory, err := armnetwork.NewClientFactory(subID, credential, nil)
-
+	// Create ARM network interfaces client using ARO-RP utility
+	interfacesClient, err := utilarmnetwork.NewInterfacesClient(resource.SubscriptionID, credential, nil)
 	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Failed to create network interfaces client: %v", err))
 	}
 
-	poller, err := clientFactory.NewInterfacesClient().BeginGetEffectiveRouteTable(context.Background(), rg, nicName, nil)
-
+	// Call GetEffectiveRouteTable using the ARO-RP utility pattern
+	result, err := interfacesClient.GetEffectiveRouteTableAndWait(ctx, resource.ResourceGroup, nicName, nil)
 	if err != nil {
-		log.Fatalf("failed to finish the request: %v", err)
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Failed to retrieve effective route table: %v", err))
 	}
 
-	res, err := poller.PollUntilDone(ctx, nil)
-
+	// Marshal the result to JSON
+	jsonData, err := result.MarshalJSON()
 	if err != nil {
-		log.Fatalf("failed to pull the result: %v", err)
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Failed to serialize route table data: %v", err))
 	}
 
-	e, err := res.MarshalJSON()
-
-	reply(log, w, nil, e, err)
-
-	return e, err
+	return jsonData, nil
 }
