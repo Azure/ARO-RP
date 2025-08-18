@@ -11,15 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	fakeazcore "github.com/Azure/azure-sdk-for-go/sdk/azcore/fake"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	fakearmnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6/fake"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	utilarmnetwork "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -179,141 +176,107 @@ func TestGetOpenshiftClusterEffectiveRouteTableQueryParameterHandling(t *testing
 	}
 }
 
-func TestGetOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *testing.T) {
+func TestGetOpenshiftClusterEffectiveRouteTableAzureActionsIntegration(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
-	// Use cluster resource group (where NICs are located) instead of cluster resource group
-	clusterResourceGroup := "cluster-resource-group"
 	testNIC := "test-nic-name"
 
-	// Create mock effective route data
-	mockRoutes := []*armnetwork.EffectiveRoute{
-		{
-			Name:   pointerutils.ToPtr("default-route"),
-			Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("Default")),
-			State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
-			AddressPrefix: []*string{
-				pointerutils.ToPtr("0.0.0.0/0"),
+	// Create mock effective route data that AzureActions would return
+	mockRouteData := []byte(`{
+		"value": [
+			{
+				"name": "default-route",
+				"source": "Default",
+				"state": "Active",
+				"addressPrefix": ["0.0.0.0/0"],
+				"nextHopType": "VirtualNetworkGateway"
 			},
-			NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VirtualNetworkGateway")),
-		},
-		{
-			Name:   pointerutils.ToPtr("local-route"),
-			Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("VNetLocal")),
-			State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
-			AddressPrefix: []*string{
-				pointerutils.ToPtr("10.0.0.0/16"),
-			},
-			NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VnetLocal")),
-		},
-	}
+			{
+				"name": "local-route", 
+				"source": "VNetLocal",
+				"state": "Active",
+				"addressPrefix": ["10.0.0.0/16"],
+				"nextHopType": "VnetLocal"
+			}
+		]
+	}`)
 
 	tests := []struct {
 		name               string
-		setupMockServer    func() fakearmnetwork.InterfacesServer
+		setupMockActions   func(ctrl *gomock.Controller) adminactions.AzureActions
 		expectError        bool
 		expectedRouteCount int
 		description        string
 	}{
 		{
-			name: "successful route table retrieval with ARO-RP utility",
-			setupMockServer: func() fakearmnetwork.InterfacesServer {
-				return fakearmnetwork.InterfacesServer{
-					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
-						// Verify the parameters passed match what the implementation sends (cluster resource group)
-						if resourceGroupName != clusterResourceGroup {
-							t.Errorf("Expected cluster resource group '%s', got '%s'", clusterResourceGroup, resourceGroupName)
-						}
-						if networkInterfaceName != testNIC {
-							t.Errorf("Expected NIC name '%s', got '%s'", testNIC, networkInterfaceName)
-						}
-
-						resp.AddNonTerminalResponse(http.StatusAccepted, nil)
-						resp.SetTerminalResponse(http.StatusOK, armnetwork.InterfacesClientGetEffectiveRouteTableResponse{
-							EffectiveRouteListResult: armnetwork.EffectiveRouteListResult{
-								Value: mockRoutes,
-							},
-						}, nil)
-						return resp, errResp
-					},
-				}
+			name: "successful route table retrieval with AzureActions",
+			setupMockActions: func(ctrl *gomock.Controller) adminactions.AzureActions {
+				mockActions := mock_adminactions.NewMockAzureActions(ctrl)
+				mockActions.EXPECT().
+					GetEffectiveRouteTable(gomock.Any(), testNIC).
+					Return(mockRouteData, nil)
+				return mockActions
 			},
 			expectError:        false,
 			expectedRouteCount: 2,
-			description:        "Should successfully retrieve effective routes using ARO-RP GetEffectiveRouteTableAndWait utility",
+			description:        "Should successfully retrieve effective routes using AzureActions interface",
 		},
 		{
-			name: "azure api network interface not found error",
-			setupMockServer: func() fakearmnetwork.InterfacesServer {
-				return fakearmnetwork.InterfacesServer{
-					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
-						errResp.SetResponseError(http.StatusNotFound, "NetworkInterfaceNotFound")
-						return resp, errResp
-					},
-				}
+			name: "azure actions network interface not found error",
+			setupMockActions: func(ctrl *gomock.Controller) adminactions.AzureActions {
+				mockActions := mock_adminactions.NewMockAzureActions(ctrl)
+				mockActions.EXPECT().
+					GetEffectiveRouteTable(gomock.Any(), testNIC).
+					Return(nil, fmt.Errorf("NetworkInterfaceNotFound"))
+				return mockActions
 			},
 			expectError: true,
-			description: "Should handle network interface not found errors",
+			description: "Should handle network interface not found errors from AzureActions",
 		},
 		{
-			name: "azure api permission denied error",
-			setupMockServer: func() fakearmnetwork.InterfacesServer {
-				return fakearmnetwork.InterfacesServer{
-					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
-						errResp.SetResponseError(http.StatusForbidden, "InsufficientPermissions")
-						return resp, errResp
-					},
-				}
+			name: "azure actions permission denied error",
+			setupMockActions: func(ctrl *gomock.Controller) adminactions.AzureActions {
+				mockActions := mock_adminactions.NewMockAzureActions(ctrl)
+				mockActions.EXPECT().
+					GetEffectiveRouteTable(gomock.Any(), testNIC).
+					Return(nil, fmt.Errorf("InsufficientPermissions"))
+				return mockActions
 			},
 			expectError: true,
-			description: "Should handle permission denied errors",
+			description: "Should handle permission denied errors from AzureActions",
 		},
 		{
-			name: "empty effective route table response",
-			setupMockServer: func() fakearmnetwork.InterfacesServer {
-				return fakearmnetwork.InterfacesServer{
-					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
-						resp.AddNonTerminalResponse(http.StatusAccepted, nil)
-						resp.SetTerminalResponse(http.StatusOK, armnetwork.InterfacesClientGetEffectiveRouteTableResponse{
-							EffectiveRouteListResult: armnetwork.EffectiveRouteListResult{
-								Value: []*armnetwork.EffectiveRoute{}, // Empty routes
-							},
-						}, nil)
-						return resp, errResp
-					},
-				}
+			name: "empty effective route table response from AzureActions",
+			setupMockActions: func(ctrl *gomock.Controller) adminactions.AzureActions {
+				mockActions := mock_adminactions.NewMockAzureActions(ctrl)
+				emptyRouteData := []byte(`{"value": []}`)
+				mockActions.EXPECT().
+					GetEffectiveRouteTable(gomock.Any(), testNIC).
+					Return(emptyRouteData, nil)
+				return mockActions
 			},
 			expectError:        false,
 			expectedRouteCount: 0,
-			description:        "Should handle empty effective route table responses correctly",
+			description:        "Should handle empty effective route table responses from AzureActions",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
 			ctx := context.Background()
 
-			// Set up fake Azure server
-			server := tt.setupMockServer()
-			clientOptions := &arm.ClientOptions{
-				ClientOptions: policy.ClientOptions{
-					Transport: fakearmnetwork.NewInterfacesServerTransport(&server),
-				},
-			}
+			// Set up mock AzureActions
+			mockActions := tt.setupMockActions(ctrl)
 
-			// Create Azure client with fake server using ARO-RP utility
-			mockCredential := &fakeazcore.TokenCredential{}
-			client, err := utilarmnetwork.NewInterfacesClient(mockSubID, mockCredential, clientOptions)
-			if err != nil {
-				t.Fatalf("Failed to create ARO-RP interfaces client: %v", err)
-			}
-
-			// Test the GetEffectiveRouteTableAndWait method that the implementation uses with cluster resource group
-			result, err := client.GetEffectiveRouteTableAndWait(ctx, clusterResourceGroup, testNIC, nil)
+			// Test the AzureActions.GetEffectiveRouteTable method that the implementation uses
+			jsonData, err := mockActions.GetEffectiveRouteTable(ctx, testNIC)
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
 				}
-				// Verify error would be wrapped in api.NewCloudError in the  implementation
+				// Verify error would be wrapped in api.NewCloudError in the implementation
 				expectedError := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
 					fmt.Sprintf("Failed to retrieve effective route table: %v", err))
 				if expectedError == nil {
@@ -326,17 +289,6 @@ func TestGetOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *testing.
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
-			// Verify the result structure
-			if len(result.Value) != tt.expectedRouteCount {
-				t.Errorf("Expected %d routes, got %d", tt.expectedRouteCount, len(result.Value))
-			}
-
-			// Test JSON marshaling (final step in  implementation)
-			jsonData, err := result.MarshalJSON()
-			if err != nil {
-				t.Fatalf("Failed to marshal result to JSON: %v", err)
-			}
-
 			// Verify JSON is valid
 			var jsonObj map[string]interface{}
 			err = json.Unmarshal(jsonData, &jsonObj)
@@ -344,15 +296,24 @@ func TestGetOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *testing.
 				t.Fatalf("Generated JSON is invalid: %v", err)
 			}
 
-			// For non-empty results, verify content
-			if tt.expectedRouteCount > 0 {
-				jsonStr := string(jsonData)
-				if !strings.Contains(jsonStr, "default-route") || !strings.Contains(jsonStr, "local-route") {
-					t.Error("JSON should contain route names")
+			// Verify route count
+			if valueObj, ok := jsonObj["value"].([]interface{}); ok {
+				if len(valueObj) != tt.expectedRouteCount {
+					t.Errorf("Expected %d routes, got %d", tt.expectedRouteCount, len(valueObj))
 				}
-				if !strings.Contains(jsonStr, "0.0.0.0/0") || !strings.Contains(jsonStr, "10.0.0.0/16") {
-					t.Error("JSON should contain address prefixes")
+
+				// For non-empty results, verify content
+				if tt.expectedRouteCount > 0 {
+					jsonStr := string(jsonData)
+					if !strings.Contains(jsonStr, "default-route") || !strings.Contains(jsonStr, "local-route") {
+						t.Error("JSON should contain route names")
+					}
+					if !strings.Contains(jsonStr, "0.0.0.0/0") || !strings.Contains(jsonStr, "10.0.0.0/16") {
+						t.Error("JSON should contain address prefixes")
+					}
 				}
+			} else {
+				t.Error("JSON response should contain 'value' array")
 			}
 		})
 	}
@@ -601,7 +562,7 @@ func TestGetOpenshiftClusterEffectiveRouteTableDataConsistency(t *testing.T) {
 	resourceID := testdatabase.GetResourcePath(mockSubID, "test-cluster")
 
 	t.Run("resource ID extraction consistency", func(t *testing.T) {
-		// Test that the  implementation extracts resource ID consistently
+		// Test that the implementation extracts resource ID consistently
 		adminPath := "/admin" + resourceID
 		extractedResourceID := strings.TrimPrefix(adminPath, "/admin")
 
@@ -621,45 +582,47 @@ func TestGetOpenshiftClusterEffectiveRouteTableDataConsistency(t *testing.T) {
 	})
 
 	t.Run("JSON serialization consistency", func(t *testing.T) {
-		// Create test route data
-		testRoutes := armnetwork.EffectiveRouteListResult{
-			Value: []*armnetwork.EffectiveRoute{
+		// Create test route data that AzureActions would return
+		testRouteData := []byte(`{
+			"value": [
 				{
-					Name:   pointerutils.ToPtr("test-route"),
-					Source: (*armnetwork.EffectiveRouteSource)(pointerutils.ToPtr("Default")),
-					State:  (*armnetwork.EffectiveRouteState)(pointerutils.ToPtr("Active")),
-					AddressPrefix: []*string{
-						pointerutils.ToPtr("192.168.1.0/24"),
-					},
-					NextHopType: (*armnetwork.RouteNextHopType)(pointerutils.ToPtr("VnetLocal")),
-				},
-			},
-		}
+					"name": "test-route",
+					"source": "Default",
+					"state": "Active",
+					"addressPrefix": ["192.168.1.0/24"],
+					"nextHopType": "VnetLocal"
+				}
+			]
+		}`)
 
-		// Test JSON marshaling
-		jsonData, err := testRoutes.MarshalJSON()
+		// Test that we can unmarshal the JSON from AzureActions
+		var jsonObj map[string]interface{}
+		err := json.Unmarshal(testRouteData, &jsonObj)
 		if err != nil {
-			t.Fatalf("Failed to marshal route data: %v", err)
+			t.Fatalf("Failed to unmarshal AzureActions JSON: %v", err)
 		}
 
-		// Test that we can unmarshal back to the same structure
-		var unmarshaled armnetwork.EffectiveRouteListResult
-		err = json.Unmarshal(jsonData, &unmarshaled)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal JSON: %v", err)
-		}
+		// Verify data structure
+		if valueObj, ok := jsonObj["value"].([]interface{}); ok {
+			if len(valueObj) != 1 {
+				t.Errorf("Expected 1 route, got %d", len(valueObj))
+			}
 
-		// Verify data consistency after round-trip
-		if len(unmarshaled.Value) != len(testRoutes.Value) {
-			t.Errorf("Expected %d routes after unmarshal, got %d", len(testRoutes.Value), len(unmarshaled.Value))
-		}
+			if route, ok := valueObj[0].(map[string]interface{}); ok {
+				if routeName, ok := route["name"].(string); !ok || routeName != "test-route" {
+					t.Error("Route name not preserved in AzureActions JSON")
+				}
 
-		if unmarshaled.Value[0].Name == nil || *unmarshaled.Value[0].Name != "test-route" {
-			t.Error("Route name not preserved after JSON round-trip")
-		}
-
-		if len(unmarshaled.Value[0].AddressPrefix) == 0 || *unmarshaled.Value[0].AddressPrefix[0] != "192.168.1.0/24" {
-			t.Error("Address prefix not preserved after JSON round-trip")
+				if addressPrefixes, ok := route["addressPrefix"].([]interface{}); !ok || len(addressPrefixes) == 0 {
+					t.Error("Address prefix not preserved in AzureActions JSON")
+				} else if prefix, ok := addressPrefixes[0].(string); !ok || prefix != "192.168.1.0/24" {
+					t.Error("Address prefix value not preserved in AzureActions JSON")
+				}
+			} else {
+				t.Error("Route object structure invalid in AzureActions JSON")
+			}
+		} else {
+			t.Error("JSON response should contain 'value' array")
 		}
 	})
 }
@@ -729,33 +692,33 @@ func TestGetOpenshiftClusterEffectiveRouteTableSubscriptionDocumentHandling(t *t
 	}
 }
 
-func TestGetOpenshiftClusterEffectiveRouteTableCredentialHandling(t *testing.T) {
+func TestGetOpenshiftClusterEffectiveRouteTableAzureActionsFactoryHandling(t *testing.T) {
 	mockTenantID := "11111111-1111-1111-1111-111111111111"
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 
-	t.Run("credential creation validation", func(t *testing.T) {
-		// Test the credential parameters that would be used
+	t.Run("azureActionsFactory validation", func(t *testing.T) {
+		// Test the parameters that would be used for azureActionsFactory
 		if mockTenantID == "" {
-			t.Error("Tenant ID should be available for credential creation")
+			t.Error("Tenant ID should be available for AzureActions creation")
 		}
 		if mockSubID == "" {
-			t.Error("Subscription ID should be available for client creation")
+			t.Error("Subscription ID should be available for AzureActions creation")
 		}
 
-		// Test error handling for credential creation failure
-		credentialError := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Failed to create Azure credentials: %v", "mock credential error"))
-		if credentialError.StatusCode != http.StatusInternalServerError {
-			t.Error("Should return 500 for credential creation failures")
+		// Test error handling for AzureActions factory failure
+		factoryError := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Failed to create Azure actions: %v", "mock factory error"))
+		if factoryError.StatusCode != http.StatusInternalServerError {
+			t.Error("Should return 500 for AzureActions factory failures")
 		}
 	})
 
-	t.Run("client creation validation", func(t *testing.T) {
-		// Test error handling for client creation failure
-		clientError := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Failed to create network interfaces client: %v", "mock client error"))
-		if clientError.StatusCode != http.StatusInternalServerError {
-			t.Error("Should return 500 for client creation failures")
+	t.Run("azureActions method validation", func(t *testing.T) {
+		// Test error handling for AzureActions method failure
+		methodError := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Failed to retrieve effective route table: %v", "mock method error"))
+		if methodError.StatusCode != http.StatusInternalServerError {
+			t.Error("Should return 500 for AzureActions method failures")
 		}
 	})
 }

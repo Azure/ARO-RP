@@ -13,7 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	utilarmnetwork "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 )
 
 func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, r *http.Request) ([]byte, error) {
@@ -56,48 +56,18 @@ func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, 
 			fmt.Sprintf("Failed to retrieve subscription document: %v", err))
 	}
 
-	// Create Azure credentials using the environment's helper
-	credential, err := f.env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
+	// Create AzureActions using the existing factory pattern
+	azureActions, err := f.azureActionsFactory(nil, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Failed to create Azure credentials: %v", err))
+			fmt.Sprintf("Failed to create Azure actions: %v", err))
 	}
 
-	// Create ARM network interfaces client using ARO-RP utility
-	interfacesClient, err := utilarmnetwork.NewInterfacesClient(subscriptionDoc.ID, credential, nil)
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Failed to create network interfaces client: %v", err))
-	}
-
-	// Use the cluster document's ClusterResourceGroup instead of the cluster resource group
-	clusterResourceGroup := doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
-	if clusterResourceGroup == "" {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			"Cluster resource group not found in cluster document")
-	}
-
-	// Extract resource group name from resource group ID
-	// ClusterResourceGroup format: /subscriptions/{sub}/resourceGroups/{rg}
-	parts := strings.Split(clusterResourceGroup, "/")
-	if len(parts) < 5 || parts[3] != "resourceGroups" {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			"Invalid cluster resource group format")
-	}
-	clusterResourceGroupName := parts[4]
-
-	// Call GetEffectiveRouteTable using the cluster resource group
-	result, err := interfacesClient.GetEffectiveRouteTableAndWait(ctx, clusterResourceGroupName, nicName, nil)
+	// Use AzureActions to get effective route table
+	jsonData, err := azureActions.GetEffectiveRouteTable(ctx, nicName)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
 			fmt.Sprintf("Failed to retrieve effective route table: %v", err))
-	}
-
-	// Marshal the result to JSON
-	jsonData, err := result.MarshalJSON()
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Failed to serialize route table data: %v", err))
 	}
 
 	return jsonData, nil
