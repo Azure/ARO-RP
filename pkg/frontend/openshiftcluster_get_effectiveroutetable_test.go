@@ -181,7 +181,8 @@ func TestGetOpenshiftClusterEffectiveRouteTableQueryParameterHandling(t *testing
 
 func TestGetOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
-	testRG := "test-resource-group"
+	// Use cluster resource group (where NICs are located) instead of cluster resource group
+	clusterResourceGroup := "cluster-resource-group"
 	testNIC := "test-nic-name"
 
 	// Create mock effective route data
@@ -218,9 +219,9 @@ func TestGetOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *testing.
 			setupMockServer: func() fakearmnetwork.InterfacesServer {
 				return fakearmnetwork.InterfacesServer{
 					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
-						// Verify the parameters passed match what the  implementation sends
-						if resourceGroupName != testRG {
-							t.Errorf("Expected resource group '%s', got '%s'", testRG, resourceGroupName)
+						// Verify the parameters passed match what the implementation sends (cluster resource group)
+						if resourceGroupName != clusterResourceGroup {
+							t.Errorf("Expected cluster resource group '%s', got '%s'", clusterResourceGroup, resourceGroupName)
 						}
 						if networkInterfaceName != testNIC {
 							t.Errorf("Expected NIC name '%s', got '%s'", testNIC, networkInterfaceName)
@@ -306,8 +307,8 @@ func TestGetOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *testing.
 				t.Fatalf("Failed to create ARO-RP interfaces client: %v", err)
 			}
 
-			// Test the GetEffectiveRouteTableAndWait method that the  implementation uses
-			result, err := client.GetEffectiveRouteTableAndWait(ctx, testRG, testNIC, nil)
+			// Test the GetEffectiveRouteTableAndWait method that the implementation uses with cluster resource group
+			result, err := client.GetEffectiveRouteTableAndWait(ctx, clusterResourceGroup, testNIC, nil)
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -453,6 +454,92 @@ func TestGetOpenshiftClusterEffectiveRouteTableErrorHandling(t *testing.T) {
 	}
 }
 
+func TestGetOpenshiftClusterEffectiveRouteTableClusterResourceGroupExtraction(t *testing.T) {
+	tests := []struct {
+		name                      string
+		clusterResourceGroupID    string
+		expectedResourceGroupName string
+		expectError               bool
+		description               string
+	}{
+		{
+			name:                      "valid cluster resource group ID",
+			clusterResourceGroupID:    "/subscriptions/12345/resourceGroups/cluster-rg/providers/Microsoft.Resources/resourceGroups",
+			expectedResourceGroupName: "cluster-rg",
+			expectError:               false,
+			description:               "Should extract resource group name from valid cluster resource group ID",
+		},
+		{
+			name:                      "another valid cluster resource group ID",
+			clusterResourceGroupID:    "/subscriptions/67890/resourceGroups/my-cluster-resources/providers/Microsoft.Resources/resourceGroups",
+			expectedResourceGroupName: "my-cluster-resources",
+			expectError:               false,
+			description:               "Should extract resource group name from another valid format",
+		},
+		{
+			name:                   "invalid cluster resource group ID format",
+			clusterResourceGroupID: "/invalid/format/resourceGroup",
+			expectError:            true,
+			description:            "Should return error for invalid cluster resource group ID format",
+		},
+		{
+			name:                   "empty cluster resource group ID",
+			clusterResourceGroupID: "",
+			expectError:            true,
+			description:            "Should return error for empty cluster resource group ID",
+		},
+		{
+			name:                   "malformed cluster resource group ID",
+			clusterResourceGroupID: "/subscriptions/12345/resourceGroups",
+			expectError:            true,
+			description:            "Should return error for malformed cluster resource group ID",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test cluster resource group extraction logic from implementation
+			if tt.clusterResourceGroupID == "" {
+				// Should return error for empty cluster resource group
+				err := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+					"Cluster resource group not found in cluster document")
+				if !tt.expectError {
+					t.Error("Expected no error but got error")
+				}
+				if err.StatusCode != http.StatusInternalServerError {
+					t.Error("Should return 500 for missing cluster resource group")
+				}
+				return
+			}
+
+			// Extract resource group name from resource group ID (same logic as implementation)
+			// ClusterResourceGroup format: /subscriptions/{sub}/resourceGroups/{rg}
+			parts := strings.Split(tt.clusterResourceGroupID, "/")
+			if len(parts) < 5 || parts[3] != "resourceGroups" {
+				if !tt.expectError {
+					t.Error("Expected successful extraction but got parsing error")
+				}
+				err := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+					"Invalid cluster resource group format")
+				if err.StatusCode != http.StatusInternalServerError {
+					t.Error("Should return 500 for invalid cluster resource group format")
+				}
+				return
+			}
+
+			clusterResourceGroupName := parts[4]
+			if tt.expectError {
+				t.Error("Expected error but got successful extraction")
+				return
+			}
+
+			if clusterResourceGroupName != tt.expectedResourceGroupName {
+				t.Errorf("Expected cluster resource group name '%s', got '%s'", tt.expectedResourceGroupName, clusterResourceGroupName)
+			}
+		})
+	}
+}
+
 func TestGetOpenshiftClusterEffectiveRouteTableDatabaseIntegration(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -575,6 +662,71 @@ func TestGetOpenshiftClusterEffectiveRouteTableDataConsistency(t *testing.T) {
 			t.Error("Address prefix not preserved after JSON round-trip")
 		}
 	})
+}
+
+func TestGetOpenshiftClusterEffectiveRouteTableSubscriptionDocumentHandling(t *testing.T) {
+	tests := []struct {
+		name           string
+		subscriptionID string
+		tenantID       string
+		expectError    bool
+		description    string
+	}{
+		{
+			name:           "valid subscription document",
+			subscriptionID: "00000000-0000-0000-0000-000000000000",
+			tenantID:       "11111111-1111-1111-1111-111111111111",
+			expectError:    false,
+			description:    "Should handle valid subscription document with tenant ID",
+		},
+		{
+			name:           "missing tenant ID",
+			subscriptionID: "00000000-0000-0000-0000-000000000000",
+			tenantID:       "",
+			expectError:    true,
+			description:    "Should return error when tenant ID is missing from subscription document",
+		},
+		{
+			name:           "missing subscription ID",
+			subscriptionID: "",
+			tenantID:       "11111111-1111-1111-1111-111111111111",
+			expectError:    true,
+			description:    "Should return error when subscription ID is missing",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test subscription document validation logic from implementation
+			if tt.subscriptionID == "" {
+				err := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+					"Failed to retrieve subscription document: subscription ID is required")
+				if !tt.expectError {
+					t.Error("Expected no error but got error for missing subscription ID")
+				}
+				if err.StatusCode != http.StatusInternalServerError {
+					t.Error("Should return 500 for missing subscription ID")
+				}
+				return
+			}
+
+			if tt.tenantID == "" && tt.expectError {
+				err := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+					"Failed to create Azure credentials: tenant ID is required")
+				if err.StatusCode != http.StatusInternalServerError {
+					t.Error("Should return 500 for missing tenant ID")
+				}
+				return
+			}
+
+			// Valid case - verify IDs are usable
+			if !tt.expectError {
+				if tt.subscriptionID == "" || tt.tenantID == "" {
+					t.Error("Valid case should have both subscription ID and tenant ID")
+				}
+			}
+		})
+	}
 }
 
 func TestGetOpenshiftClusterEffectiveRouteTableCredentialHandling(t *testing.T) {

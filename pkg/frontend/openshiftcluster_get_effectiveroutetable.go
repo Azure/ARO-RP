@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/go-chi/chi/v5"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -17,6 +17,10 @@ import (
 )
 
 func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, r *http.Request) ([]byte, error) {
+	resType := chi.URLParam(r, "resourceType")
+	resName := chi.URLParam(r, "resourceName")
+	resGroupName := chi.URLParam(r, "resourceGroupName")
+
 	// Extract NIC name from query parameters (this is still required as it's not in the cluster doc)
 	nicName := r.URL.Query().Get("nic")
 	if nicName == "" {
@@ -27,12 +31,6 @@ func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 	if resourceID == "" {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "resourceId", "Resource ID is required")
-	}
-
-	// Parse the resource ID to extract subscription and resource group
-	resource, err := azure.ParseResourceID(resourceID)
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "resourceId", "Invalid resource ID format")
 	}
 
 	// Get cluster document from database
@@ -46,7 +44,7 @@ func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, 
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 			fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.",
-				resource.ResourceType, resource.ResourceName, resource.ResourceGroup))
+				resType, resName, resGroupName))
 	case err != nil:
 		return nil, err
 	}
@@ -66,14 +64,30 @@ func (f *frontend) _getOpenshiftClusterEffectiveRouteTable(ctx context.Context, 
 	}
 
 	// Create ARM network interfaces client using ARO-RP utility
-	interfacesClient, err := utilarmnetwork.NewInterfacesClient(resource.SubscriptionID, credential, nil)
+	interfacesClient, err := utilarmnetwork.NewInterfacesClient(subscriptionDoc.ID, credential, nil)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
 			fmt.Sprintf("Failed to create network interfaces client: %v", err))
 	}
 
-	// Call GetEffectiveRouteTable using the ARO-RP utility pattern
-	result, err := interfacesClient.GetEffectiveRouteTableAndWait(ctx, resource.ResourceGroup, nicName, nil)
+	// Use the cluster document's ClusterResourceGroup instead of the cluster resource group
+	clusterResourceGroup := doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
+	if clusterResourceGroup == "" {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			"Cluster resource group not found in cluster document")
+	}
+
+	// Extract resource group name from resource group ID
+	// ClusterResourceGroup format: /subscriptions/{sub}/resourceGroups/{rg}
+	parts := strings.Split(clusterResourceGroup, "/")
+	if len(parts) < 5 || parts[3] != "resourceGroups" {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			"Invalid cluster resource group format")
+	}
+	clusterResourceGroupName := parts[4]
+
+	// Call GetEffectiveRouteTable using the cluster resource group
+	result, err := interfacesClient.GetEffectiveRouteTableAndWait(ctx, clusterResourceGroupName, nicName, nil)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
 			fmt.Sprintf("Failed to retrieve effective route table: %v", err))

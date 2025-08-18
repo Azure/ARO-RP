@@ -156,7 +156,8 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableQueryParameterHandling(t *te
 
 func TestGetAdminOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
-	testRG := "admin-test-resource-group"
+	// Admin now uses cluster resource group from shared implementation (where NICs are located)
+	clusterResourceGroup := "admin-cluster-resource-group"
 	testNIC := "admin-test-nic-name"
 
 	// Create mock effective route data for admin scenarios
@@ -205,9 +206,9 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *tes
 			setupMockServer: func() fakearmnetwork.InterfacesServer {
 				return fakearmnetwork.InterfacesServer{
 					BeginGetEffectiveRouteTable: func(ctx context.Context, resourceGroupName string, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (resp fakeazcore.PollerResponder[armnetwork.InterfacesClientGetEffectiveRouteTableResponse], errResp fakeazcore.ErrorResponder) {
-						// Verify the parameters passed match what the shared implementation sends
-						if resourceGroupName != testRG {
-							t.Errorf("Expected admin resource group '%s', got '%s'", testRG, resourceGroupName)
+						// Verify the parameters passed match what the shared implementation sends (cluster resource group)
+						if resourceGroupName != clusterResourceGroup {
+							t.Errorf("Expected admin cluster resource group '%s', got '%s'", clusterResourceGroup, resourceGroupName)
 						}
 						if networkInterfaceName != testNIC {
 							t.Errorf("Expected admin NIC name '%s', got '%s'", testNIC, networkInterfaceName)
@@ -225,7 +226,7 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *tes
 			},
 			expectError:        false,
 			expectedRouteCount: 3,
-			description:        "Should successfully retrieve admin effective routes using shared ARO-RP implementation",
+			description:        "Should successfully retrieve admin effective routes via shared implementation using cluster resource group",
 		},
 		{
 			name: "admin azure api network interface not found error",
@@ -293,8 +294,8 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableARMNetworkIntegration(t *tes
 				t.Fatalf("Failed to create ARO-RP admin interfaces client: %v", err)
 			}
 
-			// Test the GetEffectiveRouteTableAndWait method that the shared implementation uses
-			result, err := client.GetEffectiveRouteTableAndWait(ctx, testRG, testNIC, nil)
+			// Test the GetEffectiveRouteTableAndWait method that the shared implementation uses with cluster resource group
+			result, err := client.GetEffectiveRouteTableAndWait(ctx, clusterResourceGroup, testNIC, nil)
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected admin error but got none")
@@ -358,13 +359,13 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableWorkflow(t *testing.T) {
 			name:            "complete admin workflow simulation",
 			originalPath:    "/admin/subscriptions/12345/resourceGroups/test-rg/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster/effectiveroutingtables",
 			queryParameters: "nic=admin-nic-test",
-			description:     "Should simulate complete admin workflow from request to shared implementation",
+			description:     "Should simulate complete admin workflow: filepath.Dir path manipulation then call shared implementation",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Step 1: Simulate admin handler path manipulation
+			// Step 1: Simulate admin handler path manipulation (only admin-specific logic)
 			// r.URL.Path = filepath.Dir(r.URL.Path)
 			adminProcessedPath := filepath.Dir(tt.originalPath)
 
@@ -372,13 +373,13 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableWorkflow(t *testing.T) {
 			// resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 			resourceID := strings.TrimPrefix(adminProcessedPath, "/admin")
 
-			// Step 3: Verify the resource ID is valid for parsing
+			// Step 3: Verify the resource ID is valid for parsing (rest handled by shared implementation)
 			resource, err := azure.ParseResourceID(resourceID)
 			if err != nil {
 				t.Fatalf("Resource ID should be parseable after admin processing: %v", err)
 			}
 
-			// Step 4: Verify all components are correctly extracted
+			// Step 4: Verify all components are correctly extracted for shared implementation
 			if resource.SubscriptionID != "12345" {
 				t.Errorf("Expected subscription ID '12345', got '%s'", resource.SubscriptionID)
 			}
@@ -598,20 +599,20 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableIntegrationWithSharedImpleme
 	resourceID := testdatabase.GetResourcePath(mockSubID, "admin-test-cluster")
 
 	t.Run("admin to shared implementation integration", func(t *testing.T) {
-		// Simulate the complete flow from admin handler to shared implementation
+		// Simulate the complete flow: admin handler does filepath.Dir then calls shared implementation
 
 		// Admin handler receives request
 		adminRequestPath := "/admin" + resourceID + "/effectiveroutingtables"
 
-		// Admin handler applies filepath.Dir
+		// Admin handler applies filepath.Dir (only admin-specific logic)
 		adminProcessedPath := filepath.Dir(adminRequestPath)
 
-		// Shared implementation extracts resource ID
+		// Admin handler then calls shared implementation which extracts resource ID
 		sharedResourceID := strings.TrimPrefix(adminProcessedPath, "/admin")
 
-		// Verify the shared implementation receives the correct resource ID
+		// Verify the shared implementation receives the correct resource ID from admin handler
 		if sharedResourceID != resourceID {
-			t.Errorf("Shared implementation should receive correct resource ID: expected '%s', got '%s'", resourceID, sharedResourceID)
+			t.Errorf("Shared implementation should receive correct resource ID from admin: expected '%s', got '%s'", resourceID, sharedResourceID)
 		}
 
 		// Verify the shared implementation can parse the resource ID
@@ -624,7 +625,7 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableIntegrationWithSharedImpleme
 			t.Errorf("Expected admin subscription ID %s, got %s", mockSubID, resource.SubscriptionID)
 		}
 
-		// Simulate database document structure that shared implementation would use
+		// Simulate database document structure that shared implementation uses (called by admin handler)
 		mockDoc := &api.OpenShiftClusterDocument{
 			Key: strings.ToLower(sharedResourceID),
 			OpenShiftCluster: &api.OpenShiftCluster{

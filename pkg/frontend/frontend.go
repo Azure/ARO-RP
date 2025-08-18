@@ -324,7 +324,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				// Top nodes metrics endpoint
 				r.Get("/top/nodes", f.getAdminTopNodes)
 
-				r.Get("/effectiveroutingtable", f.getAdminOpenshiftClusterEffectiveRouteTable)
+				r.Get("/effectiveroutetable", f.getAdminOpenshiftClusterEffectiveRouteTable)
 
 				// Etcd recovery
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdrecovery", f.postAdminOpenShiftClusterEtcdRecovery)
