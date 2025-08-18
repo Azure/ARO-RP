@@ -14,11 +14,10 @@ import (
 	io "io"
 	reflect "reflect"
 
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
-
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAzureActions is a mock of AzureActions interface.
@@ -43,6 +42,21 @@ func NewMockAzureActions(ctrl *gomock.Controller) *MockAzureActions {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
+}
+
+// GetEffectiveRouteTable mocks base method.
+func (m *MockAzureActions) GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEffectiveRouteTable", ctx, nicName)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEffectiveRouteTable indicates an expected call of GetEffectiveRouteTable.
+func (mr *MockAzureActionsMockRecorder) GetEffectiveRouteTable(ctx, nicName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEffectiveRouteTable", reflect.TypeOf((*MockAzureActions)(nil).GetEffectiveRouteTable), ctx, nicName)
 }
 
 // GroupResourceList mocks base method.

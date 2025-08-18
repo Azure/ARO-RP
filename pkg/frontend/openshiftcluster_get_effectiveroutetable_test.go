@@ -11,13 +11,12 @@ import (
 	"strings"
 	"testing"
 
+	"go.uber.org/mock/gomock"
+
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
-	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/frontend/adminactions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -177,7 +176,6 @@ func TestGetOpenshiftClusterEffectiveRouteTableQueryParameterHandling(t *testing
 }
 
 func TestGetOpenshiftClusterEffectiveRouteTableAzureActionsIntegration(t *testing.T) {
-	mockSubID := "00000000-0000-0000-0000-000000000000"
 	testNIC := "test-nic-name"
 
 	// Create mock effective route data that AzureActions would return
@@ -202,14 +200,14 @@ func TestGetOpenshiftClusterEffectiveRouteTableAzureActionsIntegration(t *testin
 
 	tests := []struct {
 		name               string
-		setupMockActions   func(ctrl *gomock.Controller) adminactions.AzureActions
+		setupMockActions   func(ctrl *gomock.Controller) *mock_adminactions.MockAzureActions
 		expectError        bool
 		expectedRouteCount int
 		description        string
 	}{
 		{
 			name: "successful route table retrieval with AzureActions",
-			setupMockActions: func(ctrl *gomock.Controller) adminactions.AzureActions {
+			setupMockActions: func(ctrl *gomock.Controller) *mock_adminactions.MockAzureActions {
 				mockActions := mock_adminactions.NewMockAzureActions(ctrl)
 				mockActions.EXPECT().
 					GetEffectiveRouteTable(gomock.Any(), testNIC).
@@ -222,7 +220,7 @@ func TestGetOpenshiftClusterEffectiveRouteTableAzureActionsIntegration(t *testin
 		},
 		{
 			name: "azure actions network interface not found error",
-			setupMockActions: func(ctrl *gomock.Controller) adminactions.AzureActions {
+			setupMockActions: func(ctrl *gomock.Controller) *mock_adminactions.MockAzureActions {
 				mockActions := mock_adminactions.NewMockAzureActions(ctrl)
 				mockActions.EXPECT().
 					GetEffectiveRouteTable(gomock.Any(), testNIC).
@@ -234,7 +232,7 @@ func TestGetOpenshiftClusterEffectiveRouteTableAzureActionsIntegration(t *testin
 		},
 		{
 			name: "azure actions permission denied error",
-			setupMockActions: func(ctrl *gomock.Controller) adminactions.AzureActions {
+			setupMockActions: func(ctrl *gomock.Controller) *mock_adminactions.MockAzureActions {
 				mockActions := mock_adminactions.NewMockAzureActions(ctrl)
 				mockActions.EXPECT().
 					GetEffectiveRouteTable(gomock.Any(), testNIC).
@@ -246,7 +244,7 @@ func TestGetOpenshiftClusterEffectiveRouteTableAzureActionsIntegration(t *testin
 		},
 		{
 			name: "empty effective route table response from AzureActions",
-			setupMockActions: func(ctrl *gomock.Controller) adminactions.AzureActions {
+			setupMockActions: func(ctrl *gomock.Controller) *mock_adminactions.MockAzureActions {
 				mockActions := mock_adminactions.NewMockAzureActions(ctrl)
 				emptyRouteData := []byte(`{"value": []}`)
 				mockActions.EXPECT().
