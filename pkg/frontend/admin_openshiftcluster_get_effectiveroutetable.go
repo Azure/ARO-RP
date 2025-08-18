@@ -21,7 +21,7 @@ func (f *frontend) getAdminOpenshiftClusterEffectiveRouteTable(w http.ResponseWr
 	// Use filepath.Dir to get the cluster resource path (same as original)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	e, err := f._getOpenshiftClusterEffectiveRouteTableRefactored(ctx, r)
+	e, err := f._getOpenshiftClusterEffectiveRouteTable(ctx, r)
 	if err != nil {
 		log.Errorf("Unable to get effective route table: %v", err)
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Failed to retrieve effective route table.")
