@@ -578,14 +578,14 @@ func TestGetAdminOpenshiftClusterEffectiveRouteTableDataConsistency(t *testing.T
 			t.Error("Admin route name not preserved after JSON round-trip")
 		}
 
-		if unmarshaled.Value[0].AddressPrefix == nil || len(unmarshaled.Value[0].AddressPrefix) == 0 || *unmarshaled.Value[0].AddressPrefix[0] != "172.16.1.0/24" {
+		if len(unmarshaled.Value[0].AddressPrefix) == 0 || *unmarshaled.Value[0].AddressPrefix[0] != "172.16.1.0/24" {
 			t.Error("Admin address prefix not preserved after JSON round-trip")
 		}
 
 		// Verify admin-specific fields
 		if len(unmarshaled.Value) > 1 {
 			adminRoute := unmarshaled.Value[1]
-			if adminRoute.NextHopIPAddress == nil || len(adminRoute.NextHopIPAddress) == 0 || *adminRoute.NextHopIPAddress[0] != "172.16.1.100" {
+			if len(adminRoute.NextHopIPAddress) == 0 || *adminRoute.NextHopIPAddress[0] != "172.16.1.100" {
 				t.Error("Admin next hop IP address not preserved after JSON round-trip")
 			}
 		}

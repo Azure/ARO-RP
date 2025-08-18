@@ -571,7 +571,7 @@ func TestGetOpenshiftClusterEffectiveRouteTableDataConsistency(t *testing.T) {
 			t.Error("Route name not preserved after JSON round-trip")
 		}
 
-		if unmarshaled.Value[0].AddressPrefix == nil || len(unmarshaled.Value[0].AddressPrefix) == 0 || *unmarshaled.Value[0].AddressPrefix[0] != "192.168.1.0/24" {
+		if len(unmarshaled.Value[0].AddressPrefix) == 0 || *unmarshaled.Value[0].AddressPrefix[0] != "192.168.1.0/24" {
 			t.Error("Address prefix not preserved after JSON round-trip")
 		}
 	})
