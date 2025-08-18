@@ -20,6 +20,7 @@ import (
 
 // OpenShiftClustersClient is a minimal interface for azure OpenshiftClustersClient
 type OpenShiftClustersClient interface {
+	ListAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20240812preview.OpenShiftClusterAdminKubeconfig, err error)
 	ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20240812preview.OpenShiftClusterCredentials, err error)
 	Get(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20240812preview.OpenShiftCluster, err error)
 	OpenShiftClustersClientAddons
