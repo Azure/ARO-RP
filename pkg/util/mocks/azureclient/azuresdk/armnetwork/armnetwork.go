@@ -152,21 +152,6 @@ func (mr *MockInterfacesClientMockRecorder) Get(ctx, resourceGroupName, networkI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterfacesClient)(nil).Get), ctx, resourceGroupName, networkInterfaceName, options)
 }
 
-// List mocks base method.
-func (m *MockInterfacesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) ([]*armnetwork.Interface, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, options)
-	ret0, _ := ret[0].([]*armnetwork.Interface)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockInterfacesClientMockRecorder) List(ctx, resourceGroupName, options any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterfacesClient)(nil).List), ctx, resourceGroupName, options)
-}
-
 // GetEffectiveRouteTableAndWait mocks base method.
 func (m *MockInterfacesClient) GetEffectiveRouteTableAndWait(ctx context.Context, resourceGroupName, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (*armnetwork.EffectiveRouteListResult, error) {
 	m.ctrl.T.Helper()
@@ -180,6 +165,21 @@ func (m *MockInterfacesClient) GetEffectiveRouteTableAndWait(ctx context.Context
 func (mr *MockInterfacesClientMockRecorder) GetEffectiveRouteTableAndWait(ctx, resourceGroupName, networkInterfaceName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEffectiveRouteTableAndWait", reflect.TypeOf((*MockInterfacesClient)(nil).GetEffectiveRouteTableAndWait), ctx, resourceGroupName, networkInterfaceName, options)
+}
+
+// List mocks base method.
+func (m *MockInterfacesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) ([]*armnetwork.Interface, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, resourceGroupName, options)
+	ret0, _ := ret[0].([]*armnetwork.Interface)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockInterfacesClientMockRecorder) List(ctx, resourceGroupName, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterfacesClient)(nil).List), ctx, resourceGroupName, options)
 }
 
 // MockLoadBalancersClient is a mock of LoadBalancersClient interface.
