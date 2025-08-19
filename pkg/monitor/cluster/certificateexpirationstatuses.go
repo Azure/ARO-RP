@@ -9,7 +9,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -86,36 +85,38 @@ func (mon *Monitor) emitIngressAndAPIServerCertificateExpiry(ctx context.Context
 
 // emitEtcdCertificateExpiry emits days until expiration for ETCD certificates.
 func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
-	cv, err := mon.getClusterVersion(ctx)
-	if err != nil {
-		return err
-	}
-	v, err := version.ParseVersion(actualVersion(cv))
-	if err != nil {
-		return err
-	}
-
 	// ETCD ceritificates are autorotated by the operator when close to expiry for cluster running 4.9+
-	if !v.Lt(version.NewVersion(4, 9)) {
+	if mon.clusterActualVersion == nil || !mon.clusterActualVersion.Lt(version.NewVersion(4, 9)) {
 		return nil
 	}
 
-	secretList, err := mon.cli.CoreV1().Secrets(etcdNamespace).List(ctx, metav1.ListOptions{
-		FieldSelector: "type=" + string(corev1.SecretTypeTLS),
-	})
-	if err != nil {
-		return err
-	}
+	var cont string
+	l := &corev1.SecretList{}
 
-	for _, secret := range secretList.Items {
-		secretName := secret.Name
-		// only process secrets with names indicating ETCD certificates.
-		if strings.Contains(secretName, "etcd-peer") || strings.Contains(secretName, "etcd-serving") {
-			if err := mon.processCertificate(ctx, etcdNamespace, secretName, corev1.TLSCertKey, &secret); err != nil {
-				return err
+	for {
+		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.InNamespace(etcdNamespace),
+			client.MatchingFields(map[string]string{"type": string(corev1.SecretTypeTLS)}))
+
+		if err != nil {
+			return err
+		}
+
+		for _, secret := range l.Items {
+			secretName := secret.Name
+			// only process secrets with names indicating ETCD certificates.
+			if strings.Contains(secretName, "etcd-peer") || strings.Contains(secretName, "etcd-serving") {
+				if err := mon.processCertificate(ctx, etcdNamespace, secretName, corev1.TLSCertKey, &secret); err != nil {
+					return err
+				}
 			}
 		}
+
+		cont = l.Continue
+		if cont == "" {
+			break
+		}
 	}
+
 	return nil
 }
 

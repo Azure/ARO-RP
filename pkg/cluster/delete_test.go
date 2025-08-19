@@ -20,7 +20,6 @@ import (
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -33,7 +32,6 @@ import (
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
-	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -298,12 +296,12 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		mocks   func(*mock_armnetwork.MockSecurityGroupsClient, *mock_subnet.MockManager)
+		mocks   func(*mock_armnetwork.MockSecurityGroupsClient, *mock_armnetwork.MockSubnetsClient)
 		wantErr string
 	}{
 		{
 			name: "empty security group",
-			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_subnet.MockManager) {
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
 						ID: pointerutils.ToPtr(nsgId),
@@ -313,12 +311,35 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 					},
 				}
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
-				subnets.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
 			},
 		},
 		{
+			name: "fails to parse subnet ID",
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
+				invalidSubnetId := "invalid-subnet-id"
+				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
+					SecurityGroup: armnetwork.SecurityGroup{
+						ID: pointerutils.ToPtr(nsgId),
+						Properties: &armnetwork.SecurityGroupPropertiesFormat{
+							Subnets: []*armnetwork.Subnet{
+								{
+									ID: pointerutils.ToPtr(invalidSubnetId),
+								},
+							},
+						},
+					},
+				}
+				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
+				// Should not call subnets.Get or CreateOrUpdateAndWait due to parse error
+				subnets.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
+			},
+			wantErr: "400: InvalidResourceID: invalid-subnet-id: Invalid subnet resource ID format. For more details, please refer to https://docs.microsoft.com/azure/azure-resource-manager/management/resource-name-rules",
+		},
+		{
 			name: "disconnects subnets",
-			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_subnet.MockManager) {
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
 				subnetId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
@@ -333,18 +354,22 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 					},
 				}
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
-				subnets.EXPECT().Get(gomock.Any(), subnetId).Return(&mgmtnetwork.Subnet{
-					ID: pointerutils.ToPtr(subnetId),
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: pointerutils.ToPtr(nsgId),
+				subnets.EXPECT().Get(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						ID: pointerutils.ToPtr(subnetId),
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: pointerutils.ToPtr(nsgId),
+							},
 						},
 					},
 				}, nil).Times(1)
-				subnets.EXPECT().CreateOrUpdate(gomock.Any(), subnetId, &mgmtnetwork.Subnet{
-					ID:                     pointerutils.ToPtr(subnetId),
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{},
-				}).Return(nil).Times(1)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", armnetwork.Subnet{
+					ID: pointerutils.ToPtr(subnetId),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: nil,
+					},
+				}, nil).Return(nil).Times(1)
 			},
 		},
 	}
@@ -355,14 +380,14 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 			defer controller.Finish()
 
 			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
-			subnets := mock_subnet.NewMockManager(controller)
+			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
 
 			tt.mocks(securityGroups, subnets)
 
 			m := manager{
 				log:               logrus.NewEntry(logrus.StandardLogger()),
 				armSecurityGroups: securityGroups,
-				subnet:            subnets,
+				armSubnets:        subnets,
 			}
 
 			ctx := context.Background()

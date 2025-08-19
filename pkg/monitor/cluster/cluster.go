@@ -5,13 +5,15 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -20,27 +22,29 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
+
+const MONITOR_GOROUTINES_PER_CLUSTER = 5
 
 var _ monitoring.Monitor = (*Monitor)(nil)
 
 type Monitor struct {
+	collectors []func(context.Context) error
+
 	log       *logrus.Entry
 	hourlyRun bool
 
@@ -51,31 +55,28 @@ type Monitor struct {
 	cli         kubernetes.Interface
 	configcli   configclient.Interface
 	operatorcli operatorclient.Interface
-	maocli      machineclient.Interface
-	mcocli      mcoclient.Interface
 	m           metrics.Emitter
 	arocli      aroclient.Interface
 	env         env.Interface
+	rawClient   rest.Interface
 	tenantID    string
 
-	ocpclientset  client.Client
-	hiveclientset client.Client
+	ocpclientset clienthelper.Interface
 
-	// access below only via the helper functions in cache.go
-	cache struct {
-		cos   *configv1.ClusterOperatorList
-		cs    *arov1alpha1.ClusterList
-		cv    *configv1.ClusterVersion
-		ns    *corev1.NodeList
-		arodl *appsv1.DeploymentList
-	}
+	wg *sync.WaitGroup
 
-	wg                 *sync.WaitGroup
-	hiveClusterManager hive.ClusterManager
-	doc                *api.OpenShiftClusterDocument
+	// Namespaces that are OpenShift or ARO managed that we want to monitor
+	namespacesToMonitor []string
+
+	// OpenShift version of the cluster being monitored
+	clusterDesiredVersion *version.Version
+	clusterActualVersion  *version.Version
+
+	// Limit for items per pagination query
+	queryLimit int
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, doc *api.OpenShiftClusterDocument, env env.Interface, tenantID string, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -88,22 +89,32 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		dimension.ResourceName:         r.ResourceName,
 	}
 
-	cli, err := kubernetes.NewForConfig(restConfig)
+	// configure the shared rest clients
+	configShallowCopy := *restConfig
+	configShallowCopy.UserAgent = rest.DefaultKubernetesUserAgent()
+
+	// share the transport between all clients
+	httpClient, err := rest.HTTPClientFor(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
 
-	configcli, err := configclient.NewForConfig(restConfig)
+	// set up the raw rest client that we use for healthz scraping
+	configShallowCopyRaw := *restConfig
+	configShallowCopyRaw.GroupVersion = &schema.GroupVersion{}
+	configShallowCopyRaw.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	configShallowCopyRaw.UserAgent = rest.DefaultKubernetesUserAgent()
+	rawClient, err := rest.RESTClientForConfigAndClient(&configShallowCopyRaw, httpClient)
 	if err != nil {
 		return nil, err
 	}
 
-	maocli, err := machineclient.NewForConfig(restConfig)
+	cli, err := kubernetes.NewForConfigAndClient(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
 
-	mcocli, err := mcoclient.NewForConfig(restConfig)
+	configcli, err := configclient.NewForConfigAndClient(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +123,8 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	if err != nil {
 		return nil, err
 	}
-	operatorcli, err := operatorclient.NewForConfig(restConfig)
+
+	operatorcli, err := operatorclient.NewForConfigAndClient(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -130,85 +142,29 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	hiveclientset, err := getHiveClientSet(hiveRestConfig)
-	if err != nil {
-		log.Error(err)
-	}
-
-	return &Monitor{
+	mon := &Monitor{
 		log:       log,
 		hourlyRun: hourlyRun,
 
 		oc:   oc,
 		dims: dims,
 
-		restconfig:         restConfig,
-		cli:                cli,
-		configcli:          configcli,
-		operatorcli:        operatorcli,
-		maocli:             maocli,
-		mcocli:             mcocli,
-		arocli:             arocli,
-		env:                env,
-		tenantID:           tenantID,
-		m:                  m,
-		ocpclientset:       ocpclientset,
-		hiveclientset:      hiveclientset,
-		wg:                 wg,
-		hiveClusterManager: hiveClusterManager,
-		doc:                doc,
-	}, nil
-}
+		restconfig:  restConfig,
+		cli:         cli,
+		configcli:   configcli,
+		operatorcli: operatorcli,
+		arocli:      arocli,
+		rawClient:   rawClient,
 
-func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
-	if hiveRestConfig == nil {
-		return nil, nil
+		env:                 env,
+		tenantID:            tenantID,
+		m:                   m,
+		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
+		wg:                  wg,
+		namespacesToMonitor: []string{},
+		queryLimit:          50,
 	}
-
-	// lazy discovery will not attempt to reach out to the apiserver immediately
-	mapper, err := apiutil.NewDynamicRESTMapper(hiveRestConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	hiveclientset, err := client.New(hiveRestConfig, client.Options{
-		Mapper: mapper,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return hiveclientset, nil
-}
-
-// Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
-	defer mon.wg.Done()
-
-	mon.log.Debug("monitoring")
-
-	if mon.hourlyRun {
-		mon.emitGauge("cluster.provisioning", 1, map[string]string{
-			"provisioningState":       mon.oc.Properties.ProvisioningState.String(),
-			"failedProvisioningState": mon.oc.Properties.FailedProvisioningState.String(),
-		})
-	}
-
-	//this API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
-	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
-	if err != nil {
-		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerHealthzCode), err)
-	}
-	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
-	if statusCode != http.StatusOK {
-		err := mon.emitAPIServerPingCode(ctx)
-		if err != nil {
-			errs = append(errs, err)
-			mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerPingCode), err)
-		}
-		return
-	}
-	for _, f := range []func(context.Context) error{
+	mon.collectors = []func(context.Context) error{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
 		mon.emitNSGReconciliation,
@@ -228,8 +184,6 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
 		mon.emitSummary,
-		mon.emitHiveRegistrationStatus,
-		mon.emitClusterSync,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitMaintenanceState,
 		mon.emitMDSDCertificateExpiry,
@@ -238,13 +192,102 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 		mon.emitCWPStatus,
 		mon.emitClusterAuthenticationType,
-	} {
-		err = f(ctx)
+	}
+
+	return mon, nil
+}
+
+// Monitor checks the API server health of a cluster
+func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
+	defer mon.wg.Done()
+
+	now := time.Now()
+
+	mon.log.Debug("monitoring")
+
+	if mon.hourlyRun {
+		mon.emitGauge("cluster.provisioning", 1, map[string]string{
+			"provisioningState":       mon.oc.Properties.ProvisioningState.String(),
+			"failedProvisioningState": mon.oc.Properties.FailedProvisioningState.String(),
+		})
+	}
+
+	//this API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
+	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
+	if err != nil {
+		errs = append(errs, err)
+		mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerHealthzCode), err)
+	}
+	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
+	if statusCode != http.StatusOK {
+		err := mon.emitAPIServerPingCode(ctx)
 		if err != nil {
 			errs = append(errs, err)
-			mon.emitFailureToGatherMetric(steps.FriendlyName(f), err)
-			// keep going
+			mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerPingCode), err)
 		}
+		return
+	}
+
+	err = mon.prefetchClusterVersion(ctx)
+	if err != nil {
+		errs = append(errs, err)
+		mon.emitFailureToGatherMetric(steps.ShortName(mon.prefetchClusterVersion), err)
+		return
+	}
+
+	// Determine the list of OpenShift (or ARO) managed namespaces that we will
+	// query for -- this needs to succeed
+	err = mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		errs = append(errs, err)
+		mon.emitFailureToGatherMetric(steps.ShortName(mon.fetchManagedNamespaces), err)
+		return
+	}
+
+	// Run up to MONITOR_GOROUTINES_PER_CLUSTER goroutines for collecting
+	// metrics
+	wg := new(errgroup.Group)
+	wg.SetLimit(MONITOR_GOROUTINES_PER_CLUSTER)
+
+	// Create a channel capable of buffering one error from every collector
+	errChan := make(chan error, len(mon.collectors))
+
+	for _, f := range mon.collectors {
+		wg.Go(func() error {
+			innerNow := time.Now()
+			collectorName := steps.ShortName(f)
+			mon.log.Debugf("running %s", collectorName)
+			innerErr := f(ctx)
+			if innerErr != nil {
+				mon.log.Debugf("failed to run %s: %s", collectorName, innerErr.Error())
+				// emit metrics collection failures and collect the err, but
+				// don't stop running other metric collections
+				mon.emitFailureToGatherMetric(collectorName, innerErr)
+				// NOTE: The channel only has room to accommodate one error per
+				// collector, so if a collector needs to return multiple errors
+				// they should be joined into a single one (see errors.Join)
+				// before being added.
+				errChan <- fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
+			} else {
+				mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, time.Since(innerNow).Seconds())
+			}
+			return nil
+		})
+	}
+
+	err = wg.Wait()
+	if err != nil {
+		errs = append(errs, err)
+	}
+	// collect up the errors in the buffered channel
+	close(errChan)
+	for e := range errChan {
+		errs = append(errs, e)
+	}
+
+	// emit a metric with how long we took when we have no errors
+	if len(errs) == 0 {
+		mon.emitFloat("monitor.cluster.duration", time.Since(now).Seconds(), map[string]string{})
 	}
 
 	return
@@ -257,4 +300,8 @@ func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
 	emitter.EmitGauge(mon.m, m, value, mon.dims, dims)
+}
+
+func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
+	emitter.EmitFloat(mon.m, m, value, mon.dims, dims)
 }

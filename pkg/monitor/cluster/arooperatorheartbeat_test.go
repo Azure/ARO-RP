@@ -11,17 +11,21 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitAroOperatorHeartbeat(t *testing.T) {
 	ctx := context.Background()
 
-	cli := fake.NewSimpleClientset(
+	objects := []client.Object{
+
 		&appsv1.Deployment{ // not available expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "aro-operator-master",
@@ -75,17 +79,22 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 				UnavailableReplicas: 1,
 			},
 		},
-	)
+	}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	m := mock_metrics.NewMockEmitter(controller)
 
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
 	mon := &Monitor{
-		cli: cli,
-		m:   m,
-		log: utillog.GetLogger(),
+		log:          log,
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
 	}
 
 	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(0), map[string]string{

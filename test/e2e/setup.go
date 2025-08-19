@@ -143,9 +143,13 @@ func skipIfMIMOActuatorNotEnabled() {
 }
 
 func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
-	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
+	if !isHiveManagedCluster(adminAPICluster) {
 		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")
 	}
+}
+
+func isHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) bool {
+	return adminAPICluster.Properties.HiveProfile != (admin.HiveProfile{})
 }
 
 func SaveScreenshot(wd selenium.WebDriver, e error) {
@@ -374,12 +378,22 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	var hiveAKS *kubernetes.Clientset
 	var hiveCM hive.ClusterManager
 
-	if _env.IsLocalDevelopmentMode() {
-		liveCfg, err := _env.NewLiveConfigManager(ctx)
-		if err != nil {
-			return nil, err
-		}
+	liveCfg, err := _env.NewLiveConfigManager(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	adoptByHive, err := liveCfg.AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	installViaHive, err := liveCfg.InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if _env.IsLocalDevelopmentMode() && (adoptByHive || installViaHive) {
 		hiveShard := 1
 		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
 		if err != nil {

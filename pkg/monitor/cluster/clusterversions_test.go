@@ -11,30 +11,30 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
+
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
-	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitClusterVersion(t *testing.T) {
 	ctx := context.Background()
 
-	cli := fake.NewSimpleClientset(
-		&appsv1.Deployment{ // metrics expected
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: operator.Namespace,
-				Name:      "aro-operator-master",
-				Labels: map[string]string{
-					"version": "test",
-				},
+	aroDeployment := &appsv1.Deployment{ // metrics expected
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: operator.Namespace,
+			Name:      "aro-operator-master",
+			Labels: map[string]string{
+				"version": "test",
 			},
 		},
-	)
+	}
 
 	for _, tt := range []struct {
 		name                                     string
@@ -82,6 +82,41 @@ func TestEmitClusterVersion(t *testing.T) {
 			wantActualMinorVersion:                   "4.5",
 		},
 		{
+			name: "without spec, at nightly",
+			cv: &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Status: configv1.ClusterVersionStatus{
+					Desired: configv1.Release{
+						Version: "4.5.0-0.nightly-2025-07-31-063120",
+					},
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.PartialUpdate,
+							Version: "4.5.2",
+						},
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "4.5.0-0.ci-2025-08-05-023912",
+						},
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "4.5.0",
+						},
+					},
+				},
+			},
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{},
+			},
+			wantActualVersion:                        "4.5.0-0.ci-2025-08-05-023912",
+			wantDesiredVersion:                       "4.5.0-0.nightly-2025-07-31-063120",
+			wantProvisionedByResourceProviderVersion: "",
+			wantAvailableRP:                          "unknown",
+			wantActualMinorVersion:                   "4.5",
+		},
+		{
 			name: "with spec",
 			cv: &configv1.ClusterVersion{
 				ObjectMeta: metav1.ObjectMeta{
@@ -122,7 +157,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			wantAvailableRP:                          "unknown", // (rpVersion = unknown) != (provisionedByResourceProvider = "")
 		},
 		{
-			name: "with ProvisionedBy",
+			name: "with ProvisionedBy unknown",
 			cv: &configv1.ClusterVersion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "version",
@@ -138,18 +173,21 @@ func TestEmitClusterVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			configcli := configfake.NewSimpleClientset(tt.cv)
-
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+
+			_, log := testlog.New()
+			ocpclientset := clienthelper.NewWithClient(log, fake.
+				NewClientBuilder().
+				WithObjects(aroDeployment, tt.cv).
+				Build())
 
 			m := mock_metrics.NewMockEmitter(controller)
 
 			mon := &Monitor{
-				configcli: configcli,
-				m:         m,
-				oc:        tt.oc,
-				cli:       cli,
+				ocpclientset: ocpclientset,
+				m:            m,
+				log:          log,
+				oc:           tt.oc,
 			}
 
 			m.EXPECT().EmitGauge("cluster.versions", int64(1), map[string]string{
@@ -162,7 +200,12 @@ func TestEmitClusterVersion(t *testing.T) {
 				"actualMinorVersion":                   tt.wantActualMinorVersion,
 			})
 
-			err := mon.emitClusterVersions(ctx)
+			err := mon.prefetchClusterVersion(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = mon.emitClusterVersions(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}

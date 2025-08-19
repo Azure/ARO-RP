@@ -10,6 +10,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
@@ -33,29 +34,35 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 	// Check each of the cluster subnets for the Microsoft.Storage service endpoint. If the subnet has
 	// the service endpoint, it needs to be included in the storage account vnet rules.
 	for _, subnet := range subnets {
-		mgmtSubnet, err := r.subnets.Get(ctx, subnet.ResourceID)
+		subnetResource, err := arm.ParseResourceID(subnet.ResourceID)
+		if err != nil {
+			return err
+		}
+		subnetName := subnetResource.Name
+		resourceGroupName := subnetResource.ResourceGroupName
+		vnetName := subnetResource.Parent.Name
+
+		armSubnet, err := r.subnets.Get(ctx, resourceGroupName, vnetName, subnetName, nil)
 		if err != nil {
 			if azureerrors.IsNotFoundError(err) {
 				r.log.Infof("Subnet %s not found, skipping", subnet.ResourceID)
-				break
+				continue
 			}
 			return err
 		}
 
-		if mgmtSubnet.SubnetPropertiesFormat != nil && mgmtSubnet.ServiceEndpoints != nil {
-			for _, serviceEndpoint := range *mgmtSubnet.ServiceEndpoints {
+		if armSubnet.Properties != nil && armSubnet.Properties.ServiceEndpoints != nil {
+			for _, serviceEndpoint := range armSubnet.Properties.ServiceEndpoints {
 				isStorageEndpoint := (serviceEndpoint.Service != nil) && (*serviceEndpoint.Service == "Microsoft.Storage")
 				matchesClusterLocation := false
-
 				if serviceEndpoint.Locations != nil {
-					for _, l := range *serviceEndpoint.Locations {
-						if l == "*" || l == location {
+					for _, l := range serviceEndpoint.Locations {
+						if l != nil && (*l == "*" || *l == location) {
 							matchesClusterLocation = true
 							break
 						}
 					}
 				}
-
 				if isStorageEndpoint && matchesClusterLocation {
 					serviceSubnets = append(serviceSubnets, subnet.ResourceID)
 					break
