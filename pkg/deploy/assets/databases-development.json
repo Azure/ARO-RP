@@ -46,7 +46,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -68,7 +68,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -90,7 +90,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -111,7 +111,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -133,7 +133,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -155,7 +155,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -195,7 +195,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -217,7 +217,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -238,7 +238,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
@@ -368,7 +368,7 @@
                     }
                 }
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "apiVersion": "2023-04-15",
