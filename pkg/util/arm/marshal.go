@@ -9,8 +9,9 @@ import (
 	"reflect"
 	"strings"
 
-	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	gofrsuuid "github.com/gofrs/uuid"
+
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 const (
