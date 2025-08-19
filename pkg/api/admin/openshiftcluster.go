@@ -307,6 +307,20 @@ const (
 	VMSizeStandardD64dsV5 VMSize = "Standard_D64ds_v5"
 	VMSizeStandardD96dsV5 VMSize = "Standard_D96ds_v5"
 
+	VMSizeStandardD4sV6  VMSize = "Standard_D4s_v6"
+	VMSizeStandardD8sV6  VMSize = "Standard_D8s_v6"
+	VMSizeStandardD16sV6 VMSize = "Standard_D16s_v6"
+	VMSizeStandardD32sV6 VMSize = "Standard_D32s_v6"
+	VMSizeStandardD64sV6 VMSize = "Standard_D64s_v6"
+	VMSizeStandardD96sV6 VMSize = "Standard_D96s_v6"
+
+	VMSizeStandardD4dsV6  VMSize = "Standard_D4ds_v6"
+	VMSizeStandardD8dsV6  VMSize = "Standard_D8ds_v6"
+	VMSizeStandardD16dsV6 VMSize = "Standard_D16ds_v6"
+	VMSizeStandardD32dsV6 VMSize = "Standard_D32ds_v6"
+	VMSizeStandardD64dsV6 VMSize = "Standard_D64ds_v6"
+	VMSizeStandardD96dsV6 VMSize = "Standard_D96ds_v6"
+
 	VMSizeStandardE4sV3  VMSize = "Standard_E4s_v3"
 	VMSizeStandardE8sV3  VMSize = "Standard_E8s_v3"
 	VMSizeStandardE16sV3 VMSize = "Standard_E16s_v3"
@@ -379,6 +393,30 @@ const (
 	VMSizeStandardL32sV3 VMSize = "Standard_L32s_v3"
 	VMSizeStandardL48sV3 VMSize = "Standard_L48s_v3"
 	VMSizeStandardL64sV3 VMSize = "Standard_L64s_v3"
+
+	VMSizeStandardL4sV4  VMSize = "Standard_L4s_v4"
+	VMSizeStandardL8sV4  VMSize = "Standard_L8s_v4"
+	VMSizeStandardL16sV4 VMSize = "Standard_L16s_v4"
+	VMSizeStandardL32sV4 VMSize = "Standard_L32s_v4"
+	VMSizeStandardL48sV4 VMSize = "Standard_L48s_v4"
+	VMSizeStandardL64sV4 VMSize = "Standard_L64s_v4"
+	VMSizeStandardL80sV4 VMSize = "Standard_L80s_v4"
+
+	VMSizeStandardD4lsV6  VMSize = "Standard_D4ls_v6"
+	VMSizeStandardD8lsV6  VMSize = "Standard_D8ls_v6"
+	VMSizeStandardD16lsV6 VMSize = "Standard_D16ls_v6"
+	VMSizeStandardD32lsV6 VMSize = "Standard_D32ls_v6"
+	VMSizeStandardD48lsV6 VMSize = "Standard_D48ls_v6"
+	VMSizeStandardD64lsV6 VMSize = "Standard_D64ls_v6"
+	VMSizeStandardD96lsV6 VMSize = "Standard_D96ls_v6"
+
+	VMSizeStandardD4ldsV6  VMSize = "Standard_D4lds_v6"
+	VMSizeStandardD8ldsV6  VMSize = "Standard_D8lds_v6"
+	VMSizeStandardD16ldsV6 VMSize = "Standard_D1l6ds_v6"
+	VMSizeStandardD32ldsV6 VMSize = "Standard_D32lds_v6"
+	VMSizeStandardD48ldsV6 VMSize = "Standard_D48lds_v6"
+	VMSizeStandardD64ldsV6 VMSize = "Standard_D64lds_v6"
+	VMSizeStandardD96ldsV6 VMSize = "Standard_D96lds_v6"
 
 	// GPU VMs
 	VMSizeStandardNC4asT4V3  VMSize = "Standard_NC4as_T4_v3"

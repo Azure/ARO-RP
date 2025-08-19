@@ -9,12 +9,29 @@ import (
 	"reflect"
 	"strings"
 
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	gofrsuuid "github.com/gofrs/uuid"
 )
 
 const (
 	track2sdkPkgPathPrefix = "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager"
 )
+
+// ARM resource types that should include Type and Location fields when marshaling to JSON
+// Add new types here as needed.
+var armResourceTypes = map[reflect.Type]bool{
+	// Network resources
+	reflect.TypeOf(&armnetwork.VirtualNetwork{}):        true,
+	reflect.TypeOf(&armnetwork.Subnet{}):                true,
+	reflect.TypeOf(&armnetwork.SecurityGroup{}):         true,
+	reflect.TypeOf(&armnetwork.RouteTable{}):            true,
+	reflect.TypeOf(&armnetwork.LoadBalancer{}):          true,
+	reflect.TypeOf(&armnetwork.PublicIPAddress{}):       true,
+	reflect.TypeOf(&armnetwork.VirtualNetworkPeering{}): true,
+
+	// Add other ARM types as needed - import the appropriate packages first
+	// For other resource types like Compute, KeyVault, Storage, etc.
+}
 
 // MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods
 // on its types.  It then merges remaining fields of r over the result
@@ -42,11 +59,14 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		if r.DependsOn != nil {
 			dataMap["dependsOn"] = r.DependsOn
 		}
-		if r.Type != "" {
+		// Add Type and Location fields only for ARM resources
+		resourceType := reflect.TypeOf(r.Resource)
+		if armResourceTypes[resourceType] && r.Type != "" {
 			dataMap["type"] = r.Type
-		}
-		if r.Location != "" {
-			dataMap["location"] = r.Location
+			// Also add location if it's present
+			if r.Location != "" {
+				dataMap["location"] = r.Location
+			}
 		}
 		return json.Marshal(dataMap)
 	}
