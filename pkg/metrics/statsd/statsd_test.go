@@ -16,20 +16,15 @@ import (
 )
 
 func TestEmitGauge(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	env := mock_env.NewMockInterface(controller)
-	env.EXPECT().Location().AnyTimes().Return("eastus")
-	env.EXPECT().Hostname().AnyTimes().Return("test-host")
-
 	c1, c2 := net.Pipe()
 
 	s := &statsd{
-		env: env,
-
 		account:   "*",
 		namespace: "*",
+		extraDimensions: map[string]string{
+			"hostname": "test-host",
+			"location": "eastus",
+		},
 
 		conn: c1,
 		ch:   make(chan *metric),
@@ -50,21 +45,46 @@ func TestEmitGauge(t *testing.T) {
 	}
 }
 
-func TestEmitFloat(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	env := mock_env.NewMockInterface(controller)
-	env.EXPECT().Location().AnyTimes().Return("eastus")
-	env.EXPECT().Hostname().AnyTimes().Return("test-host")
-
+func TestEmitGaugeNoDims(t *testing.T) {
 	c1, c2 := net.Pipe()
 
 	s := &statsd{
-		env: env,
-
 		account:   "*",
 		namespace: "*",
+		extraDimensions: map[string]string{
+			"hostname": "test-host",
+			"location": "eastus",
+		},
+
+		conn: c1,
+		ch:   make(chan *metric),
+
+		now: func() time.Time { return time.Time{} },
+	}
+
+	go s.run()
+
+	s.EmitGauge("tests.test_key", 42, nil)
+
+	m, err := bufio.NewReader(c2).ReadString('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"test-host","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
+		t.Error(m)
+	}
+}
+
+func TestEmitFloat(t *testing.T) {
+	c1, c2 := net.Pipe()
+
+	s := &statsd{
+		account:   "*",
+		namespace: "*",
+		extraDimensions: map[string]string{
+			"hostname": "test-host",
+			"location": "eastus",
+		},
 
 		conn: c1,
 		ch:   make(chan *metric),
