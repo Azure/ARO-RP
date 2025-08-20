@@ -148,6 +148,8 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	defer n.wg.Done()
 
+	now := time.Now()
+
 	errors := []error{}
 
 	// to make sure each NSG is processed only once
@@ -221,5 +223,11 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 			}
 		}
 	}
+
+	// emit a metric with how long we took when we have no errors
+	if len(errors) == 0 {
+		n.emitter.EmitFloat("monitor.nsg.duration", time.Since(now).Seconds(), n.dims)
+	}
+
 	return errors
 }
