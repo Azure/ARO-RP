@@ -33,9 +33,9 @@ type statsd struct {
 }
 
 // New returns a new metrics.Emitter
-func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string, mdmSocketEnv string) metrics.Emitter {
+func New(ctx context.Context, env env.Core, account, namespace string, mdmSocketEnv string) metrics.Emitter {
 	s := &statsd{
-		log: log,
+		log: env.LoggerForComponent("metrics"),
 		env: env,
 
 		account:      account,
