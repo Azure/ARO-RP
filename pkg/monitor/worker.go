@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"sync"
@@ -312,7 +313,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 
 	monitors = append(monitors, c, nsgMon)
 	allJobsDone := make(chan bool)
-	go execute(ctx, allJobsDone, &wg, monitors)
+	go execute(ctx, log, allJobsDone, &wg, monitors)
 
 	select {
 	case <-allJobsDone:
@@ -322,10 +323,16 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 }
 
-func execute(ctx context.Context, done chan<- bool, wg *sync.WaitGroup, monitors []monitoring.Monitor) {
+func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, wg *sync.WaitGroup, monitors []monitoring.Monitor) {
 	for _, monitor := range monitors {
 		wg.Add(1)
-		go monitor.Monitor(ctx)
+		go func() {
+			errs := monitor.Monitor(ctx)
+			err := errors.Join(errs...)
+			if err != nil {
+				log.Error(err)
+			}
+		}()
 	}
 	wg.Wait()
 	done <- true
