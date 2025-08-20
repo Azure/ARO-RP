@@ -6,6 +6,7 @@ package monitor
 import (
 	"context"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,6 +27,9 @@ import (
 
 // nsgMonitoringFrequency is used for initializing NSG monitoring ticker
 var nsgMonitoringFrequency = 10 * time.Minute
+
+// changefeedBatchSize is how many items in the changefeed to fetch in each page
+const changefeedBatchSize = 50
 
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
@@ -84,7 +88,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 	for {
 		successful := true
 		for {
-			docs, err := clustersIterator.Next(ctx, -1)
+			docs, err := clustersIterator.Next(ctx, changefeedBatchSize)
 			if err != nil {
 				successful = false
 				baseLog.Error(err)
@@ -93,6 +97,8 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 			if docs == nil {
 				break
 			}
+
+			baseLog.Debugf("openshiftclusters changefeed page was %d docs", docs.Count)
 
 			mon.mu.Lock()
 
@@ -117,7 +123,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 		}
 
 		for {
-			subs, err := subscriptionsIterator.Next(ctx, -1)
+			subs, err := subscriptionsIterator.Next(ctx, changefeedBatchSize)
 			if err != nil {
 				successful = false
 				baseLog.Error(err)
@@ -127,10 +133,32 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 				break
 			}
 
+			baseLog.Debugf("subscriptions changefeed page was %d docs", subs.Count)
+
 			mon.mu.Lock()
 
 			for _, sub := range subs.SubscriptionDocuments {
-				mon.subs[sub.ID] = sub
+				id := strings.ToLower(sub.ID)
+
+				// Don't keep subscriptions that are restricted, warned, or are
+				// being deleted from our db
+				if sub.Subscription.State == api.SubscriptionStateSuspended ||
+					sub.Subscription.State == api.SubscriptionStateWarned ||
+					sub.Subscription.State == api.SubscriptionStateDeleted {
+					// delete is a no-op if it doesn't exist
+					delete(mon.subs, id)
+					continue
+				}
+
+				c, ok := mon.subs[id]
+				if ok {
+					// update this as subscription might have moved tenants
+					c.TenantID = strings.ToLower(sub.Subscription.Properties.TenantID)
+				} else {
+					mon.subs[id] = &subscriptionInfo{
+						TenantID: strings.ToLower(sub.Subscription.Properties.TenantID),
+					}
+				}
 			}
 
 			mon.mu.Unlock()
@@ -189,7 +217,8 @@ out:
 	for {
 		mon.mu.RLock()
 		v := mon.docs[id]
-		sub := mon.subs[r.SubscriptionID]
+		subID := strings.ToLower(r.SubscriptionID)
+		sub := mon.subs[subID]
 		mon.mu.RUnlock()
 
 		if v == nil {
@@ -201,8 +230,8 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
-			mon.workOne(context.Background(), log, v.doc, sub, newh != h, nsgMonitoringTicker)
+		if sub != nil {
+			mon.workOne(context.Background(), log, v.doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
 		}
 
 		select {
@@ -218,7 +247,7 @@ out:
 }
 
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, hourlyRun bool, nsgMonTicker *time.Ticker) {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, subID string, tenantID string, hourlyRun bool, nsgMonTicker *time.Ticker) {
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
@@ -231,7 +260,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	dims := map[string]string{
 		dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
 		dimension.Location:          doc.OpenShiftCluster.Location,
-		dimension.SubscriptionID:    sub.ID,
+		dimension.SubscriptionID:    subID,
 	}
 
 	var monitors []monitoring.Monitor
@@ -252,9 +281,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		}
 	}
 
-	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
+	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, subID, tenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, sub.Subscription.Properties.TenantID, mon.clusterm, hourlyRun, &wg)
+	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun, &wg)
 	if err != nil {
 		log.Error(err)
 		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
