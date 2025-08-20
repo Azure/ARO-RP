@@ -243,20 +243,6 @@ func (mr *MockInterfaceMockRecorder) ClusterMsiKeyVaultName() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterMsiKeyVaultName", reflect.TypeOf((*MockInterface)(nil).ClusterMsiKeyVaultName))
 }
 
-// Component mocks base method.
-func (m *MockInterface) Component() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Component")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Component indicates an expected call of Component.
-func (mr *MockInterfaceMockRecorder) Component() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Component", reflect.TypeOf((*MockInterface)(nil).Component))
-}
-
 // DialContext mocks base method.
 func (m *MockInterface) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	m.ctrl.T.Helper()
@@ -518,6 +504,20 @@ func (mr *MockInterfaceMockRecorder) Logger() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockInterface)(nil).Logger))
 }
 
+// LoggerForComponent mocks base method.
+func (m *MockInterface) LoggerForComponent(arg0 string) *logrus.Entry {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoggerForComponent", arg0)
+	ret0, _ := ret[0].(*logrus.Entry)
+	return ret0
+}
+
+// LoggerForComponent indicates an expected call of LoggerForComponent.
+func (mr *MockInterfaceMockRecorder) LoggerForComponent(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoggerForComponent", reflect.TypeOf((*MockInterface)(nil).LoggerForComponent), arg0)
+}
+
 // MISEAuthorizer mocks base method.
 func (m *MockInterface) MISEAuthorizer() miseadapter.MISEAdapter {
 	m.ctrl.T.Helper()
@@ -689,6 +689,20 @@ func (m *MockInterface) ResourceGroup() string {
 func (mr *MockInterfaceMockRecorder) ResourceGroup() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceGroup", reflect.TypeOf((*MockInterface)(nil).ResourceGroup))
+}
+
+// Service mocks base method.
+func (m *MockInterface) Service() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockInterfaceMockRecorder) Service() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockInterface)(nil).Service))
 }
 
 // ServiceKeyvault mocks base method.
