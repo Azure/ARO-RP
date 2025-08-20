@@ -46,6 +46,11 @@ func TestMonitor(t *testing.T) {
 			value  int64
 			labels map[string]string
 		}
+		expectedFloats []struct {
+			name   string
+			value  any
+			labels map[string]string
+		}
 	}{
 		{
 			name:        "happy path",
@@ -73,6 +78,40 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 			},
+			expectedFloats: []struct {
+				name   string
+				value  any
+				labels map[string]string
+			}{
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitAPIServerHealthzCode",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitReplicasetStatuses",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "prefetchClusterVersion",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "fetchManagedNamespaces",
+					},
+				},
+			},
 		},
 		{
 			name:        "namespace fetch failure",
@@ -87,7 +126,7 @@ func TestMonitor(t *testing.T) {
 				})
 			},
 			expectedErrors: []error{
-				fmt.Errorf("error in list operation: %w", errors.New("failure with ns")),
+				fmt.Errorf("failure running cluster collector 'fetchManagedNamespaces': %w", fmt.Errorf("error in list operation: %w", errors.New("failure with ns"))),
 			},
 			expectedGauges: []struct {
 				name   string
@@ -102,10 +141,30 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 				{
-					name:  "monitor.clustererrors",
+					name:  "monitor.cluster.collector.error",
 					value: 1,
 					labels: map[string]string{
-						"monitor": "fetchManagedNamespaces",
+						"collector": "fetchManagedNamespaces",
+					},
+				},
+			},
+			expectedFloats: []struct {
+				name   string
+				value  any
+				labels map[string]string
+			}{
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitAPIServerHealthzCode",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "prefetchClusterVersion",
 					},
 				},
 			},
@@ -138,10 +197,37 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 				{
-					name:  "monitor.clustererrors",
+					name:  "monitor.cluster.collector.error",
 					value: 1,
 					labels: map[string]string{
-						"monitor": "emitReplicasetStatuses",
+						"collector": "emitReplicasetStatuses",
+					},
+				},
+			},
+			expectedFloats: []struct {
+				name   string
+				value  any
+				labels map[string]string
+			}{
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitAPIServerHealthzCode",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "prefetchClusterVersion",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "fetchManagedNamespaces",
 					},
 				},
 			},
@@ -152,8 +238,8 @@ func TestMonitor(t *testing.T) {
 				return &http.Response{StatusCode: http.StatusInternalServerError}, nil
 			},
 			expectedErrors: []error{
-				kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true),
-				kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true),
+				fmt.Errorf("failure running cluster collector 'emitAPIServerHealthzCode': %w", kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true)),
+				fmt.Errorf("failure running cluster collector 'emitAPIServerPingCode': %w", kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true)),
 			},
 			expectedGauges: []struct {
 				name   string
@@ -168,10 +254,17 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 				{
-					name:  "monitor.clustererrors",
+					name:  "monitor.cluster.collector.error",
 					value: 1,
 					labels: map[string]string{
-						"monitor": "emitAPIServerHealthzCode",
+						"collector": "emitAPIServerHealthzCode",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.error",
+					value: 1,
+					labels: map[string]string{
+						"collector": "emitAPIServerPingCode",
 					},
 				},
 				{
@@ -181,14 +274,12 @@ func TestMonitor(t *testing.T) {
 						"code": "500",
 					},
 				},
-				{
-					name:  "monitor.clustererrors",
-					value: 1,
-					labels: map[string]string{
-						"monitor": "emitAPIServerPingCode",
-					},
-				},
 			},
+			expectedFloats: []struct {
+				name   string
+				value  any
+				labels map[string]string
+			}{},
 		},
 		{
 			name: "api failure, ping succeeds",
@@ -199,7 +290,7 @@ func TestMonitor(t *testing.T) {
 				return &http.Response{StatusCode: http.StatusInternalServerError}, nil
 			},
 			expectedErrors: []error{
-				kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true),
+				fmt.Errorf("failure running cluster collector 'emitAPIServerHealthzCode': %w", kerrors.NewGenericServerResponse(500, "GET", schema.GroupResource{}, "", "", 0, true)),
 			},
 			expectedGauges: []struct {
 				name   string
@@ -221,10 +312,23 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 				{
-					name:  "monitor.clustererrors",
+					name:  "monitor.cluster.collector.error",
 					value: 1,
 					labels: map[string]string{
-						"monitor": "emitAPIServerHealthzCode",
+						"collector": "emitAPIServerHealthzCode",
+					},
+				},
+			},
+			expectedFloats: []struct {
+				name   string
+				value  any
+				labels map[string]string
+			}{
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitAPIServerPingCode",
 					},
 				},
 			},
@@ -315,6 +419,9 @@ func TestMonitor(t *testing.T) {
 
 			for _, gauge := range tt.expectedGauges {
 				m.EXPECT().EmitGauge(gauge.name, gauge.value, gauge.labels).Times(1)
+			}
+			for _, gauge := range tt.expectedFloats {
+				m.EXPECT().EmitFloat(gauge.name, gauge.value, gauge.labels).Times(1)
 			}
 
 			// we only emit duration when no errors

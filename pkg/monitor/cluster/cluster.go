@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
@@ -212,35 +211,50 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		})
 	}
 
-	//this API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
-	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
+	timeCall := func(ctx context.Context, f func(context.Context) error) error {
+		innerNow := time.Now()
+		collectorName := steps.ShortName(f)
+		mon.log.Debugf("running %s", collectorName)
+		innerErr := f(ctx)
+		if innerErr != nil {
+			e := fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
+			mon.log.Debug(e.Error())
+			// emit metrics collection failures and collect the err, but
+			// don't stop running other metric collections
+			mon.emitMonitorCollectorError(collectorName)
+			return e
+		} else {
+			timeToComplete := time.Since(innerNow).Seconds()
+			mon.emitMonitorCollectionTiming(collectorName, timeToComplete)
+			mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, timeToComplete)
+		}
+		return innerErr
+	}
+
+	// This API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
+	err := timeCall(ctx, mon.emitAPIServerHealthzCode)
 	if err != nil {
 		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerHealthzCode), err)
-	}
-	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
-	if statusCode != http.StatusOK {
-		err := mon.emitAPIServerPingCode(ctx)
+
+		// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
+		err := timeCall(ctx, mon.emitAPIServerPingCode)
 		if err != nil {
 			errs = append(errs, err)
-			mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerPingCode), err)
 		}
 		return
 	}
 
-	err = mon.prefetchClusterVersion(ctx)
+	err = timeCall(ctx, mon.prefetchClusterVersion)
 	if err != nil {
 		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.ShortName(mon.prefetchClusterVersion), err)
 		return
 	}
 
 	// Determine the list of OpenShift (or ARO) managed namespaces that we will
 	// query for -- this needs to succeed
-	err = mon.fetchManagedNamespaces(ctx)
+	err = timeCall(ctx, mon.fetchManagedNamespaces)
 	if err != nil {
 		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.ShortName(mon.fetchManagedNamespaces), err)
 		return
 	}
 
@@ -254,22 +268,13 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 
 	for _, f := range mon.collectors {
 		wg.Go(func() error {
-			innerNow := time.Now()
-			collectorName := steps.ShortName(f)
-			mon.log.Debugf("running %s", collectorName)
-			innerErr := f(ctx)
+			innerErr := timeCall(ctx, f)
 			if innerErr != nil {
-				mon.log.Debugf("failed to run %s: %s", collectorName, innerErr.Error())
-				// emit metrics collection failures and collect the err, but
-				// don't stop running other metric collections
-				mon.emitFailureToGatherMetric(collectorName, innerErr)
 				// NOTE: The channel only has room to accommodate one error per
 				// collector, so if a collector needs to return multiple errors
 				// they should be joined into a single one (see errors.Join)
 				// before being added.
-				errChan <- fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
-			} else {
-				mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, time.Since(innerNow).Seconds())
+				errChan <- innerErr
 			}
 			return nil
 		})
@@ -293,9 +298,12 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	return
 }
 
-func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error) {
-	mon.log.Printf("%s: %s", friendlyFuncName, err)
-	mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+func (mon *Monitor) emitMonitorCollectorError(collectorName string) {
+	emitter.EmitGauge(mon.m, "monitor.cluster.collector.error", 1, mon.dims, map[string]string{"collector": collectorName})
+}
+
+func (mon *Monitor) emitMonitorCollectionTiming(collectorName string, duration float64) {
+	emitter.EmitFloat(mon.m, "monitor.cluster.collector.duration", duration, mon.dims, map[string]string{"collector": collectorName})
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
