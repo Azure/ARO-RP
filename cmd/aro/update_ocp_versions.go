@@ -143,25 +143,20 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	return ocpVersions, nil
 }
 
-func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenShiftVersions, error) {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_OCP_VERSIONS)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = env.ValidateVars("DST_ACR_NAME"); err != nil {
+func getVersionsDatabase(ctx context.Context, _env env.Core) (database.OpenShiftVersions, error) {
+	if err := env.ValidateVars("DST_ACR_NAME"); err != nil {
 		return nil, err
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		if err = env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
+		if err := env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
 			return nil, err
 		}
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, nil)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, m, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating database client: %w", err)
 	}
@@ -179,7 +174,9 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 	return dbOpenShiftVersions, nil
 }
 
-func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.OpenShiftVersions, log *logrus.Entry) error {
+func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.OpenShiftVersions, _env env.Core) error {
+	log := _env.Logger()
+
 	existingVersions, err := dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		return err
@@ -239,13 +236,18 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 	return nil
 }
 
-func updateOCPVersions(ctx context.Context, log *logrus.Entry) error {
-	dbOpenShiftVersions, err := getVersionsDatabase(ctx, log)
+func updateOCPVersions(ctx context.Context, _log *logrus.Entry) error {
+	_env, err := env.NewCore(ctx, _log, env.COMPONENT_UPDATE_OCP_VERSIONS)
 	if err != nil {
 		return err
 	}
 
-	err = updateOpenShiftVersions(ctx, dbOpenShiftVersions, log)
+	dbOpenShiftVersions, err := getVersionsDatabase(ctx, _env)
+	if err != nil {
+		return err
+	}
+
+	err = updateOpenShiftVersions(ctx, dbOpenShiftVersions, _env)
 	if err != nil {
 		return err
 	}
