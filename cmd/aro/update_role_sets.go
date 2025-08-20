@@ -24,15 +24,15 @@ func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, erro
 	return roleSets, getEnvironmentData(envKey, &roleSets)
 }
 
-func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus.Entry) (database.PlatformWorkloadIdentityRoleSets, error) {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_ROLE_SETS)
+func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, _log *logrus.Entry) (database.PlatformWorkloadIdentityRoleSets, error) {
+	_env, err := env.NewCore(ctx, _log, env.COMPONENT_UPDATE_ROLE_SETS)
 	if err != nil {
 		return nil, err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "update-role-sets"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, nil)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, m, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating database client: %w", err)
 	}

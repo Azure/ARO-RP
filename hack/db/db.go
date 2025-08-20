@@ -26,12 +26,12 @@ const (
 	KeyVaultPrefix      = "KEYVAULT_PREFIX"
 )
 
-func run(ctx context.Context, log *logrus.Entry) error {
+func run(ctx context.Context, _log *logrus.Entry) error {
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
+	_env, err := env.NewCore(ctx, _log, env.COMPONENT_TOOLING)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, &noop.Noop{}, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, &noop.Noop{}, aead)
 	if err != nil {
 		return err
 	}

@@ -25,8 +25,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-func monitor(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewEnv(ctx, log, env.COMPONENT_MONITOR)
+func monitor(ctx context.Context, _log *logrus.Entry) error {
+	_env, err := env.NewEnv(ctx, _log, env.COMPONENT_MONITOR)
 	if err != nil {
 		return err
 	}
@@ -43,9 +43,9 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	g, err := golang.NewMetrics(log.WithField("component", "metrics"), m)
+	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), m)
 	if err != nil {
 		return err
 	}
@@ -58,14 +58,14 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(m),
 	})
 
-	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	clusterm := statsd.New(ctx, _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, &noop.Noop{}, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, &noop.Noop{}, aead)
 	if err != nil {
 		return err
 	}
@@ -94,12 +94,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		WithSubscriptions(dbSubscriptions).
 		WithMonitors(dbMonitors)
 
-	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), log)
+	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), _env.LoggerForComponent("dialer"))
 	if err != nil {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbg, m, clusterm, _env)
+	mon := pkgmonitor.NewMonitor(_env.LoggerForComponent("monitor"), dialer, dbg, m, clusterm, _env)
 
 	return mon.Run(ctx)
 }
