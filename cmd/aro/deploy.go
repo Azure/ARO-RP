@@ -54,7 +54,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 			return err
 		}
 
-		_env, err = env.NewCoreForCI(ctx, log)
+		_env, err = env.NewCoreForCI(ctx, log, env.COMPONENT_DEPLOY)
 		if err != nil {
 			return err
 		}
