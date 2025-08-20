@@ -84,6 +84,12 @@ var (
 		dimension.SubscriptionID:   subscriptionID,
 	}
 
+	durationMetricDimensions = map[string]string{
+		dimension.ResourceID:     ocID,
+		dimension.Location:       ocLocation,
+		dimension.SubscriptionID: subscriptionID,
+	}
+
 	ocClusterName = "testing"
 	ocID          = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/%s", subscriptionID, resourcegroupName, ocClusterName)
 	ocLocation    = "eastus"
@@ -206,6 +212,7 @@ func TestMonitor(t *testing.T) {
 					Return(workerSubnet2, &forbiddenRespErr)
 			},
 			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 				mock.EXPECT().EmitGauge(MetricSubnetAccessForbidden, int64(1), workerSubnet2MetricDimensions)
 			},
 			wantErr: forbiddenRespErr.Error(),
@@ -250,6 +257,9 @@ func TestMonitor(t *testing.T) {
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
 			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
+			},
 		},
 		{
 			name: "pass - no rules, 3 workerprofiles have the same subnetID, subnet should be retrieved once",
@@ -288,6 +298,9 @@ func TestMonitor(t *testing.T) {
 					},
 				}
 			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
+			},
 		}, {
 			name: "pass - no rules, 0 count profiles are not checked",
 			mockSubnet: func(mock *mock_armnetwork.MockSubnetsClient) {
@@ -321,6 +334,9 @@ func TestMonitor(t *testing.T) {
 					},
 				}
 			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
+			},
 		},
 		{
 			name: "pass - no rules",
@@ -347,6 +363,9 @@ func TestMonitor(t *testing.T) {
 				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
+			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 			},
 		},
 		{
@@ -415,6 +434,9 @@ func TestMonitor(t *testing.T) {
 				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
+			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 			},
 		},
 		{
@@ -509,6 +531,7 @@ func TestMonitor(t *testing.T) {
 					dimension.NSGRuleDirection:    string(armnetwork.SecurityRuleDirectionOutbound),
 					dimension.NSGRulePriority:     fmt.Sprint(priority3),
 				})
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 			},
 		},
 	} {

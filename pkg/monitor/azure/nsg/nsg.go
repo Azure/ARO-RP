@@ -224,10 +224,8 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 		}
 	}
 
-	// emit a metric with how long we took when we have no errors
-	if len(errors) == 0 {
-		n.emitter.EmitFloat("monitor.nsg.duration", time.Since(now).Seconds(), n.dims)
-	}
+	// emit a metric with how long we took
+	n.emitter.EmitFloat("monitor.nsg.duration", time.Since(now).Seconds(), n.dims)
 
 	return errors
 }
