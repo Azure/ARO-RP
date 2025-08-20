@@ -65,7 +65,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return err
 	}
@@ -89,16 +89,4 @@ func main() {
 	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func DBName(isLocalDevelopmentMode bool) (string, error) {
-	if !isLocalDevelopmentMode {
-		return "ARO", nil
-	}
-
-	if err := env.ValidateVars(DatabaseName); err != nil {
-		return "", fmt.Errorf("%v (development mode)", err.Error())
-	}
-
-	return os.Getenv(DatabaseName), nil
 }

@@ -33,6 +33,7 @@ const (
 	COMPONENT_TOOLING             ServiceComponent = "TOOLING"
 	COMPONENT_MIMO_SCHEDULER      ServiceComponent = "MIMO_SCHEDULER"
 	COMPONENT_MIMO_ACTUATOR       ServiceComponent = "MIMO_ACTUATOR"
+	COMPONENT_E2E                 ServiceComponent = "E2E"
 )
 
 // Core collects basic configuration information which is expected to be
@@ -46,8 +47,9 @@ type Core interface {
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
 
-	Component() string
+	Service() string
 	Logger() *logrus.Entry
+	LoggerForComponent(string) *logrus.Entry
 }
 
 type core struct {
@@ -56,8 +58,8 @@ type core struct {
 	isLocalDevelopmentMode bool
 	isCI                   bool
 
-	component    ServiceComponent
-	componentLog *logrus.Entry
+	service    ServiceComponent
+	serviceLog *logrus.Entry
 
 	msiAuthorizers map[string]autorest.Authorizer
 }
@@ -70,12 +72,16 @@ func (c *core) IsCI() bool {
 	return c.isCI
 }
 
-func (c *core) Component() string {
-	return string(c.component)
+func (c *core) Service() string {
+	return string(c.service)
 }
 
 func (c *core) Logger() *logrus.Entry {
-	return c.componentLog
+	return c.serviceLog
+}
+
+func (c *core) LoggerForComponent(component string) *logrus.Entry {
+	return c.serviceLog.WithField("component", component)
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
@@ -96,11 +102,15 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 	return liveconfig.NewProd(c.Location(), mcc), nil
 }
 
-func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Core, error) {
+func logForService(_log *logrus.Entry, service ServiceComponent) *logrus.Entry {
+	return _log.WithField("service", strings.ReplaceAll(strings.ToLower(string(service)), "_", "-"))
+}
+
+func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceComponent) (Core, error) {
 	// assign results of package-level functions to struct's environment flags
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
 	isCI := IsCI()
-	componentLog := log.WithField("component", strings.ReplaceAll(strings.ToLower(string(component)), "_", "-"))
+	log := logForService(_log, service)
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
 	}
@@ -124,8 +134,8 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 		isCI:                   isCI,
-		component:              component,
-		componentLog:           componentLog,
+		service:                service,
+		serviceLog:             log,
 		msiAuthorizers:         map[string]autorest.Authorizer{},
 	}, nil
 }
@@ -135,10 +145,11 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 // which may run on CI VMs.  CI VMs don't currently have MSI and hence cannot
 // resolve their tenant ID, and also may access resources in a different tenant
 // (e.g. AME).
-func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
+func NewCoreForCI(ctx context.Context, _log *logrus.Entry, service ServiceComponent) (Core, error) {
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
+	serviceLog := logForService(_log, service)
 	if isLocalDevelopmentMode {
-		log.Info("running in local development mode")
+		serviceLog.Info("running in local development mode")
 	}
 
 	im, err := instancemetadata.NewDev(false)
@@ -150,5 +161,7 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
 		InstanceMetadata:       im,
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 		msiAuthorizers:         map[string]autorest.Authorizer{},
+		service:                service,
+		serviceLog:             serviceLog,
 	}, nil
 }

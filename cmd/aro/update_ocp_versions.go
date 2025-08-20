@@ -110,7 +110,7 @@ func appendOpenShiftVersions(ocpVersions []api.OpenShiftVersion, installStreams 
 }
 
 func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShiftVersion, error) {
-	env, err := env.NewCoreForCI(ctx, log)
+	env, err := env.NewCoreForCI(ctx, log, env.COMPONENT_UPDATE_OCP_VERSIONS)
 	if err != nil {
 		return nil, err
 	}
