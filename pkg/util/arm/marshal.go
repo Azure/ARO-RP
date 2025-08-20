@@ -21,14 +21,21 @@ const (
 // ARM resource types that should include Type and Location fields when marshaling to JSON
 // Add new types here as needed.
 var armResourceTypes = map[reflect.Type]bool{
-	// Network resources
+	// Network resources - register both pointer and non-pointer types
 	reflect.TypeOf(&armnetwork.VirtualNetwork{}):        true,
+	reflect.TypeOf(armnetwork.VirtualNetwork{}):         true,
 	reflect.TypeOf(&armnetwork.Subnet{}):                true,
+	reflect.TypeOf(armnetwork.Subnet{}):                 true,
 	reflect.TypeOf(&armnetwork.SecurityGroup{}):         true,
+	reflect.TypeOf(armnetwork.SecurityGroup{}):          true,
 	reflect.TypeOf(&armnetwork.RouteTable{}):            true,
+	reflect.TypeOf(armnetwork.RouteTable{}):             true,
 	reflect.TypeOf(&armnetwork.LoadBalancer{}):          true,
+	reflect.TypeOf(armnetwork.LoadBalancer{}):           true,
 	reflect.TypeOf(&armnetwork.PublicIPAddress{}):       true,
+	reflect.TypeOf(armnetwork.PublicIPAddress{}):        true,
 	reflect.TypeOf(&armnetwork.VirtualNetworkPeering{}): true,
+	reflect.TypeOf(armnetwork.VirtualNetworkPeering{}):  true,
 
 	// Add other ARM types as needed - import the appropriate packages first
 	// For other resource types like Compute, KeyVault, Storage, etc.
@@ -62,7 +69,14 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		}
 		// Add Type and Location fields only for ARM resources
 		resourceType := reflect.TypeOf(r.Resource)
-		if armResourceTypes[resourceType] && r.Type != "" {
+		elemType := resourceType
+		// Handle pointer types by getting their underlying element type
+		if resourceType.Kind() == reflect.Ptr {
+			elemType = resourceType.Elem()
+		}
+
+		// Check both the type and its element type (for pointers)
+		if (armResourceTypes[resourceType] || armResourceTypes[elemType]) && r.Type != "" {
 			dataMap["type"] = r.Type
 			// Also add location if it's present
 			if r.Location != "" {
