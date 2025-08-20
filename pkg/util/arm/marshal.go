@@ -67,18 +67,13 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		if r.DependsOn != nil {
 			dataMap["dependsOn"] = r.DependsOn
 		}
-		// Add Type and Location fields only for ARM resources
 		resourceType := reflect.TypeOf(r.Resource)
 		elemType := resourceType
-		// Handle pointer types by getting their underlying element type
 		if resourceType.Kind() == reflect.Ptr {
 			elemType = resourceType.Elem()
 		}
-
-		// Check both the type and its element type (for pointers)
 		if (armResourceTypes[resourceType] || armResourceTypes[elemType]) && r.Type != "" {
 			dataMap["type"] = r.Type
-			// Also add location if it's present
 			if r.Location != "" {
 				dataMap["location"] = r.Location
 			}
