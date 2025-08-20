@@ -73,7 +73,7 @@ func (c *core) IsCI() bool {
 }
 
 func (c *core) Service() string {
-	return string(c.service)
+	return strings.ToLower(string(c.service))
 }
 
 func (c *core) Logger() *logrus.Entry {
