@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
@@ -65,7 +64,7 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, &noop.Noop{}, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, m, aead)
 	if err != nil {
 		return err
 	}
