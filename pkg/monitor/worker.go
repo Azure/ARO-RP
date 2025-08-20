@@ -176,6 +176,24 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 	}
 }
 
+// changefeedMetrics emits metrics tracking the size of the changefeed caches.
+func (mon *monitor) changefeedMetrics(stop <-chan struct{}) {
+	defer recover.Panic(mon.baseLog)
+
+	t := time.NewTicker(time.Minute)
+	defer t.Stop()
+	for {
+		mon.m.EmitGauge("monitor.cache.size", int64(len(mon.docs)), map[string]string{"cache": "openshiftclusters"})
+		mon.m.EmitGauge("monitor.cache.size", int64(len(mon.subs)), map[string]string{"cache": "subscriptions"})
+
+		select {
+		case <-t.C:
+		case <-stop:
+			return
+		}
+	}
+}
+
 // worker reads clusters to be monitored and monitors them
 func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string) {
 	defer recover.Panic(mon.baseLog)

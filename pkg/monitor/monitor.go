@@ -112,6 +112,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	// fill the cache from the database change feed
 	go mon.changefeed(ctx, mon.baseLog.WithField("component", "changefeed"), nil)
+	go mon.changefeedMetrics(nil)
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
