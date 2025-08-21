@@ -527,7 +527,7 @@ outer:
 			}
 		case <-ctx.Done():
 			waitErr = fmt.Errorf("context was cancelled while waiting for %s because %s", o.GetName(), ctx.Err())
-
+			break outer
 		}
 	}
 
