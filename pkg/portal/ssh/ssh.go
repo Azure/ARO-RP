@@ -211,32 +211,23 @@ func (s *SSH) internalServerError(w http.ResponseWriter, err error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
-// as of 30 Jun 2025 / go 1.24.4, this server supports the following algorithms
+// as of 30 Jun 2025 / go 1.24.4 / PR , this server supports the following algorithms
 //
 // $ nmap --script ssh2-enum-algos localhost -p 2222
-// Starting Nmap 7.92 ( https://nmap.org ) at 2025-06-30 16:17 PDT
+// Starting Nmap 7.92 ( https://nmap.org ) at 2025-08-21 09:08 PDT
 // Nmap scan report for localhost (127.0.0.1)
-// Host is up (0.00021s latency).
-// Other addresses for localhost (not scanned): ::1
-
-// PORT     STATE SERVICE
-// Starting Nmap 7.92 ( https://nmap.org ) at 2025-07-01 09:55 PDT
-// Nmap scan report for localhost (127.0.0.1)
-// Host is up (0.00021s latency).
+// Host is up (0.00020s latency).
 // Other addresses for localhost (not scanned): ::1
 
 // PORT     STATE SERVICE
 // 2222/tcp open  EtherNetIP-1
 // | ssh2-enum-algos:
-// |   kex_algorithms: (9)
+// |   kex_algorithms: (6)
 // |       mlkem768x25519-sha256
-// |       curve25519-sha256
-// |       curve25519-sha256@libssh.org
 // |       ecdh-sha2-nistp256
 // |       ecdh-sha2-nistp384
 // |       ecdh-sha2-nistp521
 // |       diffie-hellman-group14-sha256
-// |       diffie-hellman-group14-sha1
 // |       kex-strict-s-v00@openssh.com
 // |   server_host_key_algorithms: (3)
 // |       rsa-sha2-256
@@ -245,14 +236,13 @@ func (s *SSH) internalServerError(w http.ResponseWriter, err error) {
 // |   encryption_algorithms: (3)
 // |       aes256-ctr
 // |       aes192-ctr
-// |       aes192-ctr
-// |   mac_algorithms: (6)
+// |       aes128-ctr
+// |   mac_algorithms: (5)
 // |       hmac-sha2-256-etm@openssh.com
 // |       hmac-sha2-512-etm@openssh.com
 // |       hmac-sha2-256
 // |       hmac-sha2-512
 // |       hmac-sha1
-// |       hmac-sha1-96
 // |   compression_algorithms: (1)
 // |_      none
 //
