@@ -298,6 +298,9 @@ func TestSecurity(t *testing.T) {
 					t.Fatal(err)
 				}
 
+				// Add Referer header for HTTPS otherwise securecookie is unhappy
+				req.Header.Add("Referer", "https://server/")
+
 				err = addCSRF(req)
 				if err != nil {
 					t.Fatal(err)
