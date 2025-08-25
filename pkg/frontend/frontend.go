@@ -58,6 +58,7 @@ type frontendDBs interface {
 }
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
+type portForwardActionsFactory func(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (adminactions.PortForwardActions, error)
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
 type appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error)
@@ -88,11 +89,12 @@ type frontend struct {
 
 	aead encryption.AEAD
 
-	hiveClusterManager    hive.ClusterManager
-	hiveSyncSetManager    hive.SyncSetManager
-	kubeActionsFactory    kubeActionsFactory
-	azureActionsFactory   azureActionsFactory
-	appLensActionsFactory appLensActionsFactory
+	hiveClusterManager        hive.ClusterManager
+	hiveSyncSetManager        hive.SyncSetManager
+	kubeActionsFactory        kubeActionsFactory
+	azureActionsFactory       azureActionsFactory
+	appLensActionsFactory     appLensActionsFactory
+	portForwardActionsFactory portForwardActionsFactory
 
 	skuValidator       SkuValidator
 	quotaValidator     QuotaValidator
@@ -136,6 +138,7 @@ func NewFrontend(ctx context.Context,
 	hiveSyncSetManager hive.SyncSetManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
+	portForwardActionsFactory portForwardActionsFactory,
 	appLensActionsFactory appLensActionsFactory,
 	enricher clusterdata.BestEffortEnricher,
 ) (*frontend, error) {
@@ -166,16 +169,17 @@ func NewFrontend(ctx context.Context,
 			ArmAuth:     _env.ArmClientAuthorizer(),
 			MiseAuth:    _env.MISEAuthorizer(),
 		},
-		dbGroup:               dbGroup,
-		apis:                  apis,
-		m:                     middleware.MetricsMiddleware{Emitter: m},
-		maintenanceMiddleware: middleware.MaintenanceMiddleware{Emitter: clusterm},
-		aead:                  aead,
-		hiveClusterManager:    hiveClusterManager,
-		hiveSyncSetManager:    hiveSyncSetManager,
-		kubeActionsFactory:    kubeActionsFactory,
-		azureActionsFactory:   azureActionsFactory,
-		appLensActionsFactory: appLensActionsFactory,
+		dbGroup:                   dbGroup,
+		apis:                      apis,
+		m:                         middleware.MetricsMiddleware{Emitter: m},
+		maintenanceMiddleware:     middleware.MaintenanceMiddleware{Emitter: clusterm},
+		aead:                      aead,
+		hiveClusterManager:        hiveClusterManager,
+		hiveSyncSetManager:        hiveSyncSetManager,
+		kubeActionsFactory:        kubeActionsFactory,
+		azureActionsFactory:       azureActionsFactory,
+		appLensActionsFactory:     appLensActionsFactory,
+		portForwardActionsFactory: portForwardActionsFactory,
 
 		quotaValidator:     quotaValidator{},
 		skuValidator:       skuValidator{},
@@ -376,6 +380,9 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 						r.Post("/cancel", f.postAdminMaintManifestCancel)
 					})
 				})
+
+				r.Post("/assesscontrolplanedownsize", f.postAdminAssessControlPlaneDownsize)
+
 			})
 		})
 
