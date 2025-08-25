@@ -182,6 +182,12 @@
         "subscriptionResourceGroupName": {
             "value": ""
         },
+        "tokenContributorRoleID": {
+            "value": ""
+        },
+        "tokenContributorRoleName": {
+            "value": ""
+        },
         "vmSize": {
             "value": "Standard_D2s_v3"
         },
