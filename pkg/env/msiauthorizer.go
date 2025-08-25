@@ -38,7 +38,7 @@ func (c *core) NewMSITokenCredential() (azcore.TokenCredential, error) {
 	}
 
 	var msiContext string
-	if c.component == COMPONENT_GATEWAY {
+	if c.service == COMPONENT_GATEWAY {
 		msiContext = string(MSIContextGateway)
 	} else {
 		msiContext = string(MSIContextRP)
