@@ -889,6 +889,16 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 
 	var err error
 	for _, masterVmSize := range c.Config.MasterVMSizes {
+		if err != nil {
+			// If we've already tried and failed to create the cluster, delete
+			// it before retrying. Deleting first ensures that the final failed
+			// cluster remains for diagnostic purposes.
+			err = c.openshiftclusters.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
+			if err != nil {
+				return fmt.Errorf("error deleting cluster after failed creation: %w", err)
+			}
+		}
+
 		oc.Properties.MasterProfile.VMSize = api.VMSize(masterVmSize)
 		c.log.Infof("Creating cluster %s with master VM size %s and worker VM size %s",
 			clusterName, oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
@@ -897,10 +907,6 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			break
 		}
 		c.log.WithError(err).Errorf("error creating cluster with master VM size %s, retrying", oc.Properties.MasterProfile.VMSize)
-		err = c.openshiftclusters.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			return fmt.Errorf("error deleting cluster after failed creation: %w", err)
-		}
 	}
 	return err
 }
