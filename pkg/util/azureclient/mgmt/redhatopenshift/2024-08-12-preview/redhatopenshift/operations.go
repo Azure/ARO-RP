@@ -35,7 +35,7 @@ func NewOperationsClient(environment *azureclient.AROEnvironment, subscriptionID
 		client.Sender = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // #nosec G402
+					InsecureSkipVerify: true, // #nosec G402  // CodeQL [SM03511] only used in local development
 				},
 			},
 		}
