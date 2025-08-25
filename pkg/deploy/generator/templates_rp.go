@@ -103,6 +103,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"armApiClientCertCommonName",
 			"armClientId",
 			"gatewayDomains",
+			"globalDevopsServicePrincipalId",
 			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":
@@ -209,7 +210,8 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "acrLocationOverride":
+		case "acrLocationOverride",
+			"globalDevopsServicePrincipalId":
 			p.DefaultValue = ""
 		}
 		t.Parameters[param] = p

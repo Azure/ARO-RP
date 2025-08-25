@@ -108,13 +108,19 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		return err
 	}
 
-	globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
-	if err != nil {
-		return err
+	var globalDevopsMsiPrincipalId string
+
+	if d.config.Configuration.GlobalDevopsManagedIdentity != nil {
+		globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+		if err != nil {
+			return err
+		}
+
+		globalDevopsMsiPrincipalId = globalDevopsMSI.PrincipalID.String()
 	}
 
 	// deploy ACR RBAC, RP version storage account
-	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMSI.PrincipalID.String())
+	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMsiPrincipalId)
 	if err != nil {
 		return err
 	}

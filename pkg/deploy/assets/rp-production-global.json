@@ -19,7 +19,8 @@
             "type": "string"
         },
         "globalDevopsServicePrincipalId": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "rpParentDomainName": {
             "type": "string"
@@ -125,6 +126,7 @@
                 "principalId": "[parameters('globalDevopsServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[not(equals(parameters('globalDevopsServicePrincipalId'), ''))]",
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
@@ -150,6 +152,7 @@
                 "principalId": "[parameters('globalDevopsServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[not(equals(parameters('globalDevopsServicePrincipalId'), ''))]",
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[concat(resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName')), '/blobServices/default/containers/$web')]"
