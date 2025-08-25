@@ -18,62 +18,68 @@
     },
     "resources": [
         {
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "rp-nsg",
             "properties": {
                 "securityRules": [
                     {
+                        "name": "rp_in_arm",
                         "properties": {
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "443",
-                            "sourceAddressPrefix": "*",
-                            "destinationAddressPrefix": "*",
                             "access": "Allow",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443",
+                            "direction": "Inbound",
                             "priority": 120,
-                            "direction": "Inbound"
-                        },
-                        "name": "rp_in_arm"
-                    },
-                    {
-                        "properties": {
                             "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "443",
-                            "sourceAddressPrefix": "GenevaActions",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 130,
-                            "direction": "Inbound"
-                        },
-                        "name": "rp_in_geneva"
-                    },
-                    {
-                        "properties": {
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "22",
                             "sourceAddressPrefix": "*",
-                            "destinationAddressPrefix": "*",
+                            "sourcePortRange": "*"
+                        }
+                    },
+                    {
+                        "name": "rp_in_geneva",
+                        "properties": {
                             "access": "Allow",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443",
+                            "direction": "Inbound",
+                            "priority": 130,
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "GenevaActions",
+                            "sourcePortRange": "*"
+                        }
+                    },
+                    {
+                        "name": "ssh_in",
+                        "properties": {
+                            "access": "Allow",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "22",
+                            "direction": "Inbound",
                             "priority": 125,
-                            "direction": "Inbound"
-                        },
-                        "name": "ssh_in"
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*"
+                        }
                     }
                 ]
             },
-            "name": "rp-nsg",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
+            "type": "Microsoft.Network/networkSecurityGroups"
         },
         {
-            "properties": {},
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
             "name": "rp-pe-nsg",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
+            "properties": {},
+            "type": "Microsoft.Network/networkSecurityGroups"
         },
         {
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "rp-vnet",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -82,34 +88,33 @@
                 },
                 "subnets": [
                     {
+                        "name": "rp-subnet",
                         "properties": {
                             "addressPrefix": "10.1.0.0/24",
                             "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
-                                "tags": null
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
                             },
                             "serviceEndpoints": [
                                 {
-                                    "service": "Microsoft.Storage",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.Storage"
                                 }
                             ]
-                        },
-                        "name": "rp-subnet"
+                        }
                     }
                 ]
             },
-            "name": "rp-vnet",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
-            ]
+            "type": "Microsoft.Network/virtualNetworks"
         },
         {
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "rp-pe-vnet-001",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -118,33 +123,26 @@
                 },
                 "subnets": [
                     {
+                        "name": "rp-pe-subnet",
                         "properties": {
                             "addressPrefix": "10.0.4.0/22",
                             "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
-                                "tags": null
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
                             },
+                            "privateEndpointNetworkPolicies": "Disabled",
                             "serviceEndpoints": [
                                 {
-                                    "service": "Microsoft.Storage",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.Storage"
                                 }
-                            ],
-                            "privateEndpointNetworkPolicies": "Disabled"
-                        },
-                        "name": "rp-pe-subnet"
+                            ]
+                        }
                     }
                 ]
             },
-            "name": "rp-pe-vnet-001",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
-            ]
+            "type": "Microsoft.Network/virtualNetworks"
         },
         {
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
