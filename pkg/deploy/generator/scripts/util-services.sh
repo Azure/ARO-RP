@@ -46,8 +46,8 @@ ROLE='${role,,}'"
     local -r aro_gateway_service_filename='/etc/systemd/system/aro-gateway.service'
 
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script) 
+    # below variable is in single quotes
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_gateway_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -114,7 +114,7 @@ ROLE='${role,,}'"
     # shellcheck disable=SC2034
     local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_rp_service_file='[Unit]
 After=network-online.target
@@ -218,7 +218,7 @@ ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'"
     # shellcheck disable=SC2034
     local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_monitor_service_file='[Unit]
 After=network-online.target
@@ -297,7 +297,7 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_portal_service_file='[Unit]
 After=network-online.target
@@ -338,6 +338,91 @@ RestartSec=1
 WantedBy=multi-user.target'
 
     write_file aro_portal_service_filename aro_portal_service_file true
+}
+
+# configure_service_aro_mimo_actuator
+# args:
+# 1) image - nameref, string; RP container image
+# 2) conf_file - nameref, string; aro rp environment file
+# 3) ipaddress - nameref, string; static ip of podman network to be attached
+configure_service_aro_mimo_actuator() {
+    local -n image="$1"
+    local -n conf_file="$2"
+    local -n ipaddress="$3"
+    log "starting"
+    log "Configuring aro-mimo-actuator service"
+
+    local -r aro_mimo_actuator_conf_filename='/etc/sysconfig/aro-mimo-actuator'
+    local -r add_conf_file="PODMAN_NETWORK='podman'
+IPADDRESS='$ipaddress'"
+
+    write_file aro_mimo_actuator_conf_filename conf_file true
+    write_file aro_mimo_actuator_conf_filename add_conf_file false
+
+    # shellcheck disable=SC2034
+    local -r aro_mimo_actuator_service_filename='/etc/systemd/system/aro-mimo-actuator.service'
+    # shellcheck disable=SC2034
+    # below variable is in single quotes
+    # as it is to be expanded at systemd start time (by systemd, not this script)
+    local -r aro_mimo_actuator_service_file='[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/aro-mimo-actuator
+ExecStartPre=-/usr/bin/podman rm -f %N
+ExecStart=/usr/bin/podman run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --cap-drop net_raw \
+  -e ACR_RESOURCE_ID \
+  -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
+  -e ARM_API_CLIENT_CERT_COMMON_NAME \
+  -e AZURE_ARM_CLIENT_ID \
+  -e AZURE_FP_CLIENT_ID \
+  -e CLUSTER_MDM_ACCOUNT \
+  -e CLUSTER_MDM_NAMESPACE \
+  -e CLUSTER_MDSD_ACCOUNT \
+  -e CLUSTER_MDSD_CONFIG_VERSION \
+  -e CLUSTER_MDSD_NAMESPACE \
+  -e DATABASE_ACCOUNT_NAME \
+  -e DOMAIN_NAME \
+  -e GATEWAY_DOMAINS \
+  -e GATEWAY_RESOURCEGROUP \
+  -e KEYVAULT_PREFIX \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
+  -e MDSD_ENVIRONMENT \
+  -e RP_FEATURES \
+  -e ARO_INSTALL_VIA_HIVE \
+  -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
+  -e ARO_ADOPT_BY_HIVE \
+  -e OIDC_AFD_ENDPOINT \
+  -e OIDC_STORAGE_ACCOUNT_NAME \
+  -e MSI_RP_ENDPOINT \
+  -e OTEL_AUDIT_QUEUE_SIZE \
+  -e MISE_ADDRESS \
+  -m 2g \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
+  -p 443:8443 \
+  -v /etc/aro-mimo-actuator:/etc/aro-mimo-actuator \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw:z \
+  -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
+  ${RPIMAGE} \
+  mimo-actuator
+ExecStop=/usr/bin/podman stop -t 3600 %N
+TimeoutStopSec=3600
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target'
+
+    write_file aro_mimo_actuator_service_filename aro_mimo_actuator_service_file true
 }
 
 # configure_service_aro_mise
@@ -431,7 +516,7 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r aro_mise_service_filename='/etc/systemd/system/aro-mise.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_mise_service_file='[Unit]
 After=network-online.target
@@ -530,7 +615,7 @@ service:
     # shellcheck disable=SC2034
     local -r aro_otel_collector_service_filename='/etc/systemd/system/aro-otel-collector.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_otel_collector_service_file='[Unit]
 After=mdm.service
@@ -636,7 +721,7 @@ configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -r service_filename='/etc/systemd/system/fluentbit.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r service_file='[Unit]
 After=network-online.target
@@ -863,7 +948,7 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r mdm_service_filename="/etc/systemd/system/mdm.service"
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r mdm_service_file='[Unit]
 After=network-online.target
@@ -924,6 +1009,7 @@ configure_vmss_aro_services() {
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
         configure_service_aro_rp "${images["rp"]}" "$1" "${configs["rp_config"]}" "${configs["static_ip_address"]}["rp"]"
+        configure_service_aro_mimo_actuator "${images["rp"]}" "${configs["rp_config"]}" "${configs["static_ip_address"]}["mimo_actuator"]"
         configure_service_aro_monitor "${images["rp"]}" "${configs["static_ip_address"]}["monitor"]"
         configure_service_aro_portal "${images["rp"]}" "${configs["static_ip_address"]}["portal"]"
         configure_service_aro_mise "${images["mise"]}" "${configs["static_ip_address"]}["mise"]"
