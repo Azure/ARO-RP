@@ -1,0 +1,7 @@
+apiVersion: bogusOperator/v1
+kind: bogon
+metadata:
+  name: bogerus
+  namespace: openshift-managed-upgrade-operator
+spec:
+  content: bogus
