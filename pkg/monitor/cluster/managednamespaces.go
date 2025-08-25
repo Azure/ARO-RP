@@ -5,7 +5,7 @@ package cluster
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -23,7 +23,7 @@ func (mon *Monitor) fetchManagedNamespaces(ctx context.Context) error {
 	for {
 		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
 		if err != nil {
-			return fmt.Errorf("error in list operation: %w", err)
+			return errors.Join(errListNamespaces, err)
 		}
 
 		for _, i := range l.Items {
