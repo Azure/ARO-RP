@@ -963,6 +963,7 @@ func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, componen
 	}
 
 	roleAssignment := &arm.Resource{
+		Condition: pointerutils.ToPtr("[not(equals(parameters('" + component + "ServicePrincipalId'), ''))]"),
 		Resource: mgmtauthorization.RoleAssignment{
 			Name: pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
 			Type: pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
@@ -1540,6 +1541,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			resourceTypeStorageAccount,
 			storageAccountName,
 			fmt.Sprintf("concat(%s, '/Microsoft.Authorization/', guid(resourceId('%s', %s)))", storageAccountName, resourceTypeStorageAccount, storageAccountName),
+			"[not(equals(parameters('globalDevopsServicePrincipalId'), ''))]",
 		),
 		g.storageAccountBlobContainer(
 			fmt.Sprintf("concat(%s, '/default', '/$web')", storageAccountName),
@@ -1552,6 +1554,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			fmt.Sprintf("%s/%s", resourceTypeStorageAccount, resourceTypeBlobContainer),
 			fmt.Sprintf("concat(resourceId('Microsoft.Storage/storageAccounts', %s), '/blobServices/default/containers/$web')", storageAccountName),
 			fmt.Sprintf("concat(%s, '/default/$web/Microsoft.Authorization/', guid(%s))", storageAccountName, storageAccountName),
+			"[not(equals(parameters('globalDevopsServicePrincipalId'), ''))]",
 		),
 	}
 }
