@@ -484,14 +484,18 @@ func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name
 //
 // If backups already exists the job is cowardly and refuses to overwrite them
 func backupEtcdData(ctx context.Context, log *logrus.Entry, cluster, node string, kubeActions adminactions.KubeActions) ([]byte, error) {
-	podDataBackup := createBackupEtcdDataPod(node)
+	podDataBackup, err := createBackupEtcdDataPod(node)
 
-	log.Infof("Creating job %s", podDataBackup.GetName())
-	err := kubeActions.KubeCreateOrUpdate(ctx, podDataBackup)
 	if err != nil {
 		return []byte{}, err
 	}
-	log.Infof("Job %s has been created", podDataBackup.GetName())
+
+	log.Infof("Creating pod %s", podDataBackup.GetName())
+	err = kubeActions.KubeCreateOrUpdate(ctx, podDataBackup)
+	if err != nil {
+		return []byte{}, err
+	}
+	log.Infof("Pod %s has been created", podDataBackup.GetName())
 
 	watcher, err := kubeActions.KubeWatch(ctx, podDataBackup, "app")
 	if err != nil {
@@ -511,6 +515,7 @@ func backupEtcdData(ctx context.Context, log *logrus.Entry, cluster, node string
 func waitForPodSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Interface, o *unstructured.Unstructured, k adminactions.KubeActions) ([]byte, error) {
 	var waitErr error
 	var pod corev1.Pod
+	var originalPod corev1.Pod
 	log.Infof("Waiting for %s to reach %s phase", o.GetName(), corev1.PodSucceeded)
 outer:
 	for {
@@ -541,65 +546,83 @@ outer:
 		}
 	}
 
-	// get container name
-	cxName := o.UnstructuredContent()["spec"].(map[string]interface{})["containers"].([]corev1.Container)[0].Name
-	log.Infof("Collecting container logs for Pod %s, container %s, in namespace %s", o.GetName(), cxName, o.GetNamespace())
+	// get container spec
+	err := kruntime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &originalPod)
+	if err != nil {
+		// We should get a corev1.Pod struct here, report failure if we don't
+		return nil, err
+	}
 
-	cxLogs, err := k.KubeGetPodLogs(ctx, o.GetNamespace(), o.GetName(), cxName)
+	if len(originalPod.Spec.Containers) != 1 {
+		// we should have only one container in the original pod spec
+		return nil, fmt.Errorf("unexpected number of containers in %v. There are %d containers, but only one container should be in the spec", originalPod.Name, len(originalPod.Spec.Containers))
+	}
+
+	cxName := originalPod.Spec.Containers[0].Name
+	log.Infof("Collecting container logs for Pod %s, container %s, in namespace %s", originalPod.Name, cxName, originalPod.Namespace)
+
+	cxLogs, err := k.KubeGetPodLogs(ctx, originalPod.Namespace, originalPod.Name, cxName)
 	if err != nil {
 		return cxLogs, err
 	}
-	log.Infof("Successfully collected logs for %s", o.GetName())
+	log.Infof("Successfully collected logs for %s", originalPod.Name)
 
 	return cxLogs, waitErr
 }
 
-func createBackupEtcdDataPod(node string) *unstructured.Unstructured {
+func createBackupEtcdDataPod(node string) (*unstructured.Unstructured, error) {
 	const podNameDataBackup = genericPodName + "data-backup"
-	p := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"spec": map[string]interface{}{
-				"restartPolicy": corev1.RestartPolicyNever, // It's safer to let entire action to fail fast than keep waiting for a backup that may never arrive.
-				"nodeName":      node,
-				"containers": []corev1.Container{
-					{
-						Name:  podNameDataBackup,
-						Image: image,
-						Command: []string{
-							"chroot",
-							"/host",
-							"/bin/bash",
-							"-c",
-							backupOrFixEtcd,
+	podManifest := corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podNameDataBackup,
+			Namespace: namespaceEtcds,
+			Labels:    map[string]string{"app": podNameDataBackup},
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever, // It's safer to let the pod and the geneva action to fail once than let it constantly retry.
+			NodeName:      node,
+			Containers: []corev1.Container{
+				{
+					Name:  podNameDataBackup,
+					Image: image,
+					Command: []string{
+						"chroot",
+						"/host",
+						"/bin/bash",
+						"-c",
+						backupOrFixEtcd,
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "host",
+							MountPath: "/host",
+							ReadOnly:  false,
 						},
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "host",
-								MountPath: "/host",
-								ReadOnly:  false,
-							},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"SYS_CHROOT"},
 						},
-						SecurityContext: &corev1.SecurityContext{
-							Capabilities: &corev1.Capabilities{
-								Add: []corev1.Capability{"SYS_CHROOT"},
-							},
-							Privileged: pointerutils.ToPtr(true),
-						},
-						Env: []corev1.EnvVar{
-							{
-								Name:  "BACKUP",
-								Value: "true",
-							},
+						Privileged: pointerutils.ToPtr(true),
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "BACKUP",
+							Value: "true",
 						},
 					},
 				},
-				"volumes": []corev1.Volume{
-					{
-						Name: "host",
-						VolumeSource: corev1.VolumeSource{
-							HostPath: &corev1.HostPathVolumeSource{
-								Path: "/",
-							},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "host",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/",
 						},
 					},
 				},
@@ -607,16 +630,16 @@ func createBackupEtcdDataPod(node string) *unstructured.Unstructured {
 		},
 	}
 
-	// This creates an embedded "metadata" map[string]string{} in the unstructured object
-	// For an unknown reason, creating "metadata" directly in the object doesn't work
-	// and the helper functions must be used
-	p.SetKind("Pod")
-	p.SetAPIVersion("v1")
-	p.SetName(podNameDataBackup)
-	p.SetNamespace(namespaceEtcds)
-	p.SetLabels(map[string]string{"app": podNameDataBackup})
+	// Frontend kubeactions expects an unstructured type
+	unstructuredPod, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&podManifest)
 
-	return p
+	if err != nil {
+		return nil, err
+	}
+
+	return &unstructured.Unstructured{
+		Object: unstructuredPod,
+	}, nil
 }
 
 func comparePodEnvToIp(log *logrus.Entry, pods *corev1.PodList) (*degradedEtcd, error) {

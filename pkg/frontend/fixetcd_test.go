@@ -91,7 +91,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
@@ -162,7 +165,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -256,7 +262,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(errors.New("oh no, can't create job data backup"))
 			},
 		},
@@ -273,7 +282,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -328,7 +340,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -361,7 +376,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -395,7 +413,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -432,7 +453,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -456,7 +480,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeDelete(ctx, "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeDelete(ctx, "ClusterRole", "", "system:serviceaccountopenshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeDelete(ctx, "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "Pod", namespaceEtcds, podBackupEtcd.GetName(), true, &propPolicy).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(ctx, podBackupEtcd.GetKind(), namespaceEtcds, podBackupEtcd.GetName(), true, &propPolicy).MaxTimes(1).Return(nil)
 			},
 		},
 		{
@@ -472,7 +496,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil).MaxTimes(1)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodFailed, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("oh no, Pod is in a failed state"), nil)
@@ -495,7 +522,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				podBackupEtcd, err := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil).MaxTimes(1)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodPending, true)
 				if tt.cancel {
