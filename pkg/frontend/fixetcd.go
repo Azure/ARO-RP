@@ -193,7 +193,7 @@ func getPeerPods(pods []corev1.Pod, de *degradedEtcd, cluster string) (string, e
 	return peerPods, nil
 }
 
-func newPodFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured {
+func newPodFixPeers(peerPods, deNode string) *unstructured.Unstructured {
 	const podNameFixPeers = genericPodName + "fix-peers"
 	// Frontend kubeactions expects an unstructured type
 	podFixPeers := &unstructured.Unstructured{
@@ -268,7 +268,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 		return []byte{}, err
 	}
 
-	podFixPeers := newPodFixPeers(cluster, peerPods, de.Node)
+	podFixPeers := newPodFixPeers(peerPods, de.Node)
 
 	cleanup, err, nestedCleanupErr := createPrivilegedServiceAccount(ctx, log, serviceAccountName, cluster, kubeServiceAccount, kubeActions)
 	if err != nil {
@@ -474,7 +474,7 @@ func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name
 //
 // If backups already exists the job is cowardly and refuses to overwrite them
 func backupEtcdData(ctx context.Context, log *logrus.Entry, cluster, node string, kubeActions adminactions.KubeActions) ([]byte, error) {
-	podDataBackup := createBackupEtcdDataPod(cluster, node)
+	podDataBackup := createBackupEtcdDataPod(node)
 
 	log.Infof("Creating job %s", podDataBackup.GetName())
 	err := kubeActions.KubeCreateOrUpdate(ctx, podDataBackup)
@@ -544,7 +544,7 @@ outer:
 	return cxLogs, waitErr
 }
 
-func createBackupEtcdDataPod(cluster, node string) *unstructured.Unstructured {
+func createBackupEtcdDataPod(node string) *unstructured.Unstructured {
 	const podNameDataBackup = genericPodName + "data-backup"
 	p := &unstructured.Unstructured{
 		Object: map[string]interface{}{

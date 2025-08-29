@@ -91,7 +91,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
@@ -122,7 +122,7 @@ func TestFixEtcd(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				podFixPeers := newPodFixPeers(doc.OpenShiftCluster.Name, peerPods, de.Node)
+				podFixPeers := newPodFixPeers(peerPods, de.Node)
 				k.EXPECT().KubeCreateOrUpdate(ctx, podFixPeers).Times(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podFixPeers, k, "app", corev1.PodSucceeded, false)()
 
@@ -159,7 +159,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -187,7 +187,7 @@ func TestFixEtcd(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				podFixPeers := newPodFixPeers(doc.OpenShiftCluster.Name, peerPods, de.Node)
+				podFixPeers := newPodFixPeers(peerPods, de.Node)
 				k.EXPECT().KubeCreateOrUpdate(ctx, podFixPeers).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podFixPeers, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podFixPeers.GetNamespace(), podFixPeers.GetName(), podFixPeers.GetName()).MaxTimes(1).Return([]byte("Fix peer job fixing peers..."), nil)
@@ -250,7 +250,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(errors.New("oh no, can't create job data backup"))
 			},
 		},
@@ -267,7 +267,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -295,7 +295,7 @@ func TestFixEtcd(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				podFixPeers := newPodFixPeers(doc.OpenShiftCluster.Name, peerPods, de.Node)
+				podFixPeers := newPodFixPeers(peerPods, de.Node)
 				k.EXPECT().KubeCreateOrUpdate(ctx, podFixPeers).MaxTimes(1).Return(errors.New("oh no, can't create job fix peers"))
 				expectWatchEvent(gomock.Any(), podFixPeers, k, "app", corev1.PodSucceeded, false)()
 
@@ -319,7 +319,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -352,7 +352,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -386,7 +386,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -423,7 +423,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("Backup job doing backup things..."), nil)
@@ -463,7 +463,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil).MaxTimes(1)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodFailed, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podBackupEtcd.GetNamespace(), podBackupEtcd.GetName(), podBackupEtcd.GetName()).MaxTimes(1).Return([]byte("oh no, Pod is in a failed state"), nil)
@@ -486,7 +486,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Pod", namespaceEtcds).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// backupEtcd
-				podBackupEtcd := createBackupEtcdDataPod(doc.OpenShiftCluster.Name, buildNodeName(doc, degradedNode))
+				podBackupEtcd := createBackupEtcdDataPod(buildNodeName(doc, degradedNode))
 				k.EXPECT().KubeCreateOrUpdate(ctx, podBackupEtcd).MaxTimes(1).Return(nil).MaxTimes(1)
 				expectWatchEvent(gomock.Any(), podBackupEtcd, k, "app", corev1.PodPending, true)
 				if tt.cancel {
