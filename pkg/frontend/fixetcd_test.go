@@ -122,7 +122,10 @@ func TestFixEtcd(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				podFixPeers := newPodFixPeers(peerPods, de.Node)
+				podFixPeers, err := newPodFixPeers(peerPods, de.Node)
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podFixPeers).Times(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podFixPeers, k, "app", corev1.PodSucceeded, false)()
 
@@ -187,7 +190,10 @@ func TestFixEtcd(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				podFixPeers := newPodFixPeers(peerPods, de.Node)
+				podFixPeers, err := newPodFixPeers(peerPods, de.Node)
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podFixPeers).MaxTimes(1).Return(nil)
 				expectWatchEvent(gomock.Any(), podFixPeers, k, "app", corev1.PodSucceeded, false)()
 				k.EXPECT().KubeGetPodLogs(ctx, podFixPeers.GetNamespace(), podFixPeers.GetName(), podFixPeers.GetName()).MaxTimes(1).Return([]byte("Fix peer job fixing peers..."), nil)
@@ -295,7 +301,10 @@ func TestFixEtcd(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				podFixPeers := newPodFixPeers(peerPods, de.Node)
+				podFixPeers, err := newPodFixPeers(peerPods, de.Node)
+				if err != nil {
+					t.Fatal(err)
+				}
 				k.EXPECT().KubeCreateOrUpdate(ctx, podFixPeers).MaxTimes(1).Return(errors.New("oh no, can't create job fix peers"))
 				expectWatchEvent(gomock.Any(), podFixPeers, k, "app", corev1.PodSucceeded, false)()
 

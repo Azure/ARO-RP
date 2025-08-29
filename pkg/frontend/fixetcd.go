@@ -193,72 +193,79 @@ func getPeerPods(pods []corev1.Pod, de *degradedEtcd, cluster string) (string, e
 	return peerPods, nil
 }
 
-func newPodFixPeers(peerPods, deNode string) *unstructured.Unstructured {
+func newPodFixPeers(peerPods, deNode string) (*unstructured.Unstructured, error) {
 	const podNameFixPeers = genericPodName + "fix-peers"
-	// Frontend kubeactions expects an unstructured type
-	podFixPeers := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"spec": map[string]interface{}{
-				"restartPolicy":      corev1.RestartPolicyNever, // It's safer to let the pod and the geneva action to fail once than let it constantly retry.
-				"serviceAccountName": serviceAccountName,
-				"containers": []corev1.Container{
-					{
-						Name:  podNameFixPeers,
-						Image: image,
-						Command: []string{
-							"/bin/bash",
-							"-cx",
-							backupOrFixEtcd,
+
+	podManifest := corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podNameFixPeers,
+			Namespace: namespaceEtcds,
+			Labels:    map[string]string{"app": podNameFixPeers},
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy:      corev1.RestartPolicyNever, // It's safer to let the pod and the geneva action to fail once than let it constantly retry.
+			ServiceAccountName: serviceAccountName,
+			Containers: []corev1.Container{
+				{
+					Name:  podNameFixPeers,
+					Image: image,
+					Command: []string{
+						"/bin/bash",
+						"-cx",
+						backupOrFixEtcd,
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointerutils.ToPtr(true),
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "PEER_PODS",
+							Value: peerPods,
 						},
-						SecurityContext: &corev1.SecurityContext{
-							Privileged: pointerutils.ToPtr(true),
+						{
+							Name:  "DEGRADED_NODE",
+							Value: deNode,
 						},
-						Env: []corev1.EnvVar{
-							{
-								Name:  "PEER_PODS",
-								Value: peerPods,
-							},
-							{
-								Name:  "DEGRADED_NODE",
-								Value: deNode,
-							},
-							{
-								Name:  "FIX_PEERS",
-								Value: "true",
-							},
+						{
+							Name:  "FIX_PEERS",
+							Value: "true",
 						},
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "host",
-								MountPath: "/host",
-								ReadOnly:  false,
-							},
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "host",
+							MountPath: "/host",
+							ReadOnly:  false,
 						},
 					},
 				},
-				"volumes": []corev1.Volume{
-					{
-						Name: "host",
-						VolumeSource: corev1.VolumeSource{
-							HostPath: &corev1.HostPathVolumeSource{
-								Path: "/",
-							},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "host",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/",
 						},
 					},
 				},
 			},
 		},
 	}
+	// Frontend kubeactions expects an unstructured type
+	unstructuredPod, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&podManifest)
 
-	// This creates an embedded "metadata" map[string]string{} in the unstructured object
-	// For an unknown reason, creating "metadata" directly in the object doesn't work
-	// and the helper functions must be used
-	podFixPeers.SetKind("Pod")
-	podFixPeers.SetAPIVersion("v1")
-	podFixPeers.SetName(podNameFixPeers)
-	podFixPeers.SetNamespace(namespaceEtcds)
-	podFixPeers.SetLabels(map[string]string{"app": podNameFixPeers})
-	return podFixPeers
+	if err != nil {
+		return nil, err
+	}
+
+	return &unstructured.Unstructured{
+		Object: unstructuredPod,
+	}, nil
 }
 
 // fixPeers creates a job that ssh's into the failing pod's peer pods, and deletes the failing pod from it's member's list
@@ -268,7 +275,10 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 		return []byte{}, err
 	}
 
-	podFixPeers := newPodFixPeers(peerPods, de.Node)
+	podFixPeers, err := newPodFixPeers(peerPods, de.Node)
+	if err != nil {
+		return []byte{}, err
+	}
 
 	cleanup, err, nestedCleanupErr := createPrivilegedServiceAccount(ctx, log, serviceAccountName, cluster, kubeServiceAccount, kubeActions)
 	if err != nil {
