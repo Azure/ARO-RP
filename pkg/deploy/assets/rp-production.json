@@ -958,7 +958,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'Subscriptions')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions/renewLease')]",
             "properties": {
                 "resource": {
@@ -977,7 +976,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'Subscriptions')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions/retryLater')]",
             "properties": {
                 "resource": {
@@ -996,7 +994,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'Billing')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Billing/setCreationBillingTimeStamp')]",
             "properties": {
                 "resource": {
@@ -1015,7 +1012,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'Billing')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Billing/setDeletionBillingTimeStamp')]",
             "properties": {
                 "resource": {
@@ -1034,7 +1030,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'OpenShiftClusters')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftClusters/renewLease')]",
             "properties": {
                 "resource": {
@@ -1053,7 +1048,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'Monitors')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors/renewLease')]",
             "properties": {
                 "resource": {

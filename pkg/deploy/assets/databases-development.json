@@ -246,7 +246,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Subscriptions')]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Subscriptions/renewLease')]",
             "properties": {
                 "resource": {
@@ -264,7 +263,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Subscriptions')]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Subscriptions/retryLater')]",
             "properties": {
                 "resource": {
@@ -282,7 +280,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Billing')]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing/setCreationBillingTimeStamp')]",
             "properties": {
                 "resource": {
@@ -300,7 +297,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Billing')]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing/setDeletionBillingTimeStamp')]",
             "properties": {
                 "resource": {
@@ -318,7 +314,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'OpenShiftClusters')]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftClusters/renewLease')]",
             "properties": {
                 "resource": {
@@ -336,7 +331,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Monitors')]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors/renewLease')]",
             "properties": {
                 "resource": {
@@ -376,7 +370,6 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'MaintenanceManifests')]"
             ],
-            "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/MaintenanceManifests/renewLease')]",
             "properties": {
                 "resource": {
