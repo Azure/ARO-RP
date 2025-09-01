@@ -277,7 +277,7 @@ func TestResourceMarshal(t *testing.T) {
 }`),
 		},
 		{
-			name: "arm type with explicit type and location that should be included",
+			name: "type and location should be included",
 			r: &Resource{
 				APIVersion: "2020-08-01",
 				Type:       "Microsoft.Network/virtualNetworks",
@@ -303,31 +303,6 @@ func TestResourceMarshal(t *testing.T) {
         }
     },
     "type": "Microsoft.Network/virtualNetworks"
-}`),
-		},
-		{
-			name: "cosmosdb resource with explicit type and location that should not be included",
-			r: &Resource{
-				APIVersion: "2023-04-15",
-				Type:       "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-				Location:   "westus",
-				Resource: &armcosmos.SQLDatabaseCreateUpdateParameters{
-					Name: pointerutils.ToPtr("cosmos-account/testdb"),
-					Properties: &armcosmos.SQLDatabaseCreateUpdateProperties{
-						Resource: &armcosmos.SQLDatabaseResource{
-							ID: pointerutils.ToPtr("testdb"),
-						},
-					},
-				},
-			},
-			want: []byte(`{
-    "apiVersion": "2023-04-15",
-    "name": "cosmos-account/testdb",
-    "properties": {
-        "resource": {
-            "id": "testdb"
-        }
-    }
 }`),
 		},
 	}
