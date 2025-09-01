@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -17,7 +18,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-const zonalFrontendIPName = "internal-lb-ip-zonal-v4"
+var errFetchInternalLBs = errors.New("error fetching internal load balancer")
+var errVMAvailability = errors.New("error determining the VM SKU availability")
 
 func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	location := m.doc.OpenShiftCluster.Location
@@ -156,4 +158,29 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	}
 	m.doc = updatedDoc
 	return nil
+}
+
+func (m *manager) getInternalLoadBalancer(ctx context.Context) (*armnetwork.LoadBalancer, error) {
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro"
+	}
+
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	var lbName string
+	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
+	case api.ArchitectureVersionV1:
+		lbName = infraID + "-internal-lb"
+	case api.ArchitectureVersionV2:
+		lbName = infraID + "-internal"
+	default:
+		return nil, fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
+	}
+
+	lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, lbName, nil)
+	if err != nil {
+		return nil, errors.Join(errFetchInternalLBs, err)
+	}
+	return &lb.LoadBalancer, nil
 }
