@@ -4,6 +4,7 @@ package error
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"regexp"
 	"slices"
 	"testing"
@@ -55,5 +56,22 @@ func AssertOneOfErrorMessages(t *testing.T, err error, wantMsgs []string) {
 
 	if err != nil && !slices.Contains(wantMsgs, err.Error()) {
 		t.Errorf("got error '%v', but wanted one of these errors: '%v'", err, wantMsgs)
+	}
+}
+
+func AssertErrorIs(t *testing.T, err error, wantError error) {
+	t.Helper()
+
+	if err != nil && wantError == nil {
+		t.Errorf("got unexpected error '%v'", err)
+	} else if err == nil && wantError != nil {
+		t.Errorf("got unexpected SUCCESS instead of error '%v'", wantError)
+	} else {
+		if !errors.Is(err, wantError) {
+			// check the content in case it's just plain error strings
+			if err.Error() != wantError.Error() {
+				t.Errorf("got error:\n'%v'\n\nwanted error:\n '%v'", err, wantError)
+			}
+		}
 	}
 }
