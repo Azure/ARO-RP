@@ -38,7 +38,7 @@ create_sym_links() {
 
 backup_etcd() {
     local bdir etcd_yaml etcd_dir
-    bdir="/var/lib/etcd-backup-$(date +%Y%m%d)"
+    bdir="/var/lib/etcd-backup-$(date +%Y%m%d%H%M%S)"
     etcd_yaml=/etc/kubernetes/manifests/etcd-pod.yaml
     etcd_dir=/var/lib/etcd
     if [[ -d $etcd_dir ]] && [[ -f $etcd_yaml ]]; then
