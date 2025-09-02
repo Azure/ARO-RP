@@ -29,9 +29,15 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
-	globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
-	if err != nil {
-		return err
+	var globalDevopsMsiPrincipalId string
+
+	if d.config.Configuration.GlobalDevopsManagedIdentity != nil {
+		globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+		if err != nil {
+			return err
+		}
+
+		globalDevopsMsiPrincipalId = globalDevopsMSI.PrincipalID.String()
 	}
 
 	deploymentName := "rp-production-" + d.version
@@ -83,7 +89,7 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		Value: d.env.Environment().ActualCloudName,
 	}
 	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
-		Value: globalDevopsMSI.PrincipalID.String(),
+		Value: globalDevopsMsiPrincipalId,
 	}
 	if d.config.Configuration.CosmosDB != nil {
 		parameters.Parameters["cosmosDB"] = &arm.ParametersParameter{
