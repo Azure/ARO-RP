@@ -268,7 +268,7 @@ func newPodFixPeers(peerPods, deNode string) (*unstructured.Unstructured, error)
 	}, nil
 }
 
-// fixPeers creates a job that ssh's into the failing pod's peer pods, and deletes the failing pod from it's member's list
+// fixPeers creates a pod that ssh's into the failing pod's peer pods, and deletes the failing etcd member from it's member's list
 func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *corev1.PodList, kubeActions adminactions.KubeActions, cluster string) ([]byte, error) {
 	peerPods, err := getPeerPods(pods.Items, de, cluster)
 	if err != nil {
@@ -313,7 +313,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 
 	log.Infof("Deleting %s now", podFixPeers.GetName())
 	propPolicy := metav1.DeletePropagationBackground
-	err = kubeActions.KubeDelete(ctx, "Pod", namespaceEtcds, podFixPeers.GetName(), true, &propPolicy)
+	err = kubeActions.KubeDelete(ctx, podFixPeers.GetKind(), namespaceEtcds, podFixPeers.GetName(), true, &propPolicy)
 	if err != nil {
 		return containerLogs, err
 	}
@@ -508,7 +508,7 @@ func backupEtcdData(ctx context.Context, log *logrus.Entry, node string, kubeAct
 
 	log.Infof("Deleting pod %s now", podDataBackup.GetName())
 	propPolicy := metav1.DeletePropagationBackground
-	return containerLogs, kubeActions.KubeDelete(ctx, "Pod", namespaceEtcds, podDataBackup.GetName(), true, &propPolicy)
+	return containerLogs, kubeActions.KubeDelete(ctx, podDataBackup.GetKind(), namespaceEtcds, podDataBackup.GetName(), true, &propPolicy)
 }
 
 // Waits until a standalone pod succeeds or fails. There is no retry logic for failures.
