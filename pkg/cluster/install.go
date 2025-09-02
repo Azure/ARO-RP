@@ -202,10 +202,7 @@ func (m *manager) getSyncClusterObjectSteps() []steps.Step {
 func (m *manager) getMigrateLoadBalancerSteps() []steps.Step {
 	steps := []steps.Step{
 		steps.Action(m.migrateInternalLoadBalancerZones),
-		// We sync the cluster object to update the internal IP that goes into
-		// dnsmasq/etchosts
-		steps.Action(m.initializeOperatorDeployer),
-		steps.Action(m.syncClusterObject),
+		steps.Action(m.fixSSH),
 	}
 	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
 }
