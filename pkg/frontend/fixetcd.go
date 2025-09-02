@@ -43,6 +43,16 @@ type degradedEtcd struct {
 	OldIP string
 }
 
+type podFailedError struct {
+	podName string
+	phase   corev1.PodPhase
+	message string
+}
+
+func (e *podFailedError) Error() string {
+	return fmt.Sprintf("pod %s event %s received with message %s", e.podName, e.phase, e.message)
+}
+
 const (
 	serviceAccountName    = "etcd-recovery-privileged"
 	kubeServiceAccount    = "system:serviceaccount" + namespaceEtcds + ":" + serviceAccountName
@@ -536,7 +546,11 @@ func waitForPodSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Int
 
 			case corev1.PodFailed:
 				log.Infof("Pod %s reached phase %s with message: %s", pod.GetName(), pod.Status.Phase, pod.Status.Message)
-				return fmt.Errorf("pod %s event %s received with message %s", pod.Name, pod.Status.Phase, pod.Status.Message)
+				return &podFailedError{
+					podName: pod.GetName(),
+					phase:   pod.Status.Phase,
+					message: pod.Status.Message,
+				}
 			}
 
 		case <-ctx.Done():
@@ -554,7 +568,11 @@ func waitAndGetPodLogs(ctx context.Context, log *logrus.Entry, watcher watch.Int
 	err := waitForPodSucceed(ctx, log, watcher)
 
 	if err != nil {
-		return nil, err
+		var failedErr *podFailedError
+		if !errors.As(err, &failedErr) {
+			return nil, err
+		}
+		waitErr = err // waitForPodSucceed returned a pod failed error. We want to keep this and get the pod logs.
 	}
 
 	// get container spec
