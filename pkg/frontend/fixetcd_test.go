@@ -509,7 +509,7 @@ func TestFixEtcd(t *testing.T) {
 		},
 		{
 			name:      "fail: Context cancelled",
-			wantErr:   "500: InternalServerError: : context was cancelled while waiting for etcd-recovery-data-backup because context canceled",
+			wantErr:   "500: InternalServerError: : context was cancelled while waiting for pod to succeed because context canceled",
 			pods:      newEtcdPods(t, doc, false, false, false),
 			cancel:    true,
 			ctxCancel: ctxCancel,

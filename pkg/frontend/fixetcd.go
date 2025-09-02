@@ -306,7 +306,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 		return []byte{}, err
 	}
 
-	containerLogs, err := waitForPodSucceed(ctx, log, watcher, podFixPeers, kubeActions)
+	containerLogs, err := waitAndGetPodLogs(ctx, log, watcher, podFixPeers, kubeActions)
 	if err != nil {
 		return containerLogs, err
 	}
@@ -501,7 +501,7 @@ func backupEtcdData(ctx context.Context, log *logrus.Entry, node string, kubeAct
 	if err != nil {
 		return []byte{}, err
 	}
-	containerLogs, err := waitForPodSucceed(ctx, log, watcher, podDataBackup, kubeActions)
+	containerLogs, err := waitAndGetPodLogs(ctx, log, watcher, podDataBackup, kubeActions)
 	if err != nil {
 		return containerLogs, err
 	}
@@ -511,13 +511,9 @@ func backupEtcdData(ctx context.Context, log *logrus.Entry, node string, kubeAct
 	return containerLogs, kubeActions.KubeDelete(ctx, podDataBackup.GetKind(), namespaceEtcds, podDataBackup.GetName(), true, &propPolicy)
 }
 
-// Waits until a standalone pod succeeds or fails. There is no retry logic for failures.
-func waitForPodSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Interface, o *unstructured.Unstructured, k adminactions.KubeActions) ([]byte, error) {
-	var waitErr error
+func waitForPodSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Interface) error {
 	var pod corev1.Pod
-	var originalPod corev1.Pod
-	log.Infof("Waiting for %s to reach %s phase", o.GetName(), corev1.PodSucceeded)
-outer:
+
 	for {
 		select {
 		case event := <-watcher.ResultChan():
@@ -525,29 +521,44 @@ outer:
 
 			u, ok := event.Object.(*unstructured.Unstructured)
 			if !ok {
-				return []byte{}, fmt.Errorf("unexpected event: %#v", event)
+				return fmt.Errorf("unexpected event: %#v", event)
 			}
 			err := kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &pod)
 			if err != nil {
-				return []byte{}, fmt.Errorf("failed to convert unstructured object to Pod: %w", err)
+				return fmt.Errorf("failed to convert unstructured object to Pod: %w", err)
 			}
 			log.Infof("Pod Status Phase %s", pod.Status.Phase)
-			if pod.Status.Phase == corev1.PodSucceeded {
+
+			switch pod.Status.Phase {
+			case corev1.PodSucceeded:
 				log.Infof("Pod %s completed with %s: %s", pod.GetName(), pod.Status.Message, pod.Status.Phase)
-				break outer
-			} else if pod.Status.Phase == corev1.PodFailed {
+				return nil
+
+			case corev1.PodFailed:
 				log.Infof("Pod %s reached phase %s with message: %s", pod.GetName(), pod.Status.Phase, pod.Status.Message)
-				waitErr = fmt.Errorf("pod %s event %s received with message %s", pod.Name, pod.Status.Phase, pod.Status.Message)
-				break outer
+				return fmt.Errorf("pod %s event %s received with message %s", pod.Name, pod.Status.Phase, pod.Status.Message)
 			}
+
 		case <-ctx.Done():
-			waitErr = fmt.Errorf("context was cancelled while waiting for %s because %s", o.GetName(), ctx.Err())
-			break outer
+			return fmt.Errorf("context was cancelled while waiting for pod to succeed because %s", ctx.Err())
 		}
+	}
+}
+
+// Waits until a standalone pod succeeds or fails. There is no retry logic for failures.
+func waitAndGetPodLogs(ctx context.Context, log *logrus.Entry, watcher watch.Interface, o *unstructured.Unstructured, k adminactions.KubeActions) ([]byte, error) {
+	var waitErr error
+	var originalPod corev1.Pod
+
+	log.Infof("Waiting for %s to reach %s phase", o.GetName(), corev1.PodSucceeded)
+	err := waitForPodSucceed(ctx, log, watcher)
+
+	if err != nil {
+		return nil, err
 	}
 
 	// get container spec
-	err := kruntime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &originalPod)
+	err = kruntime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &originalPod)
 	if err != nil {
 		// We should get a corev1.Pod struct here, report failure if we don't
 		return nil, err
