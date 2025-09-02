@@ -1326,8 +1326,9 @@ func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, t
 					TriggerType:      &triggerType,
 				},
 			},
-			Name: pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/" + containerName + "/" + triggerID + "')]"),
-			Type: pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"),
+			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/" + containerName + "/" + triggerID + "')]"),
+			Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
