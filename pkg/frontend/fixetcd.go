@@ -76,7 +76,7 @@ func (f *frontend) fixEtcd(ctx context.Context, log *logrus.Entry, env env.Inter
 	}
 	log.Infof("Found degraded endpoint: %v", de)
 
-	backupContainerLogs, err := backupEtcdData(ctx, log, doc.OpenShiftCluster.Name, de.Node, kubeActions)
+	backupContainerLogs, err := backupEtcdData(ctx, log, de.Node, kubeActions)
 	if err != nil {
 		return backupContainerLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
@@ -483,7 +483,7 @@ func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name
 // /var/lib/etcd is moved to /tmp
 //
 // If backups already exists the job is cowardly and refuses to overwrite them
-func backupEtcdData(ctx context.Context, log *logrus.Entry, cluster, node string, kubeActions adminactions.KubeActions) ([]byte, error) {
+func backupEtcdData(ctx context.Context, log *logrus.Entry, node string, kubeActions adminactions.KubeActions) ([]byte, error) {
 	podDataBackup, err := createBackupEtcdDataPod(node)
 
 	if err != nil {
