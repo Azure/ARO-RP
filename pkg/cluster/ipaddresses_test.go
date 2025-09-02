@@ -521,13 +521,7 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
-										Name: pointerutils.ToPtr("old"),
-										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: pointerutils.ToPtr("127.0.0.1"),
-										},
-									},
-									{
-										Name: pointerutils.ToPtr(zonalFrontendIPName),
+										Name: pointerutils.ToPtr("internal-lb-ip-v4"),
 										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 											PrivateIPAddress: pointerutils.ToPtr(privateIP),
 										},

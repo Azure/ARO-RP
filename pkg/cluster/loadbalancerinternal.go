@@ -16,7 +16,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
+
+const internalLBFrontendIPName = "internal-lb-ip-v4"
 
 var errFetchInternalLBs = errors.New("error fetching internal load balancer")
 var errVMAvailability = errors.New("error determining the VM SKU availability")
@@ -26,26 +29,14 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
-	var lbName string
-	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
-	case api.ArchitectureVersionV1:
-		lbName = infraID + "-internal-lb"
-	case api.ArchitectureVersionV2:
-		lbName = infraID + "-internal"
-	default:
-		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
-	}
-
-	lb, err := m.armLoadBalancers.Get(ctx, resourceGroupName, lbName, nil)
+	lb, err := m.getInternalLoadBalancer(ctx)
 	if err != nil {
 		return err
 	}
 
+	lbName := *lb.Name
 	for _, config := range lb.Properties.FrontendIPConfigurations {
-		if *config.Name == "internal-lb-ip-zonal-v4" {
-			m.log.Info("zone-redundant frontend IP already exists, no need to continue")
-			return nil
-		} else if *config.Name == "internal-lb-ip-v4" && len(config.Zones) > 0 {
+		if *config.Name == internalLBFrontendIPName && len(config.Zones) > 0 {
 			m.log.Info("internal load balancer frontend IP already zone-redundant, no need to continue")
 			return nil
 		}
@@ -58,10 +49,7 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 
 	controlPlaneSKU, err := checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
 	if err != nil {
-		err = fmt.Errorf("error determining the VM SKU availability, skipping: %w", err)
-		m.log.Error(err)
-		// Don't return an error because this will stop the whole adminupdate
-		return nil
+		return errors.Join(errVMAvailability, err)
 	}
 
 	// Set RP-level options for expanded AZs
@@ -80,29 +68,84 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 		lbZones = append(lbZones, pointerutils.ToPtr(z))
 	}
 
-	// Add a new zonal LB frontend IP
-	frontendConfigID := fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, zonalFrontendIPName)
+	ilbBackendPoolID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, infraID)
+	if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
+		ilbBackendPoolID = ilbBackendPoolID + "-internal-controlplane-v4"
+	}
 
-	lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations,
-		&armnetwork.FrontendIPConfiguration{
-			Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-				PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
-				Subnet: &armnetwork.Subnet{
-					ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
-				},
+	pls, err := m.armClusterPrivateLinkServices.Get(ctx, resourceGroupName, infraID+"-pls", nil)
+	if err != nil {
+		return fmt.Errorf("failure fetching PLS: %w", err)
+	}
+
+	m.log.Info("load balancer zonal migration: starting critical section")
+
+	// STEP ONE: disassociate the PLS from the existing frontend IP configuration
+	bogusLBName := uuid.DefaultGenerator.Generate()
+	bogusLBConfig := &armnetwork.FrontendIPConfiguration{
+		Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+			PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
+			Subnet: &armnetwork.Subnet{
+				ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 			},
-			Zones: lbZones,
-			Name:  pointerutils.ToPtr(zonalFrontendIPName),
-		})
+		},
+		Zones: lbZones,
+		Name:  pointerutils.ToPtr(bogusLBName),
+	}
+	// firstly, create a bogus frontend IP configuration
+	lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, bogusLBConfig)
+	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	if err != nil {
+		m.log.Errorf("FAILURE IN CRITICAL SECTION: '%v'", err)
+		return fmt.Errorf("failure updating internal load balancer: %w", err)
+	}
+
+	// associate the bogus frontend IP with the PLS (since it always needs one)
+	pls.Properties.LoadBalancerFrontendIPConfigurations = []*armnetwork.FrontendIPConfiguration{
+		{
+			ID: pointerutils.ToPtr(fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, bogusLBName)),
+		},
+	}
+	err = m.armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	if err != nil {
+		m.log.Errorf("FAILURE IN CRITICAL SECTION - PLS MAY NOW BE DISCONNECTED FROM LB: '%v'", err)
+		return fmt.Errorf("failure disassociating LB frontend IP from PLS: %w", err)
+	}
+
+	// STEP TWO: delete the existing frontend IP configuration and LB rules
+	// keep the bogus config since it's in use by the PLS
+	lb.Properties.FrontendIPConfigurations = []*armnetwork.FrontendIPConfiguration{bogusLBConfig}
+	lb.Properties.LoadBalancingRules = []*armnetwork.LoadBalancingRule{}
+
+	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	if err != nil {
+		m.log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
+		return fmt.Errorf("failure updating internal load balancer: %w", err)
+	}
+
+	// STEP THREE: add a new zonal LB frontend IP with the same IP address as the old one
+	frontendConfigID := fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, internalLBFrontendIPName)
+	newFrontendIP := &armnetwork.FrontendIPConfiguration{
+		Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+			PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
+			PrivateIPAddress:          pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP),
+			Subnet: &armnetwork.Subnet{
+				ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+			},
+		},
+		Zones: lbZones,
+		Name:  pointerutils.ToPtr(internalLBFrontendIPName),
+	}
+
+	lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, newFrontendIP)
 
 	// Add new load balancing rules referencing the new zonal frontend IP
-	ilbBackendPoolID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, m.doc.OpenShiftCluster.Properties.InfraID)
 	apiProbeID := fmt.Sprintf("%s/probes/%s", *lb.ID, "api-internal-probe")
 	sintProbeID := fmt.Sprintf("%s/probes/%s", *lb.ID, "sint-probe")
 
 	lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules,
 		&armnetwork.LoadBalancingRule{
-			Name: pointerutils.ToPtr("api-internal-v4-zonal"),
+			Name: pointerutils.ToPtr("api-internal-v4"),
 			Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &armnetwork.SubResource{
 					ID: pointerutils.ToPtr(frontendConfigID),
@@ -122,7 +165,7 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 			},
 		},
 		&armnetwork.LoadBalancingRule{
-			Name: pointerutils.ToPtr("sint-v4-zonal"),
+			Name: pointerutils.ToPtr("sint-v4"),
 			Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &armnetwork.SubResource{
 					ID: pointerutils.ToPtr(frontendConfigID),
@@ -143,20 +186,43 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	)
 
 	m.log.Info("updating internal load balancer with zone-redundant frontend IP")
-	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, lb.LoadBalancer, nil)
+	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
 	if err != nil {
+		m.log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
 		return fmt.Errorf("failure updating internal load balancer: %w", err)
 	}
 
+	// STEP FOUR: reassociate the frontend IP to the PLS
+	m.log.Info("reassociating frontend IP with PLS")
+	pls.Properties.LoadBalancerFrontendIPConfigurations = []*armnetwork.FrontendIPConfiguration{
+		{
+			ID: pointerutils.ToPtr(frontendConfigID),
+		},
+	}
+	err = m.armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	if err != nil {
+		m.log.Errorf("FAILURE IN CRITICAL SECTION - PLS MAY NOW BE DISCONNECTED FROM LB: '%v'", err)
+		return fmt.Errorf("failure disassociating LB frontend IP from PLS: %w", err)
+	}
+
+	// STEP FIVE: remove bogus frontend IP to clean up
+	lb.Properties.FrontendIPConfigurations = []*armnetwork.FrontendIPConfiguration{newFrontendIP}
+	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	if err != nil {
+		m.log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
+		return fmt.Errorf("failure updating internal load balancer: %w", err)
+	}
+
+	m.log.Info("critical section complete, api-int migrated")
+
 	// Update the document with the internal LB zones
-	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
 		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones = controlPlaneZones
 		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("failure updating cluster doc with load balancer zones: %w", err)
 	}
-	m.doc = updatedDoc
 	return nil
 }
 

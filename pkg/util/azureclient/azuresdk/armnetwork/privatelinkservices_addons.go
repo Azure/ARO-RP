@@ -12,6 +12,7 @@ import (
 // PrivateLinkServicesClientAddons contains addons for PrivateLinkServicesClient
 type PrivateLinkServicesClientAddons interface {
 	List(ctx context.Context, resourceGroupName string, options *armnetwork.PrivateLinkServicesClientListOptions) ([]*armnetwork.PrivateLinkService, error)
+	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, serviceName string, parameters armnetwork.PrivateLinkService, options *armnetwork.PrivateLinkServicesClientBeginCreateOrUpdateOptions) error
 	DeletePrivateEndpointConnectionAndWait(ctx context.Context, resourceGroupName string, serviceName string, peConnectionName string, options *armnetwork.PrivateLinkServicesClientBeginDeletePrivateEndpointConnectionOptions) error
 }
 
@@ -30,6 +31,15 @@ func (c *privateLinkServicesClient) List(ctx context.Context, resourceGroupName 
 
 func (c *privateLinkServicesClient) DeletePrivateEndpointConnectionAndWait(ctx context.Context, resourceGroupName string, serviceName string, peConnectionName string, options *armnetwork.PrivateLinkServicesClientBeginDeletePrivateEndpointConnectionOptions) error {
 	poller, err := c.BeginDeletePrivateEndpointConnection(ctx, resourceGroupName, serviceName, peConnectionName, options)
+	if err != nil {
+		return err
+	}
+	_, err = poller.PollUntilDone(ctx, nil)
+	return err
+}
+
+func (c *privateLinkServicesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, serviceName string, parameters armnetwork.PrivateLinkService, options *armnetwork.PrivateLinkServicesClientBeginCreateOrUpdateOptions) error {
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, serviceName, parameters, options)
 	if err != nil {
 		return err
 	}

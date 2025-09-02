@@ -11,7 +11,6 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -23,6 +22,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -42,17 +42,18 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 		expectedLogs        []map[string]types.GomegaMatcher
 	}{
 		{
-			name:                "noop -- has zones from creation",
+			name:                "noop -- already zone redundant",
 			architectureVersion: api.ArchitectureVersionV2,
 			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
-							ID: pointerutils.ToPtr(infraID + "-internal"),
+							Name: pointerutils.ToPtr(infraID + "-internal"),
+							ID:   pointerutils.ToPtr(infraID + "-internal"),
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
-										Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
+										Name:  pointerutils.ToPtr(internalLBFrontendIPName),
 										Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"}),
 									},
 								},
@@ -69,44 +70,14 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 			},
 		},
 		{
-			name:                "noop -- already performed",
-			architectureVersion: api.ArchitectureVersionV2,
-			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient) {
-				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
-					armnetwork.LoadBalancersClientGetResponse{
-						LoadBalancer: armnetwork.LoadBalancer{
-							ID: pointerutils.ToPtr(infraID + "-internal"),
-							Properties: &armnetwork.LoadBalancerPropertiesFormat{
-								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
-									{
-										Name:  pointerutils.ToPtr("internal-lb-ip-zonal-v4"),
-										Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"}),
-									},
-									{
-										Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
-										Zones: []*string{},
-									},
-								},
-							},
-						},
-					}, nil,
-				)
-			},
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal("zone-redundant frontend IP already exists, no need to continue"),
-				},
-			},
-		},
-		{
 			name:                "noop -- non-zonal",
 			architectureVersion: api.ArchitectureVersionV2,
 			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
-							ID: pointerutils.ToPtr(infraID + "-internal"),
+							Name: pointerutils.ToPtr(infraID + "-internal"),
+							ID:   pointerutils.ToPtr(infraID + "-internal"),
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
@@ -147,7 +118,8 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
-							ID: pointerutils.ToPtr(infraID + "-internal"),
+							ID:   pointerutils.ToPtr(infraID + "-internal"),
+							Name: pointerutils.ToPtr(infraID + "-internal"),
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
@@ -170,12 +142,8 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"level": gomega.Equal(logrus.ErrorLevel),
-					"msg":   gomega.Equal("error determining the VM SKU availability, skipping: 400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_D16as_v4' is unavailable in region 'eastus'"),
-				},
-			},
+			expectedLogs: []map[string]types.GomegaMatcher{},
+			wantErr:      errVMAvailability,
 		},
 		{
 			name:                "performed, zonal, v2",
@@ -184,7 +152,8 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
-							ID: pointerutils.ToPtr(infraID + "-internal"),
+							ID:   pointerutils.ToPtr(infraID + "-internal"),
+							Name: pointerutils.ToPtr(infraID + "-internal"),
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
@@ -209,75 +178,89 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 					},
 				}, nil)
 
-				lbs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-internal",
+				ruleDeletion := lbs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-internal",
 					armnetwork.LoadBalancer{
-						ID: pointerutils.ToPtr(infraID + "-internal"),
+						Name: pointerutils.ToPtr(infraID + "-internal"),
+						ID:   pointerutils.ToPtr(infraID + "-internal"),
 						Properties: &armnetwork.LoadBalancerPropertiesFormat{
-							FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
-								{
-									Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
-									Zones: []*string{},
-								},
-								{
-									Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-										PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
-										Subnet: &armnetwork.Subnet{
-											ID: pointerutils.ToPtr("subnetID"),
-										},
+							FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{},
+							LoadBalancingRules:       []*armnetwork.LoadBalancingRule{},
+						},
+					}, nil).Return(nil)
+
+				lbs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-internal", armnetwork.LoadBalancer{
+					ID:   pointerutils.ToPtr(infraID + "-internal"),
+					Name: pointerutils.ToPtr(infraID + "-internal"),
+					Properties: &armnetwork.LoadBalancerPropertiesFormat{
+						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+							{
+								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+									PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
+									Subnet: &armnetwork.Subnet{
+										ID: pointerutils.ToPtr("subnetID"),
 									},
-									Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"}),
-									Name:  pointerutils.ToPtr(zonalFrontendIPName),
+									PrivateIPAddress: pointerutils.ToPtr("127.1.2.3"),
+								},
+								Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"}),
+								Name:  pointerutils.ToPtr(internalLBFrontendIPName),
+							},
+						},
+						LoadBalancingRules: []*armnetwork.LoadBalancingRule{
+							{
+								Name: pointerutils.ToPtr("api-internal-v4"),
+								Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+									FrontendIPConfiguration: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal/frontendIPConfigurations/internal-lb-ip-v4"),
+									},
+									BackendAddressPool: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal/backendAddressPools/infraID"),
+									},
+									Probe: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal/probes/api-internal-probe"),
+									},
+									Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+									LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+									FrontendPort:         pointerutils.ToPtr(int32(6443)),
+									BackendPort:          pointerutils.ToPtr(int32(6443)),
+									IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+									DisableOutboundSnat:  pointerutils.ToPtr(true),
 								},
 							},
-
-							LoadBalancingRules: []*armnetwork.LoadBalancingRule{
-								{
-									Name: pointerutils.ToPtr("api-internal-v4-zonal"),
-									Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-										FrontendIPConfiguration: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal/frontendIPConfigurations/internal-lb-ip-zonal-v4"),
-										},
-										BackendAddressPool: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal/backendAddressPools/infraID"),
-										},
-										Probe: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal/probes/api-internal-probe"),
-										},
-										Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-										LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-										FrontendPort:         pointerutils.ToPtr(int32(6443)),
-										BackendPort:          pointerutils.ToPtr(int32(6443)),
-										IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-										DisableOutboundSnat:  pointerutils.ToPtr(true),
+							{
+								Name: pointerutils.ToPtr("sint-v4"),
+								Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+									FrontendIPConfiguration: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal/frontendIPConfigurations/internal-lb-ip-v4"),
 									},
-								},
-								{
-									Name: pointerutils.ToPtr("sint-v4-zonal"),
-									Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-										FrontendIPConfiguration: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal/frontendIPConfigurations/internal-lb-ip-zonal-v4"),
-										},
-										BackendAddressPool: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal/backendAddressPools/infraID"),
-										},
-										Probe: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal/probes/sint-probe"),
-										},
-										Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-										LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-										FrontendPort:         pointerutils.ToPtr(int32(22623)),
-										BackendPort:          pointerutils.ToPtr(int32(22623)),
-										IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+									BackendAddressPool: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal/backendAddressPools/infraID"),
 									},
+									Probe: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal/probes/sint-probe"),
+									},
+									Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+									LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+									FrontendPort:         pointerutils.ToPtr(int32(22623)),
+									BackendPort:          pointerutils.ToPtr(int32(22623)),
+									IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
 								},
 							},
 						},
-					}, nil).Return(nil)
+					},
+				}, nil).Return(nil).After(ruleDeletion)
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("load balancer zonal migration: starting critical section"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("updating internal load balancer with zone-redundant frontend IP"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("critical section complete, api-int migrated"),
 				},
 			},
 		},
@@ -288,12 +271,18 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal-lb", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
-							ID: pointerutils.ToPtr(infraID + "-internal-lb"),
+							Name: pointerutils.ToPtr(infraID + "-internal-lb"),
+							ID:   pointerutils.ToPtr(infraID + "-internal-lb"),
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
 										Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
 										Zones: []*string{},
+									},
+								},
+								LoadBalancingRules: []*armnetwork.LoadBalancingRule{
+									{
+										Name: pointerutils.ToPtr("sint-v4"),
 									},
 								},
 							},
@@ -313,75 +302,89 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 					},
 				}, nil)
 
-				lbs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-internal-lb",
+				ruleDeletion := lbs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-internal-lb",
 					armnetwork.LoadBalancer{
-						ID: pointerutils.ToPtr(infraID + "-internal-lb"),
+						Name: pointerutils.ToPtr(infraID + "-internal-lb"),
+						ID:   pointerutils.ToPtr(infraID + "-internal-lb"),
 						Properties: &armnetwork.LoadBalancerPropertiesFormat{
-							FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
-								{
-									Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
-									Zones: []*string{},
-								},
-								{
-									Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-										PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
-										Subnet: &armnetwork.Subnet{
-											ID: pointerutils.ToPtr("subnetID"),
-										},
+							FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{},
+							LoadBalancingRules:       []*armnetwork.LoadBalancingRule{},
+						},
+					}, nil).Return(nil)
+
+				lbs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-internal-lb", armnetwork.LoadBalancer{
+					ID:   pointerutils.ToPtr(infraID + "-internal-lb"),
+					Name: pointerutils.ToPtr(infraID + "-internal-lb"),
+					Properties: &armnetwork.LoadBalancerPropertiesFormat{
+						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+							{
+								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+									PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
+									Subnet: &armnetwork.Subnet{
+										ID: pointerutils.ToPtr("subnetID"),
 									},
-									Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"}),
-									Name:  pointerutils.ToPtr(zonalFrontendIPName),
+									PrivateIPAddress: pointerutils.ToPtr("127.1.2.3"),
+								},
+								Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"}),
+								Name:  pointerutils.ToPtr(internalLBFrontendIPName),
+							},
+						},
+						LoadBalancingRules: []*armnetwork.LoadBalancingRule{
+							{
+								Name: pointerutils.ToPtr("api-internal-v4"),
+								Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+									FrontendIPConfiguration: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal-lb/frontendIPConfigurations/internal-lb-ip-v4"),
+									},
+									BackendAddressPool: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal-lb/backendAddressPools/infraID-internal-controlplane-v4"),
+									},
+									Probe: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal-lb/probes/api-internal-probe"),
+									},
+									Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+									LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+									FrontendPort:         pointerutils.ToPtr(int32(6443)),
+									BackendPort:          pointerutils.ToPtr(int32(6443)),
+									IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+									DisableOutboundSnat:  pointerutils.ToPtr(true),
 								},
 							},
-
-							LoadBalancingRules: []*armnetwork.LoadBalancingRule{
-								{
-									Name: pointerutils.ToPtr("api-internal-v4-zonal"),
-									Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-										FrontendIPConfiguration: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal-lb/frontendIPConfigurations/internal-lb-ip-zonal-v4"),
-										},
-										BackendAddressPool: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal-lb/backendAddressPools/infraID"),
-										},
-										Probe: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal-lb/probes/api-internal-probe"),
-										},
-										Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-										LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-										FrontendPort:         pointerutils.ToPtr(int32(6443)),
-										BackendPort:          pointerutils.ToPtr(int32(6443)),
-										IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-										DisableOutboundSnat:  pointerutils.ToPtr(true),
+							{
+								Name: pointerutils.ToPtr("sint-v4"),
+								Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+									FrontendIPConfiguration: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal-lb/frontendIPConfigurations/internal-lb-ip-v4"),
 									},
-								},
-								{
-									Name: pointerutils.ToPtr("sint-v4-zonal"),
-									Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-										FrontendIPConfiguration: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal-lb/frontendIPConfigurations/internal-lb-ip-zonal-v4"),
-										},
-										BackendAddressPool: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal-lb/backendAddressPools/infraID"),
-										},
-										Probe: &armnetwork.SubResource{
-											ID: pointerutils.ToPtr(infraID + "-internal-lb/probes/sint-probe"),
-										},
-										Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-										LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-										FrontendPort:         pointerutils.ToPtr(int32(22623)),
-										BackendPort:          pointerutils.ToPtr(int32(22623)),
-										IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
+									BackendAddressPool: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal-lb/backendAddressPools/infraID-internal-controlplane-v4"),
 									},
+									Probe: &armnetwork.SubResource{
+										ID: pointerutils.ToPtr(infraID + "-internal-lb/probes/sint-probe"),
+									},
+									Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+									LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+									FrontendPort:         pointerutils.ToPtr(int32(22623)),
+									BackendPort:          pointerutils.ToPtr(int32(22623)),
+									IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
 								},
 							},
 						},
-					}, nil).Return(nil)
+					},
+				}, nil).Return(nil).After(ruleDeletion)
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("load balancer zonal migration: starting critical section"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("updating internal load balancer with zone-redundant frontend IP"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("critical section complete, api-int migrated"),
 				},
 			},
 		},
@@ -414,6 +417,9 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 							VMSize:   api.VMSizeStandardD16asV4,
 							SubnetID: "subnetID",
 						},
+						APIServerProfile: api.APIServerProfile{
+							IntIP: "127.1.2.3",
+						},
 					},
 				},
 			}
@@ -438,7 +444,7 @@ func TestUpdateLoadBalancerZonal(t *testing.T) {
 			}
 
 			err = manager.migrateInternalLoadBalancerZones(ctx)
-			assert.Equal(t, tt.wantErr, err)
+			utilerror.AssertErrorIs(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(hook, tt.expectedLogs)
 			if err != nil {
