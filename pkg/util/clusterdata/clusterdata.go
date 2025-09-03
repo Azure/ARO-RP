@@ -117,13 +117,17 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 
 		expectedResults++
 
+		//only used in testing
+		if p.metricsWG != nil {
+			p.metricsWG.Add(1)
+		}
+
 		e := enricher
 		go func() {
 			t := time.Now()
 
 			//only used in testing
 			if p.metricsWG != nil {
-				p.metricsWG.Add(1)
 				defer p.metricsWG.Done()
 			}
 
