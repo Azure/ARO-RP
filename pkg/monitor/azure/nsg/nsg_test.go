@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -152,7 +151,7 @@ func createBaseSubnets() (armnetwork.SubnetsClientGetResponse, armnetwork.Subnet
 
 	// even somethingn nonsense should still work
 	gibberish := "JUNK"
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		resp = append(
 			resp,
 			armnetwork.SubnetsClientGetResponse{
@@ -552,14 +551,12 @@ func TestMonitor(t *testing.T) {
 				tt.modOC(&oc)
 			}
 
-			var wg sync.WaitGroup
 			n := &NSGMonitor{
 				log:     logrus.NewEntry(logrus.New()),
 				emitter: emitter,
 				oc:      &oc,
 
 				subnetClient: subnetClient,
-				wg:           &wg,
 
 				dims: map[string]string{
 					dimension.ResourceID:     oc.ID,
@@ -568,27 +565,10 @@ func TestMonitor(t *testing.T) {
 				},
 			}
 
-			wg.Add(1)
 			err := n.Monitor(ctx)
-			done := make(chan any)
-
-			go wait(&wg, done)
-
-			select {
-			case <-done:
-			case <-time.After(1 * time.Second):
-				t.Error("Timeout waiting for the monitor to finish")
-			}
-			if err != nil {
-				utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
-}
-
-func wait(wg *sync.WaitGroup, done chan<- any) {
-	wg.Wait()
-	done <- nil
 }
 
 func isOfType[T any](mon monitoring.Monitor) bool {
@@ -602,7 +582,6 @@ func TestNewMonitor(t *testing.T) {
 		dimension.SubscriptionID: subscriptionID,
 		dimension.Location:       ocLocation,
 	}
-	var wg sync.WaitGroup
 	log := logrus.NewEntry(logrus.New())
 
 	for _, tt := range []struct {
@@ -679,7 +658,7 @@ func TestNewMonitor(t *testing.T) {
 				ticking <- time.Now()
 			}
 
-			mon := NewMonitor(log, &oc, e, subscriptionID, tenantID, emitter, dims, &wg, ticking)
+			mon := NewMonitor(log, &oc, e, subscriptionID, tenantID, emitter, dims, ticking)
 			if !tt.valid(mon) {
 				t.Error("Invalid monitoring object returned")
 			}
