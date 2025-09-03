@@ -25,7 +25,7 @@ import (
 )
 
 func monitor(ctx context.Context, _log *logrus.Entry) error {
-	_env, err := env.NewEnv(ctx, _log, env.COMPONENT_MONITOR)
+	_env, err := env.NewEnv(ctx, _log, env.SERVICE_MONITOR)
 	if err != nil {
 		return err
 	}

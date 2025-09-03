@@ -69,7 +69,7 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 		return err
 	}
 
-	env, err := env.NewCoreForCI(ctx, log, env.COMPONENT_TOOLING)
+	env, err := env.NewCoreForCI(ctx, log, env.SERVICE_TOOLING)
 	if err != nil {
 		return err
 	}

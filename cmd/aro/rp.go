@@ -48,7 +48,7 @@ import (
 func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, _log, env.COMPONENT_RP)
+	_env, err := env.NewEnv(ctx, _log, env.SERVICE_RP)
 	if err != nil {
 		return err
 	}

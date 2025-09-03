@@ -25,7 +25,7 @@ func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, erro
 }
 
 func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, _log *logrus.Entry) (database.PlatformWorkloadIdentityRoleSets, error) {
-	_env, err := env.NewCore(ctx, _log, env.COMPONENT_UPDATE_ROLE_SETS)
+	_env, err := env.NewCore(ctx, _log, env.SERVICE_UPDATE_ROLE_SETS)
 	if err != nil {
 		return nil, err
 	}

@@ -57,7 +57,7 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 	var tokenCredential azcore.TokenCredential
 	if os.Getenv("AZURE_EV2") != "" {
 		var err error
-		_env, err = env.NewCore(ctx, _log, env.COMPONENT_MIRROR)
+		_env, err = env.NewCore(ctx, _log, env.SERVICE_MIRROR)
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 			return err
 		}
 
-		_env, err = env.NewCoreForCI(ctx, _log, env.COMPONENT_MIRROR)
+		_env, err = env.NewCoreForCI(ctx, _log, env.SERVICE_MIRROR)
 		if err != nil {
 			return err
 		}

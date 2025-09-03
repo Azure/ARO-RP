@@ -20,7 +20,7 @@ import (
 )
 
 func gateway(ctx context.Context, _log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, _log, env.COMPONENT_GATEWAY)
+	_env, err := env.NewCore(ctx, _log, env.SERVICE_GATEWAY)
 	if err != nil {
 		return err
 	}

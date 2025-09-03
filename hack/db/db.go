@@ -31,7 +31,7 @@ func run(ctx context.Context, _log *logrus.Entry) error {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	_env, err := env.NewCore(ctx, _log, env.COMPONENT_TOOLING)
+	_env, err := env.NewCore(ctx, _log, env.SERVICE_TOOLING)
 	if err != nil {
 		return err
 	}

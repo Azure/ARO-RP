@@ -18,22 +18,23 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
-type ServiceComponent string
+// ServiceName is the name of the runtime service (e.g. gateway, monitor)
+type ServiceName string
 
 const (
-	COMPONENT_RP                  ServiceComponent = "RP"
-	COMPONENT_GATEWAY             ServiceComponent = "GATEWAY"
-	COMPONENT_MONITOR             ServiceComponent = "MONITOR"
-	COMPONENT_OPERATOR            ServiceComponent = "OPERATOR"
-	COMPONENT_MIRROR              ServiceComponent = "MIRROR"
-	COMPONENT_PORTAL              ServiceComponent = "PORTAL"
-	COMPONENT_UPDATE_OCP_VERSIONS ServiceComponent = "UPDATE_OCP_VERSIONS"
-	COMPONENT_UPDATE_ROLE_SETS    ServiceComponent = "UPDATE_ROLE_SETS"
-	COMPONENT_DEPLOY              ServiceComponent = "DEPLOY"
-	COMPONENT_TOOLING             ServiceComponent = "TOOLING"
-	COMPONENT_MIMO_SCHEDULER      ServiceComponent = "MIMO_SCHEDULER"
-	COMPONENT_MIMO_ACTUATOR       ServiceComponent = "MIMO_ACTUATOR"
-	COMPONENT_E2E                 ServiceComponent = "E2E"
+	SERVICE_RP                  ServiceName = "RP"
+	SERVICE_GATEWAY             ServiceName = "GATEWAY"
+	SERVICE_MONITOR             ServiceName = "MONITOR"
+	SERVICE_OPERATOR            ServiceName = "OPERATOR"
+	SERVICE_MIRROR              ServiceName = "MIRROR"
+	SERVICE_PORTAL              ServiceName = "PORTAL"
+	SERVICE_UPDATE_OCP_VERSIONS ServiceName = "UPDATE_OCP_VERSIONS"
+	SERVICE_UPDATE_ROLE_SETS    ServiceName = "UPDATE_ROLE_SETS"
+	SERVICE_DEPLOY              ServiceName = "DEPLOY"
+	SERVICE_TOOLING             ServiceName = "TOOLING"
+	SERVICE_MIMO_SCHEDULER      ServiceName = "MIMO_SCHEDULER"
+	SERVICE_MIMO_ACTUATOR       ServiceName = "MIMO_ACTUATOR"
+	SERVICE_E2E                 ServiceName = "E2E"
 )
 
 // Core collects basic configuration information which is expected to be
@@ -58,7 +59,7 @@ type core struct {
 	isLocalDevelopmentMode bool
 	isCI                   bool
 
-	service    ServiceComponent
+	service    ServiceName
 	serviceLog *logrus.Entry
 
 	msiAuthorizers map[string]autorest.Authorizer
@@ -80,6 +81,9 @@ func (c *core) Logger() *logrus.Entry {
 	return c.serviceLog
 }
 
+// LoggerForComponent creates a logger with the "component" field set. This
+// should be used when passing a logger to an internal component such as the
+// database or serving components such as the frontend.
 func (c *core) LoggerForComponent(component string) *logrus.Entry {
 	return c.serviceLog.WithField("component", component)
 }
@@ -102,15 +106,13 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 	return liveconfig.NewProd(c.Location(), mcc), nil
 }
 
-func logForService(_log *logrus.Entry, service ServiceComponent) *logrus.Entry {
-	return _log.WithField("service", strings.ReplaceAll(strings.ToLower(string(service)), "_", "-"))
-}
+func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core, error) {
+	// set the service field on the logger (e.g. monitor, gateway)
+	log := _log.WithField("service", strings.ReplaceAll(strings.ToLower(string(service)), "_", "-"))
 
-func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceComponent) (Core, error) {
 	// assign results of package-level functions to struct's environment flags
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
 	isCI := IsCI()
-	log := logForService(_log, service)
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
 	}
@@ -145,9 +147,9 @@ func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceComponent) 
 // which may run on CI VMs.  CI VMs don't currently have MSI and hence cannot
 // resolve their tenant ID, and also may access resources in a different tenant
 // (e.g. AME).
-func NewCoreForCI(ctx context.Context, _log *logrus.Entry, service ServiceComponent) (Core, error) {
+func NewCoreForCI(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core, error) {
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
-	serviceLog := logForService(_log, service)
+	serviceLog := loggerForService(_log, service)
 	if isLocalDevelopmentMode {
 		serviceLog.Info("running in local development mode")
 	}

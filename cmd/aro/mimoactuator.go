@@ -25,7 +25,7 @@ import (
 func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, _log, env.COMPONENT_MIMO_ACTUATOR)
+	_env, err := env.NewEnv(ctx, _log, env.SERVICE_MIMO_ACTUATOR)
 	if err != nil {
 		return err
 	}
