@@ -196,12 +196,31 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	return mon, nil
 }
 
+func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error) error {
+	innerNow := time.Now()
+	collectorName := steps.ShortName(f)
+	mon.log.Debugf("running %s", collectorName)
+	innerErr := f(ctx)
+	if innerErr != nil {
+		e := fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
+		mon.log.Error(e.Error())
+		// emit metrics collection failures and collect the err, but
+		// don't stop running other metric collections
+		mon.emitMonitorCollectorError(collectorName)
+		return e
+	} else {
+		timeToComplete := time.Since(innerNow).Seconds()
+		mon.emitMonitorCollectionTiming(collectorName, timeToComplete)
+		mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, timeToComplete)
+	}
+	return innerErr
+}
+
 // Monitor checks the API server health of a cluster
 func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	defer mon.wg.Done()
 
 	now := time.Now()
-
 	mon.log.Debug("monitoring")
 
 	if mon.hourlyRun {
@@ -211,40 +230,20 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		})
 	}
 
-	timeCall := func(ctx context.Context, f func(context.Context) error) error {
-		innerNow := time.Now()
-		collectorName := steps.ShortName(f)
-		mon.log.Debugf("running %s", collectorName)
-		innerErr := f(ctx)
-		if innerErr != nil {
-			e := fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
-			mon.log.Debug(e.Error())
-			// emit metrics collection failures and collect the err, but
-			// don't stop running other metric collections
-			mon.emitMonitorCollectorError(collectorName)
-			return e
-		} else {
-			timeToComplete := time.Since(innerNow).Seconds()
-			mon.emitMonitorCollectionTiming(collectorName, timeToComplete)
-			mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, timeToComplete)
-		}
-		return innerErr
-	}
-
 	// This API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
-	err := timeCall(ctx, mon.emitAPIServerHealthzCode)
+	err := mon.timeCall(ctx, mon.emitAPIServerHealthzCode)
 	if err != nil {
 		errs = append(errs, err)
 
 		// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
-		err := timeCall(ctx, mon.emitAPIServerPingCode)
+		err := mon.timeCall(ctx, mon.emitAPIServerPingCode)
 		if err != nil {
 			errs = append(errs, err)
 		}
 		return
 	}
 
-	err = timeCall(ctx, mon.prefetchClusterVersion)
+	err = mon.timeCall(ctx, mon.prefetchClusterVersion)
 	if err != nil {
 		errs = append(errs, err)
 		return
@@ -252,7 +251,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 
 	// Determine the list of OpenShift (or ARO) managed namespaces that we will
 	// query for -- this needs to succeed
-	err = timeCall(ctx, mon.fetchManagedNamespaces)
+	err = mon.timeCall(ctx, mon.fetchManagedNamespaces)
 	if err != nil {
 		errs = append(errs, err)
 		return
@@ -268,7 +267,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 
 	for _, f := range mon.collectors {
 		wg.Go(func() error {
-			innerErr := timeCall(ctx, f)
+			innerErr := mon.timeCall(ctx, f)
 			if innerErr != nil {
 				// NOTE: The channel only has room to accommodate one error per
 				// collector, so if a collector needs to return multiple errors
