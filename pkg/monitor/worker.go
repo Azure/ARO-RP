@@ -299,9 +299,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		}
 	}
 
-	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, subID, tenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
+	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, subID, tenantID, mon.clusterm, dims, nsgMonTicker.C)
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun, &wg)
+	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
 		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
@@ -326,6 +326,7 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, wg *sync.
 	for _, monitor := range monitors {
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			err := monitor.Monitor(ctx)
 			if err != nil {
 				log.Error(err)

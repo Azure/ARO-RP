@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -63,8 +62,6 @@ type Monitor struct {
 
 	ocpclientset clienthelper.Interface
 
-	wg *sync.WaitGroup
-
 	// Namespaces that are OpenShift or ARO managed that we want to monitor
 	namespacesToMonitor []string
 
@@ -76,7 +73,7 @@ type Monitor struct {
 	queryLimit int
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -160,7 +157,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		tenantID:            tenantID,
 		m:                   m,
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
-		wg:                  wg,
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
 	}
@@ -218,7 +214,6 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 
 // Monitor checks the API server health of a cluster
 func (mon *Monitor) Monitor(ctx context.Context) error {
-	defer mon.wg.Done()
 	errs := []error{}
 
 	now := time.Now()

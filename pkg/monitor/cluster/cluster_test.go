@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -389,16 +388,12 @@ func TestMonitor(t *testing.T) {
 				tt.hooks(client)
 			}
 
-			outerWg := new(sync.WaitGroup)
-			outerWg.Add(1)
-
 			mon := &Monitor{
 				log:          log,
 				rawClient:    fakeRawClient,
 				ocpclientset: ocpclientset,
 				m:            m,
 				queryLimit:   1,
-				wg:           outerWg,
 			}
 
 			mon.collectors = []func(context.Context) error{

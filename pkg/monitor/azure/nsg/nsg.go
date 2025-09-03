@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/netip"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -46,19 +45,17 @@ type NSGMonitor struct {
 	emitter metrics.Emitter
 	oc      *api.OpenShiftCluster
 
-	wg *sync.WaitGroup
-
 	subnetClient sdknetwork.SubnetsClient
 	dims         map[string]string
 }
 
-func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, wg *sync.WaitGroup, trigger <-chan time.Time) monitoring.Monitor {
+func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor {
 	if oc == nil {
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	if oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	emitter.EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
@@ -66,14 +63,14 @@ func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, su
 	select {
 	case <-trigger:
 	default:
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	token, err := e.FPNewClientCertificateCredential(tenantID, nil)
 	if err != nil {
 		log.Error("Unable to create FP Authorizer for NSG monitoring.", err)
 		emitter.EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	clientOptions := arm.ClientOptions{
@@ -86,7 +83,7 @@ func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, su
 	if err != nil {
 		log.Error("Unable to create the subnet client for NSG monitoring", err)
 		emitter.EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	return &NSGMonitor{
@@ -95,7 +92,6 @@ func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, su
 		oc:      oc,
 
 		subnetClient: client,
-		wg:           wg,
 
 		dims: dims,
 	}
@@ -146,8 +142,6 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 
 // Monitor checks the custom NSGs customers attach to their ARO subnets
 func (n *NSGMonitor) Monitor(ctx context.Context) error {
-	defer n.wg.Done()
-
 	now := time.Now()
 	errs := []error{}
 
