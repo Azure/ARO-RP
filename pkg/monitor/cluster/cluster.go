@@ -204,7 +204,6 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 	innerErr := f(ctx)
 	if innerErr != nil {
 		e := fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
-		mon.log.Error(e.Error())
 		// emit metrics collection failures and collect the err, but
 		// don't stop running other metric collections
 		mon.emitMonitorCollectorError(collectorName)

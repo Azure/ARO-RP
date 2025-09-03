@@ -5,7 +5,6 @@ package monitor
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"strings"
 	"sync"
@@ -327,8 +326,7 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, wg *sync.
 	for _, monitor := range monitors {
 		wg.Add(1)
 		go func() {
-			errs := monitor.Monitor(ctx)
-			err := errors.Join(errs...)
+			err := monitor.Monitor(ctx)
 			if err != nil {
 				log.Error(err)
 			}
