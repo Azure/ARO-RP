@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/validate"
 )
+
+var errListVMResourceSKUs = errors.New("failure listing resource SKUs")
 
 func (m *manager) validateResources(ctx context.Context) error {
 	var clusterMSICredential azcore.TokenCredential
@@ -33,7 +36,7 @@ func (m *manager) getVMSKUsForCurrentRegion(ctx context.Context) (map[string]*mg
 	filter := fmt.Sprintf("location eq %s", location)
 	skus, err := m.resourceSkus.List(ctx, filter)
 	if err != nil {
-		return nil, fmt.Errorf("failure listing resource SKUs: %w", err)
+		return nil, errors.Join(errListVMResourceSKUs, err)
 	}
 
 	return computeskus.FilterVMSizes(skus, location), nil
