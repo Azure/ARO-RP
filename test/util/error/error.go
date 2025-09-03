@@ -61,16 +61,39 @@ func AssertOneOfErrorMessages(t *testing.T, err error, wantMsgs []string) {
 
 func AssertErrorIs(t *testing.T, err error, wantError error) {
 	t.Helper()
+	if wantError == nil {
+		AssertErrorMatchesAll(t, err, []error{})
+		return
+	}
+	AssertErrorMatchesAll(t, err, []error{wantError})
+}
 
-	if err != nil && wantError == nil {
+// AssertErrorMatchesAll verifies that err contains all of the errors in wantError in its tree.
+func AssertErrorMatchesAll(t *testing.T, err error, wantError []error) {
+	t.Helper()
+
+	if err == nil && len(wantError) == 0 {
+		return
+	} else if err != nil && len(wantError) == 0 {
 		t.Errorf("got unexpected error '%v'", err)
-	} else if err == nil && wantError != nil {
-		t.Errorf("got unexpected SUCCESS instead of error '%v'", wantError)
+	} else if err == nil && len(wantError) != 0 {
+		t.Errorf("got unexpected SUCCESS instead of errors '%v'", wantError)
 	} else {
-		if !errors.Is(err, wantError) {
-			// check the content in case it's just plain error strings
-			if err.Error() != wantError.Error() {
-				t.Errorf("got error:\n'%v'\n\nwanted error:\n '%v'", err, wantError)
+		errorMatched := false
+		for _, wanted := range wantError {
+			if !errors.Is(err, wanted) {
+				// check the content in case it's just plain error strings
+				if err.Error() == wanted.Error() {
+					errorMatched = true
+				}
+			} else {
+				errorMatched = true
+			}
+		}
+		if !errorMatched {
+			t.Errorf("got error:\n'%v'\n\nwanted one of errors:\n", err)
+			for _, w := range wantError {
+				t.Error(w)
 			}
 		}
 	}
