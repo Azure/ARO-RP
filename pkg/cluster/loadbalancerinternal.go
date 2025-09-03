@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const internalLBFrontendIPName = "internal-lb-ip-v4"
@@ -81,8 +80,8 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	m.log.Info("load balancer zonal migration: starting critical section")
 
 	// STEP ONE: disassociate the PLS from the existing frontend IP configuration
-	bogusLBName := uuid.DefaultGenerator.Generate()
-	bogusLBConfig := &armnetwork.FrontendIPConfiguration{
+	temporaryFIPName := fmt.Sprintf("%d-ip", m.now().Unix())
+	temporaryFIPConfig := &armnetwork.FrontendIPConfiguration{
 		Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 			PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
 			Subnet: &armnetwork.Subnet{
@@ -90,22 +89,23 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 			},
 		},
 		Zones: lbZones,
-		Name:  pointerutils.ToPtr(bogusLBName),
+		Name:  pointerutils.ToPtr(temporaryFIPName),
 	}
-	// firstly, create a bogus frontend IP configuration
-	lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, bogusLBConfig)
+	// firstly, create a temporary frontend IP configuration
+	lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, temporaryFIPConfig)
 	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
 	if err != nil {
 		m.log.Errorf("FAILURE IN CRITICAL SECTION: '%v'", err)
 		return fmt.Errorf("failure updating internal load balancer: %w", err)
 	}
 
-	// associate the bogus frontend IP with the PLS (since it always needs one)
+	// associate the temporary frontend IP with the PLS (since it always needs one)
 	pls.Properties.LoadBalancerFrontendIPConfigurations = []*armnetwork.FrontendIPConfiguration{
 		{
-			ID: pointerutils.ToPtr(fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, bogusLBName)),
+			ID: pointerutils.ToPtr(fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, temporaryFIPName)),
 		},
 	}
+	m.log.Infof("associating temporary frontend IP (%s) to PLS", temporaryFIPName)
 	err = m.armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
 	if err != nil {
 		m.log.Errorf("FAILURE IN CRITICAL SECTION - PLS MAY NOW BE DISCONNECTED FROM LB: '%v'", err)
@@ -114,9 +114,9 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 
 	// STEP TWO: delete the existing frontend IP configuration and LB rules
 	// keep the bogus config since it's in use by the PLS
-	lb.Properties.FrontendIPConfigurations = []*armnetwork.FrontendIPConfiguration{bogusLBConfig}
+	lb.Properties.FrontendIPConfigurations = []*armnetwork.FrontendIPConfiguration{temporaryFIPConfig}
 	lb.Properties.LoadBalancingRules = []*armnetwork.LoadBalancingRule{}
-
+	m.log.Info("removing old frontend IP")
 	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
 	if err != nil {
 		m.log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
@@ -206,6 +206,7 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	}
 
 	// STEP FIVE: remove bogus frontend IP to clean up
+	m.log.Info("cleaning up temporary frontend IP")
 	lb.Properties.FrontendIPConfigurations = []*armnetwork.FrontendIPConfiguration{newFrontendIP}
 	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
 	if err != nil {
