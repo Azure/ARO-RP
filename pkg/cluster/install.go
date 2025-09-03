@@ -204,7 +204,7 @@ func (m *manager) getMigrateLoadBalancerSteps() []steps.Step {
 		steps.Action(m.migrateInternalLoadBalancerZones),
 		steps.Action(m.fixSSH),
 	}
-	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
+	return steps
 }
 
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {

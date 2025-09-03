@@ -103,11 +103,8 @@ func TestAdminUpdateSteps(t *testing.T) {
 	}
 
 	migrateLoadBalancerSteps := []string{
-		"[Action startVMs]",
-		"[Condition apiServersReady, timeout 30m0s]",
 		"[Action migrateInternalLoadBalancerZones]",
-		"[Action initializeOperatorDeployer]",
-		"[Action syncClusterObject]",
+		"[Action fixSSH]",
 	}
 
 	hiveSteps := []string{
