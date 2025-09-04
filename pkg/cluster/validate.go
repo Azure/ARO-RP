@@ -69,7 +69,7 @@ func (m *manager) validateZones(ctx context.Context) error {
 
 	// Update the document with configured zones
 	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
-		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones = originalZones
+		oscd.OpenShiftCluster.Properties.Zones = originalZones
 		return nil
 	})
 	m.doc = updatedDoc
