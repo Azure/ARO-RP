@@ -274,12 +274,13 @@ func TestValidateInstallVersion(t *testing.T) {
 	defaultOcpVersion := "4.12.25"
 
 	for _, tt := range []struct {
-		test              string
-		version           string
-		defaultOcpVersion string
-		availableVersions []string
-		wantVersion       string
-		wantErr           string
+		test                     string
+		version                  string
+		defaultOcpVersion        string
+		availableVersions        []string
+		arbitraryVersionsEnabled bool
+		wantVersion              string
+		wantErr                  string
 	}{
 		{
 			test:              "Valid and available OCP version specified returns no error",
@@ -324,6 +325,26 @@ func TestValidateInstallVersion(t *testing.T) {
 			defaultOcpVersion: defaultOcpVersion,
 			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16", "4.14.16+installerref-abcdef"},
 		},
+		{
+			test:                     "Arbitrary valid semver version with feature flag enabled returns no error",
+			version:                  "4.15.0-custom.build.123",
+			availableVersions:        []string{"4.12.25", "4.13.40", "4.14.16"},
+			arbitraryVersionsEnabled: true,
+		},
+		{
+			test:                     "Arbitrary invalid version with feature flag enabled returns error",
+			version:                  "not-a-valid-version",
+			availableVersions:        []string{"4.12.25", "4.13.40", "4.14.16"},
+			arbitraryVersionsEnabled: true,
+			wantErr:                  "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version 'not-a-valid-version' is not a valid semantic version.",
+		},
+		{
+			test:                     "Arbitrary version without feature flag enabled returns error",
+			version:                  "4.15.0-custom.build.123",
+			availableVersions:        []string{"4.12.25", "4.13.40", "4.14.16"},
+			arbitraryVersionsEnabled: false,
+			wantErr:                  "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.15.0-custom.build.123' is invalid.",
+		},
 	} {
 		t.Run(tt.test, func(t *testing.T) {
 			ctx := context.Background()
@@ -339,6 +360,26 @@ func TestValidateInstallVersion(t *testing.T) {
 				baseLog:            logrus.NewEntry(logrus.StandardLogger()),
 			}
 
+			// Create subscription document with optional feature flag
+			subscription := &api.SubscriptionDocument{
+				Subscription: &api.Subscription{
+					Properties: &api.SubscriptionProperties{
+						RegisteredFeatures: []api.RegisteredFeatureProfile{},
+					},
+				},
+			}
+
+			// Add arbitrary versions feature flag if enabled for this test
+			if tt.arbitraryVersionsEnabled {
+				subscription.Subscription.Properties.RegisteredFeatures = append(
+					subscription.Subscription.Properties.RegisteredFeatures,
+					api.RegisteredFeatureProfile{
+						Name:  api.FeatureFlagArbitraryVersions,
+						State: "Registered",
+					},
+				)
+			}
+
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{
@@ -347,7 +388,7 @@ func TestValidateInstallVersion(t *testing.T) {
 				},
 			}
 
-			err := f.validateInstallVersion(ctx, oc)
+			err := f.validateInstallVersion(ctx, oc, subscription)
 			if tt.wantVersion != "" && oc.Properties.ClusterProfile.Version != tt.wantVersion {
 				t.Errorf("wanted clusterdoc updated with version %s but got %s", tt.wantVersion, oc.Properties.ClusterProfile.Version)
 			}
