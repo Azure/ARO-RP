@@ -27,6 +27,11 @@ import (
 // nsgMonitoringFrequency is used for initializing NSG monitoring ticker
 var nsgMonitoringFrequency = 10 * time.Minute
 
+// subscriptionStateLogFrequency is used for initializing a ticker used to
+// send log messages when a cluster's subscription state is stopping us
+// from monitoring
+var subscriptionStateLogFrequency = 30 * time.Minute
+
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
 	dbMonitors, err := mon.dbGroup.Monitors()
@@ -180,6 +185,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	nsgMonitoringTicker := time.NewTicker(nsgMonitoringFrequency)
 	defer nsgMonitoringTicker.Stop()
+	subscriptionStateLoggingTicker := time.NewTicker(subscriptionStateLogFrequency)
+	defer subscriptionStateLoggingTicker.Stop()
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -201,12 +208,19 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
+		if shouldMonitorSubscription(sub) {
 			mon.workOne(context.Background(), log, v.doc, sub, newh != h, nsgMonitoringTicker)
 		}
 
 		select {
 		case <-t.C:
+			select {
+			case <-subscriptionStateLoggingTicker.C:
+				if !shouldMonitorSubscription(sub) {
+					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", v.doc.OpenShiftCluster.ID)
+				}
+			default:
+			}
 		case <-stop:
 			break out
 		}
@@ -282,4 +296,10 @@ func execute(ctx context.Context, done chan<- bool, wg *sync.WaitGroup, monitors
 	}
 	wg.Wait()
 	done <- true
+}
+
+// shouldMonitorSubscription returns a bool telling whether or not the clusters
+// in a given subscription should be monitored.
+func shouldMonitorSubscription(sub *api.SubscriptionDocument) bool {
+	return sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned
 }
