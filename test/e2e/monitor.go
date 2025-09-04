@@ -24,7 +24,7 @@ var _ = Describe("Monitor", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("running the monitor once")
-		errs := mon.Monitor(ctx)
-		Expect(errs).To(BeEmpty())
+		err = mon.Monitor(ctx)
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
