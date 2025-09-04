@@ -243,7 +243,7 @@ func (mon *Monitor) Monitor(ctx context.Context) error {
 	err = mon.timeCall(ctx, mon.prefetchClusterVersion)
 	if err != nil {
 		errs = append(errs, err)
-		return
+		return errors.Join(errs...)
 	}
 
 	// Determine the list of OpenShift (or ARO) managed namespaces that we will
@@ -251,7 +251,7 @@ func (mon *Monitor) Monitor(ctx context.Context) error {
 	err = mon.timeCall(ctx, mon.fetchManagedNamespaces)
 	if err != nil {
 		errs = append(errs, err)
-		return
+		return errors.Join(errs...)
 	}
 
 	// Run up to MONITOR_GOROUTINES_PER_CLUSTER goroutines for collecting

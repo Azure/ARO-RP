@@ -6,11 +6,9 @@ package cluster
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,12 +25,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-type expectedGauge struct {
+type expectedMetric struct {
 	name   string
-	value  int64
+	value  any
 	labels map[string]string
 }
 
@@ -46,31 +45,23 @@ func TestMonitor(t *testing.T) {
 		expectedErrors []error
 		hooks          func(*testclienthelper.HookingClient)
 		healthzCall    func(*http.Request) (*http.Response, error)
-		expectedGauges []struct {
-			name   string
-			value  int64
-			labels map[string]string
-		}
-		expectedFloats []struct {
-			name   string
-			value  any
-			labels map[string]string
-		}
+		expectedGauges []expectedMetric
+		expectedFloats []expectedMetric
 	}{
 		{
 			name:        "happy path",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
-			expectedGauges: []expectedGauge{
+			expectedGauges: []expectedMetric{
 				{
 					name:  "apiserver.healthz.code",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"code": "200",
 					},
 				},
 				{
 					name:  "replicaset.statuses",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"availableReplicas": "1",
 						"name":              "name1",
@@ -79,11 +70,7 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 			},
-			expectedFloats: []struct {
-				name   string
-				value  any
-				labels map[string]string
-			}{
+			expectedFloats: []expectedMetric{
 				{
 					name:  "monitor.cluster.collector.duration",
 					value: gomock.Any(),
@@ -129,27 +116,23 @@ func TestMonitor(t *testing.T) {
 			expectedErrors: []error{
 				errListNamespaces,
 			},
-			expectedGauges: []expectedGauge{
+			expectedGauges: []expectedMetric{
 				{
 					name:  "apiserver.healthz.code",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"code": "200",
 					},
 				},
 				{
 					name:  "monitor.cluster.collector.error",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"collector": "fetchManagedNamespaces",
 					},
 				},
 			},
-			expectedFloats: []struct {
-				name   string
-				value  any
-				labels map[string]string
-			}{
+			expectedFloats: []expectedMetric{
 				{
 					name:  "monitor.cluster.collector.duration",
 					value: gomock.Any(),
@@ -183,27 +166,23 @@ func TestMonitor(t *testing.T) {
 				errListReplicaSets,
 				innerFailure,
 			},
-			expectedGauges: []expectedGauge{
+			expectedGauges: []expectedMetric{
 				{
 					name:  "apiserver.healthz.code",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"code": "200",
 					},
 				},
 				{
 					name:  "monitor.cluster.collector.error",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"collector": "emitReplicasetStatuses",
 					},
 				},
 			},
-			expectedFloats: []struct {
-				name   string
-				value  any
-				labels map[string]string
-			}{
+			expectedFloats: []expectedMetric{
 				{
 					name:  "monitor.cluster.collector.duration",
 					value: gomock.Any(),
@@ -236,41 +215,37 @@ func TestMonitor(t *testing.T) {
 				errAPIServerHealthzFailure,
 				errAPIServerPingFailure,
 			},
-			expectedGauges: []expectedGauge{
+			expectedGauges: []expectedMetric{
 				{
 					name:  "apiserver.healthz.code",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"code": "500",
 					},
 				},
 				{
 					name:  "monitor.cluster.collector.error",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 				{
 					name:  "monitor.cluster.collector.error",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"collector": "emitAPIServerPingCode",
 					},
 				},
 				{
 					name:  "apiserver.healthz.ping.code",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"code": "500",
 					},
 				},
 			},
-			expectedFloats: []struct {
-				name   string
-				value  any
-				labels map[string]string
-			}{},
+			expectedFloats: []expectedMetric{},
 		},
 		{
 			name: "api failure, ping succeeds",
@@ -283,34 +258,30 @@ func TestMonitor(t *testing.T) {
 			expectedErrors: []error{
 				errAPIServerHealthzFailure,
 			},
-			expectedGauges: []expectedGauge{
+			expectedGauges: []expectedMetric{
 				{
 					name:  "apiserver.healthz.code",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"code": "500",
 					},
 				},
 				{
 					name:  "apiserver.healthz.ping.code",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"code": "200",
 					},
 				},
 				{
 					name:  "monitor.cluster.collector.error",
-					value: 1,
+					value: int64(1),
 					labels: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 			},
-			expectedFloats: []struct {
-				name   string
-				value  any
-				labels map[string]string
-			}{
+			expectedFloats: []expectedMetric{
 				{
 					name:  "monitor.cluster.collector.duration",
 					value: gomock.Any(),
@@ -413,14 +384,7 @@ func TestMonitor(t *testing.T) {
 			}
 
 			err := mon.Monitor(ctx)
-			if len(tt.expectedErrors) != 0 {
-				for _, expectedErr := range tt.expectedErrors {
-					fmt.Println(expectedErr)
-					assert.ErrorIs(t, err, expectedErr)
-				}
-			} else if err != nil {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMatchesAll(t, err, tt.expectedErrors)
 		})
 	}
 }

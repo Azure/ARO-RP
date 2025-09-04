@@ -22,6 +22,10 @@ func (mon *Monitor) emitAPIServerHealthzCode(ctx context.Context) error {
 		"code": strconv.FormatInt(int64(statusCode), 10),
 	})
 
+	if err != nil {
+		return errors.Join(errAPIServerHealthzFailure, err)
+	}
+
 	return err
 }
 

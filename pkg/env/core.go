@@ -148,10 +148,11 @@ func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core
 // resolve their tenant ID, and also may access resources in a different tenant
 // (e.g. AME).
 func NewCoreForCI(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core, error) {
+	// set the service field on the logger (e.g. monitor, gateway)
+	log := _log.WithField("service", strings.ReplaceAll(strings.ToLower(string(service)), "_", "-"))
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
-	serviceLog := loggerForService(_log, service)
 	if isLocalDevelopmentMode {
-		serviceLog.Info("running in local development mode")
+		log.Info("running in local development mode")
 	}
 
 	im, err := instancemetadata.NewDev(false)
@@ -164,6 +165,6 @@ func NewCoreForCI(ctx context.Context, _log *logrus.Entry, service ServiceName) 
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 		msiAuthorizers:         map[string]autorest.Authorizer{},
 		service:                service,
-		serviceLog:             serviceLog,
+		serviceLog:             log,
 	}, nil
 }

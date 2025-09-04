@@ -29,7 +29,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		objects        []client.Object
-		expectedGauges []expectedGauge
+		expectedGauges []expectedMetric
 		hooks          func(hc *testclienthelper.HookingClient)
 		wantErr        error
 	}{
@@ -90,15 +90,15 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 					},
 				},
 			},
-			expectedGauges: []expectedGauge{
+			expectedGauges: []expectedMetric{
 				{
 					name:   "arooperator.heartbeat",
-					value:  0,
+					value:  int64(0),
 					labels: map[string]string{"name": "aro-operator-master"},
 				},
 				{
 					name:   "arooperator.heartbeat",
-					value:  1,
+					value:  int64(1),
 					labels: map[string]string{"name": "aro-operator-worker"},
 				},
 			},
