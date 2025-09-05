@@ -5,6 +5,7 @@ package error
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"slices"
 	"testing"
@@ -68,6 +69,41 @@ func AssertErrorIs(t *testing.T, err error, wantError error) {
 	AssertErrorMatchesAll(t, err, []error{wantError})
 }
 
+// errfmt formats errors.Join() results a little nicer
+func errfmt(err error) string {
+	u, ok := err.(interface {
+		Unwrap() []error
+	})
+	if ok {
+		return fmt.Sprintf("%T(len: %d)", u, len(u.Unwrap()))
+	}
+	return fmt.Sprintf("%#v", err)
+}
+
+// unwrap will return the error tree of a given error starting at a given
+// indentation (calling itself for inner-errors until it has the whole tree)
+func unwrap(err error, indent string) string {
+	gotError := ""
+	u, ok := err.(interface {
+		Unwrap() []error
+	})
+
+	if ok {
+		errs := u.Unwrap()
+		gotError = gotError + "\n" + indent + "  which contains:"
+		for _, e := range errs {
+			gotError = gotError + fmt.Sprintf("\n%s    %s", indent, errfmt(e)) + unwrap(e, indent+"    ")
+		}
+	}
+
+	e := errors.Unwrap(err)
+	if e != nil {
+		gotError = gotError + fmt.Sprintf("\n%s  which contains:\n    %s%s", indent, indent, errfmt(e)) + unwrap(e, indent+"      ")
+	}
+
+	return gotError
+}
+
 // AssertErrorMatchesAll verifies that err contains all of the errors in wantError in its tree.
 func AssertErrorMatchesAll(t *testing.T, err error, wantError []error) {
 	t.Helper()
@@ -79,8 +115,8 @@ func AssertErrorMatchesAll(t *testing.T, err error, wantError []error) {
 	} else if err == nil && len(wantError) != 0 {
 		t.Errorf("got unexpected SUCCESS instead of errors '%v'", wantError)
 	} else {
-		errorMatched := false
 		for _, wanted := range wantError {
+			errorMatched := false
 			if !errors.Is(err, wanted) {
 				// check the content in case it's just plain error strings
 				if err.Error() == wanted.Error() {
@@ -89,11 +125,14 @@ func AssertErrorMatchesAll(t *testing.T, err error, wantError []error) {
 			} else {
 				errorMatched = true
 			}
-		}
-		if !errorMatched {
-			t.Errorf("got error:\n'%v'\n\nwanted one of errors:\n", err)
-			for _, w := range wantError {
-				t.Error(w)
+
+			if !errorMatched {
+				errt := ""
+				for _, w := range wantError {
+					errt = errt + fmt.Sprintf("\n  %s", errfmt(w))
+				}
+
+				t.Errorf("error mismatch\ngot error:\n  %s%s\n\nwanted the error tree to contain all of:%s", errfmt(err), unwrap(err, "  "), errt)
 			}
 		}
 	}

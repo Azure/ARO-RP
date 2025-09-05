@@ -19,18 +19,22 @@ var errAPIServerPingFailure = errors.New("error fetching APIServer healthz ping 
 
 type failureToRunClusterCollector struct {
 	collectorName string
+	inner         error
 }
 
 func (e *failureToRunClusterCollector) Error() string {
 	return fmt.Sprintf("failure running cluster collector '%s'", e.collectorName)
 }
 
-func (e failureToRunClusterCollector) Is(err error) bool {
-	fmt.Println(err)
+func (e *failureToRunClusterCollector) Is(err error) bool {
 	errCollector, ok := err.(*failureToRunClusterCollector)
 	if !ok {
 		return false
 	}
 
 	return errCollector.collectorName == e.collectorName
+}
+
+func (e *failureToRunClusterCollector) Unwrap() error {
+	return e.inner
 }

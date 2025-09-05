@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -199,17 +198,16 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 	mon.log.Debugf("running %s", collectorName)
 	innerErr := f(ctx)
 	if innerErr != nil {
-		e := fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
 		// emit metrics collection failures and collect the err, but
 		// don't stop running other metric collections
 		mon.emitMonitorCollectorError(collectorName)
-		return e
+		return &failureToRunClusterCollector{collectorName: collectorName, inner: innerErr}
 	} else {
 		timeToComplete := time.Since(innerNow).Seconds()
 		mon.emitMonitorCollectionTiming(collectorName, timeToComplete)
 		mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, timeToComplete)
 	}
-	return innerErr
+	return nil
 }
 
 // Monitor checks the API server health of a cluster

@@ -114,6 +114,7 @@ func TestMonitor(t *testing.T) {
 				})
 			},
 			expectedErrors: []error{
+				&failureToRunClusterCollector{collectorName: "fetchManagedNamespaces"},
 				errListNamespaces,
 			},
 			expectedGauges: []expectedMetric{
