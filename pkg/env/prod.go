@@ -85,7 +85,7 @@ type prod struct {
 	features map[Feature]bool
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, component ServiceName) (*prod, error) {
 	if err := ValidateVars("AZURE_FP_CLIENT_ID", "DOMAIN_NAME"); err != nil {
 		return nil, err
 	}

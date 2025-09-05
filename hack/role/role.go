@@ -136,7 +136,7 @@ func main() {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	log := logrus.NewEntry(logger)
-	environment, err := env.NewCoreForCI(ctx, log) // we don't use log here
+	environment, err := env.NewCoreForCI(ctx, log, env.SERVICE_TOOLING) // we don't use log here
 	if err != nil {
 		panic(err)
 	}

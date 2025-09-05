@@ -26,12 +26,12 @@ const (
 	KeyVaultPrefix      = "KEYVAULT_PREFIX"
 )
 
-func run(ctx context.Context, log *logrus.Entry) error {
+func run(ctx context.Context, _log *logrus.Entry) error {
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
+	_env, err := env.NewCore(ctx, _log, env.SERVICE_TOOLING)
 	if err != nil {
 		return err
 	}
@@ -60,12 +60,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, &noop.Noop{}, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, &noop.Noop{}, aead)
 	if err != nil {
 		return err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return err
 	}
@@ -89,16 +89,4 @@ func main() {
 	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func DBName(isLocalDevelopmentMode bool) (string, error) {
-	if !isLocalDevelopmentMode {
-		return "ARO", nil
-	}
-
-	if err := env.ValidateVars(DatabaseName); err != nil {
-		return "", fmt.Errorf("%v (development mode)", err.Error())
-	}
-
-	return os.Getenv(DatabaseName), nil
 }
