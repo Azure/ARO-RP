@@ -147,7 +147,9 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 
 				// Don't keep subscriptions that are restricted, warned, or are
 				// being deleted from our db
-				if !shouldMonitorSubscription(sub) {
+				if sub.Subscription.State == api.SubscriptionStateSuspended ||
+					sub.Subscription.State == api.SubscriptionStateWarned ||
+					sub.Subscription.State == api.SubscriptionStateDeleted {
 					// delete is a no-op if it doesn't exist
 					delete(mon.subs, id)
 					continue
@@ -253,7 +255,7 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		if shouldMonitorSubscription(sub) {
+		if sub != nil {
 			mon.workOne(context.Background(), log, v.doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
 		}
 
@@ -261,7 +263,8 @@ out:
 		case <-t.C:
 			select {
 			case <-subscriptionStateLoggingTicker.C:
-				if !shouldMonitorSubscription(sub) {
+				// The changefeed filters out subscriptions in invalid states
+				if sub == nil {
 					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", v.doc.OpenShiftCluster.ID)
 				}
 			default:
@@ -347,10 +350,4 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, wg *sync.
 	}
 	wg.Wait()
 	done <- true
-}
-
-// shouldMonitorSubscription returns a bool telling whether or not the clusters
-// in a given subscription should be monitored.
-func shouldMonitorSubscription(sub *api.SubscriptionDocument) bool {
-	return sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned && sub.Subscription.State != api.SubscriptionStateDeleted
 }
