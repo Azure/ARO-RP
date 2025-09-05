@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -172,7 +173,13 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID, devopsServicePrincipalId string) error {
 	deploymentName := "rp-global-" + d.config.Location
 
-	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobal)
+	env := strings.ToLower(os.Getenv("DEPLOY_ENVIRONMENT"))
+	rpGlobalFile := generator.FileRPProductionGlobal
+	if env == "stage" {
+		rpGlobalFile = generator.FileRPStageGlobal
+	}
+	d.log.Infof("RP Global Deployment File:", rpGlobalFile) // For debugging purpose
+	asset, err := assets.EmbeddedFiles.ReadFile(rpGlobalFile)
 	if err != nil {
 		return err
 	}
@@ -253,7 +260,17 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	deploymentName := "rp-global-subscription-" + d.config.Location
 
-	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalSubscription)
+	d.log.Infof("RP Location: %s", d.config.Location)
+
+	env := strings.ToLower(os.Getenv("DEPLOY_ENVIRONMENT"))
+	d.log.Infof("Enviroment:", env)
+	subscriptionFile := generator.FileRPProductionGlobalSubscription
+	if env == "stage" {
+		subscriptionFile = generator.FileRPStageGlobalSubscription
+	}
+	d.log.Infof("subscriptionFile: %s", subscriptionFile)
+
+	asset, err := assets.EmbeddedFiles.ReadFile(subscriptionFile)
 	if err != nil {
 		return err
 	}
@@ -265,6 +282,20 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
+	globalRGLocation := "<nil>"
+	if d.config.Configuration.GlobalResourceGroupLocation != nil {
+		globalRGLocation = *d.config.Configuration.GlobalResourceGroupLocation
+	}
+	d.log.Infof("Global Resource Group Location: %s", globalRGLocation)
+
+	globalRGName := "<nil>"
+	if d.config.Configuration.GlobalResourceGroupName != nil {
+		globalRGName = *d.config.Configuration.GlobalResourceGroupName
+	}
+
+	d.log.Infof("Global Resource Group Name: %s", globalRGName)
+	d.log.Infof("Global Resource Group Location: %s", *d.config.Configuration.GlobalResourceGroupLocation)
+
 	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
