@@ -37,8 +37,10 @@ type statsd struct {
 	now func() time.Time
 }
 
+var _ metrics.Emitter = &statsd{}
+
 // New returns a new metrics.Emitter
-func New(ctx context.Context, env env.Core, account, namespace string, mdmSocketEnv string) metrics.Emitter {
+func New(ctx context.Context, env env.Core, account, namespace string, mdmSocketEnv string) *statsd {
 	s := &statsd{
 		log: env.LoggerForComponent("metrics"),
 		env: env,
@@ -67,13 +69,11 @@ func New(ctx context.Context, env env.Core, account, namespace string, mdmSocket
 		s.namespace = "*"
 	}
 
-	go s.run()
-
 	return s
 }
 
 // New returns a new metrics.Emitter for a Monitor's cluster metrics
-func NewMetricsForCluster(ctx context.Context, env env.Core, account, namespace string, mdmSocketEnv string) metrics.Emitter {
+func NewMetricsForCluster(ctx context.Context, env env.Core, account, namespace string, mdmSocketEnv string) *statsd {
 	s := &statsd{
 		log: env.LoggerForComponent("clustermetrics"),
 		env: env,
@@ -98,8 +98,6 @@ func NewMetricsForCluster(ctx context.Context, env env.Core, account, namespace 
 	if s.namespace == "" {
 		s.namespace = "*"
 	}
-
-	go s.run()
 
 	return s
 }
@@ -135,17 +133,22 @@ func (s *statsd) emitMetric(m *metric) {
 	s.ch <- m
 }
 
-func (s *statsd) run() {
+func (s *statsd) Run(stop <-chan struct{}) {
 	defer recover.Panic(s.log)
 
 	var lastLog time.Time
 
-	for m := range s.ch {
-		err := s.write(m)
-		if err != nil &&
-			s.now().After(lastLog.Add(time.Second)) {
-			lastLog = s.now()
-			s.log.Error(err)
+	for {
+		select {
+		case m := <-s.ch:
+			err := s.write(m)
+			if err != nil &&
+				s.now().After(lastLog.Add(time.Second)) {
+				lastLog = s.now()
+				s.log.Error(err)
+			}
+		case <-stop:
+			return
 		}
 	}
 }

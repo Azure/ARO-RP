@@ -65,6 +65,7 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 	}
 
 	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go m.Run(nil)
 
 	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), m)
 	if err != nil {

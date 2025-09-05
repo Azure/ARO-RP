@@ -31,10 +31,11 @@ func TestEmitGauge(t *testing.T) {
 
 		now: func() time.Time { return time.Time{} },
 	}
-
-	go s.run()
+	stop := make(chan struct{})
+	go s.Run(stop)
 
 	s.EmitGauge("tests.test_key", 42, map[string]string{"key": "value"})
+	close(stop)
 
 	m, err := bufio.NewReader(c2).ReadString('\n')
 	if err != nil {
@@ -62,9 +63,11 @@ func TestEmitGaugeNoDims(t *testing.T) {
 		now: func() time.Time { return time.Time{} },
 	}
 
-	go s.run()
+	stop := make(chan struct{})
+	go s.Run(stop)
 
 	s.EmitGauge("tests.test_key", 42, nil)
+	close(stop)
 
 	m, err := bufio.NewReader(c2).ReadString('\n')
 	if err != nil {
@@ -92,9 +95,11 @@ func TestEmitFloat(t *testing.T) {
 		now: func() time.Time { return time.Time{} },
 	}
 
-	go s.run()
+	stop := make(chan struct{})
+	go s.Run(stop)
 
 	s.EmitFloat("tests.test_key", 5, map[string]string{"key": "value"})
+	close(stop)
 
 	m, err := bufio.NewReader(c2).ReadString('\n')
 	if err != nil {

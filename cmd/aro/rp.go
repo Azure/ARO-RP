@@ -92,6 +92,7 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 	}
 
 	metrics := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go metrics.Run(stop)
 
 	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), metrics)
 	if err != nil {
@@ -106,7 +107,8 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(metrics),
 	})
 
-	clusterm := statsd.New(ctx, _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	clusterm := statsd.NewMetricsForCluster(ctx, _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go clusterm.Run(stop)
 
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {

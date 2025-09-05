@@ -43,6 +43,7 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 	}
 
 	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go m.Run(nil)
 
 	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), m)
 	if err != nil {
@@ -58,6 +59,7 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 	})
 
 	clusterm := statsd.NewMetricsForCluster(ctx, _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go clusterm.Run(nil)
 
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {

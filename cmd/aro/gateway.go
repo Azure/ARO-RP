@@ -20,12 +20,15 @@ import (
 )
 
 func gateway(ctx context.Context, _log *logrus.Entry) error {
+	stop := make(chan struct{})
+
 	_env, err := env.NewCore(ctx, _log, env.SERVICE_GATEWAY)
 	if err != nil {
 		return err
 	}
 
 	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go m.Run(stop)
 
 	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), m)
 	if err != nil {
@@ -81,6 +84,7 @@ func gateway(ctx context.Context, _log *logrus.Entry) error {
 	<-sigterm
 	_env.Logger().Print("received SIGTERM")
 	cancel()
+	close(stop)
 	<-done
 
 	return nil

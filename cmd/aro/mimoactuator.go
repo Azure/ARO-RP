@@ -43,6 +43,7 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 	}
 
 	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go m.Run(stop)
 
 	g, err := golang.NewMetrics(_env.Logger(), m)
 	if err != nil {
