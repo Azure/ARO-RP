@@ -28,6 +28,11 @@ import (
 // nsgMonitoringFrequency is used for initializing NSG monitoring ticker
 var nsgMonitoringFrequency = 10 * time.Minute
 
+// subscriptionStateLogFrequency is used for initializing a ticker used to
+// send log messages when a cluster's subscription state is stopping us
+// from monitoring
+var subscriptionStateLogFrequency = 30 * time.Minute
+
 // changefeedBatchSize is how many items in the changefeed to fetch in each page
 const changefeedBatchSize = 50
 
@@ -226,6 +231,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	nsgMonitoringTicker := time.NewTicker(nsgMonitoringFrequency)
 	defer nsgMonitoringTicker.Stop()
+	subscriptionStateLoggingTicker := time.NewTicker(subscriptionStateLogFrequency)
+	defer subscriptionStateLoggingTicker.Stop()
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -254,6 +261,14 @@ out:
 
 		select {
 		case <-t.C:
+			select {
+			case <-subscriptionStateLoggingTicker.C:
+				// The changefeed filters out subscriptions in invalid states
+				if sub == nil {
+					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", v.doc.OpenShiftCluster.ID)
+				}
+			default:
+			}
 		case <-stop:
 			break out
 		}
