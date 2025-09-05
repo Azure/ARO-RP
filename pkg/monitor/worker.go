@@ -28,6 +28,11 @@ import (
 // nsgMonitoringFrequency is used for initializing NSG monitoring ticker
 var nsgMonitoringFrequency = 10 * time.Minute
 
+// subscriptionStateLogFrequency is used for initializing a ticker used to
+// send log messages when a cluster's subscription state is stopping us
+// from monitoring
+var subscriptionStateLogFrequency = 30 * time.Minute
+
 // changefeedBatchSize is how many items in the changefeed to fetch in each page
 const changefeedBatchSize = 50
 
@@ -142,9 +147,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 
 				// Don't keep subscriptions that are restricted, warned, or are
 				// being deleted from our db
-				if sub.Subscription.State == api.SubscriptionStateSuspended ||
-					sub.Subscription.State == api.SubscriptionStateWarned ||
-					sub.Subscription.State == api.SubscriptionStateDeleted {
+				if !shouldMonitorSubscription(sub) {
 					// delete is a no-op if it doesn't exist
 					delete(mon.subs, id)
 					continue
@@ -226,6 +229,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	nsgMonitoringTicker := time.NewTicker(nsgMonitoringFrequency)
 	defer nsgMonitoringTicker.Stop()
+	subscriptionStateLoggingTicker := time.NewTicker(subscriptionStateLogFrequency)
+	defer subscriptionStateLoggingTicker.Stop()
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -248,12 +253,19 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		if sub != nil {
+		if shouldMonitorSubscription(sub) {
 			mon.workOne(context.Background(), log, v.doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
 		}
 
 		select {
 		case <-t.C:
+			select {
+			case <-subscriptionStateLoggingTicker.C:
+				if !shouldMonitorSubscription(sub) {
+					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", v.doc.OpenShiftCluster.ID)
+				}
+			default:
+			}
 		case <-stop:
 			break out
 		}
@@ -335,4 +347,10 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, wg *sync.
 	}
 	wg.Wait()
 	done <- true
+}
+
+// shouldMonitorSubscription returns a bool telling whether or not the clusters
+// in a given subscription should be monitored.
+func shouldMonitorSubscription(sub *api.SubscriptionDocument) bool {
+	return sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned && sub.Subscription.State != api.SubscriptionStateDeleted
 }
