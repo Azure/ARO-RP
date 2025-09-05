@@ -100,107 +100,107 @@
     },
     "resources": [
         {
-            "sku": {
-                "name": "Standard"
-            },
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "gateway-lb-internal",
             "properties": {
-                "frontendIPConfigurations": [
-                    {
-                        "properties": {
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"
-                            }
-                        },
-                        "name": "gateway-frontend",
-                        "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
-                    }
-                ],
                 "backendAddressPools": [
                     {
                         "name": "gateway-backend"
                     }
                 ],
-                "loadBalancingRules": [
+                "frontendIPConfigurations": [
                     {
-                        "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
-                            },
-                            "backendAddressPool": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"
-                            },
-                            "probe": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"
-                            },
-                            "protocol": "Tcp",
-                            "loadDistribution": "Default",
-                            "frontendPort": 443,
-                            "backendPort": 443
-                        },
-                        "name": "gateway-lbrule-https"
-                    },
-                    {
-                        "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
-                            },
-                            "backendAddressPool": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"
-                            },
-                            "probe": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"
-                            },
-                            "protocol": "Tcp",
-                            "loadDistribution": "Default",
-                            "frontendPort": 80,
-                            "backendPort": 80
-                        },
-                        "name": "gateway-lbrule-http"
-                    }
-                ],
-                "probes": [
-                    {
-                        "properties": {
-                            "protocol": "Http",
-                            "port": 80,
-                            "numberOfProbes": 2,
-                            "requestPath": "/healthz/ready"
-                        },
-                        "name": "gateway-probe"
-                    }
-                ]
-            },
-            "name": "gateway-lb-internal",
-            "type": "Microsoft.Network/loadBalancers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
-        },
-        {
-            "properties": {
-                "loadBalancerFrontendIpConfigurations": [
-                    {
-                        "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
-                    }
-                ],
-                "ipConfigurations": [
-                    {
+                        "name": "gateway-frontend",
                         "properties": {
                             "subnet": {
                                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"
                             }
                         },
-                        "name": "gateway-pls-001-nic"
+                        "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
                     }
                 ],
-                "enableProxyProtocol": true
+                "loadBalancingRules": [
+                    {
+                        "name": "gateway-lbrule-https",
+                        "properties": {
+                            "backendAddressPool": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"
+                            },
+                            "backendPort": 443,
+                            "frontendIPConfiguration": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
+                            },
+                            "frontendPort": 443,
+                            "loadDistribution": "Default",
+                            "probe": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"
+                            },
+                            "protocol": "Tcp"
+                        }
+                    },
+                    {
+                        "name": "gateway-lbrule-http",
+                        "properties": {
+                            "backendAddressPool": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"
+                            },
+                            "backendPort": 80,
+                            "frontendIPConfiguration": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
+                            },
+                            "frontendPort": 80,
+                            "loadDistribution": "Default",
+                            "probe": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"
+                            },
+                            "protocol": "Tcp"
+                        }
+                    }
+                ],
+                "probes": [
+                    {
+                        "name": "gateway-probe",
+                        "properties": {
+                            "numberOfProbes": 2,
+                            "port": 80,
+                            "protocol": "Http",
+                            "requestPath": "/healthz/ready"
+                        }
+                    }
+                ]
             },
-            "name": "gateway-pls-001",
-            "type": "Microsoft.Network/privateLinkServices",
-            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard"
+            },
+            "type": "Microsoft.Network/loadBalancers"
+        },
+        {
             "apiVersion": "2020-08-01",
             "dependsOn": [
                 "Microsoft.Network/loadBalancers/gateway-lb-internal"
-            ]
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "gateway-pls-001",
+            "properties": {
+                "enableProxyProtocol": true,
+                "ipConfigurations": [
+                    {
+                        "name": "gateway-pls-001-nic",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"
+                            }
+                        }
+                    }
+                ],
+                "loadBalancerFrontendIpConfigurations": [
+                    {
+                        "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
+                    }
+                ]
+            },
+            "type": "Microsoft.Network/privateLinkServices"
         },
         {
             "sku": {
@@ -342,19 +342,19 @@
             ]
         },
         {
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "gateway-vnet/peering-rp-vnet",
             "properties": {
-                "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
                 "allowGatewayTransit": false,
-                "useRemoteGateways": false,
+                "allowVirtualNetworkAccess": true,
                 "remoteVirtualNetwork": {
                     "id": "[resourceId(parameters('rpResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'rp-vnet')]"
-                }
+                },
+                "useRemoteGateways": false
             },
-            "name": "gateway-vnet/peering-rp-vnet",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "apiVersion": "2020-08-01",
-            "location": "[resourceGroup().location]"
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings"
         },
         {
             "name": "[concat('gateway-pls-001', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/privateLinkServices', 'gateway-pls-001'), parameters('rpServicePrincipalId'), '4d97b98b-1d4f-4787-a291-c67834d212e7'))]",

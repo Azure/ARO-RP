@@ -6,9 +6,9 @@ package generator
 import (
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 
@@ -44,10 +44,10 @@ func (g *generator) dnsZone(name string) *arm.Resource {
 	}
 }
 
-func (g *generator) securityGroup(name string, securityRules *[]mgmtnetwork.SecurityRule, condition interface{}) *arm.Resource {
+func (g *generator) securityGroup(name string, securityRules []*armnetwork.SecurityRule, condition interface{}) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.SecurityGroup{
-			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+		Resource: &armnetwork.SecurityGroup{
+			Properties: &armnetwork.SecurityGroupPropertiesFormat{
 				SecurityRules: securityRules,
 			},
 			Name:     &name,
@@ -59,12 +59,12 @@ func (g *generator) securityGroup(name string, securityRules *[]mgmtnetwork.Secu
 	}
 }
 
-func (g *generator) securityRules(name string, properties *mgmtnetwork.SecurityRulePropertiesFormat, condition interface{}) *arm.Resource {
+func (g *generator) securityRules(name string, properties *armnetwork.SecurityRulePropertiesFormat, condition interface{}) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.SecurityRule{
-			SecurityRulePropertiesFormat: properties,
-			Name:                         &name,
-			Type:                         pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups/securityRules"),
+		Resource: &armnetwork.SecurityRule{
+			Properties: properties,
+			Name:       &name,
+			Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups/securityRules"),
 		},
 		Location:   "[resourceGroup().location]",
 		Condition:  condition,
@@ -74,14 +74,14 @@ func (g *generator) securityRules(name string, properties *mgmtnetwork.SecurityR
 
 func (g *generator) publicIPAddress(name string) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.PublicIPAddress{
-			Sku: &mgmtnetwork.PublicIPAddressSku{
-				Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+		Resource: &armnetwork.PublicIPAddress{
+			SKU: &armnetwork.PublicIPAddressSKU{
+				Name: pointerutils.ToPtr(armnetwork.PublicIPAddressSKUNameStandard),
 			},
-			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: mgmtnetwork.Static,
+			Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+				PublicIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
 			},
-			Zones:    &[]string{},
+			Zones:    []*string{},
 			Name:     &name,
 			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 			Location: pointerutils.ToPtr("[resourceGroup().location]"),
@@ -119,13 +119,13 @@ func (g *generator) storageAccountBlobContainer(name string, storageAccountName 
 	}
 }
 
-func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtnetwork.Subnet, condition interface{}, dependsOn []string) *arm.Resource {
+func (g *generator) virtualNetwork(name, addressPrefix string, subnets []*armnetwork.Subnet, condition interface{}, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				AddressSpace: &mgmtnetwork.AddressSpace{
-					AddressPrefixes: &[]string{
-						addressPrefix,
+		Resource: &armnetwork.VirtualNetwork{
+			Properties: &armnetwork.VirtualNetworkPropertiesFormat{
+				AddressSpace: &armnetwork.AddressSpace{
+					AddressPrefixes: []*string{
+						pointerutils.ToPtr(addressPrefix),
 					},
 				},
 				Subnets: subnets,
@@ -144,13 +144,13 @@ func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtne
 // configurations have to be applied for a peering to work
 func (g *generator) virtualNetworkPeering(name, vnetB string, allowGatewayTransit, useRemoteGateways bool, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetworkPeering{
-			VirtualNetworkPeeringPropertiesFormat: &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
+		Resource: &armnetwork.VirtualNetworkPeering{
+			Properties: &armnetwork.VirtualNetworkPeeringPropertiesFormat{
 				AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
 				AllowForwardedTraffic:     pointerutils.ToPtr(true),
 				AllowGatewayTransit:       pointerutils.ToPtr(allowGatewayTransit),
 				UseRemoteGateways:         pointerutils.ToPtr(useRemoteGateways),
-				RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+				RemoteVirtualNetwork: &armnetwork.SubResource{
 					ID: &vnetB,
 				},
 			},
