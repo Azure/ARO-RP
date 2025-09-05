@@ -644,7 +644,7 @@ go run ./hack/monitor
 ```bash
 podman machine init --now --cpus=4 --memory=4096 -v $HOME:$HOME
 ```
-2. Use the openvpn config file (which is now mounted inside the podman machine) to start the VPN connection:
+2. Use the openvpn config file (which is now mounted inside the podman machine) to start the VPN connection. This requires connexion to the corporate Global VPN.
 ```bash
 podman machine ssh
 sudo rpm-ostree install openvpn
