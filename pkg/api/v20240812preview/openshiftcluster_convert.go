@@ -379,6 +379,7 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 	for i := range oc.Properties.IngressProfiles {
 		oc.Properties.IngressProfiles[i].IP = ""
 	}
+	oc.Properties.ClusterProfile.OIDCIssuer = nil
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil {
 		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if entry, ok := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i]; ok {
