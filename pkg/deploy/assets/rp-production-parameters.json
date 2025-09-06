@@ -189,12 +189,7 @@
             "value": true
         },
         "vmssIpTags": {
-            "value": [
-                {
-                    "type": "FirstPartyUsage",
-                    "value": "/NonProd"
-                }
-            ]
+            "value": []
         },
         "vmssIpTagsDisabledRegions": {
             "value": []

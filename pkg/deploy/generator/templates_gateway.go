@@ -65,12 +65,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 			p.DefaultValue = 3
 		case "vmssIpTags":
 			p.Type = "array"
-			p.DefaultValue = []interface{}{
-				map[string]interface{}{
-					"type":  "FirstPartyUsage",
-					"value": "/NonProd",
-				},
-			}
+			p.DefaultValue = []interface{}{}
 		case "vmssIpTagsDisabledRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{}
