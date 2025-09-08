@@ -26,8 +26,8 @@ const (
 var GitCommit = "unknown"
 
 type Stream struct {
-	Version  *Version `json:"version"`
-	PullSpec string   `json:"-"`
+	Version  Version `json:"version"`
+	PullSpec string  `json:"-"`
 }
 
 // Install stream data for production and INT has moved to RP-Config.

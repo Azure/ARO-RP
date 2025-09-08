@@ -17,7 +17,7 @@ import (
 func TestGetClusterVersion(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
-		wantVers *Version
+		wantVers Version
 		mocks    func(*configv1.ClusterVersion)
 		wantErr  string
 	}{

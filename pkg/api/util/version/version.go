@@ -21,34 +21,44 @@ func (e VersionParseError) Error() string {
 
 var rxVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)`)
 
-type Version struct {
+type Version interface {
+	Lt(Version) bool
+	Gt(Version) bool
+	Eq(Version) bool
+	String() string
+	MarshalJSON() ([]byte, error)
+	Components() ([3]uint32, string)
+	MinorVersion() string
+}
+
+type version struct {
 	V      [3]uint32
 	Suffix string
 }
 
-func (v *Version) String() string {
+func (v *version) String() string {
 	return fmt.Sprintf("%d.%d.%d%s", v.V[0], v.V[1], v.V[2], v.Suffix)
 }
 
-func (v *Version) MarshalJSON() ([]byte, error) {
+func (v *version) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
-func NewVersion(vs ...uint32) *Version {
-	v := &Version{}
+func NewVersion(vs ...uint32) *version {
+	v := &version{}
 
 	copy(v.V[:], vs)
 
 	return v
 }
 
-func ParseVersion(vsn string) (*Version, error) {
+func ParseVersion(vsn string) (*version, error) {
 	m := rxVersion.FindStringSubmatch(strings.TrimSpace(vsn))
 	if m == nil {
 		return nil, VersionParseError{version: vsn}
 	}
 
-	v := &Version{
+	v := &version{
 		Suffix: m[4],
 	}
 
@@ -64,12 +74,13 @@ func ParseVersion(vsn string) (*Version, error) {
 	return v, nil
 }
 
-func (v *Version) Lt(w *Version) bool {
+func (v *version) Lt(_w Version) bool {
+	other, _ := _w.Components()
 	for i := 0; i < 3; i++ {
 		switch {
-		case v.V[i] < w.V[i]:
+		case v.V[i] < other[i]:
 			return true
-		case v.V[i] > w.V[i]:
+		case v.V[i] > other[i]:
 			return false
 		}
 	}
@@ -77,19 +88,18 @@ func (v *Version) Lt(w *Version) bool {
 	return false
 }
 
-func (v *Version) Gt(w *Version) bool {
+func (v *version) Gt(w Version) bool {
 	return !v.Lt(w)
 }
 
-func (v *Version) Eq(w *Version) bool {
-	for i := 0; i < 3; i++ {
-		if v.V[i] != w.V[i] {
-			return false
-		}
-	}
-	return v.Suffix == w.Suffix
+func (v *version) Eq(w Version) bool {
+	return v.String() == w.String()
 }
 
-func (v *Version) MinorVersion() string {
+func (v *version) Components() ([3]uint32, string) {
+	return v.V, v.Suffix
+}
+
+func (v *version) MinorVersion() string {
 	return fmt.Sprintf("%d.%d", v.V[0], v.V[1])
 }
