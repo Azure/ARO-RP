@@ -326,6 +326,13 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	if strings.HasPrefix(restconfig.ServerName, "api.") {
+		// Remove the internal CA data from a public server as api. has proper
+		// certs and the kubeconfig uses the internal serving cert
+		restconfig.CAData = []byte{}
+		restconfig.CAFile = ""
+	}
+
 	cli, err := kubernetes.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
