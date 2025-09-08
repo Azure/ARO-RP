@@ -218,7 +218,7 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 
 	// Update the document with the internal LB zones
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
-		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones = controlPlaneZones
+		oscd.OpenShiftCluster.Properties.Zones = controlPlaneZones
 		return nil
 	})
 	if err != nil {
