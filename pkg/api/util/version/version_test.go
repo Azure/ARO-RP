@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewVersion(t *testing.T) {
@@ -67,11 +68,11 @@ func TestParseVersion(t *testing.T) {
 		t.Run(tt.vsn, func(t *testing.T) {
 			got, err := ParseVersion(tt.vsn)
 			if tt.wantErr != "" {
-				assert.ErrorContains(t, err, tt.wantErr)
+				require.ErrorContains(t, err, tt.wantErr)
 			} else if err != nil {
 				t.Error(err)
 			}
-			assert.Equal(t, got, tt.want)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
