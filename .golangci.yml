@@ -5,6 +5,7 @@ run:
     - containers_image_openpgp
     - exclude_graphdriver_devicemapper
     - exclude_graphdriver_btrfs
+  modules-download-mode: readonly
 linters:
   default: none
   enable:
