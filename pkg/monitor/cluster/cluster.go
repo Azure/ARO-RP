@@ -65,8 +65,8 @@ type Monitor struct {
 	namespacesToMonitor []string
 
 	// OpenShift version of the cluster being monitored
-	clusterDesiredVersion *version.Version
-	clusterActualVersion  *version.Version
+	clusterDesiredVersion version.Version
+	clusterActualVersion  version.Version
 
 	// Limit for items per pagination query
 	queryLimit int

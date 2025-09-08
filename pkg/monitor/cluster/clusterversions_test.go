@@ -225,8 +225,8 @@ func TestPrefetchClusterVersion(t *testing.T) {
 	for _, tt := range []struct {
 		name               string
 		cv                 *configv1.ClusterVersion
-		wantActualVersion  *version.Version
-		wantDesiredVersion *version.Version
+		wantActualVersion  version.Version
+		wantDesiredVersion version.Version
 		wantErr            error
 		wantLogs           []map[string]types.GomegaMatcher
 	}{
@@ -256,8 +256,8 @@ func TestPrefetchClusterVersion(t *testing.T) {
 					},
 				},
 			},
-			wantActualVersion:  &version.Version{V: [3]uint32{4, 5, 1}},
-			wantDesiredVersion: &version.Version{V: [3]uint32{4, 5, 3}},
+			wantActualVersion:  version.NewVersion(4, 5, 1),
+			wantDesiredVersion: version.NewVersion(4, 5, 3),
 		},
 		{
 			name: "malformed desired Version",
@@ -291,7 +291,7 @@ func TestPrefetchClusterVersion(t *testing.T) {
 					"msg":   gomega.Equal("failure parsing desired ClusterVersion: could not parse version \"sporngs\""),
 				},
 			},
-			wantActualVersion: &version.Version{V: [3]uint32{4, 5, 1}},
+			wantActualVersion: version.NewVersion(4, 5, 1),
 		},
 		{
 			name: "malformed actual Version",
@@ -325,7 +325,7 @@ func TestPrefetchClusterVersion(t *testing.T) {
 					"msg":   gomega.Equal("failure parsing ClusterVersion: could not parse version \"sporngs\""),
 				},
 			},
-			wantDesiredVersion: &version.Version{V: [3]uint32{4, 6, 1}},
+			wantDesiredVersion: version.NewVersion(4, 6, 1),
 		},
 		{
 			name:    "missing clusterversion",
