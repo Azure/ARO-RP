@@ -5260,8 +5260,8 @@ func TestValidateIdentityTenantID(t *testing.T) {
 	}
 }
 
-func getMIWIUpgradeableToVersion() *version.Version {
-	ver := version.DefaultInstallStream.Version.V
+func getMIWIUpgradeableToVersion() version.Version {
+	ver, _ := version.DefaultInstallStream.Version.Components()
 	return version.NewVersion(ver[0], ver[1]+1, ver[2])
 }
 

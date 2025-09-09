@@ -58,7 +58,7 @@ func (mr *MockWorkaroundMockRecorder) Ensure(arg0 any) *gomock.Call {
 }
 
 // IsRequired mocks base method.
-func (m *MockWorkaround) IsRequired(clusterVersion *version.Version, cluster *v1alpha1.Cluster) bool {
+func (m *MockWorkaround) IsRequired(clusterVersion version.Version, cluster *v1alpha1.Cluster) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRequired", clusterVersion, cluster)
 	ret0, _ := ret[0].(bool)

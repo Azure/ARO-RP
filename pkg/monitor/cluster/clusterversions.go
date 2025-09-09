@@ -72,16 +72,20 @@ func (mon *Monitor) prefetchClusterVersion(ctx context.Context) error {
 	}
 
 	av := actualVersion(cv)
-	mon.clusterActualVersion, err = version.ParseVersion(av)
+	avobj, err := version.ParseVersion(av)
 	if err != nil {
 		mon.log.Errorf("failure parsing ClusterVersion: %s", err.Error())
+	} else {
+		mon.clusterActualVersion = avobj
 	}
 
 	dv := desiredVersion(cv)
 	if dv != "" {
-		mon.clusterDesiredVersion, err = version.ParseVersion(dv)
+		dvobj, err := version.ParseVersion(dv)
 		if err != nil {
 			mon.log.Errorf("failure parsing desired ClusterVersion: %s", err.Error())
+		} else {
+			mon.clusterDesiredVersion = dvobj
 		}
 	}
 
