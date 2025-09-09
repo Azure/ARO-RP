@@ -28,13 +28,14 @@ func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 
 // FakeTemplateClient is a FakeTemplateClient
 type FakeTemplateClient struct {
-	lock            sync.RWMutex
-	jsonHandle      *codec.JsonHandle
-	templates       map[string]*pkg.Template
-	triggerHandlers map[string]fakeTemplateTriggerHandler
-	queryHandlers   map[string]fakeTemplateQueryHandler
-	sorter          func([]*pkg.Template)
-	etag            int
+	lock                sync.RWMutex
+	jsonHandle          *codec.JsonHandle
+	templates           map[string]*pkg.Template
+	triggerHandlers     map[string]fakeTemplateTriggerHandler
+	queryHandlers       map[string]fakeTemplateQueryHandler
+	sorter              func([]*pkg.Template)
+	etag                int
+	changeFeedIterators []*fakeTemplateIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.Template, *pkg.Template) bool
@@ -156,6 +157,10 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 
 	c.templates[template.ID] = template
 
+	if err = c.updateChangeFeeds(template); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(template)
 }
 
@@ -235,7 +240,9 @@ func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, te
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a Template does not remove it from the existing change feeds
+// - when a Template is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a template from the changefeed is actually the most recent version.
 func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -244,7 +251,26 @@ func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 		return NewFakeTemplateErroringRawIterator(c.err)
 	}
 
-	return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeTemplateIterator)
+	if !ok {
+		return NewFakeTemplateErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeTemplateClient) updateChangeFeeds(template *pkg.Template) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(template)
+		if err != nil {
+			return err
+		}
+
+		currentIterator.templates = append(currentIterator.templates, newTpl)
+		currentIterator.done = false
+	}
+	return nil
 }
 
 func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, template *pkg.Template, options *Options) error {
