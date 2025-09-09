@@ -4,6 +4,7 @@
 > This document outlines the development dependencies required to build the RP code.
 
 ## Table Of Contents
+
 - [Prepare Your Development Environment](#prepare-your-development-environment)
   - [Table Of Contents](#table-of-contents)
   - [Containerized RP Software Required](#containerized-rp-software-required)
@@ -25,20 +26,19 @@
   - [Getting Started With Docker Compose](#getting-started-with-docker-compose)
   - [Troubleshooting](#troubleshooting)
 
-
 ## Containerized RP Software Required
 
 > [!TIP]
 > For a minimal development environment, the recommended approach is to use the containerized setup, which requires only the locally installed binaries listed below.
 
-* az
-* make
-* podman
-* openvpn
+- az
+- make
+- podman
+- openvpn
 
 > [!NOTE]
 > Instructions for these binaries are provided below. Refer to the [Podman](#install-podman-and-podman-docker) section for setup details specific to your operating system (Linux or macOS with Podman Machine).
-
+>
 > [!IMPORTANT]
 > With the local binaries installed you can then refer to the [Getting Started](#getting-started) section below to obtain the source code before deploying a development RP.
 >
@@ -102,6 +102,7 @@
     ```sh
     curl https://pyenv.run | bash
     ```
+
 2. Append the following to your shell's RC file
 
     ```sh
@@ -109,6 +110,7 @@
     eval "$(pyenv init --path)"
     eval "$(pyenv init -)"
     ```
+
 3. Install required Python version using `pyenv`
 
     ```sh
@@ -177,7 +179,7 @@
 > podman machine start
 > ```
 
-2. Disable Docker compatibility mode for `az acr login` support
+1. Disable Docker compatibility mode for `az acr login` support
 
     ```sh
     sudo touch /etc/containers/nodocker

@@ -97,6 +97,6 @@ In the example below we are going to apply a custom `kube-apiserver` image.
 
 1. Verify that `kube-apiserver-NUMBER` containers from the list have a new image:
 
-    ```
+    ```bash
     oc -n openshift-kube-apiserver get pods -l app=openshift-kube-apiserver -o json | jq ".items[].spec.containers[] | {name: .name, image: .image}"
     ```
