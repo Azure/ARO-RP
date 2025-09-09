@@ -29,8 +29,8 @@ require (
 	github.com/Azure/msi-dataplane v0.4.3
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
-	github.com/containers/image/v5 v5.36.0
-	github.com/containers/podman/v5 v5.5.2
+	github.com/containers/image/v5 v5.36.2
+	github.com/containers/podman/v5 v5.6.1
 	github.com/coreos/go-oidc/v3 v3.14.1
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.5.1-0.20231103132048-7d375ecc2b09
@@ -60,7 +60,7 @@ require (
 	github.com/microsoft/kiota-serialization-text-go v1.1.2
 	github.com/microsoftgraph/msgraph-sdk-go-core v1.3.2
 	github.com/onsi/ginkgo/v2 v2.23.4
-	github.com/onsi/gomega v1.37.0
+	github.com/onsi/gomega v1.38.0
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20221109005544-7de84dff5081
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
@@ -136,19 +136,19 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
-	github.com/containers/buildah v1.40.1 // indirect
-	github.com/containers/common v0.64.0 // indirect
+	github.com/containers/buildah v1.41.4 // indirect
+	github.com/containers/common v0.64.2 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.2.1 // indirect
 	github.com/containers/psgo v1.9.0 // indirect
-	github.com/containers/storage v1.59.0 // indirect
+	github.com/containers/storage v1.59.1 // indirect
 	github.com/coreos/vcontext v0.0.0-20231102161604-685dc7299dc5 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/disiqueira/gotree/v3 v3.0.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v28.3.2+incompatible // indirect
+	github.com/docker/docker v28.3.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -258,7 +258,7 @@ require (
 	github.com/sylabs/sif/v2 v2.21.1 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.3 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
-	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/vbauerster/mpb/v8 v8.10.2 // indirect
 	github.com/vmihailenco/msgpack/v4 v4.3.13 // indirect
