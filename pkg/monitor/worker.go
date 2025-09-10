@@ -282,13 +282,12 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	var monitors []monitoring.Monitor
-	var wg sync.WaitGroup
 
 	hiveClusterManager, ok := mon.hiveClusterManagers[1]
 	if !ok {
 		log.Info("skipping: no hive cluster manager")
 	} else {
-		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, &wg, hiveClusterManager)
+		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
 		if err != nil {
 			log.Error(err)
 			mon.m.EmitGauge("monitor.hive.failedworker", 1, map[string]string{
@@ -312,7 +311,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 
 	monitors = append(monitors, c, nsgMon)
 	allJobsDone := make(chan bool)
-	go execute(ctx, log, allJobsDone, &wg, monitors)
+	go execute(ctx, log, allJobsDone, monitors)
 
 	select {
 	case <-allJobsDone:
@@ -322,7 +321,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 }
 
-func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, wg *sync.WaitGroup, monitors []monitoring.Monitor) {
+func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors []monitoring.Monitor) {
+	var wg sync.WaitGroup
+
 	for _, monitor := range monitors {
 		wg.Add(1)
 		go func() {
