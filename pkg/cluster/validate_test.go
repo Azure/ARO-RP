@@ -131,10 +131,10 @@ func TestValidateZones(t *testing.T) {
 		},
 		{
 			name:                  "error from resourceskus",
-			resourceSkusClientErr: errors.New("error time :)"),
+			resourceSkusClientErr: errTestSKUFetchError,
 			controlPlaneSkuZones:  []string{"1", "2"},
 			workerSkuZones:        []string{"1", "2", "3"},
-			wantErrs:              []error{errListVMResourceSKUs, errors.New("error time :)")},
+			wantErrs:              []error{errListVMResourceSKUs, errTestSKUFetchError},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
