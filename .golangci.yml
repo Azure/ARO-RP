@@ -178,6 +178,7 @@ linters:
         text: "SA1019: codec.BasicHandle is deprecated"
       - linters:
           - importas
+          - staticcheck
         path: pkg/client/(.+)\.go
       - linters:
           - importas
@@ -217,3 +218,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - pkg/client

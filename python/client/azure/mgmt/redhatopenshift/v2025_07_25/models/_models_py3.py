@@ -642,7 +642,7 @@ class TrackedResource(Resource):
         self.location = location
 
 
-class OpenShiftCluster(TrackedResource):
+class OpenShiftCluster(TrackedResource):  # pylint: disable=too-many-instance-attributes
     """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
     Variables are only populated by the server, and will be ignored when sending a request.
@@ -664,11 +664,36 @@ class OpenShiftCluster(TrackedResource):
     :vartype tags: dict[str, str]
     :ivar location: The geo-location where the resource lives. Required.
     :vartype location: str
-    :ivar properties: The cluster properties.
-    :vartype properties: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftClusterProperties
     :ivar identity: Identity stores information about the cluster MSI(s) in a workload identity
      cluster.
     :vartype identity: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ManagedServiceIdentity
+    :ivar provisioning_state: The cluster provisioning state. Known values are: "AdminUpdating",
+     "Canceled", "Creating", "Deleting", "Failed", "Succeeded", and "Updating".
+    :vartype provisioning_state: str or
+     ~azure.mgmt.redhatopenshift.v2025_07_25.models.ProvisioningState
+    :ivar cluster_profile: The cluster profile.
+    :vartype cluster_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ClusterProfile
+    :ivar console_profile: The console profile.
+    :vartype console_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ConsoleProfile
+    :ivar service_principal_profile: The cluster service principal profile.
+    :vartype service_principal_profile:
+     ~azure.mgmt.redhatopenshift.v2025_07_25.models.ServicePrincipalProfile
+    :ivar platform_workload_identity_profile: The workload identity profile.
+    :vartype platform_workload_identity_profile:
+     ~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityProfile
+    :ivar network_profile: The cluster network profile.
+    :vartype network_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.NetworkProfile
+    :ivar master_profile: The cluster master profile.
+    :vartype master_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.MasterProfile
+    :ivar worker_profiles: The cluster worker profiles.
+    :vartype worker_profiles: list[~azure.mgmt.redhatopenshift.v2025_07_25.models.WorkerProfile]
+    :ivar worker_profiles_status: The cluster worker profiles status.
+    :vartype worker_profiles_status:
+     list[~azure.mgmt.redhatopenshift.v2025_07_25.models.WorkerProfile]
+    :ivar apiserver_profile: The cluster API server profile.
+    :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.APIServerProfile
+    :ivar ingress_profiles: The cluster ingress profiles.
+    :vartype ingress_profiles: list[~azure.mgmt.redhatopenshift.v2025_07_25.models.IngressProfile]
     """
 
     _validation = {
@@ -677,6 +702,7 @@ class OpenShiftCluster(TrackedResource):
         "type": {"readonly": True},
         "system_data": {"readonly": True},
         "location": {"required": True},
+        "worker_profiles_status": {"readonly": True},
     }
 
     _attribute_map = {
@@ -686,8 +712,21 @@ class OpenShiftCluster(TrackedResource):
         "system_data": {"key": "systemData", "type": "SystemData"},
         "tags": {"key": "tags", "type": "{str}"},
         "location": {"key": "location", "type": "str"},
-        "properties": {"key": "properties", "type": "OpenShiftClusterProperties"},
         "identity": {"key": "identity", "type": "ManagedServiceIdentity"},
+        "provisioning_state": {"key": "properties.provisioningState", "type": "str"},
+        "cluster_profile": {"key": "properties.clusterProfile", "type": "ClusterProfile"},
+        "console_profile": {"key": "properties.consoleProfile", "type": "ConsoleProfile"},
+        "service_principal_profile": {"key": "properties.servicePrincipalProfile", "type": "ServicePrincipalProfile"},
+        "platform_workload_identity_profile": {
+            "key": "properties.platformWorkloadIdentityProfile",
+            "type": "PlatformWorkloadIdentityProfile",
+        },
+        "network_profile": {"key": "properties.networkProfile", "type": "NetworkProfile"},
+        "master_profile": {"key": "properties.masterProfile", "type": "MasterProfile"},
+        "worker_profiles": {"key": "properties.workerProfiles", "type": "[WorkerProfile]"},
+        "worker_profiles_status": {"key": "properties.workerProfilesStatus", "type": "[WorkerProfile]"},
+        "apiserver_profile": {"key": "properties.apiserverProfile", "type": "APIServerProfile"},
+        "ingress_profiles": {"key": "properties.ingressProfiles", "type": "[IngressProfile]"},
     }
 
     def __init__(
@@ -695,8 +734,17 @@ class OpenShiftCluster(TrackedResource):
         *,
         location: str,
         tags: Optional[Dict[str, str]] = None,
-        properties: Optional["_models.OpenShiftClusterProperties"] = None,
         identity: Optional["_models.ManagedServiceIdentity"] = None,
+        provisioning_state: Optional[Union[str, "_models.ProvisioningState"]] = None,
+        cluster_profile: Optional["_models.ClusterProfile"] = None,
+        console_profile: Optional["_models.ConsoleProfile"] = None,
+        service_principal_profile: Optional["_models.ServicePrincipalProfile"] = None,
+        platform_workload_identity_profile: Optional["_models.PlatformWorkloadIdentityProfile"] = None,
+        network_profile: Optional["_models.NetworkProfile"] = None,
+        master_profile: Optional["_models.MasterProfile"] = None,
+        worker_profiles: Optional[List["_models.WorkerProfile"]] = None,
+        apiserver_profile: Optional["_models.APIServerProfile"] = None,
+        ingress_profiles: Optional[List["_models.IngressProfile"]] = None,
         **kwargs: Any
     ) -> None:
         """
@@ -704,16 +752,48 @@ class OpenShiftCluster(TrackedResource):
         :paramtype tags: dict[str, str]
         :keyword location: The geo-location where the resource lives. Required.
         :paramtype location: str
-        :keyword properties: The cluster properties.
-        :paramtype properties:
-         ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftClusterProperties
         :keyword identity: Identity stores information about the cluster MSI(s) in a workload identity
          cluster.
         :paramtype identity: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ManagedServiceIdentity
+        :keyword provisioning_state: The cluster provisioning state. Known values are: "AdminUpdating",
+         "Canceled", "Creating", "Deleting", "Failed", "Succeeded", and "Updating".
+        :paramtype provisioning_state: str or
+         ~azure.mgmt.redhatopenshift.v2025_07_25.models.ProvisioningState
+        :keyword cluster_profile: The cluster profile.
+        :paramtype cluster_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ClusterProfile
+        :keyword console_profile: The console profile.
+        :paramtype console_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ConsoleProfile
+        :keyword service_principal_profile: The cluster service principal profile.
+        :paramtype service_principal_profile:
+         ~azure.mgmt.redhatopenshift.v2025_07_25.models.ServicePrincipalProfile
+        :keyword platform_workload_identity_profile: The workload identity profile.
+        :paramtype platform_workload_identity_profile:
+         ~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityProfile
+        :keyword network_profile: The cluster network profile.
+        :paramtype network_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.NetworkProfile
+        :keyword master_profile: The cluster master profile.
+        :paramtype master_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.MasterProfile
+        :keyword worker_profiles: The cluster worker profiles.
+        :paramtype worker_profiles: list[~azure.mgmt.redhatopenshift.v2025_07_25.models.WorkerProfile]
+        :keyword apiserver_profile: The cluster API server profile.
+        :paramtype apiserver_profile: ~azure.mgmt.redhatopenshift.v2025_07_25.models.APIServerProfile
+        :keyword ingress_profiles: The cluster ingress profiles.
+        :paramtype ingress_profiles:
+         list[~azure.mgmt.redhatopenshift.v2025_07_25.models.IngressProfile]
         """
         super().__init__(tags=tags, location=location, **kwargs)
-        self.properties = properties
         self.identity = identity
+        self.provisioning_state = provisioning_state
+        self.cluster_profile = cluster_profile
+        self.console_profile = console_profile
+        self.service_principal_profile = service_principal_profile
+        self.platform_workload_identity_profile = platform_workload_identity_profile
+        self.network_profile = network_profile
+        self.master_profile = master_profile
+        self.worker_profiles = worker_profiles
+        self.worker_profiles_status = None
+        self.apiserver_profile = apiserver_profile
+        self.ingress_profiles = ingress_profiles
 
 
 class OpenShiftClusterAdminKubeconfig(_serialization.Model):
@@ -796,11 +876,16 @@ class OpenShiftClusterList(_serialization.Model):
         self.next_link = next_link
 
 
-class OpenShiftClusterProperties(_serialization.Model):  # pylint: disable=too-many-instance-attributes
-    """OpenShiftClusterProperties represents an OpenShift cluster's properties.
+class OpenShiftClusterUpdate(_serialization.Model):  # pylint: disable=too-many-instance-attributes
+    """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
+    :ivar tags: The resource tags.
+    :vartype tags: dict[str, str]
+    :ivar identity: Identity stores information about the cluster MSI(s) in a workload identity
+     cluster.
+    :vartype identity: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ManagedServiceIdentity
     :ivar provisioning_state: The cluster provisioning state. Known values are: "AdminUpdating",
      "Canceled", "Creating", "Deleting", "Failed", "Succeeded", and "Updating".
     :vartype provisioning_state: str or
@@ -835,25 +920,29 @@ class OpenShiftClusterProperties(_serialization.Model):  # pylint: disable=too-m
     }
 
     _attribute_map = {
-        "provisioning_state": {"key": "provisioningState", "type": "str"},
-        "cluster_profile": {"key": "clusterProfile", "type": "ClusterProfile"},
-        "console_profile": {"key": "consoleProfile", "type": "ConsoleProfile"},
-        "service_principal_profile": {"key": "servicePrincipalProfile", "type": "ServicePrincipalProfile"},
+        "tags": {"key": "tags", "type": "{str}"},
+        "identity": {"key": "identity", "type": "ManagedServiceIdentity"},
+        "provisioning_state": {"key": "properties.provisioningState", "type": "str"},
+        "cluster_profile": {"key": "properties.clusterProfile", "type": "ClusterProfile"},
+        "console_profile": {"key": "properties.consoleProfile", "type": "ConsoleProfile"},
+        "service_principal_profile": {"key": "properties.servicePrincipalProfile", "type": "ServicePrincipalProfile"},
         "platform_workload_identity_profile": {
-            "key": "platformWorkloadIdentityProfile",
+            "key": "properties.platformWorkloadIdentityProfile",
             "type": "PlatformWorkloadIdentityProfile",
         },
-        "network_profile": {"key": "networkProfile", "type": "NetworkProfile"},
-        "master_profile": {"key": "masterProfile", "type": "MasterProfile"},
-        "worker_profiles": {"key": "workerProfiles", "type": "[WorkerProfile]"},
-        "worker_profiles_status": {"key": "workerProfilesStatus", "type": "[WorkerProfile]"},
-        "apiserver_profile": {"key": "apiserverProfile", "type": "APIServerProfile"},
-        "ingress_profiles": {"key": "ingressProfiles", "type": "[IngressProfile]"},
+        "network_profile": {"key": "properties.networkProfile", "type": "NetworkProfile"},
+        "master_profile": {"key": "properties.masterProfile", "type": "MasterProfile"},
+        "worker_profiles": {"key": "properties.workerProfiles", "type": "[WorkerProfile]"},
+        "worker_profiles_status": {"key": "properties.workerProfilesStatus", "type": "[WorkerProfile]"},
+        "apiserver_profile": {"key": "properties.apiserverProfile", "type": "APIServerProfile"},
+        "ingress_profiles": {"key": "properties.ingressProfiles", "type": "[IngressProfile]"},
     }
 
     def __init__(
         self,
         *,
+        tags: Optional[Dict[str, str]] = None,
+        identity: Optional["_models.ManagedServiceIdentity"] = None,
         provisioning_state: Optional[Union[str, "_models.ProvisioningState"]] = None,
         cluster_profile: Optional["_models.ClusterProfile"] = None,
         console_profile: Optional["_models.ConsoleProfile"] = None,
@@ -867,6 +956,11 @@ class OpenShiftClusterProperties(_serialization.Model):  # pylint: disable=too-m
         **kwargs: Any
     ) -> None:
         """
+        :keyword tags: The resource tags.
+        :paramtype tags: dict[str, str]
+        :keyword identity: Identity stores information about the cluster MSI(s) in a workload identity
+         cluster.
+        :paramtype identity: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ManagedServiceIdentity
         :keyword provisioning_state: The cluster provisioning state. Known values are: "AdminUpdating",
          "Canceled", "Creating", "Deleting", "Failed", "Succeeded", and "Updating".
         :paramtype provisioning_state: str or
@@ -894,6 +988,8 @@ class OpenShiftClusterProperties(_serialization.Model):  # pylint: disable=too-m
          list[~azure.mgmt.redhatopenshift.v2025_07_25.models.IngressProfile]
         """
         super().__init__(**kwargs)
+        self.tags = tags
+        self.identity = identity
         self.provisioning_state = provisioning_state
         self.cluster_profile = cluster_profile
         self.console_profile = console_profile
@@ -905,48 +1001,6 @@ class OpenShiftClusterProperties(_serialization.Model):  # pylint: disable=too-m
         self.worker_profiles_status = None
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
-
-
-class OpenShiftClusterUpdate(_serialization.Model):
-    """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
-
-    :ivar tags: The resource tags.
-    :vartype tags: dict[str, str]
-    :ivar properties: The cluster properties.
-    :vartype properties: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftClusterProperties
-    :ivar identity: Identity stores information about the cluster MSI(s) in a workload identity
-     cluster.
-    :vartype identity: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ManagedServiceIdentity
-    """
-
-    _attribute_map = {
-        "tags": {"key": "tags", "type": "{str}"},
-        "properties": {"key": "properties", "type": "OpenShiftClusterProperties"},
-        "identity": {"key": "identity", "type": "ManagedServiceIdentity"},
-    }
-
-    def __init__(
-        self,
-        *,
-        tags: Optional[Dict[str, str]] = None,
-        properties: Optional["_models.OpenShiftClusterProperties"] = None,
-        identity: Optional["_models.ManagedServiceIdentity"] = None,
-        **kwargs: Any
-    ) -> None:
-        """
-        :keyword tags: The resource tags.
-        :paramtype tags: dict[str, str]
-        :keyword properties: The cluster properties.
-        :paramtype properties:
-         ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftClusterProperties
-        :keyword identity: Identity stores information about the cluster MSI(s) in a workload identity
-         cluster.
-        :paramtype identity: ~azure.mgmt.redhatopenshift.v2025_07_25.models.ManagedServiceIdentity
-        """
-        super().__init__(**kwargs)
-        self.tags = tags
-        self.properties = properties
-        self.identity = identity
 
 
 class ProxyResource(Resource):
@@ -985,8 +1039,8 @@ class OpenShiftVersion(ProxyResource):
     :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2025_07_25.models.SystemData
-    :ivar properties: The properties for the OpenShiftVersion resource.
-    :vartype properties: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftVersionProperties
+    :ivar version: Version represents the version to create the cluster at.
+    :vartype version: str
     """
 
     _validation = {
@@ -1001,17 +1055,16 @@ class OpenShiftVersion(ProxyResource):
         "name": {"key": "name", "type": "str"},
         "type": {"key": "type", "type": "str"},
         "system_data": {"key": "systemData", "type": "SystemData"},
-        "properties": {"key": "properties", "type": "OpenShiftVersionProperties"},
+        "version": {"key": "properties.version", "type": "str"},
     }
 
-    def __init__(self, *, properties: Optional["_models.OpenShiftVersionProperties"] = None, **kwargs: Any) -> None:
+    def __init__(self, *, version: Optional[str] = None, **kwargs: Any) -> None:
         """
-        :keyword properties: The properties for the OpenShiftVersion resource.
-        :paramtype properties:
-         ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftVersionProperties
+        :keyword version: Version represents the version to create the cluster at.
+        :paramtype version: str
         """
         super().__init__(**kwargs)
-        self.properties = properties
+        self.version = version
 
 
 class OpenShiftVersionList(_serialization.Model):
@@ -1044,26 +1097,6 @@ class OpenShiftVersionList(_serialization.Model):
         super().__init__(**kwargs)
         self.value = value
         self.next_link = next_link
-
-
-class OpenShiftVersionProperties(_serialization.Model):
-    """OpenShiftVersionProperties represents the properties of an OpenShiftVersion.
-
-    :ivar version: Version represents the version to create the cluster at.
-    :vartype version: str
-    """
-
-    _attribute_map = {
-        "version": {"key": "version", "type": "str"},
-    }
-
-    def __init__(self, *, version: Optional[str] = None, **kwargs: Any) -> None:
-        """
-        :keyword version: Version represents the version to create the cluster at.
-        :paramtype version: str
-        """
-        super().__init__(**kwargs)
-        self.version = version
 
 
 class Operation(_serialization.Model):
@@ -1266,9 +1299,13 @@ class PlatformWorkloadIdentityRoleSet(ProxyResource):
     :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2025_07_25.models.SystemData
-    :ivar properties: The properties for the PlatformWorkloadIdentityRoleSet resource.
-    :vartype properties:
-     ~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityRoleSetProperties
+    :ivar open_shift_version: OpenShiftVersion represents the version associated with this set of
+     roles.
+    :vartype open_shift_version: str
+    :ivar platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
+     roles associated with this version.
+    :vartype platform_workload_identity_roles:
+     list[~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityRole]
     """
 
     _validation = {
@@ -1283,19 +1320,32 @@ class PlatformWorkloadIdentityRoleSet(ProxyResource):
         "name": {"key": "name", "type": "str"},
         "type": {"key": "type", "type": "str"},
         "system_data": {"key": "systemData", "type": "SystemData"},
-        "properties": {"key": "properties", "type": "PlatformWorkloadIdentityRoleSetProperties"},
+        "open_shift_version": {"key": "properties.openShiftVersion", "type": "str"},
+        "platform_workload_identity_roles": {
+            "key": "properties.platformWorkloadIdentityRoles",
+            "type": "[PlatformWorkloadIdentityRole]",
+        },
     }
 
     def __init__(
-        self, *, properties: Optional["_models.PlatformWorkloadIdentityRoleSetProperties"] = None, **kwargs: Any
+        self,
+        *,
+        open_shift_version: Optional[str] = None,
+        platform_workload_identity_roles: Optional[List["_models.PlatformWorkloadIdentityRole"]] = None,
+        **kwargs: Any
     ) -> None:
         """
-        :keyword properties: The properties for the PlatformWorkloadIdentityRoleSet resource.
-        :paramtype properties:
-         ~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityRoleSetProperties
+        :keyword open_shift_version: OpenShiftVersion represents the version associated with this set
+         of roles.
+        :paramtype open_shift_version: str
+        :keyword platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
+         roles associated with this version.
+        :paramtype platform_workload_identity_roles:
+         list[~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityRole]
         """
         super().__init__(**kwargs)
-        self.properties = properties
+        self.open_shift_version = open_shift_version
+        self.platform_workload_identity_roles = platform_workload_identity_roles
 
 
 class PlatformWorkloadIdentityRoleSetList(_serialization.Model):
@@ -1330,48 +1380,6 @@ class PlatformWorkloadIdentityRoleSetList(_serialization.Model):
         super().__init__(**kwargs)
         self.value = value
         self.next_link = next_link
-
-
-class PlatformWorkloadIdentityRoleSetProperties(_serialization.Model):  # pylint: disable=name-too-long
-    """PlatformWorkloadIdentityRoleSetProperties represents the properties of a
-    PlatformWorkloadIdentityRoleSet resource.
-
-    :ivar open_shift_version: OpenShiftVersion represents the version associated with this set of
-     roles.
-    :vartype open_shift_version: str
-    :ivar platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
-     roles associated with this version.
-    :vartype platform_workload_identity_roles:
-     list[~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityRole]
-    """
-
-    _attribute_map = {
-        "open_shift_version": {"key": "openShiftVersion", "type": "str"},
-        "platform_workload_identity_roles": {
-            "key": "platformWorkloadIdentityRoles",
-            "type": "[PlatformWorkloadIdentityRole]",
-        },
-    }
-
-    def __init__(
-        self,
-        *,
-        open_shift_version: Optional[str] = None,
-        platform_workload_identity_roles: Optional[List["_models.PlatformWorkloadIdentityRole"]] = None,
-        **kwargs: Any
-    ) -> None:
-        """
-        :keyword open_shift_version: OpenShiftVersion represents the version associated with this set
-         of roles.
-        :paramtype open_shift_version: str
-        :keyword platform_workload_identity_roles: PlatformWorkloadIdentityRoles represents the set of
-         roles associated with this version.
-        :paramtype platform_workload_identity_roles:
-         list[~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityRole]
-        """
-        super().__init__(**kwargs)
-        self.open_shift_version = open_shift_version
-        self.platform_workload_identity_roles = platform_workload_identity_roles
 
 
 class ServicePrincipalProfile(_serialization.Model):
