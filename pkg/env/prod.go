@@ -287,7 +287,7 @@ func (p *prod) InitializeAuthorizers() error {
 
 	var adminCertPool *x509.CertPool
 
-	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
+	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) { // If we're in prod, use GetIssuers to grab the CA bundle(s)
 		var issuerPkiUrls []string
 		for _, ca := range p.Environment().PkiCaNames {
 			issuerPkiUrls = append(issuerPkiUrls, fmt.Sprintf(p.Environment().PkiIssuerUrlTemplate, ca))
@@ -302,7 +302,7 @@ func (p *prod) InitializeAuthorizers() error {
 		if err != nil {
 			return err
 		}
-	} else {
+	} else { // Otherwise we're in local dev - read the CA bundle(s) from a file
 		caBundle, err := os.ReadFile(AdminCABundlePath)
 		if err != nil {
 			return err
