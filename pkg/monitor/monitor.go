@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -18,6 +19,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/monitor/azure/nsg"
+	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
+	hivemon "github.com/Azure/ARO-RP/pkg/monitor/hive"
+	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
@@ -51,6 +56,10 @@ type monitor struct {
 	startTime      time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager
+
+	clusterMonitorBuilder func(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (monitoring.Monitor, error)
+	nsgMonitorBuilder     func(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor
+	hiveMonitorBuilder    func(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (monitoring.Monitor, error)
 }
 
 // subscriptionInfo stores TenantID for a given subscription. We don't store the
@@ -82,6 +91,10 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		startTime: time.Now(),
 
 		hiveClusterManagers: map[int]hive.ClusterManager{},
+
+		clusterMonitorBuilder: cluster.NewMonitor,
+		nsgMonitorBuilder:     nsg.NewMonitor,
+		hiveMonitorBuilder:    hivemon.NewHiveMonitor,
 	}
 }
 
@@ -127,6 +140,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 		}
 
 		// try to become master and share buckets across registered monitors
+		mon.baseLog.Info("Trying to become master")
 		err = mon.master(ctx)
 		if err != nil {
 			mon.baseLog.Error(err)
@@ -140,6 +154,9 @@ func (mon *monitor) Run(ctx context.Context) error {
 			mon.lastBucketlist.Store(time.Now())
 		}
 
+		if err = ctx.Err(); err != nil {
+			return err
+		}
 		<-t.C
 	}
 }

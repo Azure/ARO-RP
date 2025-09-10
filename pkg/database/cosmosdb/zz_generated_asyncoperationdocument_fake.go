@@ -37,6 +37,7 @@ type FakeAsyncOperationDocumentClient struct {
 	queryHandlers           map[string]fakeAsyncOperationDocumentQueryHandler
 	sorter                  func([]*pkg.AsyncOperationDocument)
 	etag                    int
+	changeFeedIterators     []*fakeAsyncOperationDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.AsyncOperationDocument, *pkg.AsyncOperationDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeAsyncOperationDocumentClient) apply(ctx context.Context, partitionk
 
 	c.asyncOperationDocuments[asyncOperationDocument.ID] = asyncOperationDocument
 
+	if err = c.updateChangeFeeds(asyncOperationDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(asyncOperationDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakeAsyncOperationDocumentClient) ChangeFeed(*Options) AsyncOperationDo
 		return NewFakeAsyncOperationDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeAsyncOperationDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeAsyncOperationDocumentIterator)
+	if !ok {
+		return NewFakeAsyncOperationDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeAsyncOperationDocumentClient) updateChangeFeeds(asyncOperationDocument *pkg.AsyncOperationDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(asyncOperationDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.asyncOperationDocuments = append(currentIterator.asyncOperationDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakeAsyncOperationDocumentClient) processPreTriggers(ctx context.Context, asyncOperationDocument *pkg.AsyncOperationDocument, options *Options) error {

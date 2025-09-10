@@ -37,6 +37,7 @@ type FakePlatformWorkloadIdentityRoleSetDocumentClient struct {
 	queryHandlers                            map[string]fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler
 	sorter                                   func([]*pkg.PlatformWorkloadIdentityRoleSetDocument)
 	etag                                     int
+	changeFeedIterators                      []*fakePlatformWorkloadIdentityRoleSetDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.PlatformWorkloadIdentityRoleSetDocument, *pkg.PlatformWorkloadIdentityRoleSetDocument) bool
@@ -158,6 +159,10 @@ func (c *FakePlatformWorkloadIdentityRoleSetDocumentClient) apply(ctx context.Co
 
 	c.platformWorkloadIdentityRoleSetDocuments[platformWorkloadIdentityRoleSetDocument.ID] = platformWorkloadIdentityRoleSetDocument
 
+	if err = c.updateChangeFeeds(platformWorkloadIdentityRoleSetDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(platformWorkloadIdentityRoleSetDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakePlatformWorkloadIdentityRoleSetDocumentClient) ChangeFeed(*Options)
 		return NewFakePlatformWorkloadIdentityRoleSetDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakePlatformWorkloadIdentityRoleSetDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakePlatformWorkloadIdentityRoleSetDocumentIterator)
+	if !ok {
+		return NewFakePlatformWorkloadIdentityRoleSetDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakePlatformWorkloadIdentityRoleSetDocumentClient) updateChangeFeeds(platformWorkloadIdentityRoleSetDocument *pkg.PlatformWorkloadIdentityRoleSetDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(platformWorkloadIdentityRoleSetDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.platformWorkloadIdentityRoleSetDocuments = append(currentIterator.platformWorkloadIdentityRoleSetDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakePlatformWorkloadIdentityRoleSetDocumentClient) processPreTriggers(ctx context.Context, platformWorkloadIdentityRoleSetDocument *pkg.PlatformWorkloadIdentityRoleSetDocument, options *Options) error {

@@ -37,6 +37,7 @@ type FakeSubscriptionDocumentClient struct {
 	queryHandlers         map[string]fakeSubscriptionDocumentQueryHandler
 	sorter                func([]*pkg.SubscriptionDocument)
 	etag                  int
+	changeFeedIterators   []*fakeSubscriptionDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.SubscriptionDocument, *pkg.SubscriptionDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeSubscriptionDocumentClient) apply(ctx context.Context, partitionkey
 
 	c.subscriptionDocuments[subscriptionDocument.ID] = subscriptionDocument
 
+	if err = c.updateChangeFeeds(subscriptionDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(subscriptionDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakeSubscriptionDocumentClient) ChangeFeed(*Options) SubscriptionDocume
 		return NewFakeSubscriptionDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeSubscriptionDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeSubscriptionDocumentIterator)
+	if !ok {
+		return NewFakeSubscriptionDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeSubscriptionDocumentClient) updateChangeFeeds(subscriptionDocument *pkg.SubscriptionDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(subscriptionDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.subscriptionDocuments = append(currentIterator.subscriptionDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakeSubscriptionDocumentClient) processPreTriggers(ctx context.Context, subscriptionDocument *pkg.SubscriptionDocument, options *Options) error {

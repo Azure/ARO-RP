@@ -31,6 +31,7 @@ func (mon *monitor) master(ctx context.Context) error {
 	if !mon.isMaster {
 		return nil
 	}
+	mon.baseLog.Info("I Am master")
 
 	// we think we're the master.  Gather up all the registered monitors
 	// including ourself, balance buckets between them and write the bucket
@@ -50,6 +51,7 @@ func (mon *monitor) master(ctx context.Context) error {
 			}
 		}
 
+		mon.baseLog.Info("Balancing buckets across monitors")
 		mon.balance(monitors, doc)
 
 		return nil

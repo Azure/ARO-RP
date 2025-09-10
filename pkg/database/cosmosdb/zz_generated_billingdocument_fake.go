@@ -30,13 +30,14 @@ func NewFakeBillingDocumentClient(h *codec.JsonHandle) *FakeBillingDocumentClien
 
 // FakeBillingDocumentClient is a FakeBillingDocumentClient
 type FakeBillingDocumentClient struct {
-	lock             sync.RWMutex
-	jsonHandle       *codec.JsonHandle
-	billingDocuments map[string]*pkg.BillingDocument
-	triggerHandlers  map[string]fakeBillingDocumentTriggerHandler
-	queryHandlers    map[string]fakeBillingDocumentQueryHandler
-	sorter           func([]*pkg.BillingDocument)
-	etag             int
+	lock                sync.RWMutex
+	jsonHandle          *codec.JsonHandle
+	billingDocuments    map[string]*pkg.BillingDocument
+	triggerHandlers     map[string]fakeBillingDocumentTriggerHandler
+	queryHandlers       map[string]fakeBillingDocumentQueryHandler
+	sorter              func([]*pkg.BillingDocument)
+	etag                int
+	changeFeedIterators []*fakeBillingDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.BillingDocument, *pkg.BillingDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeBillingDocumentClient) apply(ctx context.Context, partitionkey stri
 
 	c.billingDocuments[billingDocument.ID] = billingDocument
 
+	if err = c.updateChangeFeeds(billingDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(billingDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakeBillingDocumentClient) ChangeFeed(*Options) BillingDocumentIterator
 		return NewFakeBillingDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeBillingDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeBillingDocumentIterator)
+	if !ok {
+		return NewFakeBillingDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeBillingDocumentClient) updateChangeFeeds(billingDocument *pkg.BillingDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(billingDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.billingDocuments = append(currentIterator.billingDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakeBillingDocumentClient) processPreTriggers(ctx context.Context, billingDocument *pkg.BillingDocument, options *Options) error {

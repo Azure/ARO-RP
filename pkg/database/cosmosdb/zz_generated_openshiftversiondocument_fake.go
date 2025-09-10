@@ -37,6 +37,7 @@ type FakeOpenShiftVersionDocumentClient struct {
 	queryHandlers             map[string]fakeOpenShiftVersionDocumentQueryHandler
 	sorter                    func([]*pkg.OpenShiftVersionDocument)
 	etag                      int
+	changeFeedIterators       []*fakeOpenShiftVersionDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.OpenShiftVersionDocument, *pkg.OpenShiftVersionDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeOpenShiftVersionDocumentClient) apply(ctx context.Context, partitio
 
 	c.openShiftVersionDocuments[openShiftVersionDocument.ID] = openShiftVersionDocument
 
+	if err = c.updateChangeFeeds(openShiftVersionDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(openShiftVersionDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakeOpenShiftVersionDocumentClient) ChangeFeed(*Options) OpenShiftVersi
 		return NewFakeOpenShiftVersionDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeOpenShiftVersionDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeOpenShiftVersionDocumentIterator)
+	if !ok {
+		return NewFakeOpenShiftVersionDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeOpenShiftVersionDocumentClient) updateChangeFeeds(openShiftVersionDocument *pkg.OpenShiftVersionDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(openShiftVersionDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.openShiftVersionDocuments = append(currentIterator.openShiftVersionDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakeOpenShiftVersionDocumentClient) processPreTriggers(ctx context.Context, openShiftVersionDocument *pkg.OpenShiftVersionDocument, options *Options) error {

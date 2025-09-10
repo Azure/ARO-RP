@@ -30,13 +30,14 @@ func NewFakeMonitorDocumentClient(h *codec.JsonHandle) *FakeMonitorDocumentClien
 
 // FakeMonitorDocumentClient is a FakeMonitorDocumentClient
 type FakeMonitorDocumentClient struct {
-	lock             sync.RWMutex
-	jsonHandle       *codec.JsonHandle
-	monitorDocuments map[string]*pkg.MonitorDocument
-	triggerHandlers  map[string]fakeMonitorDocumentTriggerHandler
-	queryHandlers    map[string]fakeMonitorDocumentQueryHandler
-	sorter           func([]*pkg.MonitorDocument)
-	etag             int
+	lock                sync.RWMutex
+	jsonHandle          *codec.JsonHandle
+	monitorDocuments    map[string]*pkg.MonitorDocument
+	triggerHandlers     map[string]fakeMonitorDocumentTriggerHandler
+	queryHandlers       map[string]fakeMonitorDocumentQueryHandler
+	sorter              func([]*pkg.MonitorDocument)
+	etag                int
+	changeFeedIterators []*fakeMonitorDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.MonitorDocument, *pkg.MonitorDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeMonitorDocumentClient) apply(ctx context.Context, partitionkey stri
 
 	c.monitorDocuments[monitorDocument.ID] = monitorDocument
 
+	if err = c.updateChangeFeeds(monitorDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(monitorDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakeMonitorDocumentClient) ChangeFeed(*Options) MonitorDocumentIterator
 		return NewFakeMonitorDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeMonitorDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeMonitorDocumentIterator)
+	if !ok {
+		return NewFakeMonitorDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeMonitorDocumentClient) updateChangeFeeds(monitorDocument *pkg.MonitorDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(monitorDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.monitorDocuments = append(currentIterator.monitorDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakeMonitorDocumentClient) processPreTriggers(ctx context.Context, monitorDocument *pkg.MonitorDocument, options *Options) error {
