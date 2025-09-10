@@ -61,6 +61,8 @@ function generate_python() {
     --version=3.10.2 \
     --modelerfour.lenient-model-deduplication=true \
     --python \
+    --combine-operation-files=true \
+    --version-tolerant=false \
     --no-async=true \
     --azure-arm \
     --models-mode=msrest \
