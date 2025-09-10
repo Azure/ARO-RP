@@ -22,7 +22,7 @@ import (
 var (
 	pkiIssuerUrlTemplate = "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s"
 	pkiCaNames           = []string{
-		"ame",  // AMEv1
+		"ame",  // AMEv1; TODO: remove this when the AME v1 CA is eventually deprecated in favor of v2
 		"ccme", // AMEv2; see https://aka.ms/AzureTLSCAs
 	}
 )
