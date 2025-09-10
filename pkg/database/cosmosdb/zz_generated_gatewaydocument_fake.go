@@ -30,13 +30,14 @@ func NewFakeGatewayDocumentClient(h *codec.JsonHandle) *FakeGatewayDocumentClien
 
 // FakeGatewayDocumentClient is a FakeGatewayDocumentClient
 type FakeGatewayDocumentClient struct {
-	lock             sync.RWMutex
-	jsonHandle       *codec.JsonHandle
-	gatewayDocuments map[string]*pkg.GatewayDocument
-	triggerHandlers  map[string]fakeGatewayDocumentTriggerHandler
-	queryHandlers    map[string]fakeGatewayDocumentQueryHandler
-	sorter           func([]*pkg.GatewayDocument)
-	etag             int
+	lock                sync.RWMutex
+	jsonHandle          *codec.JsonHandle
+	gatewayDocuments    map[string]*pkg.GatewayDocument
+	triggerHandlers     map[string]fakeGatewayDocumentTriggerHandler
+	queryHandlers       map[string]fakeGatewayDocumentQueryHandler
+	sorter              func([]*pkg.GatewayDocument)
+	etag                int
+	changeFeedIterators []*fakeGatewayDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.GatewayDocument, *pkg.GatewayDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeGatewayDocumentClient) apply(ctx context.Context, partitionkey stri
 
 	c.gatewayDocuments[gatewayDocument.ID] = gatewayDocument
 
+	if err = c.updateChangeFeeds(gatewayDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(gatewayDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakeGatewayDocumentClient) ChangeFeed(*Options) GatewayDocumentIterator
 		return NewFakeGatewayDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeGatewayDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeGatewayDocumentIterator)
+	if !ok {
+		return NewFakeGatewayDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeGatewayDocumentClient) updateChangeFeeds(gatewayDocument *pkg.GatewayDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(gatewayDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.gatewayDocuments = append(currentIterator.gatewayDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakeGatewayDocumentClient) processPreTriggers(ctx context.Context, gatewayDocument *pkg.GatewayDocument, options *Options) error {

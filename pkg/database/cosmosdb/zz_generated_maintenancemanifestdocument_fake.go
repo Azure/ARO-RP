@@ -37,6 +37,7 @@ type FakeMaintenanceManifestDocumentClient struct {
 	queryHandlers                map[string]fakeMaintenanceManifestDocumentQueryHandler
 	sorter                       func([]*pkg.MaintenanceManifestDocument)
 	etag                         int
+	changeFeedIterators          []*fakeMaintenanceManifestDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.MaintenanceManifestDocument, *pkg.MaintenanceManifestDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeMaintenanceManifestDocumentClient) apply(ctx context.Context, parti
 
 	c.maintenanceManifestDocuments[maintenanceManifestDocument.ID] = maintenanceManifestDocument
 
+	if err = c.updateChangeFeeds(maintenanceManifestDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(maintenanceManifestDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakeMaintenanceManifestDocumentClient) ChangeFeed(*Options) Maintenance
 		return NewFakeMaintenanceManifestDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeMaintenanceManifestDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeMaintenanceManifestDocumentIterator)
+	if !ok {
+		return NewFakeMaintenanceManifestDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeMaintenanceManifestDocumentClient) updateChangeFeeds(maintenanceManifestDocument *pkg.MaintenanceManifestDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(maintenanceManifestDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.maintenanceManifestDocuments = append(currentIterator.maintenanceManifestDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakeMaintenanceManifestDocumentClient) processPreTriggers(ctx context.Context, maintenanceManifestDocument *pkg.MaintenanceManifestDocument, options *Options) error {
