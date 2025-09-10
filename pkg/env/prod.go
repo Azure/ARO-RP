@@ -287,7 +287,18 @@ func (p *prod) InitializeAuthorizers() error {
 
 	var adminCertPool *x509.CertPool
 
-	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) { // If we're in prod, use GetIssuers to grab the CA bundle(s)
+	if p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
+		caBundle, err := os.ReadFile(AdminCABundlePath)
+		if err != nil {
+			return err
+		}
+
+		adminCertPool = x509.NewCertPool()
+		ok := adminCertPool.AppendCertsFromPEM(caBundle)
+		if !ok {
+			return fmt.Errorf("cannot decode CA bundle from %s", AdminCABundlePath)
+		}
+	} else {
 		var issuerPkiUrls []string
 		for _, ca := range p.Environment().PkiCaNames {
 			issuerPkiUrls = append(issuerPkiUrls, fmt.Sprintf(p.Environment().PkiIssuerUrlTemplate, ca))
@@ -301,17 +312,6 @@ func (p *prod) InitializeAuthorizers() error {
 		adminCertPool, err = pki.BuildCertPoolFromCAData(rootCAs)
 		if err != nil {
 			return err
-		}
-	} else { // Otherwise we're in local dev - read the CA bundle(s) from a file
-		caBundle, err := os.ReadFile(AdminCABundlePath)
-		if err != nil {
-			return err
-		}
-
-		adminCertPool = x509.NewCertPool()
-		ok := adminCertPool.AppendCertsFromPEM(caBundle)
-		if !ok {
-			return fmt.Errorf("cannot decode CA bundle from %s", AdminCABundlePath)
 		}
 	}
 
