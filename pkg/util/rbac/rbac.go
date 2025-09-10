@@ -49,7 +49,7 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 	roleDefinitionID := "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"
 	if strings.HasPrefix(roleID, "parameters") {
 		roleDefinitionID = "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"
-	} 
+	}
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
 			Name: pointerutils.ToPtr("[" + name + "]"),
