@@ -107,6 +107,7 @@ func unwrap(err error, indent string) string {
 // AssertErrorMatchesAll verifies that err contains all of the errors in wantError in its tree.
 func AssertErrorMatchesAll(t *testing.T, err error, wantError []error) {
 	t.Helper()
+	notFound := []error{}
 
 	if err == nil && len(wantError) == 0 {
 		return
@@ -117,23 +118,27 @@ func AssertErrorMatchesAll(t *testing.T, err error, wantError []error) {
 	} else {
 		for _, wanted := range wantError {
 			errorMatched := false
-			if !errors.Is(err, wanted) {
+			if errors.Is(err, wanted) {
+				errorMatched = true
+			} else {
 				// check the content in case it's just plain error strings
 				if err.Error() == wanted.Error() {
 					errorMatched = true
 				}
-			} else {
-				errorMatched = true
 			}
 
 			if !errorMatched {
-				errt := ""
-				for _, w := range wantError {
-					errt = errt + fmt.Sprintf("\n  %s", errfmt(w))
-				}
-
-				t.Errorf("error mismatch\ngot error:\n  %s%s\n\nwanted the error tree to contain all of:%s", errfmt(err), unwrap(err, "  "), errt)
+				notFound = append(notFound, wanted)
 			}
 		}
+	}
+
+	if len(notFound) > 0 {
+		errt := ""
+		for _, w := range notFound {
+			errt = errt + fmt.Sprintf("\n  %s", errfmt(w))
+		}
+
+		t.Errorf("error mismatch\ngot error:\n  %s%s\n\ncould not find the errors:%s", errfmt(err), unwrap(err, "  "), errt)
 	}
 }
