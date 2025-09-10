@@ -121,6 +121,12 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 
 	for _, ref := range []string{
 
+		// https://hub.docker.com/_/fedora
+		"fedora:42",
+
+		// https://hub.docker.com/r/selenium/standalone-edge
+		"selenium/standalone-edge:4.10.0",
+
 		// https://mcr.microsoft.com/en-us/product/azure-cli/about
 		"mcr.microsoft.com/azure-cli:cbl-mariner2.0",
 		"mcr.microsoft.com/azure-cli:azurelinux3.0",
@@ -144,6 +150,12 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		// https://catalog.redhat.com/software/containers/ubi9/ubi-minimal/615bd9b4075b022acc111bf5
 		"registry.access.redhat.com/ubi9/ubi-minimal:latest",
 
+		// https://catalog.redhat.com/software/containers/ubi9/ubi-micro/615bd9b4075b022acc111bf5
+		"registry.access.redhat.com/ubi9/ubi-micro:latest",
+
+		// https://catalog.redhat.com/software/containers/ubi9/toolbox/615bd9b4075b022acc111bf5
+		"registry.access.redhat.com/ubi9/toolbox:latest",
+
 		// https://catalog.redhat.com/software/containers/ubi8/nodejs-18/6278e5c078709f5277f26998
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 		// https://catalog.redhat.com/software/containers/ubi9/nodejs-18/62e8e7ed22d1d3c2dfe2ca01
@@ -155,6 +167,12 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
 		"quay.io/app-sre/hive:8796c4f534",
+
+		// https://quay.io/repository/cmarches/aro-must-gather?tab=tags
+		"quay.io/cmarches/aro-must-gather:20231030.00",
+
+		// https://quay.io/repository/openshift-on-azure/autorest?tab=tags
+		"quay.io/openshift-on-azure/autorest:3.7.2",
 
 		// OpenShift Automated Release Tooling partner images
 		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
