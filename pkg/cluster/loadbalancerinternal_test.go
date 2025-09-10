@@ -28,6 +28,8 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
+var errTestSKUFetchError = errors.New("oops")
+
 func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 	ctx := context.Background()
 	infraID := "infraID"
@@ -168,10 +170,10 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus").Return([]mgmtcompute.ResourceSku{}, errors.New("oops"))
+				sku.EXPECT().List(gomock.Any(), "location eq eastus").Return([]mgmtcompute.ResourceSku{}, errTestSKUFetchError)
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
-			wantErrs:     []error{errListVMResourceSKUs, errors.New("oops")},
+			wantErrs:     []error{errListVMResourceSKUs, errTestSKUFetchError},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
