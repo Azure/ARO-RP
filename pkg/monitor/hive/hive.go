@@ -6,7 +6,6 @@ package hive
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -33,13 +32,12 @@ type Monitor struct {
 	oc        *api.OpenShiftCluster
 	dims      map[string]string
 
-	m  metrics.Emitter
-	wg *sync.WaitGroup
+	m metrics.Emitter
 
 	hiveClusterManager hive.ClusterManager
 }
 
-func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, wg *sync.WaitGroup, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
+func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -59,8 +57,7 @@ func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitt
 		oc:        oc,
 		dims:      dims,
 
-		wg: wg,
-		m:  m,
+		m: m,
 
 		hiveClusterManager: hiveClusterManager,
 	}
@@ -74,7 +71,6 @@ func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitt
 
 // Monitor checks the health of Hive resources associated with a cluster
 func (mon *Monitor) Monitor(ctx context.Context) error {
-	defer mon.wg.Done()
 	now := time.Now()
 
 	mon.log.Debug("hive monitoring")
