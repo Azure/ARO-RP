@@ -37,6 +37,7 @@ type FakeOpenShiftClusterDocumentClient struct {
 	queryHandlers             map[string]fakeOpenShiftClusterDocumentQueryHandler
 	sorter                    func([]*pkg.OpenShiftClusterDocument)
 	etag                      int
+	changeFeedIterators       []*fakeOpenShiftClusterDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.OpenShiftClusterDocument, *pkg.OpenShiftClusterDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeOpenShiftClusterDocumentClient) apply(ctx context.Context, partitio
 
 	c.openShiftClusterDocuments[openShiftClusterDocument.ID] = openShiftClusterDocument
 
+	if err = c.updateChangeFeeds(openShiftClusterDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(openShiftClusterDocument)
 }
 
@@ -246,7 +251,26 @@ func (c *FakeOpenShiftClusterDocumentClient) ChangeFeed(*Options) OpenShiftClust
 		return NewFakeOpenShiftClusterDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeOpenShiftClusterDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeOpenShiftClusterDocumentIterator)
+	if !ok {
+		return NewFakeOpenShiftClusterDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeOpenShiftClusterDocumentClient) updateChangeFeeds(openShiftClusterDocument *pkg.OpenShiftClusterDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(openShiftClusterDocument)
+		if err != nil {
+			return err
+		}
+		currentIterator.openShiftClusterDocuments = append(currentIterator.openShiftClusterDocuments, newTpl)
+		currentIterator.done = false
+	}
+
+	return nil
 }
 
 func (c *FakeOpenShiftClusterDocumentClient) processPreTriggers(ctx context.Context, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) error {
