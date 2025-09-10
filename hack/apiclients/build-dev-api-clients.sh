@@ -61,6 +61,7 @@ function generate_python() {
     --version=3.10.2 \
     --modelerfour.lenient-model-deduplication=true \
     --python \
+    --no-async=true \
     --azure-arm \
     --models-mode=msrest \
     --license-header=MICROSOFT_APACHE_NO_VERSION \
@@ -68,7 +69,6 @@ function generate_python() {
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
     --output-folder=/python/client
 
-  rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
   >python/client/__init__.py
 }
 
