@@ -168,9 +168,8 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		// https://quay.io/repository/app-sre/hive?tab=tags
 		"quay.io/app-sre/hive:8796c4f534",
 
-		// https://quay.io/repository/openshift/aro-must-gather?tab=tags  
+		// https://quay.io/repository/openshift/aro-must-gather?tab=tags
 		"quay.io/openshift/aro-must-gather:latest",
-
 
 		// OpenShift Automated Release Tooling partner images
 		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
