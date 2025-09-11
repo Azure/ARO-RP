@@ -122,10 +122,10 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 	for _, ref := range []string{
 
 		// https://hub.docker.com/_/fedora
-		"fedora:42",
+		"registry.fedoraproject.org/fedora:42",
 
 		// https://hub.docker.com/r/selenium/standalone-edge
-		"selenium/standalone-edge:4.10.0",
+		"docker.io/selenium/standalone-edge:4.10.0",
 
 		// https://mcr.microsoft.com/en-us/product/azure-cli/about
 		"mcr.microsoft.com/azure-cli:cbl-mariner2.0",
@@ -168,11 +168,9 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		// https://quay.io/repository/app-sre/hive?tab=tags
 		"quay.io/app-sre/hive:8796c4f534",
 
-		// https://quay.io/repository/cmarches/aro-must-gather?tab=tags
-		"quay.io/cmarches/aro-must-gather:20231030.00",
+		// https://quay.io/repository/openshift/aro-must-gather?tab=tags  
+		"quay.io/openshift/aro-must-gather:latest",
 
-		// https://quay.io/repository/openshift-on-azure/autorest?tab=tags
-		"quay.io/openshift-on-azure/autorest:3.7.2",
 
 		// OpenShift Automated Release Tooling partner images
 		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
