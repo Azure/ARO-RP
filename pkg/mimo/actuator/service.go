@@ -7,15 +7,16 @@ import (
 	"context"
 	"errors"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
 
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -42,19 +44,21 @@ type service struct {
 
 	dbGroup actuatorDBs
 
-	m        metrics.Emitter
-	mu       sync.RWMutex
-	cond     *sync.Cond
-	stopping *atomic.Bool
-	workers  *atomic.Int32
+	m              metrics.Emitter
+	mu             sync.RWMutex
+	cond           *sync.Cond
+	stopping       *atomic.Bool
+	workers        *atomic.Int32
+	workerRoutines sync.WaitGroup
 
 	b buckets.BucketWorker
 
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
 
-	pollTime time.Duration
-	now      func() time.Time
+	pollTime    time.Duration
+	now         func() time.Time
+	workerDelay func() time.Duration
 
 	tasks map[string]tasks.MaintenanceTask
 
@@ -66,7 +70,7 @@ type actuatorDBs interface {
 	database.DatabaseGroupWithMaintenanceManifests
 }
 
-func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter) *service {
+func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter, ownedBuckets []int) *service {
 	s := &service{
 		env:     env,
 		baseLog: log,
@@ -78,14 +82,16 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		stopping: &atomic.Bool{},
 		workers:  &atomic.Int32{},
 
-		startTime: time.Now(),
-		now:       time.Now,
-		pollTime:  time.Minute,
+		startTime:   time.Now(),
+		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
+		now:         time.Now,
+		pollTime:    time.Minute,
 
 		serveHealthz: true,
 	}
 
-	s.b = buckets.NewBucketWorker(log, s.worker, &s.mu)
+	s.b = buckets.NewBucketWorker(log, s.spawnWorker, &s.mu)
+	s.b.SetBuckets(ownedBuckets)
 
 	return s
 }
@@ -205,7 +211,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	}
 
 	// remove docs that don't exist in the new set (removed clusters)
-	for _, oldCluster := range maps.Keys(oldDocs) {
+	for oldCluster := range oldDocs {
 		_, ok := docMap[strings.ToLower(oldCluster)]
 		if !ok {
 			s.b.DeleteDoc(oldDocs[oldCluster])
@@ -215,7 +221,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 
 	s.baseLog.Debugf("updating %d clusters", len(docMap))
 
-	for _, cluster := range maps.Values(docMap) {
+	for _, cluster := range docMap {
 		s.b.UpsertDoc(cluster)
 	}
 
@@ -247,9 +253,16 @@ func (s *service) checkReady() bool {
 	}
 }
 
-func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
-	defer recover.Panic(s.baseLog)
+func (s *service) spawnWorker(stop <-chan struct{}, id string) {
+	s.workerRoutines.Add(1)
+	go s.worker(stop, id)
+}
 
+func (s *service) worker(stop <-chan struct{}, id string) {
+	defer recover.Panic(s.baseLog)
+	defer s.workerRoutines.Done()
+
+	delay := s.workerDelay()
 	log := utillog.EnrichWithResourceID(s.baseLog, id)
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 
@@ -306,4 +319,49 @@ out:
 			break out
 		}
 	}
+}
+
+// DetermineBuckets uses the hostname to figure out which subset of buckets we
+// should be serving.
+func DetermineBuckets(env env.Core, hostnameFunc func() (string, error)) []int {
+	_log := env.Logger()
+
+	b := []int{}
+	if !env.IsLocalDevelopmentMode() {
+		name, err := hostnameFunc()
+		if err != nil {
+			// if we can't get the hostname then just run all of them
+			_log.Warn("unable to get the hostname for bucket determination")
+		} else {
+			// figure out which VMSS host we're running on - e.g. rp-v20000101.01-000001"
+			splitName := strings.Split(name, "-")
+			if len(splitName) > 1 {
+				num, err := strconv.Atoi(splitName[len(splitName)-1])
+				if err != nil {
+					_log.Warningf("hostname %s doesn't end in a number, unable to partition buckets", name)
+				} else {
+					if num > 3 || num <= 0 {
+						// Rather than guess, we fall back to all buckets. This
+						// means that a VMSS replacement of -4 might have some
+						// weird behaviour, but because we get a lock on the
+						// OpenShiftClusterObject before we do anything to the
+						// cluster, it should be fine.
+						_log.Warningf("vmss number is %d, currently only handles 3 partitions (vm numbers 1-3), falling back to all", num)
+					} else {
+						for i := num - 1; i < bucket.Buckets; i = i + 3 {
+							b = append(b, i)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// We haven't figured out our buckets so fall back to all
+	if len(b) == 0 {
+		for i := range 256 {
+			b = append(b, i)
+		}
+	}
+	return b
 }
