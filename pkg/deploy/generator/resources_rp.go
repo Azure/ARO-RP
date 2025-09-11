@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
+	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v4"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v7"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
@@ -160,6 +161,7 @@ func (g *generator) rpVnet() *arm.Resource {
 	return g.virtualNetwork("rp-vnet", addressPrefix, &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
 }
 
+// Generate Private Endpoint vnet Resource
 func (g *generator) rpPEVnet() *arm.Resource {
 	return g.virtualNetwork("rp-pe-vnet-001", "10.0.4.0/22", &[]mgmtnetwork.Subnet{
 		{
@@ -950,6 +952,51 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("''", "rp"))
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "globalDevops"))
 	}
+
+	basicNSP := sdknetwork.SecurityPerimeter{
+		Location:   pointerutils.ToPtr("[resourceGroup().location]"),
+		Properties: &sdknetwork.SecurityPerimeterProperties{},
+		Name:       pointerutils.ToPtr("cosmos-nsp"),
+		Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityPerimeters"),
+	}
+	rs = append(rs, &arm.Resource{
+		Resource:   basicNSP,
+		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters"),
+	})
+
+	profileNSP := sdknetwork.NspProfile{
+		Name: pointerutils.ToPtr("cosmos-nsp/cosmos-nsp-profile"),
+		Type: pointerutils.ToPtr("Microsoft.Network/networkSecurityPerimeters/profiles"),
+	}
+	rs = append(rs, &arm.Resource{
+		Resource:   profileNSP,
+		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters/profiles"),
+		Location:   "[resourceGroup().location]",
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/networkSecurityPerimeters', 'cosmos-nsp']",
+		},
+	})
+
+	cosmosdbAssociation := sdknetwork.NspAssociation{
+		Properties: &sdknetwork.NspAssociationProperties{
+			AccessMode: pointerutils.ToPtr(sdknetwork.AssociationAccessModeAudit),
+			PrivateLinkResource: &sdknetwork.SubResource{
+				ID: pointerutils.ToPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts'), parameters('databaseAccountName')]"),
+			},
+			Profile: &sdknetwork.SubResource{
+				ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles'), 'cosmos-nsp/cosmos-nsp-profile']"),
+			},
+		},
+		Name:       pointerutils.ToPtr("cosmos-nsp/cosmos-association"),
+		Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityPerimeters/resourceAssociations"),
+	}
+	rs = append(rs, &arm.Resource{
+		Resource:   cosmosdbAssociation,
+		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters/resourceAssociations"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'cosmos-nsp/cosmos-nsp-profile']",
+		},
+	})
 
 	return rs
 }
