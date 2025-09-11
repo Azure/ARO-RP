@@ -4,9 +4,7 @@ package buckets
 // Licensed under the Apache License 2.0.
 
 import (
-	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
@@ -54,10 +52,7 @@ func (mon *monitor) FixDoc(doc *api.OpenShiftClusterDocument) {
 	v := mon.docs[id]
 
 	mon.baseLog.Debugf("fixing doc %s (%s)", doc.ID, doc.Key)
-
-	// TODO: bucketing logic
-	//_, ours := mon.buckets[v.doc.Bucket]
-	ours := true
+	_, ours := mon.buckets[v.doc.Bucket]
 
 	if !ours && v.stop != nil {
 		mon.baseLog.Debugf("stopping channel for %s", doc.ID)
@@ -67,9 +62,8 @@ func (mon *monitor) FixDoc(doc *api.OpenShiftClusterDocument) {
 		ch := make(chan struct{})
 		v.stop = ch
 
-		delay := time.Duration(rand.Intn(60)) * time.Second
-
-		go mon.worker(ch, delay, doc.Key)
+		mon.baseLog.Debugf("spawning worker for %s", doc.ID)
+		mon.worker(ch, doc.Key)
 	}
 }
 
