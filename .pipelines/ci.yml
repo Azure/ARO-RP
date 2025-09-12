@@ -24,6 +24,8 @@ variables:
   - template: vars.yml
   - name: CI
     value: true
+  - name: RP_IMAGE_ACR
+    value: arointsvc
   - name: REGISTRY
     value: arointsvc.azurecr.io
   - name: BUILDER_REGISTRY
@@ -231,6 +233,7 @@ stages:
           # Run the E2E test suite
           - bash: |
               . ./hack/e2e/run-rp-and-e2e.sh
+              az acr login --name arosvcdev
               az acr login --name arointsvc
 
               deploy_e2e_db
