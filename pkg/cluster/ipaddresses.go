@@ -198,30 +198,25 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP != "" {
 		return nil
 	}
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-	if infraID == "" {
-		infraID = "aro"
-	}
-
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	var lbName string
-	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
-	case api.ArchitectureVersionV1:
-		lbName = infraID + "-internal-lb"
-	case api.ArchitectureVersionV2:
-		lbName = infraID + "-internal"
-	default:
-		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
-	}
-
-	lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, lbName, nil)
+	lb, err := m.getInternalLoadBalancer(ctx)
 	if err != nil {
 		return err
 	}
 
+	frontendIPs := map[string]string{}
+	for _, fip := range lb.Properties.FrontendIPConfigurations {
+		if fip.Properties != nil && fip.Properties.PrivateIPAddress != nil {
+			frontendIPs[*fip.Name] = *fip.Properties.PrivateIPAddress
+		}
+	}
+
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *lb.Properties.FrontendIPConfigurations[0].Properties.PrivateIPAddress
+		// Fetch the named frontend IP if possible, otherwise fall back to the first
+		if ip, ok := frontendIPs["internal-lb-ip-v4"]; ok {
+			doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = ip
+		} else {
+			doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *lb.Properties.FrontendIPConfigurations[0].Properties.PrivateIPAddress
+		}
 		return nil
 	})
 	return err
