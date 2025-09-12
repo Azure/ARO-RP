@@ -61,7 +61,7 @@ services:
       retries: 3
 
   selenium:
-    image: arointsvc.azurecr.io/selenium/standalone-edge:4.10.0
+    image: selenium/standalone-edge:4.10.0-20230607
     container_name: selenium-container
     network_mode: host
     ports:

@@ -124,9 +124,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		// https://hub.docker.com/_/fedora
 		"registry.fedoraproject.org/fedora:42",
 
-		// https://hub.docker.com/r/selenium/standalone-edge
-		"docker.io/selenium/standalone-edge:4.10.0",
-
 		// https://mcr.microsoft.com/en-us/product/azure-cli/about
 		"mcr.microsoft.com/azure-cli:cbl-mariner2.0",
 		"mcr.microsoft.com/azure-cli:azurelinux3.0",

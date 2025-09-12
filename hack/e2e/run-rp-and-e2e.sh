@@ -144,8 +144,8 @@ kill_vpn() {
 
 run_selenium() {
     echo "########## 🚀 Run Selenium in background ##########"
-    podman -r --url tcp://localhost:8888 pull arointsvc.azurecr.io/selenium/standalone-edge:4.10.0
-    podman -r --url tcp://localhost:8888 run -d --name selenium-edge-standalone --network=host --shm-size=2g -e SE_START_VNC=false arointsvc.azurecr.io/selenium/standalone-edge:4.10.0
+    podman -r --url tcp://localhost:8888 pull docker.io/selenium/standalone-edge:4.10.0-20230607
+    podman -r --url tcp://localhost:8888 run -d --name selenium-edge-standalone --network=host --shm-size=2g -e SE_START_VNC=false docker.io/selenium/standalone-edge:4.10.0-20230607
 
 }
 
