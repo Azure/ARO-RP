@@ -55,12 +55,12 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 					pointerutils.ToPtr(azcertificates.KeyUsageTypeDigitalSignature),
 					pointerutils.ToPtr(azcertificates.KeyUsageTypeKeyEncipherment),
 				},
-				ValidityInMonths: pointerutils.ToPtr(int32(12)),
+				ValidityInMonths: pointerutils.ToPtr(int32(3)),
 			},
 			LifetimeActions: []*azcertificates.LifetimeAction{
 				{
 					Trigger: &azcertificates.LifetimeActionTrigger{
-						DaysBeforeExpiry: pointerutils.ToPtr(int32(365 - 90)),
+						DaysBeforeExpiry: pointerutils.ToPtr(int32(30)),
 					},
 					Action: &azcertificates.LifetimeActionType{
 						ActionType: pointerutils.ToPtr(azcertificates.CertificatePolicyActionAutoRenew),
