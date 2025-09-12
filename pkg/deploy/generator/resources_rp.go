@@ -625,6 +625,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 			Name:     pointerutils.ToPtr("[concat('rp-vmss-', parameters('vmssName'))]"),
 			Type:     pointerutils.ToPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			Zones:    &[]string{"vmZones"},
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{

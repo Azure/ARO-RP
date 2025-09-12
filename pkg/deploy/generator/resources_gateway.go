@@ -404,6 +404,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 			Name:     pointerutils.ToPtr("[concat('gateway-vmss-', parameters('vmssName'))]"),
 			Type:     pointerutils.ToPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			Zones:    &[]string{"vmZones"},
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
