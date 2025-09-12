@@ -104,6 +104,9 @@ type Configuration struct {
 	OIDCStorageAccountName             *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
 	OtelAuditQueueSize                 *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
 	MsiRpEndpoint                      *string                `json:"msiRpEndpoint,omitempty" value:"required"`
+	RPLBIpTags                         []interface{}          `json:"rpLbIpTags,omitempty"`
+	PortalLBIpTags                     []interface{}          `json:"portalLbIpTags,omitempty"`
+	LBIpTagsDisabledRegions            []string               `json:"lbIpTagsDisabledRegions,omitempty"`
 
 	// TODO: Replace with Live Service Configuration in KeyVault
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
