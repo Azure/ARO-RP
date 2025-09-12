@@ -9,7 +9,14 @@ trigger:
     include:
       - v2*
 
-# PR triggers are overridden in the ADO UI
+# PR triggers defined in YAML to override ADO UI and respect path exclusions
+pr:
+  branches:
+    include:
+      - master
+  paths:
+    exclude:
+      - docs/*
 
 resources:
   containers:

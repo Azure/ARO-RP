@@ -78,7 +78,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.6
+          version: v2.2.1
           args: -v --timeout 15m
         env:
           GO111MODULE: 'auto'

@@ -5,7 +5,7 @@ package validate
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/Azure/ARO-RP/pkg/api/util/version"
 )
 
 // Public facing document which lists supported VM Sizes:
@@ -30,163 +30,66 @@ func SupportedVMSizesByRole(vmRole string) map[api.VMSize]api.VMSizeStruct {
 	return supportedvmsizes
 }
 
-var masterVmSizesWithMinimumVersion = map[api.VMSize]version.Version{
-	api.VMSizeStandardD4sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD8sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD16sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD32sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD48sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD64sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD96sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
+var ver419 = version.NewVersion(4, 19, 0)
 
-	api.VMSizeStandardD4dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD8dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD16dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD32dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD48dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD64dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD96dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
+var masterVmSizesWithMinimumVersion = map[api.VMSize]version.Version{
+	api.VMSizeStandardD4sV6:  ver419,
+	api.VMSizeStandardD8sV6:  ver419,
+	api.VMSizeStandardD16sV6: ver419,
+	api.VMSizeStandardD32sV6: ver419,
+	api.VMSizeStandardD48sV6: ver419,
+	api.VMSizeStandardD64sV6: ver419,
+	api.VMSizeStandardD96sV6: ver419,
+
+	api.VMSizeStandardD4dsV6:  ver419,
+	api.VMSizeStandardD8dsV6:  ver419,
+	api.VMSizeStandardD16dsV6: ver419,
+	api.VMSizeStandardD32dsV6: ver419,
+	api.VMSizeStandardD48dsV6: ver419,
+	api.VMSizeStandardD64dsV6: ver419,
+	api.VMSizeStandardD96dsV6: ver419,
 }
 
 var workerVmSizesWithMinimumVersion = map[api.VMSize]version.Version{
+	api.VMSizeStandardD4sV6:  ver419,
+	api.VMSizeStandardD8sV6:  ver419,
+	api.VMSizeStandardD16sV6: ver419,
+	api.VMSizeStandardD32sV6: ver419,
+	api.VMSizeStandardD48sV6: ver419,
+	api.VMSizeStandardD64sV6: ver419,
+	api.VMSizeStandardD96sV6: ver419,
 
-	api.VMSizeStandardD4sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD8sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD16sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD32sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD48sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD64sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD96sV6: {
-		V: [3]uint32{4, 19, 0},
-	},
+	api.VMSizeStandardD4dsV6:  ver419,
+	api.VMSizeStandardD8dsV6:  ver419,
+	api.VMSizeStandardD16dsV6: ver419,
+	api.VMSizeStandardD32dsV6: ver419,
+	api.VMSizeStandardD48dsV6: ver419,
+	api.VMSizeStandardD64dsV6: ver419,
+	api.VMSizeStandardD96dsV6: ver419,
 
-	api.VMSizeStandardD4dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD8dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD16dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD32dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD48dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD64dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD96dsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
+	api.VMSizeStandardD4lsV6:  ver419,
+	api.VMSizeStandardD8lsV6:  ver419,
+	api.VMSizeStandardD16lsV6: ver419,
+	api.VMSizeStandardD32lsV6: ver419,
+	api.VMSizeStandardD48lsV6: ver419,
+	api.VMSizeStandardD64lsV6: ver419,
+	api.VMSizeStandardD96lsV6: ver419,
 
-	api.VMSizeStandardD4lsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD8lsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD16lsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD32lsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD48lsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD64lsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD96lsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
+	api.VMSizeStandardD4ldsV6:  ver419,
+	api.VMSizeStandardD8ldsV6:  ver419,
+	api.VMSizeStandardD16ldsV6: ver419,
+	api.VMSizeStandardD32ldsV6: ver419,
+	api.VMSizeStandardD48ldsV6: ver419,
+	api.VMSizeStandardD64ldsV6: ver419,
+	api.VMSizeStandardD96ldsV6: ver419,
 
-	api.VMSizeStandardD4ldsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD8ldsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD16ldsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD32ldsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD48ldsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD64ldsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardD96ldsV6: {
-		V: [3]uint32{4, 19, 0},
-	},
-
-	api.VMSizeStandardL4sV4: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardL8sV4: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardL16sV4: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardL32sV4: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardL48sV4: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardL64sV4: {
-		V: [3]uint32{4, 19, 0},
-	},
-	api.VMSizeStandardL80sV4: {
-		V: [3]uint32{4, 19, 0},
-	},
+	api.VMSizeStandardL4sV4:  ver419,
+	api.VMSizeStandardL8sV4:  ver419,
+	api.VMSizeStandardL16sV4: ver419,
+	api.VMSizeStandardL32sV4: ver419,
+	api.VMSizeStandardL48sV4: ver419,
+	api.VMSizeStandardL64sV4: ver419,
+	api.VMSizeStandardL80sV4: ver419,
 }
 
 var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
@@ -490,11 +393,11 @@ func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool
 	// Check version-specific restrictions
 	if isMaster {
 		if minVersion, exists := masterVmSizesWithMinimumVersion[vmSize]; exists {
-			return clusterVersion.Gt(&minVersion) || clusterVersion.Eq(&minVersion)
+			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
 		}
 	} else {
 		if minVersion, exists := workerVmSizesWithMinimumVersion[vmSize]; exists {
-			return clusterVersion.Gt(&minVersion) || clusterVersion.Eq(&minVersion)
+			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
 		}
 	}
 

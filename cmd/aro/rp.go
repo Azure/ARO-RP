@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -44,10 +45,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
-func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
+func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)
+	_env, err := env.NewEnv(ctx, _log, env.SERVICE_RP)
 	if err != nil {
 		return err
 	}
@@ -90,9 +91,10 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		return err
 	}
 
-	metrics := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	metrics := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go metrics.Run(stop)
 
-	g, err := golang.NewMetrics(log.WithField("component", "metrics"), metrics)
+	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), metrics)
 	if err != nil {
 		return err
 	}
@@ -105,14 +107,15 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(metrics),
 	})
 
-	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	clusterm := statsd.NewMetricsForCluster(ctx, _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go clusterm.Run(stop)
 
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, metrics, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, metrics, aead)
 	if err != nil {
 		return err
 	}
@@ -158,18 +161,18 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		return err
 	}
 
-	go database.EmitOpenShiftClustersMetrics(ctx, log, dbOpenShiftClusters, metrics)
+	go database.EmitOpenShiftClustersMetrics(ctx, _env.LoggerForComponent("metrics"), dbOpenShiftClusters, metrics)
 
 	feAead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.FrontendEncryptionSecretV2Name, env.FrontendEncryptionSecretName)
 	if err != nil {
 		return err
 	}
-	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, log, _env)
+	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, _env.LoggerForComponent("hiveclustermanager"), _env)
 	if err != nil {
 		return err
 	}
 
-	hiveSyncSetManager, err := hive.NewFromEnvSyncSetManager(ctx, log, _env)
+	hiveSyncSetManager, err := hive.NewFromEnvSyncSetManager(ctx, _env.LoggerForComponent("hivesyncsetmanager"), _env)
 	if err != nil {
 		return err
 	}
@@ -200,12 +203,12 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, auditLog, log.WithField("component", "frontend"), outelAuditClient, _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
+	f, err := frontend.NewFrontend(ctx, auditLog, _env.LoggerForComponent("frontend"), outelAuditClient, _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}
 
-	b, err := backend.NewBackend(log.WithField("component", "backend"), _env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, aead, metrics)
+	b, err := backend.NewBackend(_env.LoggerForComponent("backend"), _env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, aead, metrics)
 	if err != nil {
 		return err
 	}

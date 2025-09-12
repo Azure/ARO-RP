@@ -26,7 +26,7 @@ type OpenShiftCluster struct {
 	Location                   string                     `json:"location,omitempty"`
 	Tags                       map[string]string          `json:"tags,omitempty"`
 	Properties                 OpenShiftClusterProperties `json:"properties,omitempty"`
-	Identity                   *ManagedServiceIdentity    `json:"managedServiceIdentity,omitempty"`
+	Identity                   *ManagedServiceIdentity    `json:"identity,omitempty"`
 	OperatorFlagsMergeStrategy string                     `json:"operatorFlagsMergeStrategy,omitempty" mutable:"true"`
 }
 

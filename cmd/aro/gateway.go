@@ -19,22 +19,25 @@ import (
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 )
 
-func gateway(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_GATEWAY)
+func gateway(ctx context.Context, _log *logrus.Entry) error {
+	stop := make(chan struct{})
+
+	_env, err := env.NewCore(ctx, _log, env.SERVICE_GATEWAY)
 	if err != nil {
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "gateway"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go m.Run(stop)
 
-	g, err := golang.NewMetrics(log.WithField("component", "gateway"), m)
+	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), m)
 	if err != nil {
 		return err
 	}
 
 	go g.Run()
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, nil)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, m, nil)
 	if err != nil {
 		return err
 	}
@@ -64,9 +67,9 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	log.Print("listening")
+	_env.Logger().Print("listening")
 
-	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, healthListener, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"), m)
+	p, err := pkggateway.NewGateway(ctx, _env, _env.LoggerForComponent("gateway"), _env.LoggerForComponent("gateway-access"), dbGateway, httpsl, httpl, healthListener, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"), m)
 	if err != nil {
 		return err
 	}
@@ -79,8 +82,9 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	go p.Run(cancelCtx, done)
 
 	<-sigterm
-	log.Print("received SIGTERM")
+	_env.Logger().Print("received SIGTERM")
 	cancel()
+	close(stop)
 	<-done
 
 	return nil

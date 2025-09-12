@@ -60,7 +60,7 @@ def build_operations_list_request(**kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/providers/Microsoft.RedHatOpenShift/operations"
+    _url = kwargs.pop("template_url", "/providers/Microsoft.RedHatOpenShift/operations")
 
     # Construct parameters
     _params["api-version"] = _SERIALIZER.query("api_version", api_version, "str")
@@ -79,7 +79,10 @@ def build_open_shift_versions_list_request(location: str, subscription_id: str, 
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions"
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "location": _SERIALIZER.url("location", location, "str", min_length=1),
@@ -106,7 +109,10 @@ def build_open_shift_versions_get_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions/{openShiftVersion}"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openShiftVersions/{openShiftVersion}",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "location": _SERIALIZER.url("location", location, "str", min_length=1),
@@ -141,7 +147,10 @@ def build_platform_workload_identity_role_sets_list_request(  # pylint: disable=
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "location": _SERIALIZER.url("location", location, "str", min_length=1),
@@ -168,7 +177,10 @@ def build_platform_workload_identity_role_set_get_request(  # pylint: disable=na
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{openShiftMinorVersion}"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/platformWorkloadIdentityRoleSets/{openShiftMinorVersion}",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "location": _SERIALIZER.url("location", location, "str", min_length=1),
@@ -201,7 +213,9 @@ def build_open_shift_clusters_list_request(subscription_id: str, **kwargs: Any) 
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/openShiftClusters"
+    _url = kwargs.pop(
+        "template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/openShiftClusters"
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
     }
@@ -227,7 +241,10 @@ def build_open_shift_clusters_list_by_resource_group_request(  # pylint: disable
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "resourceGroupName": _SERIALIZER.url(
@@ -256,7 +273,10 @@ def build_open_shift_clusters_get_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "resourceGroupName": _SERIALIZER.url(
@@ -282,12 +302,15 @@ def build_open_shift_clusters_create_or_update_request(  # pylint: disable=name-
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "resourceGroupName": _SERIALIZER.url(
@@ -319,7 +342,10 @@ def build_open_shift_clusters_delete_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "resourceGroupName": _SERIALIZER.url(
@@ -345,12 +371,15 @@ def build_open_shift_clusters_update_request(
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     api_version: str = kwargs.pop("api_version", _params.pop("api-version", "2025-07-25"))
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "resourceGroupName": _SERIALIZER.url(
@@ -382,7 +411,10 @@ def build_open_shift_clusters_list_admin_credentials_request(  # pylint: disable
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listAdminCredentials"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listAdminCredentials",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "resourceGroupName": _SERIALIZER.url(
@@ -412,7 +444,10 @@ def build_open_shift_clusters_list_credentials_request(  # pylint: disable=name-
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials"  # pylint: disable=line-too-long
+    _url = kwargs.pop(
+        "template_url",
+        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials",
+    )  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, "str"),
         "resourceGroupName": _SERIALIZER.url(
@@ -457,14 +492,15 @@ class Operations:
 
         The operation returns the RP operations.
 
-        :return: An iterator like instance of Operation
+        :return: An iterator like instance of either Operation or the result of cls(response)
         :rtype: ~azure.core.paging.ItemPaged[~azure.mgmt.redhatopenshift.v2025_07_25.models.Operation]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-        cls: ClsType[_models._models.OperationList] = kwargs.pop("cls", None)  # pylint: disable=protected-access
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
+        cls: ClsType[_models.OperationList] = kwargs.pop("cls", None)
 
         error_map: MutableMapping[int, Type[HttpResponseError]] = {
             401: ClientAuthenticationError,
@@ -478,7 +514,7 @@ class Operations:
             if not next_link:
 
                 _request = build_operations_list_request(
-                    api_version=self._config.api_version,
+                    api_version=api_version,
                     headers=_headers,
                     params=_params,
                 )
@@ -498,13 +534,11 @@ class Operations:
                     "GET", urllib.parse.urljoin(next_link, _parsed_next_link.path), params=_next_request_params
                 )
                 _request.url = self._client.format_url(_request.url)
-
+                _request.method = "GET"
             return _request
 
         def extract_data(pipeline_response):
-            deserialized = self._deserialize(
-                _models._models.OperationList, pipeline_response  # pylint: disable=protected-access
-            )
+            deserialized = self._deserialize("OperationList", pipeline_response)
             list_of_elem = deserialized.value
             if cls:
                 list_of_elem = cls(list_of_elem)  # type: ignore
@@ -555,15 +589,16 @@ class OpenShiftVersionsOperations:
 
         :param location: The name of the Azure region. Required.
         :type location: str
-        :return: An iterator like instance of OpenShiftVersion
+        :return: An iterator like instance of either OpenShiftVersion or the result of cls(response)
         :rtype:
          ~azure.core.paging.ItemPaged[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftVersion]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-        cls: ClsType[_models._models.OpenShiftVersionList] = kwargs.pop("cls", None)  # pylint: disable=protected-access
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
+        cls: ClsType[_models.OpenShiftVersionList] = kwargs.pop("cls", None)
 
         error_map: MutableMapping[int, Type[HttpResponseError]] = {
             401: ClientAuthenticationError,
@@ -579,7 +614,7 @@ class OpenShiftVersionsOperations:
                 _request = build_open_shift_versions_list_request(
                     location=location,
                     subscription_id=self._config.subscription_id,
-                    api_version=self._config.api_version,
+                    api_version=api_version,
                     headers=_headers,
                     params=_params,
                 )
@@ -599,13 +634,11 @@ class OpenShiftVersionsOperations:
                     "GET", urllib.parse.urljoin(next_link, _parsed_next_link.path), params=_next_request_params
                 )
                 _request.url = self._client.format_url(_request.url)
-
+                _request.method = "GET"
             return _request
 
         def extract_data(pipeline_response):
-            deserialized = self._deserialize(
-                _models._models.OpenShiftVersionList, pipeline_response  # pylint: disable=protected-access
-            )
+            deserialized = self._deserialize("OpenShiftVersionList", pipeline_response)
             list_of_elem = deserialized.value
             if cls:
                 list_of_elem = cls(list_of_elem)  # type: ignore
@@ -639,7 +672,7 @@ class OpenShiftVersionsOperations:
         :param open_shift_version: The desired version value of the OpenShiftVersion resource.
          Required.
         :type open_shift_version: str
-        :return: OpenShiftVersion
+        :return: OpenShiftVersion or the result of cls(response)
         :rtype: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftVersion
         :raises ~azure.core.exceptions.HttpResponseError:
         """
@@ -652,15 +685,16 @@ class OpenShiftVersionsOperations:
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         cls: ClsType[_models.OpenShiftVersion] = kwargs.pop("cls", None)
 
         _request = build_open_shift_versions_get_request(
             location=location,
             open_shift_version=open_shift_version,
             subscription_id=self._config.subscription_id,
-            api_version=self._config.api_version,
+            api_version=api_version,
             headers=_headers,
             params=_params,
         )
@@ -713,17 +747,17 @@ class PlatformWorkloadIdentityRoleSetsOperations:  # pylint: disable=name-too-lo
 
         :param location: The name of the Azure region. Required.
         :type location: str
-        :return: An iterator like instance of PlatformWorkloadIdentityRoleSet
+        :return: An iterator like instance of either PlatformWorkloadIdentityRoleSet or the result of
+         cls(response)
         :rtype:
          ~azure.core.paging.ItemPaged[~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityRoleSet]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-        cls: ClsType[_models._models.PlatformWorkloadIdentityRoleSetList] = kwargs.pop(
-            "cls", None
-        )  # pylint: disable=protected-access
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
+        cls: ClsType[_models.PlatformWorkloadIdentityRoleSetList] = kwargs.pop("cls", None)
 
         error_map: MutableMapping[int, Type[HttpResponseError]] = {
             401: ClientAuthenticationError,
@@ -739,7 +773,7 @@ class PlatformWorkloadIdentityRoleSetsOperations:  # pylint: disable=name-too-lo
                 _request = build_platform_workload_identity_role_sets_list_request(
                     location=location,
                     subscription_id=self._config.subscription_id,
-                    api_version=self._config.api_version,
+                    api_version=api_version,
                     headers=_headers,
                     params=_params,
                 )
@@ -759,14 +793,11 @@ class PlatformWorkloadIdentityRoleSetsOperations:  # pylint: disable=name-too-lo
                     "GET", urllib.parse.urljoin(next_link, _parsed_next_link.path), params=_next_request_params
                 )
                 _request.url = self._client.format_url(_request.url)
-
+                _request.method = "GET"
             return _request
 
         def extract_data(pipeline_response):
-            deserialized = self._deserialize(
-                _models._models.PlatformWorkloadIdentityRoleSetList,  # pylint: disable=protected-access
-                pipeline_response,
-            )
+            deserialized = self._deserialize("PlatformWorkloadIdentityRoleSetList", pipeline_response)
             list_of_elem = deserialized.value
             if cls:
                 list_of_elem = cls(list_of_elem)  # type: ignore
@@ -823,7 +854,7 @@ class PlatformWorkloadIdentityRoleSetOperations:  # pylint: disable=name-too-lon
         :param open_shift_minor_version: The desired version value of the
          PlatformWorkloadIdentityRoleSet resource. Required.
         :type open_shift_minor_version: str
-        :return: PlatformWorkloadIdentityRoleSet
+        :return: PlatformWorkloadIdentityRoleSet or the result of cls(response)
         :rtype: ~azure.mgmt.redhatopenshift.v2025_07_25.models.PlatformWorkloadIdentityRoleSet
         :raises ~azure.core.exceptions.HttpResponseError:
         """
@@ -836,15 +867,16 @@ class PlatformWorkloadIdentityRoleSetOperations:  # pylint: disable=name-too-lon
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         cls: ClsType[_models.PlatformWorkloadIdentityRoleSet] = kwargs.pop("cls", None)
 
         _request = build_platform_workload_identity_role_set_get_request(
             location=location,
             open_shift_minor_version=open_shift_minor_version,
             subscription_id=self._config.subscription_id,
-            api_version=self._config.api_version,
+            api_version=api_version,
             headers=_headers,
             params=_params,
         )
@@ -894,15 +926,16 @@ class OpenShiftClustersOperations:
 
         The operation returns properties of each OpenShift cluster.
 
-        :return: An iterator like instance of OpenShiftCluster
+        :return: An iterator like instance of either OpenShiftCluster or the result of cls(response)
         :rtype:
          ~azure.core.paging.ItemPaged[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-        cls: ClsType[_models._models.OpenShiftClusterList] = kwargs.pop("cls", None)  # pylint: disable=protected-access
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
+        cls: ClsType[_models.OpenShiftClusterList] = kwargs.pop("cls", None)
 
         error_map: MutableMapping[int, Type[HttpResponseError]] = {
             401: ClientAuthenticationError,
@@ -917,7 +950,7 @@ class OpenShiftClustersOperations:
 
                 _request = build_open_shift_clusters_list_request(
                     subscription_id=self._config.subscription_id,
-                    api_version=self._config.api_version,
+                    api_version=api_version,
                     headers=_headers,
                     params=_params,
                 )
@@ -937,13 +970,11 @@ class OpenShiftClustersOperations:
                     "GET", urllib.parse.urljoin(next_link, _parsed_next_link.path), params=_next_request_params
                 )
                 _request.url = self._client.format_url(_request.url)
-
+                _request.method = "GET"
             return _request
 
         def extract_data(pipeline_response):
-            deserialized = self._deserialize(
-                _models._models.OpenShiftClusterList, pipeline_response  # pylint: disable=protected-access
-            )
+            deserialized = self._deserialize("OpenShiftClusterList", pipeline_response)
             list_of_elem = deserialized.value
             if cls:
                 list_of_elem = cls(list_of_elem)  # type: ignore
@@ -975,15 +1006,16 @@ class OpenShiftClustersOperations:
         :param resource_group_name: The name of the resource group. The name is case insensitive.
          Required.
         :type resource_group_name: str
-        :return: An iterator like instance of OpenShiftCluster
+        :return: An iterator like instance of either OpenShiftCluster or the result of cls(response)
         :rtype:
          ~azure.core.paging.ItemPaged[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-        cls: ClsType[_models._models.OpenShiftClusterList] = kwargs.pop("cls", None)  # pylint: disable=protected-access
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
+        cls: ClsType[_models.OpenShiftClusterList] = kwargs.pop("cls", None)
 
         error_map: MutableMapping[int, Type[HttpResponseError]] = {
             401: ClientAuthenticationError,
@@ -999,7 +1031,7 @@ class OpenShiftClustersOperations:
                 _request = build_open_shift_clusters_list_by_resource_group_request(
                     resource_group_name=resource_group_name,
                     subscription_id=self._config.subscription_id,
-                    api_version=self._config.api_version,
+                    api_version=api_version,
                     headers=_headers,
                     params=_params,
                 )
@@ -1019,13 +1051,11 @@ class OpenShiftClustersOperations:
                     "GET", urllib.parse.urljoin(next_link, _parsed_next_link.path), params=_next_request_params
                 )
                 _request.url = self._client.format_url(_request.url)
-
+                _request.method = "GET"
             return _request
 
         def extract_data(pipeline_response):
-            deserialized = self._deserialize(
-                _models._models.OpenShiftClusterList, pipeline_response  # pylint: disable=protected-access
-            )
+            deserialized = self._deserialize("OpenShiftClusterList", pipeline_response)
             list_of_elem = deserialized.value
             if cls:
                 list_of_elem = cls(list_of_elem)  # type: ignore
@@ -1059,7 +1089,7 @@ class OpenShiftClustersOperations:
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource. Required.
         :type resource_name: str
-        :return: OpenShiftCluster
+        :return: OpenShiftCluster or the result of cls(response)
         :rtype: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster
         :raises ~azure.core.exceptions.HttpResponseError:
         """
@@ -1072,15 +1102,16 @@ class OpenShiftClustersOperations:
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         cls: ClsType[_models.OpenShiftCluster] = kwargs.pop("cls", None)
 
         _request = build_open_shift_clusters_get_request(
             resource_group_name=resource_group_name,
             resource_name=resource_name,
             subscription_id=self._config.subscription_id,
-            api_version=self._config.api_version,
+            api_version=api_version,
             headers=_headers,
             params=_params,
         )
@@ -1120,8 +1151,9 @@ class OpenShiftClustersOperations:
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[Iterator[bytes]] = kwargs.pop("cls", None)
 
@@ -1137,8 +1169,8 @@ class OpenShiftClustersOperations:
             resource_group_name=resource_group_name,
             resource_name=resource_name,
             subscription_id=self._config.subscription_id,
+            api_version=api_version,
             content_type=content_type,
-            api_version=self._config.api_version,
             json=_json,
             content=_content,
             headers=_headers,
@@ -1146,6 +1178,7 @@ class OpenShiftClustersOperations:
         )
         _request.url = self._client.format_url(_request.url)
 
+        _decompress = kwargs.pop("decompress", True)
         _stream = True
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
@@ -1161,7 +1194,7 @@ class OpenShiftClustersOperations:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response, error_format=ARMErrorFormat)
 
-        deserialized = response.iter_bytes()
+        deserialized = response.stream_download(self._client._pipeline, decompress=_decompress)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -1193,7 +1226,8 @@ class OpenShiftClustersOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: An instance of LROPoller that returns OpenShiftCluster
+        :return: An instance of LROPoller that returns either OpenShiftCluster or the result of
+         cls(response)
         :rtype:
          ~azure.core.polling.LROPoller[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1224,7 +1258,8 @@ class OpenShiftClustersOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: An instance of LROPoller that returns OpenShiftCluster
+        :return: An instance of LROPoller that returns either OpenShiftCluster or the result of
+         cls(response)
         :rtype:
          ~azure.core.polling.LROPoller[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1251,14 +1286,16 @@ class OpenShiftClustersOperations:
         :param parameters: The OpenShift cluster resource. Is either a OpenShiftCluster type or a
          IO[bytes] type. Required.
         :type parameters: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster or IO[bytes]
-        :return: An instance of LROPoller that returns OpenShiftCluster
+        :return: An instance of LROPoller that returns either OpenShiftCluster or the result of
+         cls(response)
         :rtype:
          ~azure.core.polling.LROPoller[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[_models.OpenShiftCluster] = kwargs.pop("cls", None)
         polling: Union[bool, PollingMethod] = kwargs.pop("polling", True)
@@ -1269,6 +1306,7 @@ class OpenShiftClustersOperations:
                 resource_group_name=resource_group_name,
                 resource_name=resource_name,
                 parameters=parameters,
+                api_version=api_version,
                 content_type=content_type,
                 cls=lambda x, y, z: x,
                 headers=_headers,
@@ -1311,20 +1349,22 @@ class OpenShiftClustersOperations:
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         cls: ClsType[Iterator[bytes]] = kwargs.pop("cls", None)
 
         _request = build_open_shift_clusters_delete_request(
             resource_group_name=resource_group_name,
             resource_name=resource_name,
             subscription_id=self._config.subscription_id,
-            api_version=self._config.api_version,
+            api_version=api_version,
             headers=_headers,
             params=_params,
         )
         _request.url = self._client.format_url(_request.url)
 
+        _decompress = kwargs.pop("decompress", True)
         _stream = True
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
@@ -1340,7 +1380,7 @@ class OpenShiftClustersOperations:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response, error_format=ARMErrorFormat)
 
-        deserialized = response.iter_bytes()
+        deserialized = response.stream_download(self._client._pipeline, decompress=_decompress)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -1358,13 +1398,14 @@ class OpenShiftClustersOperations:
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource. Required.
         :type resource_name: str
-        :return: An instance of LROPoller that returns None
+        :return: An instance of LROPoller that returns either None or the result of cls(response)
         :rtype: ~azure.core.polling.LROPoller[None]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         cls: ClsType[None] = kwargs.pop("cls", None)
         polling: Union[bool, PollingMethod] = kwargs.pop("polling", True)
         lro_delay = kwargs.pop("polling_interval", self._config.polling_interval)
@@ -1373,6 +1414,7 @@ class OpenShiftClustersOperations:
             raw_result = self._delete_initial(
                 resource_group_name=resource_group_name,
                 resource_name=resource_name,
+                api_version=api_version,
                 cls=lambda x, y, z: x,
                 headers=_headers,
                 params=_params,
@@ -1416,8 +1458,9 @@ class OpenShiftClustersOperations:
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[Iterator[bytes]] = kwargs.pop("cls", None)
 
@@ -1433,8 +1476,8 @@ class OpenShiftClustersOperations:
             resource_group_name=resource_group_name,
             resource_name=resource_name,
             subscription_id=self._config.subscription_id,
+            api_version=api_version,
             content_type=content_type,
-            api_version=self._config.api_version,
             json=_json,
             content=_content,
             headers=_headers,
@@ -1442,6 +1485,7 @@ class OpenShiftClustersOperations:
         )
         _request.url = self._client.format_url(_request.url)
 
+        _decompress = kwargs.pop("decompress", True)
         _stream = True
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
@@ -1457,7 +1501,7 @@ class OpenShiftClustersOperations:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response, error_format=ARMErrorFormat)
 
-        deserialized = response.iter_bytes()
+        deserialized = response.stream_download(self._client._pipeline, decompress=_decompress)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -1489,7 +1533,8 @@ class OpenShiftClustersOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: An instance of LROPoller that returns OpenShiftCluster
+        :return: An instance of LROPoller that returns either OpenShiftCluster or the result of
+         cls(response)
         :rtype:
          ~azure.core.polling.LROPoller[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1520,7 +1565,8 @@ class OpenShiftClustersOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: An instance of LROPoller that returns OpenShiftCluster
+        :return: An instance of LROPoller that returns either OpenShiftCluster or the result of
+         cls(response)
         :rtype:
          ~azure.core.polling.LROPoller[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1548,14 +1594,16 @@ class OpenShiftClustersOperations:
          IO[bytes] type. Required.
         :type parameters: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftClusterUpdate or
          IO[bytes]
-        :return: An instance of LROPoller that returns OpenShiftCluster
+        :return: An instance of LROPoller that returns either OpenShiftCluster or the result of
+         cls(response)
         :rtype:
          ~azure.core.polling.LROPoller[~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftCluster]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[_models.OpenShiftCluster] = kwargs.pop("cls", None)
         polling: Union[bool, PollingMethod] = kwargs.pop("polling", True)
@@ -1566,6 +1614,7 @@ class OpenShiftClustersOperations:
                 resource_group_name=resource_group_name,
                 resource_name=resource_name,
                 parameters=parameters,
+                api_version=api_version,
                 content_type=content_type,
                 cls=lambda x, y, z: x,
                 headers=_headers,
@@ -1612,7 +1661,7 @@ class OpenShiftClustersOperations:
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource. Required.
         :type resource_name: str
-        :return: OpenShiftClusterAdminKubeconfig
+        :return: OpenShiftClusterAdminKubeconfig or the result of cls(response)
         :rtype: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftClusterAdminKubeconfig
         :raises ~azure.core.exceptions.HttpResponseError:
         """
@@ -1625,15 +1674,16 @@ class OpenShiftClustersOperations:
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         cls: ClsType[_models.OpenShiftClusterAdminKubeconfig] = kwargs.pop("cls", None)
 
         _request = build_open_shift_clusters_list_admin_credentials_request(
             resource_group_name=resource_group_name,
             resource_name=resource_name,
             subscription_id=self._config.subscription_id,
-            api_version=self._config.api_version,
+            api_version=api_version,
             headers=_headers,
             params=_params,
         )
@@ -1671,7 +1721,7 @@ class OpenShiftClustersOperations:
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource. Required.
         :type resource_name: str
-        :return: OpenShiftClusterCredentials
+        :return: OpenShiftClusterCredentials or the result of cls(response)
         :rtype: ~azure.mgmt.redhatopenshift.v2025_07_25.models.OpenShiftClusterCredentials
         :raises ~azure.core.exceptions.HttpResponseError:
         """
@@ -1684,15 +1734,16 @@ class OpenShiftClustersOperations:
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
+        _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+        api_version: str = kwargs.pop("api_version", _params.pop("api-version", self._config.api_version))
         cls: ClsType[_models.OpenShiftClusterCredentials] = kwargs.pop("cls", None)
 
         _request = build_open_shift_clusters_list_credentials_request(
             resource_group_name=resource_group_name,
             resource_name=resource_name,
             subscription_id=self._config.subscription_id,
-            api_version=self._config.api_version,
+            api_version=api_version,
             headers=_headers,
             params=_params,
         )

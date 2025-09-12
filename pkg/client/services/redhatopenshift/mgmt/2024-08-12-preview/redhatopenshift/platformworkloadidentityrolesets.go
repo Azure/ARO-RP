@@ -55,7 +55,7 @@ func (client PlatformWorkloadIdentityRoleSetsClient) List(ctx context.Context, l
 		defer func() {
 			sc := -1
 			if result.pwirsl.Response.Response != nil {
-				sc = result.pwirsl.StatusCode
+				sc = result.pwirsl.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -159,7 +159,7 @@ func (client PlatformWorkloadIdentityRoleSetsClient) ListComplete(ctx context.Co
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().StatusCode
+				sc = result.page.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()

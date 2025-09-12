@@ -80,7 +80,7 @@ const (
 )
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig, version string, tokenCredential azcore.TokenCredential) (Deployer, error) {
+func New(ctx context.Context, _env env.Core, config *RPConfig, version string, tokenCredential azcore.TokenCredential) (Deployer, error) {
 	err := config.validate()
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 	}
 
 	return &deployer{
-		log: log,
+		log: _env.LoggerForComponent("deploy"),
 		env: _env,
 
 		globaldeployments:            features.NewDeploymentsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
@@ -142,7 +142,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 
 		config:      config,
 		version:     version,
-		vmssCleaner: vmsscleaner.New(log, vmssClient),
+		vmssCleaner: vmsscleaner.New(_env.LoggerForComponent("vmsscleaner"), vmssClient),
 	}, nil
 }
 

@@ -56,7 +56,7 @@ func (client OpenShiftVersionsClient) Get(ctx context.Context, location string, 
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
-				sc = result.StatusCode
+				sc = result.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -141,7 +141,7 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 		defer func() {
 			sc := -1
 			if result.osvl.Response.Response != nil {
-				sc = result.osvl.StatusCode
+				sc = result.osvl.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -245,7 +245,7 @@ func (client OpenShiftVersionsClient) ListComplete(ctx context.Context, location
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().StatusCode
+				sc = result.page.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
