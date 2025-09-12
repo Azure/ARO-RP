@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: test
-          image: registry.access.redhat.com/ubi9/ubi-micro:latest
+          image: arointsvc.azurecr.io/ubi9/ubi-micro:latest
           command: ["bash"]
           args: ["-c", "while :; do sleep 2073600; done"]

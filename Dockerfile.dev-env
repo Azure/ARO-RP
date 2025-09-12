@@ -1,5 +1,5 @@
 # Use Fedora as base image since the project documentation mentions Fedora/RHEL dependencies
-FROM fedora:42
+FROM arointsvc.azurecr.io/fedora:42
 
 # Install system dependencies
 RUN dnf update -y && dnf install -y \
