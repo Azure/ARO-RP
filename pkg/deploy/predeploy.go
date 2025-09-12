@@ -170,7 +170,32 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 }
 
 func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID, devopsServicePrincipalId string) error {
+	d.log.Infof("=== ENTERED deployRPGlobal() ===")
 	deploymentName := "rp-global-" + d.config.Location
+
+	// Log deployment context to help debug incorrect subscription usage
+	d.log.Infof("======== DEBUG DEPLOYMENT CONTEXT ========")
+	d.log.Infof("RP Location: %s", d.config.Location)
+
+	globalRGLocation := "<nil>"
+	if d.config.Configuration.GlobalResourceGroupLocation != nil {
+		globalRGLocation = *d.config.Configuration.GlobalResourceGroupLocation
+	}
+	d.log.Infof("Global Resource Group Location: %s", globalRGLocation)
+
+	globalRGName := "<nil>"
+	if d.config.Configuration.GlobalResourceGroupName != nil {
+		globalRGName = *d.config.Configuration.GlobalResourceGroupName
+	}
+	d.log.Infof("Global Resource Group Name: %s", globalRGName)
+
+	d.log.Infof("rpServicePrincipalID: %s", rpServicePrincipalID)
+	d.log.Infof("gatewayServicePrincipalID: %s", gatewayServicePrincipalID)
+	d.log.Infof("devopsServicePrincipalId: %s", devopsServicePrincipalId)
+
+	d.log.Infof("Template 'assignableScopes' is set to [subscription().id] — expected to resolve to the current deployment subscription.")
+	d.log.Infof("About to run CreateOrUpdateAndWait on: %s", globalRGName)
+	d.log.Infof("==========================================")
 
 	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobal)
 	if err != nil {
@@ -182,6 +207,9 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 	if err != nil {
 		return err
 	}
+
+	d.log.Infof("Parsed ARM template: rp-production-global-subscription.json")
+	d.log.Infof("About to deploy ARM template at subscription-scope")
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
