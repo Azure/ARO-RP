@@ -50,7 +50,7 @@ services:
     devices:
       - /dev/net/tun # required to modify VPN on host
     entrypoint: "openvpn"
-    command: ["/secrets/vpn-eastus.ovpn"]
+    command: ["/secrets/vpn-aks-${LOCATION}.ovpn"]
     ports:
       - "443:443"
     healthcheck:
