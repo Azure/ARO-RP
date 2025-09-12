@@ -308,6 +308,131 @@ func (g *generator) rpLB() *arm.Resource {
 	}
 }
 
+func (g *generator) rpTaggedLB() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.LoadBalancer{
+			Sku: &mgmtnetwork.LoadBalancerSku{
+				Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+			},
+			LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+				FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+					{
+						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]"),
+							},
+						},
+						Name: pointerutils.ToPtr("rp-frontend-tagged"),
+					},
+					{
+						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]"),
+							},
+						},
+						Name: pointerutils.ToPtr("portal-frontend-tagged"),
+					},
+				},
+				// No backend pools - this LB will reference the existing rp-backend pool from the original LB
+				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{},
+				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-tagged', 'rp-frontend-tagged')]"),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-tagged', 'rp-probe-tagged')]"),
+							},
+							Protocol:         mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:     pointerutils.ToPtr(int32(443)),
+							BackendPort:      pointerutils.ToPtr(int32(443)),
+						},
+						Name: pointerutils.ToPtr("rp-lbrule-tagged"),
+					},
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-tagged', 'portal-frontend-tagged')]"),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-tagged', 'portal-probe-https-tagged')]"),
+							},
+							Protocol:         mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:     pointerutils.ToPtr(int32(443)),
+							BackendPort:      pointerutils.ToPtr(int32(444)),
+						},
+						Name: pointerutils.ToPtr("portal-lbrule-tagged"),
+					},
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-tagged', 'portal-frontend-tagged')]"),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-tagged', 'portal-probe-ssh-tagged')]"),
+							},
+							Protocol:         mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:     pointerutils.ToPtr(int32(2222)),
+							BackendPort:      pointerutils.ToPtr(int32(2222)),
+						},
+						Name: pointerutils.ToPtr("portal-lbrule-ssh-tagged"),
+					},
+				},
+				Probes: &[]mgmtnetwork.Probe{
+					{
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
+							Port:           pointerutils.ToPtr(int32(443)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
+						},
+						Name: pointerutils.ToPtr("rp-probe-tagged"),
+					},
+					{
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
+							Port:           pointerutils.ToPtr(int32(444)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
+						},
+						Name: pointerutils.ToPtr("portal-probe-https-tagged"),
+					},
+					{
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:       mgmtnetwork.ProbeProtocolTCP,
+							Port:           pointerutils.ToPtr(int32(2222)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+						},
+						Name: pointerutils.ToPtr("portal-probe-ssh-tagged"),
+					},
+				},
+			},
+			Name:     pointerutils.ToPtr("rp-lb-tagged"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]",
+			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
+		},
+	}
+}
+
 // rpLBAlert generates an alert resource for the rp-lb healthprobe metric
 func (g *generator) rpLBAlert(threshold float64, severity int32, name string, evalFreq string, windowSize string, metric string) *arm.Resource {
 	return &arm.Resource{

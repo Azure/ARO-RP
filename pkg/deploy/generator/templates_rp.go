@@ -192,6 +192,37 @@ func (g *generator) rpTemplate() *arm.Template {
 	return t
 }
 
+func (g *generator) rpTaggedLBTemplate() *arm.Template {
+	t := templateStanza()
+
+	params := []string{
+		"rpLbIpTags",
+		"portalLbIpTags",
+		"lbIpTagsDisabledRegions",
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "array"}
+		switch param {
+		case "rpLbIpTags":
+			p.DefaultValue = []interface{}{}
+		case "portalLbIpTags":
+			p.DefaultValue = []interface{}{}
+		case "lbIpTagsDisabledRegions":
+			p.DefaultValue = []string{}
+		}
+		t.Parameters[param] = p
+	}
+
+	t.Resources = append(t.Resources,
+		g.publicIPAddressTagged("rp-pip-tagged", "rpLbIpTags"),
+		g.publicIPAddressTagged("portal-pip-tagged", "portalLbIpTags"),
+		g.rpTaggedLB(),
+	)
+
+	return t
+}
+
 func (g *generator) rpGlobalTemplate() *arm.Template {
 	t := templateStanza()
 

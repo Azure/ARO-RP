@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -53,6 +54,10 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte(`"throughput": `+strconv.Itoa(cosmosDbGatewayProvisionedThroughputHack)), []byte(`"throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"`))
 	// pickZones doesn't work for regions that don't have zones.  We have created param nonZonalRegions in both rp and gateway and set default values to include all those regions.  It cannot be passed in-line to contains function, has to be created as an array in a parameter :(
 	b = bytes.ReplaceAll(b, []byte(`"zones": []`), []byte(`"zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"`))
+
+	// Handle IP tags for Load Balancer tagged IPs
+	b = g.replaceLoadBalancerIPTags(b)
+
 	b = bytes.ReplaceAll(b, []byte(`"routes": []`), []byte(`"routes": "[parameters('routes')]"`))
 
 	if g.production {
@@ -91,4 +96,24 @@ func parametersStanza() *arm.Parameters {
 		ContentVersion: "1.0.0.0",
 		Parameters:     map[string]*arm.ParametersParameter{},
 	}
+}
+
+func (g *generator) replaceLoadBalancerIPTags(b []byte) []byte {
+	// Check if this is the tagged Load Balancer template by looking for tagged resource names
+	if strings.Contains(string(b), "rp-pip-tagged") {
+		// Use a multiline pattern that looks ahead to find the name field
+		// We need to enable multiline mode and use [\s\S]* to match newlines
+		rpPipPattern := regexp.MustCompile(`(?s)("ipTags":\s*\[]\s*}\s*,\s*"name":\s*"rp-pip-tagged")`)
+		b = rpPipPattern.ReplaceAll(b, []byte(`"ipTags": "[if(or(contains(parameters('lbIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpLbIpTags')[0].type, 'tag', parameters('rpLbIpTags')[0].value)))]"
+            },
+            "name": "rp-pip-tagged"`))
+
+		// For portal-pip-tagged, replace empty ipTags with portalLbIpTags logic
+		portalPipPattern := regexp.MustCompile(`(?s)("ipTags":\s*\[]\s*}\s*,\s*"name":\s*"portal-pip-tagged")`)
+		b = portalPipPattern.ReplaceAll(b, []byte(`"ipTags": "[if(or(contains(parameters('lbIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('portalLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('portalLbIpTags')[0].type, 'tag', parameters('portalLbIpTags')[0].value)))]"
+            },
+            "name": "portal-pip-tagged"`))
+	}
+
+	return b
 }

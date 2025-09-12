@@ -63,6 +63,10 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
+		err = g.writeTemplate(g.rpTaggedLBTemplate(), FileRPProductionTaggedLB)
+		if err != nil {
+			return err
+		}
 		err = g.writeTemplate(g.gatewayManagedIdentityTemplate(), FileGatewayProductionManagedIdentity)
 		if err != nil {
 			return err
