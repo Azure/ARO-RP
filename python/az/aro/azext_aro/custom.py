@@ -121,6 +121,7 @@ def aro_create(*,  # pylint: disable=too-many-locals
              version=version,
              pod_cidr=pod_cidr,
              service_cidr=service_cidr,
+             enable_managed_identity=enable_managed_identity,
              warnings_as_text=True)
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
@@ -251,7 +252,7 @@ def validate(*,  # pylint: disable=too-many-locals,too-many-statements
              version=None,
              pod_cidr=None,  # pylint: disable=unused-argument
              service_cidr=None,  # pylint: disable=unused-argument
-             enable_managed_identity=False,  # pylint: disable=unused-argument
+             enable_managed_identity=False,
              platform_workload_identities=None,  # pylint: disable=unused-argument
              mi_user_assigned=None,  # pylint: disable=unused-argument
              warnings_as_text=False):
@@ -272,14 +273,15 @@ def validate(*,  # pylint: disable=too-many-locals,too-many-statements
 
     aad = AADManager(cmd.cli_ctx)
 
-    rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
-    if not rp_client_sp_id:
-        raise ResourceNotFoundError("RP service principal not found.")
+    sp_obj_ids = []
+    if not enable_managed_identity:
+        rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
+        if not rp_client_sp_id:
+            raise ResourceNotFoundError("RP service principal not found.")
+        sp_obj_ids.append(rp_client_sp_id)
 
-    sp_obj_ids = [rp_client_sp_id]
-
-    if client_id is not None:
-        sp_obj_ids.append(aad.get_service_principal_id(client_id))
+        if client_id is not None:
+            sp_obj_ids.append(aad.get_service_principal_id(client_id))
 
     cluster = mockoc(disk_encryption_set, master_subnet, worker_subnet, enable_preconfigured_nsg)
     try:
