@@ -333,8 +333,12 @@ func (g *generator) rpTaggedLB() *arm.Resource {
 						Name: pointerutils.ToPtr("portal-frontend-tagged"),
 					},
 				},
-				// No backend pools - this LB will reference the existing rp-backend pool from the original LB
-				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{},
+				// Add own backend pool for the tagged Load Balancer
+				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+					{
+						Name: pointerutils.ToPtr("rp-backend-tagged"),
+					},
+				},
 				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
@@ -342,7 +346,7 @@ func (g *generator) rpTaggedLB() *arm.Resource {
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-tagged', 'rp-frontend-tagged')]"),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-tagged', 'rp-backend-tagged')]"),
 							},
 							Probe: &mgmtnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-tagged', 'rp-probe-tagged')]"),
@@ -360,7 +364,7 @@ func (g *generator) rpTaggedLB() *arm.Resource {
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-tagged', 'portal-frontend-tagged')]"),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-tagged', 'rp-backend-tagged')]"),
 							},
 							Probe: &mgmtnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-tagged', 'portal-probe-https-tagged')]"),
@@ -378,7 +382,7 @@ func (g *generator) rpTaggedLB() *arm.Resource {
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-tagged', 'portal-frontend-tagged')]"),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-tagged', 'rp-backend-tagged')]"),
 							},
 							Probe: &mgmtnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-tagged', 'portal-probe-ssh-tagged')]"),
@@ -689,6 +693,20 @@ func (g *generator) rpVMSS() *arm.Resource {
 												},
 											},
 										},
+										{
+											Name: pointerutils.ToPtr("rp-vmss-ipconfig-tagged"),
+											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
+												Subnet: &mgmtcompute.APIEntityReference{
+													ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+												},
+												Primary: pointerutils.ToPtr(false),
+												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
+													{
+														ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-tagged', 'rp-backend-tagged')]"),
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -755,6 +773,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
+			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb-tagged')]",
 		},
 	}
 }
