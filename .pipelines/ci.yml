@@ -231,7 +231,7 @@ stages:
           # Run the E2E test suite
           - bash: |
               . ./hack/e2e/run-rp-and-e2e.sh
-              az acr login --name arosvcdev
+              az acr login --name arointsvc
 
               deploy_e2e_db
               register_sub
