@@ -7,30 +7,23 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"os"
 
 	"github.com/sirupsen/logrus"
 )
 
 // NewSubjectNameAndIssuer creates a new instance of ClientAuthorizer which
 // allows connections only if they contain a valid client certificate signed by
-// a CA in `caBundlePath` and the client certificate's CommonName equals
-// `clientCertCommonName`.
-func NewSubjectNameAndIssuer(log *logrus.Entry, caBundlePath, clientCertCommonName string) (ClientAuthorizer, error) {
+// a CA in `certPool` and the client certificate's CommonName equals `clientCertCommonName`.
+func NewSubjectNameAndIssuer(log *logrus.Entry, certPool *x509.CertPool, clientCertCommonName string) (ClientAuthorizer, error) {
 	if clientCertCommonName == "" {
 		return nil, fmt.Errorf("client cert common name is empty")
 	}
 
 	authorizer := &subjectNameAndIssuer{
+		roots:                certPool,
 		clientCertCommonName: clientCertCommonName,
 
-		log:      log,
-		readFile: os.ReadFile,
-	}
-
-	err := authorizer.readCABundle(caBundlePath)
-	if err != nil {
-		return nil, err
+		log: log,
 	}
 
 	return authorizer, nil
@@ -40,24 +33,7 @@ type subjectNameAndIssuer struct {
 	roots                *x509.CertPool
 	clientCertCommonName string
 
-	log      *logrus.Entry
-	readFile func(filename string) ([]byte, error)
-}
-
-func (sni *subjectNameAndIssuer) readCABundle(caBundlePath string) error {
-	caBundle, err := sni.readFile(caBundlePath)
-	if err != nil {
-		return err
-	}
-
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM(caBundle)
-	if !ok {
-		return fmt.Errorf("can not decode admin CA bundle from %s", caBundlePath)
-	}
-
-	sni.roots = roots
-	return nil
+	log *logrus.Entry
 }
 
 func (sni *subjectNameAndIssuer) IsAuthorized(cs *tls.ConnectionState) bool {

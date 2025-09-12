@@ -25,7 +25,7 @@ var _ AppLensClient = &appLensClient{}
 
 // NewAppLensClient returns a new AppLensClient
 func NewAppLensClient(env *azureclient.AROEnvironment, cred azcore.TokenCredential) (AppLensClient, error) {
-	client, err := NewClient(env.AppLensEndpoint, env.PkiIssuerUrlTemplate, env.PkiCaName, env.AppLensScope, cred, nil)
+	client, err := NewClient(env.AppLensEndpoint, env.PkiIssuerUrlTemplate, env.PkiCaNames, env.AppLensScope, cred, nil)
 
 	if err != nil {
 		return nil, err
