@@ -104,7 +104,7 @@ jobs:
           . ./env
           . secrets/env
           . ./hack/e2e/run-rp-and-e2e.sh
-          
+
           az acr login --name arosvcdev
           az acr login --name arointsvc
 
