@@ -14,7 +14,6 @@ const (
 	FileRPProductionGlobalSubscription       = "rp-production-global-subscription.json"
 	FileRPProductionParameters               = "rp-production-parameters.json"
 	FileRPProductionSubscription             = "rp-production-subscription.json"
-	FileRPProductionTaggedLB                 = "rp-production-tagged-lb.json"
 	FileGatewayProductionManagedIdentity     = "gateway-production-managed-identity.json"
 	FileGatewayProductionPredeploy           = "gateway-production-predeploy.json"
 	FileGatewayProductionPredeployParameters = "gateway-production-predeploy-parameters.json"

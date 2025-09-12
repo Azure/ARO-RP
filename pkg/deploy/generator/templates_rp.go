@@ -83,6 +83,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			"oidcStorageAccountName",
 			"otelAuditQueueSize",
 			"msiRpEndpoint",
+			"rpLbIpTags",
+			"portalLbIpTags",
+			"lbIpTagsDisabledRegions",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
@@ -132,6 +135,26 @@ func (g *generator) rpTemplate() *arm.Template {
 				"centralindia",
 				"centraluseuap",
 				"koreacentral",
+				"switzerlandnorth",
+				"northcentralus",
+				"uaenorth",
+				"westus",
+				"japanwest",
+				"uaecentral",
+			}
+		case "rpLbIpTags":
+			p.Type = "array"
+			p.DefaultValue = []interface{}{}
+		case "portalLbIpTags":
+			p.Type = "array"
+			p.DefaultValue = []interface{}{}
+		case "lbIpTagsDisabledRegions":
+			p.Type = "array"
+			p.DefaultValue = []string{
+				"eastasia",
+				"centralindia",
+				"centraluseuap",
+				"koreacentral",
 				"southcentralus",
 				"canadacentral",
 				"germanywestcentral",
@@ -145,7 +168,6 @@ func (g *generator) rpTemplate() *arm.Template {
 				"japanwest",
 				"uaecentral",
 			}
-
 		// TODO: Replace with Live Service Configuration in KeyVault
 		case "clustersInstallViaHive",
 			"clustersAdoptByHive",
@@ -176,6 +198,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
 			g.rpLB(),
+			g.publicIPAddressTagged("rp-pip-tagged", "rpLbIpTags"),
+			g.publicIPAddressTagged("portal-pip-tagged", "portalLbIpTags"),
+			g.rpTaggedLB(),
 			g.rpVMSS(),
 			g.rpLBAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.
 			g.rpLBAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),     // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
@@ -188,37 +213,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		g.virtualNetworkPeering("rp-pe-vnet-001/peering-rp-vnet", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]", false, false, nil))
 	t.Resources = append(t.Resources, g.rpCosmosDB()...)
 	t.Resources = append(t.Resources, g.rpRBAC()...)
-
-	return t
-}
-
-func (g *generator) rpTaggedLBTemplate() *arm.Template {
-	t := templateStanza()
-
-	params := []string{
-		"rpLbIpTags",
-		"portalLbIpTags",
-		"lbIpTagsDisabledRegions",
-	}
-
-	for _, param := range params {
-		p := &arm.TemplateParameter{Type: "array"}
-		switch param {
-		case "rpLbIpTags":
-			p.DefaultValue = []interface{}{}
-		case "portalLbIpTags":
-			p.DefaultValue = []interface{}{}
-		case "lbIpTagsDisabledRegions":
-			p.DefaultValue = []string{}
-		}
-		t.Parameters[param] = p
-	}
-
-	t.Resources = append(t.Resources,
-		g.publicIPAddressTagged("rp-pip-tagged", "rpLbIpTags"),
-		g.publicIPAddressTagged("portal-pip-tagged", "portalLbIpTags"),
-		g.rpTaggedLB(),
-	)
 
 	return t
 }

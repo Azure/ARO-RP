@@ -99,6 +99,26 @@
         "keyvaultPrefix": {
             "value": ""
         },
+        "lbIpTagsDisabledRegions": {
+            "value": [
+                "eastasia",
+                "centralindia",
+                "centraluseuap",
+                "koreacentral",
+                "southcentralus",
+                "canadacentral",
+                "germanywestcentral",
+                "norwayeast",
+                "switzerlandnorth",
+                "brazilsouth",
+                "southafricanorth",
+                "northcentralus",
+                "uaenorth",
+                "westus",
+                "japanwest",
+                "uaecentral"
+            ]
+        },
         "mdmFrontendUrl": {
             "value": ""
         },
@@ -120,13 +140,7 @@
                 "centralindia",
                 "centraluseuap",
                 "koreacentral",
-                "southcentralus",
-                "canadacentral",
-                "germanywestcentral",
-                "norwayeast",
                 "switzerlandnorth",
-                "brazilsouth",
-                "southafricanorth",
                 "northcentralus",
                 "uaenorth",
                 "westus",
@@ -149,11 +163,17 @@
         "portalElevatedGroupIds": {
             "value": ""
         },
+        "portalLbIpTags": {
+            "value": []
+        },
         "rpFeatures": {
             "value": ""
         },
         "rpImage": {
             "value": ""
+        },
+        "rpLbIpTags": {
+            "value": []
         },
         "rpMdmAccount": {
             "value": ""
