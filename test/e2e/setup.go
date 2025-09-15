@@ -326,9 +326,10 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	if strings.HasPrefix(restconfig.ServerName, "api.") {
-		// This should be able to be verified with public certs
-		restconfig.CAFile = "/etc/ssl/certs/ca-certificates.crt"
+	// In development e2e the certificate is not always created with a publicly
+	// verifiable TLS certificate.
+	if _env.IsLocalDevelopmentMode() {
+		restconfig.Insecure = true // CodeQL [SM03511] only used in local development
 	}
 
 	cli, err := kubernetes.NewForConfig(restconfig)
