@@ -506,7 +506,7 @@ def aro_get_versions(client, location):
     items = client.open_shift_versions.list(location)
     versions = []
     for item in items:
-        versions.append(item.properties.version)
+        versions.append(item.version)
     return sorted(versions)
 
 

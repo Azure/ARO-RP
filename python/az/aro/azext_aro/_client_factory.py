@@ -14,10 +14,11 @@ def cf_aro(cli_ctx, *_):
 
     if rp_mode_development():
         opt_args = {
-            "endpoint": "https://localhost:8443/",
+            "base_url": "https://localhost:8443/",
             "connection_verify": False
         }
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        print(cli_ctx.cloud.endpoints.resource_manager)
 
     client = get_mgmt_service_client(
         cli_ctx, AzureRedHatOpenShiftClient, base_url_bound=False, **opt_args)
