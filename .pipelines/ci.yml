@@ -264,7 +264,7 @@ stages:
           - bash: |
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-              ./oc adm must-gather --image arointsvc.azurecr.io/openshift/aro-must-gather:latest
+              ./oc adm must-gather --image arointsvc.azurecr.io/openshift4/ose-must-gather:latest
               tar cf must-gather.tar.gz must-gather.local.*
             displayName: Collect must-gather
             condition: Failed()
