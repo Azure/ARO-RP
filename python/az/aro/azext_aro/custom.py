@@ -234,7 +234,34 @@ def aro_create(*,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def validate(*,  # pylint: disable=too-many-locals,too-many-statements
+def _report_validation_issues(errors_and_warnings, warnings_as_text):
+    warnings = [issue for issue in errors_and_warnings if issue[2] == "Warning"]
+    errors = [issue for issue in errors_and_warnings if issue[2] != "Warning"]
+
+    if not warnings and not errors:
+        logger.info("No validation errors or warnings")
+        return
+
+    if warnings:
+        if len(errors) == 0 and warnings_as_text:
+            full_msg = ""
+            for warning in warnings:
+                full_msg += f"{warning[3]}\n"
+        else:
+            headers = ["Type", "Name", "Severity", "Description"]
+            table = tabulate(warnings, headers=headers, tablefmt="grid")
+            full_msg = f"The following issues will have a minor impact on cluster creation:\n{table}"
+        logger.warning(full_msg)
+
+    if errors:
+        full_msg = "\n" if warnings else ""
+        headers = ["Type", "Name", "Severity", "Description"]
+        table = tabulate(errors, headers=headers, tablefmt="grid")
+        full_msg += f"The following errors are fatal and will block cluster creation:\n{table}"
+        raise ValidationError(full_msg)
+
+
+def validate(*,  # pylint: disable=too-many-locals
              cmd,
              client,  # pylint: disable=unused-argument
              resource_group_name,  # pylint: disable=unused-argument
@@ -309,46 +336,13 @@ def validate(*,  # pylint: disable=too-many-locals,too-many-statements
     for error_func in error_objects:
         namespace = collections.namedtuple("Namespace", locals().keys())(*locals().values())
         error_obj = error_func(cmd, namespace)
-        if error_obj != []:
+        if error_obj:
             for err in error_obj:
                 # Wrap text so tabulate returns a pretty table
-                new_err = []
-                for txt in err:
-                    new_err.append(textwrap.fill(txt, width=160))
+                new_err = [textwrap.fill(txt, width=160) for txt in err]
                 errors_and_warnings.append(new_err)
 
-    warnings = []
-    errors = []
-    if len(errors_and_warnings) > 0:
-        # Separate errors and warnings into separate arrays
-        for issue in errors_and_warnings:
-            if issue[2] == "Warning":
-                warnings.append(issue)
-            else:
-                errors.append(issue)
-    else:
-        logger.info("No validation errors or warnings")
-
-    if len(warnings) > 0:
-        if len(errors) == 0 and warnings_as_text:
-            full_msg = ""
-            for warning in warnings:
-                full_msg = full_msg + f"{warning[3]}\n"
-        else:
-            headers = ["Type", "Name", "Severity", "Description"]
-            table = tabulate(warnings, headers=headers, tablefmt="grid")
-            full_msg = f"The following issues will have a minor impact on cluster creation:\n{table}"
-        logger.warning(full_msg)
-
-    if len(errors) > 0:
-        if len(warnings) > 0:
-            full_msg = "\n"
-        else:
-            full_msg = ""
-        headers = ["Type", "Name", "Severity", "Description"]
-        table = tabulate(errors, headers=headers, tablefmt="grid")
-        full_msg = full_msg + f"The following errors are fatal and will block cluster creation:\n{table}"
-        raise ValidationError(full_msg)
+    _report_validation_issues(errors_and_warnings, warnings_as_text)
 
 
 def aro_validate(*,  # pylint: disable=too-many-locals,too-many-statements
