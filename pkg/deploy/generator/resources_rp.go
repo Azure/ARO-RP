@@ -790,6 +790,7 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 		Name:       "[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "/add')]",
 		Type:       "Microsoft.KeyVault/vaults/accessPolicies",
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault/vaults/accessPolicies"),
+		Condition:  "[parameters('deploy')]",
 		Properties: &mgmtkeyvault.VaultProperties{
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
