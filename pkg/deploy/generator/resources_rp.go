@@ -974,7 +974,7 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters/profiles"),
 		Location:   "[resourceGroup().location]",
 		DependsOn: []string{
-			"[resourceId('Microsoft.Network/networkSecurityPerimeters', 'cosmos-nsp']",
+			"[resourceId('Microsoft.Network/networkSecurityPerimeters', 'cosmos-nsp')]",
 		},
 	})
 
