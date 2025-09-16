@@ -329,7 +329,8 @@
                                         }
                                     }
                                 ]
-                            }
+                            },
+                            "condition": "[parameters('deploy')]"
                         }
                     ]
                 }
