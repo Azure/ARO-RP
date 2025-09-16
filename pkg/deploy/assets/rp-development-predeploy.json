@@ -5,6 +5,12 @@
         "adminObjectId": {
             "type": "string"
         },
+        "clustersAdoptByHive": {
+            "type": "string"
+        },
+        "clustersInstallViaHive": {
+            "type": "string"
+        },
         "fpServicePrincipalId": {
             "type": "string"
         },
@@ -284,6 +290,9 @@
                     "scope": "inner"
                 },
                 "parameters": {
+                    "deploy": {
+                        "value": "[or(not(empty(parameters('clustersInstallViaHive'))), not(empty(parameters('clustersAdoptByHive'))))]"
+                    },
                     "keyvaultPrefix": {
                         "value": "[parameters('keyvaultPrefix')]"
                     }
@@ -292,6 +301,9 @@
                     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                     "contentVersion": "1.0.0.0",
                     "parameters": {
+                        "deploy": {
+                            "type": "bool"
+                        },
                         "keyvaultPrefix": {
                             "type": "string"
                         }
