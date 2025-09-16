@@ -214,6 +214,12 @@ func DevConfig(_env env.Core) (*Config, error) {
 			TokenContributorRoleID:            pointerutils.ToPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
 			TokenContributorRoleName:          pointerutils.ToPtr("ARO v4 ContainerRegistry Token Contributor"),
 			VMSize:                            pointerutils.ToPtr("Standard_D2s_v3"),
+			VMImageReference: pointerutils.ToPtr(map[string]string{
+				"publisher": "MicrosoftCBLMariner",
+				"offer":     "cbl-mariner",
+				"sku":       "cbl-mariner-2-gen2",
+				"version":   "latest",
+			}),
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			InstallViaHive:           pointerutils.ToPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),

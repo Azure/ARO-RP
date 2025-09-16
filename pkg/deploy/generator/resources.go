@@ -6,7 +6,6 @@ package generator
 import (
 	"fmt"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -186,29 +185,5 @@ func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessP
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 		Condition:  condition,
 		DependsOn:  dependsOn,
-	}
-}
-
-// vmImage returns the correct ImageReference for a VM depending on whether it
-// is production (using the 1P image) or development (using the public gallery).
-func (g *generator) vmImage() *mgmtcompute.ImageReference {
-	if g.production {
-		// https://eng.ms/docs/products/azure-linux/gettingstarted/azurevm/azurevm
-		return &mgmtcompute.ImageReference{
-			// cbl-mariner-2-gen2-fips is not supported by Automatic OS Updates
-			// therefore the non fips image is used, and fips is configured manually
-			// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade
-			// https://eng.ms/docs/cloud-ai-platform/azure-core/azure-compute/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryusageinstructions#vmss-deployment-with-1p-image-galleryarm-template
-			// https://eng.ms/docs/cloud-ai-platform/azure-core/core-compute-and-host/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryimagereference#cbl-mariner-2-images
-			SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"),
-		}
-	} else {
-		// In non-1P subscriptions, use the public gallery
-		return &mgmtcompute.ImageReference{
-			Publisher: pointerutils.ToPtr("MicrosoftCBLMariner"),
-			Offer:     pointerutils.ToPtr("cbl-mariner"),
-			Sku:       pointerutils.ToPtr("cbl-mariner-2-gen2"),
-			Version:   pointerutils.ToPtr("latest"),
-		}
 	}
 }

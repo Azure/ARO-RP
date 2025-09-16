@@ -78,6 +78,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"sshPublicKey",
 			"subscriptionResourceGroupName",
 			"vmSize",
+			"vmImageReference",
 			"vmssCleanupEnabled",
 			"vmssName",
 			"oidcStorageAccountName",
@@ -111,6 +112,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = ""
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"
+		case "vmImageReference":
+			p.Type = "object"
+			p.DefaultValue = map[string]string{}
 		case "vmssCleanupEnabled":
 			p.Type = "bool"
 			p.DefaultValue = true

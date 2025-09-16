@@ -522,7 +522,8 @@ func (g *generator) rpVMSS() *arm.Resource {
 						},
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
-						ImageReference: g.vmImage(),
+						// ImageReference is moved to a parameter
+						ImageReference: &mgmtcompute.ImageReference{},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
