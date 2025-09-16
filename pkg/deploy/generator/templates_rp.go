@@ -308,6 +308,8 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		"keyvaultPrefix",
 		"rpServicePrincipalId",
 		"fpServicePrincipalId",
+		"clustersInstallViaHive",
+		"clustersAdoptByHive",
 	}
 
 	if g.production {

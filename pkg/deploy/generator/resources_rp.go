@@ -818,12 +818,18 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 					"keyvaultPrefix": {
 						Type: "string",
 					},
+					"deploy": {
+						Type: "bool",
+					},
 				},
 				Resources: []*arm.DeploymentTemplateResource{vaultAccessPoliciesResource},
 			},
 			Parameters: map[string]*arm.DeploymentTemplateResourceParameter{
 				"keyvaultPrefix": {
 					Value: "[parameters('keyvaultPrefix')]",
+				},
+				"deploy": {
+					Value: "[or(not(empty(parameters('clustersInstallViaHive'))), not(empty(parameters('clustersAdoptByHive'))))]",
 				},
 			},
 			Mode: "Incremental",
