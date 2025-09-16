@@ -24,6 +24,8 @@ variables:
   - template: vars.yml
   - name: CI
     value: true
+  - name: RP_IMAGE_ACR
+    value: arointsvc
   - name: REGISTRY
     value: arointsvc.azurecr.io
   - name: BUILDER_REGISTRY
@@ -232,6 +234,7 @@ stages:
           - bash: |
               . ./hack/e2e/run-rp-and-e2e.sh
               az acr login --name arosvcdev
+              az acr login --name arointsvc
 
               deploy_e2e_db
               register_sub
@@ -261,7 +264,7 @@ stages:
           - bash: |
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-              ./oc adm must-gather --image quay.io/cmarches/aro-must-gather:20231030.00
+              ./oc adm must-gather --image arointsvc.azurecr.io/openshift4/ose-must-gather:latest
               tar cf must-gather.tar.gz must-gather.local.*
             displayName: Collect must-gather
             condition: Failed()
