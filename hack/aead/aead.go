@@ -50,7 +50,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		v = v + scanner.Text() + "\n"
 	}
 
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
+	_env, err := env.NewCore(ctx, log, env.SERVICE_TOOLING)
 	if err != nil {
 		return err
 	}

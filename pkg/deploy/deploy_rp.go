@@ -29,9 +29,15 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
-	globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
-	if err != nil {
-		return err
+	var globalDevopsMsiPrincipalId string
+
+	if d.config.Configuration.GlobalDevopsManagedIdentity != nil {
+		globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+		if err != nil {
+			return err
+		}
+
+		globalDevopsMsiPrincipalId = globalDevopsMSI.PrincipalID.String()
 	}
 
 	deploymentName := "rp-production-" + d.version
@@ -49,8 +55,10 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 
 	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
-		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
+	if d.config.Configuration.AdminAPICABundle != nil {
+		parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
+			Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
+		}
 	}
 	if d.config.Configuration.ARMAPICABundle != nil {
 		parameters.Parameters["armApiCaBundle"] = &arm.ParametersParameter{
@@ -83,7 +91,7 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		Value: d.env.Environment().ActualCloudName,
 	}
 	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
-		Value: globalDevopsMSI.PrincipalID.String(),
+		Value: globalDevopsMsiPrincipalId,
 	}
 	if d.config.Configuration.CosmosDB != nil {
 		parameters.Parameters["cosmosDB"] = &arm.ParametersParameter{

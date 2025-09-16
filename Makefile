@@ -10,11 +10,11 @@ OC ?= oc
 export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-MARINER_VERSION = 20240301
-FLUENTBIT_VERSION = 1.9.10
+MARINER_VERSION = 20250701
+FLUENTBIT_VERSION = 4.0.4
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.7.2
-AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
+AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
 
 # Golang version go mod tidy compatibility
@@ -314,6 +314,7 @@ lint-go: $(GOLANGCI_LINT)
 .PHONY: lint-go-fix
 lint-go-fix: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --verbose --fix
+	cd pkg/api/ && $(GOLANGCI_LINT) run --verbose --fix ./...
 
 .PHONY: validate-lint-go-fix
 validate-lint-go-fix: lint-go-fix
@@ -386,11 +387,17 @@ aks.kubeconfig:
 
 .PHONY: go-tidy
 go-tidy: # Run go mod tidy - add missing and remove unused modules.
+	echo "tidying main module"
 	go mod tidy -compat=${GOLANG_VERSION}
+	echo "tidying pkg/api/"
+	cd pkg/api/ && go mod tidy -compat=${GOLANG_VERSION}
 
 .PHONY: go-verify
 go-verify: go-tidy # Run go mod verify - verify dependencies have expected content
+	echo "verifying main module"
 	go mod verify
+	echo "verifying pkg/api/"
+	cd pkg/api/ && go mod verify
 
 .PHONY: xmlcov
 xmlcov: $(GOCOV) $(GOCOV_XML)

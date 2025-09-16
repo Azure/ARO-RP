@@ -4,7 +4,6 @@ package cluster
 // Licensed under the Apache License 2.0.
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -30,7 +29,6 @@ func TestEmitCWPStatus(t *testing.T) {
 		configcli: fakeConfigClient,
 		m:         mockMetrics,
 		log:       logrus.NewEntry(logrus.New()),
-		wg:        &sync.WaitGroup{},
 	}
 
 	tests := []struct {

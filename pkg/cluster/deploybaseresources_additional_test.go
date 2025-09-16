@@ -307,11 +307,7 @@ func TestNetworkInternalLoadBalancerZonality(t *testing.T) {
 							APIServerProfile: api.APIServerProfile{
 								Visibility: api.VisibilityPublic,
 							},
-							NetworkProfile: api.NetworkProfile{
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									Zones: []string{"1", "2", "3"},
-								},
-							},
+							Zones: []string{"1", "2", "3"},
 						},
 					},
 				},

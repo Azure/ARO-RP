@@ -39,10 +39,10 @@ type AcrAuth struct {
 	mu       sync.RWMutex
 }
 
-func NewAcrAuth(acr string, log *logrus.Entry, env env.Core, tokenCredential azcore.TokenCredential, authenticationClient azcontainerregistry.AuthenticationClient) *AcrAuth {
+func NewAcrAuth(acr string, env env.Core, tokenCredential azcore.TokenCredential, authenticationClient azcontainerregistry.AuthenticationClient) *AcrAuth {
 	return &AcrAuth{
 		acr:                  acr,
-		log:                  log,
+		log:                  env.LoggerForComponent("acrAuth"),
 		env:                  env,
 		tokenCredential:      tokenCredential,
 		authenticationClient: authenticationClient,

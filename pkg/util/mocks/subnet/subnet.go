@@ -45,17 +45,17 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // CreateOrUpdate mocks base method.
-func (m *MockManager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *network.Subnet) error {
+func (m *MockManager) CreateOrUpdate(ctx context.Context, subnetID string, arg2 *network.Subnet) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", ctx, subnetID, subnet)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", ctx, subnetID, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockManagerMockRecorder) CreateOrUpdate(ctx, subnetID, subnet any) *gomock.Call {
+func (mr *MockManagerMockRecorder) CreateOrUpdate(ctx, subnetID, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockManager)(nil).CreateOrUpdate), ctx, subnetID, subnet)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockManager)(nil).CreateOrUpdate), ctx, subnetID, arg2)
 }
 
 // Get mocks base method.

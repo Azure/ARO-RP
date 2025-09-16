@@ -108,13 +108,19 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		return err
 	}
 
-	globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
-	if err != nil {
-		return err
+	var globalDevopsMsiPrincipalId string
+
+	if d.config.Configuration.GlobalDevopsManagedIdentity != nil {
+		globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+		if err != nil {
+			return err
+		}
+
+		globalDevopsMsiPrincipalId = globalDevopsMSI.PrincipalID.String()
 	}
 
 	// deploy ACR RBAC, RP version storage account
-	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMSI.PrincipalID.String())
+	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMsiPrincipalId)
 	if err != nil {
 		return err
 	}
@@ -187,6 +193,9 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
 		Value: devopsServicePrincipalId,
 	}
+	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleID,
+	}
 
 	for i := 0; i < 2; i++ {
 		d.log.Infof("deploying %s", deploymentName)
@@ -258,12 +267,22 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+
+	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleID,
+	}
+	parameters.Parameters["tokenContributorRoleName"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleName,
+	}
+
 	d.log.Infof("deploying %s", deploymentName)
 	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
-				Template: template,
-				Mode:     mgmtfeatures.Incremental,
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
 			},
 			Location: d.config.Configuration.GlobalResourceGroupLocation,
 		})

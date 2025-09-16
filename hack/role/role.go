@@ -136,7 +136,7 @@ func main() {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	log := logrus.NewEntry(logger)
-	environment, err := env.NewCoreForCI(ctx, log) // we don't use log here
+	environment, err := env.NewCoreForCI(ctx, log, env.SERVICE_TOOLING) // we don't use log here
 	if err != nil {
 		panic(err)
 	}
@@ -228,7 +228,7 @@ func versionsToValidate(verifiedVersion string) ([]string, error) {
 
 // getLatestVersion returns the latest available patch version for the given minor version.
 // The version could be a candidate version (e.g. 4.17.0-rc1, 4.17.0-ec2).
-func getLatestVersion(v *version.Version) (string, error) {
+func getLatestVersion(v version.Version) (string, error) {
 	tags, err := getAvailableTags(v)
 	if err != nil {
 		return "", fmt.Errorf("failed to get available tags: %w", err)
@@ -244,7 +244,7 @@ func getLatestVersion(v *version.Version) (string, error) {
 
 // getAvailableTags returns all available tags in quay.io/openshift-release-dev/ocp-release for given minor version.
 // The tags are like 4.14.37-x86_64, 4.17.0-rc1-x86_64, 4.17.0-ec2-x86_64, etc.
-func getAvailableTags(v *version.Version) ([]tag, error) {
+func getAvailableTags(v version.Version) ([]tag, error) {
 	hasAdditional := true
 	page := 1
 	var tags []tag

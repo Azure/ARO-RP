@@ -977,6 +977,37 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
+		{
+			name: "success - ensureClusterMsiCertificate fails but deletion continues",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
+								},
+							},
+						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
+					},
+				},
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, fmt.Errorf("key vault error")).Times(1)
+			},
+		},
 	}
 
 	for _, tt := range tests {

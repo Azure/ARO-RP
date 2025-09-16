@@ -5,7 +5,7 @@ package cluster
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -22,7 +22,7 @@ func (mon *Monitor) emitReplicasetStatuses(ctx context.Context) error {
 		for {
 			err := mon.ocpclientset.List(ctx, l, client.InNamespace(ns), client.Continue(cont), client.Limit(mon.queryLimit))
 			if err != nil {
-				return fmt.Errorf("error in list operation: %w", err)
+				return errors.Join(errListReplicaSets, err)
 			}
 
 			for _, rs := range l.Items {

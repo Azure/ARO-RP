@@ -496,7 +496,7 @@ func setup(ctx context.Context) error {
 
 	// Core ARO env
 	var err error
-	_env, err = env.NewCoreForCI(ctx, log)
+	_env, err = env.NewCoreForCI(ctx, log, env.SERVICE_E2E)
 	if err != nil {
 		return err
 	}

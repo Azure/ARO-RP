@@ -19,7 +19,8 @@
             "type": "string"
         },
         "globalDevopsServicePrincipalId": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "rpParentDomainName": {
             "type": "string"
@@ -28,6 +29,9 @@
             "type": "string"
         },
         "rpVersionStorageAccountName": {
+            "type": "string"
+        },
+        "tokenContributorRoleID": {
             "type": "string"
         }
     },
@@ -91,7 +95,7 @@
             "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '48983534-3d06-4dcb-a566-08a694eb1279')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('tokenContributorRoleID'))]",
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
@@ -125,6 +129,7 @@
                 "principalId": "[parameters('globalDevopsServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[not(equals(parameters('globalDevopsServicePrincipalId'), ''))]",
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
@@ -150,6 +155,7 @@
                 "principalId": "[parameters('globalDevopsServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[not(equals(parameters('globalDevopsServicePrincipalId'), ''))]",
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[concat(resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName')), '/blobServices/default/containers/$web')]"

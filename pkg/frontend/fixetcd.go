@@ -43,12 +43,22 @@ type degradedEtcd struct {
 	OldIP string
 }
 
+type podFailedError struct {
+	podName string
+	phase   corev1.PodPhase
+	message string
+}
+
+func (e *podFailedError) Error() string {
+	return fmt.Sprintf("pod %s event %s received with message %s", e.podName, e.phase, e.message)
+}
+
 const (
 	serviceAccountName    = "etcd-recovery-privileged"
 	kubeServiceAccount    = "system:serviceaccount" + namespaceEtcds + ":" + serviceAccountName
 	namespaceEtcds        = "openshift-etcd"
 	image                 = "ubi9/ubi-minimal"
-	jobName               = "etcd-recovery-"
+	genericPodName        = "etcd-recovery-"
 	patchOverides         = "unsupportedConfigOverrides:"
 	patchDisableOverrides = `{"useUnsupportedUnsafeNonHANonProductionUnstableEtcd": true}`
 )
@@ -76,11 +86,10 @@ func (f *frontend) fixEtcd(ctx context.Context, log *logrus.Entry, env env.Inter
 	}
 	log.Infof("Found degraded endpoint: %v", de)
 
-	backupContainerLogs, err := backupEtcdData(ctx, log, doc.OpenShiftCluster.Name, de.Node, kubeActions)
+	backupContainerLogs, err := backupEtcdData(ctx, log, de.Node, kubeActions)
 	if err != nil {
 		return backupContainerLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
-
 	fixPeersContainerLogs, err := fixPeers(ctx, log, de, pods, kubeActions, doc.OpenShiftCluster.Name)
 	allLogs, _ := logSeperator(backupContainerLogs, fixPeersContainerLogs)
 	if err != nil {
@@ -194,99 +203,92 @@ func getPeerPods(pods []corev1.Pod, de *degradedEtcd, cluster string) (string, e
 	return peerPods, nil
 }
 
-func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured {
-	const jobNameFixPeers = jobName + "fix-peers"
-	// Frontend kubeactions expects an unstructured type
-	jobFixPeers := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"objectMeta": map[string]interface{}{
-				"name":      jobNameFixPeers,
-				"namespace": namespaceEtcds,
-				"labels":    map[string]string{"app": jobNameFixPeers},
-			},
-			"spec": map[string]interface{}{
-				"template": map[string]interface{}{
-					"objectMeta": map[string]interface{}{
-						"name":      jobNameFixPeers,
-						"namespace": namespaceEtcds,
-						"labels":    map[string]string{"app": jobNameFixPeers},
+func newPodFixPeers(peerPods, deNode string) (*unstructured.Unstructured, error) {
+	const podNameFixPeers = genericPodName + "fix-peers"
+
+	podManifest := corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podNameFixPeers,
+			Namespace: namespaceEtcds,
+			Labels:    map[string]string{"app": podNameFixPeers},
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy:      corev1.RestartPolicyNever, // It's safer to let the pod and the geneva action to fail once than let it constantly retry.
+			ServiceAccountName: serviceAccountName,
+			Containers: []corev1.Container{
+				{
+					Name:  podNameFixPeers,
+					Image: image,
+					Command: []string{
+						"/bin/bash",
+						"-cx",
+						backupOrFixEtcd,
 					},
-					"activeDeadlineSeconds":   pointerutils.ToPtr(int64(10)),
-					"completions":             pointerutils.ToPtr(int32(1)),
-					"ttlSecondsAfterFinished": pointerutils.ToPtr(int32(300)),
-					"spec": map[string]interface{}{
-						"restartPolicy":      corev1.RestartPolicyOnFailure,
-						"serviceAccountName": serviceAccountName,
-						"containers": []corev1.Container{
-							{
-								Name:  jobNameFixPeers,
-								Image: image,
-								Command: []string{
-									"/bin/bash",
-									"-cx",
-									backupOrFixEtcd,
-								},
-								SecurityContext: &corev1.SecurityContext{
-									Privileged: pointerutils.ToPtr(true),
-								},
-								Env: []corev1.EnvVar{
-									{
-										Name:  "PEER_PODS",
-										Value: peerPods,
-									},
-									{
-										Name:  "DEGRADED_NODE",
-										Value: deNode,
-									},
-									{
-										Name:  "FIX_PEERS",
-										Value: "true",
-									},
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      "host",
-										MountPath: "/host",
-										ReadOnly:  false,
-									},
-								},
-							},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointerutils.ToPtr(true),
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "PEER_PODS",
+							Value: peerPods,
 						},
-						"volumes": []corev1.Volume{
-							{
-								Name: "host",
-								VolumeSource: corev1.VolumeSource{
-									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/",
-									},
-								},
-							},
+						{
+							Name:  "DEGRADED_NODE",
+							Value: deNode,
+						},
+						{
+							Name:  "FIX_PEERS",
+							Value: "true",
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "host",
+							MountPath: "/host",
+							ReadOnly:  false,
+						},
+					},
+				},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "host",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/",
 						},
 					},
 				},
 			},
 		},
 	}
+	// Frontend kubeactions expects an unstructured type
+	unstructuredPod, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&podManifest)
 
-	// This creates an embedded "metadata" map[string]string{} in the unstructured object
-	// For an unknown reason, creating "metadata" directly in the object doesn't work
-	// and the helper functions must be used
-	jobFixPeers.SetKind("Job")
-	jobFixPeers.SetAPIVersion("batch/v1")
-	jobFixPeers.SetName(jobNameFixPeers)
-	jobFixPeers.SetNamespace(namespaceEtcds)
+	if err != nil {
+		return nil, err
+	}
 
-	return jobFixPeers
+	return &unstructured.Unstructured{
+		Object: unstructuredPod,
+	}, nil
 }
 
-// fixPeers creates a job that ssh's into the failing pod's peer pods, and deletes the failing pod from it's member's list
+// fixPeers creates a pod that ssh's into the failing pod's peer pods, and deletes the failing etcd member from it's member's list
 func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *corev1.PodList, kubeActions adminactions.KubeActions, cluster string) ([]byte, error) {
 	peerPods, err := getPeerPods(pods.Items, de, cluster)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	jobFixPeers := newJobFixPeers(cluster, peerPods, de.Node)
+	podFixPeers, err := newPodFixPeers(peerPods, de.Node)
+	if err != nil {
+		return []byte{}, err
+	}
 
 	cleanup, err, nestedCleanupErr := createPrivilegedServiceAccount(ctx, log, serviceAccountName, cluster, kubeServiceAccount, kubeActions)
 	if err != nil {
@@ -303,25 +305,25 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 		}
 	}()
 
-	log.Infof("Creating job %s", jobFixPeers.GetName())
-	err = kubeActions.KubeCreateOrUpdate(ctx, jobFixPeers)
+	log.Infof("Creating pod %s", podFixPeers.GetName())
+	err = kubeActions.KubeCreateOrUpdate(ctx, podFixPeers)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	watcher, err := kubeActions.KubeWatch(ctx, jobFixPeers, "app")
+	watcher, err := kubeActions.KubeWatch(ctx, podFixPeers, "app")
 	if err != nil {
 		return []byte{}, err
 	}
 
-	containerLogs, err := waitForJobSucceed(ctx, log, watcher, jobFixPeers, kubeActions)
+	containerLogs, err := waitAndGetPodLogs(ctx, log, watcher, podFixPeers, kubeActions)
 	if err != nil {
 		return containerLogs, err
 	}
 
-	log.Infof("Deleting %s now", jobFixPeers.GetName())
+	log.Infof("Deleting %s now", podFixPeers.GetName())
 	propPolicy := metav1.DeletePropagationBackground
-	err = kubeActions.KubeDelete(ctx, "Job", namespaceEtcds, jobFixPeers.GetName(), true, &propPolicy)
+	err = kubeActions.KubeDelete(ctx, podFixPeers.GetKind(), namespaceEtcds, podFixPeers.GetName(), true, &propPolicy)
 	if err != nil {
 		return containerLogs, err
 	}
@@ -491,126 +493,165 @@ func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name
 // /var/lib/etcd is moved to /tmp
 //
 // If backups already exists the job is cowardly and refuses to overwrite them
-func backupEtcdData(ctx context.Context, log *logrus.Entry, cluster, node string, kubeActions adminactions.KubeActions) ([]byte, error) {
-	jobDataBackup := createBackupEtcdDataJob(cluster, node)
+func backupEtcdData(ctx context.Context, log *logrus.Entry, node string, kubeActions adminactions.KubeActions) ([]byte, error) {
+	podDataBackup, err := createBackupEtcdDataPod(node)
 
-	log.Infof("Creating job %s", jobDataBackup.GetName())
-	err := kubeActions.KubeCreateOrUpdate(ctx, jobDataBackup)
-	if err != nil {
-		return []byte{}, err
-	}
-	log.Infof("Job %s has been created", jobDataBackup.GetName())
-
-	watcher, err := kubeActions.KubeWatch(ctx, jobDataBackup, "app")
 	if err != nil {
 		return []byte{}, err
 	}
 
-	containerLogs, err := waitForJobSucceed(ctx, log, watcher, jobDataBackup, kubeActions)
+	log.Infof("Creating pod %s", podDataBackup.GetName())
+	err = kubeActions.KubeCreateOrUpdate(ctx, podDataBackup)
+	if err != nil {
+		return []byte{}, err
+	}
+	log.Infof("Pod %s has been created", podDataBackup.GetName())
+
+	watcher, err := kubeActions.KubeWatch(ctx, podDataBackup, "app")
+	if err != nil {
+		return []byte{}, err
+	}
+	containerLogs, err := waitAndGetPodLogs(ctx, log, watcher, podDataBackup, kubeActions)
 	if err != nil {
 		return containerLogs, err
 	}
 
-	log.Infof("Deleting job %s now", jobDataBackup.GetName())
+	log.Infof("Deleting pod %s now", podDataBackup.GetName())
 	propPolicy := metav1.DeletePropagationBackground
-	return containerLogs, kubeActions.KubeDelete(ctx, "Job", namespaceEtcds, jobDataBackup.GetName(), true, &propPolicy)
+	return containerLogs, kubeActions.KubeDelete(ctx, podDataBackup.GetKind(), namespaceEtcds, podDataBackup.GetName(), true, &propPolicy)
 }
 
-func waitForJobSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Interface, o *unstructured.Unstructured, k adminactions.KubeActions) ([]byte, error) {
-	var waitErr error
-	log.Infof("Waiting for %s to reach %s phase", o.GetName(), corev1.PodSucceeded)
-	select {
-	case event := <-watcher.ResultChan():
-		pod := event.Object.(*corev1.Pod)
+func waitForPodSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Interface) error {
+	var pod corev1.Pod
 
-		switch pod.Status.Phase {
-		case corev1.PodSucceeded:
-			log.Infof("Job %s completed with %s", pod.GetName(), pod.Status.Message)
-		case corev1.PodFailed:
-			log.Infof("Job %s reached phase %s with message: %s", pod.GetName(), pod.Status.Phase, pod.Status.Message)
-			waitErr = fmt.Errorf("pod %s event %s received with message %s", pod.Name, pod.Status.Phase, pod.Status.Message)
+	for {
+		select {
+		case event := <-watcher.ResultChan():
+			log.Infoln("Event received")
+
+			u, ok := event.Object.(*unstructured.Unstructured)
+			if !ok {
+				return fmt.Errorf("unexpected event: %#v", event)
+			}
+			err := kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &pod)
+			if err != nil {
+				return fmt.Errorf("failed to convert unstructured object to Pod: %w", err)
+			}
+			log.Infof("Pod Status Phase %s", pod.Status.Phase)
+
+			switch pod.Status.Phase {
+			case corev1.PodSucceeded:
+				log.Infof("Pod %s completed with %s: %s", pod.GetName(), pod.Status.Message, pod.Status.Phase)
+				return nil
+
+			case corev1.PodFailed:
+				log.Infof("Pod %s reached phase %s with message: %s", pod.GetName(), pod.Status.Phase, pod.Status.Message)
+				return &podFailedError{
+					podName: pod.GetName(),
+					phase:   pod.Status.Phase,
+					message: pod.Status.Message,
+				}
+			}
+
+		case <-ctx.Done():
+			return fmt.Errorf("context was cancelled while waiting for pod to succeed because %s", ctx.Err())
 		}
-	case <-ctx.Done():
-		waitErr = fmt.Errorf("context was cancelled while waiting for %s because %s", o.GetName(), ctx.Err())
+	}
+}
+
+// Waits until a standalone pod succeeds or fails. There is no retry logic for failures.
+func waitAndGetPodLogs(ctx context.Context, log *logrus.Entry, watcher watch.Interface, o *unstructured.Unstructured, k adminactions.KubeActions) ([]byte, error) {
+	var waitErr error
+	var originalPod corev1.Pod
+
+	log.Infof("Waiting for %s to reach %s phase", o.GetName(), corev1.PodSucceeded)
+	err := waitForPodSucceed(ctx, log, watcher)
+
+	if err != nil {
+		var failedErr *podFailedError
+		if !errors.As(err, &failedErr) {
+			return nil, err
+		}
+		waitErr = err // waitForPodSucceed returned a pod failed error. We want to keep this and get the pod logs.
 	}
 
-	// get container name
-	cxName := o.UnstructuredContent()["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})["containers"].([]corev1.Container)[0].Name
-	log.Infof("Collecting container logs for Pod %s, container %s, in namespace %s", o.GetName(), cxName, o.GetNamespace())
+	// get container spec
+	err = kruntime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &originalPod)
+	if err != nil {
+		// We should get a corev1.Pod struct here, report failure if we don't
+		return nil, err
+	}
 
-	cxLogs, err := k.KubeGetPodLogs(ctx, o.GetNamespace(), o.GetName(), cxName)
+	if len(originalPod.Spec.Containers) != 1 {
+		// we should have only one container in the original pod spec
+		return nil, fmt.Errorf("unexpected number of containers in %v. There are %d containers, but only one container should be in the spec", originalPod.Name, len(originalPod.Spec.Containers))
+	}
+
+	cxName := originalPod.Spec.Containers[0].Name
+	log.Infof("Collecting container logs for Pod %s, container %s, in namespace %s", originalPod.Name, cxName, originalPod.Namespace)
+
+	cxLogs, err := k.KubeGetPodLogs(ctx, originalPod.Namespace, originalPod.Name, cxName)
 	if err != nil {
 		return cxLogs, err
 	}
-	log.Infof("Successfully collected logs for %s", o.GetName())
+	log.Infof("Successfully collected logs for %s", originalPod.Name)
 
 	return cxLogs, waitErr
 }
 
-func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
-	const jobNameDataBackup = jobName + "data-backup"
-	j := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"objectMeta": map[string]interface{}{
-				"name":      jobNameDataBackup,
-				"kind":      "Job",
-				"namespace": namespaceEtcds,
-				"labels":    map[string]string{"app": jobNameDataBackup},
-			},
-			"spec": map[string]interface{}{
-				"template": map[string]interface{}{
-					"objectMeta": map[string]interface{}{
-						"name":      jobNameDataBackup,
-						"namespace": namespaceEtcds,
-						"labels":    map[string]string{"app": jobNameDataBackup},
+func createBackupEtcdDataPod(node string) (*unstructured.Unstructured, error) {
+	const podNameDataBackup = genericPodName + "data-backup"
+	podManifest := corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podNameDataBackup,
+			Namespace: namespaceEtcds,
+			Labels:    map[string]string{"app": podNameDataBackup},
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever, // It's safer to let the pod and the geneva action to fail once than let it constantly retry.
+			NodeName:      node,
+			Containers: []corev1.Container{
+				{
+					Name:  podNameDataBackup,
+					Image: image,
+					Command: []string{
+						"chroot",
+						"/host",
+						"/bin/bash",
+						"-c",
+						backupOrFixEtcd,
 					},
-					"activeDeadlineSeconds":   pointerutils.ToPtr(int64(10)),
-					"completions":             pointerutils.ToPtr(int32(1)),
-					"ttlSecondsAfterFinished": pointerutils.ToPtr(int32(300)),
-					"spec": map[string]interface{}{
-						"restartPolicy": corev1.RestartPolicyOnFailure,
-						"nodeName":      node,
-						"containers": []corev1.Container{
-							{
-								Name:  jobNameDataBackup,
-								Image: image,
-								Command: []string{
-									"chroot",
-									"/host",
-									"/bin/bash",
-									"-c",
-									backupOrFixEtcd,
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      "host",
-										MountPath: "/host",
-										ReadOnly:  false,
-									},
-								},
-								SecurityContext: &corev1.SecurityContext{
-									Capabilities: &corev1.Capabilities{
-										Add: []corev1.Capability{"SYS_CHROOT"},
-									},
-									Privileged: pointerutils.ToPtr(true),
-								},
-								Env: []corev1.EnvVar{
-									{
-										Name:  "BACKUP",
-										Value: "true",
-									},
-								},
-							},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "host",
+							MountPath: "/host",
+							ReadOnly:  false,
 						},
-						"volumes": []corev1.Volume{
-							{
-								Name: "host",
-								VolumeSource: corev1.VolumeSource{
-									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/",
-									},
-								},
-							},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"SYS_CHROOT"},
+						},
+						Privileged: pointerutils.ToPtr(true),
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "BACKUP",
+							Value: "true",
+						},
+					},
+				},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "host",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/",
 						},
 					},
 				},
@@ -618,15 +659,16 @@ func createBackupEtcdDataJob(cluster, node string) *unstructured.Unstructured {
 		},
 	}
 
-	// This creates an embedded "metadata" map[string]string{} in the unstructured object
-	// For an unknown reason, creating "metadata" directly in the object doesn't work
-	// and the helper functions must be used
-	j.SetKind("Job")
-	j.SetAPIVersion("batch/v1")
-	j.SetName(jobNameDataBackup)
-	j.SetNamespace(namespaceEtcds)
+	// Frontend kubeactions expects an unstructured type
+	unstructuredPod, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&podManifest)
 
-	return j
+	if err != nil {
+		return nil, err
+	}
+
+	return &unstructured.Unstructured{
+		Object: unstructuredPod,
+	}, nil
 }
 
 func comparePodEnvToIp(log *logrus.Entry, pods *corev1.PodList) (*degradedEtcd, error) {
