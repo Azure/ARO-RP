@@ -85,6 +85,9 @@
         "sshPublicKey": {
             "value": ""
         },
+        "vmImageReference": {
+            "value": {}
+        },
         "vmssCleanupEnabled": {
             "value": true
         },
