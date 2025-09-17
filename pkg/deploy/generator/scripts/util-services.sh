@@ -407,7 +407,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -p 443:8443 \
-  -v /etc/aro-mimo-actuator:/etc/aro-mimo-actuator \
+  -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
