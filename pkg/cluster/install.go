@@ -157,7 +157,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 }
 
 func (m *manager) getCertificateRenewalSteps() []steps.Step {
-	steps := []steps.Step{
+	s := []steps.Step{
 		steps.Action(m.populateDatabaseIntIP),
 		steps.Action(m.correctCertificateIssuer),
 		steps.Action(m.fixMCSCert),
@@ -169,7 +169,14 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 
 		steps.Action(m.renewMDSDCertificate), // Dependent on initializeOperatorDeployer.
 	}
-	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.ensureClusterMsiCertificate),
+		)
+	}
+
+	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), s)
 }
 
 func (m *manager) getOperatorUpdateSteps() []steps.Step {

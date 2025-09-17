@@ -247,7 +247,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothStepsManagedIdentity, generalFixesSteps, certificateRenewalSteps,
+				zerothStepsManagedIdentity, generalFixesSteps, append(certificateRenewalSteps, "[Action ensureClusterMsiCertificate]"),
 				operatorUpdateSteps, updateProvisionedBySteps,
 			),
 		},
