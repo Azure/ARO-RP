@@ -88,6 +88,9 @@ func (g *generator) networkSecurityPerimeterAssociation(nspName string, associat
 			Type: pointerutils.ToPtr("Microsoft.Network/networkSecurityPerimeters/resourceAssociations"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters/resourceAssociations"),
+		DependsOn: []string{
+			fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', '%s/default')]", nspName),
+		},
 	}
 }
 
