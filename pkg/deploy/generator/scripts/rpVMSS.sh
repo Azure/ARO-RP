@@ -77,6 +77,8 @@ main() {
         "443/tcp"
         # Portal web
         "444/tcp"
+        # MIMO Actuator healthz
+        "445/tcp"
         # Portal ssh
         "2222/tcp"
         # JIT ssh

@@ -401,16 +401,13 @@ ExecStart=/usr/bin/podman run \
   -e OIDC_AFD_ENDPOINT \
   -e OIDC_STORAGE_ACCOUNT_NAME \
   -e MSI_RP_ENDPOINT \
-  -e OTEL_AUDIT_QUEUE_SIZE \
-  -e MISE_ADDRESS \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
-  -p 443:8443 \
+  -p 445:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
   ${RPIMAGE} \
   mimo-actuator
 ExecStop=/usr/bin/podman stop -t 3600 %N
