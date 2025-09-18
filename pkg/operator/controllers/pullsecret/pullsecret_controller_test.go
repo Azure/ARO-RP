@@ -6,9 +6,11 @@ package pullsecret
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -29,6 +31,19 @@ import (
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
+
+// failingClient wraps a client and fails on Update operations
+type failingClient struct {
+	client.Client
+	failOnUpdate bool
+}
+
+func (f *failingClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	if f.failOnUpdate {
+		return errors.New("simulated update failure")
+	}
+	return f.Client.Update(ctx, obj, opts...)
+}
 
 func TestPullSecretReconciler(t *testing.T) {
 	baseCluster := &arov1alpha1.Cluster{
@@ -420,6 +435,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 		pullSecret         *corev1.Secret
 		wantSecret         *corev1.Secret
 		wantError          string
+		wantMetricValue    int
+		wantMetricLabel    string
 	}{
 		{
 			name: "Red Hat Key present",
@@ -461,7 +478,9 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				},
 			},
-			wantError: "",
+			wantError:       "",
+			wantMetricValue: 0, // no metrics expected because pull secret is identical
+			wantMetricLabel: "",
 		},
 		{
 			name: "Red Hat Key missing",
@@ -502,6 +521,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
+			wantMetricValue: 1, // metric expected because pullSecret was created
+			wantMetricLabel: "success",
 		},
 		{
 			name: "Red Hat key added should merge in",
@@ -542,6 +563,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
+			wantMetricValue: 1, // metric expected when updating pull secret
+			wantMetricLabel: "success",
 		},
 		{
 			name: "Pull secret empty",
@@ -578,6 +601,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
+			wantMetricValue: 1, // metric expected because pull secret was created
+			wantMetricLabel: "success",
 		},
 		{
 			name:          "Secret missing",
@@ -605,6 +630,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
+			wantMetricValue: 1, // metric expected because pull secret was created
+			wantMetricLabel: "success",
 		},
 		{
 			name: "Red Hat Key present but secret type broken",
@@ -649,7 +676,9 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
-			wantError: "",
+			wantError:       "",
+			wantMetricValue: 1,
+			wantMetricLabel: "success",
 		},
 		{
 			name: "Secret auth key broken broken",
@@ -694,6 +723,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
+			wantMetricValue: 1,
+			wantMetricLabel: "success",
 		},
 		{
 			name: "Secret not parseable",
@@ -731,6 +762,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
+			wantMetricValue: 1,
+			wantMetricLabel: "success",
 		},
 		{
 			name: "Operator secret not parseable",
@@ -760,8 +793,10 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 					corev1.DockerConfigJsonKey: []byte(`bad`),
 				},
 			},
-			wantSecret: nil,
-			wantError:  "invalid character 'b' looking for beginning of value",
+			wantSecret:      nil,
+			wantError:       "invalid character 'b' looking for beginning of value",
+			wantMetricValue: 0,
+			wantMetricLabel: "",
 		},
 		{
 			name: "Operator secret nil",
@@ -808,9 +843,72 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
+			// Metric values will never be in decimals but we are using `testutil.ToFloat64` to extract the metric value
+			// because it's most convenient way to extract the metric value. Else, we may have to use something like `CollectAndCompare`.
+			assert.Equal(t, tt.wantMetricValue, int(testutil.ToFloat64(pullSecretRemediation.WithLabelValues(tt.wantMetricLabel))))
+
 			if diff := cmp.Diff(s, tt.wantSecret); diff != "" {
 				t.Fatalf("Unexpected pull secret (-want, +got): %s", diff)
 			}
+
+			// Reset metrics after each test case
+			pullSecretRemediation.Reset()
 		})
 	}
+}
+
+func TestEnsureGlobalPullSecretErrorMetric(t *testing.T) {
+	t.Run("Update failure causes error metric", func(t *testing.T) {
+		ctx := context.Background()
+
+		initialSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "pull-secret",
+				Namespace:       "openshift-config",
+				ResourceVersion: "1",
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			},
+		}
+
+		operatorSecret := &corev1.Secret{
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			},
+		}
+
+		pullSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+		}
+
+		clientBuilder := ctrlfake.NewClientBuilder().WithObjects(initialSecret)
+		failingClientWrapper := &failingClient{
+			Client:       clientBuilder.Build(),
+			failOnUpdate: true,
+		}
+
+		r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), failingClientWrapper)
+		assert.NotNil(t, r)
+
+		// Reset metrics before test
+		pullSecretRemediation.Reset()
+
+		_, err := r.ensureGlobalPullSecret(ctx, operatorSecret, pullSecret)
+
+		// check whether we got an error here due to the failing update
+		utilerror.AssertErrorMessage(t, err, "simulated update failure")
+
+		// Metric values will never be in decimals but we are using `testutil.ToFloat64` to extract the metric value
+		// because it's most convenient way to extract the metric value. Else, we may have to use something like `CollectAndCompare`.
+		assert.Equal(t, 1, int(testutil.ToFloat64(pullSecretRemediation.WithLabelValues("error"))))
+	})
 }
