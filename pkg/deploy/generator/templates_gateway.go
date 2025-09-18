@@ -145,11 +145,11 @@ func (g *generator) gatewayPredeployTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources,
-		g.gatewayNetworkSecurityPerimeter(),
-		g.gatewayNetworkSecurityPerimeterProfile(),
 		g.gatewaySecurityGroup(),
 		g.gatewayVnet(),
 		g.gatewayKeyvault(),
+		g.gatewayNetworkSecurityPerimeter(),
+		g.gatewayNetworkSecurityPerimeterProfile(),
 		g.gatewayKeyvaultPerimeterAssociation(),
 	)
 

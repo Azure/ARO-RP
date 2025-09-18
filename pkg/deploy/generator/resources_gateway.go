@@ -34,7 +34,7 @@ func (g *generator) gatewayManagedIdentity() *arm.Resource {
 
 func (g *generator) gatewayKeyvaultPerimeterAssociation() *arm.Resource {
 	gwKvResId := fmt.Sprintf(
-		"[resourceId('Microsoft.KeyVault/vaults', [concat(parameters('keyvaultPrefix'), '%s')])]",
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
 		env.GatewayKeyvaultSuffix,
 	)
 

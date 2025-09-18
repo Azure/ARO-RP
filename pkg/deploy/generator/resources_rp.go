@@ -707,22 +707,22 @@ func (g *generator) rpKeyvaultNSPProfile() *arm.Resource {
 
 func (g *generator) rpKeyvaultNSPAssociations() []*arm.Resource {
 	clusterKeyvaultResId := fmt.Sprintf(
-		"[resourceId('Microsoft.KeyVault/vaults', [concat(parameters('keyvaultPrefix'), '%s')])]",
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
 		env.ClusterKeyvaultSuffix,
 	)
 	portalKeyvaultResId := fmt.Sprintf(
-		"[resourceId('Microsoft.KeyVault/vaults', [concat(parameters('keyvaultPrefix'), '%s')])]",
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
 		env.PortalKeyvaultSuffix,
 	)
 	serviceKeyvaultResId := fmt.Sprintf(
-		"[resourceId('Microsoft.KeyVault/vaults', [concat(parameters('keyvaultPrefix'), '%s')])]",
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
 		env.ServiceKeyvaultSuffix,
 	)
 
 	return []*arm.Resource{
-		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp-"+env.ClusterKeyvaultSuffix, clusterKeyvaultResId),
-		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp-"+env.PortalKeyvaultSuffix, portalKeyvaultResId),
-		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp-"+env.ServiceKeyvaultSuffix, serviceKeyvaultResId),
+		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp"+env.ClusterKeyvaultSuffix, clusterKeyvaultResId),
+		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp"+env.PortalKeyvaultSuffix, portalKeyvaultResId),
+		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp"+env.ServiceKeyvaultSuffix, serviceKeyvaultResId),
 	}
 }
 
@@ -984,7 +984,7 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 
 	cosmosNSP := g.networkSecurityPerimeter("cosmos-nsp")
 	cosmosNSPProfile := g.networkSecurityPerimeterProfile("cosmos-nsp")
-	cosmosNSPAssociation := g.networkSecurityPerimeterAssociation("cosmos-nsp", "cosmos-nsp-association","[resourceId('Microsoft.DocumentDB/databaseAccounts'), parameters('databaseAccountName')]")
+	cosmosNSPAssociation := g.networkSecurityPerimeterAssociation("cosmos-nsp", "cosmos-nsp-association","[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]")
 
 	rs = append(rs, cosmosNSP, cosmosNSPProfile, cosmosNSPAssociation)
 
