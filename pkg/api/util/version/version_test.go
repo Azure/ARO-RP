@@ -8,25 +8,25 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewVersion(t *testing.T) {
 	for i, tt := range []struct {
 		vs   []uint32
-		want *Version
+		want *version
 	}{
 		{
 			vs:   []uint32{1, 2},
-			want: &Version{V: [3]uint32{1, 2}},
+			want: &version{V: [3]uint32{1, 2}},
 		},
 		{
-			want: &Version{},
+			want: &version{},
 		},
 		{
 			vs:   []uint32{1, 2, 3, 4},
-			want: &Version{V: [3]uint32{1, 2, 3}},
+			want: &version{V: [3]uint32{1, 2, 3}},
 		},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
@@ -41,24 +41,24 @@ func TestNewVersion(t *testing.T) {
 func TestParseVersion(t *testing.T) {
 	for _, tt := range []struct {
 		vsn     string
-		want    *Version
+		want    *version
 		wantErr string
 	}{
 		{
 			vsn:  "4.3.0-0.nightly-2020-04-17-062811",
-			want: &Version{V: [3]uint32{4, 3}, Suffix: "-0.nightly-2020-04-17-062811"},
+			want: &version{V: [3]uint32{4, 3}, Suffix: "-0.nightly-2020-04-17-062811"},
 		},
 		{
 			vsn:  "40.30.10",
-			want: &Version{V: [3]uint32{40, 30, 10}},
+			want: &version{V: [3]uint32{40, 30, 10}},
 		},
 		{
 			vsn:  " 40.30.10 ",
-			want: &Version{V: [3]uint32{40, 30, 10}},
+			want: &version{V: [3]uint32{40, 30, 10}},
 		},
 		{
 			vsn:  "4000.3000.1000",
-			want: &Version{V: [3]uint32{4000, 3000, 1000}},
+			want: &version{V: [3]uint32{4000, 3000, 1000}},
 		},
 		{
 			vsn:     "bad",
@@ -67,18 +67,20 @@ func TestParseVersion(t *testing.T) {
 	} {
 		t.Run(tt.vsn, func(t *testing.T) {
 			got, err := ParseVersion(tt.vsn)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Error(cmp.Diff(got, tt.want))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+			} else if err != nil {
+				t.Error(err)
 			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestLt(t *testing.T) {
 	for i, tt := range []struct {
-		input *Version
-		min   *Version
+		input Version
+		min   Version
 		want  bool
 	}{
 		{
@@ -106,7 +108,7 @@ func TestLt(t *testing.T) {
 
 func TestEq(t *testing.T) {
 	for i, tt := range []struct {
-		input *Version
+		input Version
 		vsn   string
 		equal bool
 	}{

@@ -22,13 +22,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // The package's fully qualified name.
@@ -400,7 +399,7 @@ func (iter *OpenShiftClusterListIterator) NextWithContext(ctx context.Context) (
 		defer func() {
 			sc := -1
 			if iter.Response().Response.Response != nil {
-				sc = iter.Response().StatusCode
+				sc = iter.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -485,7 +484,7 @@ func (page *OpenShiftClusterListPage) NextWithContext(ctx context.Context) (err 
 		defer func() {
 			sc := -1
 			if page.Response().Response.Response != nil {
-				sc = page.Response().StatusCode
+				sc = page.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -632,7 +631,7 @@ func (future *OpenShiftClustersCreateOrUpdateFuture) result(client OpenShiftClus
 		return
 	}
 	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if osc.Response.Response, err = future.GetResult(sender); err == nil && osc.StatusCode != http.StatusNoContent {
+	if osc.Response.Response, err = future.GetResult(sender); err == nil && osc.Response.Response.StatusCode != http.StatusNoContent {
 		osc, err = client.CreateOrUpdateResponder(osc.Response.Response)
 		if err != nil {
 			err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersCreateOrUpdateFuture", "Result", osc.Response.Response, "Failure responding to request")
@@ -712,7 +711,7 @@ func (future *OpenShiftClustersUpdateFuture) result(client OpenShiftClustersClie
 		return
 	}
 	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-	if osc.Response.Response, err = future.GetResult(sender); err == nil && osc.StatusCode != http.StatusNoContent {
+	if osc.Response.Response, err = future.GetResult(sender); err == nil && osc.Response.Response.StatusCode != http.StatusNoContent {
 		osc, err = client.UpdateResponder(osc.Response.Response)
 		if err != nil {
 			err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersUpdateFuture", "Result", osc.Response.Response, "Failure responding to request")
@@ -895,7 +894,7 @@ func (iter *OpenShiftVersionListIterator) NextWithContext(ctx context.Context) (
 		defer func() {
 			sc := -1
 			if iter.Response().Response.Response != nil {
-				sc = iter.Response().StatusCode
+				sc = iter.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -980,7 +979,7 @@ func (page *OpenShiftVersionListPage) NextWithContext(ctx context.Context) (err 
 		defer func() {
 			sc := -1
 			if page.Response().Response.Response != nil {
-				sc = page.Response().StatusCode
+				sc = page.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -1070,7 +1069,7 @@ func (iter *OperationListIterator) NextWithContext(ctx context.Context) (err err
 		defer func() {
 			sc := -1
 			if iter.Response().Response.Response != nil {
-				sc = iter.Response().StatusCode
+				sc = iter.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -1155,7 +1154,7 @@ func (page *OperationListPage) NextWithContext(ctx context.Context) (err error) 
 		defer func() {
 			sc := -1
 			if page.Response().Response.Response != nil {
-				sc = page.Response().StatusCode
+				sc = page.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -1380,7 +1379,7 @@ func (iter *PlatformWorkloadIdentityRoleSetListIterator) NextWithContext(ctx con
 		defer func() {
 			sc := -1
 			if iter.Response().Response.Response != nil {
-				sc = iter.Response().StatusCode
+				sc = iter.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -1465,7 +1464,7 @@ func (page *PlatformWorkloadIdentityRoleSetListPage) NextWithContext(ctx context
 		defer func() {
 			sc := -1
 			if page.Response().Response.Response != nil {
-				sc = page.Response().StatusCode
+				sc = page.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()

@@ -43,28 +43,28 @@ class AzureRedHatOpenShiftClient:  # pylint: disable=client-accepts-api-version-
     """Rest API for Azure Red Hat OpenShift 4.
 
     :ivar operations: Operations operations
-    :vartype operations: azure.mgmt.redhatopenshift.v2025_07_25.operations.Operations
+    :vartype operations: azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.Operations
     :ivar open_shift_versions: OpenShiftVersionsOperations operations
     :vartype open_shift_versions:
-     azure.mgmt.redhatopenshift.v2025_07_25.operations.OpenShiftVersionsOperations
+     azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.OpenShiftVersionsOperations
     :ivar platform_workload_identity_role_sets: PlatformWorkloadIdentityRoleSetsOperations
      operations
     :vartype platform_workload_identity_role_sets:
-     azure.mgmt.redhatopenshift.v2025_07_25.operations.PlatformWorkloadIdentityRoleSetsOperations
+     azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.PlatformWorkloadIdentityRoleSetsOperations
     :ivar platform_workload_identity_role_set: PlatformWorkloadIdentityRoleSetOperations operations
     :vartype platform_workload_identity_role_set:
-     azure.mgmt.redhatopenshift.v2025_07_25.operations.PlatformWorkloadIdentityRoleSetOperations
+     azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.PlatformWorkloadIdentityRoleSetOperations
     :ivar open_shift_clusters: OpenShiftClustersOperations operations
     :vartype open_shift_clusters:
-     azure.mgmt.redhatopenshift.v2025_07_25.operations.OpenShiftClustersOperations
+     azure.mgmt.redhatopenshift.v2024_08_12_preview.operations.OpenShiftClustersOperations
     :param credential: Credential needed for the client to connect to Azure. Required.
     :type credential: ~azure.core.credentials.TokenCredential
     :param subscription_id: The ID of the target subscription. The value must be an UUID. Required.
     :type subscription_id: str
-    :param endpoint: Service URL. Default value is "https://management.azure.com".
-    :type endpoint: str
-    :keyword api_version: Api Version. Default value is "2025-07-25". Note that overriding this
-     default value may result in unsupported behavior.
+    :param base_url: Service URL. Default value is "https://management.azure.com".
+    :type base_url: str
+    :keyword api_version: Api Version. Default value is "2024-08-12-preview". Note that overriding
+     this default value may result in unsupported behavior.
     :paramtype api_version: str
     :keyword int polling_interval: Default waiting time between two polls for LRO operations if no
      Retry-After header is present.
@@ -74,7 +74,7 @@ class AzureRedHatOpenShiftClient:  # pylint: disable=client-accepts-api-version-
         self,
         credential: "TokenCredential",
         subscription_id: str,
-        endpoint: str = "https://management.azure.com",
+        base_url: str = "https://management.azure.com",
         **kwargs: Any
     ) -> None:
         self._config = AzureRedHatOpenShiftClientConfiguration(
@@ -98,10 +98,9 @@ class AzureRedHatOpenShiftClient:  # pylint: disable=client-accepts-api-version-
                 policies.SensitiveHeaderCleanupPolicy(**kwargs) if self._config.redirect_policy else None,
                 self._config.http_logging_policy,
             ]
-        self._client: ARMPipelineClient = ARMPipelineClient(base_url=endpoint, policies=_policies, **kwargs)
+        self._client: ARMPipelineClient = ARMPipelineClient(base_url=base_url, policies=_policies, **kwargs)
 
-        client_models = {k: v for k, v in _models._models.__dict__.items() if isinstance(v, type)}
-        client_models.update({k: v for k, v in _models.__dict__.items() if isinstance(v, type)})
+        client_models = {k: v for k, v in _models.__dict__.items() if isinstance(v, type)}
         self._serialize = Serializer(client_models)
         self._deserialize = Deserializer(client_models)
         self._serialize.client_side_validation = False
@@ -119,13 +118,13 @@ class AzureRedHatOpenShiftClient:  # pylint: disable=client-accepts-api-version-
             self._client, self._config, self._serialize, self._deserialize
         )
 
-    def send_request(self, request: HttpRequest, *, stream: bool = False, **kwargs: Any) -> HttpResponse:
+    def _send_request(self, request: HttpRequest, *, stream: bool = False, **kwargs: Any) -> HttpResponse:
         """Runs the network request through the client's chained policies.
 
         >>> from azure.core.rest import HttpRequest
         >>> request = HttpRequest("GET", "https://www.example.org/")
         <HttpRequest [GET], url: 'https://www.example.org/'>
-        >>> response = client.send_request(request)
+        >>> response = client._send_request(request)
         <HttpResponse: 200 OK>
 
         For more information on this code flow, see https://aka.ms/azsdk/dpcodegen/python/send_request

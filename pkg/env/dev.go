@@ -27,7 +27,7 @@ type dev struct {
 	*prod
 }
 
-func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {
+func newDev(ctx context.Context, log *logrus.Entry, component ServiceName) (Interface, error) {
 	d := &dev{}
 
 	var err error
@@ -84,7 +84,7 @@ func (d *dev) OtelAuditQueueSize() (int, error) {
 }
 
 func (d *dev) Listen() (net.Listener, error) {
-	if d.Component() == string(COMPONENT_MIMO_ACTUATOR) {
+	if d.Service() == string(SERVICE_MIMO_ACTUATOR) {
 		return net.Listen("tcp", ":8445")
 	}
 	return net.Listen("tcp", ":8443")

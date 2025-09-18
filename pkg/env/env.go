@@ -121,7 +121,7 @@ type Interface interface {
 	ClusterCertificates() azcertificates.Client
 }
 
-func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {
+func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceName) (Interface, error) {
 	if IsLocalDevelopmentMode() {
 		if err := ValidateVars(ProxyHostName); err != nil {
 			return nil, err

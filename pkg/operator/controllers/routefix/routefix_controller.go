@@ -42,8 +42,8 @@ type Reconciler struct {
 	client client.Client
 	dh     dynamichelper.Interface
 
-	verFixed46 *version.Version
-	verFixed47 *version.Version
+	verFixed46 version.Version
+	verFixed47 version.Version
 }
 
 var (
@@ -166,8 +166,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *Reconciler) isRequired(clusterVersion *version.Version) bool {
-	y := clusterVersion.V[1]
+func (r *Reconciler) isRequired(clusterVersion version.Version) bool {
+	v, _ := clusterVersion.Components()
+	y := v[1]
 	switch y {
 	case 6: // 4.6.X
 		return clusterVersion.Lt(r.verFixed46)

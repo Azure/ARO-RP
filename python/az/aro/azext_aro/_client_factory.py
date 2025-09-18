@@ -14,7 +14,7 @@ def cf_aro(cli_ctx, *_):
 
     if rp_mode_development():
         opt_args = {
-            "endpoint": "https://localhost:8443/",
+            "base_url": "https://localhost:8443/",
             "connection_verify": False
         }
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

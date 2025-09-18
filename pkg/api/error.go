@@ -22,7 +22,7 @@ func (err *CloudError) Error() string {
 	var body string
 
 	if err.CloudErrorBody != nil {
-		body = ": " + err.CloudErrorBody.String()
+		body = ": " + err.String()
 	}
 
 	return fmt.Sprintf("%d%s", err.StatusCode, body)

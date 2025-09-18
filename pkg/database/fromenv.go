@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -16,7 +14,7 @@ import (
 )
 
 // NewDatabaseClient creates a CosmosDB database client from the environment configuration.
-func NewDatabaseClientFromEnv(ctx context.Context, _env env.Core, log *logrus.Entry, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
+func NewDatabaseClientFromEnv(ctx context.Context, _env env.Core, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
 	dbAccountName, err := env.DBAccountName()
 	if err != nil {
 		return nil, err
@@ -31,7 +29,7 @@ func NewDatabaseClientFromEnv(ctx context.Context, _env env.Core, log *logrus.En
 		fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope),
 	}
 
-	logrusEntry := log.WithField("component", "database")
+	logrusEntry := _env.LoggerForComponent("database")
 
 	dbAuthorizer, err := NewTokenAuthorizer(
 		ctx, logrusEntry, msiToken, dbAccountName, scope,

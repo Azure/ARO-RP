@@ -21,9 +21,8 @@ package redhatopenshift
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/gofrs/uuid"
 )
 
 const (

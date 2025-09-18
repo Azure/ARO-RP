@@ -45,7 +45,7 @@ type Configuration struct {
 	AzureSecPackVSATenantId            *string                `json:"azureSecPackVSATenantId,omitempty"`
 	RPVersionStorageAccountName        *string                `json:"rpVersionStorageAccountName,omitempty" value:"required"`
 	ACRReplicaDisabled                 *bool                  `json:"acrReplicaDisabled,omitempty"`
-	AdminAPICABundle                   *string                `json:"adminApiCaBundle,omitempty" value:"required"`
+	AdminAPICABundle                   *string                `json:"adminApiCaBundle,omitempty"`
 	AdminAPIClientCertCommonName       *string                `json:"adminApiClientCertCommonName,omitempty" value:"required"`
 	ARMAPICABundle                     *string                `json:"armApiCaBundle,omitempty"`
 	ARMAPIClientCertCommonName         *string                `json:"armApiClientCertCommonName,omitempty"`
@@ -104,6 +104,8 @@ type Configuration struct {
 	OIDCStorageAccountName             *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
 	OtelAuditQueueSize                 *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
 	MsiRpEndpoint                      *string                `json:"msiRpEndpoint,omitempty" value:"required"`
+	TokenContributorRoleID             *string                `json:"tokenContributorRoleID,omitempty" value:"required"`
+	TokenContributorRoleName           *string                `json:"tokenContributorRoleName,omitempty" value:"required"`
 
 	// TODO: Replace with Live Service Configuration in KeyVault
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`

@@ -21,7 +21,7 @@ type Node struct {
 
 // AddFromGraph adds all nodes whose version is of the form x.y.z (no suffix)
 // and >= min
-func AddFromGraph(min *version.Version) ([]Node, error) {
+func AddFromGraph(min version.Version) ([]Node, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://amd64.ocp.releases.ci.openshift.org/graph", nil)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func AddFromGraph(min *version.Version) ([]Node, error) {
 }
 
 // VersionInfo fetches the Node containing the version payload
-func VersionInfo(ver *version.Version) (Node, error) {
+func VersionInfo(ver version.Version) (Node, error) {
 	nodes, err := AddFromGraph(ver)
 	if err != nil {
 		return Node{}, err

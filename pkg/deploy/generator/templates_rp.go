@@ -83,6 +83,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"oidcStorageAccountName",
 			"otelAuditQueueSize",
 			"msiRpEndpoint",
+			"tokenContributorRoleID",
+			"tokenContributorRoleName",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
@@ -99,7 +101,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = false
 		case "ipRules":
 			p.Type = "array"
-		case "armApiCaBundle",
+		case "adminApiCaBundle",
+			"armApiCaBundle",
 			"armApiClientCertCommonName",
 			"armClientId",
 			"gatewayDomains",
@@ -205,6 +208,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
 		"globalDevopsServicePrincipalId",
+		"tokenContributorRoleID",
 	}
 
 	for _, param := range params {
@@ -252,10 +256,17 @@ func (g *generator) rpGlobalACRReplicationTemplate() *arm.Template {
 func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
+	params := []string{
+		"tokenContributorRoleID",
+		"tokenContributorRoleName",
+	}
+
 	t.Resources = append(t.Resources,
 		g.rpRoleDefinitionTokenContributor(),
 	)
-
+	for _, param := range params {
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+	}
 	return t
 }
 

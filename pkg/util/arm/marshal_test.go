@@ -276,6 +276,35 @@ func TestResourceMarshal(t *testing.T) {
     "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
 }`),
 		},
+		{
+			name: "type and location should be included",
+			r: &Resource{
+				APIVersion: "2020-08-01",
+				Type:       "Microsoft.Network/virtualNetworks",
+				Location:   "westus",
+				Resource: armnetwork.VirtualNetwork{
+					Name: pointerutils.ToPtr("test-vnet"),
+					Properties: &armnetwork.VirtualNetworkPropertiesFormat{
+						AddressSpace: &armnetwork.AddressSpace{
+							AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/16")},
+						},
+					},
+				},
+			},
+			want: []byte(`{
+    "apiVersion": "2020-08-01",
+    "location": "westus",
+    "name": "test-vnet",
+    "properties": {
+        "addressSpace": {
+            "addressPrefixes": [
+                "10.0.0.0/16"
+            ]
+        }
+    },
+    "type": "Microsoft.Network/virtualNetworks"
+}`),
+		},
 	}
 
 	for _, test := range tests {

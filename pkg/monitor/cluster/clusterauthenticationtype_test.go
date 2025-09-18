@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -59,7 +58,6 @@ func TestEmitClusterAuthenticationType(t *testing.T) {
 				oc:  oc,
 				m:   mockMetrics,
 				log: logrus.NewEntry(logrus.New()),
-				wg:  &sync.WaitGroup{},
 			}
 
 			mockMetrics.EXPECT().EmitGauge(authenticationTypeMetricsTopic, int64(1), tt.expectMetric).Times(1)

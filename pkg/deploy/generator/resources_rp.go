@@ -398,6 +398,8 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpParentDomainName",
 		"oidcStorageAccountName",
 		"otelAuditQueueSize",
+		"tokenContributorRoleID",
+		"tokenContributorRoleName",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",
@@ -927,7 +929,6 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 	r := &arm.Resource{
 		Resource:   cosmosdb,
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
-		Type:       "Microsoft.DocumentDB/databaseAccounts",
 	}
 	if g.production {
 		cosmosdb.Properties.IPRules = []*sdkcosmos.IPAddressOrRange{}
@@ -998,7 +999,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
-		Type:       "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 	hashPartitionKey := sdkcosmos.PartitionKindHash
 	portal := &arm.Resource{
@@ -1026,7 +1026,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 		},
-		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
 	gateway := &arm.Resource{
@@ -1054,7 +1053,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 		},
-		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
 	mimo := &arm.Resource{
@@ -1082,7 +1080,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 		},
-		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
 	if !g.production {
@@ -1121,7 +1118,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
-			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
@@ -1146,7 +1142,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
-			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
@@ -1171,7 +1166,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
-			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
@@ -1195,7 +1189,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
-			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		gateway,
 		{
@@ -1221,7 +1214,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
-			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
@@ -1264,7 +1256,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
-			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		portal,
 		{
@@ -1289,7 +1280,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
-			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 	}
 
@@ -1347,7 +1337,6 @@ func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, t
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), " + databaseName + ", '" + containerName + "')]",
 		},
-		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
 	}
 }
 
@@ -1415,10 +1404,10 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 func (g *generator) rpRoleDefinitionTokenContributor() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleDefinition{
-			Name: pointerutils.ToPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
+			Name: pointerutils.ToPtr("[parameters('tokenContributorRoleID')]"),
 			Type: pointerutils.ToPtr("Microsoft.Authorization/roleDefinitions"),
 			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-				RoleName:         pointerutils.ToPtr("ARO v4 ContainerRegistry Token Contributor"),
+				RoleName:         pointerutils.ToPtr("[parameters('tokenContributorRoleName')]"),
 				AssignableScopes: &[]string{"[subscription().id]"},
 				Permissions: &[]mgmtauthorization.Permission{
 					{
@@ -1514,7 +1503,7 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('gatewayServicePrincipalId'), 'RP / AcrPull')))",
 		),
 		rbac.ResourceRoleAssignmentWithName(
-			"48983534-3d06-4dcb-a566-08a694eb1279", // ARO v4 ContainerRegistry Token Contributor
+			"parameters('tokenContributorRoleID')",
 			"parameters('fpServicePrincipalId')",
 			"Microsoft.ContainerRegistry/registries",
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",

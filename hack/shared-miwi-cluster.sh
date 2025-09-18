@@ -236,16 +236,16 @@ elif [[ $1 == create ]]; then
     --query principalId -o tsv)" \
     --assignee-principal-type ServicePrincipal \
     --role "/subscriptions/$SUBSCRIPTION_ID/providers/Microsoft.Authorization/roleDefinitions/0d7aedc0-15fd-4a67-a412-efad370c947e" \
-    --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME/providers/Microsoft.Network/virtualNetworks/aro-vnet/subnets/master"
+    --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME/providers/Microsoft.Network/virtualNetworks/aro-vnet"
 
-    az role assignment create \
+	az role assignment create \
     --assignee-object-id "$(az identity show \
     --resource-group $SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME \
-    --name file-csi-driver \
+    --name image-registry \
     --query principalId -o tsv)" \
     --assignee-principal-type ServicePrincipal \
-    --role "/subscriptions/$SUBSCRIPTION_ID/providers/Microsoft.Authorization/roleDefinitions/0d7aedc0-15fd-4a67-a412-efad370c947e" \
-    --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME/providers/Microsoft.Network/virtualNetworks/aro-vnet/subnets/worker"
+    --role "/subscriptions/$SUBSCRIPTION_ID/providers/Microsoft.Authorization/roleDefinitions/8b32b316-c2f5-4ddf-b05b-83dacd2d08b5" \
+    --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME/providers/Microsoft.Network/virtualNetworks/aro-vnet"
 
     az role assignment create \
     --assignee-object-id "$(az identity show \

@@ -27,8 +27,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_PORTAL)
+func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) error {
+	_env, err := env.NewCore(ctx, _log, env.SERVICE_PORTAL)
 	if err != nil {
 		return err
 	}
@@ -64,9 +64,10 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "portal"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go m.Run(nil)
 
-	g, err := golang.NewMetrics(log.WithField("component", "portal"), m)
+	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), m)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, m, aead)
 	if err != nil {
 		return err
 	}
@@ -159,7 +160,7 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 		return err
 	}
 
-	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), log)
+	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), _env.LoggerForComponent("dialer"))
 	if err != nil {
 		return err
 	}
@@ -195,7 +196,7 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 		return err
 	}
 
-	log.Printf("listening %s", address)
+	_env.Logger().Printf("listening %s", address)
 
 	var size int
 	if err := env.ValidateVars(env.OtelAuditQueueSize); err != nil {
@@ -212,7 +213,7 @@ func portal(ctx context.Context, log *logrus.Entry, auditLog *logrus.Entry) erro
 		return err
 	}
 
-	p := pkgportal.NewPortal(_env, auditLog, log.WithField("component", "portal"), log.WithField("component", "portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
+	p := pkgportal.NewPortal(_env, auditLog, _env.LoggerForComponent("portal"), _env.LoggerForComponent("portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
 
 	return p.Run(ctx)
 }

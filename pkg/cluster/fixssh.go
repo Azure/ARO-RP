@@ -96,15 +96,15 @@ NICs:
 
 			ilbBackendPoolsUpdated = m.updateILBBackendPools(*ipc, infraID, *nic.Name, *lb.ID)
 
-			// Check if this is a fully private cluster and the internal load balancer backend pools have been updated
-			// If both the API and ingress visibility are private, there is no external LB so we continue
-			if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPrivate &&
-				m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate &&
-				ilbBackendPoolsUpdated {
-				m.log.Infof("Updating Private Cluster Network Interface %s", *nic.Name)
-				err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
-				if err != nil {
-					return err
+			// Check if UserDefinedRouting is enabled for this cluster
+			// UDR clusters don't have an external load balancer so stop executing here and continue to next NIC
+			if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+				if ilbBackendPoolsUpdated {
+					m.log.Infof("Updating UDR Cluster Network Interface %s", *nic.Name)
+					err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+					if err != nil {
+						return err
+					}
 				}
 				continue NICs
 			}

@@ -11,6 +11,15 @@ trigger:
     include:
       - v2*
 
+# PR triggers defined in YAML to override ADO UI and respect path exclusions
+pr:
+  branches:
+    include:
+      - master
+  paths:
+    exclude:
+      - docs/*
+
 variables:
   - template: vars.yml
   - name: CI

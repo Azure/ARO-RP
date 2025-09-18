@@ -10,9 +10,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
+
 	azcorearm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/coreos/go-semver/semver"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
@@ -311,7 +312,7 @@ func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundI
 	if architectureVersion == api.ArchitectureVersionV1 && managedOutboundIPs.Count > 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", fmt.Sprintf("The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.", managedOutboundIPs.Count))
 	}
-	if !(managedOutboundIPs.Count > 0 && managedOutboundIPs.Count <= 20) {
+	if managedOutboundIPs.Count <= 0 || managedOutboundIPs.Count > 20 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", fmt.Sprintf("The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be in the range of 1 to 20 (inclusive).", managedOutboundIPs.Count))
 	}
 	return nil

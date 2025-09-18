@@ -21,11 +21,10 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // OperationsClient is the rest API for Azure Red Hat OpenShift 4
@@ -51,7 +50,7 @@ func (client OperationsClient) List(ctx context.Context) (result OperationListPa
 		defer func() {
 			sc := -1
 			if result.ol.Response.Response != nil {
-				sc = result.ol.StatusCode
+				sc = result.ol.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -144,7 +143,7 @@ func (client OperationsClient) ListComplete(ctx context.Context) (result Operati
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
-				sc = result.page.Response().StatusCode
+				sc = result.page.Response().Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()

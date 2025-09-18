@@ -348,17 +348,6 @@ func (m *manager) networkPrivateEndpoint() *arm.Resource {
 }
 
 func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.Resource {
-	zones := []string{}
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones != nil {
-		zones = m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones
-	}
-
-	// Convert []string to []*string for zones
-	zonePointers := make([]*string, len(zones))
-	for i, zone := range zones {
-		zonePointers[i] = pointerutils.ToPtr(zone)
-	}
-
 	return &arm.Resource{
 		Resource: &sdknetwork.PublicIPAddress{
 			SKU: &sdknetwork.PublicIPAddressSKU{
@@ -367,7 +356,7 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 			Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
 				PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
 			},
-			Zones:    zonePointers,
+			Zones:    pointerutils.ToSlicePtr(m.doc.OpenShiftCluster.Properties.Zones),
 			Name:     &name,
 			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
 			Location: &azureRegion,
@@ -378,13 +367,6 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 
 // networkInternalLoadBalancer creates a new internal LB (not to be used for updates)
 func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource {
-	zones := []*string{}
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones != nil {
-		for _, z := range m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones {
-			zones = append(zones, pointerutils.ToPtr(z))
-		}
-	}
-
 	return &arm.Resource{
 		Resource: &sdknetwork.LoadBalancer{
 			SKU: &sdknetwork.LoadBalancerSKU{
@@ -399,9 +381,8 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 								ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
 						},
-						Zones: zones,
-
-						Name: pointerutils.ToPtr("internal-lb-ip-v4"),
+						Zones: pointerutils.ToSlicePtr(m.doc.OpenShiftCluster.Properties.Zones),
+						Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
 					},
 				},
 				BackendAddressPools: []*sdknetwork.BackendAddressPool{
