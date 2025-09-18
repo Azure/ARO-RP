@@ -27,6 +27,7 @@ likely to be simpler, more reliable, and with a shorter time to remediate.
 
 Remediations in place:
 * periodically reset NSGs in the master and worker subnets to the defaults (controlled by the reconcileNSGs feature flag)
+* recreate broken/missing pull secrets
 
 ### End user warnings
 
@@ -49,6 +50,11 @@ The static pod resources can be found at `pkg/operator/deploy/staticresources`. 
 deploy operation kicks off two deployments in the `openshift-azure-operator` namespace, one for
 master and one for worker. The `aro-operator-master` deployment runs all controllers,
 while the `aro-operator-worker` deployment runs only the internet checker in the worker subnet.
+
+### Remediation metrics
+
+Metrics are emitted for each remediation with labels `success` and `error` to represent the outcome.
+Currently, only `pullSecret` remediation metrics are being emitted.
 
 ## Developer documentation
 
