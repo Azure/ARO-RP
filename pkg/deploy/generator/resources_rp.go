@@ -522,15 +522,8 @@ func (g *generator) rpVMSS() *arm.Resource {
 						},
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
-						// https://eng.ms/docs/products/azure-linux/gettingstarted/azurevm/azurevm
-						ImageReference: &mgmtcompute.ImageReference{
-							// cbl-mariner-2-gen2-fips is not supported by Automatic OS Updates
-							// therefore the non fips image is used, and fips is configured manually
-							// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade
-							// https://eng.ms/docs/cloud-ai-platform/azure-core/azure-compute/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryusageinstructions#vmss-deployment-with-1p-image-galleryarm-template
-							// https://eng.ms/docs/cloud-ai-platform/azure-core/core-compute-and-host/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryimagereference#cbl-mariner-2-images
-							SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"),
-						},
+						// ImageReference is moved to a parameter
+						ImageReference: &mgmtcompute.ImageReference{},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
@@ -790,6 +783,7 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 		Name:       "[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "/add')]",
 		Type:       "Microsoft.KeyVault/vaults/accessPolicies",
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault/vaults/accessPolicies"),
+		Condition:  "[parameters('deploy')]",
 		Properties: &mgmtkeyvault.VaultProperties{
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
@@ -818,12 +812,18 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 					"keyvaultPrefix": {
 						Type: "string",
 					},
+					"deploy": {
+						Type: "bool",
+					},
 				},
 				Resources: []*arm.DeploymentTemplateResource{vaultAccessPoliciesResource},
 			},
 			Parameters: map[string]*arm.DeploymentTemplateResourceParameter{
 				"keyvaultPrefix": {
 					Value: "[parameters('keyvaultPrefix')]",
+				},
+				"deploy": {
+					Value: "[or(not(empty(parameters('clustersInstallViaHive'))), not(empty(parameters('clustersAdoptByHive'))))]",
 				},
 			},
 			Mode: "Incremental",
@@ -1281,6 +1281,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
 		},
+		mimo,
 	}
 
 	// Adding Triggers
@@ -1295,16 +1296,9 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		g.rpCosmosDBTriggers(databaseName, "OpenShiftClusters", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 		// Monitors
 		g.rpCosmosDBTriggers(databaseName, "Monitors", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		// MIMO DB triggers
+		g.rpCosmosDBTriggers(databaseName, "MaintenanceManifests", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 	)
-
-	// Don't deploy the MIMO databases in production yet
-	if !g.production {
-		rs = append(rs,
-			mimo,
-			// MIMO DB triggers
-			g.rpCosmosDBTriggers(databaseName, "MaintenanceManifests", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
-		)
-	}
 
 	if addDependsOn {
 		for i := range rs {

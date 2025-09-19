@@ -46,6 +46,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"rpResourceGroupName",
 		"rpServicePrincipalId",
 		"sshPublicKey",
+		"vmImageReference",
 		"vmssCleanupEnabled",
 		"vmssName",
 	}
@@ -58,6 +59,9 @@ func (g *generator) gatewayTemplate() *arm.Template {
 			p.DefaultValue = ""
 		case "gatewayVmSize":
 			p.DefaultValue = "Standard_D4s_v3"
+		case "vmImageReference":
+			p.Type = "object"
+			p.DefaultValue = map[string]string{}
 		case "gatewayVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3

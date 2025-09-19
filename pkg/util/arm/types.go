@@ -83,6 +83,7 @@ type DeploymentTemplateResource struct {
 	Type       string      `json:"type,omitempty"`
 	APIVersion string      `json:"apiVersion,omitempty"`
 	Properties interface{} `json:"properties,omitempty"`
+	Condition  string      `json:"condition,omitempty"`
 }
 
 // DeploymentTemplateResourceParameter represents a nested ARM deployment's resource parameter
