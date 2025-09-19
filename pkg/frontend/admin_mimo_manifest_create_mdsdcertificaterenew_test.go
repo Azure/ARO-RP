@@ -23,6 +23,7 @@ func TestAdminMdsdCertificateRenew(t *testing.T) {
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/reesourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
 	ctx := context.Background()
+	now := func() time.Time { return time.Unix(1000, 0) }
 
 	type test struct {
 		name           string
@@ -62,8 +63,8 @@ func TestAdminMdsdCertificateRenew(t *testing.T) {
 				ID:                "07070707-0707-0707-0707-070707070001",
 				MaintenanceTaskID: mimo.MDSD_CERT_ROTATION_ID,
 				State:             admin.MaintenanceManifestStatePending,
-				RunAfter:          int(time.Now().Unix()),
-				RunBefore:         int(time.Now().Add(time.Hour * 7 * 24).Unix()),
+				RunAfter:          int(now().Unix()),
+				RunBefore:         int(now().Add(time.Hour * 7 * 24).Unix()),
 			},
 			wantStatusCode: http.StatusCreated,
 		},
@@ -95,15 +96,13 @@ func TestAdminMdsdCertificateRenew(t *testing.T) {
 				ID:                "07070707-0707-0707-0707-070707070001",
 				MaintenanceTaskID: mimo.MDSD_CERT_ROTATION_ID,
 				State:             admin.MaintenanceManifestStatePending,
-				RunAfter:          int(time.Now().Unix()),
-				RunBefore:         int(time.Now().Add(time.Hour * 7 * 24).Unix()),
+				RunAfter:          int(now().Unix()),
+				RunBefore:         int(now().Add(time.Hour * 7 * 24).Unix()),
 			},
 			wantStatusCode: http.StatusCreated,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			now := func() time.Time { return time.Unix(1000, 0) }
-
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions().WithMaintenanceManifests(now)
 			defer ti.done()
 
@@ -127,10 +126,10 @@ func TestAdminMdsdCertificateRenew(t *testing.T) {
 			}
 
 			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil, nil)
-
 			if err != nil {
 				t.Fatal(err)
 			}
+			f.now = now
 
 			go f.Run(ctx, nil, nil)
 

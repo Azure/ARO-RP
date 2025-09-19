@@ -179,10 +179,10 @@ func TestMIMOCreateManifest(t *testing.T) {
 			}
 
 			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil, nil)
-
 			if err != nil {
 				t.Fatal(err)
 			}
+			f.now = now
 
 			go f.Run(ctx, nil, nil)
 
