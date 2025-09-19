@@ -81,7 +81,7 @@ func (g *generator) networkSecurityPerimeterAssociation(nspName string, associat
 					ID: &targetResourceId,
 				},
 				Profile: &sdknetwork.SubResource{
-					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', '%s/default')]", nspName)),
+					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', '%s', 'default')]", nspName)),
 				},
 			},
 			Name: pointerutils.ToPtr(fmt.Sprintf("%s/%s", nspName, associationName)),
@@ -89,7 +89,7 @@ func (g *generator) networkSecurityPerimeterAssociation(nspName string, associat
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters/resourceAssociations"),
 		DependsOn: []string{
-			fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', '%s/default')]", nspName),
+			fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', '%s', 'default')]", nspName),
 		},
 	}
 }

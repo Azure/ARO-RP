@@ -341,7 +341,7 @@
         {
             "apiVersion": "2020-08-01",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp/default')]"
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
             ],
             "name": "aro-keyvaults-nsp/nsp-cls",
             "properties": {
@@ -350,7 +350,7 @@
                     "id": "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-cls'))]"
                 },
                 "profile": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp/default')]"
+                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
                 }
             },
             "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations"
@@ -358,7 +358,7 @@
         {
             "apiVersion": "2020-08-01",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp/default')]"
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
             ],
             "name": "aro-keyvaults-nsp/nsp-por",
             "properties": {
@@ -367,7 +367,7 @@
                     "id": "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-por'))]"
                 },
                 "profile": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp/default')]"
+                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
                 }
             },
             "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations"
@@ -375,7 +375,7 @@
         {
             "apiVersion": "2020-08-01",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp/default')]"
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
             ],
             "name": "aro-keyvaults-nsp/nsp-svc",
             "properties": {
@@ -384,7 +384,7 @@
                     "id": "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-svc'))]"
                 },
                 "profile": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp/default')]"
+                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
                 }
             },
             "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations"
