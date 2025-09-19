@@ -37,6 +37,7 @@ type AzureActions interface {
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
 	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error
 	ResourceDeleteAndWait(ctx context.Context, resourceID string) error
+	GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error)
 }
 
 type azureActions struct {
@@ -168,4 +169,22 @@ func (a *azureActions) ResourceGroupHasVM(ctx context.Context, vmName string) (b
 	}
 
 	return false, nil
+}
+
+func (a *azureActions) GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error) {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	// Call GetEffectiveRouteTableAndWait using the ARO-RP utility pattern
+	result, err := a.networkInterfaces.GetEffectiveRouteTableAndWait(ctx, clusterRGName, nicName, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Marshal the result to JSON
+	jsonData, err := result.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonData, nil
 }
