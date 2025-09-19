@@ -20,7 +20,7 @@ import (
 )
 
 func TestInstallConfigMap(t *testing.T) {
-	var expected = map[string]string{"install-config.yaml": "apiVersion: v1\nplatform:\n  azure:\n    region: \"testLocation\"\n"}
+	var expected = map[string]string{"install-config.yaml": "apiVersion: v1\nplatform:\n  azure:\n    region: \"testLocation\"\n    userTags:\n      red-hat-managed: \"true\"\n"}
 
 	r := installConfigCM("testNamespace", "testLocation")
 

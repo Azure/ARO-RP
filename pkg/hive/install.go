@@ -35,6 +35,8 @@ const (
 platform:
   azure:
     region: "%s"
+    userTags:
+      red-hat-managed: "true"
 `
 )
 
