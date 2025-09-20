@@ -120,27 +120,27 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 
 		// Check worker profiles
 		for _, workerProfile := range mon.oc.Properties.WorkerProfiles {
-			workersubnetID, err := azure.ParseResourceID(workerProfile.SubnetID)
+			workerSubnetResource, err := azure.ParseResourceID(workerProfile.SubnetID)
 			if err != nil {
-				mon.log.Errorf("failed to parse the workersubnetID: %v", err)
+				mon.log.Errorf("failed to parse the subnetID '%s': %v", workerProfile.SubnetID, err)
 				return err
 			}
-			workerVnetID, _, err := apisubnet.Split(workerProfile.SubnetID)
+			vnetId, _, err := apisubnet.Split(workerProfile.SubnetID)
 			if err != nil {
-				mon.log.Errorf("failed to feth the workerVnetID: %v", err)
+				mon.log.Errorf("failed to fetch the virtual network: %v", err)
 				return err
 			}
-			workervnetId, err := azure.ParseResourceID(workerVnetID)
+			vnetResource, err := azure.ParseResourceID(vnetId)
 			if err != nil {
-				mon.log.Errorf("failed to parse the workerVnetID: %v", err)
+				mon.log.Errorf("failed to parse the vnet resource ID '%s': %v", vnetId, err)
 				return err
 			}
-			workerres, err := clientFactory.NewSubnetsClient().Get(ctx, workersubnetID.ResourceGroup, workervnetId.ResourceName, workersubnetID.ResourceName, &armnetwork.SubnetsClientGetOptions{Expand: nil})
+			workerSubnetResponse, err := clientFactory.NewSubnetsClient().Get(ctx, workerSubnetResource.ResourceGroup, vnetResource.ResourceName, workerSubnetResource.ResourceName, &armnetwork.SubnetsClientGetOptions{Expand: nil})
 			if err != nil {
 				mon.log.Errorf("failed to finish the request: %v", err)
 			}
-			if workerres.Properties.AddressPrefix != nil {
-				workermachinesCIDR := *workerres.Properties.AddressPrefix
+			if workerSubnetResponse.Properties != nil && workerSubnetResponse.Properties.AddressPrefix != nil {
+				workermachinesCIDR := *workerSubnetResponse.Properties.AddressPrefix
 				if !noProxyMap[workermachinesCIDR] {
 					missing_no_proxy_list = append(missing_no_proxy_list, workermachinesCIDR)
 				}
@@ -210,7 +210,7 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 			// Infrastructure Configuration Check
 			infraConfig, err := mon.configcli.ConfigV1().Infrastructures().Get(ctx, cluster, metav1.GetOptions{})
 			if err != nil {
-				mon.log.Errorf("Error in getting Infrasturcture info: %v", err)
+				mon.log.Errorf("Error in getting Infrastructure info: %v", err)
 				return err
 			}
 
