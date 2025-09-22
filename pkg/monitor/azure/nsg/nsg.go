@@ -141,7 +141,14 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 }
 
 // Monitor checks the custom NSGs customers attach to their ARO subnets
-func (n *NSGMonitor) Monitor(ctx context.Context) error {
+func (n *NSGMonitor) Monitor(ctx context.Context) (_err error) {
+	// guard for any monitor-level panics
+	defer func() {
+		if e := recover(); e != nil {
+			_err = &monitoring.MonitorPanic{PanicValue: e}
+		}
+	}()
+
 	now := time.Now()
 	errs := []error{}
 

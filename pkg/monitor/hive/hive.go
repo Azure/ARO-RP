@@ -72,6 +72,12 @@ func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitt
 }
 
 func (mon *Monitor) runCollector(ctx context.Context, f func(context.Context) error) (err error) {
+	// guard for any monitor-level panics
+	defer func() {
+		if e := recover(); e != nil {
+			err = &monitoring.MonitorPanic{PanicValue: e}
+		}
+	}()
 	collectorName := steps.ShortName(f)
 	mon.log.Debugf("running %s", collectorName)
 

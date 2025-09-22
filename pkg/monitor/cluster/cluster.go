@@ -224,7 +224,14 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 }
 
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) error {
+func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
+	// guard for any monitor-level panics
+	defer func() {
+		if e := recover(); e != nil {
+			_err = &monitoring.MonitorPanic{PanicValue: e}
+		}
+	}()
+
 	errs := []error{}
 
 	now := time.Now()

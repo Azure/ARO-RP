@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"sync"
@@ -322,7 +323,11 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 
 	monitors = append(monitors, c, nsgMon)
 	allJobsDone := make(chan bool)
-	go execute(ctx, log, allJobsDone, monitors)
+	onPanic := func(m monitoring.Monitor) {
+		// emit a failed worker metric on panic
+		mon.m.EmitGauge("monitor."+m.MonitorName()+".failedworker", 1, dims)
+	}
+	go execute(ctx, log, allJobsDone, monitors, onPanic)
 
 	select {
 	case <-allJobsDone:
@@ -332,7 +337,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 }
 
-func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors []monitoring.Monitor) {
+func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors []monitoring.Monitor, onPanic func(monitoring.Monitor)) {
 	var wg sync.WaitGroup
 
 	for _, monitor := range monitors {
@@ -341,6 +346,9 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors 
 			defer wg.Done()
 			err := monitor.Monitor(ctx)
 			if err != nil {
+				if errors.Is(err, &monitoring.MonitorPanic{}) {
+					onPanic(monitor)
+				}
 				log.Error(err)
 			}
 		}()
