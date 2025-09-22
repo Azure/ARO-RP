@@ -29,6 +29,7 @@ func (g *generator) rpTemplate() *arm.Template {
 		"databaseAccountName",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
+		"globalDevopsServicePrincipalId",
 	}
 	if g.production {
 		params = append(params,
@@ -57,7 +58,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"gatewayDomains",
 			"gatewayResourceGroupName",
 			"gatewayServicePrincipalId",
-			"globalDevopsServicePrincipalId",
 			"ipRules",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
@@ -83,6 +83,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"oidcStorageAccountName",
 			"otelAuditQueueSize",
 			"msiRpEndpoint",
+			"tokenContributorRoleID",
+			"tokenContributorRoleName",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
@@ -99,10 +101,12 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = false
 		case "ipRules":
 			p.Type = "array"
-		case "armApiCaBundle",
+		case "adminApiCaBundle",
+			"armApiCaBundle",
 			"armApiClientCertCommonName",
 			"armClientId",
 			"gatewayDomains",
+			"globalDevopsServicePrincipalId",
 			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":
@@ -204,12 +208,14 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
 		"globalDevopsServicePrincipalId",
+		"tokenContributorRoleID",
 	}
 
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "acrLocationOverride":
+		case "acrLocationOverride",
+			"globalDevopsServicePrincipalId":
 			p.DefaultValue = ""
 		}
 		t.Parameters[param] = p
@@ -250,10 +256,17 @@ func (g *generator) rpGlobalACRReplicationTemplate() *arm.Template {
 func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
+	params := []string{
+		"tokenContributorRoleID",
+		"tokenContributorRoleName",
+	}
+
 	t.Resources = append(t.Resources,
 		g.rpRoleDefinitionTokenContributor(),
 	)
-
+	for _, param := range params {
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+	}
 	return t
 }
 

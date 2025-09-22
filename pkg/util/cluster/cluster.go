@@ -74,8 +74,9 @@ type ClusterConfig struct {
 	NoInternet            bool   `mapstructure:"NO_INTERNET"`
 	MockMSIObjectID       string `mapstructure:"MOCK_MSI_OBJECT_ID"`
 
-	MasterVMSize string `mapstructure:"MASTER_VM_SIZE"`
-	WorkerVMSize string `mapstructure:"WORKER_VM_SIZE"`
+	MasterVMSize  string   `mapstructure:"MASTER_VM_SIZE"`
+	WorkerVMSize  string   `mapstructure:"WORKER_VM_SIZE"`
+	MasterVMSizes []string `mapstructure:"MASTER_VM_SIZES"`
 }
 
 func (cc *ClusterConfig) IsLocalDevelopmentMode() bool {
@@ -106,8 +107,16 @@ type Cluster struct {
 
 const GenerateSubnetMaxTries = 100
 const localDefaultURL string = "https://localhost:8443"
-const DefaultMasterVmSize = api.VMSizeStandardD8sV5
 const DefaultWorkerVmSize = api.VMSizeStandardD4sV5
+
+func DefaultMasterVmSizes() []string {
+	return []string{
+		api.VMSizeStandardD8sV6.String(),
+		api.VMSizeStandardD8sV5.String(),
+		api.VMSizeStandardD8sV4.String(),
+		api.VMSizeStandardD8sV3.String(),
+	}
+}
 
 func insecureLocalClient() *http.Client {
 	return &http.Client{
@@ -164,7 +173,10 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	}
 
 	if conf.MasterVMSize == "" {
-		conf.MasterVMSize = DefaultMasterVmSize.String()
+		conf.MasterVMSizes = DefaultMasterVmSizes()
+	}
+	if len(conf.MasterVMSizes) == 0 {
+		conf.MasterVMSizes = []string{conf.MasterVMSize}
 	}
 	if conf.WorkerVMSize == "" {
 		conf.WorkerVMSize = DefaultWorkerVmSize.String()
@@ -810,7 +822,6 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 			},
 			MasterProfile: api.MasterProfile{
-				VMSize:              api.VMSize(c.Config.MasterVMSize),
 				SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.Config.SubscriptionID, vnetResourceGroup, clusterName),
 				EncryptionAtHost:    api.EncryptionAtHostEnabled,
 				DiskEncryptionSetID: diskEncryptionSetID,
@@ -876,7 +887,28 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		}
 	}
 
-	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
+	var err error
+	for _, masterVmSize := range c.Config.MasterVMSizes {
+		if err != nil {
+			// If we've already tried and failed to create the cluster, delete
+			// it before retrying. Deleting first ensures that the final failed
+			// cluster remains for diagnostic purposes.
+			err = c.openshiftclusters.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
+			if err != nil {
+				return fmt.Errorf("error deleting cluster after failed creation: %w", err)
+			}
+		}
+
+		oc.Properties.MasterProfile.VMSize = api.VMSize(masterVmSize)
+		c.log.Infof("Creating cluster %s with master VM size %s and worker VM size %s",
+			clusterName, oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
+		err = c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
+		if err == nil {
+			break
+		}
+		c.log.WithError(err).Errorf("error creating cluster with master VM size %s, retrying", oc.Properties.MasterProfile.VMSize)
+	}
+	return err
 }
 
 func (c *Cluster) registerSubscription() error {

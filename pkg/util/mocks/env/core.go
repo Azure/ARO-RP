@@ -47,20 +47,6 @@ func (m *MockCore) EXPECT() *MockCoreMockRecorder {
 	return m.recorder
 }
 
-// Component mocks base method.
-func (m *MockCore) Component() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Component")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Component indicates an expected call of Component.
-func (mr *MockCoreMockRecorder) Component() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Component", reflect.TypeOf((*MockCore)(nil).Component))
-}
-
 // Environment mocks base method.
 func (m *MockCore) Environment() *azureclient.AROEnvironment {
 	m.ctrl.T.Helper()
@@ -145,6 +131,20 @@ func (mr *MockCoreMockRecorder) Logger() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockCore)(nil).Logger))
 }
 
+// LoggerForComponent mocks base method.
+func (m *MockCore) LoggerForComponent(arg0 string) *logrus.Entry {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoggerForComponent", arg0)
+	ret0, _ := ret[0].(*logrus.Entry)
+	return ret0
+}
+
+// LoggerForComponent indicates an expected call of LoggerForComponent.
+func (mr *MockCoreMockRecorder) LoggerForComponent(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoggerForComponent", reflect.TypeOf((*MockCore)(nil).LoggerForComponent), arg0)
+}
+
 // NewLiveConfigManager mocks base method.
 func (m *MockCore) NewLiveConfigManager(arg0 context.Context) (liveconfig.Manager, error) {
 	m.ctrl.T.Helper()
@@ -202,6 +202,20 @@ func (m *MockCore) ResourceGroup() string {
 func (mr *MockCoreMockRecorder) ResourceGroup() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceGroup", reflect.TypeOf((*MockCore)(nil).ResourceGroup))
+}
+
+// Service mocks base method.
+func (m *MockCore) Service() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockCoreMockRecorder) Service() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockCore)(nil).Service))
 }
 
 // SubscriptionID mocks base method.

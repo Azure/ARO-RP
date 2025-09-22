@@ -4,9 +4,12 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"net"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,6 +18,7 @@ import (
 
 	conditions "github.com/serge1peshcoff/selenium-go-conditions"
 	"github.com/tebeka/selenium"
+	"golang.org/x/crypto/ssh"
 )
 
 var _ = Describe("Admin Portal E2E Testing", func() {
@@ -184,6 +188,107 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		// Test fails if these labels aren't present
 		err = wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshCommand"))
 		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("Should be able to open ssh panel and get ssh details, then SSH to the cluster", Pending, func() {
+		// TODO: See if we can make this work. Currently it fails with a blank SSH command
+		// TODO: This may be due to insufficient permissions. Further work needed.
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='SSH']"))
+
+		button, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='SSH']")
+		Expect(err).ToNot(HaveOccurred(), "SSH button should have been found")
+
+		button.Click()
+
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshModal"))
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshDropdown"))
+
+		sshDropdown, err := wd.FindElement(selenium.ByID, "sshDropdown")
+		Expect(err).ToNot(HaveOccurred(), "SSH dropdown should have been found")
+
+		sshDropdown.Click()
+
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshDropdown-list0"))
+		machine, err := wd.FindElement(selenium.ByID, "sshDropdown-list0")
+		Expect(err).ToNot(HaveOccurred(), "SSH machine should have been found")
+
+		machine.Click()
+
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshButton"))
+		requestBtn, err := wd.FindElement(selenium.ByID, "sshButton")
+		Expect(err).ToNot(HaveOccurred(), "SSH request button should have been found")
+
+		requestBtn.Click()
+
+		// Test fails if these labels aren't present
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshCommand"))
+		sshCommand, err := wd.FindElement(selenium.ByID, "sshCommand")
+		Expect(err).ToNot(HaveOccurred(), "SSH command element should have been found")
+		Expect(sshCommand).ToNot(BeNil(), "SSH command element should have been found in the previous test")
+		command, err := sshCommand.FindElement(selenium.ByCSSSelector, "input[type='text']")
+		Expect(err).ToNot(HaveOccurred(), "SSH command input should have been found")
+		commandTxt, err := command.GetAttribute("value")
+		Expect(err).ToNot(HaveOccurred(), "SSH command text should have been retrieved")
+		passwd, err := sshCommand.FindElement(selenium.ByCSSSelector, "input[type='password']")
+		Expect(err).ToNot(HaveOccurred(), "SSH password input should have been found")
+		passwdTxt, err := passwd.GetAttribute("value")
+		Expect(err).ToNot(HaveOccurred(), "SSH password text should have been retrieved")
+
+		Expect(commandTxt).ToNot(BeEmpty(), "SSH command should not be empty")
+		Expect(passwdTxt).ToNot(BeEmpty(), "SSH password should not be empty")
+		log.Infof("SSH command: %s", commandTxt)
+
+		khRE := regexp.MustCompile(`echo\s+'([^ ]+) ([^ ]+)'`)
+		khMatch := khRE.FindStringSubmatch(commandTxt)
+		Expect(khMatch).To(HaveLen(2), "Failed to extract known-hosts line")
+		hostKeyType := khMatch[1]
+		hostKeyData := khMatch[2]
+
+		re := regexp.MustCompile(`(\S+@\S+(?::\d+)?)`)
+		matches := re.FindStringSubmatch(commandTxt)
+		Expect(matches).To(HaveLen(2), "Failed to parse user@host from SSH command")
+
+		userHost := matches[1] // "user@ip[:port]"
+		parts := strings.Split(userHost, "@")
+		Expect(parts).To(HaveLen(2))
+		username := parts[0]
+		hostPort := parts[1] // "ip[:port]"
+
+		host, port, err := net.SplitHostPort(hostPort)
+		if err != nil { // no explicit port in string
+			host = hostPort
+			port = "22"
+		}
+
+		config := &ssh.ClientConfig{
+			User: username,
+			Auth: []ssh.AuthMethod{ssh.Password(passwdTxt)},
+			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+				if key.Type() != hostKeyType {
+					return fmt.Errorf("unexpected host key type %s, expected %s", key.Type(), hostKeyType)
+				}
+				if string(key.Marshal()) != hostKeyData {
+					return fmt.Errorf("host key data does not match expected value")
+				}
+				return nil
+			},
+			Timeout: 30 * time.Second,
+		}
+
+		conn, err := ssh.Dial("tcp", net.JoinHostPort(host, port), config)
+		Expect(err).ToNot(HaveOccurred(), "SSH dial failed")
+		defer conn.Close()
+
+		sess, err := conn.NewSession()
+		Expect(err).ToNot(HaveOccurred(), "Creating SSH session failed")
+		defer sess.Close()
+
+		var out bytes.Buffer
+		sess.Stdout = &out
+		err = sess.Run("uname")
+		Expect(err).ToNot(HaveOccurred(), "Failed to send command over SSH")
+
+		Expect(strings.TrimSpace(out.String())).To(Equal("Linux"), "Expected uname output to be Linux")
 	})
 
 	It("Should be able to navigate to other regions", func() {

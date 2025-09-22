@@ -26,8 +26,8 @@ const (
 var GitCommit = "unknown"
 
 type Stream struct {
-	Version  *Version `json:"version"`
-	PullSpec string   `json:"-"`
+	Version  Version `json:"version"`
+	PullSpec string  `json:"-"`
 }
 
 // Install stream data for production and INT has moved to RP-Config.
@@ -41,7 +41,7 @@ var DefaultInstallStream = Stream{
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
 	// https://github.com/microsoft/azurelinux/releases
-	return acrDomain + "/fluentbit:1.9.10-cm20250429@sha256:a115a12041f48404a21fb678e3f853b531ca6d9b9935482b67b400427ffbdfef"
+	return acrDomain + "/fluentbit:4.0.4-cm20250701@sha256:72e56529c56b43eb6e375807dc1924b24705138ec3f3788c8a6cdf7c4ad36e63"
 }
 
 // MdmImage contains the location of the MDM container image
@@ -68,7 +68,7 @@ func GateKeeperImage(acrDomain string) string {
 
 // MiseImage contains the location of the Mise container image
 func MiseImage(acrDomain string) string {
-	return acrDomain + "/mise:1.0.02773.115-mise-cbl-mariner2.0-distroless"
+	return acrDomain + "/mise:1.0.03103.537-mise-cbl-mariner2.0-distroless"
 }
 
 func OTelImage(acrDomain string) string {

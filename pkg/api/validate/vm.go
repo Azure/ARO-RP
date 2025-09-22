@@ -5,6 +5,7 @@ package validate
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/version"
 )
 
 // Public facing document which lists supported VM Sizes:
@@ -27,6 +28,68 @@ func SupportedVMSizesByRole(vmRole string) map[api.VMSize]api.VMSizeStruct {
 		return nil
 	}
 	return supportedvmsizes
+}
+
+var ver419 = version.NewVersion(4, 19, 0)
+
+var masterVmSizesWithMinimumVersion = map[api.VMSize]version.Version{
+	api.VMSizeStandardD4sV6:  ver419,
+	api.VMSizeStandardD8sV6:  ver419,
+	api.VMSizeStandardD16sV6: ver419,
+	api.VMSizeStandardD32sV6: ver419,
+	api.VMSizeStandardD48sV6: ver419,
+	api.VMSizeStandardD64sV6: ver419,
+	api.VMSizeStandardD96sV6: ver419,
+
+	api.VMSizeStandardD4dsV6:  ver419,
+	api.VMSizeStandardD8dsV6:  ver419,
+	api.VMSizeStandardD16dsV6: ver419,
+	api.VMSizeStandardD32dsV6: ver419,
+	api.VMSizeStandardD48dsV6: ver419,
+	api.VMSizeStandardD64dsV6: ver419,
+	api.VMSizeStandardD96dsV6: ver419,
+}
+
+var workerVmSizesWithMinimumVersion = map[api.VMSize]version.Version{
+	api.VMSizeStandardD4sV6:  ver419,
+	api.VMSizeStandardD8sV6:  ver419,
+	api.VMSizeStandardD16sV6: ver419,
+	api.VMSizeStandardD32sV6: ver419,
+	api.VMSizeStandardD48sV6: ver419,
+	api.VMSizeStandardD64sV6: ver419,
+	api.VMSizeStandardD96sV6: ver419,
+
+	api.VMSizeStandardD4dsV6:  ver419,
+	api.VMSizeStandardD8dsV6:  ver419,
+	api.VMSizeStandardD16dsV6: ver419,
+	api.VMSizeStandardD32dsV6: ver419,
+	api.VMSizeStandardD48dsV6: ver419,
+	api.VMSizeStandardD64dsV6: ver419,
+	api.VMSizeStandardD96dsV6: ver419,
+
+	api.VMSizeStandardD4lsV6:  ver419,
+	api.VMSizeStandardD8lsV6:  ver419,
+	api.VMSizeStandardD16lsV6: ver419,
+	api.VMSizeStandardD32lsV6: ver419,
+	api.VMSizeStandardD48lsV6: ver419,
+	api.VMSizeStandardD64lsV6: ver419,
+	api.VMSizeStandardD96lsV6: ver419,
+
+	api.VMSizeStandardD4ldsV6:  ver419,
+	api.VMSizeStandardD8ldsV6:  ver419,
+	api.VMSizeStandardD16ldsV6: ver419,
+	api.VMSizeStandardD32ldsV6: ver419,
+	api.VMSizeStandardD48ldsV6: ver419,
+	api.VMSizeStandardD64ldsV6: ver419,
+	api.VMSizeStandardD96ldsV6: ver419,
+
+	api.VMSizeStandardL4sV4:  ver419,
+	api.VMSizeStandardL8sV4:  ver419,
+	api.VMSizeStandardL16sV4: ver419,
+	api.VMSizeStandardL32sV4: ver419,
+	api.VMSizeStandardL48sV4: ver419,
+	api.VMSizeStandardL64sV4: ver419,
+	api.VMSizeStandardL80sV4: ver419,
 }
 
 var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
@@ -103,6 +166,22 @@ var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 
 	// Memory and compute optimized
 	api.VMSizeStandardM128ms: api.VMSizeStandardM128msStruct,
+
+	api.VMSizeStandardD4sV6:  api.VMSizeStandardD4sV6Struct,
+	api.VMSizeStandardD8sV6:  api.VMSizeStandardD8sV6Struct,
+	api.VMSizeStandardD16sV6: api.VMSizeStandardD16sV6Struct,
+	api.VMSizeStandardD32sV6: api.VMSizeStandardD32sV6Struct,
+	api.VMSizeStandardD48sV6: api.VMSizeStandardD48sV6Struct,
+	api.VMSizeStandardD64sV6: api.VMSizeStandardD64sV6Struct,
+	api.VMSizeStandardD96sV6: api.VMSizeStandardD96sV6Struct,
+
+	api.VMSizeStandardD4dsV6:  api.VMSizeStandardD4dsV6Struct,
+	api.VMSizeStandardD8dsV6:  api.VMSizeStandardD8dsV6Struct,
+	api.VMSizeStandardD16dsV6: api.VMSizeStandardD16dsV6Struct,
+	api.VMSizeStandardD32dsV6: api.VMSizeStandardD32dsV6Struct,
+	api.VMSizeStandardD48dsV6: api.VMSizeStandardD48dsV6Struct,
+	api.VMSizeStandardD64dsV6: api.VMSizeStandardD64dsV6Struct,
+	api.VMSizeStandardD96dsV6: api.VMSizeStandardD96dsV6Struct,
 }
 
 // Document support
@@ -223,6 +302,14 @@ var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardL48sV3: api.VMSizeStandardL48sV3Struct,
 	api.VMSizeStandardL64sV3: api.VMSizeStandardL64sV3Struct,
 
+	api.VMSizeStandardL4sV4:  api.VMSizeStandardL4sV4Struct,
+	api.VMSizeStandardL8sV4:  api.VMSizeStandardL8sV4Struct,
+	api.VMSizeStandardL16sV4: api.VMSizeStandardL16sV4Struct,
+	api.VMSizeStandardL32sV4: api.VMSizeStandardL32sV4Struct,
+	api.VMSizeStandardL48sV4: api.VMSizeStandardL48sV4Struct,
+	api.VMSizeStandardL64sV4: api.VMSizeStandardL64sV4Struct,
+	api.VMSizeStandardL80sV4: api.VMSizeStandardL80sV4Struct,
+
 	// GPU nodes
 	// the formatting of the ncasv3_t4 family is different.  This can be seen through a
 	// az vm list-usage -l eastus
@@ -235,6 +322,38 @@ var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardNC12sV3:  api.VMSizeStandardNC12sV3Struct,
 	api.VMSizeStandardNC24sV3:  api.VMSizeStandardNC24sV3Struct,
 	api.VMSizeStandardNC24rsV3: api.VMSizeStandardNC24rsV3Struct,
+
+	api.VMSizeStandardD4sV6:  api.VMSizeStandardD4sV6Struct,
+	api.VMSizeStandardD8sV6:  api.VMSizeStandardD8sV6Struct,
+	api.VMSizeStandardD16sV6: api.VMSizeStandardD16sV6Struct,
+	api.VMSizeStandardD32sV6: api.VMSizeStandardD32sV6Struct,
+	api.VMSizeStandardD48sV6: api.VMSizeStandardD48sV6Struct,
+	api.VMSizeStandardD64sV6: api.VMSizeStandardD64sV6Struct,
+	api.VMSizeStandardD96sV6: api.VMSizeStandardD96sV6Struct,
+
+	api.VMSizeStandardD4dsV6:  api.VMSizeStandardD4dsV6Struct,
+	api.VMSizeStandardD8dsV6:  api.VMSizeStandardD8dsV6Struct,
+	api.VMSizeStandardD16dsV6: api.VMSizeStandardD16dsV6Struct,
+	api.VMSizeStandardD32dsV6: api.VMSizeStandardD32dsV6Struct,
+	api.VMSizeStandardD48dsV6: api.VMSizeStandardD48dsV6Struct,
+	api.VMSizeStandardD64dsV6: api.VMSizeStandardD64dsV6Struct,
+	api.VMSizeStandardD96dsV6: api.VMSizeStandardD96dsV6Struct,
+
+	api.VMSizeStandardD4lsV6:  api.VMSizeStandardD4lsV6Struct,
+	api.VMSizeStandardD8lsV6:  api.VMSizeStandardD8lsV6Struct,
+	api.VMSizeStandardD16lsV6: api.VMSizeStandardD16lsV6Struct,
+	api.VMSizeStandardD32lsV6: api.VMSizeStandardD32lsV6Struct,
+	api.VMSizeStandardD48lsV6: api.VMSizeStandardD48lsV6Struct,
+	api.VMSizeStandardD64lsV6: api.VMSizeStandardD64lsV6Struct,
+	api.VMSizeStandardD96lsV6: api.VMSizeStandardD96lsV6Struct,
+
+	api.VMSizeStandardD4ldsV6:  api.VMSizeStandardD4ldsV6Struct,
+	api.VMSizeStandardD8ldsV6:  api.VMSizeStandardD8ldsV6Struct,
+	api.VMSizeStandardD16ldsV6: api.VMSizeStandardD16ldsV6Struct,
+	api.VMSizeStandardD32ldsV6: api.VMSizeStandardD32ldsV6Struct,
+	api.VMSizeStandardD48ldsV6: api.VMSizeStandardD48ldsV6Struct,
+	api.VMSizeStandardD64ldsV6: api.VMSizeStandardD64ldsV6Struct,
+	api.VMSizeStandardD96ldsV6: api.VMSizeStandardD96ldsV6Struct,
 }
 
 func DiskSizeIsValid(sizeGB int) bool {
@@ -260,6 +379,32 @@ func VMSizeIsValid(vmSize api.VMSize, requireD2sWorkers, isMaster bool) bool {
 	return supportedAsWorker
 }
 
+// VMSizeIsValidForVersion validates VM size with version-specific restrictions
+func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool, v string) bool {
+	// First check basic validity
+	if !VMSizeIsValid(vmSize, requireD2sWorkers, isMaster) {
+		return false
+	}
+
+	clusterVersion, err := version.ParseVersion(v)
+	if err != nil {
+		return false
+	}
+	// Check version-specific restrictions
+	if isMaster {
+		if minVersion, exists := masterVmSizesWithMinimumVersion[vmSize]; exists {
+			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
+		}
+	} else {
+		if minVersion, exists := workerVmSizesWithMinimumVersion[vmSize]; exists {
+			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
+		}
+	}
+
+	// VM size has no version restrictions or passed all checks
+	return true
+}
+
 func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
 	//this is for development purposes only
 	switch vmSize {
@@ -278,5 +423,6 @@ func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
 	if size, ok := SupportedVMSizesByRole(VMRoleMaster)[vmSize]; ok {
 		return size, true
 	}
+
 	return api.VMSizeStruct{}, false
 }

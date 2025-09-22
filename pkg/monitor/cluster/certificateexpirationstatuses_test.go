@@ -11,20 +11,20 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	fakeClient "k8s.io/client-go/kubernetes/fake"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utilcert "github.com/Azure/ARO-RP/pkg/util/cert"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -95,10 +95,11 @@ func TestEmitMDSDCertificateExpiry(t *testing.T) {
 
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 
-			ocpclientset := fake.
+			_, log := testlog.New()
+			ocpclientset := clienthelper.NewWithClient(log, fake.
 				NewClientBuilder().
 				WithObjects(secrets...).
-				Build()
+				Build())
 
 			mon := &Monitor{
 				ocpclientset: ocpclientset,
@@ -232,11 +233,12 @@ func TestEmitIngressAndAPIServerCertificateExpiry(t *testing.T) {
 
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 
-			ocpclientset := fake.
+			_, log := testlog.New()
+			ocpclientset := clienthelper.NewWithClient(log, fake.
 				NewClientBuilder().
 				WithObjects(tt.ingressController).
 				WithObjects(secrets...).
-				Build()
+				Build())
 
 			mon := &Monitor{
 				ocpclientset: ocpclientset,
@@ -278,13 +280,12 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                   string
-		configcli              *configfake.Clientset
-		cli                    *fakeClient.Clientset
+		objects                []client.Object
 		minDaysUntilExpiration int
 	}{
 		{
 			name: "emit etcd certificate expiry",
-			configcli: configfake.NewSimpleClientset(
+			objects: []client.Object{
 				&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",
@@ -298,8 +299,6 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 						},
 					},
 				},
-			),
-			cli: fakeClient.NewSimpleClientset(
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "etcd-peer-master-0",
@@ -310,19 +309,26 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 					},
 					Type: corev1.SecretTypeTLS,
 				},
-			),
+			},
+
 			minDaysUntilExpiration: 0,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			m := mock_metrics.NewMockEmitter(controller)
+
+			_, log := testlog.New()
+			ocpclientset := clienthelper.NewWithClient(log, fake.
+				NewClientBuilder().
+				WithObjects(tt.objects...).
+				Build())
+
 			mon := &Monitor{
-				cli:       tt.cli,
-				configcli: tt.configcli,
-				m:         m,
+				log:          log,
+				ocpclientset: ocpclientset,
+				m:            m,
+				queryLimit:   1,
 			}
 
 			m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(tt.minDaysUntilExpiration), map[string]string{
@@ -331,6 +337,12 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 				"subject":    "etcd-cert",
 				"thumbprint": utilcert.Thumbprint(certificate[0]),
 			})
+
+			err = mon.prefetchClusterVersion(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			err = mon.emitEtcdCertificateExpiry(ctx)
 			if err != nil {
 				t.Fatal(err)

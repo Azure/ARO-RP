@@ -10,9 +10,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/coreos/go-semver/semver"
+
 	azcorearm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/coreos/go-semver/semver"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
@@ -103,13 +104,15 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", p.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
-		return err
+	if len(p.IngressProfiles) > 0 {
+		if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
+			return err
+		}
 	}
 	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadBalancerProfile, isCreate, architectureVersion); err != nil {
 		return err
 	}
-	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
+	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile, p.ClusterProfile.Version); err != nil {
 		return err
 	}
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
@@ -127,7 +130,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 		if len(p.WorkerProfiles) != 1 {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
 		}
-		if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
+		if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile, p.ClusterProfile.Version); err != nil {
 			return err
 		}
 
@@ -309,15 +312,15 @@ func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundI
 	if architectureVersion == api.ArchitectureVersionV1 && managedOutboundIPs.Count > 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", fmt.Sprintf("The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.", managedOutboundIPs.Count))
 	}
-	if !(managedOutboundIPs.Count > 0 && managedOutboundIPs.Count <= 20) {
+	if managedOutboundIPs.Count <= 0 || managedOutboundIPs.Count > 20 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", fmt.Sprintf("The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be in the range of 1 to 20 (inclusive).", managedOutboundIPs.Count))
 	}
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
-	if !validate.VMSizeIsValid(api.VMSize(mp.VMSize), sv.requireD2sWorkers, true) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid.", mp.VMSize))
+func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile, version string) error {
+	if !validate.VMSizeIsValidForVersion(api.VMSize(mp.VMSize), sv.requireD2sWorkers, true, version) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid for version '%s", mp.VMSize, version))
 	}
 	if !validate.RxSubnetID.MatchString(mp.SubnetID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", fmt.Sprintf("The provided master VM subnet '%s' is invalid.", mp.SubnetID))
@@ -350,11 +353,11 @@ func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp 
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp *WorkerProfile, mp *MasterProfile) error {
+func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp *WorkerProfile, mp *MasterProfile, version string) error {
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", fmt.Sprintf("The provided worker name '%s' is invalid.", wp.Name))
 	}
-	if !validate.VMSizeIsValid(api.VMSize(wp.VMSize), sv.requireD2sWorkers, false) {
+	if !validate.VMSizeIsValidForVersion(api.VMSize(wp.VMSize), sv.requireD2sWorkers, false, version) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided worker VM size '%s' is invalid.", wp.VMSize))
 	}
 	if !validate.DiskSizeIsValid(wp.DiskSizeGB) {

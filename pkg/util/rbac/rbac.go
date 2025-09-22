@@ -4,6 +4,8 @@ package rbac
 // Licensed under the Apache License 2.0.
 
 import (
+	"strings"
+
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -43,13 +45,18 @@ func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, con
 // deployed, to preserve the name and avoid a RoleAssignmentExists error.
 func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, name string, condition ...interface{}) *arm.Resource {
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
+
+	roleDefinitionID := "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"
+	if strings.HasPrefix(roleID, "parameters") {
+		roleDefinitionID = "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"
+	}
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
 			Name: pointerutils.ToPtr("[" + name + "]"),
 			Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
-				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
+				RoleDefinitionID: pointerutils.ToPtr(roleDefinitionID),
 				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},

@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -45,23 +44,20 @@ func TestEmitClusterAuthenticationType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doc := &api.OpenShiftClusterDocument{
-				OpenShiftCluster: &api.OpenShiftCluster{},
-			}
+			oc := &api.OpenShiftCluster{}
 
 			if tt.useWorkloadIdentity {
-				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
-				doc.OpenShiftCluster.Properties.ServicePrincipalProfile = nil
+				oc.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
+				oc.Properties.ServicePrincipalProfile = nil
 			} else {
-				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile = nil
-				doc.OpenShiftCluster.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{}
+				oc.Properties.PlatformWorkloadIdentityProfile = nil
+				oc.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{}
 			}
 
 			mon := &Monitor{
-				doc: doc,
+				oc:  oc,
 				m:   mockMetrics,
 				log: logrus.NewEntry(logrus.New()),
-				wg:  &sync.WaitGroup{},
 			}
 
 			mockMetrics.EXPECT().EmitGauge(authenticationTypeMetricsTopic, int64(1), tt.expectMetric).Times(1)

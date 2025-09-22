@@ -44,3 +44,6 @@ megalinter-reports/
 .kiota.log
 podmanlog
 .python-version
+.tool-versions
+./venv
+/CLAUDE.md

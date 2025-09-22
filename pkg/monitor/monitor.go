@@ -12,17 +12,15 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"k8s.io/client-go/rest"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
-	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 type monitorDBs interface {
@@ -41,7 +39,7 @@ type monitor struct {
 	clusterm metrics.Emitter
 	mu       sync.RWMutex
 	docs     map[string]*cacheDoc
-	subs     map[string]*api.SubscriptionDocument
+	subs     map[string]*subscriptionInfo
 	env      env.Interface
 
 	isMaster    bool
@@ -52,16 +50,20 @@ type monitor struct {
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
 
-	liveConfig       liveconfig.Manager
-	hiveShardConfigs map[int]*rest.Config
-	shardMutex       sync.RWMutex
+	hiveClusterManagers map[int]hive.ClusterManager
+}
+
+// subscriptionInfo stores TenantID for a given subscription. We don't store the
+// state as we filter out unwanted states in the changefeed.
+type subscriptionInfo struct {
+	TenantID string
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager, e env.Interface) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, e env.Interface) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -71,7 +73,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		m:        m,
 		clusterm: clusterm,
 		docs:     map[string]*cacheDoc{},
-		subs:     map[string]*api.SubscriptionDocument{},
+		subs:     map[string]*subscriptionInfo{},
 		env:      e,
 
 		bucketCount: bucket.Buckets,
@@ -79,9 +81,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 
 		startTime: time.Now(),
 
-		liveConfig: liveConfig,
-
-		hiveShardConfigs: map[int]*rest.Config{},
+		hiveClusterManagers: map[int]hive.ClusterManager{},
 	}
 }
 
@@ -89,6 +89,18 @@ func (mon *monitor) Run(ctx context.Context) error {
 	dbMonitors, err := mon.dbGroup.Monitors()
 	if err != nil {
 		return err
+	}
+
+	// Load the Hive ClusterManager if configured -- NewFromEnvClusterManager
+	// returns nil and no error if Hive is disabled
+	cl, err := hive.NewFromEnvCLusterManager(ctx, mon.baseLog, mon.env)
+	if err != nil {
+		mon.baseLog.Error("failed to create Hive ClusterManager: %w", err)
+		return err
+	}
+	if cl != nil {
+		// We only have one shard
+		mon.hiveClusterManagers[1] = cl
 	}
 
 	_, err = dbMonitors.Create(ctx, &api.MonitorDocument{
@@ -100,6 +112,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	// fill the cache from the database change feed
 	go mon.changefeed(ctx, mon.baseLog.WithField("component", "changefeed"), nil)
+	go mon.changefeedMetrics(nil)
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
@@ -147,17 +160,4 @@ func (mon *monitor) checkReady() bool {
 	return (time.Since(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
 		(time.Since(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
 		(time.Since(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
-}
-
-func (mon *monitor) getHiveShardConfig(shard int) (*rest.Config, bool) {
-	mon.shardMutex.RLock()
-	hiveRestConfig, exists := mon.hiveShardConfigs[shard]
-	mon.shardMutex.RUnlock()
-	return hiveRestConfig, exists
-}
-
-func (mon *monitor) setHiveShardConfig(shard int, config *rest.Config) {
-	mon.shardMutex.Lock()
-	mon.hiveShardConfigs[shard] = config
-	mon.shardMutex.Unlock()
 }

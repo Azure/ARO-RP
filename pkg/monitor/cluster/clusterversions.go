@@ -5,58 +5,89 @@ package cluster
 
 import (
 	"context"
+	"errors"
+
+	appsv1 "k8s.io/api/apps/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	configv1 "github.com/openshift/api/config/v1"
 
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
-	cv, err := mon.getClusterVersion(ctx)
+	aroMasterDeployment := &appsv1.Deployment{}
+	err := mon.ocpclientset.Get(ctx, types.NamespacedName{Namespace: pkgoperator.Namespace, Name: "aro-operator-master"}, aroMasterDeployment)
 	if err != nil {
-		return err
+		if kerrors.IsNotFound(err) {
+			mon.log.Info("aro-operator-master deployment not found")
+		} else {
+			return errors.Join(errFetchAROOperatorMasterDeployment, err)
+		}
 	}
-
-	aroDeployments, err := mon.listARODeployments(ctx)
-	if err != nil {
-		return err
-	}
-
-	operatorVersion := "unknown" // TODO(mj): Once unknown is not present anymore, simplify this
-	for _, d := range aroDeployments.Items {
-		if d.Name == "aro-operator-master" {
-			if d.Labels != nil {
-				if val, ok := d.Labels["version"]; ok {
-					operatorVersion = val
-				}
-			}
+	operatorVersion := "unknown"
+	if aroMasterDeployment.Labels != nil {
+		if val, ok := aroMasterDeployment.Labels["version"]; ok {
+			operatorVersion = val
 		}
 	}
 
-	availableRP := ""
+	var availableRP, desiredVersion, actualVersion, actualMinorVersion string
+
 	if version.GitCommit != mon.oc.Properties.ProvisionedBy {
 		availableRP = version.GitCommit
 	}
 
-	actualVersion := actualVersion(cv)
-	actualMinorVersion := ""
-	if len(actualVersion) > 0 {
-		parsedVersion, err := version.ParseVersion(actualVersion)
-		if err != nil {
-			return err
-		}
-		actualMinorVersion = parsedVersion.MinorVersion()
+	if mon.clusterActualVersion != nil {
+		actualVersion = mon.clusterActualVersion.String()
+		actualMinorVersion = mon.clusterActualVersion.MinorVersion()
+	}
+
+	if mon.clusterDesiredVersion != nil {
+		desiredVersion = mon.clusterDesiredVersion.String()
 	}
 
 	mon.emitGauge("cluster.versions", 1, map[string]string{
 		"actualVersion":                        actualVersion,
-		"desiredVersion":                       desiredVersion(cv),
+		"desiredVersion":                       desiredVersion,
 		"provisionedByResourceProviderVersion": mon.oc.Properties.ProvisionedBy, // last successful Put or Patch
 		"resourceProviderVersion":              version.GitCommit,               // RP version currently running
 		"operatorVersion":                      operatorVersion,                 // operator version in the cluster
 		"availableRP":                          availableRP,                     // current RP version available for document update, empty when none
 		"actualMinorVersion":                   actualMinorVersion,              // Minor version, empty if actual version is not in expected form
 	})
+
+	return nil
+}
+
+// Prefetch the cluster version for use in collectors that only need to run on
+// certain OpenShift versions.
+func (mon *Monitor) prefetchClusterVersion(ctx context.Context) error {
+	cv := &configv1.ClusterVersion{}
+	err := mon.ocpclientset.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return errors.Join(errFetchClusterVersion, err)
+	}
+
+	av := actualVersion(cv)
+	avobj, err := version.ParseVersion(av)
+	if err != nil {
+		mon.log.Errorf("failure parsing ClusterVersion: %s", err.Error())
+	} else {
+		mon.clusterActualVersion = avobj
+	}
+
+	dv := desiredVersion(cv)
+	if dv != "" {
+		dvobj, err := version.ParseVersion(dv)
+		if err != nil {
+			mon.log.Errorf("failure parsing desired ClusterVersion: %s", err.Error())
+		} else {
+			mon.clusterDesiredVersion = dvobj
+		}
+	}
 
 	return nil
 }

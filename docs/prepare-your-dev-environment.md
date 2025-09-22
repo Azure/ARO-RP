@@ -361,7 +361,7 @@ az acr login --name <TARGET_ACR>
 4. Run VPN, RP, and Portal services using Docker Compose
 
     ```sh
-    docker compose up
+    docker compose up vpn rp portal
     ```
 
 ## Troubleshooting

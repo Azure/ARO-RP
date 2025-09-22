@@ -6,9 +6,9 @@ package generator
 import (
 	"fmt"
 
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -25,9 +25,9 @@ func (g *generator) clusterVnet() *arm.Resource {
 }
 
 func (g *generator) clusterRouteTable() *arm.Resource {
-	rt := &mgmtnetwork.RouteTable{
-		RouteTablePropertiesFormat: &mgmtnetwork.RouteTablePropertiesFormat{
-			Routes: &[]mgmtnetwork.Route{},
+	rt := &armnetwork.RouteTable{
+		Properties: &armnetwork.RouteTablePropertiesFormat{
+			Routes: []*armnetwork.Route{},
 		},
 		Name:     pointerutils.ToPtr("[concat(parameters('clusterName'), '-rt')]"),
 		Type:     pointerutils.ToPtr("Microsoft.Network/routeTables"),
@@ -42,12 +42,12 @@ func (g *generator) clusterRouteTable() *arm.Resource {
 
 func (g *generator) clusterMasterSubnet() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.Subnet{
-			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefixes: &[]string{
-					*pointerutils.ToPtr("[parameters('masterAddressPrefix')]"),
+		Resource: &armnetwork.Subnet{
+			Properties: &armnetwork.SubnetPropertiesFormat{
+				AddressPrefixes: []*string{
+					pointerutils.ToPtr("[parameters('masterAddressPrefix')]"),
 				},
-				RouteTable: &mgmtnetwork.RouteTable{
+				RouteTable: &armnetwork.RouteTable{
 					ID: pointerutils.ToPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
 				},
 			},
@@ -65,10 +65,10 @@ func (g *generator) clusterMasterSubnet() *arm.Resource {
 
 func (g *generator) clusterWorkerSubnet() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.Subnet{
-			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+		Resource: &armnetwork.Subnet{
+			Properties: &armnetwork.SubnetPropertiesFormat{
 				AddressPrefix: pointerutils.ToPtr("[parameters('workerAddressPrefix')]"),
-				RouteTable: &mgmtnetwork.RouteTable{
+				RouteTable: &armnetwork.RouteTable{
 					ID: pointerutils.ToPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
 				},
 			},

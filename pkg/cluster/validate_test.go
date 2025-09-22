@@ -43,14 +43,13 @@ func TestValidateZones(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:                 "zonal, all available",
-			controlPlaneSkuZones: []string{"1", "2", "3"},
-			workerSkuZones:       []string{"1", "2", "3"},
+			name:                 "non-zonal",
+			controlPlaneSkuZones: []string{},
+			workerSkuZones:       []string{},
 			doc: api.OpenShiftCluster{
 				ID:       key,
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
-
 					MasterProfile: api.MasterProfile{
 						VMSize: api.VMSizeStandardD16asV4,
 					},
@@ -59,11 +58,27 @@ func TestValidateZones(t *testing.T) {
 							VMSize: api.VMSizeStandardD8asV4,
 						},
 					},
-					NetworkProfile: api.NetworkProfile{
-						LoadBalancerProfile: &api.LoadBalancerProfile{
-							Zones: []string{"1", "2", "3"},
+					Zones: []string{},
+				},
+			},
+		},
+		{
+			name:                 "zonal, all available",
+			controlPlaneSkuZones: []string{"1", "2", "3"},
+			workerSkuZones:       []string{"1", "2", "3"},
+			doc: api.OpenShiftCluster{
+				ID:       key,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD16asV4,
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							VMSize: api.VMSizeStandardD8asV4,
 						},
 					},
+					Zones: []string{"1", "2", "3"},
 				},
 			},
 		},
@@ -75,7 +90,6 @@ func TestValidateZones(t *testing.T) {
 				ID:       key,
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
-
 					MasterProfile: api.MasterProfile{
 						VMSize: api.VMSizeStandardD16asV4,
 					},
@@ -84,11 +98,7 @@ func TestValidateZones(t *testing.T) {
 							VMSize: api.VMSizeStandardD8asV4,
 						},
 					},
-					NetworkProfile: api.NetworkProfile{
-						LoadBalancerProfile: &api.LoadBalancerProfile{
-							Zones: []string{"1", "2", "3"},
-						},
-					},
+					Zones: []string{"1", "2", "3"},
 				},
 			},
 		},
@@ -109,11 +119,7 @@ func TestValidateZones(t *testing.T) {
 							VMSize: api.VMSizeStandardD8asV4,
 						},
 					},
-					NetworkProfile: api.NetworkProfile{
-						LoadBalancerProfile: &api.LoadBalancerProfile{
-							Zones: []string{"1", "2", "3", "4"},
-						},
-					},
+					Zones: []string{"1", "2", "3", "4"},
 				},
 			},
 		},
@@ -191,9 +197,6 @@ func TestValidateZones(t *testing.T) {
 							},
 							MasterProfile: api.MasterProfile{
 								VMSize: api.VMSize(controlPlaneSku),
-							},
-							NetworkProfile: api.NetworkProfile{
-								LoadBalancerProfile: &api.LoadBalancerProfile{},
 							},
 						},
 					},

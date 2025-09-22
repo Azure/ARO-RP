@@ -5,12 +5,13 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"strconv"
 )
 
-func (mon *Monitor) emitAPIServerHealthzCode(ctx context.Context) (int, error) {
+func (mon *Monitor) emitAPIServerHealthzCode(ctx context.Context) error {
 	var statusCode int
-	err := mon.cli.Discovery().RESTClient().
+	err := mon.rawClient.
 		Get().
 		AbsPath("/healthz").
 		Do(ctx).
@@ -21,12 +22,16 @@ func (mon *Monitor) emitAPIServerHealthzCode(ctx context.Context) (int, error) {
 		"code": strconv.FormatInt(int64(statusCode), 10),
 	})
 
-	return statusCode, err
+	if err != nil {
+		return errors.Join(errAPIServerHealthzFailure, err)
+	}
+
+	return err
 }
 
 func (mon *Monitor) emitAPIServerPingCode(ctx context.Context) error {
 	var statusCode int
-	err := mon.cli.Discovery().RESTClient().
+	err := mon.rawClient.
 		Get().
 		AbsPath("/healthz/ping").
 		Do(ctx).
@@ -36,6 +41,10 @@ func (mon *Monitor) emitAPIServerPingCode(ctx context.Context) error {
 	mon.emitGauge("apiserver.healthz.ping.code", 1, map[string]string{
 		"code": strconv.FormatInt(int64(statusCode), 10),
 	})
+
+	if err != nil {
+		return errors.Join(errAPIServerPingFailure, err)
+	}
 
 	return err
 }

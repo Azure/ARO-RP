@@ -6,14 +6,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
 
 func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, error) {
@@ -24,15 +23,13 @@ func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, erro
 	return roleSets, getEnvironmentData(envKey, &roleSets)
 }
 
-func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus.Entry) (database.PlatformWorkloadIdentityRoleSets, error) {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_ROLE_SETS)
+func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, _log *logrus.Entry) (database.PlatformWorkloadIdentityRoleSets, error) {
+	_env, err := env.NewCore(ctx, _log, env.SERVICE_UPDATE_ROLE_SETS)
 	if err != nil {
 		return nil, err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "update-role-sets"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
-
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, nil)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, &noop.Noop{}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating database client: %w", err)
 	}
@@ -118,12 +115,6 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 func updatePlatformWorkloadIdentityRoleSets(ctx context.Context, log *logrus.Entry) error {
 	if err := env.ValidateVars("PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"); err != nil {
 		return err
-	}
-
-	if !env.IsLocalDevelopmentMode() {
-		if err := env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
-			return err
-		}
 	}
 
 	dbRoleSets, err := getPlatformWorkloadIdentityRoleSetDatabase(ctx, log)

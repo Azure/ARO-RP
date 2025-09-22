@@ -56,7 +56,7 @@ func (client PlatformWorkloadIdentityRoleSetClient) Get(ctx context.Context, loc
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
-				sc = result.StatusCode
+				sc = result.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()

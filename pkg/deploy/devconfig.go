@@ -211,6 +211,8 @@ func DevConfig(_env env.Core) (*Config, error) {
 			SubscriptionResourceGroupLocation: pointerutils.ToPtr(_env.Location()),
 			SubscriptionResourceGroupName:     pointerutils.ToPtr(azureUniquePrefix + "-subscription"),
 			VMSSCleanupEnabled:                pointerutils.ToPtr(true),
+			TokenContributorRoleID:            pointerutils.ToPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
+			TokenContributorRoleName:          pointerutils.ToPtr("ARO v4 ContainerRegistry Token Contributor"),
 			VMSize:                            pointerutils.ToPtr("Standard_D2s_v3"),
 
 			// TODO: Replace with Live Service Configuration in KeyVault

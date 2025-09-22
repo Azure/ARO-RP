@@ -39,6 +39,8 @@ func (m *manager) getVMSKUsForCurrentRegion(ctx context.Context) (map[string]*mg
 	return computeskus.FilterVMSizes(skus, location), nil
 }
 
+// validateZones validates the SKU availability and zones of the cluster being
+// created. This function is only to be called during cluster bootstrap!
 func (m *manager) validateZones(ctx context.Context) error {
 	location := m.doc.OpenShiftCluster.Location
 	filteredSkus, err := m.getVMSKUsForCurrentRegion(ctx)
@@ -65,9 +67,9 @@ func (m *manager) validateZones(ctx context.Context) error {
 		return err
 	}
 
-	// Update the document with the control plane and worker zones
+	// Update the document with configured zones
 	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
-		oscd.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.Zones = originalZones
+		oscd.OpenShiftCluster.Properties.Zones = originalZones
 		return nil
 	})
 	m.doc = updatedDoc

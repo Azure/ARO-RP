@@ -6,6 +6,7 @@ package e2e
 import (
 	"context"
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"math"
 	"net/url"
@@ -28,8 +29,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/client-go/tools/clientcmd/api/latest"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -37,6 +36,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -62,7 +62,6 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/util/dynamic"
-	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 const (
@@ -143,9 +142,13 @@ func skipIfMIMOActuatorNotEnabled() {
 }
 
 func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
-	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
+	if !isHiveManagedCluster(adminAPICluster) {
 		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")
 	}
+}
+
+func isHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) bool {
+	return adminAPICluster.Properties.HiveProfile != (admin.HiveProfile{})
 }
 
 func SaveScreenshot(wd selenium.WebDriver, e error) {
@@ -296,22 +299,37 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	scopes := []string{_env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	configv1, err := kubeadminkubeconfig.Get(ctx, log, _env, authorizer, resourceIDFromEnv())
+	res, err := azure.ParseResourceID(resourceIDFromEnv())
 	if err != nil {
 		return nil, err
 	}
 
-	var config api.Config
-	err = latest.Scheme.Convert(configv1, &config, nil)
+	clusters := redhatopenshift20240812preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer)
+
+	r, err := clusters.ListAdminCredentials(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {
 		return nil, err
 	}
 
-	kubeconfig := clientcmd.NewDefaultClientConfig(config, &clientcmd.ConfigOverrides{})
+	kubeConfigFile, err := base64.StdEncoding.DecodeString(*r.Kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("error b64 decoding kubeconfig file: %w", err)
+	}
+
+	kubeconfig, err := clientcmd.NewClientConfigFromBytes(kubeConfigFile)
+	if err != nil {
+		return nil, fmt.Errorf("error building clientconfig: %w", err)
+	}
 
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
 		return nil, err
+	}
+
+	// In development e2e the certificate is not always created with a publicly
+	// verifiable TLS certificate.
+	if _env.IsLocalDevelopmentMode() {
+		restconfig.Insecure = true // CodeQL [SM03511] only used in local development
 	}
 
 	cli, err := kubernetes.NewForConfig(restconfig)
@@ -374,12 +392,22 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	var hiveAKS *kubernetes.Clientset
 	var hiveCM hive.ClusterManager
 
-	if _env.IsLocalDevelopmentMode() {
-		liveCfg, err := _env.NewLiveConfigManager(ctx)
-		if err != nil {
-			return nil, err
-		}
+	liveCfg, err := _env.NewLiveConfigManager(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	adoptByHive, err := liveCfg.AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	installViaHive, err := liveCfg.InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if _env.IsLocalDevelopmentMode() && (adoptByHive || installViaHive) {
 		hiveShard := 1
 		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
 		if err != nil {
@@ -437,7 +465,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 	return &clientSet{
 		Operations:        redhatopenshift20240812preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClusters: redhatopenshift20240812preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClusters: clusters,
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -482,7 +510,7 @@ func setup(ctx context.Context) error {
 
 	// Core ARO env
 	var err error
-	_env, err = env.NewCoreForCI(ctx, log)
+	_env, err = env.NewCoreForCI(ctx, log, env.SERVICE_E2E)
 	if err != nil {
 		return err
 	}
@@ -533,9 +561,11 @@ func setup(ctx context.Context) error {
 			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
 			time.Sleep(waitBetween)
 		}
-
 		// Old cluster is gone, create the new one
+	}
 
+	// we only create a cluster when running this in CI
+	if conf.IsCI {
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
