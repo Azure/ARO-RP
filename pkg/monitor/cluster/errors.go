@@ -53,10 +53,9 @@ func (e *collectorPanic) Error() string {
 }
 
 func (e *collectorPanic) Is(err error) bool {
-	errCollector, ok := err.(*collectorPanic)
+	_, ok := err.(*collectorPanic)
 	if !ok {
 		return false
 	}
-
-	return errCollector.panicValue == e.panicValue
+	return true
 }
