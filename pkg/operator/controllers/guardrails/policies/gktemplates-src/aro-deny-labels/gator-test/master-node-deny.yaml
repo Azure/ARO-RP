@@ -11,79 +11,16 @@ request:
     apiVersion: v1
     kind: Node
     metadata:
-      annotations:
-        cloud.network.openshift.io/egress-ipconfig: '[{"interface":"jeff-aue-417-s7bmw-master2-nic","ifaddr":{"ipv4":"10.0.0.0/23"},"capacity":{"ip":255}}]'
-        csi.volume.kubernetes.io/nodeid: '{"disk.csi.azure.com":"jeff-aue-417-s7bmw-master-2","file.csi.azure.com":"jeff-aue-417-s7bmw-master-2"}'
-        k8s.ovn.org/host-cidrs: '["10.0.0.8/23"]'
-        k8s.ovn.org/l3-gateway-config: '{"default":{"mode":"shared","bridge-id":"br-ex","interface-id":"br-ex_jeff-aue-417-s7bmw-master-2","mac-address":"7c:1e:52:62:95:85","ip-addresses":["10.0.0.8/23"],"ip-address":"10.0.0.8/23","next-hops":["10.0.0.1"],"next-hop":"10.0.0.1","node-port-enable":"true","vlan-id":"0"}}'
-        k8s.ovn.org/network-ids: '{"default":"0"}'
-        k8s.ovn.org/node-chassis-id: f279e774-ae77-4c41-94a6-c76167f9f260
-        k8s.ovn.org/node-gateway-router-lrp-ifaddrs: '{"default":{"ipv4":"100.64.0.3/16"}}'
-        k8s.ovn.org/node-id: "3"
-        k8s.ovn.org/node-masquerade-subnet: '{"ipv4":"169.254.0.0/17","ipv6":"fd69::/112"}'
-        k8s.ovn.org/node-mgmt-port-mac-addresses: '{"default":"0e:5e:a6:d6:92:6e"}'
-        k8s.ovn.org/node-primary-ifaddr: '{"ipv4":"10.0.0.8/23"}'
-        k8s.ovn.org/node-subnets: '{"default":["10.129.0.0/23"]}'
-        k8s.ovn.org/node-transit-switch-port-ifaddr: '{"ipv4":"100.88.0.3/16"}'
-        k8s.ovn.org/remote-zone-migrated: jeff-aue-417-s7bmw-master-2
-        k8s.ovn.org/zone-name: jeff-aue-417-s7bmw-master-2
-        machine.openshift.io/machine: openshift-machine-api/jeff-aue-417-s7bmw-master-2
-        machineconfiguration.openshift.io/controlPlaneTopology: HighlyAvailable
-        machineconfiguration.openshift.io/currentConfig: rendered-master-5ebe09d367752c0c101a74669c142040
-        machineconfiguration.openshift.io/desiredConfig: rendered-master-5ebe09d367752c0c101a74669c142040
-        machineconfiguration.openshift.io/desiredDrain: uncordon-rendered-master-5ebe09d367752c0c101a74669c142040
-        machineconfiguration.openshift.io/lastAppliedDrain: uncordon-rendered-master-5ebe09d367752c0c101a74669c142040
-        machineconfiguration.openshift.io/lastObservedServerCAAnnotation: "false"
-        machineconfiguration.openshift.io/lastSyncedControllerConfigResourceVersion: "174263"
-        machineconfiguration.openshift.io/post-config-action: ""
-        machineconfiguration.openshift.io/reason: ""
-        machineconfiguration.openshift.io/state: Done
-        volumes.kubernetes.io/controller-managed-attach-detach: "true"
-      creationTimestamp: "2025-06-30T22:22:46Z"
       labels:
-        beta.kubernetes.io/arch: amd64
-        beta.kubernetes.io/instance-type: Standard_D8s_v5
-        beta.kubernetes.io/os: linux
-        failure-domain.beta.kubernetes.io/region: australiaeast
-        failure-domain.beta.kubernetes.io/zone: australiaeast-3
-        kubernetes.io/arch: amd64
-        kubernetes.io/hostname: jeff-aue-417-s7bmw-master-2
         kubernetes.io/os: linux
         node-role.kubernetes.io/control-plane: ""
         node-role.kubernetes.io/master: ""
-        node.kubernetes.io/instance-type: Standard_D8s_v5
         node.openshift.io/os_id: rhcos
-        topology.disk.csi.azure.com/zone: australiaeast-3
-        topology.kubernetes.io/region: australiaeast
-        topology.kubernetes.io/zone: australiaeast-3
       name: jeff-aue-417-s7bmw-master-2
-      resourceVersion: "175334"
-      uid: 95f6c883-faf2-469b-8dc4-c3b6f60bb09a
     spec:
-      providerID: azure:///subscriptions/fe16a035-e540-4ab7-80d9-373fa9a3d6ae/resourceGroups/aro-pr0k9itm/providers/Microsoft.Compute/virtualMachines/jeff-aue-417-s7bmw-master-2
       taints:
       - effect: NoSchedule
         key: node-role.kubernetes.io/master
-    status:
-      addresses:
-      - address: 10.0.0.8
-        type: InternalIP
-      - address: jeff-aue-417-s7bmw-master-2
-        type: Hostname
-      allocatable:
-        cpu: 7860m
-        ephemeral-storage: "940839717763"
-        hugepages-1Gi: "0"
-        hugepages-2Mi: "0"
-        memory: 28567748Ki
-        pods: "250"
-      capacity:
-        cpu: "8"
-        ephemeral-storage: 1022041516Ki
-        hugepages-1Gi: "0"
-        hugepages-2Mi: "0"
-        memory: 32864452Ki
-        pods: "250"
   operation: DELETE
   options: null
   requestKind:
@@ -98,60 +35,3 @@ request:
   userInfo:
     uid: f7c58070-9a2d-450b-aebb-8d64ff1a2109
     username: fake-k8s-admin-review
-# kind: AdmissionReview
-# apiVersion: admission.k8s.io/v1
-# request:
-#   uid: 2024ee9c-c374-413c-838d-e62bcb4826be
-#   kind:
-#     group: ""
-#     version: v1
-#     kind: Node
-#   resource:
-#     group: ""
-#     version: v1
-#     resource: node
-#   requestKind:
-#     group: ""
-#     version: v1
-#     kind: Node
-#   requestResource:
-#     group: ""
-#     version: v1
-#     resource: node
-#   name: master
-#   operation: DELETE
-#   userInfo:
-#     username: kube-review
-#     uid: 611a19d7-6aa5-47d2-bba3-8c5df2bffbc7
-#   oldObject:
-#     kind: Node
-#     apiVersion: ""
-#     metadata:
-#       name: master-0
-#       creationTimestamp:
-#       labels:
-#         node-role.kubernetes.io/master: ""
-#         app: nginx
-#     spec:
-#       selector:
-#         matchLabels:
-#           app: nginx
-#       template:
-#         metadata:
-#           creationTimestamp:
-#           labels:
-#             app: nginx
-#         spec:
-#           containers:
-#           - name: nginx
-#             image: nginx
-#             ports:
-#             - containerPort: 8080
-#             resources: {}
-#       strategy: {}
-#     status: {}
-#   dryRun: true
-#   options:
-#     kind: CreateOptions
-#     apiVersion: meta.k8s.io/v1
-#   object:
