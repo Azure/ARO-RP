@@ -222,3 +222,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) error {
 
 	return errors.Join(errs...)
 }
+
+func (m *NSGMonitor) MonitorName() string {
+	return "nsg"
+}

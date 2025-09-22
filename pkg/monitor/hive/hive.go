@@ -127,3 +127,7 @@ func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
 func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
 	emitter.EmitFloat(mon.m, m, value, mon.dims, dims)
 }
+
+func (m *Monitor) MonitorName() string {
+	return "hive"
+}
