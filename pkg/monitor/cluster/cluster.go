@@ -41,8 +41,10 @@ const MONITOR_GOROUTINES_PER_CLUSTER = 5
 
 var _ monitoring.Monitor = (*Monitor)(nil)
 
+type collectorFunc func(context.Context) error
+
 type Monitor struct {
-	collectors []func(context.Context) error
+	collectors []collectorFunc
 
 	log       *logrus.Entry
 	hourlyRun bool
@@ -160,7 +162,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
 	}
-	mon.collectors = []func(context.Context) error{
+	mon.collectors = []collectorFunc{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
 		mon.emitNSGReconciliation,
@@ -193,10 +195,20 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	return mon, nil
 }
 
-func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error) error {
+func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error) (err error) {
 	innerNow := time.Now()
 	collectorName := steps.ShortName(f)
 	mon.log.Debugf("running %s", collectorName)
+
+	// If the collector panics we should return the error (so that it bubbles
+	// up) but not prevent any other collector from running.
+	defer func() {
+		if e := recover(); e != nil {
+			err = &failureToRunClusterCollector{collectorName: collectorName, inner: &collectorPanic{panicValue: e}}
+			mon.emitMonitorCollectorError(collectorName)
+		}
+	}()
+
 	innerErr := f(ctx)
 	if innerErr != nil {
 		// emit metrics collection failures and collect the err, but
