@@ -23,8 +23,10 @@ import (
 
 var _ monitoring.Monitor = (*Monitor)(nil)
 
+type collectorFunc func(context.Context) error
+
 type Monitor struct {
-	collectors []func(context.Context) error
+	collectors []collectorFunc
 
 	log *logrus.Entry
 
@@ -61,12 +63,35 @@ func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitt
 
 		hiveClusterManager: hiveClusterManager,
 	}
-	mon.collectors = []func(context.Context) error{
+	mon.collectors = []collectorFunc{
 		mon.emitHiveRegistrationStatus,
 		mon.emitClusterSync,
 	}
 
 	return mon, nil
+}
+
+func (mon *Monitor) runCollector(ctx context.Context, f func(context.Context) error) (err error) {
+	collectorName := steps.ShortName(f)
+	mon.log.Debugf("running %s", collectorName)
+
+	// If the collector panics we should return the error (so that it bubbles
+	// up) but not prevent any other collector from running.
+	defer func() {
+		if e := recover(); e != nil {
+			err = &failureToRunHiveCollector{collectorName: collectorName, inner: &collectorPanic{panicValue: e}}
+			mon.emitHiveCollectorError(collectorName)
+		}
+	}()
+
+	innerErr := f(ctx)
+	if innerErr != nil {
+		// emit metrics collection failures and collect the err, but
+		// don't stop running other metric collections
+		mon.emitHiveCollectorError(collectorName)
+		return &failureToRunHiveCollector{collectorName: collectorName, inner: innerErr}
+	}
+	return nil
 }
 
 // Monitor checks the health of Hive resources associated with a cluster
@@ -76,15 +101,10 @@ func (mon *Monitor) Monitor(ctx context.Context) error {
 	mon.log.Debug("hive monitoring")
 
 	errs := []error{}
-
 	for _, f := range mon.collectors {
-		mon.log.Debugf("running %s", steps.ShortName(f))
-		innerErr := f(ctx)
+		innerErr := mon.runCollector(ctx, f)
 		if innerErr != nil {
-			// emit metrics collection failures and collect the err, but
-			// don't stop running other metric collections
 			errs = append(errs, innerErr)
-			mon.emitFailureToGatherMetric(steps.ShortName(f), innerErr)
 		}
 	}
 
@@ -96,9 +116,8 @@ func (mon *Monitor) Monitor(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error) {
-	mon.log.Printf("%s: %s", friendlyFuncName, err)
-	mon.emitGauge("monitor.hiveerrors", 1, map[string]string{"monitor": friendlyFuncName})
+func (mon *Monitor) emitHiveCollectorError(collectorName string) {
+	emitter.EmitGauge(mon.m, "monitor.hive.collector.error", 1, mon.dims, map[string]string{"collector": collectorName})
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
