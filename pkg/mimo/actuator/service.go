@@ -326,6 +326,9 @@ out:
 func DetermineBuckets(env env.Core, hostnameFunc func() (string, error)) []int {
 	_log := env.Logger()
 
+	// We have a VMSS with 3 VMs in prod
+	vmCount := 3
+
 	b := []int{}
 	if !env.IsLocalDevelopmentMode() {
 		name, err := hostnameFunc()
@@ -340,7 +343,7 @@ func DetermineBuckets(env env.Core, hostnameFunc func() (string, error)) []int {
 				if err != nil {
 					_log.Warningf("hostname %s doesn't end in a number, unable to partition buckets", name)
 				} else {
-					if num > 3 || num <= 0 {
+					if num > vmCount || num <= 0 {
 						// Rather than guess, we fall back to all buckets. This
 						// means that a VMSS replacement of -4 might have some
 						// weird behaviour, but because we get a lock on the
@@ -348,7 +351,9 @@ func DetermineBuckets(env env.Core, hostnameFunc func() (string, error)) []int {
 						// cluster, it should be fine.
 						_log.Warningf("vmss number is %d, currently only handles 3 partitions (vm numbers 1-3), falling back to all", num)
 					} else {
-						for i := num - 1; i < bucket.Buckets; i = i + 3 {
+						// For the 3 VMs, VM 1 will serve buckets 0,3,6...,
+						// VM 2 will serve 1,4,7... VM 3 will serve 2,5,8...
+						for i := num - 1; i < bucket.Buckets; i += vmCount {
 							b = append(b, i)
 						}
 					}
