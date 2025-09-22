@@ -305,9 +305,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
 		if err != nil {
 			log.Error(err)
-			mon.m.EmitGauge("monitor.hive.failedworker", 1, map[string]string{
-				"resourceId": doc.OpenShiftCluster.ID,
-			})
+			mon.m.EmitGauge("monitor.hive.failedworker", 1, dims)
 		} else {
 			monitors = append(monitors, h)
 		}
@@ -318,9 +316,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
-		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
-			"resourceId": doc.OpenShiftCluster.ID,
-		})
+		mon.m.EmitGauge("monitor.cluster.failedworker", 1, dims)
 		return
 	}
 
