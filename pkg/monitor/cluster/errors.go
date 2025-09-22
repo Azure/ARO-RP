@@ -54,8 +54,5 @@ func (e *collectorPanic) Error() string {
 
 func (e *collectorPanic) Is(err error) bool {
 	_, ok := err.(*collectorPanic)
-	if !ok {
-		return false
-	}
-	return true
+	return ok
 }
