@@ -292,9 +292,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	dims := map[string]string{
-		dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
-		dimension.Location:          doc.OpenShiftCluster.Location,
-		dimension.SubscriptionID:    subID,
+		dimension.ResourceID:     doc.OpenShiftCluster.ID,
+		dimension.Location:       doc.OpenShiftCluster.Location,
+		dimension.SubscriptionID: subID,
 	}
 
 	var monitors []monitoring.Monitor
