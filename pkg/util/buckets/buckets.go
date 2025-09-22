@@ -6,7 +6,6 @@ package buckets
 import (
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -14,7 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 )
 
-type WorkerFunc func(<-chan struct{}, time.Duration, string)
+type WorkerFunc func(<-chan struct{}, string)
 
 type monitor struct {
 	baseLog *logrus.Entry
@@ -30,6 +29,7 @@ type monitor struct {
 
 type BucketWorker interface {
 	Stop()
+	SetBuckets([]int)
 
 	Doc(string) *api.OpenShiftClusterDocument
 	DeleteDoc(*api.OpenShiftClusterDocument)
@@ -57,4 +57,18 @@ func (mon *monitor) Doc(id string) *api.OpenShiftClusterDocument {
 		return nil
 	}
 	return v.doc
+}
+
+func (mon *monitor) SetBuckets(buckets []int) {
+	mon.mu.Lock()
+	defer mon.mu.Unlock()
+	mon.buckets = map[int]struct{}{}
+
+	for _, i := range buckets {
+		mon.buckets[i] = struct{}{}
+	}
+
+	for _, v := range mon.docs {
+		mon.FixDoc(v.doc)
+	}
 }

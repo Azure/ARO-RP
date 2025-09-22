@@ -100,6 +100,7 @@ type Configuration struct {
 	SubscriptionResourceGroupName      *string                `json:"subscriptionResourceGroupName,omitempty" value:"required"`
 	SubscriptionResourceGroupLocation  *string                `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string                `json:"vmSize,omitempty" value:"required"`
+	VMImageReference                   *map[string]string     `json:"vmImageReference,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool                  `json:"vmssCleanupEnabled,omitempty"`
 	OIDCStorageAccountName             *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
 	OtelAuditQueueSize                 *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
