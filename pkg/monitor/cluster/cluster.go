@@ -32,6 +32,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -262,6 +263,7 @@ func (mon *Monitor) Monitor(ctx context.Context) error {
 
 	for _, f := range mon.collectors {
 		wg.Go(func() error {
+			defer recover.Panic(mon.log)
 			innerErr := mon.timeCall(ctx, f)
 			if innerErr != nil {
 				// NOTE: The channel only has room to accommodate one error per
