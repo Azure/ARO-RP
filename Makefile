@@ -238,7 +238,8 @@ pyenv:
 	. pyenv/bin/activate && \
 		pip install -U pip && \
 		pip install -r requirements.txt && \
-		azdev setup -r .
+		azdev setup -r . && \
+		az config set extension.dev_sources=$(PWD)/python
 
 .PHONY: secrets
 secrets:
