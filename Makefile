@@ -32,8 +32,7 @@ else
 	VERSION = $(TAG)
 endif
 
-REGISTRY ?= ${REGISTRY}
-BUILDER_REGISTRY ?= ${BUILDER_REGISTRY}
+# REGISTRY and BUILDER_REGISTRY are set conditionally below based on RP_IMAGE_ACR
 # default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
