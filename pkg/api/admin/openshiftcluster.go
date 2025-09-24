@@ -130,6 +130,14 @@ const (
 	MaintenanceTaskCustomerActionNeeded MaintenanceTask = "CustomerActionNeeded"
 )
 
+var validMaintenanceTasks = []MaintenanceTask{
+	MaintenanceTaskEverything,
+	MaintenanceTaskOperator,
+	MaintenanceTaskRenewCerts,
+	MaintenanceTaskSyncClusterObject,
+	MaintenanceTaskMigrateLoadBalancer,
+}
+
 // Operator feature flags
 type OperatorFlags map[string]string
 
