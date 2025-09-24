@@ -85,19 +85,10 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action renewMDSDCertificate]",
 	}
 
-	managedIdentityCertificateRenewalSteps := []string{
-		"[Action startVMs]",
-		"[Condition apiServersReady, timeout 30m0s]",
-		"[Action populateDatabaseIntIP]",
-		"[Action correctCertificateIssuer]",
-		"[Action fixMCSCert]",
-		"[Action fixMCSUserData]",
-		"[Action configureAPIServerCertificate]",
-		"[Action configureIngressCertificate]",
-		"[Action initializeOperatorDeployer]",
-		"[Action renewMDSDCertificate]",
+	managedIdentityCertificateRenewalSteps := append(
+	    certificateRenewalSteps,
 		"[Action ensureClusterMsiCertificate]",
-	}
+		)
 
 	operatorUpdateSteps := []string{
 		"[Action startVMs]",
