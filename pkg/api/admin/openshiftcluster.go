@@ -136,6 +136,10 @@ var validMaintenanceTasks = []MaintenanceTask{
 	MaintenanceTaskRenewCerts,
 	MaintenanceTaskSyncClusterObject,
 	MaintenanceTaskMigrateLoadBalancer,
+	// internal maintenance state signals
+	MaintenanceTaskPending,
+	MaintenanceTaskNone,
+	MaintenanceTaskCustomerActionNeeded,
 }
 
 // Operator feature flags
