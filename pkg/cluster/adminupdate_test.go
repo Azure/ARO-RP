@@ -86,9 +86,9 @@ func TestAdminUpdateSteps(t *testing.T) {
 	}
 
 	managedIdentityCertificateRenewalSteps := append(
-	    certificateRenewalSteps,
+		certificateRenewalSteps,
 		"[Action ensureClusterMsiCertificate]",
-		)
+	)
 
 	operatorUpdateSteps := []string{
 		"[Action startVMs]",
