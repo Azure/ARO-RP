@@ -32,7 +32,6 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -41,8 +40,10 @@ const MONITOR_GOROUTINES_PER_CLUSTER = 5
 
 var _ monitoring.Monitor = (*Monitor)(nil)
 
+type collectorFunc func(context.Context) error
+
 type Monitor struct {
-	collectors []func(context.Context) error
+	collectors []collectorFunc
 
 	log       *logrus.Entry
 	hourlyRun bool
@@ -160,7 +161,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
 	}
-	mon.collectors = []func(context.Context) error{
+	mon.collectors = []collectorFunc{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
 		mon.emitNSGReconciliation,
@@ -193,10 +194,20 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	return mon, nil
 }
 
-func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error) error {
+func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error) (err error) {
 	innerNow := time.Now()
 	collectorName := steps.ShortName(f)
 	mon.log.Debugf("running %s", collectorName)
+
+	// If the collector panics we should return the error (so that it bubbles
+	// up) but not prevent any other collector from running.
+	defer func() {
+		if e := recover(); e != nil {
+			err = &failureToRunClusterCollector{collectorName: collectorName, inner: &collectorPanic{panicValue: e}}
+			mon.emitMonitorCollectorError(collectorName)
+		}
+	}()
+
 	innerErr := f(ctx)
 	if innerErr != nil {
 		// emit metrics collection failures and collect the err, but
@@ -212,7 +223,14 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 }
 
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) error {
+func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
+	// guard for any monitor-level panics
+	defer func() {
+		if e := recover(); e != nil {
+			_err = &monitoring.MonitorPanic{PanicValue: e}
+		}
+	}()
+
 	errs := []error{}
 
 	now := time.Now()
@@ -263,7 +281,6 @@ func (mon *Monitor) Monitor(ctx context.Context) error {
 
 	for _, f := range mon.collectors {
 		wg.Go(func() error {
-			defer recover.Panic(mon.log)
 			innerErr := mon.timeCall(ctx, f)
 			if innerErr != nil {
 				// NOTE: The channel only has room to accommodate one error per
@@ -308,4 +325,8 @@ func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
 
 func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
 	emitter.EmitFloat(mon.m, m, value, mon.dims, dims)
+}
+
+func (m *Monitor) MonitorName() string {
+	return "cluster"
 }

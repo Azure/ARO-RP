@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"sync"
@@ -276,9 +277,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	dims := map[string]string{
-		dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
-		dimension.Location:          doc.OpenShiftCluster.Location,
-		dimension.SubscriptionID:    subID,
+		dimension.ResourceID:     doc.OpenShiftCluster.ID,
+		dimension.Location:       doc.OpenShiftCluster.Location,
+		dimension.SubscriptionID: subID,
 	}
 
 	var monitors []monitoring.Monitor
@@ -290,9 +291,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
 		if err != nil {
 			log.Error(err)
-			mon.m.EmitGauge("monitor.hive.failedworker", 1, map[string]string{
-				"resourceId": doc.OpenShiftCluster.ID,
-			})
+			mon.m.EmitGauge("monitor.hive.failedworker", 1, dims)
 		} else {
 			monitors = append(monitors, h)
 		}
@@ -303,15 +302,17 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
-		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
-			"resourceId": doc.OpenShiftCluster.ID,
-		})
+		mon.m.EmitGauge("monitor.cluster.failedworker", 1, dims)
 		return
 	}
 
 	monitors = append(monitors, c, nsgMon)
 	allJobsDone := make(chan bool)
-	go execute(ctx, log, allJobsDone, monitors)
+	onPanic := func(m monitoring.Monitor) {
+		// emit a failed worker metric on panic
+		mon.m.EmitGauge("monitor."+m.MonitorName()+".failedworker", 1, dims)
+	}
+	go execute(ctx, log, allJobsDone, monitors, onPanic)
 
 	select {
 	case <-allJobsDone:
@@ -321,7 +322,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 }
 
-func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors []monitoring.Monitor) {
+func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors []monitoring.Monitor, onPanic func(monitoring.Monitor)) {
 	var wg sync.WaitGroup
 
 	for _, monitor := range monitors {
@@ -330,6 +331,9 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors 
 			defer wg.Done()
 			err := monitor.Monitor(ctx)
 			if err != nil {
+				if errors.Is(err, &monitoring.MonitorPanic{}) {
+					onPanic(monitor)
+				}
 				log.Error(err)
 			}
 		}()
