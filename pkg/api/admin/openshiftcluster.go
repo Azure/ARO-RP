@@ -109,10 +109,11 @@ const (
 	// Maintenance tasks that perform work on the cluster
 	//
 
-	MaintenanceTaskEverything        MaintenanceTask = "Everything"
-	MaintenanceTaskOperator          MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts        MaintenanceTask = "CertificatesRenewal"
-	MaintenanceTaskSyncClusterObject MaintenanceTask = "SyncClusterObject"
+	MaintenanceTaskEverything          MaintenanceTask = "Everything"
+	MaintenanceTaskOperator            MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts          MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskSyncClusterObject   MaintenanceTask = "SyncClusterObject"
+	MaintenanceTaskMigrateLoadBalancer MaintenanceTask = "MigrateLoadBalancer"
 
 	//
 	// Maintenance tasks for updating customer maintenance signals
@@ -128,6 +129,18 @@ const (
 	// To remove the signal after customer takes action, use maintenance task None
 	MaintenanceTaskCustomerActionNeeded MaintenanceTask = "CustomerActionNeeded"
 )
+
+var validMaintenanceTasks = []MaintenanceTask{
+	MaintenanceTaskEverything,
+	MaintenanceTaskOperator,
+	MaintenanceTaskRenewCerts,
+	MaintenanceTaskSyncClusterObject,
+	MaintenanceTaskMigrateLoadBalancer,
+	// internal maintenance state signals
+	MaintenanceTaskPending,
+	MaintenanceTaskNone,
+	MaintenanceTaskCustomerActionNeeded,
+}
 
 // Operator feature flags
 type OperatorFlags map[string]string
