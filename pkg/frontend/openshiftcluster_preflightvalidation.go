@@ -78,6 +78,19 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 
 func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, resourceID string) api.ValidationResult {
 	log.Infof("running preflight validation on resource: %s", resourceID)
+	
+	// Get subscription document for feature flag validation
+	subscription, err := f.getSubscriptionDocument(ctx, resourceID)
+	if err != nil {
+		log.Error(err)
+		return api.ValidationResult{
+			Status: api.ValidationStatusFailed,
+			Error: &api.CloudErrorBody{
+				Message: fmt.Sprintf("Failed to get subscription: %s", err.Error()),
+			},
+		}
+	}
+	
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
 		log.Error(err)
@@ -131,7 +144,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 				},
 			}
 		}
-		if err := f.validateInstallVersion(ctx, oc); err != nil {
+		if err := f.validateInstallVersion(ctx, oc, subscription); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.CloudErrorBody{
