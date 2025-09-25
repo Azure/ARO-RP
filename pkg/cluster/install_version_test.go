@@ -121,6 +121,7 @@ func TestGetOpenShiftVersionFromVersionWithArbitraryVersions(t *testing.T) {
 		version                  string
 		installViaHive           bool
 		arbitraryVersionsEnabled bool
+		isLocalDevelopmentMode   bool
 		wantErrString            string
 		wantInstallerPullspec    string
 		wantOpenShiftPullspec    string
@@ -176,6 +177,48 @@ func TestGetOpenShiftVersionFromVersionWithArbitraryVersions(t *testing.T) {
 			wantOpenShiftPullspec:    "acrdomain.io/ocp-release:4.17.0-0.nightly-2024-12-01-123456",
 			wantVersion:              "4.17.0-0.nightly-2024-12-01-123456",
 		},
+		{
+			name:                   "arbitrary version in development mode - traditional install",
+			version:                "4.18.0-dev.custom.build",
+			installViaHive:         false,
+			isLocalDevelopmentMode: true,
+			wantInstallerPullspec:  "acrdomain.io/aro-installer:4.18",
+			wantOpenShiftPullspec:  "quay.io/openshift-release-dev/ocp-release:4.18.0-dev.custom.build",
+			wantVersion:            "4.18.0-dev.custom.build",
+		},
+		{
+			name:                   "arbitrary version in development mode - hive install",
+			version:                "4.19.0-0.nightly-dev-123",
+			installViaHive:         true,
+			isLocalDevelopmentMode: true,
+			wantInstallerPullspec:  "acrdomain.io/aro-installer:4.19",
+			wantOpenShiftPullspec:  "acrdomain.io/ocp-release:4.19.0-0.nightly-dev-123",
+			wantVersion:            "4.19.0-0.nightly-dev-123",
+		},
+		{
+			name:                   "invalid semantic version in development mode",
+			version:                "not-a-valid-version",
+			isLocalDevelopmentMode: true,
+			wantErrString:          "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version 'not-a-valid-version' is not a valid semantic version.",
+		},
+		{
+			name:                     "both AFEC flag and dev mode enabled - should work",
+			version:                  "4.20.0-combined.test",
+			installViaHive:           false,
+			arbitraryVersionsEnabled: true,
+			isLocalDevelopmentMode:   true,
+			wantInstallerPullspec:    "acrdomain.io/aro-installer:4.20",
+			wantOpenShiftPullspec:    "quay.io/openshift-release-dev/ocp-release:4.20.0-combined.test",
+			wantVersion:              "4.20.0-combined.test",
+		},
+		{
+			name:                   "dev mode overrides normal validation for arbitrary versions",
+			version:                "4.21.0-0.dev-override-123",
+			isLocalDevelopmentMode: true,
+			wantInstallerPullspec:  "acrdomain.io/aro-installer:4.21",
+			wantOpenShiftPullspec:  "quay.io/openshift-release-dev/ocp-release:4.21.0-0.dev-override-123",
+			wantVersion:            "4.21.0-0.dev-override-123",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -185,6 +228,7 @@ func TestGetOpenShiftVersionFromVersionWithArbitraryVersions(t *testing.T) {
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().ACRDomain().AnyTimes().Return(testACRDomain)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
+			_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(tt.isLocalDevelopmentMode)
 
 			uuidGen := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.OPENSHIFT_VERSIONS)
 			dbOpenShiftVersions, _ := testdatabase.NewFakeOpenShiftVersions(uuidGen)

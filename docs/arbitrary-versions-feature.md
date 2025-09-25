@@ -2,7 +2,12 @@
 
 ## Overview
 
-This feature allows ARO clusters to be created with arbitrary OpenShift version strings instead of being limited to pre-defined versions stored in CosmosDB. This capability is protected by an AFEC (Azure Feature Exposure Control) flag and is intended for testing and development scenarios where custom builds or pre-release versions need to be installed.
+This feature allows ARO clusters to be created with arbitrary OpenShift version strings instead of being limited to pre-defined versions stored in CosmosDB. This capability can be enabled through either:
+
+1. **AFEC Feature Flag**: Protected by subscription-level feature registration for production/testing environments
+2. **Development Environment**: Automatically enabled when running in local development mode
+
+This dual-enablement approach supports both secure production testing and convenient development workflows.
 
 ## Implementation Details
 
@@ -20,15 +25,20 @@ FeatureFlagArbitraryVersions = "Microsoft.RedHatOpenShift/ArbitraryVersions"
 The `validateInstallVersion()` function in `pkg/frontend/validate.go` has been enhanced to:
 
 - Accept a subscription document parameter to check for feature flags
-- Check for the `FeatureFlagArbitraryVersions` AFEC flag
-- Apply different validation logic based on the flag state:
+- Check for both the `FeatureFlagArbitraryVersions` AFEC flag and development environment
+- Apply different validation logic based on enablement conditions:
 
-**When flag is enabled:**
+```go
+allowArbitraryVersions := f.env.IsLocalDevelopmentMode() || 
+    (subscription != nil && feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagArbitraryVersions))
+```
+
+**When arbitrary versions are enabled (either via AFEC flag OR development mode):**
 - Only validates semantic version format using `semver.NewVersion`
 - Bypasses the requirement for versions to be in the CosmosDB enabled list
 - Allows custom version strings like `4.15.0-custom.build.123`
 
-**When flag is disabled:**
+**When arbitrary versions are disabled:**
 - Maintains existing behavior (version must be in enabled list AND valid semver)
 - Preserves backward compatibility
 
@@ -38,8 +48,8 @@ The version resolution system in `pkg/cluster/version.go` has been enhanced to s
 
 **Resolution Order:**
 1. **CosmosDB First**: Check if the version exists in the OpenShiftVersions collection
-2. **ACR Fallback**: If not found and arbitrary versions are enabled, generate image specs using ACR patterns
-3. **Error**: If neither found and feature flag disabled, return error
+2. **ACR Fallback**: If not found and arbitrary versions are enabled (via AFEC flag OR development mode), generate image specs using ACR patterns
+3. **Error**: If neither found and arbitrary versions disabled, return error
 
 **ACR Image Generation:**
 - **Installer Image**: `{ACRDomain}/aro-installer:{major.minor}` (e.g., `arosvc.azurecr.io/aro-installer:4.15`)
@@ -63,21 +73,33 @@ Comprehensive test cases have been added covering:
 
 **Frontend Validation Tests:**
 - ✅ Arbitrary valid semver versions with feature flag enabled
+- ✅ Arbitrary valid semver versions in development mode
 - ✅ Invalid versions with feature flag enabled (proper error handling)
+- ✅ Invalid versions in development mode (proper error handling)
 - ✅ Arbitrary versions without feature flag (blocked as expected)
+- ✅ Both AFEC flag and development mode enabled (should work)
+- ✅ Development mode overrides normal validation for arbitrary versions
 - ✅ Existing functionality preserved for standard versions
 
 **Image Resolution Tests:**
 - ✅ ACR fallback for traditional installer (quay.io OpenShift images)
 - ✅ ACR fallback for Hive installer (ACR OpenShift images)
+- ✅ ACR fallback in development mode (both traditional and hive)
 - ✅ CosmosDB versions take precedence over ACR fallback
 - ✅ Invalid semantic versions with proper error messages
+- ✅ Invalid semantic versions in development mode
 - ✅ Prerelease and development version handling
 - ✅ Major.minor version extraction for installer images
+- ✅ Both AFEC flag and development mode scenarios
+- ✅ Development mode override behavior for version resolution
 
 ## Usage
 
 ### Enabling the Feature
+
+There are two ways to enable arbitrary version support:
+
+#### Option 1: AFEC Feature Flag (Production/Testing)
 
 To enable arbitrary versions for a subscription:
 
@@ -88,6 +110,19 @@ az feature register --namespace Microsoft.RedHatOpenShift --name ArbitraryVersio
 # Verify registration (may take a few minutes)
 az feature show --namespace Microsoft.RedHatOpenShift --name ArbitraryVersions
 ```
+
+#### Option 2: Development Environment (Local Development)
+
+For local development, the feature is automatically enabled when `RP_MODE=development` is set:
+
+```bash
+# Set development mode environment variable
+export RP_MODE=development
+
+# Now arbitrary versions are automatically enabled without AFEC registration
+```
+
+**Note**: Development mode bypasses AFEC flag requirements and is intended for local development only.
 
 ### Example Version Strings
 
@@ -114,8 +149,11 @@ No changes to the API structure are required. Simply specify the desired version
 
 ## Security Considerations
 
-- **AFEC Protection**: Feature is gated behind subscription-level feature registration
+- **Dual-Layer Protection**: Feature is gated behind either:
+  - **AFEC Protection**: Subscription-level feature registration for production environments
+  - **Development Mode**: Local development environment detection (`RP_MODE=development`)
 - **Validation**: Still enforces semantic versioning format to prevent invalid strings
+- **Environment Isolation**: Development mode only works in local development environments
 - **Audit Trail**: Feature flag registration is tracked in Azure subscription logs
 
 ## Image Resolution Behavior
@@ -175,10 +213,14 @@ This feature maintains full backward compatibility. Existing clusters and instal
 
 The feature includes comprehensive unit tests that validate:
 
-1. Feature flag enabled scenarios with valid and invalid versions
-2. Feature flag disabled scenarios (existing behavior)
-3. Default version assignment when no version specified
-4. Error message accuracy and formatting
+1. **AFEC Flag Scenarios**: Feature flag enabled/disabled with valid and invalid versions
+2. **Development Mode Scenarios**: Local development environment detection and behavior
+3. **Combined Scenarios**: Both AFEC flag and development mode enabled
+4. **Backward Compatibility**: Existing behavior preserved when feature is disabled
+5. **Default Behavior**: Default version assignment when no version specified
+6. **Error Handling**: Accurate error messages for all failure scenarios
+7. **ACR Fallback**: Image resolution patterns for arbitrary versions
+8. **Precedence Rules**: CosmosDB versions take precedence over ACR fallback
 
 ## Future Considerations
 

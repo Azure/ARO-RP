@@ -239,8 +239,9 @@ func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShift
 	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
 	_, err := semver.NewVersion(oc.Properties.ClusterProfile.Version)
 
-	// Check if arbitrary versions are enabled via AFEC flag
-	allowArbitraryVersions := feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagArbitraryVersions)
+	// Check if arbitrary versions are enabled via AFEC flag or development environment
+	allowArbitraryVersions := f.env.IsLocalDevelopmentMode() || 
+		(subscription != nil && feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagArbitraryVersions))
 
 	// If arbitrary versions are enabled, only validate that it's a valid semver format
 	if allowArbitraryVersions {
