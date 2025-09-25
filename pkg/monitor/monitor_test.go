@@ -155,9 +155,11 @@ func TestMonitor(t *testing.T) {
 	wg.Wait()
 
 	for k, v := range fakeClusterVisitMonitoringAttempts {
-		t.Logf("%s: %d", k, *v)
+		if *v < 1 {
+			t.Errorf("Expected that cluster %s got non-zero visits, but it got %v", k, v)
+		}
 	}
-	t.Fail()
+
 }
 
 func newFakeSubscription() *api.SubscriptionDocument {

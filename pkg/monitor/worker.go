@@ -31,6 +31,10 @@ var nsgMonitoringFrequency = 10 * time.Minute
 // from monitoring
 var subscriptionStateLogFrequency = 30 * time.Minute
 
+// Default loop ticket time for changeFeed
+
+var changefeedLoopTime = 10 * time.Second
+
 // changefeedBatchSize is how many items in the changefeed to fetch in each page
 const changefeedBatchSize = 50
 
@@ -65,7 +69,7 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 // up-to-date.  We don't monitor clusters in Creating state, hence we don't add
 // them to mon.docs.  We also don't monitor clusters in Deleting state; when
 // this state is reached we delete from mon.docs
-func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}) {
+func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}, waitTime time.Duration) {
 	defer recover.Panic(baseLog)
 
 	dbOpenShiftClusters, err := mon.dbGroup.OpenShiftClusters()
@@ -85,7 +89,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 
 	// Align this time with the deletion mechanism.
 	// Go to docs/monitoring.md for the details.
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(waitTime)
 	defer t.Stop()
 
 	for {
