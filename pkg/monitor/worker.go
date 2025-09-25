@@ -16,10 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/monitor/azure/nsg"
-	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
-	hivemon "github.com/Azure/ARO-RP/pkg/monitor/hive"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
@@ -112,6 +109,8 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 				ps := doc.OpenShiftCluster.Properties.ProvisioningState
 				fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
 
+				mon.baseLog.Infof("Got cluster in changefeed: %s", doc.ID)
+
 				switch {
 				case ps == api.ProvisioningStateCreating,
 					ps == api.ProvisioningStateDeleting,
@@ -155,7 +154,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 					delete(mon.subs, id)
 					continue
 				}
-
+				mon.baseLog.Infof("Got Subscription in changefeed: %s", sub.ID)
 				c, ok := mon.subs[id]
 				if ok {
 					// update this as subscription might have moved tenants
@@ -303,7 +302,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	if !ok {
 		log.Info("skipping: no hive cluster manager")
 	} else {
-		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
+		h, err := mon.hiveMonitorBuilder(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
 		if err != nil {
 			log.Error(err)
 			mon.m.EmitGauge("monitor.hive.failedworker", 1, dims)
@@ -312,9 +311,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		}
 	}
 
-	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, subID, tenantID, mon.clusterm, dims, nsgMonTicker.C)
+	nsgMon := mon.nsgMonitorBuilder(log, doc.OpenShiftCluster, mon.env, subID, tenantID, mon.clusterm, dims, nsgMonTicker.C)
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
+	c, err := mon.clusterMonitorBuilder(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
 		mon.m.EmitGauge("monitor.cluster.failedworker", 1, dims)
