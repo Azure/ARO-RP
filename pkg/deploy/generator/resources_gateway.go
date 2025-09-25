@@ -32,6 +32,23 @@ func (g *generator) gatewayManagedIdentity() *arm.Resource {
 	}
 }
 
+func (g *generator) gatewayKeyvaultPerimeterAssociation() *arm.Resource {
+	gwKvResId := fmt.Sprintf(
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
+		env.GatewayKeyvaultSuffix,
+	)
+
+	return g.networkSecurityPerimeterAssociation("gateway-nsp", "gateway-keyvault", gwKvResId)
+}
+
+func (g *generator) gatewayNetworkSecurityPerimeterProfile() *arm.Resource {
+	return g.networkSecurityPerimeterProfile("gateway-nsp")
+}
+
+func (g *generator) gatewayNetworkSecurityPerimeter() *arm.Resource {
+	return g.networkSecurityPerimeter("gateway-nsp")
+}
+
 func (g *generator) gatewaySecurityGroup() *arm.Resource {
 	return g.securityGroup("gateway-nsg", nil, g.conditionStanza("deployNSGs"))
 }
