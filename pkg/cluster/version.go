@@ -68,8 +68,11 @@ func (service *openShiftClusterDocumentVersionerService) GetWithSubscription(ctx
 		}
 	}
 
-	// If not found in CosmosDB, check if arbitrary versions are enabled
-	if subscription != nil && feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagArbitraryVersions) {
+	// If not found in CosmosDB, check if arbitrary versions are enabled via AFEC flag or development environment
+	allowArbitraryVersions := env.IsLocalDevelopmentMode() || 
+		(subscription != nil && feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagArbitraryVersions))
+	
+	if allowArbitraryVersions {
 		return service.generateACRVersionSpec(ctx, requestedInstallVersion, env, installViaHive)
 	}
 
