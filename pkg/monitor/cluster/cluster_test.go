@@ -44,6 +44,7 @@ func TestMonitor(t *testing.T) {
 		name           string
 		expectedErrors []error
 		hooks          func(*testclienthelper.HookingClient)
+		collectors     func(*Monitor) []collectorFunc
 		healthzCall    func(*http.Request) (*http.Response, error)
 		expectedGauges []expectedMetric
 		expectedFloats []expectedMetric
@@ -51,6 +52,9 @@ func TestMonitor(t *testing.T) {
 		{
 			name:        "happy path",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
+			collectors: func(m *Monitor) []collectorFunc {
+				return []collectorFunc{m.emitReplicasetStatuses, m.emitDaemonsetStatuses}
+			},
 			expectedGauges: []expectedMetric{
 				{
 					name:  "apiserver.healthz.code",
@@ -69,6 +73,16 @@ func TestMonitor(t *testing.T) {
 						"replicas":          "2",
 					},
 				},
+				{
+					name:  "daemonset.statuses",
+					value: int64(1),
+					labels: map[string]string{
+						"desiredNumberScheduled": "2",
+						"numberAvailable":        "1",
+						"namespace":              "openshift",
+						"name":                   "daemonset",
+					},
+				},
 			},
 			expectedFloats: []expectedMetric{
 				{
@@ -76,13 +90,6 @@ func TestMonitor(t *testing.T) {
 					value: gomock.Any(),
 					labels: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
-					},
-				},
-				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
-						"collector": "emitReplicasetStatuses",
 					},
 				},
 				{
@@ -97,6 +104,20 @@ func TestMonitor(t *testing.T) {
 					value: gomock.Any(),
 					labels: map[string]string{
 						"collector": "fetchManagedNamespaces",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitReplicasetStatuses",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitDaemonsetStatuses",
 					},
 				},
 			},
@@ -153,6 +174,9 @@ func TestMonitor(t *testing.T) {
 		{
 			name:        "collector failure",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
+			collectors: func(m *Monitor) []collectorFunc {
+				return []collectorFunc{m.emitReplicasetStatuses}
+			},
 			hooks: func(hc *testclienthelper.HookingClient) {
 				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
 					_, ok := obj.(*appsv1.ReplicaSetList)
@@ -203,6 +227,82 @@ func TestMonitor(t *testing.T) {
 					value: gomock.Any(),
 					labels: map[string]string{
 						"collector": "fetchManagedNamespaces",
+					},
+				},
+			},
+		},
+		{
+			name:        "collector panic does not stop other collectors",
+			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
+			collectors: func(m *Monitor) []collectorFunc {
+				return []collectorFunc{m.emitReplicasetStatuses, m.emitDaemonsetStatuses}
+			},
+			hooks: func(hc *testclienthelper.HookingClient) {
+				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
+					_, ok := obj.(*appsv1.ReplicaSetList)
+					if ok {
+						panic(innerFailure)
+					}
+					return nil
+				})
+			},
+			expectedErrors: []error{
+				&failureToRunClusterCollector{collectorName: "emitReplicasetStatuses"},
+				&collectorPanic{panicValue: innerFailure},
+			},
+			expectedGauges: []expectedMetric{
+				{
+					name:  "apiserver.healthz.code",
+					value: int64(1),
+					labels: map[string]string{
+						"code": "200",
+					},
+				},
+				{
+					name:  "daemonset.statuses",
+					value: int64(1),
+					labels: map[string]string{
+						"desiredNumberScheduled": "2",
+						"numberAvailable":        "1",
+						"namespace":              "openshift",
+						"name":                   "daemonset",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.error",
+					value: int64(1),
+					labels: map[string]string{
+						"collector": "emitReplicasetStatuses",
+					},
+				},
+			},
+			expectedFloats: []expectedMetric{
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitAPIServerHealthzCode",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "prefetchClusterVersion",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "fetchManagedNamespaces",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitDaemonsetStatuses",
 					},
 				},
 			},
@@ -337,6 +437,15 @@ func TestMonitor(t *testing.T) {
 						Replicas:          2,
 						AvailableReplicas: 1,
 					},
+				}, &appsv1.DaemonSet{ // metric expected
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "daemonset",
+						Namespace: "openshift",
+					},
+					Status: appsv1.DaemonSetStatus{
+						DesiredNumberScheduled: 2,
+						NumberAvailable:        1,
+					},
 				},
 			}
 
@@ -368,8 +477,8 @@ func TestMonitor(t *testing.T) {
 				queryLimit:   1,
 			}
 
-			mon.collectors = []func(context.Context) error{
-				mon.emitReplicasetStatuses,
+			if tt.collectors != nil {
+				mon.collectors = tt.collectors(mon)
 			}
 
 			for _, gauge := range tt.expectedGauges {

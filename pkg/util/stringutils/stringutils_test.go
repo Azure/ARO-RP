@@ -6,6 +6,8 @@ package stringutils
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLastTokenByte(t *testing.T) {
@@ -58,4 +60,16 @@ func TestGroupsIntersect(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIndentLines(t *testing.T) {
+	in := "hello"
+	expected := "  hello"
+	out := IndentLines(in, "  ")
+	assert.Equal(t, expected, out)
+
+	in = "hello\nthere\nfriends"
+	expected = "  hello\n  there\n  friends"
+	out = IndentLines(in, "  ")
+	assert.Equal(t, expected, out)
 }

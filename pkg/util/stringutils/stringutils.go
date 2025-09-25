@@ -33,3 +33,12 @@ func GroupsIntersect(as, bs []string) (gs []string) {
 
 	return gs
 }
+
+func IndentLines(t string, indent string) string {
+	out := &strings.Builder{}
+	for l := range strings.Lines(t) {
+		out.WriteString(indent)
+		out.WriteString(l)
+	}
+	return out.String()
+}
