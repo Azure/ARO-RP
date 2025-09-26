@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+
 	"strings"
 	"sync"
 	"testing"
@@ -90,9 +91,14 @@ func TestMonitor(t *testing.T) {
 			WithSubscriptions(subscriptionsDB)
 
 		mon := NewMonitor(testlogger.WithField("id", i), dialer, dbs, &noopMetricsEmitter, &noopClusterMetricsEmitter, mockEnv).(*monitor)
+
+		// Adding our mocks and shorter intervals to the monitor
 		mon.nsgMonitorBuilder = fakeNsgMonitoringBuilder
 		mon.hiveMonitorBuilder = fakeHiveMonitoringBuilder
 		mon.clusterMonitorBuilder = fakeClusterMonitorBuilder
+		mon.delay = time.Second
+		mon.interval = 2 * time.Second
+		mon.changefeedInterval = time.Second
 
 		workers = append(workers, mon)
 	}
@@ -123,19 +129,23 @@ func TestMonitor(t *testing.T) {
 		fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = pointerutils.ToPtr(0)
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	wg := sync.WaitGroup{}
 
 	for _, mon := range workers {
 		wg.Add(1)
 		go func() {
 			err := mon.Run(ctx)
-			t.Logf("Run Err: %v", err)
+			if err != nil && err != context.DeadlineExceeded {
+				t.Logf("Unexpected error: %v", err)
+			}
 			wg.Done()
 		}()
 	}
 
-	time.Sleep(20 * time.Second)
+	time.Sleep(5 * time.Second)
 	// add a new cluster
 
 	subDoc := newFakeSubscription()
@@ -156,8 +166,12 @@ func TestMonitor(t *testing.T) {
 
 	for k, v := range fakeClusterVisitMonitoringAttempts {
 		if *v < 1 {
-			t.Errorf("Expected that cluster %s got non-zero visits, but it got %v", k, v)
+			t.Errorf("Expected that cluster %s got visits, but it got %v", k, v)
 		}
+	}
+
+	if *fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] < 1 {
+		t.Errorf("Last added cluster %s didn't get any visit: %v", clusterDoc.ResourceID, fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID])
 	}
 
 }
