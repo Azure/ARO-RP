@@ -6,122 +6,47 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
-	"k8s.io/client-go/rest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/hive"
-	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/Azure/ARO-RP/test/util/testliveconfig"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
 var fakeBucketAllocator = bucket.Random{}
 var fakeDefaultLocation = "centralus"
 
-var fakeClusterVisitMonitoringAttempts = map[string]*int{}
-
-func fakeClusterMonitorBuilder(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (monitoring.Monitor, error) {
-	return &fakeMonitor{
-		timeout:        2 * time.Second,
-		clusterCounter: fakeClusterVisitMonitoringAttempts[oc.ID],
-	}, nil
-}
-
-func fakeHiveMonitoringBuilder(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (monitoring.Monitor, error) {
-	return &monitoring.NoOpMonitor{}, nil
-}
-
-func fakeNsgMonitoringBuilder(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor {
-	return &monitoring.NoOpMonitor{}
-}
-
-type fakeMonitor struct {
-	timeout        time.Duration
-	clusterCounter *int
-}
-
-func (fm *fakeMonitor) Monitor(ctx context.Context) error {
-	time.Sleep(fm.timeout)
-	*fm.clusterCounter++
-	return nil
-}
-
 func TestMonitor(t *testing.T) {
 	numWorker := 3
-	workers := []Runnable{}
 
-	openShiftClusterDB, _ := testdatabase.NewFakeOpenShiftClusters()
-	subscriptionsDB, _ := testdatabase.NewFakeSubscriptions()
-	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors()
+	// Setup test environment
+	env := SetupTestEnvironment(t)
+	defer env.Cleanup()
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	testlogger := logrus.NewEntry(logrus.StandardLogger())
-	testlogger.Logger.SetLevel(logrus.DebugLevel)
-	dialer := mock_proxy.NewMockDialer(ctrl)
-	mockEnv := mock_env.NewMockInterface(ctrl)
-	mockEnv.EXPECT().LiveConfig().Return(testliveconfig.NewTestLiveConfig(false, false)).AnyTimes()
-	noopMetricsEmitter := noop.Noop{}
-	noopClusterMetricsEmitter := noop.Noop{}
-
+	// Create multiple monitors for worker testing
+	workers := make([]Runnable, numWorker)
 	for i := 0; i < numWorker; i++ {
-
-		dbs := database.NewDBGroup().
-			WithMonitors(testdatabase.NewFakeMonitorWithExistingClient(fakeMonitorsDBClient)).
-			WithOpenShiftClusters(openShiftClusterDB).
-			WithSubscriptions(subscriptionsDB)
-
-		mon := NewMonitor(testlogger.WithField("id", i), dialer, dbs, &noopMetricsEmitter, &noopClusterMetricsEmitter, mockEnv).(*monitor)
-
-		// Adding our mocks and shorter intervals to the monitor
-		mon.nsgMonitorBuilder = fakeNsgMonitoringBuilder
-		mon.hiveMonitorBuilder = fakeHiveMonitoringBuilder
-		mon.clusterMonitorBuilder = fakeClusterMonitorBuilder
-		mon.delay = time.Second
-		mon.interval = 2 * time.Second
-		mon.changefeedInterval = time.Second
-
-		workers = append(workers, mon)
+		mon := env.CreateTestMonitor(fmt.Sprintf("worker-%d", i))
+		workers[i] = mon
 	}
-
-	monitorsDB.Create(context.TODO(), &api.MonitorDocument{
-		ID: "master",
-		Monitor: &api.Monitor{
-			Buckets: make([]string, 256),
-		},
-	})
-
-	f := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClusterDB)
-	f.Create()
 
 	for i := 0; i < 10; i++ {
 		subDoc := newFakeSubscription()
 		clusterDoc := newFakeCluster(subDoc.ResourceID)
-		_, err := openShiftClusterDB.Create(context.Background(), clusterDoc)
+		_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
 		if err != nil {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
 		}
-		_, err = subscriptionsDB.Create(context.Background(), subDoc)
+		_, err = env.SubscriptionsDB.Create(context.Background(), subDoc)
 		if err != nil {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
@@ -150,12 +75,12 @@ func TestMonitor(t *testing.T) {
 
 	subDoc := newFakeSubscription()
 	clusterDoc := newFakeCluster(subDoc.ResourceID)
-	_, err := openShiftClusterDB.Create(context.Background(), clusterDoc)
+	_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
 	if err != nil {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
 	}
-	_, err = subscriptionsDB.Create(context.Background(), subDoc)
+	_, err = env.SubscriptionsDB.Create(context.Background(), subDoc)
 	if err != nil {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
@@ -173,7 +98,6 @@ func TestMonitor(t *testing.T) {
 	if *fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] < 1 {
 		t.Errorf("Last added cluster %s didn't get any visit: %v", clusterDoc.ResourceID, fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID])
 	}
-
 }
 
 func newFakeSubscription() *api.SubscriptionDocument {
@@ -190,7 +114,6 @@ func newFakeSubscription() *api.SubscriptionDocument {
 			},
 		},
 	}
-
 }
 
 func newFakeCluster(subscriptionID string) *api.OpenShiftClusterDocument {
@@ -264,7 +187,6 @@ func randomClusterResourceID(subscriptionID string) arm.ResourceID {
 
 	resourceID, _ := arm.ParseResourceID(clusterID)
 	return *resourceID
-
 }
 
 func randomString(n int) string {

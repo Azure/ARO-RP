@@ -3,14 +3,15 @@ package monitor
 import (
 	"testing"
 
+	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 	"github.com/Azure/ARO-RP/test/util/testliveconfig"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 )
 
 func TestUpsertAndDelete(t *testing.T) {

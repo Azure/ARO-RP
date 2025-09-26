@@ -10,19 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	"github.com/Azure/ARO-RP/test/util/testliveconfig"
 )
 
 type panicMonitor struct {
@@ -59,39 +51,12 @@ func TestExecute(t *testing.T) {
 }
 
 func TestChangefeedOperations(t *testing.T) {
-	// Setup single monitor for all test operations
-	openShiftClusterDB, _ := testdatabase.NewFakeOpenShiftClusters()
-	subscriptionsDB, _ := testdatabase.NewFakeSubscriptions()
-	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors()
+	// Setup test environment
+	env := SetupTestEnvironment(t)
+	defer env.Cleanup()
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	testlogger := logrus.NewEntry(logrus.StandardLogger())
-	testlogger.Logger.SetLevel(logrus.DebugLevel)
-	dialer := mock_proxy.NewMockDialer(ctrl)
-	mockEnv := mock_env.NewMockInterface(ctrl)
-	mockEnv.EXPECT().LiveConfig().Return(testliveconfig.NewTestLiveConfig(false, false)).AnyTimes()
-	noopMetricsEmitter := noop.Noop{}
-	noopClusterMetricsEmitter := noop.Noop{}
-	dbs := database.NewDBGroup().
-		WithMonitors(testdatabase.NewFakeMonitorWithExistingClient(fakeMonitorsDBClient)).
-		WithOpenShiftClusters(openShiftClusterDB).
-		WithSubscriptions(subscriptionsDB)
-
-	mon := NewMonitor(testlogger, dialer, dbs, &noopMetricsEmitter, &noopClusterMetricsEmitter, mockEnv).(*monitor)
-	mon.nsgMonitorBuilder = fakeNsgMonitoringBuilder
-	mon.hiveMonitorBuilder = fakeHiveMonitoringBuilder
-	mon.clusterMonitorBuilder = fakeClusterMonitorBuilder
-
-	monitorsDB.Create(context.TODO(), &api.MonitorDocument{
-		ID: "master",
-		Monitor: &api.Monitor{
-			Buckets: make([]string, 256),
-		},
-	})
-
-	f := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClusterDB)
-	f.Create()
+	// Create single monitor for changefeed testing
+	mon := env.CreateTestMonitor("changefeed")
 
 	// Start changefeed
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -107,7 +72,7 @@ func TestChangefeedOperations(t *testing.T) {
 
 	mon.changefeedInterval = time.Second / 2
 	go func() {
-		// Running changefeed loop every half second
+		// Running changefeed loop every second
 		mon.changefeed(ctx, mon.baseLog.WithField("component", "changefeed"), stopChan)
 		wg.Done()
 	}()
@@ -154,19 +119,18 @@ func TestChangefeedOperations(t *testing.T) {
 
 			switch op.action {
 			case "create":
-				_, err := openShiftClusterDB.Create(context.Background(), clusterDoc)
+				_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
 				if err != nil {
 					t.Fatalf("Couldn't create cluster doc: %v", err)
 				}
-				_, err = subscriptionsDB.Create(context.Background(), subDoc)
+				_, err = env.SubscriptionsDB.Create(context.Background(), subDoc)
 				if err != nil {
 					t.Fatalf("Couldn't create subscription doc: %v", err)
 				}
-
 			}
 
 			// Wait for changefeed to process
-			time.Sleep(time.Second)
+			time.Sleep(2 * time.Second)
 
 			// Validate expected results
 			if len(mon.docs) != op.expectDocs {
