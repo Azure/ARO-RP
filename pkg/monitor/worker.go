@@ -31,10 +31,6 @@ var nsgMonitoringFrequency = 10 * time.Minute
 // from monitoring
 var subscriptionStateLogFrequency = 30 * time.Minute
 
-// Default loop ticket time for changeFeed
-
-var changefeedLoopTime = 10 * time.Second
-
 // changefeedBatchSize is how many items in the changefeed to fetch in each page
 const changefeedBatchSize = 50
 
@@ -69,7 +65,7 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 // up-to-date.  We don't monitor clusters in Creating state, hence we don't add
 // them to mon.docs.  We also don't monitor clusters in Deleting state; when
 // this state is reached we delete from mon.docs
-func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}, waitTime time.Duration) {
+func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}) {
 	defer recover.Panic(baseLog)
 
 	dbOpenShiftClusters, err := mon.dbGroup.OpenShiftClusters()
@@ -89,7 +85,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 
 	// Align this time with the deletion mechanism.
 	// Go to docs/monitoring.md for the details.
-	t := time.NewTicker(waitTime)
+	t := time.NewTicker(mon.changefeedInterval)
 	defer t.Stop()
 
 	for {
@@ -204,10 +200,10 @@ func (mon *monitor) changefeedMetrics(stop <-chan struct{}) {
 }
 
 // worker reads clusters to be monitored and monitors them
-func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string) {
+func (mon *monitor) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(mon.baseLog)
 
-	time.Sleep(delay)
+	time.Sleep(mon.delay)
 
 	var r azure.Resource
 
@@ -237,7 +233,7 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 	defer nsgMonitoringTicker.Stop()
 	subscriptionStateLoggingTicker := time.NewTicker(subscriptionStateLogFrequency)
 	defer subscriptionStateLoggingTicker.Stop()
-	t := time.NewTicker(time.Minute)
+	t := time.NewTicker(mon.interval)
 	defer t.Stop()
 
 	h := time.Now().Hour()

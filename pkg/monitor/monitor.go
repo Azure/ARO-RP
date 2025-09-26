@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"math/rand"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -34,6 +35,11 @@ type monitorDBs interface {
 	database.DatabaseGroupWithSubscriptions
 }
 
+// Defaults for the different durations. We use different values in tests to speed them up.
+var defaultMonitorDelay = time.Duration(rand.Intn(60)) * time.Second
+var defaultMonitorInterval = time.Minute
+var defaultChangefeedInteval = 10 * time.Second
+
 type monitor struct {
 	baseLog *logrus.Entry
 	dialer  proxy.Dialer
@@ -60,6 +66,10 @@ type monitor struct {
 	clusterMonitorBuilder func(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (monitoring.Monitor, error)
 	nsgMonitorBuilder     func(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor
 	hiveMonitorBuilder    func(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (monitoring.Monitor, error)
+
+	delay              time.Duration // Time until the monitor starts running
+	interval           time.Duration // Interval between monitor runs
+	changefeedInterval time.Duration // Interval between changefeed runs (updates to cluster docs)
 }
 
 // subscriptionInfo stores TenantID for a given subscription. We don't store the
@@ -95,6 +105,10 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		clusterMonitorBuilder: cluster.NewMonitor,
 		nsgMonitorBuilder:     nsg.NewMonitor,
 		hiveMonitorBuilder:    hivemon.NewHiveMonitor,
+
+		delay:              defaultMonitorDelay,
+		interval:           defaultMonitorInterval,
+		changefeedInterval: defaultChangefeedInteval,
 	}
 }
 
@@ -124,7 +138,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 	}
 
 	// fill the cache from the database change feed
-	go mon.changefeed(ctx, mon.baseLog.WithField("component", "changefeed"), nil, changefeedLoopTime)
+	go mon.changefeed(ctx, mon.baseLog.WithField("component", "changefeed"), nil)
 	go mon.changefeedMetrics(nil)
 
 	t := time.NewTicker(10 * time.Second)
