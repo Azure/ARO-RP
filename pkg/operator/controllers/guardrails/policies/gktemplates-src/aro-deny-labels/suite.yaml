@@ -28,7 +28,7 @@ tests:
     object: gator-test/master-node-deny.yaml
     assertions:
     - violations: yes
-      message: "Operation not allowed. Label <node-role.kubernetes.io/master: > matches deny regex: <>"
+      message: "user <fake-k8s-admin-review> not allowed to delete resource with label <node-role.kubernetes.io/master: >"
   - name: worker-node-allowed
     object: gator-test/worker-node-allowed.yaml
     assertions:
