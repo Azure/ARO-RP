@@ -434,9 +434,6 @@
                         }
                     },
                     "networkProfile": {
-                        "healthProbe": {
-                            "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"
-                        },
                         "networkInterfaceConfigurations": [
                             {
                                 "name": "rp-vmss-nic",
@@ -456,6 +453,9 @@
                                                 "loadBalancerBackendAddressPools": [
                                                     {
                                                         "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
+                                                    },
+                                                    {
+                                                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'public-rp-lb', 'rp-backend-pool')]"
                                                     }
                                                 ]
                                             }
@@ -519,7 +519,8 @@
             "apiVersion": "2024-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
-                "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
+                "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
+                "[resourceId('Microsoft.Network/loadBalancers', 'public-rp-lb')]"
             ]
         },
         {

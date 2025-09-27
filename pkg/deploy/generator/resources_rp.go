@@ -538,9 +538,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
-						HealthProbe: &mgmtcompute.APIEntityReference{
-							ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
-						},
 						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
 							{
 								Name: pointerutils.ToPtr("rp-vmss-nic"),
@@ -560,6 +557,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{
 														ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+													},
+													{
+														ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'public-rp-lb', 'rp-backend-pool')]"),
 													},
 												},
 											},
@@ -630,6 +630,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
+			"[resourceId('Microsoft.Network/loadBalancers', 'public-rp-lb')]",
 		},
 	}
 }
