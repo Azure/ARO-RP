@@ -71,7 +71,6 @@ func (g *generator) securityRules(name string, properties *mgmtnetwork.SecurityR
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
-
 func (g *generator) publicIPAddress(name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
@@ -185,26 +184,5 @@ func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessP
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 		Condition:  condition,
 		DependsOn:  dependsOn,
-	}
-}
-
-// publicIPAddressTagged generates a public IP address resource with conditional IP tags
-func (g *generator) publicIPAddressTagged(name, ipTagsParam string) *arm.Resource {
-	sku := &mgmtnetwork.PublicIPAddressSku{
-		Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
-	}
-
-	return &arm.Resource{
-		Resource: &mgmtnetwork.PublicIPAddress{
-			Sku: sku,
-			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: mgmtnetwork.Static,
-				IPTags:                   &[]mgmtnetwork.IPTag{},
-			},
-			Name:     pointerutils.ToPtr(name),
-			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
