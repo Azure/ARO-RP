@@ -147,3 +147,7 @@ func (fm *fakeMonitor) Monitor(ctx context.Context) error {
 	*fm.clusterCounter++
 	return nil
 }
+
+func (fm *fakeMonitor) MonitorName() string {
+	return "fakemonitor"
+}
