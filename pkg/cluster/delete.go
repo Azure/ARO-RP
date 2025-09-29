@@ -395,8 +395,15 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 		return nil
 	}
 
+	// If there's nothing in the platform workload identity profile, there's nothing to do.
+	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil ||
+		len(m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities) == 0 {
+		m.log.Info("no platform workload identities found, skipping federated credential deletion")
+		return nil
+	}
+
 	// before deleting federated credentials, ensure validity of the MSI cert
-	err := m.ensureClusterMsiCertificate(ctx)
+	err := m.ensureClusterMsiCertificate(ctx, time.Now())
 	if err != nil {
 		m.log.Errorf("ensureClusterMsiCertificate failed with error: %v", err)
 		return nil

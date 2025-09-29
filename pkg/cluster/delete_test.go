@@ -23,6 +23,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -528,8 +529,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
 	placeholderString := "placeholder"
 	placeholderTime := time.Now().Format(time.RFC3339)
-	placeholderNotEligibleForRotationTime := time.Now().Add(-1 * time.Hour)
-	placeholderEligibleForRotationTime := time.Now().Add(-1200 * time.Hour)
+	now := time.Date(2025, time.September, 29, 16, 0, 0, 0, time.UTC)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
@@ -560,16 +560,10 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	notEligibleForRotationResponse := azsecrets.GetSecretResponse{
 		Secret: azsecrets.Secret{
 			Value: &credentialsObjectString,
-			Attributes: &azsecrets.SecretAttributes{
-				NotBefore: &placeholderNotEligibleForRotationTime,
-			},
-		},
-	}
-	eligibleForRotationResponse := azsecrets.GetSecretResponse{
-		Secret: azsecrets.Secret{
-			Value: &credentialsObjectString,
-			Attributes: &azsecrets.SecretAttributes{
-				NotBefore: &placeholderEligibleForRotationTime,
+			Attributes: &azsecrets.SecretAttributes{},
+			Tags: map[string]*string{
+				dataplane.RenewAfterKeyVaultTag:       to.StringPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
+				dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
 			},
 		},
 	}
@@ -583,7 +577,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 		wantErr          string
 	}{
 		{
-			name: "success - cluster doc has nil PlatformWorkloadIdentities, MSI certificate valid",
+			name: "success - cluster doc has nil PlatformWorkloadIdentities, exit early",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -603,71 +597,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 					},
 				},
 			},
-			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
-			},
 		},
 		{
-			name: "success - cluster doc has nil PlatformWorkloadIdentities, MSI certificate eligible for rotation",
-			doc: &api.OpenShiftClusterDocument{
-				ID: mockGuid,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Properties: api.OpenShiftClusterProperties{
-						ClusterProfile: api.ClusterProfile{
-							Version:    "4.14.40",
-							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
-						},
-						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
-						},
-					},
-					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
-						},
-						IdentityURL: "https://foo.bar",
-					},
-				},
-			},
-			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
-				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
-			},
-			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(eligibleForRotationResponse, nil).Times(1)
-				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
-			},
-		},
-		{
-			name: "success - cluster doc has non-nil but empty PlatformWorkloadIdentities",
-			doc: &api.OpenShiftClusterDocument{
-				ID: mockGuid,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Properties: api.OpenShiftClusterProperties{
-						ClusterProfile: api.ClusterProfile{
-							Version:    "4.14.40",
-							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
-						},
-						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
-						},
-					},
-					Identity: &api.ManagedServiceIdentity{
-						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {},
-						},
-					},
-				},
-			},
-			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
-			},
-		},
-		{
-			name: "success - cluster doc has no oidc issuer so no actions performed",
+			name: "success - cluster doc has no oidc issuer, exit early",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{

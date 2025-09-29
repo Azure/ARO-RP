@@ -95,7 +95,9 @@ func (m *manager) getZerothSteps() []steps.Step {
 		// in the cluster doc for MSI stuff to work.
 		managedIdentitySteps := []steps.Step{
 			steps.Action(m.fixupClusterMsiTenantID),
-			steps.Action(m.ensureClusterMsiCertificate),
+			steps.Action(func(ctx context.Context) error {
+				return m.ensureClusterMsiCertificate(ctx, time.Now())
+			}),
 			steps.Action(m.initializeClusterMsiClients),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
@@ -248,7 +250,9 @@ func (m *manager) Update(ctx context.Context) error {
 			// Since API converters rebuild the struct during PUT/PATCH, we need to repopulate the tenant ID
 			// in the cluster doc for MSI stuff to work.
 			steps.Action(m.fixupClusterMsiTenantID),
-			steps.Action(m.ensureClusterMsiCertificate),
+			steps.Action(func(ctx context.Context) error {
+				return m.ensureClusterMsiCertificate(ctx, time.Now())
+			}),
 			steps.Action(m.initializeClusterMsiClients),
 			steps.Action(m.platformWorkloadIdentityIDs),
 		)
@@ -380,7 +384,9 @@ func (m *manager) bootstrap() []steps.Step {
 	// to advance
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
-			steps.Action(m.ensureClusterMsiCertificate),
+			steps.Action(func(ctx context.Context) error {
+				return m.ensureClusterMsiCertificate(ctx, time.Now())
+			}),
 			steps.Action(m.initializeClusterMsiClients),
 			steps.Action(m.platformWorkloadIdentityIDs),
 		)
