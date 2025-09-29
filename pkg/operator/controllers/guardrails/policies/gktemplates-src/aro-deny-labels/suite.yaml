@@ -11,12 +11,29 @@ tests:
     object: gator-test/master-machine-deny.yaml
     assertions:
     - violations: yes
-      message: "Operation not allowed. Label <machine.openshift.io/cluster-api-machine-role: master> matches deny regex: <master>"
+      message: "user <kube-review> not allowed to delete resource with label <machine.openshift.io/cluster-api-machine-role: master>"
   - name: worker-machine-allowed
     object: gator-test/worker-machine-allowed.yaml
     assertions:
     - violations: no
   - name: no-label-machine-allowed
     object: gator-test/no-label-machine-allowed.yaml
+    assertions:
+    - violations: no
+- name: nodes-deny
+  template: ../../gktemplates/aro-deny-labels.yaml
+  constraint: ../../gkconstraints-test/aro-nodes-deny.yaml
+  cases:
+  - name: master-node-deny
+    object: gator-test/master-node-deny.yaml
+    assertions:
+    - violations: yes
+      message: "Operation not allowed. Label <node-role.kubernetes.io/master: > matches deny regex: <>"
+  - name: worker-node-allowed
+    object: gator-test/worker-node-allowed.yaml
+    assertions:
+    - violations: no
+  - name: no-label-node-allowed
+    object: gator-test/no-label-node-allowed.yaml
     assertions:
     - violations: no

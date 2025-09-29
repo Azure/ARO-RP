@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"sync"
@@ -27,6 +28,11 @@ import (
 
 // nsgMonitoringFrequency is used for initializing NSG monitoring ticker
 var nsgMonitoringFrequency = 10 * time.Minute
+
+// subscriptionStateLogFrequency is used for initializing a ticker used to
+// send log messages when a cluster's subscription state is stopping us
+// from monitoring
+var subscriptionStateLogFrequency = 30 * time.Minute
 
 // changefeedBatchSize is how many items in the changefeed to fetch in each page
 const changefeedBatchSize = 50
@@ -226,6 +232,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	nsgMonitoringTicker := time.NewTicker(nsgMonitoringFrequency)
 	defer nsgMonitoringTicker.Stop()
+	subscriptionStateLoggingTicker := time.NewTicker(subscriptionStateLogFrequency)
+	defer subscriptionStateLoggingTicker.Stop()
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -254,6 +262,14 @@ out:
 
 		select {
 		case <-t.C:
+			select {
+			case <-subscriptionStateLoggingTicker.C:
+				// The changefeed filters out subscriptions in invalid states
+				if sub == nil {
+					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", v.doc.OpenShiftCluster.ID)
+				}
+			default:
+			}
 		case <-stop:
 			break out
 		}
@@ -276,9 +292,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	dims := map[string]string{
-		dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
-		dimension.Location:          doc.OpenShiftCluster.Location,
-		dimension.SubscriptionID:    subID,
+		dimension.ResourceID:     doc.OpenShiftCluster.ID,
+		dimension.Location:       doc.OpenShiftCluster.Location,
+		dimension.SubscriptionID: subID,
 	}
 
 	var monitors []monitoring.Monitor
@@ -290,9 +306,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
 		if err != nil {
 			log.Error(err)
-			mon.m.EmitGauge("monitor.hive.failedworker", 1, map[string]string{
-				"resourceId": doc.OpenShiftCluster.ID,
-			})
+			mon.m.EmitGauge("monitor.hive.failedworker", 1, dims)
 		} else {
 			monitors = append(monitors, h)
 		}
@@ -303,15 +317,17 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
-		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
-			"resourceId": doc.OpenShiftCluster.ID,
-		})
+		mon.m.EmitGauge("monitor.cluster.failedworker", 1, dims)
 		return
 	}
 
 	monitors = append(monitors, c, nsgMon)
 	allJobsDone := make(chan bool)
-	go execute(ctx, log, allJobsDone, monitors)
+	onPanic := func(m monitoring.Monitor) {
+		// emit a failed worker metric on panic
+		mon.m.EmitGauge("monitor."+m.MonitorName()+".failedworker", 1, dims)
+	}
+	go execute(ctx, log, allJobsDone, monitors, onPanic)
 
 	select {
 	case <-allJobsDone:
@@ -321,7 +337,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 }
 
-func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors []monitoring.Monitor) {
+func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors []monitoring.Monitor, onPanic func(monitoring.Monitor)) {
 	var wg sync.WaitGroup
 
 	for _, monitor := range monitors {
@@ -330,6 +346,9 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors 
 			defer wg.Done()
 			err := monitor.Monitor(ctx)
 			if err != nil {
+				if errors.Is(err, &monitoring.MonitorPanic{}) {
+					onPanic(monitor)
+				}
 				log.Error(err)
 			}
 		}()

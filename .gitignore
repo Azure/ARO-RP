@@ -45,3 +45,5 @@ megalinter-reports/
 podmanlog
 .python-version
 .tool-versions
+./venv
+/CLAUDE.md

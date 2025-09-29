@@ -4,7 +4,6 @@ package dimension
 // Licensed under the Apache License 2.0.
 
 const (
-	ClusterResourceID    = "clusterresourceid"
 	Location             = "location"
 	ClusterResourceGroup = "resourceGroup"
 	ResourceID           = "resourceId"

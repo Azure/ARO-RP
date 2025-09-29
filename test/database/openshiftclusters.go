@@ -166,7 +166,9 @@ func fakeOpenShiftClustersOnlyResourceID(client cosmosdb.OpenShiftClusterDocumen
 
 	for _, d := range docs {
 		newDocs = append(newDocs, &api.OpenShiftClusterDocument{
-			Key: d.Key,
+			ID:     d.ID,
+			Key:    d.Key,
+			Bucket: d.Bucket,
 		})
 	}
 

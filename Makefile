@@ -14,7 +14,7 @@ MARINER_VERSION = 20250701
 FLUENTBIT_VERSION = 4.0.4
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.7.2
-AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
+AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
 
 # Golang version go mod tidy compatibility
@@ -32,8 +32,7 @@ else
 	VERSION = $(TAG)
 endif
 
-REGISTRY ?= ${REGISTRY}
-BUILDER_REGISTRY ?= ${BUILDER_REGISTRY}
+# REGISTRY and BUILDER_REGISTRY are set conditionally below based on RP_IMAGE_ACR
 # default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
@@ -238,7 +237,8 @@ pyenv:
 	. pyenv/bin/activate && \
 		pip install -U pip && \
 		pip install -r requirements.txt && \
-		azdev setup -r .
+		azdev setup -r . && \
+		az config set extension.dev_sources=$(PWD)/python
 
 .PHONY: secrets
 secrets:
