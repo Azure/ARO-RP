@@ -18,6 +18,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -30,6 +31,8 @@ import (
 
 func TestEnsureClusterMsiCertificate(t *testing.T) {
 	ctx := context.Background()
+	now := time.Date(2025, time.September, 29, 16, 0, 0, 0, time.UTC)
+
 	mockGuid := "00000000-0000-0000-0000-000000000000"
 	clusterRGName := "aro-cluster"
 	miName := "aro-cluster-msi"
@@ -43,50 +46,32 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	}
 
 	placeholderString := "placeholder"
-	placeholderTime := time.Now().Format(time.RFC3339)
-	placeholderNotEligibleForRotationTime := time.Now().Add(-1 * time.Hour)
-	placeholderEligibleForRotationTime := time.Now().Add(-1200 * time.Hour)
+	placeholderTime := now.Format(time.RFC3339)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientID:                   &placeholderString,
-				ClientSecret:               &placeholderString,
-				TenantID:                   &placeholderString,
-				ResourceID:                 &miResourceId,
-				AuthenticationEndpoint:     &placeholderString,
-				CannotRenewAfter:           &placeholderTime,
-				ClientSecretURL:            &placeholderString,
-				MtlsAuthenticationEndpoint: &placeholderString,
-				NotAfter:                   &placeholderTime,
-				NotBefore:                  &placeholderTime,
-				RenewAfter:                 &placeholderTime,
-				CustomClaims: &dataplane.CustomClaims{
-					XMSAzNwperimid: []string{placeholderString},
-					XMSAzTm:        &placeholderString,
-				},
-				ObjectID: &placeholderString,
+				ResourceID:       &miResourceId,
+				ClientID:         &placeholderString,
+				ClientSecret:     &placeholderString,
+				TenantID:         &placeholderString,
+				NotAfter:         &placeholderTime,
+				NotBefore:        &placeholderTime,
+				RenewAfter:       &placeholderTime,
+				CannotRenewAfter: &placeholderTime,
 			},
 		},
 	}
 	alternateCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientID:                   &placeholderString,
-				ClientSecret:               &placeholderString,
-				TenantID:                   &placeholderString,
-				ResourceID:                 &altResourceId,
-				AuthenticationEndpoint:     &placeholderString,
-				CannotRenewAfter:           &placeholderTime,
-				ClientSecretURL:            &placeholderString,
-				MtlsAuthenticationEndpoint: &placeholderString,
-				NotAfter:                   &placeholderTime,
-				NotBefore:                  &placeholderTime,
-				RenewAfter:                 &placeholderTime,
-				CustomClaims: &dataplane.CustomClaims{
-					XMSAzNwperimid: []string{placeholderString},
-					XMSAzTm:        &placeholderString,
-				},
-				ObjectID: &placeholderString,
+				ResourceID:       &altResourceId,
+				ClientID:         &placeholderString,
+				ClientSecret:     &placeholderString,
+				TenantID:         &placeholderString,
+				NotAfter:         &placeholderTime,
+				NotBefore:        &placeholderTime,
+				RenewAfter:       &placeholderTime,
+				CannotRenewAfter: &placeholderTime,
 			},
 		},
 	}
@@ -104,13 +89,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
 						},
 					},
 				},
@@ -126,13 +106,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
 						},
 					},
 				},
@@ -151,13 +126,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
 						},
 					},
 				},
@@ -166,17 +136,15 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
-				if err != nil {
-					panic(err)
-				}
-
-				credentialsObjectString := string(credentialsObjectBuffer)
+				credBytes, _ := json.Marshal(placeholderCredentialsObject)
+				credString := string(credBytes)
 				getSecretResponse := azsecrets.GetSecretResponse{
 					Secret: azsecrets.Secret{
-						Value: &credentialsObjectString,
-						Attributes: &azsecrets.SecretAttributes{
-							NotBefore: &placeholderEligibleForRotationTime,
+						Attributes: &azsecrets.SecretAttributes{},
+						Value:      &credString,
+						Tags: map[string]*string{
+							dataplane.RenewAfterKeyVaultTag:       to.StringPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -190,29 +158,22 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
 						},
 					},
 				},
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
-				if err != nil {
-					panic(err)
-				}
-
-				credentialsObjectString := string(credentialsObjectBuffer)
+				credBytes, _ := json.Marshal(placeholderCredentialsObject)
+				credString := string(credBytes)
 				getSecretResponse := azsecrets.GetSecretResponse{
 					Secret: azsecrets.Secret{
-						Value: &credentialsObjectString,
-						Attributes: &azsecrets.SecretAttributes{
-							NotBefore: &placeholderNotEligibleForRotationTime,
+						Attributes: &azsecrets.SecretAttributes{},
+						Value:      &credString,
+						Tags: map[string]*string{
+							dataplane.RenewAfterKeyVaultTag:       to.StringPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -225,13 +186,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
 						},
 					},
 				},
@@ -250,13 +206,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							altResourceId: {},
 						},
 					},
 				},
@@ -265,17 +216,15 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(alternateCredentialsObject, nil)
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				credentialsObjectBuffer, err := json.Marshal(alternateCredentialsObject)
-				if err != nil {
-					panic(err)
-				}
-
-				credentialsObjectString := string(credentialsObjectBuffer)
+				credBytes, _ := json.Marshal(placeholderCredentialsObject)
+				credString := string(credBytes)
 				getSecretResponse := azsecrets.GetSecretResponse{
 					Secret: azsecrets.Secret{
-						Value: &credentialsObjectString,
-						Attributes: &azsecrets.SecretAttributes{
-							NotBefore: &placeholderNotEligibleForRotationTime,
+						Attributes: &azsecrets.SecretAttributes{},
+						Value:      &credString,
+						Tags: map[string]*string{
+							dataplane.RenewAfterKeyVaultTag:       to.StringPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -290,71 +239,189 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				doc: tt.doc,
-			}
-
 			factory := mock_msidataplane.NewMockClientFactory(controller)
-			client := mock_msidataplane.NewMockClient(controller)
 			if tt.msiDataplaneStub != nil {
+				client := mock_msidataplane.NewMockClient(controller)
 				tt.msiDataplaneStub(client)
+				factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 			}
-			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
-
-			m.msiDataplane = factory
 
 			mockKvClient := mock_azsecrets.NewMockClient(controller)
 			if tt.kvClientMocks != nil {
 				tt.kvClientMocks(mockKvClient)
 			}
 
-			m.clusterMsiKeyVaultStore = mockKvClient
+			m := manager{
+				log:                     logrus.NewEntry(logrus.StandardLogger()),
+				doc:                     tt.doc,
+				msiDataplane:            factory,
+				clusterMsiKeyVaultStore: mockKvClient,
+			}
 
-			err := m.ensureClusterMsiCertificate(ctx)
+			err := m.ensureClusterMsiCertificate(ctx, now)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
 
-func TestIsEligibleForRenewal(t *testing.T) {
-	m := &manager{}
+func TestNeedsRefresh(t *testing.T) {
+	now := time.Date(2025, 9, 16, 16, 0, 0, 0, time.UTC)
 
-	now := time.Now()
+	renewTime := now.Add(-1 * time.Hour).Format(time.RFC3339)
+	expireTime := now.Add(1 * time.Hour).Format(time.RFC3339)
 
-	tests := []struct {
-		name      string
-		notBefore time.Time
-		expected  bool
+	testCases := []struct {
+		name        string
+		item        *azsecrets.GetSecretResponse
+		currentTime time.Time
+		wantBool    bool
+		wantErr     bool
+		errContains string
 	}{
 		{
-			name:      "Eligible - NotBefore 47 days ago",
-			notBefore: now.AddDate(0, 0, -47),
-			expected:  true,
+			name: "success - needs refresh",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       to.StringPtr(renewTime),
+						dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(expireTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    true,
+			wantErr:     false,
 		},
 		{
-			name:      "Not Eligible - NotBefore 45 days ago",
-			notBefore: now.AddDate(0, 0, -45),
-			expected:  false,
+			name: "success - not yet refreshing time",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       to.StringPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     false,
 		},
 		{
-			name:      "Exactly 46 days ago",
-			notBefore: now.AddDate(0, 0, -46),
-			expected:  true,
+			name: "success - too late to refresh",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       to.StringPtr(now.Add(-2 * time.Hour).Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     false,
+		},
+		{
+			name: "exactly at renewal time",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       to.StringPtr(now.Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(expireTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    true,
+			wantErr:     false,
+		},
+		{
+			name: "exactly at expiration time",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       to.StringPtr(renewTime),
+						dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(now.Format(time.RFC3339)),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    true,
+			wantErr:     false,
+		},
+		{
+			name:        "tags are nil",
+			item:        &azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Tags: nil}},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     true,
+			errContains: "secret tags are nil",
+		},
+		{
+			name: "error - missing renew_after tag",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(expireTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     true,
+			errContains: "missing or invalid tag: renew_after",
+		},
+		{
+			name: "error - missing cannot_renew_after Tag",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag: to.StringPtr(renewTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     true,
+			errContains: "missing or invalid tag: cannot_renew_after",
+		},
+		{
+			name: "error - invalid tag time format",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       to.StringPtr("not-a-valid-time"),
+						dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(expireTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     true,
+			errContains: "invalid time format for tag renew_after: parsing time \"not-a-valid-time\"",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			secret := azsecrets.GetSecretResponse{
-				Secret: azsecrets.Secret{
-					Attributes: &azsecrets.SecretAttributes{
-						NotBefore: &tt.notBefore,
-					},
-				},
+	m := &manager{}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotBool, gotErr := m.needsRefresh(tc.item, tc.currentTime)
+
+			if tc.wantErr {
+				if gotErr == nil {
+					t.Errorf("expected an error, but got nil")
+				}
+				if !strings.Contains(gotErr.Error(), tc.errContains) {
+					t.Errorf("expected error to contain %q, but got %q", tc.errContains, gotErr.Error())
+				}
+			} else {
+				if gotErr != nil {
+					t.Errorf("did not expect an error, but got: %v", gotErr)
+				}
+				if gotBool != tc.wantBool {
+					t.Errorf("expected bool %v, but got %v", tc.wantBool, gotBool)
+				}
 			}
-			result := m.isEligibleForRenewal(secret)
-			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
