@@ -31,64 +31,25 @@ var (
 // function will request and persist a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context, now time.Time) error {
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
-	needsNewCert := false
 
-	if existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
-		if existingMsiCertificate.Attributes != nil {
-			// if the secret's value is empty or the secret is for a different
-			// identity, we need to issue a new certificate
-			if existingMsiCertificate.Value == nil {
-				// MSI cert is empty for some reason, create a new cert
-				needsNewCert = true
-			} else {
-				keyvaultCredentials := &dataplane.ManagedIdentityCredentials{}
-				err := json.Unmarshal([]byte(*existingMsiCertificate.Value), keyvaultCredentials)
-				if err != nil {
-					return err
-				}
-
-				// If the credentials object has no identities, it's invalid.
-				// This check prevents a panic from an index out-of-bounds error below.
-				if len(keyvaultCredentials.ExplicitIdentities) == 0 {
-					needsNewCert = true
-				} else {
-					clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
-					if err != nil {
-						return err
-					}
-
-					if *keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterMsiResourceId.String() {
-						// cluster update - identity updated, re-request and replace the MSI cert
-						needsNewCert = true
-					}
-				}
-			}
-
-			// Only check for time-based renewal if no other condition has already
-			// determined that a new certificate is needed.
-			if !needsNewCert {
-				refreshNeeded, err := m.needsRefresh(&existingMsiCertificate, now)
-				if err != nil {
-					return err
-				}
-
-				if refreshNeeded {
-					// cluster update - MSI cert is eligible for refresh
-					needsNewCert = true
-				}
-			}
-		}
-	} else if azureerrors.IsNotFoundError(err) {
-		// cluster create - request and persist MSI cert
-		needsNewCert = true
-	} else {
-		// ie: when there is an error in the dataplane
+	existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil)
+	if err != nil && !azureerrors.IsNotFoundError(err) {
 		return err
 	}
 
-	if !needsNewCert {
-		return nil
+	// If the secret exists, we need to decide if it should be replaced.
+	if err == nil {
+		replace, err := m.shouldReplaceMSICertificate(&existingMsiCertificate, now)
+		if err != nil {
+			return err
+		}
+		if !replace {
+			// The existing certificate is valid, so we're done.
+			return nil
+		}
 	}
+	// If we reach this point, it's because the secret was not found, or it was found but is invalid/expired.
+	// In either case, we need to create a new one.
 
 	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
 	if err != nil {
@@ -116,6 +77,42 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context, now time.Time
 
 	_, err = m.clusterMsiKeyVaultStore.SetSecret(ctx, name, parameters, nil)
 	return err
+}
+
+func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
+	if cert.Attributes == nil || cert.Value == nil {
+		return true, nil
+	}
+
+	var keyvaultCredentials dataplane.ManagedIdentityCredentials
+	if err := json.Unmarshal([]byte(*cert.Value), &keyvaultCredentials); err != nil {
+		return false, err
+	}
+
+	if len(keyvaultCredentials.ExplicitIdentities) == 0 {
+		return true, nil
+	}
+
+	// Check if the secret is for a different identity (e.g., after a cluster update).
+	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	if err != nil {
+		return false, err
+	}
+	if *keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterMsiResourceId.String() {
+		return true, nil
+	}
+
+	// Check if the certificate is within its renewal window.
+	// In the future, certificate refreshing will be handled by the Certificate Refresher. For now, handle it here.
+	refreshNeeded, err := m.needsRefresh(cert, now)
+	if err != nil {
+		return false, err
+	}
+	if refreshNeeded {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation
