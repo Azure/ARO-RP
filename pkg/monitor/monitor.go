@@ -155,7 +155,6 @@ func (mon *monitor) Run(ctx context.Context) error {
 		}
 
 		// try to become master and share buckets across registered monitors
-		mon.baseLog.Info("Trying to become master")
 		err = mon.master(ctx)
 		if err != nil {
 			mon.baseLog.Error(err)

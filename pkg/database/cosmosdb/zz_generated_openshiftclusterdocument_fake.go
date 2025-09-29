@@ -345,7 +345,7 @@ func (i *fakeOpenShiftClusterDocumentIterator) Next(ctx context.Context, maxItem
 			max = len(i.openShiftClusterDocuments)
 		}
 		openShiftClusterDocuments = i.openShiftClusterDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

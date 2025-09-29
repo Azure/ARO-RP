@@ -106,6 +106,12 @@ func TestChangefeedOperations(t *testing.T) {
 			provisioningState: api.ProvisioningStateDeleting,
 			expectDocs:        2,
 			expectSubs:        2,
+		}, {
+			name:              "create cluster in creating state - should be ignored",
+			action:            "create",
+			provisioningState: api.ProvisioningStateCreating,
+			expectDocs:        2,
+			expectSubs:        2,
 		},
 	}
 

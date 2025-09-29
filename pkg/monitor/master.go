@@ -51,7 +51,6 @@ func (mon *monitor) master(ctx context.Context) error {
 			}
 		}
 
-		mon.baseLog.Info("Balancing buckets across monitors")
 		mon.balance(monitors, doc)
 
 		return nil

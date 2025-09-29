@@ -199,30 +199,3 @@ func randomString(n int) string {
 
 	return string(b)
 }
-
-func TestPointerStuff(t *testing.T) {
-	t.Log("Starting")
-	thingmap := map[string]*int{}
-	one := 0
-	two := 0
-	thingmap["one"] = &one
-	thingmap["two"] = &two
-	wg := &sync.WaitGroup{}
-	increase := func(incNum *int) {
-		*incNum++
-		wg.Done()
-	}
-	wg.Add(1)
-	go increase(thingmap["one"])
-	wg.Add(1)
-	go increase(thingmap["two"])
-	time.Sleep(time.Second)
-	wg.Add(1)
-	go increase(thingmap["one"])
-
-	wg.Wait()
-	for k, v := range thingmap {
-		t.Logf("%s: %d", k, *v)
-	}
-	t.Fail()
-}

@@ -154,7 +154,6 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 					delete(mon.subs, id)
 					continue
 				}
-				mon.baseLog.Infof("Got Subscription in changefeed: %s", sub.ID)
 				c, ok := mon.subs[id]
 				if ok {
 					// update this as subscription might have moved tenants
