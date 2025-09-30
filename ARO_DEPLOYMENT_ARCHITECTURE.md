@@ -4,7 +4,7 @@ This document describes how the instances of the Azure Red Hat OpenShift (ARO) R
 
 ## Overview
 
-The ARO Resource Provider (RP) and Gateway are deployed as **Azure Virtual Machine Scale Sets (VMSS)** using ARM templates. This architecture provides high availability, scalability, and version management capabilities.
+The ARO Resource Provider (RP) and Gateway are deployed as **Azure Virtual Machine Scale Sets (VMSS)** using ARM templates.
 
 ## Architecture Diagram
 
