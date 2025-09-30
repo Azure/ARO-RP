@@ -160,6 +160,7 @@ func (g *generator) rpVnet() *arm.Resource {
 	return g.virtualNetwork("rp-vnet", addressPrefix, &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
 }
 
+// Generate Private Endpoint vnet Resource
 func (g *generator) rpPEVnet() *arm.Resource {
 	return g.virtualNetwork("rp-pe-vnet-001", "10.0.4.0/22", &[]mgmtnetwork.Subnet{
 		{
@@ -697,6 +698,35 @@ func (g *generator) rpServiceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolic
 	}
 }
 
+func (g *generator) rpKeyvaultNSP() *arm.Resource {
+	return g.networkSecurityPerimeter("aro-keyvaults-nsp")
+}
+func (g *generator) rpKeyvaultNSPProfile() *arm.Resource {
+	return g.networkSecurityPerimeterProfile("aro-keyvaults-nsp")
+}
+
+func (g *generator) rpKeyvaultNSPAssociations() []*arm.Resource {
+	clusterKeyvaultResId := fmt.Sprintf(
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
+		env.ClusterKeyvaultSuffix,
+	)
+	portalKeyvaultResId := fmt.Sprintf(
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
+		env.PortalKeyvaultSuffix,
+	)
+	serviceKeyvaultResId := fmt.Sprintf(
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
+		env.ServiceKeyvaultSuffix,
+	)
+
+	return []*arm.Resource{
+		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp"+env.ClusterKeyvaultSuffix, clusterKeyvaultResId),
+		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp"+env.PortalKeyvaultSuffix, portalKeyvaultResId),
+		g.networkSecurityPerimeterAssociation("aro-keyvaults-nsp", "nsp"+env.ServiceKeyvaultSuffix, serviceKeyvaultResId),
+	}
+}
+
+
 func (g *generator) rpClusterKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
@@ -951,6 +981,12 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("''", "rp"))
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "globalDevops"))
 	}
+
+	cosmosNSP := g.networkSecurityPerimeter("cosmos-nsp")
+	cosmosNSPProfile := g.networkSecurityPerimeterProfile("cosmos-nsp")
+	cosmosNSPAssociation := g.networkSecurityPerimeterAssociation("cosmos-nsp", "cosmos-nsp-association","[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]")
+
+	rs = append(rs, cosmosNSP, cosmosNSPProfile, cosmosNSPAssociation)
 
 	return rs
 }
