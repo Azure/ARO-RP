@@ -345,7 +345,7 @@ func (i *fakeTemplateIterator) Next(ctx context.Context, maxItemCount int) (*pkg
 			max = len(i.templates)
 		}
 		templates = i.templates[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 
