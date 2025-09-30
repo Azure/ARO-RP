@@ -86,7 +86,7 @@ type prod struct {
 	features map[Feature]bool
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, component ServiceName) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod, error) {
 	if err := ValidateVars("AZURE_FP_CLIENT_ID", "DOMAIN_NAME"); err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceName) (*pr
 		}
 	}
 
-	core, err := NewCore(ctx, log, component)
+	core, err := NewCore(ctx, log, service)
 	if err != nil {
 		return nil, err
 	}
