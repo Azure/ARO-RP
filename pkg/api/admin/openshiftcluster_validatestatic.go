@@ -5,6 +5,7 @@ package admin
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
@@ -36,16 +37,9 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 }
 
 func validateMaintenanceTask(task MaintenanceTask) error {
-	if task != "" &&
-		task != MaintenanceTaskEverything &&
-		task != MaintenanceTaskOperator &&
-		task != MaintenanceTaskRenewCerts &&
-		task != MaintenanceTaskPending &&
-		task != MaintenanceTaskNone &&
-		task != MaintenanceTaskSyncClusterObject &&
-		task != MaintenanceTaskCustomerActionNeeded {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.maintenanceTask", "Invalid enum parameter.")
+	if task == "" || slices.Contains(validMaintenanceTasks, task) {
+		return nil
 	}
 
-	return nil
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.maintenanceTask", "Invalid enum parameter.")
 }

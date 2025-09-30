@@ -50,14 +50,10 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 }
 
 func (m *manager) adminUpdate() []steps.Step {
-	task := m.doc.OpenShiftCluster.Properties.MaintenanceTask
-	isEverything := task == api.MaintenanceTaskEverything || task == ""
-	isOperator := task == api.MaintenanceTaskOperator
-	isRenewCerts := task == api.MaintenanceTaskRenewCerts
-	isSyncClusterObject := task == api.MaintenanceTaskSyncClusterObject
-
 	stepsToRun := m.getZerothSteps()
-	if isEverything {
+
+	switch m.doc.OpenShiftCluster.Properties.MaintenanceTask {
+	case api.MaintenanceTaskEverything, "":
 		stepsToRun = utilgenerics.ConcatMultipleSlices(
 			stepsToRun, m.getGeneralFixesSteps(), m.getCertificateRenewalSteps(),
 		)
@@ -67,21 +63,21 @@ func (m *manager) adminUpdate() []steps.Step {
 		if m.adoptViaHive && !m.clusterWasCreatedByHive() {
 			stepsToRun = append(stepsToRun, m.getHiveAdoptionAndReconciliationSteps()...)
 		}
-	} else if isOperator {
+		// We don't run this on an operator-only deploy as PUCM scripts then cannot
+		// determine if the cluster has been fully admin-updated
+		// Run this last so we capture the resource provider only once the upgrade has been fully performed
+		stepsToRun = append(stepsToRun, steps.Action(m.updateProvisionedBy))
+
+	case api.MaintenanceTaskOperator:
 		if m.shouldUpdateOperator() {
 			stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
 		}
-	} else if isRenewCerts {
+	case api.MaintenanceTaskRenewCerts:
 		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
-	} else if isSyncClusterObject {
+	case api.MaintenanceTaskSyncClusterObject:
 		stepsToRun = append(stepsToRun, m.getSyncClusterObjectSteps()...)
-	}
-
-	// We don't run this on an operator-only deploy as PUCM scripts then cannot
-	// determine if the cluster has been fully admin-updated
-	// Run this last so we capture the resource provider only once the upgrade has been fully performed
-	if isEverything {
-		stepsToRun = append(stepsToRun, steps.Action(m.updateProvisionedBy))
+	case api.MaintenanceTaskMigrateLoadBalancer:
+		stepsToRun = append(stepsToRun, m.getMigrateLoadBalancerSteps()...)
 	}
 
 	return stepsToRun
@@ -201,6 +197,14 @@ func (m *manager) getSyncClusterObjectSteps() []steps.Step {
 		steps.Action(m.syncClusterObject),
 	}
 	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
+}
+
+func (m *manager) getMigrateLoadBalancerSteps() []steps.Step {
+	steps := []steps.Step{
+		steps.Action(m.migrateInternalLoadBalancerZones),
+		steps.Action(m.fixSSH),
+	}
+	return steps
 }
 
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
