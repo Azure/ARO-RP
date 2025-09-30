@@ -77,6 +77,8 @@ main() {
         "443/tcp"
         # Portal web
         "444/tcp"
+        # MIMO Actuator healthz
+        "445/tcp"
         # Portal ssh
         "2222/tcp"
         # JIT ssh
@@ -148,6 +150,7 @@ main() {
         ["rp"]="10.88.0.2"
         ["monitor"]="10.88.0.3"
         ["portal"]="10.88.0.4"
+        ["mimo_actuator"]="10.88.0.10"
         ["mise"]="10.88.0.5"
         ["otel_collector"]="10.88.0.6"
         ["mdm"]="10.88.0.8"
@@ -197,6 +200,7 @@ MSI_RP_ENDPOINT='$MSIRPENDPOINT'
         "aro-monitor"
         "aro-otel-collector"
         "aro-portal"
+        "aro-mimo-actuator"
         "aro-rp"
         "azsecd"
         "mdsd"
