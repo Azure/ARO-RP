@@ -108,7 +108,7 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 
 func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core, error) {
 	// set the service field on the logger (e.g. monitor, gateway)
-	log := _log.WithField("service", strings.ReplaceAll(strings.ToLower(string(service)), "_", "-"))
+	log := LoggerForService(service, _log)
 
 	// assign results of package-level functions to struct's environment flags
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
@@ -149,7 +149,8 @@ func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core
 // (e.g. AME).
 func NewCoreForCI(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core, error) {
 	// set the service field on the logger (e.g. monitor, gateway)
-	log := _log.WithField("service", strings.ReplaceAll(strings.ToLower(string(service)), "_", "-"))
+	log := LoggerForService(service, _log)
+
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
