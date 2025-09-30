@@ -47,6 +47,7 @@ func main() {
 	}()
 
 	log.Printf("starting, git commit %s", version.GitCommit)
+	log.Printf("command line: '%s'", strings.Join(os.Args, " "))
 
 	var err error
 	switch serviceName {
