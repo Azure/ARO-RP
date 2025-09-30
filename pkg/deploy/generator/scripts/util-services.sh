@@ -504,6 +504,15 @@ IPADDRESS='$ipaddress'"
             \"Default\": \"Information\",
             \"Microsoft\": \"Information\",
             \"Microsoft.Hosting.Lifetime\": \"Information\"
+        },
+        \"Console\": {
+            \"FormatterName\": \"Simple\",
+            \"FormatterOptions\": {
+                \"IncludeScopes\": true,
+                \"SingleLine\": true,
+                \"TimestampFormat\": \"HH:mm:ss.ffff \",
+                \"UseUtcTimestamp\": true
+            }
         }
     }
 }"
