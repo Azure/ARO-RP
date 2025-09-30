@@ -90,6 +90,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		serveHealthz: true,
 	}
 
+	s.cond = sync.NewCond(&s.mu)
 	s.b = buckets.NewBucketWorker(log, s.spawnWorker, &s.mu)
 	s.b.SetBuckets(ownedBuckets)
 
