@@ -23,7 +23,6 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -559,11 +558,11 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	credentialsObjectString := string(credentialsObjectBuffer)
 	notEligibleForRotationResponse := azsecrets.GetSecretResponse{
 		Secret: azsecrets.Secret{
-			Value: &credentialsObjectString,
+			Value:      &credentialsObjectString,
 			Attributes: &azsecrets.SecretAttributes{},
 			Tags: map[string]*string{
-				dataplane.RenewAfterKeyVaultTag:       to.StringPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
-				dataplane.CannotRenewAfterKeyVaultTag: to.StringPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
+				dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
+				dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
 			},
 		},
 	}
