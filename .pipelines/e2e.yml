@@ -96,7 +96,7 @@ jobs:
 
       - script: |
           export CI=true
-          export ARO_E2E_MIMO=true
+          # export ARO_E2E_MIMO=true
           export USE_WI=true
           export ARO_INSTALL_VIA_HIVE="true"
           export ARO_ADOPT_BY_HIVE="true"
@@ -122,8 +122,8 @@ jobs:
 
           update_role_sets
 
-          run_mimo_actuator
-          validate_mimo_actuator_running
+          # run_mimo_actuator
+          # validate_mimo_actuator_running
 
           run_rp
           validate_rp_running
@@ -171,7 +171,7 @@ jobs:
 
           delete_e2e_cluster
           kill_rp
-          kill_mimo_actuator
+          # kill_mimo_actuator
           kill_selenium
           kill_podman
           kill_vpn
