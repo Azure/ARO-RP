@@ -22,6 +22,7 @@ resources:
   containers:
     - container: container
       image: arointsvc.azurecr.io/ubi9/toolbox
+      endpoint: arointsvc
       options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
 
 # Azure DevOps Pipeline running e2e tests
