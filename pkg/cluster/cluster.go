@@ -36,6 +36,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
@@ -87,6 +88,8 @@ type manager struct {
 	armLoadBalancers              armnetwork.LoadBalancersClient
 	armPrivateEndpoints           armnetwork.PrivateEndpointsClient
 	armSecurityGroups             armnetwork.SecurityGroupsClient
+	armCapacityReservations       armcompute.CapacityReservationsClient
+	armCapacityReservationGroups  armcompute.CapacityReservationGroupsClient
 	deployments                   features.DeploymentsClient
 	resourceGroups                features.ResourceGroupsClient
 	resources                     features.ResourcesClient
@@ -237,6 +240,16 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armCapacityReservationGroups, err := armcompute.NewCapacityReservationGroupsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	armCapacityReservations, err := armcompute.NewCapacityReservationsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	storage, err := storage.NewManager(r.SubscriptionID, _env.Environment().StorageEndpointSuffix, fpCredClusterTenant, doc.OpenShiftCluster.UsesWorkloadIdentity(), clientOptions)
 	if err != nil {
 		return nil, err
@@ -279,6 +292,8 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armLoadBalancers:              armLoadBalancersClient,
 		armPrivateEndpoints:           armPrivateEndpoints,
 		armSecurityGroups:             armSecurityGroupsClient,
+		armCapacityReservations:       armCapacityReservations,
+		armCapacityReservationGroups:  armCapacityReservationGroups,
 		deployments:                   features.NewDeploymentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		resourceGroups:                features.NewResourceGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		resources:                     features.NewResourcesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),

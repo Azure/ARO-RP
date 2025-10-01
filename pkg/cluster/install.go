@@ -396,6 +396,14 @@ func (m *manager) bootstrap() []steps.Step {
 		)
 	}
 	s = append(s,
+		// Ensure the resource group first, as that can be an early trigger for
+		// DeniedByPolicy errors
+		steps.Action(m.ensureResourceGroup),
+
+		// Create the CapacityReservation for the control plane, to fail early
+		// in case of lack of capacity
+		steps.Action(m.ensureControlPlaneCapacity),
+
 		steps.Action(m.ensurePreconfiguredNSG),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
@@ -404,7 +412,6 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.populateMTUSize),
 		steps.Action(m.createDNS),
 		steps.Action(m.createOIDC),
-		steps.Action(m.ensureResourceGroup),
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate),

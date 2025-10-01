@@ -308,6 +308,7 @@ type ClusterProfile struct {
 	FipsValidatedModules          FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 	OIDCIssuer                    *OIDCIssuer          `json:"oidcIssuer,omitempty"`
 	BoundServiceAccountSigningKey *SecureString        `json:"boundServiceAccountSigningKey,omitempty"`
+	CapacityReservationGroup      string               `json:"capacityReservationGroup,omitempty"`
 }
 
 // FeatureProfile represents a feature profile.
@@ -442,10 +443,11 @@ const (
 type MasterProfile struct {
 	MissingFields
 
-	VMSize              VMSize           `json:"vmSize,omitempty"`
-	SubnetID            string           `json:"subnetId,omitempty"`
-	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
-	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
+	VMSize                  VMSize           `json:"vmSize,omitempty"`
+	SubnetID                string           `json:"subnetId,omitempty"`
+	EncryptionAtHost        EncryptionAtHost `json:"encryptionAtHost,omitempty"`
+	DiskEncryptionSetID     string           `json:"diskEncryptionSetId,omitempty"`
+	CapacityReservationName string           `json:"capacityReservationName,omitempty"`
 }
 
 // VMSize represents a VM size
