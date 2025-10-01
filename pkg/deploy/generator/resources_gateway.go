@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -37,36 +37,36 @@ func (g *generator) gatewaySecurityGroup() *arm.Resource {
 }
 
 func (g *generator) gatewayVnet() *arm.Resource {
-	return g.virtualNetwork("gateway-vnet", "10.0.8.0/24", &[]mgmtnetwork.Subnet{
+	return g.virtualNetwork("gateway-vnet", "10.0.8.0/24", []*armnetwork.Subnet{
 		{
-			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+			Properties: &armnetwork.SubnetPropertiesFormat{
 				AddressPrefix: pointerutils.ToPtr("10.0.8.0/24"),
-				NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+				NetworkSecurityGroup: &armnetwork.SecurityGroup{
 					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"),
 				},
-				ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+				ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 					{
 						Service:   pointerutils.ToPtr("Microsoft.AzureCosmosDB"),
-						Locations: &[]string{"*"},
+						Locations: []*string{pointerutils.ToPtr("*")},
 					},
 					{
 						Service:   pointerutils.ToPtr("Microsoft.ContainerRegistry"),
-						Locations: &[]string{"*"},
+						Locations: []*string{pointerutils.ToPtr("*")},
 					},
 					{
 						Service:   pointerutils.ToPtr("Microsoft.EventHub"),
-						Locations: &[]string{"*"},
+						Locations: []*string{pointerutils.ToPtr("*")},
 					},
 					{
 						Service:   pointerutils.ToPtr("Microsoft.Storage"),
-						Locations: &[]string{"*"},
+						Locations: []*string{pointerutils.ToPtr("*")},
 					},
 					{
 						Service:   pointerutils.ToPtr("Microsoft.KeyVault"),
-						Locations: &[]string{"*"},
+						Locations: []*string{pointerutils.ToPtr("*")},
 					},
 				},
-				PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr("Disabled"),
+				PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 			},
 			Name: pointerutils.ToPtr("gateway-subnet"),
 		},
@@ -75,69 +75,69 @@ func (g *generator) gatewayVnet() *arm.Resource {
 
 func (g *generator) gatewayLB() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.LoadBalancer{
-			Sku: &mgmtnetwork.LoadBalancerSku{
-				Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+		Resource: &armnetwork.LoadBalancer{
+			SKU: &armnetwork.LoadBalancerSKU{
+				Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
 			},
-			LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-				FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+			Properties: &armnetwork.LoadBalancerPropertiesFormat{
+				FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 					{
-						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-							Subnet: &mgmtnetwork.Subnet{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							Subnet: &armnetwork.Subnet{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
 							},
 						},
-						Zones: &[]string{},
+						Zones: []*string{},
 						Name:  pointerutils.ToPtr("gateway-frontend"),
 					},
 				},
-				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+				BackendAddressPools: []*armnetwork.BackendAddressPool{
 					{
 						Name: pointerutils.ToPtr("gateway-backend"),
 					},
 				},
-				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+				LoadBalancingRules: []*armnetwork.LoadBalancingRule{
 					{
-						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
 							},
-							BackendAddressPool: &mgmtnetwork.SubResource{
+							BackendAddressPool: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
 							},
-							Probe: &mgmtnetwork.SubResource{
+							Probe: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
 							},
-							Protocol:         mgmtnetwork.TransportProtocolTCP,
-							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 							FrontendPort:     pointerutils.ToPtr(int32(443)),
 							BackendPort:      pointerutils.ToPtr(int32(443)),
 						},
 						Name: pointerutils.ToPtr("gateway-lbrule-https"),
 					},
 					{
-						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
 							},
-							BackendAddressPool: &mgmtnetwork.SubResource{
+							BackendAddressPool: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
 							},
-							Probe: &mgmtnetwork.SubResource{
+							Probe: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
 							},
-							Protocol:         mgmtnetwork.TransportProtocolTCP,
-							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 							FrontendPort:     pointerutils.ToPtr(int32(80)),
 							BackendPort:      pointerutils.ToPtr(int32(80)),
 						},
 						Name: pointerutils.ToPtr("gateway-lbrule-http"),
 					},
 				},
-				Probes: &[]mgmtnetwork.Probe{
+				Probes: []*armnetwork.Probe{
 					{
-						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-							Protocol:       mgmtnetwork.ProbeProtocolHTTP,
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTP),
 							Port:           pointerutils.ToPtr(int32(80)),
 							NumberOfProbes: pointerutils.ToPtr(int32(2)),
 							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
@@ -156,17 +156,17 @@ func (g *generator) gatewayLB() *arm.Resource {
 
 func (g *generator) gatewayPLS() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.PrivateLinkService{
-			PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
-				LoadBalancerFrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+		Resource: &armnetwork.PrivateLinkService{
+			Properties: &armnetwork.PrivateLinkServiceProperties{
+				LoadBalancerFrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 					{
 						ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
 					},
 				},
-				IPConfigurations: &[]mgmtnetwork.PrivateLinkServiceIPConfiguration{
+				IPConfigurations: []*armnetwork.PrivateLinkServiceIPConfiguration{
 					{
-						PrivateLinkServiceIPConfigurationProperties: &mgmtnetwork.PrivateLinkServiceIPConfigurationProperties{
-							Subnet: &mgmtnetwork.Subnet{
+						Properties: &armnetwork.PrivateLinkServiceIPConfigurationProperties{
+							Subnet: &armnetwork.Subnet{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
 							},
 						},

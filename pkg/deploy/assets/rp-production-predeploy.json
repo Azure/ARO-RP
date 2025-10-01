@@ -80,64 +80,70 @@
     },
     "resources": [
         {
+            "apiVersion": "2020-08-01",
+            "condition": "[parameters('deployNSGs')]",
+            "location": "[resourceGroup().location]",
+            "name": "rp-nsg",
             "properties": {
                 "securityRules": [
                     {
+                        "name": "rp_in_arm",
                         "properties": {
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "443",
-                            "sourceAddressPrefix": "AzureResourceManager",
-                            "destinationAddressPrefix": "*",
                             "access": "Allow",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443",
+                            "direction": "Inbound",
                             "priority": 120,
-                            "direction": "Inbound"
-                        },
-                        "name": "rp_in_arm"
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "AzureResourceManager",
+                            "sourcePortRange": "*"
+                        }
                     },
                     {
+                        "name": "rp_in_geneva",
                         "properties": {
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "443",
-                            "sourceAddressPrefix": "GenevaActions",
-                            "destinationAddressPrefix": "*",
                             "access": "Allow",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443",
+                            "direction": "Inbound",
                             "priority": 130,
-                            "direction": "Inbound"
-                        },
-                        "name": "rp_in_geneva"
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "GenevaActions",
+                            "sourcePortRange": "*"
+                        }
                     },
                     {
+                        "name": "deny_in_gateway",
                         "properties": {
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "10.0.8.0/24",
-                            "destinationAddressPrefix": "*",
                             "access": "Deny",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "*",
+                            "direction": "Inbound",
                             "priority": 145,
-                            "direction": "Inbound"
-                        },
-                        "name": "deny_in_gateway"
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "sourcePortRange": "*"
+                        }
                     }
                 ]
             },
-            "name": "rp-nsg",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "location": "[resourceGroup().location]",
-            "condition": "[parameters('deployNSGs')]",
-            "apiVersion": "2020-08-01"
+            "type": "Microsoft.Network/networkSecurityGroups"
         },
         {
-            "properties": {},
+            "apiVersion": "2020-08-01",
+            "condition": "[parameters('deployNSGs')]",
+            "location": "[resourceGroup().location]",
             "name": "rp-pe-nsg",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "location": "[resourceGroup().location]",
-            "condition": "[parameters('deployNSGs')]",
-            "apiVersion": "2020-08-01"
+            "properties": {},
+            "type": "Microsoft.Network/networkSecurityGroups"
         },
         {
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "rp-vnet",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -146,46 +152,45 @@
                 },
                 "subnets": [
                     {
+                        "name": "rp-subnet",
                         "properties": {
                             "addressPrefix": "10.0.0.0/24",
                             "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
-                                "tags": null
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
                             },
                             "serviceEndpoints": [
                                 {
-                                    "service": "Microsoft.Storage",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.Storage"
                                 },
                                 {
-                                    "service": "Microsoft.KeyVault",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.KeyVault"
                                 },
                                 {
-                                    "service": "Microsoft.AzureCosmosDB",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.AzureCosmosDB"
                                 }
                             ]
-                        },
-                        "name": "rp-subnet"
+                        }
                     }
                 ]
             },
-            "name": "rp-vnet",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
-            ]
+            "type": "Microsoft.Network/virtualNetworks"
         },
         {
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "rp-pe-vnet-001",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -194,33 +199,26 @@
                 },
                 "subnets": [
                     {
+                        "name": "rp-pe-subnet",
                         "properties": {
                             "addressPrefix": "10.0.4.0/22",
                             "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
-                                "tags": null
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
                             },
+                            "privateEndpointNetworkPolicies": "Disabled",
                             "serviceEndpoints": [
                                 {
-                                    "service": "Microsoft.Storage",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.Storage"
                                 }
-                            ],
-                            "privateEndpointNetworkPolicies": "Disabled"
-                        },
-                        "name": "rp-pe-subnet"
+                            ]
+                        }
                     }
                 ]
             },
-            "name": "rp-pe-vnet-001",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
-            ]
+            "type": "Microsoft.Network/virtualNetworks"
         },
         {
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
@@ -320,21 +318,21 @@
             }
         },
         {
-            "properties": {
-                "protocol": "Tcp",
-                "sourcePortRange": "*",
-                "destinationPortRange": "444",
-                "sourceAddressPrefixes": "[parameters('rpNsgPortalSourceAddressPrefixes')]",
-                "destinationAddressPrefix": "*",
-                "access": "Allow",
-                "priority": 142,
-                "direction": "Inbound"
-            },
-            "name": "rp-nsg/portal_in",
-            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
-            "condition": "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]",
             "apiVersion": "2020-08-01",
-            "location": "[resourceGroup().location]"
+            "condition": "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]",
+            "location": "[resourceGroup().location]",
+            "name": "rp-nsg/portal_in",
+            "properties": {
+                "access": "Allow",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "444",
+                "direction": "Inbound",
+                "priority": 142,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('rpNsgPortalSourceAddressPrefixes')]",
+                "sourcePortRange": "*"
+            },
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules"
         }
     ]
 }

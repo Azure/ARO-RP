@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
@@ -38,43 +38,43 @@ func (g *generator) rpManagedIdentity() *arm.Resource {
 }
 
 func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resource {
-	return g.securityRules("rp-nsg/portal_in", &mgmtnetwork.SecurityRulePropertiesFormat{
-		Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+	return g.securityRules("rp-nsg/portal_in", &armnetwork.SecurityRulePropertiesFormat{
+		Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
 		SourcePortRange:          pointerutils.ToPtr("*"),
 		DestinationPortRange:     pointerutils.ToPtr("444"),
-		SourceAddressPrefixes:    &[]string{},
+		SourceAddressPrefixes:    []*string{},
 		DestinationAddressPrefix: pointerutils.ToPtr("*"),
-		Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+		Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
 		Priority:                 pointerutils.ToPtr(int32(142)),
-		Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+		Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
 	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
 }
 
 func (g *generator) rpSecurityGroup() *arm.Resource {
-	rules := []mgmtnetwork.SecurityRule{
+	rules := []*armnetwork.SecurityRule{
 		{
-			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+			Properties: &armnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
 				SourcePortRange:          pointerutils.ToPtr("*"),
 				DestinationPortRange:     pointerutils.ToPtr("443"),
 				SourceAddressPrefix:      pointerutils.ToPtr("AzureResourceManager"),
 				DestinationAddressPrefix: pointerutils.ToPtr("*"),
-				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
 				Priority:                 pointerutils.ToPtr(int32(120)),
-				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
 			},
 			Name: pointerutils.ToPtr("rp_in_arm"),
 		},
 		{
-			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+			Properties: &armnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
 				SourcePortRange:          pointerutils.ToPtr("*"),
 				DestinationPortRange:     pointerutils.ToPtr("443"),
 				SourceAddressPrefix:      pointerutils.ToPtr("GenevaActions"),
 				DestinationAddressPrefix: pointerutils.ToPtr("*"),
-				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
 				Priority:                 pointerutils.ToPtr(int32(130)),
-				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
 			},
 			Name: pointerutils.ToPtr("rp_in_geneva"),
 		},
@@ -82,40 +82,40 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 
 	if !g.production {
 		// override production ARM flag for more open configuration in development
-		rules[0].SourceAddressPrefix = pointerutils.ToPtr("*")
+		rules[0].Properties.SourceAddressPrefix = pointerutils.ToPtr("*")
 
-		rules = append(rules, mgmtnetwork.SecurityRule{
-			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+		rules = append(rules, &armnetwork.SecurityRule{
+			Properties: &armnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
 				SourcePortRange:          pointerutils.ToPtr("*"),
 				DestinationPortRange:     pointerutils.ToPtr("22"),
 				SourceAddressPrefix:      pointerutils.ToPtr("*"),
 				DestinationAddressPrefix: pointerutils.ToPtr("*"),
-				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
 				Priority:                 pointerutils.ToPtr(int32(125)),
-				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
 			},
 			Name: pointerutils.ToPtr("ssh_in"),
 		})
 	} else {
 		rules = append(rules,
-			mgmtnetwork.SecurityRule{
-				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+			&armnetwork.SecurityRule{
+				Properties: &armnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
 					SourcePortRange:          pointerutils.ToPtr("*"),
 					DestinationPortRange:     pointerutils.ToPtr("*"),
 					SourceAddressPrefix:      pointerutils.ToPtr("10.0.8.0/24"),
 					DestinationAddressPrefix: pointerutils.ToPtr("*"),
-					Access:                   mgmtnetwork.SecurityRuleAccessDeny,
+					Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessDeny),
 					Priority:                 pointerutils.ToPtr(int32(145)),
-					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+					Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
 				},
 				Name: pointerutils.ToPtr("deny_in_gateway"),
 			},
 		)
 	}
 
-	return g.securityGroup("rp-nsg", &rules, g.conditionStanza("deployNSGs"))
+	return g.securityGroup("rp-nsg", rules, g.conditionStanza("deployNSGs"))
 }
 
 func (g *generator) rpPESecurityGroup() *arm.Resource {
@@ -128,16 +128,16 @@ func (g *generator) rpVnet() *arm.Resource {
 		addressPrefix = "10.0.0.0/24"
 	}
 
-	subnet := mgmtnetwork.Subnet{
-		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+	subnet := &armnetwork.Subnet{
+		Properties: &armnetwork.SubnetPropertiesFormat{
 			AddressPrefix: pointerutils.ToPtr(addressPrefix),
-			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+			NetworkSecurityGroup: &armnetwork.SecurityGroup{
 				ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
 			},
-			ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+			ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 				{
 					Service:   pointerutils.ToPtr("Microsoft.Storage"),
-					Locations: &[]string{"*"},
+					Locations: []*string{pointerutils.ToPtr("*")},
 				},
 			},
 		},
@@ -145,34 +145,34 @@ func (g *generator) rpVnet() *arm.Resource {
 	}
 
 	if g.production {
-		*subnet.ServiceEndpoints = append(*subnet.ServiceEndpoints, []mgmtnetwork.ServiceEndpointPropertiesFormat{
+		subnet.Properties.ServiceEndpoints = append(subnet.Properties.ServiceEndpoints, []*armnetwork.ServiceEndpointPropertiesFormat{
 			{
 				Service:   pointerutils.ToPtr("Microsoft.KeyVault"),
-				Locations: &[]string{"*"},
+				Locations: []*string{pointerutils.ToPtr("*")},
 			},
 			{
 				Service:   pointerutils.ToPtr("Microsoft.AzureCosmosDB"),
-				Locations: &[]string{"*"},
+				Locations: []*string{pointerutils.ToPtr("*")},
 			},
 		}...)
 	}
 
-	return g.virtualNetwork("rp-vnet", addressPrefix, &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
+	return g.virtualNetwork("rp-vnet", addressPrefix, []*armnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
 }
 
 func (g *generator) rpPEVnet() *arm.Resource {
-	return g.virtualNetwork("rp-pe-vnet-001", "10.0.4.0/22", &[]mgmtnetwork.Subnet{
+	return g.virtualNetwork("rp-pe-vnet-001", "10.0.4.0/22", []*armnetwork.Subnet{
 		{
-			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+			Properties: &armnetwork.SubnetPropertiesFormat{
 				AddressPrefix: pointerutils.ToPtr("10.0.4.0/22"),
-				NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+				NetworkSecurityGroup: &armnetwork.SecurityGroup{
 					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 				},
-				PrivateEndpointNetworkPolicies: pointerutils.ToPtr("Disabled"),
-				ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+				PrivateEndpointNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+				ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 					{
 						Service:   pointerutils.ToPtr("Microsoft.Storage"),
-						Locations: &[]string{"*"},
+						Locations: []*string{pointerutils.ToPtr("*")},
 					},
 				},
 			},
@@ -183,94 +183,94 @@ func (g *generator) rpPEVnet() *arm.Resource {
 
 func (g *generator) rpLB() *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.LoadBalancer{
-			Sku: &mgmtnetwork.LoadBalancerSku{
-				Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+		Resource: &armnetwork.LoadBalancer{
+			SKU: &armnetwork.LoadBalancerSKU{
+				Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
 			},
-			LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-				FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+			Properties: &armnetwork.LoadBalancerPropertiesFormat{
+				FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 					{
-						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-							PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &armnetwork.PublicIPAddress{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"),
 							},
 						},
 						Name: pointerutils.ToPtr("rp-frontend"),
 					},
 					{
-						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-							PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &armnetwork.PublicIPAddress{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]"),
 							},
 						},
 						Name: pointerutils.ToPtr("portal-frontend"),
 					},
 				},
-				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+				BackendAddressPools: []*armnetwork.BackendAddressPool{
 					{
 						Name: pointerutils.ToPtr("rp-backend"),
 					},
 				},
-				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+				LoadBalancingRules: []*armnetwork.LoadBalancingRule{
 					{
-						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"),
 							},
-							BackendAddressPool: &mgmtnetwork.SubResource{
+							BackendAddressPool: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
-							Probe: &mgmtnetwork.SubResource{
+							Probe: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
 							},
-							Protocol:         mgmtnetwork.TransportProtocolTCP,
-							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 							FrontendPort:     pointerutils.ToPtr(int32(443)),
 							BackendPort:      pointerutils.ToPtr(int32(443)),
 						},
 						Name: pointerutils.ToPtr("rp-lbrule"),
 					},
 					{
-						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
 							},
-							BackendAddressPool: &mgmtnetwork.SubResource{
+							BackendAddressPool: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
-							Probe: &mgmtnetwork.SubResource{
+							Probe: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
 							},
-							Protocol:         mgmtnetwork.TransportProtocolTCP,
-							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 							FrontendPort:     pointerutils.ToPtr(int32(443)),
 							BackendPort:      pointerutils.ToPtr(int32(444)),
 						},
 						Name: pointerutils.ToPtr("portal-lbrule"),
 					},
 					{
-						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
 							},
-							BackendAddressPool: &mgmtnetwork.SubResource{
+							BackendAddressPool: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
-							Probe: &mgmtnetwork.SubResource{
+							Probe: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh')]"),
 							},
-							Protocol:         mgmtnetwork.TransportProtocolTCP,
-							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
 							FrontendPort:     pointerutils.ToPtr(int32(22)),
 							BackendPort:      pointerutils.ToPtr(int32(2222)),
 						},
 						Name: pointerutils.ToPtr("portal-lbrule-ssh"),
 					},
 				},
-				Probes: &[]mgmtnetwork.Probe{
+				Probes: []*armnetwork.Probe{
 					{
-						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTPS),
 							Port:           pointerutils.ToPtr(int32(443)),
 							NumberOfProbes: pointerutils.ToPtr(int32(2)),
 							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
@@ -278,8 +278,8 @@ func (g *generator) rpLB() *arm.Resource {
 						Name: pointerutils.ToPtr("rp-probe"),
 					},
 					{
-						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTPS),
 							Port:           pointerutils.ToPtr(int32(444)),
 							NumberOfProbes: pointerutils.ToPtr(int32(2)),
 							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
@@ -287,8 +287,8 @@ func (g *generator) rpLB() *arm.Resource {
 						Name: pointerutils.ToPtr("portal-probe-https"),
 					},
 					{
-						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-							Protocol:       mgmtnetwork.ProbeProtocolTCP,
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
 							Port:           pointerutils.ToPtr(int32(2222)),
 							NumberOfProbes: pointerutils.ToPtr(int32(2)),
 						},
