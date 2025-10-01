@@ -155,6 +155,11 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		return err
 	}
 
+	dbMaintenanceManifests, err := database.NewMaintenanceManifests(ctx, dbc, dbName)
+	if err != nil {
+		return err
+	}
+
 	// Note: When handling DB operations don't delete records but set TTL on them otherwise if we're leveraging change feeds, it will break.
 	dbPlatformWorkloadIdentityRoleSets, err := database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
 	if err != nil {
@@ -182,16 +187,8 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		WithOpenShiftClusters(dbOpenShiftClusters).
 		WithOpenShiftVersions(dbOpenShiftVersions).
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
-		WithSubscriptions(dbSubscriptions)
-
-	// MIMO only activated in development for now
-	if _env.IsLocalDevelopmentMode() {
-		dbMaintenanceManifests, err := database.NewMaintenanceManifests(ctx, dbc, dbName)
-		if err != nil {
-			return err
-		}
-		dbg.WithMaintenanceManifests(dbMaintenanceManifests)
-	}
+		WithSubscriptions(dbSubscriptions).
+		WithMaintenanceManifests(dbMaintenanceManifests)
 
 	size, err := _env.OtelAuditQueueSize()
 	if err != nil {
