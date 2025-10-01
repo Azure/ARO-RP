@@ -4789,6 +4789,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 							Domain:               "example.aroapp.io",
 							ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/clusterResourceGroup", mockSubID),
 							FipsValidatedModules: v20220401.FipsValidatedModulesDisabled,
+							Version:              "4.15.0",
 						},
 						MasterProfile: v20220401.MasterProfile{
 							EncryptionAtHost: v20220401.EncryptionAtHostDisabled,
@@ -4844,6 +4845,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								Domain:               "example.aroapp.io",
 								ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/clusterResourceGroup", mockSubID),
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+								Version:              "4.15.0",
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -4903,6 +4905,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								Domain:               "example.aroapp.io",
 								ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/clusterResourceGroup", mockSubID),
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+								Version:              "4.15.0",
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -4960,6 +4963,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 						Domain:               "example.aroapp.io",
 						ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/clusterResourceGroup", mockSubID),
 						FipsValidatedModules: v20220401.FipsValidatedModulesDisabled,
+						Version:              "4.15.0",
 					},
 					MasterProfile: v20220401.MasterProfile{
 						EncryptionAtHost: v20220401.EncryptionAtHostDisabled,
