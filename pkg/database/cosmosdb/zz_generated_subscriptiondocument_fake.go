@@ -242,7 +242,9 @@ func (c *FakeSubscriptionDocumentClient) Delete(ctx context.Context, partitionKe
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a SubscriptionDocument does not remove it from the existing change feeds
+// - when a SubscriptionDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a subscriptionDocument from the changefeed is actually the most recent version.
 func (c *FakeSubscriptionDocumentClient) ChangeFeed(*Options) SubscriptionDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -266,10 +268,10 @@ func (c *FakeSubscriptionDocumentClient) updateChangeFeeds(subscriptionDocument 
 		if err != nil {
 			return err
 		}
+
 		currentIterator.subscriptionDocuments = append(currentIterator.subscriptionDocuments, newTpl)
 		currentIterator.done = false
 	}
-
 	return nil
 }
 
@@ -345,7 +347,7 @@ func (i *fakeSubscriptionDocumentIterator) Next(ctx context.Context, maxItemCoun
 			max = len(i.subscriptionDocuments)
 		}
 		subscriptionDocuments = i.subscriptionDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

@@ -242,7 +242,9 @@ func (c *FakePlatformWorkloadIdentityRoleSetDocumentClient) Delete(ctx context.C
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a PlatformWorkloadIdentityRoleSetDocument does not remove it from the existing change feeds
+// - when a PlatformWorkloadIdentityRoleSetDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a platformWorkloadIdentityRoleSetDocument from the changefeed is actually the most recent version.
 func (c *FakePlatformWorkloadIdentityRoleSetDocumentClient) ChangeFeed(*Options) PlatformWorkloadIdentityRoleSetDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -266,10 +268,10 @@ func (c *FakePlatformWorkloadIdentityRoleSetDocumentClient) updateChangeFeeds(pl
 		if err != nil {
 			return err
 		}
+
 		currentIterator.platformWorkloadIdentityRoleSetDocuments = append(currentIterator.platformWorkloadIdentityRoleSetDocuments, newTpl)
 		currentIterator.done = false
 	}
-
 	return nil
 }
 
@@ -345,7 +347,7 @@ func (i *fakePlatformWorkloadIdentityRoleSetDocumentIterator) Next(ctx context.C
 			max = len(i.platformWorkloadIdentityRoleSetDocuments)
 		}
 		platformWorkloadIdentityRoleSetDocuments = i.platformWorkloadIdentityRoleSetDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

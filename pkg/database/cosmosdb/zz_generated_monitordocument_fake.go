@@ -242,7 +242,9 @@ func (c *FakeMonitorDocumentClient) Delete(ctx context.Context, partitionKey str
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a MonitorDocument does not remove it from the existing change feeds
+// - when a MonitorDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a monitorDocument from the changefeed is actually the most recent version.
 func (c *FakeMonitorDocumentClient) ChangeFeed(*Options) MonitorDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -266,10 +268,10 @@ func (c *FakeMonitorDocumentClient) updateChangeFeeds(monitorDocument *pkg.Monit
 		if err != nil {
 			return err
 		}
+
 		currentIterator.monitorDocuments = append(currentIterator.monitorDocuments, newTpl)
 		currentIterator.done = false
 	}
-
 	return nil
 }
 
@@ -345,7 +347,7 @@ func (i *fakeMonitorDocumentIterator) Next(ctx context.Context, maxItemCount int
 			max = len(i.monitorDocuments)
 		}
 		monitorDocuments = i.monitorDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

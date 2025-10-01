@@ -242,7 +242,9 @@ func (c *FakeBillingDocumentClient) Delete(ctx context.Context, partitionKey str
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a BillingDocument does not remove it from the existing change feeds
+// - when a BillingDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a billingDocument from the changefeed is actually the most recent version.
 func (c *FakeBillingDocumentClient) ChangeFeed(*Options) BillingDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -266,10 +268,10 @@ func (c *FakeBillingDocumentClient) updateChangeFeeds(billingDocument *pkg.Billi
 		if err != nil {
 			return err
 		}
+
 		currentIterator.billingDocuments = append(currentIterator.billingDocuments, newTpl)
 		currentIterator.done = false
 	}
-
 	return nil
 }
 
@@ -345,7 +347,7 @@ func (i *fakeBillingDocumentIterator) Next(ctx context.Context, maxItemCount int
 			max = len(i.billingDocuments)
 		}
 		billingDocuments = i.billingDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

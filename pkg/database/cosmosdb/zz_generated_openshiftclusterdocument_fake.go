@@ -242,7 +242,9 @@ func (c *FakeOpenShiftClusterDocumentClient) Delete(ctx context.Context, partiti
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a OpenShiftClusterDocument does not remove it from the existing change feeds
+// - when a OpenShiftClusterDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a openShiftClusterDocument from the changefeed is actually the most recent version.
 func (c *FakeOpenShiftClusterDocumentClient) ChangeFeed(*Options) OpenShiftClusterDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -266,10 +268,10 @@ func (c *FakeOpenShiftClusterDocumentClient) updateChangeFeeds(openShiftClusterD
 		if err != nil {
 			return err
 		}
+
 		currentIterator.openShiftClusterDocuments = append(currentIterator.openShiftClusterDocuments, newTpl)
 		currentIterator.done = false
 	}
-
 	return nil
 }
 

@@ -78,40 +78,52 @@ func TestChangefeedOperations(t *testing.T) {
 	}()
 
 	type operation struct {
-		name              string
-		action            string // "create"
-		provisioningState api.ProvisioningState
-		expectDocs        int
-		expectSubs        int
+		name                          string
+		action                        string // "create"
+		clusterProvisioningState      api.ProvisioningState
+		subscriptionProvisioningState api.SubscriptionState
+		expectDocs                    int
+		expectSubs                    int
 	}
 
 	operations := []operation{
 		{
-			name:              "create first cluster with subscription",
-			action:            "create",
-			provisioningState: api.ProvisioningStateSucceeded,
-			expectDocs:        1,
-			expectSubs:        1,
+			name:                          "create first cluster with subscription",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateSucceeded,
+			subscriptionProvisioningState: api.SubscriptionStateRegistered,
+			expectDocs:                    1,
+			expectSubs:                    1,
 		},
 		{
-			name:              "create second cluster with new subscription",
-			action:            "create",
-			provisioningState: api.ProvisioningStateSucceeded,
-			expectDocs:        2,
-			expectSubs:        2,
+			name:                          "create second cluster with new subscription",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateSucceeded,
+			subscriptionProvisioningState: api.SubscriptionStateRegistered,
+			expectDocs:                    2,
+			expectSubs:                    2,
 		},
 		{
-			name:              "create cluster in Deleting state - should be ignored",
-			action:            "create",
-			provisioningState: api.ProvisioningStateDeleting,
-			expectDocs:        2,
-			expectSubs:        2,
+			name:                          "create cluster in Deleting state - should be ignored",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateDeleting,
+			subscriptionProvisioningState: api.SubscriptionStateRegistered,
+			expectDocs:                    2,
+			expectSubs:                    3,
 		}, {
-			name:              "create cluster in creating state - should be ignored",
-			action:            "create",
-			provisioningState: api.ProvisioningStateCreating,
-			expectDocs:        2,
-			expectSubs:        2,
+			name:                          "create cluster in creating state - should be ignored",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateCreating,
+			subscriptionProvisioningState: api.SubscriptionStateRegistered,
+			expectDocs:                    2,
+			expectSubs:                    4,
+		}, {
+			name:                          "subscription and cluster in Deleting state - BOTH should be ignored",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateDeleting,
+			subscriptionProvisioningState: api.SubscriptionStateDeleted,
+			expectDocs:                    2,
+			expectSubs:                    4,
 		},
 	}
 
@@ -120,8 +132,9 @@ func TestChangefeedOperations(t *testing.T) {
 		t.Run(op.name, func(t *testing.T) {
 			// Create subscription and cluster documents
 			subDoc := newFakeSubscription()
+			subDoc.Subscription.State = op.subscriptionProvisioningState
 			clusterDoc := newFakeCluster(subDoc.ResourceID)
-			clusterDoc.OpenShiftCluster.Properties.ProvisioningState = op.provisioningState
+			clusterDoc.OpenShiftCluster.Properties.ProvisioningState = op.clusterProvisioningState
 
 			switch op.action {
 			case "create":

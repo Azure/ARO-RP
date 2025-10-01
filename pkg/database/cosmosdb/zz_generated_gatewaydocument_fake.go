@@ -242,7 +242,9 @@ func (c *FakeGatewayDocumentClient) Delete(ctx context.Context, partitionKey str
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a GatewayDocument does not remove it from the existing change feeds
+// - when a GatewayDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a gatewayDocument from the changefeed is actually the most recent version.
 func (c *FakeGatewayDocumentClient) ChangeFeed(*Options) GatewayDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -266,10 +268,10 @@ func (c *FakeGatewayDocumentClient) updateChangeFeeds(gatewayDocument *pkg.Gatew
 		if err != nil {
 			return err
 		}
+
 		currentIterator.gatewayDocuments = append(currentIterator.gatewayDocuments, newTpl)
 		currentIterator.done = false
 	}
-
 	return nil
 }
 
@@ -345,7 +347,7 @@ func (i *fakeGatewayDocumentIterator) Next(ctx context.Context, maxItemCount int
 			max = len(i.gatewayDocuments)
 		}
 		gatewayDocuments = i.gatewayDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

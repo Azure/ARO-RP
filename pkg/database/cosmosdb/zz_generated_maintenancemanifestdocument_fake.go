@@ -242,7 +242,9 @@ func (c *FakeMaintenanceManifestDocumentClient) Delete(ctx context.Context, part
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a MaintenanceManifestDocument does not remove it from the existing change feeds
+// - when a MaintenanceManifestDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a maintenanceManifestDocument from the changefeed is actually the most recent version.
 func (c *FakeMaintenanceManifestDocumentClient) ChangeFeed(*Options) MaintenanceManifestDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -266,10 +268,10 @@ func (c *FakeMaintenanceManifestDocumentClient) updateChangeFeeds(maintenanceMan
 		if err != nil {
 			return err
 		}
+
 		currentIterator.maintenanceManifestDocuments = append(currentIterator.maintenanceManifestDocuments, newTpl)
 		currentIterator.done = false
 	}
-
 	return nil
 }
 
@@ -345,7 +347,7 @@ func (i *fakeMaintenanceManifestDocumentIterator) Next(ctx context.Context, maxI
 			max = len(i.maintenanceManifestDocuments)
 		}
 		maintenanceManifestDocuments = i.maintenanceManifestDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 
