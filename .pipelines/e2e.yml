@@ -66,19 +66,19 @@ jobs:
         displayName: Enable regression tests in CI
         condition: in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI')
 
-      # - script: |
-      #     . secrets/env
+      - script: |
+          . secrets/env
 
-      #     # Retrieve the kubeconfig
-      #     hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
+          # Retrieve the kubeconfig
+          hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
 
-      #     if [ -f aks.kubeconfig ]; then
-      #       echo "Kubeconfig retrieved successfully."
-      #     else
-      #       echo "Failed to retrieve Kubeconfig."
-      #       exit 1
-      #     fi
-      #   displayName: Get Kubeconfig for AKS Cluster
+          if [ -f aks.kubeconfig ]; then
+            echo "Kubeconfig retrieved successfully."
+          else
+            echo "Failed to retrieve Kubeconfig."
+            exit 1
+          fi
+        displayName: Get Kubeconfig for AKS Cluster
 
       - script: |
           az account set -s $AZURE_SUBSCRIPTION_ID
@@ -100,7 +100,7 @@ jobs:
           export USE_WI=true
           export ARO_INSTALL_VIA_HIVE="true"
           export ARO_ADOPT_BY_HIVE="true"
-          # export HIVE_KUBE_CONFIG_PATH="$(realpath ./aks.kubeconfig)"
+          export HIVE_KUBE_CONFIG_PATH="$(realpath ./aks.kubeconfig)"
 
           . ./env
           . secrets/env
