@@ -1062,6 +1062,38 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				return response
 			},
 		},
+		{
+			name: "Fail - update a Workload Identity cluster from succeeded - pass existing issuerURL in the body",
+			request: func() *v20240812preview.OpenShiftCluster {
+				cluster := getWorkloadIdentityOpenShiftClusterRequest()
+				// OutboundType is set to the current value
+				cluster.Properties.NetworkProfile.OutboundType = v20240812preview.OutboundTypeLoadbalancer
+				// PreconfiguredNSG is set to the current value
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = v20240812preview.PreconfiguredNSGDisabled
+				// LoadBalancerProfile is set to the current value
+				cluster.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
+					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
+						Count: 1,
+					},
+				}
+				// Set UpgradeableTo with new identity
+				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
+					ResourceID: mockMiResourceId,
+				}
+				cluster.Properties.ClusterProfile.OIDCIssuer = (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid))
+				return cluster
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(mockSubscriptionDocument)
+				f.AddOpenShiftClusterDocuments(getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateSucceeded, "", ""))
+			},
+			wantResponse: func() *v20240812preview.OpenShiftCluster {
+				return nil
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: PropertyChangeNotAllowed: properties.clusterProfile.oidcIssuer: Changing property 'properties.clusterProfile.oidcIssuer' is not allowed.",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).
@@ -1338,6 +1370,28 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
 				return response
 			},
+		},
+		{
+			name: "Fail - patch a workload identity cluster from succeeded - pass same issuerURL in the body",
+			request: func() *v20240812preview.OpenShiftCluster {
+				cluster := &v20240812preview.OpenShiftCluster{
+					Properties: v20240812preview.OpenShiftClusterProperties{
+						ClusterProfile: v20240812preview.ClusterProfile{
+							OIDCIssuer: (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
+						},
+					},
+				}
+				return cluster
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(mockSubscriptionDocument)
+				f.AddOpenShiftClusterDocuments(getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateSucceeded, "", ""))
+			},
+			wantResponse: func() *v20240812preview.OpenShiftCluster {
+				return nil
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: PropertyChangeNotAllowed: properties.clusterProfile.oidcIssuer: Changing property 'properties.clusterProfile.oidcIssuer' is not allowed.",
 		},
 		{
 			name: "patch a workload identity cluster from succeeded - unexpected identity provided",
