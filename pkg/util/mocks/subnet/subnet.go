@@ -15,7 +15,7 @@ import (
 
 	gomock "go.uber.org/mock/gomock"
 
-	subnet "github.com/Azure/ARO-RP/pkg/util/subnet"
+	subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 )
 
 // MockKubeManager is a mock of KubeManager interface.

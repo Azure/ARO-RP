@@ -16,20 +16,17 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+
+	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
 )
 
 const (
 	machineSetsNamespace = "openshift-machine-api"
 )
 
-type Subnet struct {
-	ResourceID string
-	IsMaster   bool
-}
-
 // KubeManager interface interact with kubernetes layer to extract required information
 type KubeManager interface {
-	List(ctx context.Context) ([]Subnet, error)
+	List(ctx context.Context) ([]subnet.Subnet, error)
 }
 
 type kubeManager struct {
@@ -48,8 +45,8 @@ func NewKubeManager(client client.Client, subscriptionID string) KubeManager {
 // List reconstructs subnetId used in machines object in the cluster
 // In cases when we interact with customer vnets, we don't know which subnets are used in ARO.
 // Example : /subscriptions/{subscriptionID}/resourceGroups/{vnet-resource-group}/providers/Microsoft.Network/virtualNetworks/{vnet-name}/subnets/{subnet-name}
-func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
-	subnetMap := []Subnet{}
+func (m *kubeManager) List(ctx context.Context) ([]subnet.Subnet, error) {
+	subnetMap := []subnet.Subnet{}
 
 	// select all workers by the  machine.openshift.io/cluster-api-machine-role: not equal to master Label
 	selector, _ := labels.Parse("machine.openshift.io/cluster-api-machine-role!=master")
@@ -80,7 +77,7 @@ func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 		return nil, err
 	}
 	for _, machine := range machines.Items {
-		var subnetDesc *Subnet // declared here due to := rescoping of the masterResourceGroup variable below
+		var subnetDesc *subnet.Subnet // declared here due to := rescoping of the masterResourceGroup variable below
 		subnetDesc, err = m.getDescriptorFromProviderSpec(machine.Spec.ProviderSpec.Value)
 		if err != nil {
 			return nil, err
@@ -92,7 +89,7 @@ func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 	return unique(subnetMap), nil
 }
 
-func (m *kubeManager) getDescriptorFromProviderSpec(providerSpec *kruntime.RawExtension) (*Subnet, error) {
+func (m *kubeManager) getDescriptorFromProviderSpec(providerSpec *kruntime.RawExtension) (*subnet.Subnet, error) {
 	var spec machinev1beta1.AzureMachineProviderSpec
 	err := json.Unmarshal(providerSpec.Raw, &spec)
 	if err != nil {
@@ -107,14 +104,14 @@ func (m *kubeManager) getDescriptorFromProviderSpec(providerSpec *kruntime.RawEx
 		ResourceName:   spec.Vnet,
 	}
 
-	return &Subnet{
+	return &subnet.Subnet{
 		ResourceID: resource.String() + "/subnets/" + spec.Subnet,
 	}, nil
 }
 
-func unique(s []Subnet) []Subnet {
+func unique(s []subnet.Subnet) []subnet.Subnet {
 	keys := make(map[string]struct{})
-	list := []Subnet{}
+	list := []subnet.Subnet{}
 	for _, entry := range s {
 		key := strings.ToLower(entry.ResourceID)
 		if _, ok := keys[key]; !ok {
