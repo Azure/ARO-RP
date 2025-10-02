@@ -85,6 +85,11 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action renewMDSDCertificate]",
 	}
 
+	managedIdentityCertificateRenewalSteps := append(
+		certificateRenewalSteps,
+		"[Action ensureClusterMsiCertificate]",
+	)
+
 	operatorUpdateSteps := []string{
 		"[Action startVMs]",
 		"[Condition apiServersReady, timeout 30m0s]",
@@ -262,7 +267,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothStepsManagedIdentity, generalFixesSteps, certificateRenewalSteps,
+				zerothStepsManagedIdentity, generalFixesSteps, managedIdentityCertificateRenewalSteps,
 				operatorUpdateSteps, updateProvisionedBySteps,
 			),
 		},
