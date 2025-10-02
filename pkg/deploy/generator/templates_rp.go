@@ -30,6 +30,8 @@ func (g *generator) rpTemplate() *arm.Template {
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
 		"globalDevopsServicePrincipalId",
+		"vmssIpTags",
+		"vmssIpTagsDisabledRegions",
 	}
 	if g.production {
 		params = append(params,
@@ -128,6 +130,12 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.Type = "array"
 		case "miseValidAppIDs":
 			p.Type = "array"
+		case "vmssIpTags":
+			p.Type = "array"
+			p.DefaultValue = []interface{}{}
+		case "vmssIpTagsDisabledRegions":
+			p.Type = "array"
+			p.DefaultValue = []string{}
 		case "nonZonalRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{
@@ -160,6 +168,7 @@ func (g *generator) rpTemplate() *arm.Template {
 
 	if g.production {
 		t.Variables = map[string]interface{}{
+
 			"rpCosmoDbVirtualNetworkRules": &[]mgmtdocumentdb.VirtualNetworkRule{
 				{
 					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
