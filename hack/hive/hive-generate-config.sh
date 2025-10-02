@@ -18,7 +18,7 @@ main() {
     # For now we'll use the quay hive image, but this will change to an ACR once the quay.io -> ACR mirroring is setup
     # Note: semi-scientific way to get the latest image: `podman search --list-tags --limit 10000 quay.io/app-sre/hive | tail -n1`
     # shellcheck disable=SC2034
-    local -r hive_image="quay.io/app-sre/hive:${hive_image_commit_hash}"
+    local -r hive_image="arointsvc.azurecr.io/app-sre/hive:${hive_image_commit_hash}"
 
 
     # shellcheck disable=SC2034

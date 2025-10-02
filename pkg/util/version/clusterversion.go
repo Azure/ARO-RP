@@ -18,7 +18,7 @@ import (
 // cv.Status.History[0] assuming the State == Completed.
 // If for some reason there is no cluster version history, it will
 // return the most recently updated version in history
-func GetClusterVersion(cv *configv1.ClusterVersion) (*Version, error) {
+func GetClusterVersion(cv *configv1.ClusterVersion) (Version, error) {
 	unknownErr := errors.New("unknown cluster version")
 	if cv == nil {
 		return nil, unknownErr

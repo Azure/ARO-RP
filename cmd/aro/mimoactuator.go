@@ -21,10 +21,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-func mimoActuator(ctx context.Context, log *logrus.Entry) error {
+func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, log, env.COMPONENT_MIMO_ACTUATOR)
+	_env, err := env.NewEnv(ctx, _log, env.SERVICE_MIMO_ACTUATOR)
 	if err != nil {
 		return err
 	}
@@ -41,9 +41,12 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "actuator"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	log := _env.Logger()
 
-	g, err := golang.NewMetrics(_env.Logger(), m)
+	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go m.Run(stop)
+
+	g, err := golang.NewMetrics(log, m)
 	if err != nil {
 		return err
 	}
@@ -54,7 +57,7 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, m, aead)
 	if err != nil {
 		return err
 	}
@@ -78,14 +81,17 @@ func mimoActuator(ctx context.Context, log *logrus.Entry) error {
 		WithOpenShiftClusters(clusters).
 		WithMaintenanceManifests(manifests)
 
-	go database.EmitMIMOMetrics(ctx, log, manifests, m)
+	go database.EmitMIMOMetrics(ctx, _env.LoggerForComponent("metrics"), manifests, m)
 
-	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), log)
+	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), _env.LoggerForComponent("dialer"))
 	if err != nil {
 		return err
 	}
 
-	a := actuator.NewService(_env, _env.Logger(), dialer, dbg, m)
+	buckets := actuator.DetermineBuckets(_env, os.Hostname)
+	log.Printf("serving %d buckets: %v", len(buckets), buckets)
+
+	a := actuator.NewService(_env, log, dialer, dbg, m, buckets)
 	a.SetMaintenanceTasks(tasks.DEFAULT_MAINTENANCE_TASKS)
 
 	sigterm := make(chan os.Signal, 1)

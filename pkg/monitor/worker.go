@@ -5,7 +5,9 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,6 +28,14 @@ import (
 
 // nsgMonitoringFrequency is used for initializing NSG monitoring ticker
 var nsgMonitoringFrequency = 10 * time.Minute
+
+// subscriptionStateLogFrequency is used for initializing a ticker used to
+// send log messages when a cluster's subscription state is stopping us
+// from monitoring
+var subscriptionStateLogFrequency = 30 * time.Minute
+
+// changefeedBatchSize is how many items in the changefeed to fetch in each page
+const changefeedBatchSize = 50
 
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
@@ -84,7 +94,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 	for {
 		successful := true
 		for {
-			docs, err := clustersIterator.Next(ctx, -1)
+			docs, err := clustersIterator.Next(ctx, changefeedBatchSize)
 			if err != nil {
 				successful = false
 				baseLog.Error(err)
@@ -93,6 +103,8 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 			if docs == nil {
 				break
 			}
+
+			baseLog.Debugf("openshiftclusters changefeed page was %d docs", docs.Count)
 
 			mon.mu.Lock()
 
@@ -117,7 +129,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 		}
 
 		for {
-			subs, err := subscriptionsIterator.Next(ctx, -1)
+			subs, err := subscriptionsIterator.Next(ctx, changefeedBatchSize)
 			if err != nil {
 				successful = false
 				baseLog.Error(err)
@@ -127,10 +139,32 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 				break
 			}
 
+			baseLog.Debugf("subscriptions changefeed page was %d docs", subs.Count)
+
 			mon.mu.Lock()
 
 			for _, sub := range subs.SubscriptionDocuments {
-				mon.subs[sub.ID] = sub
+				id := strings.ToLower(sub.ID)
+
+				// Don't keep subscriptions that are restricted, warned, or are
+				// being deleted from our db
+				if sub.Subscription.State == api.SubscriptionStateSuspended ||
+					sub.Subscription.State == api.SubscriptionStateWarned ||
+					sub.Subscription.State == api.SubscriptionStateDeleted {
+					// delete is a no-op if it doesn't exist
+					delete(mon.subs, id)
+					continue
+				}
+
+				c, ok := mon.subs[id]
+				if ok {
+					// update this as subscription might have moved tenants
+					c.TenantID = strings.ToLower(sub.Subscription.Properties.TenantID)
+				} else {
+					mon.subs[id] = &subscriptionInfo{
+						TenantID: strings.ToLower(sub.Subscription.Properties.TenantID),
+					}
+				}
 			}
 
 			mon.mu.Unlock()
@@ -139,6 +173,24 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 		if successful {
 			mon.lastChangefeed.Store(time.Now())
 		}
+
+		select {
+		case <-t.C:
+		case <-stop:
+			return
+		}
+	}
+}
+
+// changefeedMetrics emits metrics tracking the size of the changefeed caches.
+func (mon *monitor) changefeedMetrics(stop <-chan struct{}) {
+	defer recover.Panic(mon.baseLog)
+
+	t := time.NewTicker(time.Minute)
+	defer t.Stop()
+	for {
+		mon.m.EmitGauge("monitor.cache.size", int64(len(mon.docs)), map[string]string{"cache": "openshiftclusters"})
+		mon.m.EmitGauge("monitor.cache.size", int64(len(mon.subs)), map[string]string{"cache": "subscriptions"})
 
 		select {
 		case <-t.C:
@@ -180,6 +232,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	nsgMonitoringTicker := time.NewTicker(nsgMonitoringFrequency)
 	defer nsgMonitoringTicker.Stop()
+	subscriptionStateLoggingTicker := time.NewTicker(subscriptionStateLogFrequency)
+	defer subscriptionStateLoggingTicker.Stop()
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -189,7 +243,8 @@ out:
 	for {
 		mon.mu.RLock()
 		v := mon.docs[id]
-		sub := mon.subs[r.SubscriptionID]
+		subID := strings.ToLower(r.SubscriptionID)
+		sub := mon.subs[subID]
 		mon.mu.RUnlock()
 
 		if v == nil {
@@ -201,12 +256,20 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
-			mon.workOne(context.Background(), log, v.doc, sub, newh != h, nsgMonitoringTicker)
+		if sub != nil {
+			mon.workOne(context.Background(), log, v.doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
 		}
 
 		select {
 		case <-t.C:
+			select {
+			case <-subscriptionStateLoggingTicker.C:
+				// The changefeed filters out subscriptions in invalid states
+				if sub == nil {
+					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", v.doc.OpenShiftCluster.ID)
+				}
+			default:
+			}
 		case <-stop:
 			break out
 		}
@@ -218,7 +281,7 @@ out:
 }
 
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, hourlyRun bool, nsgMonTicker *time.Ticker) {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, subID string, tenantID string, hourlyRun bool, nsgMonTicker *time.Ticker) {
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
@@ -229,43 +292,42 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	dims := map[string]string{
-		dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
-		dimension.Location:          doc.OpenShiftCluster.Location,
-		dimension.SubscriptionID:    sub.ID,
+		dimension.ResourceID:     doc.OpenShiftCluster.ID,
+		dimension.Location:       doc.OpenShiftCluster.Location,
+		dimension.SubscriptionID: subID,
 	}
 
 	var monitors []monitoring.Monitor
-	var wg sync.WaitGroup
 
 	hiveClusterManager, ok := mon.hiveClusterManagers[1]
 	if !ok {
 		log.Info("skipping: no hive cluster manager")
 	} else {
-		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, &wg, hiveClusterManager)
+		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
 		if err != nil {
 			log.Error(err)
-			mon.m.EmitGauge("monitor.hive.failedworker", 1, map[string]string{
-				"resourceId": doc.OpenShiftCluster.ID,
-			})
+			mon.m.EmitGauge("monitor.hive.failedworker", 1, dims)
 		} else {
 			monitors = append(monitors, h)
 		}
 	}
 
-	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
+	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, subID, tenantID, mon.clusterm, dims, nsgMonTicker.C)
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, sub.Subscription.Properties.TenantID, mon.clusterm, hourlyRun, &wg)
+	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
-		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
-			"resourceId": doc.OpenShiftCluster.ID,
-		})
+		mon.m.EmitGauge("monitor.cluster.failedworker", 1, dims)
 		return
 	}
 
 	monitors = append(monitors, c, nsgMon)
 	allJobsDone := make(chan bool)
-	go execute(ctx, allJobsDone, &wg, monitors)
+	onPanic := func(m monitoring.Monitor) {
+		// emit a failed worker metric on panic
+		mon.m.EmitGauge("monitor."+m.MonitorName()+".failedworker", 1, dims)
+	}
+	go execute(ctx, log, allJobsDone, monitors, onPanic)
 
 	select {
 	case <-allJobsDone:
@@ -275,10 +337,21 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 }
 
-func execute(ctx context.Context, done chan<- bool, wg *sync.WaitGroup, monitors []monitoring.Monitor) {
+func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors []monitoring.Monitor, onPanic func(monitoring.Monitor)) {
+	var wg sync.WaitGroup
+
 	for _, monitor := range monitors {
 		wg.Add(1)
-		go monitor.Monitor(ctx)
+		go func() {
+			defer wg.Done()
+			err := monitor.Monitor(ctx)
+			if err != nil {
+				if errors.Is(err, &monitoring.MonitorPanic{}) {
+					onPanic(monitor)
+				}
+				log.Error(err)
+			}
+		}()
 	}
 	wg.Wait()
 	done <- true

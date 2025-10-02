@@ -38,7 +38,7 @@ create_sym_links() {
 
 backup_etcd() {
     local bdir etcd_yaml etcd_dir
-    bdir=/var/lib/etcd-backup
+    bdir="/var/lib/etcd-backup-$(date +%Y%m%d%H%M%S)"
     etcd_yaml=/etc/kubernetes/manifests/etcd-pod.yaml
     etcd_dir=/var/lib/etcd
     if [[ -d $etcd_dir ]] && [[ -f $etcd_yaml ]]; then
@@ -47,7 +47,7 @@ backup_etcd() {
         echo "Moving $etcd_yaml to $bdir"
         mv "$etcd_yaml" "$bdir" || abort "failed to move $etcd_yaml to $bdir"
         echo "Moving $etcd_dir to /host/tmp"
-        mv "$etcd_dir" /tmp || abort "failed to move $etcd_dir to /tmp"
+        mv "$etcd_dir" $bdir || abort "failed to move $etcd_dir to $bdir"
     else
         echo "$etcd_dir doesn't exist or $etcd_yaml has already been moved"
         echo "Not taking host etcd backup"

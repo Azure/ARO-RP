@@ -1,0 +1,14 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyLabels
+metadata:
+  name: aro-nodes-deny
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Node"]
+  parameters:
+    labels:
+      - key: "node-role.kubernetes.io/master"
+        denyRegex: ""

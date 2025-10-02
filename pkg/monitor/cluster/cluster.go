@@ -5,9 +5,7 @@ package cluster
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"sync"
+	"errors"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -42,8 +40,10 @@ const MONITOR_GOROUTINES_PER_CLUSTER = 5
 
 var _ monitoring.Monitor = (*Monitor)(nil)
 
+type collectorFunc func(context.Context) error
+
 type Monitor struct {
-	collectors []func(context.Context) error
+	collectors []collectorFunc
 
 	log       *logrus.Entry
 	hourlyRun bool
@@ -63,20 +63,18 @@ type Monitor struct {
 
 	ocpclientset clienthelper.Interface
 
-	wg *sync.WaitGroup
-
 	// Namespaces that are OpenShift or ARO managed that we want to monitor
 	namespacesToMonitor []string
 
 	// OpenShift version of the cluster being monitored
-	clusterDesiredVersion *version.Version
-	clusterActualVersion  *version.Version
+	clusterDesiredVersion version.Version
+	clusterActualVersion  version.Version
 
 	// Limit for items per pagination query
 	queryLimit int
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -160,11 +158,10 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		tenantID:            tenantID,
 		m:                   m,
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
-		wg:                  wg,
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
 	}
-	mon.collectors = []func(context.Context) error{
+	mon.collectors = []collectorFunc{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
 		mon.emitNSGReconciliation,
@@ -197,12 +194,46 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	return mon, nil
 }
 
+func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error) (err error) {
+	innerNow := time.Now()
+	collectorName := steps.ShortName(f)
+	mon.log.Debugf("running %s", collectorName)
+
+	// If the collector panics we should return the error (so that it bubbles
+	// up) but not prevent any other collector from running.
+	defer func() {
+		if e := recover(); e != nil {
+			err = &failureToRunClusterCollector{collectorName: collectorName, inner: &collectorPanic{panicValue: e}}
+			mon.emitMonitorCollectorError(collectorName)
+		}
+	}()
+
+	innerErr := f(ctx)
+	if innerErr != nil {
+		// emit metrics collection failures and collect the err, but
+		// don't stop running other metric collections
+		mon.emitMonitorCollectorError(collectorName)
+		return &failureToRunClusterCollector{collectorName: collectorName, inner: innerErr}
+	} else {
+		timeToComplete := time.Since(innerNow).Seconds()
+		mon.emitMonitorCollectionTiming(collectorName, timeToComplete)
+		mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, timeToComplete)
+	}
+	return nil
+}
+
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
-	defer mon.wg.Done()
+func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
+	// guard for any monitor-level panics
+	defer func() {
+		if e := recover(); e != nil {
+			_err = &monitoring.MonitorPanic{PanicValue: e}
+		}
+	}()
+
+	errs := []error{}
 
 	now := time.Now()
-
 	mon.log.Debug("monitoring")
 
 	if mon.hourlyRun {
@@ -212,36 +243,32 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		})
 	}
 
-	//this API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
-	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
+	// This API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
+	err := mon.timeCall(ctx, mon.emitAPIServerHealthzCode)
 	if err != nil {
 		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerHealthzCode), err)
-	}
-	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
-	if statusCode != http.StatusOK {
-		err := mon.emitAPIServerPingCode(ctx)
+
+		// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
+		err := mon.timeCall(ctx, mon.emitAPIServerPingCode)
 		if err != nil {
 			errs = append(errs, err)
-			mon.emitFailureToGatherMetric(steps.ShortName(mon.emitAPIServerPingCode), err)
 		}
-		return
+
+		return errors.Join(errs...)
 	}
 
-	err = mon.prefetchClusterVersion(ctx)
+	err = mon.timeCall(ctx, mon.prefetchClusterVersion)
 	if err != nil {
 		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.ShortName(mon.prefetchClusterVersion), err)
-		return
+		return errors.Join(errs...)
 	}
 
 	// Determine the list of OpenShift (or ARO) managed namespaces that we will
 	// query for -- this needs to succeed
-	err = mon.fetchManagedNamespaces(ctx)
+	err = mon.timeCall(ctx, mon.fetchManagedNamespaces)
 	if err != nil {
 		errs = append(errs, err)
-		mon.emitFailureToGatherMetric(steps.ShortName(mon.fetchManagedNamespaces), err)
-		return
+		return errors.Join(errs...)
 	}
 
 	// Run up to MONITOR_GOROUTINES_PER_CLUSTER goroutines for collecting
@@ -254,22 +281,13 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 
 	for _, f := range mon.collectors {
 		wg.Go(func() error {
-			innerNow := time.Now()
-			collectorName := steps.ShortName(f)
-			mon.log.Debugf("running %s", collectorName)
-			innerErr := f(ctx)
+			innerErr := mon.timeCall(ctx, f)
 			if innerErr != nil {
-				mon.log.Debugf("failed to run %s: %s", collectorName, innerErr.Error())
-				// emit metrics collection failures and collect the err, but
-				// don't stop running other metric collections
-				mon.emitFailureToGatherMetric(collectorName, innerErr)
 				// NOTE: The channel only has room to accommodate one error per
 				// collector, so if a collector needs to return multiple errors
 				// they should be joined into a single one (see errors.Join)
 				// before being added.
-				errChan <- fmt.Errorf("failure running cluster collector '%s': %w", collectorName, innerErr)
-			} else {
-				mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, time.Since(innerNow).Seconds())
+				errChan <- innerErr
 			}
 			return nil
 		})
@@ -290,12 +308,15 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitFloat("monitor.cluster.duration", time.Since(now).Seconds(), map[string]string{})
 	}
 
-	return
+	return errors.Join(errs...)
 }
 
-func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error) {
-	mon.log.Printf("%s: %s", friendlyFuncName, err)
-	mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+func (mon *Monitor) emitMonitorCollectorError(collectorName string) {
+	emitter.EmitGauge(mon.m, "monitor.cluster.collector.error", 1, mon.dims, map[string]string{"collector": collectorName})
+}
+
+func (mon *Monitor) emitMonitorCollectionTiming(collectorName string, duration float64) {
+	emitter.EmitFloat(mon.m, "monitor.cluster.collector.duration", duration, mon.dims, map[string]string{"collector": collectorName})
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
@@ -304,4 +325,8 @@ func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
 
 func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
 	emitter.EmitFloat(mon.m, m, value, mon.dims, dims)
+}
+
+func (m *Monitor) MonitorName() string {
+	return "cluster"
 }

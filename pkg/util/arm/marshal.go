@@ -37,18 +37,33 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		dataMap["apiVersion"] = r.APIVersion
 		if r.DependsOn != nil {
 			dataMap["dependsOn"] = r.DependsOn
 		}
-
-		// Always inject outer Type/Location if provided by the caller
 		if r.Type != "" {
 			dataMap["type"] = r.Type
 		}
 		if r.Location != "" {
 			dataMap["location"] = r.Location
+		}
+		if r.Condition != nil {
+			dataMap["condition"] = r.Condition
+		}
+		if r.Name != "" {
+			dataMap["name"] = r.Name
+		}
+		if r.Tags != nil {
+			dataMap["tags"] = r.Tags
+		}
+		if r.Copy != nil {
+			dataMap["copy"] = r.Copy
+		}
+		if r.Comments != "" {
+			dataMap["comments"] = r.Comments
+		}
+		if r.Etag != "" {
+			dataMap["etag"] = r.Etag
 		}
 		return json.Marshal(dataMap)
 	}

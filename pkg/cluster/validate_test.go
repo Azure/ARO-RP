@@ -38,7 +38,7 @@ func TestValidateZones(t *testing.T) {
 
 		doc                   api.OpenShiftCluster
 		resourceSkusClientErr error
-		wantErr               string
+		wantErrs              []error
 	}
 
 	for _, tt := range []*test{
@@ -50,7 +50,6 @@ func TestValidateZones(t *testing.T) {
 				ID:       key,
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
-
 					MasterProfile: api.MasterProfile{
 						VMSize: api.VMSizeStandardD16asV4,
 					},
@@ -59,11 +58,7 @@ func TestValidateZones(t *testing.T) {
 							VMSize: api.VMSizeStandardD8asV4,
 						},
 					},
-					NetworkProfile: api.NetworkProfile{
-						LoadBalancerProfile: &api.LoadBalancerProfile{
-							Zones: []string{},
-						},
-					},
+					Zones: []string{},
 				},
 			},
 		},
@@ -75,7 +70,6 @@ func TestValidateZones(t *testing.T) {
 				ID:       key,
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
-
 					MasterProfile: api.MasterProfile{
 						VMSize: api.VMSizeStandardD16asV4,
 					},
@@ -84,11 +78,7 @@ func TestValidateZones(t *testing.T) {
 							VMSize: api.VMSizeStandardD8asV4,
 						},
 					},
-					NetworkProfile: api.NetworkProfile{
-						LoadBalancerProfile: &api.LoadBalancerProfile{
-							Zones: []string{"1", "2", "3"},
-						},
-					},
+					Zones: []string{"1", "2", "3"},
 				},
 			},
 		},
@@ -100,7 +90,6 @@ func TestValidateZones(t *testing.T) {
 				ID:       key,
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
-
 					MasterProfile: api.MasterProfile{
 						VMSize: api.VMSizeStandardD16asV4,
 					},
@@ -109,11 +98,7 @@ func TestValidateZones(t *testing.T) {
 							VMSize: api.VMSizeStandardD8asV4,
 						},
 					},
-					NetworkProfile: api.NetworkProfile{
-						LoadBalancerProfile: &api.LoadBalancerProfile{
-							Zones: []string{"1", "2", "3"},
-						},
-					},
+					Zones: []string{"1", "2", "3"},
 				},
 			},
 		},
@@ -134,11 +119,7 @@ func TestValidateZones(t *testing.T) {
 							VMSize: api.VMSizeStandardD8asV4,
 						},
 					},
-					NetworkProfile: api.NetworkProfile{
-						LoadBalancerProfile: &api.LoadBalancerProfile{
-							Zones: []string{"1", "2", "3", "4"},
-						},
-					},
+					Zones: []string{"1", "2", "3", "4"},
 				},
 			},
 		},
@@ -146,14 +127,14 @@ func TestValidateZones(t *testing.T) {
 			name:                 "zonal, control plane unavailable",
 			controlPlaneSkuZones: []string{"1", "2"},
 			workerSkuZones:       []string{"1", "2", "3"},
-			wantErr:              "control plane SKU 'Standard_D16as_v4' only available in 2 zones, need 3",
+			wantErrs:             []error{errors.New("control plane SKU 'Standard_D16as_v4' only available in 2 zones, need 3")},
 		},
 		{
 			name:                  "error from resourceskus",
-			resourceSkusClientErr: errors.New("error time :)"),
+			resourceSkusClientErr: errTestSKUFetchError,
 			controlPlaneSkuZones:  []string{"1", "2"},
 			workerSkuZones:        []string{"1", "2", "3"},
-			wantErr:               "failure listing resource SKUs: error time :)",
+			wantErrs:              []error{errListVMResourceSKUs, errTestSKUFetchError},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -217,9 +198,6 @@ func TestValidateZones(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								VMSize: api.VMSize(controlPlaneSku),
 							},
-							NetworkProfile: api.NetworkProfile{
-								LoadBalancerProfile: &api.LoadBalancerProfile{},
-							},
 						},
 					},
 				},
@@ -231,8 +209,8 @@ func TestValidateZones(t *testing.T) {
 			fixture.Create()
 
 			err := m.validateZones(ctx)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			if tt.wantErr == "" {
+			utilerror.AssertErrorMatchesAll(t, err, tt.wantErrs)
+			if len(tt.wantErrs) == 0 {
 				for _, err := range checker.CheckOpenShiftClusters(openShiftClustersClient) {
 					t.Error(err)
 				}

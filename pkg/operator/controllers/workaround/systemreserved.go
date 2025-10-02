@@ -29,7 +29,7 @@ type systemreserved struct {
 
 	client client.Client
 
-	versionFixed *version.Version
+	versionFixed version.Version
 }
 
 var _ Workaround = &systemreserved{}
@@ -49,7 +49,7 @@ func (sr *systemreserved) Name() string {
 	return "SystemReserved fix for bz-1857446"
 }
 
-func (sr *systemreserved) IsRequired(clusterVersion *version.Version, cluster *arov1alpha1.Cluster) bool {
+func (sr *systemreserved) IsRequired(clusterVersion version.Version, cluster *arov1alpha1.Cluster) bool {
 	if cluster.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled) {
 		return false
 	}

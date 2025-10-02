@@ -34,6 +34,7 @@
     "resources": [
         {
             "apiVersion": "2020-08-01",
+            "condition": "[parameters('deployNSGs')]",
             "location": "[resourceGroup().location]",
             "name": "gateway-nsg",
             "properties": {},

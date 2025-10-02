@@ -1079,10 +1079,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 									Visibility: api.VisibilityPrivate,
 								},
 							},
+							Zones: []string{"1", "2", "3"},
 							NetworkProfile: api.NetworkProfile{
 								OutboundType: api.OutboundTypeLoadbalancer,
 								LoadBalancerProfile: &api.LoadBalancerProfile{
-									Zones: []string{"1", "2", "3"},
 									ManagedOutboundIPs: &api.ManagedOutboundIPs{
 										Count: 1,
 									},
@@ -1485,7 +1485,6 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 							NetworkProfile: api.NetworkProfile{
 								OutboundType: api.OutboundTypeLoadbalancer,
 								LoadBalancerProfile: &api.LoadBalancerProfile{
-									Zones: []string{},
 									ManagedOutboundIPs: &api.ManagedOutboundIPs{
 										Count: 1,
 									},
@@ -1587,10 +1586,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 									Visibility: api.VisibilityPrivate,
 								},
 							},
+							Zones: []string{"1", "2", "3"},
 							NetworkProfile: api.NetworkProfile{
 								OutboundType: api.OutboundTypeLoadbalancer,
 								LoadBalancerProfile: &api.LoadBalancerProfile{
-									Zones: []string{"1", "2", "3"},
 									ManagedOutboundIPs: &api.ManagedOutboundIPs{
 										Count: 1,
 									},

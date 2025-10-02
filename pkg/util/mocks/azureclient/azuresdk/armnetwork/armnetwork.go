@@ -152,6 +152,21 @@ func (mr *MockInterfacesClientMockRecorder) Get(ctx, resourceGroupName, networkI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterfacesClient)(nil).Get), ctx, resourceGroupName, networkInterfaceName, options)
 }
 
+// GetEffectiveRouteTableAndWait mocks base method.
+func (m *MockInterfacesClient) GetEffectiveRouteTableAndWait(ctx context.Context, resourceGroupName, networkInterfaceName string, options *armnetwork.InterfacesClientBeginGetEffectiveRouteTableOptions) (*armnetwork.EffectiveRouteListResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEffectiveRouteTableAndWait", ctx, resourceGroupName, networkInterfaceName, options)
+	ret0, _ := ret[0].(*armnetwork.EffectiveRouteListResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEffectiveRouteTableAndWait indicates an expected call of GetEffectiveRouteTableAndWait.
+func (mr *MockInterfacesClientMockRecorder) GetEffectiveRouteTableAndWait(ctx, resourceGroupName, networkInterfaceName, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEffectiveRouteTableAndWait", reflect.TypeOf((*MockInterfacesClient)(nil).GetEffectiveRouteTableAndWait), ctx, resourceGroupName, networkInterfaceName, options)
+}
+
 // List mocks base method.
 func (m *MockInterfacesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.InterfacesClientListOptions) ([]*armnetwork.Interface, error) {
 	m.ctrl.T.Helper()
@@ -348,6 +363,20 @@ func NewMockPrivateLinkServicesClient(ctrl *gomock.Controller) *MockPrivateLinkS
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPrivateLinkServicesClient) EXPECT() *MockPrivateLinkServicesClientMockRecorder {
 	return m.recorder
+}
+
+// CreateOrUpdateAndWait mocks base method.
+func (m *MockPrivateLinkServicesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, serviceName string, parameters armnetwork.PrivateLinkService, options *armnetwork.PrivateLinkServicesClientBeginCreateOrUpdateOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", ctx, resourceGroupName, serviceName, parameters, options)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
+func (mr *MockPrivateLinkServicesClientMockRecorder) CreateOrUpdateAndWait(ctx, resourceGroupName, serviceName, parameters, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).CreateOrUpdateAndWait), ctx, resourceGroupName, serviceName, parameters, options)
 }
 
 // DeletePrivateEndpointConnectionAndWait mocks base method.

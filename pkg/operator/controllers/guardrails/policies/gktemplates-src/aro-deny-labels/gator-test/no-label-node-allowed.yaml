@@ -1,0 +1,54 @@
+kind: AdmissionReview
+apiVersion: admission.k8s.io/v1
+request:
+  uid: 2024ee9c-c374-413c-838d-e62bcb4826be
+  kind:
+    group: ""
+    version: v1
+    kind: Node
+  resource:
+    group: ""
+    version: v1
+    resource: node
+  requestKind:
+    group: ""
+    version: v1
+    kind: Node
+  requestResource:
+    group: ""
+    version: v1
+    resource: node
+  name: infra
+  operation: DELETE
+  userInfo:
+    username: kube-review
+    uid: 611a19d7-6aa5-47d2-bba3-8c5df2bffbc7
+  oldObject:
+    kind: Node
+    apiVersion: ""
+    metadata:
+      name: infra-0
+      creationTimestamp:
+    spec:
+      selector:
+        matchLabels:
+          app: nginx
+      template:
+        metadata:
+          creationTimestamp:
+          labels:
+            app: nginx
+        spec:
+          containers:
+          - name: nginx
+            image: nginx
+            ports:
+            - containerPort: 8080
+            resources: {}
+      strategy: {}
+    status: {}
+  dryRun: true
+  options:
+    kind: CreateOptions
+    apiVersion: meta.k8s.io/v1
+  object:

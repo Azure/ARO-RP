@@ -30,6 +30,9 @@
         },
         "rpVersionStorageAccountName": {
             "type": "string"
+        },
+        "tokenContributorRoleID": {
+            "type": "string"
         }
     },
     "resources": [
@@ -92,7 +95,7 @@
             "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '48983534-3d06-4dcb-a566-08a694eb1279')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('tokenContributorRoleID'))]",
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },

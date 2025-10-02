@@ -7,6 +7,7 @@ package statsd
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type statsd struct {
@@ -29,18 +31,30 @@ type statsd struct {
 	conn net.Conn
 	ch   chan *metric
 
+	// extraDimensions are values added to every emit (e.g. location)
+	extraDimensions map[string]string
+
 	now func() time.Time
 }
 
+var _ metrics.Emitter = &statsd{}
+
 // New returns a new metrics.Emitter
-func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string, mdmSocketEnv string) metrics.Emitter {
+func New(ctx context.Context, env env.Core, account, namespace string, mdmSocketEnv string) *statsd {
 	s := &statsd{
-		log: log,
+		log: env.LoggerForComponent("metrics"),
 		env: env,
 
 		account:      account,
 		namespace:    namespace,
 		mdmSocketEnv: mdmSocketEnv,
+
+		extraDimensions: map[string]string{
+			"hostname": env.Hostname(),
+			"location": env.Location(),
+			"service":  env.Service(),
+			"version":  version.GitCommit,
+		},
 
 		ch: make(chan *metric, 1024),
 
@@ -55,7 +69,35 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespac
 		s.namespace = "*"
 	}
 
-	go s.run()
+	return s
+}
+
+// New returns a new metrics.Emitter for a Monitor's cluster metrics
+func NewMetricsForCluster(ctx context.Context, env env.Core, account, namespace string, mdmSocketEnv string) *statsd {
+	s := &statsd{
+		log: env.LoggerForComponent("clustermetrics"),
+		env: env,
+
+		account:      account,
+		namespace:    namespace,
+		mdmSocketEnv: mdmSocketEnv,
+
+		extraDimensions: map[string]string{
+			"location": env.Location(),
+		},
+
+		ch: make(chan *metric, 1024),
+
+		now: time.Now,
+	}
+
+	if s.account == "" {
+		s.account = "*"
+	}
+
+	if s.namespace == "" {
+		s.namespace = "*"
+	}
 
 	return s
 }
@@ -84,24 +126,29 @@ func (s *statsd) emitMetric(m *metric) {
 	if m.dimensions == nil {
 		m.dimensions = map[string]string{}
 	}
-	m.dimensions["location"] = s.env.Location()
-	m.dimensions["hostname"] = s.env.Hostname()
+
+	maps.Copy(m.dimensions, s.extraDimensions)
 	m.timestamp = s.now()
 
 	s.ch <- m
 }
 
-func (s *statsd) run() {
+func (s *statsd) Run(stop <-chan struct{}) {
 	defer recover.Panic(s.log)
 
 	var lastLog time.Time
 
-	for m := range s.ch {
-		err := s.write(m)
-		if err != nil &&
-			s.now().After(lastLog.Add(time.Second)) {
-			lastLog = s.now()
-			s.log.Error(err)
+	for {
+		select {
+		case m := <-s.ch:
+			err := s.write(m)
+			if err != nil &&
+				s.now().After(lastLog.Add(time.Second)) {
+				lastLog = s.now()
+				s.log.Error(err)
+			}
+		case <-stop:
+			return
 		}
 	}
 }

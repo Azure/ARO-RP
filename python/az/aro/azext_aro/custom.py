@@ -121,6 +121,7 @@ def aro_create(*,  # pylint: disable=too-many-locals
              version=version,
              pod_cidr=pod_cidr,
              service_cidr=service_cidr,
+             enable_managed_identity=enable_managed_identity,
              warnings_as_text=True)
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
@@ -233,7 +234,34 @@ def aro_create(*,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def validate(*,  # pylint: disable=too-many-locals,too-many-statements
+def _report_validation_issues(errors_and_warnings, warnings_as_text):
+    warnings = [issue for issue in errors_and_warnings if issue[2] == "Warning"]
+    errors = [issue for issue in errors_and_warnings if issue[2] != "Warning"]
+
+    if not warnings and not errors:
+        logger.info("No validation errors or warnings")
+        return
+
+    if warnings:
+        if len(errors) == 0 and warnings_as_text:
+            full_msg = ""
+            for warning in warnings:
+                full_msg += f"{warning[3]}\n"
+        else:
+            headers = ["Type", "Name", "Severity", "Description"]
+            table = tabulate(warnings, headers=headers, tablefmt="grid")
+            full_msg = f"The following issues will have a minor impact on cluster creation:\n{table}"
+        logger.warning(full_msg)
+
+    if errors:
+        full_msg = "\n" if warnings else ""
+        headers = ["Type", "Name", "Severity", "Description"]
+        table = tabulate(errors, headers=headers, tablefmt="grid")
+        full_msg += f"The following errors are fatal and will block cluster creation:\n{table}"
+        raise ValidationError(full_msg)
+
+
+def validate(*,  # pylint: disable=too-many-locals
              cmd,
              client,  # pylint: disable=unused-argument
              resource_group_name,  # pylint: disable=unused-argument
@@ -251,7 +279,7 @@ def validate(*,  # pylint: disable=too-many-locals,too-many-statements
              version=None,
              pod_cidr=None,  # pylint: disable=unused-argument
              service_cidr=None,  # pylint: disable=unused-argument
-             enable_managed_identity=False,  # pylint: disable=unused-argument
+             enable_managed_identity=False,
              platform_workload_identities=None,  # pylint: disable=unused-argument
              mi_user_assigned=None,  # pylint: disable=unused-argument
              warnings_as_text=False):
@@ -272,14 +300,15 @@ def validate(*,  # pylint: disable=too-many-locals,too-many-statements
 
     aad = AADManager(cmd.cli_ctx)
 
-    rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
-    if not rp_client_sp_id:
-        raise ResourceNotFoundError("RP service principal not found.")
+    sp_obj_ids = []
+    if not enable_managed_identity:
+        rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
+        if not rp_client_sp_id:
+            raise ResourceNotFoundError("RP service principal not found.")
+        sp_obj_ids.append(rp_client_sp_id)
 
-    sp_obj_ids = [rp_client_sp_id]
-
-    if client_id is not None:
-        sp_obj_ids.append(aad.get_service_principal_id(client_id))
+        if client_id is not None:
+            sp_obj_ids.append(aad.get_service_principal_id(client_id))
 
     cluster = mockoc(disk_encryption_set, master_subnet, worker_subnet, enable_preconfigured_nsg)
     try:
@@ -307,46 +336,13 @@ def validate(*,  # pylint: disable=too-many-locals,too-many-statements
     for error_func in error_objects:
         namespace = collections.namedtuple("Namespace", locals().keys())(*locals().values())
         error_obj = error_func(cmd, namespace)
-        if error_obj != []:
+        if error_obj:
             for err in error_obj:
                 # Wrap text so tabulate returns a pretty table
-                new_err = []
-                for txt in err:
-                    new_err.append(textwrap.fill(txt, width=160))
+                new_err = [textwrap.fill(txt, width=160) for txt in err]
                 errors_and_warnings.append(new_err)
 
-    warnings = []
-    errors = []
-    if len(errors_and_warnings) > 0:
-        # Separate errors and warnings into separate arrays
-        for issue in errors_and_warnings:
-            if issue[2] == "Warning":
-                warnings.append(issue)
-            else:
-                errors.append(issue)
-    else:
-        logger.info("No validation errors or warnings")
-
-    if len(warnings) > 0:
-        if len(errors) == 0 and warnings_as_text:
-            full_msg = ""
-            for warning in warnings:
-                full_msg = full_msg + f"{warning[3]}\n"
-        else:
-            headers = ["Type", "Name", "Severity", "Description"]
-            table = tabulate(warnings, headers=headers, tablefmt="grid")
-            full_msg = f"The following issues will have a minor impact on cluster creation:\n{table}"
-        logger.warning(full_msg)
-
-    if len(errors) > 0:
-        if len(warnings) > 0:
-            full_msg = "\n"
-        else:
-            full_msg = ""
-        headers = ["Type", "Name", "Severity", "Description"]
-        table = tabulate(errors, headers=headers, tablefmt="grid")
-        full_msg = full_msg + f"The following errors are fatal and will block cluster creation:\n{table}"
-        raise ValidationError(full_msg)
+    _report_validation_issues(errors_and_warnings, warnings_as_text)
 
 
 def aro_validate(*,  # pylint: disable=too-many-locals,too-many-statements
@@ -506,7 +502,7 @@ def aro_get_versions(client, location):
     items = client.open_shift_versions.list(location)
     versions = []
     for item in items:
-        versions.append(item.properties.version)
+        versions.append(item.version)
     return sorted(versions)
 
 

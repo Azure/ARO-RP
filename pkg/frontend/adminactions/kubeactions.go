@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -157,8 +158,8 @@ func (k *kubeActions) KubeWatch(ctx context.Context, o *unstructured.Unstructure
 	}
 
 	listOpts := metav1.ListOptions{
-		Limit:         1000, // just in case
-		LabelSelector: o.GetLabels()[labelKey],
+		LabelSelector: fmt.Sprintf("%v=%v", labelKey, o.GetLabels()[labelKey]),
+		Watch:         true,
 	}
 
 	w, err := k.dyn.Resource(gvr).Namespace(o.GetNamespace()).Watch(ctx, listOpts)
