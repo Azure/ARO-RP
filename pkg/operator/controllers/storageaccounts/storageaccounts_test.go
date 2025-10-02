@@ -23,7 +23,7 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
@@ -31,7 +31,6 @@ import (
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 var (
@@ -44,7 +43,7 @@ var (
 	vnetName                 = "vnet"
 	subnetNameWorker         = "worker"
 	subnetNameMaster         = "master"
-	nsgv1MasterResourceId    = clusterResourceGroupId + "/providers/Microsoft.Network/networkSecurityGroups/" + infraId + apisubnet.NSGControlPlaneSuffixV1
+	nsgv1MasterResourceId    = clusterResourceGroupId + "/providers/Microsoft.Network/networkSecurityGroups/" + infraId + subnet.NSGControlPlaneSuffixV1
 
 	storageSuffix              = "random-suffix"
 	clusterStorageAccountName  = "cluster" + storageSuffix

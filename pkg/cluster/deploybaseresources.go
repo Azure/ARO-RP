@@ -440,11 +440,11 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 		return err
 	}
 
-	subnetResp, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+	subnetResponse, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
 	if err != nil {
 		return err
 	}
-	s := subnetResp.Subnet
+	s := subnetResponse.Subnet
 
 	if s.Properties == nil {
 		s.Properties = &armnetwork.SubnetPropertiesFormat{}
