@@ -109,8 +109,6 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 				ps := doc.OpenShiftCluster.Properties.ProvisioningState
 				fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
 
-				mon.baseLog.Infof("Got cluster in changefeed: %s", doc.ID)
-
 				switch {
 				case ps == api.ProvisioningStateCreating,
 					ps == api.ProvisioningStateDeleting,
