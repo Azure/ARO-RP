@@ -63,6 +63,13 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 		newRoleSets[doc.OpenShiftVersion] = doc
 	}
 
+	// check if 4.16 is present in the incoming payload
+	if doc, ok := newRoleSets["4.16"]; ok {
+		log.Infof("incoming payload contains %s", doc.OpenShiftVersion)
+	} else {
+		log.Infof("incoming payload does not contain 4.16")
+	}
+
 	for _, doc := range existingRoleSets.PlatformWorkloadIdentityRoleSetDocuments {
 		incoming, found := newRoleSets[doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion]
 		if found {

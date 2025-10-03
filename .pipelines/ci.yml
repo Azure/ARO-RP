@@ -176,7 +176,7 @@ stages:
     variables:
       TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variable.outputs['SetTag.TAG'] ]
     jobs:
-      - job: Run_E2E_Tests
+      - job: Run_E2E_Tests_For_CSP
         timeoutInMinutes: 0
         pool:
           name: 1es-aro-ci-pool
@@ -248,7 +248,137 @@ stages:
               else
                 echo "E2E tests passed."
               fi
-            displayName: ⚙️  Run E2E Test Suite
+            displayName: ⚙️  Run E2E Test Suite for CSP
+
+          # Log the output from the services in case of failure
+          - bash: |
+              docker compose logs vpn
+              docker compose logs selenium
+              docker compose logs rp
+              docker compose logs portal
+              docker compose logs e2e
+            displayName: Log Service Output
+            condition: always()
+
+          # Collect must-gather logs
+          - bash: |
+              wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+              tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+              ./oc adm must-gather --image arointsvc.azurecr.io/openshift4/ose-must-gather:latest
+              tar cf must-gather.tar.gz must-gather.local.*
+            displayName: Collect must-gather
+            condition: Failed()
+          # Publish the must-gather result to the pipeline
+          - publish: must-gather.tar.gz
+            artifact: must-gather
+            displayName: Append must-gather to Pipeline
+            condition: Failed()
+
+          # Clean up Docker Compose services
+          - bash: |
+              docker compose down
+              rm -f aks.kubeconfig
+            displayName: Cleanup Docker Compose Services and Kubeconfig
+            condition: always()
+
+          # Clean Up Database
+          - bash: |
+              . ./hack/e2e/run-rp-and-e2e.sh
+              az cosmosdb sql database delete --name "$DATABASE_NAME" --yes --account-name "$DATABASE_ACCOUNT_NAME" --resource-group "$RESOURCEGROUP"
+            displayName: Clean Up Database
+            condition: always()
+
+          # AZ CLI Logout
+          - template: ./templates/template-az-cli-logout.yml
+      - job: Run_E2E_Tests_For_MIWI
+        dependsOn: Run_E2E_Tests_For_CSP
+        condition: always()
+        timeoutInMinutes: 0
+        pool:
+          name: 1es-aro-ci-pool
+        steps:
+          # Checkout the code
+          - template: ./templates/template-checkout.yml
+
+          # Install Docker, Docker Compose, and dependencies
+          - bash: |
+              . ./hack/e2e/utils.sh
+              install_docker_dependencies
+            displayName: Install Docker and Docker Compose
+          - task: Docker@2
+            inputs:
+              command: "login"
+              containerRegistry: arointsvc #service connection name
+
+          # AZ CLI Login
+          - template: ./templates/template-az-cli-login.yml
+            parameters:
+              azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+
+          - bash: |
+              az account set -s $AZURE_SUBSCRIPTION_ID
+              SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+            displayName: Fetch secrets
+
+          - bash: |
+              echo "##vso[task.setvariable variable=CI]true"
+            displayName: Set CI=true
+
+          # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
+          # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
+          - bash: |
+              echo "##vso[task.setvariable variable=E2E_LABEL]!smoke"
+            displayName: Enable regression tests in CI
+            condition: in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI')
+
+          # Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
+          - bash: |
+              . secrets/env
+
+              # Retrieve the kubeconfig
+              hack/get-admin-aks-kubeconfig.sh > aks.kubeconfig
+
+              if [ -f aks.kubeconfig ]; then
+                echo "Kubeconfig retrieved successfully."
+              else
+                echo "Failed to retrieve Kubeconfig."
+                exit 1
+              fi
+            displayName: Get Kubeconfig for AKS Cluster
+
+          # Run the E2E test suite
+          - bash: |
+              echo "##vso[task.setvariable variable=USE_WI]true"
+            displayName: Set USE_WI=true
+          - bash: |
+              . secrets/env
+              . ./hack/e2e/run-rp-and-e2e.sh
+              export CLUSTER=${CLUSTER}-miwi
+              export CLUSTER_RESOURCEGROUP=${CLUSTER}
+              export SKIP_MIWI_ROLE_ASSIGNMENT=true
+              . ./hack/devtools/local_dev_env.sh
+              create_miwi_env_file
+              echo "created miwi env file successfully"
+              . ./env
+              az acr login --name arosvcdev
+              az acr login --name arointsvc
+              deploy_e2e_db
+              register_sub
+              docker compose build vpn
+              docker compose up -d vpn --wait
+              echo "Updating role sets"
+              update_role_sets
+              echo "Updated role sets"
+              docker compose up --quiet-pull --exit-code-from e2e portal selenium rp e2e
+              # Check if the E2E tests failed
+              E2E_EXIT_CODE=$?
+              if [ $E2E_EXIT_CODE -ne 0 ]; then
+                echo "##vso[task.logissue type=error] E2E tests failed. Check the logs for more details."
+                exit $E2E_EXIT_CODE
+              else
+                echo "E2E tests passed."
+              fi
+            displayName: ⚙️  Run E2E Test Suite for MIWI
 
           # Log the output from the services in case of failure
           - bash: |
