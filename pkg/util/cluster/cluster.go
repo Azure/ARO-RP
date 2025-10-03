@@ -111,7 +111,6 @@ const DefaultWorkerVmSize = api.VMSizeStandardD4sV5
 
 func DefaultMasterVmSizes() []string {
 	return []string{
-		api.VMSizeStandardD8sV6.String(),
 		api.VMSizeStandardD8sV5.String(),
 		api.VMSizeStandardD8sV4.String(),
 		api.VMSizeStandardD8sV3.String(),
