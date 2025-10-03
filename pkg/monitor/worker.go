@@ -16,10 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/monitor/azure/nsg"
-	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
-	hivemon "github.com/Azure/ARO-RP/pkg/monitor/hive"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
@@ -88,7 +85,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 
 	// Align this time with the deletion mechanism.
 	// Go to docs/monitoring.md for the details.
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(mon.changefeedInterval)
 	defer t.Stop()
 
 	for {
@@ -155,7 +152,6 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 					delete(mon.subs, id)
 					continue
 				}
-
 				c, ok := mon.subs[id]
 				if ok {
 					// update this as subscription might have moved tenants
@@ -201,10 +197,10 @@ func (mon *monitor) changefeedMetrics(stop <-chan struct{}) {
 }
 
 // worker reads clusters to be monitored and monitors them
-func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string) {
+func (mon *monitor) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(mon.baseLog)
 
-	time.Sleep(delay)
+	time.Sleep(mon.delay)
 
 	var r azure.Resource
 
@@ -234,7 +230,7 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 	defer nsgMonitoringTicker.Stop()
 	subscriptionStateLoggingTicker := time.NewTicker(subscriptionStateLogFrequency)
 	defer subscriptionStateLoggingTicker.Stop()
-	t := time.NewTicker(time.Minute)
+	t := time.NewTicker(mon.interval)
 	defer t.Stop()
 
 	h := time.Now().Hour()
@@ -303,7 +299,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	if !ok {
 		log.Info("skipping: no hive cluster manager")
 	} else {
-		h, err := hivemon.NewHiveMonitor(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
+		h, err := mon.hiveMonitorBuilder(log, doc.OpenShiftCluster, mon.clusterm, hourlyRun, hiveClusterManager)
 		if err != nil {
 			log.Error(err)
 			mon.m.EmitGauge("monitor.hive.failedworker", 1, dims)
@@ -312,9 +308,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		}
 	}
 
-	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, subID, tenantID, mon.clusterm, dims, nsgMonTicker.C)
+	nsgMon := mon.nsgMonitorBuilder(log, doc.OpenShiftCluster, mon.env, subID, tenantID, mon.clusterm, dims, nsgMonTicker.C)
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
+	c, err := mon.clusterMonitorBuilder(log, restConfig, doc.OpenShiftCluster, mon.env, tenantID, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
 		mon.m.EmitGauge("monitor.cluster.failedworker", 1, dims)

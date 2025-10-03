@@ -37,6 +37,7 @@ type FakeAsyncOperationDocumentClient struct {
 	queryHandlers           map[string]fakeAsyncOperationDocumentQueryHandler
 	sorter                  func([]*pkg.AsyncOperationDocument)
 	etag                    int
+	changeFeedIterators     []*fakeAsyncOperationDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.AsyncOperationDocument, *pkg.AsyncOperationDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeAsyncOperationDocumentClient) apply(ctx context.Context, partitionk
 
 	c.asyncOperationDocuments[asyncOperationDocument.ID] = asyncOperationDocument
 
+	if err = c.updateChangeFeeds(asyncOperationDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(asyncOperationDocument)
 }
 
@@ -237,7 +242,9 @@ func (c *FakeAsyncOperationDocumentClient) Delete(ctx context.Context, partition
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a AsyncOperationDocument does not remove it from the existing change feeds
+// - when a AsyncOperationDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a asyncOperationDocument from the changefeed is actually the most recent version.
 func (c *FakeAsyncOperationDocumentClient) ChangeFeed(*Options) AsyncOperationDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -246,7 +253,26 @@ func (c *FakeAsyncOperationDocumentClient) ChangeFeed(*Options) AsyncOperationDo
 		return NewFakeAsyncOperationDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeAsyncOperationDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeAsyncOperationDocumentIterator)
+	if !ok {
+		return NewFakeAsyncOperationDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeAsyncOperationDocumentClient) updateChangeFeeds(asyncOperationDocument *pkg.AsyncOperationDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(asyncOperationDocument)
+		if err != nil {
+			return err
+		}
+
+		currentIterator.asyncOperationDocuments = append(currentIterator.asyncOperationDocuments, newTpl)
+		currentIterator.done = false
+	}
+	return nil
 }
 
 func (c *FakeAsyncOperationDocumentClient) processPreTriggers(ctx context.Context, asyncOperationDocument *pkg.AsyncOperationDocument, options *Options) error {
@@ -321,7 +347,7 @@ func (i *fakeAsyncOperationDocumentIterator) Next(ctx context.Context, maxItemCo
 			max = len(i.asyncOperationDocuments)
 		}
 		asyncOperationDocuments = i.asyncOperationDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 
