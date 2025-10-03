@@ -151,7 +151,7 @@ type ClusterProfile struct {
 	Version              string               `json:"version,omitempty"`
 	ResourceGroupID      string               `json:"resourceGroupId,omitempty"`
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
-	OIDCIssuer           *OIDCIssuer          `json:"oidcIssuer,omitempty"`
+	OIDCIssuer           *OIDCIssuer          `json:"oidcIssuer,omitempty" swagger:"readOnly"`
 }
 
 // FeatureProfile represents a feature profile.
