@@ -84,6 +84,9 @@ type Configuration struct {
 	MiseValidAudiences                 []string               `json:"miseValidAudiences,omitempty"`
 	MiseValidAppIDs                    []string               `json:"miseValidAppIDs,omitempty"`
 	NonZonalRegions                    []string               `json:"nonZonalRegions,omitempty"`
+	RPLbIpTags                         []interface{}          `json:"rpLbIpTags,omitempty"`
+	PortalLbIpTags                     []interface{}          `json:"portalLbIpTags,omitempty"`
+	LbIpTagsDisabledRegions            []string               `json:"lbIpTagsDisabledRegions,omitempty"`
 	PortalAccessGroupIDs               []string               `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                     *string                `json:"portalClientId,omitempty" value:"required"`
 	PortalElevatedGroupIDs             []string               `json:"portalElevatedGroupIds,omitempty" value:"required"`

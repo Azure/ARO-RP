@@ -96,6 +96,11 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clustersInstallViaHive",
 			"clusterDefaultInstallerPullspec",
 			"clustersAdoptByHive",
+
+			// Load Balancer IP Tags
+			"rpLbIpTags",
+			"portalLbIpTags",
+			"lbIpTagsDisabledRegions",
 		)
 	}
 
@@ -162,6 +167,13 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clustersAdoptByHive",
 			"clusterDefaultInstallerPullspec":
 			p.DefaultValue = ""
+		case "rpLbIpTags",
+			"portalLbIpTags":
+			p.Type = "array"
+			p.DefaultValue = []interface{}{}
+		case "lbIpTagsDisabledRegions":
+			p.Type = "array"
+			p.DefaultValue = []string{}
 		}
 		t.Parameters[param] = p
 	}
@@ -186,6 +198,8 @@ func (g *generator) rpTemplate() *arm.Template {
 		t.Resources = append(t.Resources,
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
+			g.publicLBIPAddressTagged("rp-pip-tagged", "rpLbIpTags"),
+			g.publicLBIPAddressTagged("portal-pip-tagged", "portalLbIpTags"),
 			g.rpLB(),
 			g.rpVMSS(),
 			g.rpLBAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.

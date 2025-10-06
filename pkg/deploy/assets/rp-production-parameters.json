@@ -99,23 +99,20 @@
         "keyvaultPrefix": {
             "value": ""
         },
+        "lbIpTagsDisabledRegions": {
+            "value": []
+        },
         "mdmFrontendUrl": {
             "value": ""
         },
         "mdsdEnvironment": {
             "value": ""
         },
-        "mimoActuatorLogLevel": {
-            "value": "info"
-        },
         "miseValidAppIDs": {
             "value": ""
         },
         "miseValidAudiences": {
             "value": ""
-        },
-        "monitorLogLevel": {
-            "value": "info"
         },
         "msiRpEndpoint": {
             "value": ""
@@ -155,8 +152,8 @@
         "portalElevatedGroupIds": {
             "value": ""
         },
-        "portalLogLevel": {
-            "value": "info"
+        "portalLbIpTags": {
+            "value": []
         },
         "rpFeatures": {
             "value": ""
@@ -164,8 +161,8 @@
         "rpImage": {
             "value": ""
         },
-        "rpLogLevel": {
-            "value": "info"
+        "rpLbIpTags": {
+            "value": []
         },
         "rpMdmAccount": {
             "value": ""
