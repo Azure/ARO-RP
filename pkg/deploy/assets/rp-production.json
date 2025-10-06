@@ -123,6 +123,10 @@
         "keyvaultPrefix": {
             "type": "string"
         },
+        "lbIpTagsDisabledRegions": {
+            "type": "array",
+            "defaultValue": []
+        },
         "mdmFrontendUrl": {
             "type": "string"
         },
@@ -174,12 +178,20 @@
         "portalElevatedGroupIds": {
             "type": "string"
         },
+        "portalLbIpTags": {
+            "type": "array",
+            "defaultValue": []
+        },
         "rpFeatures": {
             "type": "string",
             "defaultValue": ""
         },
         "rpImage": {
             "type": "string"
+        },
+        "rpLbIpTags": {
+            "type": "array",
+            "defaultValue": []
         },
         "rpMdmAccount": {
             "type": "string"
@@ -246,6 +258,34 @@
             "location": "[resourceGroup().location]",
             "name": "portal-pip",
             "properties": {
+                "publicIPAllocationMethod": "Static"
+            },
+            "sku": {
+                "name": "Standard"
+            },
+            "type": "Microsoft.Network/publicIPAddresses",
+            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
+        },
+        {
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "rp-pip-tagged",
+            "properties": {
+                "ipTags": "[if(or(contains(parameters('lbIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpLbIpTags')[0].type, 'tag', parameters('rpLbIpTags')[0].value)))]",
+                "publicIPAllocationMethod": "Static"
+            },
+            "sku": {
+                "name": "Standard"
+            },
+            "type": "Microsoft.Network/publicIPAddresses",
+            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
+        },
+        {
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "name": "portal-pip-tagged",
+            "properties": {
+                "ipTags": "[if(or(contains(parameters('lbIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('portalLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('portalLbIpTags')[0].type, 'tag', parameters('portalLbIpTags')[0].value)))]",
                 "publicIPAllocationMethod": "Static"
             },
             "sku": {

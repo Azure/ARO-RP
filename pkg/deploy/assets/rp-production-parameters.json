@@ -99,6 +99,9 @@
         "keyvaultPrefix": {
             "value": ""
         },
+        "lbIpTagsDisabledRegions": {
+            "value": []
+        },
         "mdmFrontendUrl": {
             "value": ""
         },
@@ -149,11 +152,17 @@
         "portalElevatedGroupIds": {
             "value": ""
         },
+        "portalLbIpTags": {
+            "value": []
+        },
         "rpFeatures": {
             "value": ""
         },
         "rpImage": {
             "value": ""
+        },
+        "rpLbIpTags": {
+            "value": []
         },
         "rpMdmAccount": {
             "value": ""
