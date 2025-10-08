@@ -6,6 +6,7 @@ package log
 import (
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -108,7 +109,13 @@ func GetLogger() *logrus.Entry {
 
 	log := logrus.NewEntry(logger)
 
-	l, err := logrus.ParseLevel(*loglevel)
+	// Get the log level from the environment or command line flag
+	envLevel, ext := os.LookupEnv("ARO_LOGLEVEL")
+	if !ext {
+		envLevel = *loglevel
+	}
+
+	l, err := logrus.ParseLevel(envLevel)
 	if err == nil {
 		logger.SetLevel(l)
 	} else {
