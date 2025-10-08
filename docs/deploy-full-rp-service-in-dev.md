@@ -58,7 +58,7 @@
     * if using a public key separate from `~/.ssh/id_rsa.pub` (for ssh access to RP and Gateway vmss instances), source it with `export SSH_PUBLIC_KEY=~/.ssh/id_separate.pub`
     - Modify `AZURE_PREFIX` environment variable for a different prefix of the created Azure resources.
     * set tag of `FLUENTBIT_IMAGE` value to match the default from `pkg/util/version/const.go`,
-      eg. `FLUENTBIT_IMAGE=${AZURE_PREFIX}aro.azurecr.io/fluentbit:1.9.10-cm20230426`
+      eg. `FLUENTBIT_IMAGE=${AZURE_PREFIX}aro.azurecr.io/fluentbit:4.0.4-cm20250701`
     * if you actually care about fluentbit image version, you need to change the default both in the env-int file and for ARO Deployer, which is out of scope of this guide
 
 1. And finally source the env:
