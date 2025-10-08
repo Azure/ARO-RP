@@ -52,7 +52,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
@@ -104,7 +103,6 @@ type manager struct {
 
 	dns     dns.Manager
 	storage storage.Manager
-	subnet  subnet.Manager // TODO: use armSubnets instead. https://issues.redhat.com/browse/ARO-4665
 	graph   graph.Manager
 	rpBlob  blob.Manager
 
@@ -295,7 +293,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,
-		subnet:                                 subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:                                  graph.NewManager(_env, log, aead, storage),
 		rpBlob:                                 rpBlob,
 		installViaHive:                         installViaHive,

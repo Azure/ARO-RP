@@ -100,7 +100,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 			}
 		}
 
-		subnetResp, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+		subnetResponse, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
 		if err != nil {
 			b, _ := json.Marshal(err)
 
@@ -118,7 +118,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 			}
 		}
 
-		s := subnetResp.Subnet
+		s := subnetResponse.Subnet
 
 		if s.Properties == nil || s.Properties.NetworkSecurityGroup == nil ||
 			!strings.EqualFold(*s.Properties.NetworkSecurityGroup.ID, *nsg.ID) {
