@@ -46,6 +46,8 @@ const (
 	SuccessResultType     ResultType = "Success"
 	UserErrorResultType   ResultType = "UserError"
 	ServerErrorResultType ResultType = "InternalServerError"
+
+	logLevelEnvKey = "ARO_LOG_LEVEL"
 )
 
 func MapStatusCodeToResultType(statusCode int) ResultType {
@@ -110,7 +112,7 @@ func GetLogger() *logrus.Entry {
 	log := logrus.NewEntry(logger)
 
 	// Get the log level from the environment or command line flag
-	envLevel, ext := os.LookupEnv("ARO_LOGLEVEL")
+	envLevel, ext := os.LookupEnv(logLevelEnvKey)
 	if !ext {
 		envLevel = *loglevel
 	}

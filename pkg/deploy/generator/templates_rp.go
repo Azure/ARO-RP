@@ -85,6 +85,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"msiRpEndpoint",
 			"tokenContributorRoleID",
 			"tokenContributorRoleName",
+			"aroLogLevel",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
@@ -148,6 +149,8 @@ func (g *generator) rpTemplate() *arm.Template {
 				"japanwest",
 				"uaecentral",
 			}
+		case "aroLogLevel":
+			p.DefaultValue = "info"
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		case "clustersInstallViaHive",
