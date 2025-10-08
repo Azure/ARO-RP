@@ -320,6 +320,75 @@
                     ]
                 }
             }
+        },
+        {
+            "apiVersion": "2024-07-01",
+            "location": "[resourceGroup().location]",
+            "name": "aro-keyvaults-nsp",
+            "properties": {},
+            "type": "Microsoft.Network/networkSecurityPerimeters"
+        },
+        {
+            "apiVersion": "2024-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters', 'aro-keyvaults-nsp')]"
+            ],
+            "name": "aro-keyvaults-nsp/default",
+            "type": "Microsoft.Network/networkSecurityPerimeters/profiles"
+        },
+        {
+            "apiVersion": "2024-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]",
+                "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-cls'))]"
+            ],
+            "name": "aro-keyvaults-nsp/nsp-cls",
+            "properties": {
+                "accessMode": "Learning",
+                "privateLinkResource": {
+                    "id": "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-cls'))]"
+                },
+                "profile": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
+                }
+            },
+            "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations"
+        },
+        {
+            "apiVersion": "2024-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]",
+                "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-por'))]"
+            ],
+            "name": "aro-keyvaults-nsp/nsp-por",
+            "properties": {
+                "accessMode": "Learning",
+                "privateLinkResource": {
+                    "id": "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-por'))]"
+                },
+                "profile": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
+                }
+            },
+            "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations"
+        },
+        {
+            "apiVersion": "2024-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]",
+                "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-svc'))]"
+            ],
+            "name": "aro-keyvaults-nsp/nsp-svc",
+            "properties": {
+                "accessMode": "Learning",
+                "privateLinkResource": {
+                    "id": "[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '-svc'))]"
+                },
+                "profile": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'aro-keyvaults-nsp', 'default')]"
+                }
+            },
+            "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations"
         }
     ]
 }

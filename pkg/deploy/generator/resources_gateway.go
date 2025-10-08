@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v7"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
@@ -30,6 +30,23 @@ func (g *generator) gatewayManagedIdentity() *arm.Resource {
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ManagedIdentity"),
 	}
+}
+
+func (g *generator) gatewayKeyvaultPerimeterAssociation() *arm.Resource {
+	gwKvResId := fmt.Sprintf(
+		"[resourceId('Microsoft.KeyVault/vaults', concat(parameters('keyvaultPrefix'), '%s'))]",
+		env.GatewayKeyvaultSuffix,
+	)
+
+	return g.networkSecurityPerimeterAssociation("gateway-nsp", "gateway-keyvault", gwKvResId)
+}
+
+func (g *generator) gatewayNetworkSecurityPerimeterProfile() *arm.Resource {
+	return g.networkSecurityPerimeterProfile("gateway-nsp")
+}
+
+func (g *generator) gatewayNetworkSecurityPerimeter() *arm.Resource {
+	return g.networkSecurityPerimeter("gateway-nsp")
 }
 
 func (g *generator) gatewaySecurityGroup() *arm.Resource {
