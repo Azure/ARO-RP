@@ -207,7 +207,6 @@ func TestUpsertAndDelete(t *testing.T) {
 		})
 	}
 	testMon.mu.Unlock()
-
 }
 
 func TestConcurrentUpsert(t *testing.T) {
@@ -234,7 +233,6 @@ func TestConcurrentUpsert(t *testing.T) {
 	if len(mon.docs) != 1 {
 		t.Errorf("Expected 1 doc after the same concurrent upsert, found %d", len(mon.docs))
 	}
-
 }
 
 func createMockClusterDoc(clusterID string, bucket int, provisioningState api.ProvisioningState) *api.OpenShiftClusterDocument {
