@@ -46,8 +46,8 @@ ROLE='${role,,}'"
     local -r aro_gateway_service_filename='/etc/systemd/system/aro-gateway.service'
 
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
-    # as it is to be expanded at systemd start time (by systemd, not this script) 
+    # below variable is in single quotes
+    # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_gateway_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
@@ -66,6 +66,7 @@ ExecStart=/usr/bin/podman run \
   -e GATEWAY_FEATURES \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
+  -e ARO_LOG_LEVEL \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -114,7 +115,7 @@ ROLE='${role,,}'"
     # shellcheck disable=SC2034
     local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_rp_service_file='[Unit]
 After=network-online.target
@@ -155,6 +156,7 @@ ExecStart=/usr/bin/podman run \
   -e MSI_RP_ENDPOINT \
   -e OTEL_AUDIT_QUEUE_SIZE \
   -e MISE_ADDRESS \
+  -e ARO_LOG_LEVEL \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -218,7 +220,7 @@ ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'"
     # shellcheck disable=SC2034
     local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_monitor_service_file='[Unit]
 After=network-online.target
@@ -251,6 +253,7 @@ ExecStart=/usr/bin/podman run \
   -e ARO_INSTALL_VIA_HIVE \
   -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
   -e ARO_ADOPT_BY_HIVE \
+  -e ARO_LOG_LEVEL \
   -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
@@ -297,7 +300,7 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_portal_service_file='[Unit]
 After=network-online.target
@@ -323,6 +326,7 @@ ExecStart=/usr/bin/podman run \
   -e MDM_NAMESPACE \
   -e PORTAL_HOSTNAME \
   -e OTEL_AUDIT_QUEUE_SIZE \
+  -e ARO_LOG_LEVEL \
   -m 2g \
   -p 444:8444 \
   -p 2222:2222 \
@@ -401,6 +405,7 @@ ExecStart=/usr/bin/podman run \
   -e OIDC_AFD_ENDPOINT \
   -e OIDC_STORAGE_ACCOUNT_NAME \
   -e MSI_RP_ENDPOINT \
+  -e ARO_LOG_LEVEL \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -522,7 +527,7 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r aro_mise_service_filename='/etc/systemd/system/aro-mise.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_mise_service_file='[Unit]
 After=network-online.target
@@ -621,7 +626,7 @@ service:
     # shellcheck disable=SC2034
     local -r aro_otel_collector_service_filename='/etc/systemd/system/aro-otel-collector.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_otel_collector_service_file='[Unit]
 After=mdm.service
@@ -727,7 +732,7 @@ configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -r service_filename='/etc/systemd/system/fluentbit.service'
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r service_file='[Unit]
 After=network-online.target
@@ -954,7 +959,7 @@ IPADDRESS='$ipaddress'"
     # shellcheck disable=SC2034
     local -r mdm_service_filename="/etc/systemd/system/mdm.service"
     # shellcheck disable=SC2034
-    # below variable is in single quotes 
+    # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r mdm_service_file='[Unit]
 After=network-online.target
