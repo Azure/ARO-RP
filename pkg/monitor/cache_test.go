@@ -4,34 +4,19 @@ package monitor
 // Licensed under the Apache License 2.0.
 
 import (
+	"math/rand"
+	"sync"
 	"testing"
-
-	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
+	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
-	"github.com/Azure/ARO-RP/test/util/testliveconfig"
 )
 
 func TestUpsertAndDelete(t *testing.T) {
 	// Setup single monitor for all test operations
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	testlogger := logrus.NewEntry(logrus.StandardLogger())
-	testlogger.Logger.SetLevel(logrus.DebugLevel)
-	dialer := mock_proxy.NewMockDialer(ctrl)
-	mockEnv := mock_env.NewMockInterface(ctrl)
-	mockEnv.EXPECT().LiveConfig().Return(testliveconfig.NewTestLiveConfig(false, false)).AnyTimes()
-	noopMetricsEmitter := noop.Noop{}
-	noopClusterMetricsEmitter := noop.Noop{}
-
-	dbs := database.NewDBGroup()
-	testMon := NewMonitor(testlogger, dialer, dbs, &noopMetricsEmitter, &noopClusterMetricsEmitter, mockEnv).(*monitor)
-
+	env := SetupTestEnvironment(t)
+	defer env.Cleanup()
+	testMon := env.CreateTestMonitor("test-cache")
 	// Set owned buckets for the entire test sequence
 	ownedBuckets := []int{1, 2, 5}
 	for _, bucket := range ownedBuckets {
@@ -199,6 +184,7 @@ func TestUpsertAndDelete(t *testing.T) {
 	}
 
 	// Execute operations in sequence on the same monitor
+	testMon.mu.Lock()
 	for _, op := range operations {
 		t.Run(op.name, func(t *testing.T) {
 			doc := createMockClusterDoc(op.clusterID, op.bucket, op.state)
@@ -220,6 +206,35 @@ func TestUpsertAndDelete(t *testing.T) {
 			}
 		})
 	}
+	testMon.mu.Unlock()
+
+}
+
+func TestConcurrentUpsert(t *testing.T) {
+	env := SetupTestEnvironment(t)
+	defer env.Cleanup()
+
+	doc := createMockClusterDoc("cluster-concurrent", 1, api.ProvisioningStateSucceeded)
+	mon := env.CreateTestMonitor("cluster-concurrent")
+
+	wg := sync.WaitGroup{}
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func() {
+			mon.mu.Lock()
+			// Holding the lock for a random duration, up to a second
+			// As we're upserting the same doc over and over, lenght should be 1
+			time.Sleep(time.Duration(rand.Intn(int(time.Second))))
+			mon.upsertDoc(doc)
+			mon.mu.Unlock()
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	if len(mon.docs) != 1 {
+		t.Errorf("Expected 1 doc after the same concurrent upsert, found %d", len(mon.docs))
+	}
+
 }
 
 func createMockClusterDoc(clusterID string, bucket int, provisioningState api.ProvisioningState) *api.OpenShiftClusterDocument {
