@@ -211,6 +211,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"rpMdmAccount",
 		"rpMdsdAccount",
 		"rpMdsdNamespace",
+		"aroLogLevel",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
