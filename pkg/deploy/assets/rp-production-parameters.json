@@ -20,6 +20,9 @@
         "armClientId": {
             "value": ""
         },
+        "aroLogLevel": {
+            "value": "info"
+        },
         "azureCloudName": {
             "value": ""
         },
