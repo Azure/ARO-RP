@@ -50,6 +50,7 @@ type Configuration struct {
 	ARMAPICABundle                     *string                `json:"armApiCaBundle,omitempty"`
 	ARMAPIClientCertCommonName         *string                `json:"armApiClientCertCommonName,omitempty"`
 	ARMClientID                        *string                `json:"armClientId,omitempty"`
+	AROLogLevel                        *string                `json:"aroLogLevel,omitempty"`
 	ClusterMDMAccount                  *string                `json:"clusterMdmAccount,omitempty" value:"required"`
 	ClusterMDSDAccount                 *string                `json:"clusterMdsdAccount,omitempty" value:"required"`
 	ClusterMDSDConfigVersion           *string                `json:"clusterMdsdConfigVersion,omitempty" value:"required"`

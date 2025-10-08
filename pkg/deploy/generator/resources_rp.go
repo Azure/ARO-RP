@@ -400,6 +400,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"otelAuditQueueSize",
 		"tokenContributorRoleID",
 		"tokenContributorRoleName",
+		"aroLogLevel",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",

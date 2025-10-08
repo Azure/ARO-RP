@@ -23,6 +23,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 
 	params := []string{
 		"acrResourceId",
+		"aroLogLevel",
 		"azureCloudName",
 		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
@@ -78,6 +79,8 @@ func (g *generator) gatewayTemplate() *arm.Template {
 				"japanwest",
 				"uaecentral",
 			}
+		case "aroLogLevel":
+			p.DefaultValue = "info"
 		}
 		t.Parameters[param] = p
 	}
