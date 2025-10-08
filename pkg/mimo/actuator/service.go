@@ -344,17 +344,17 @@ func DetermineBuckets(env env.Core, hostnameFunc func() (string, error)) []int {
 				if err != nil {
 					_log.Warningf("hostname %s doesn't end in a number, unable to partition buckets", name)
 				} else {
-					if num > vmCount || num <= 0 {
+					if num >= vmCount {
 						// Rather than guess, we fall back to all buckets. This
-						// means that a VMSS replacement of -4 might have some
+						// means that a VMSS replacement of -3 might have some
 						// weird behaviour, but because we get a lock on the
 						// OpenShiftClusterObject before we do anything to the
 						// cluster, it should be fine.
-						_log.Warningf("vmss number is %d, currently only handles 3 partitions (vm numbers 1-3), falling back to all", num)
+						_log.Warningf("vmss number is %d, currently only handles 3 partitions (vm numbers 0-2), falling back to all", num)
 					} else {
 						// For the 3 VMs, VM 1 will serve buckets 0,3,6...,
 						// VM 2 will serve 1,4,7... VM 3 will serve 2,5,8...
-						for i := num - 1; i < bucket.Buckets; i += vmCount {
+						for i := num; i < bucket.Buckets; i += vmCount {
 							b = append(b, i)
 						}
 					}
