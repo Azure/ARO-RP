@@ -48,7 +48,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 		name                 string
 		usesWorkloadIdentity bool
 		identities           map[string]api.PlatformWorkloadIdentity
-		roles                map[string]api.PlatformWorkloadIdentityRole
+		roles                map[string][]api.PlatformWorkloadIdentityRole
 		want                 map[string]kruntime.Object
 		wantErr              string
 	}{
@@ -70,26 +70,32 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					ClientID: "00d00d00-0d00-0d00-0d00-d00d00d00d00",
 				},
 			},
-			roles: map[string]api.PlatformWorkloadIdentityRole{
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
 				"foo": {
-					OperatorName: "foo",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-foo",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: "foo",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-foo",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 				"bar": {
-					OperatorName: "bar",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: "bar",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-bar",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 				pkgoperator.OperatorIdentityName: {
-					OperatorName: pkgoperator.OperatorIdentityName,
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-azure-operator",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: pkgoperator.OperatorIdentityName,
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-azure-operator",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 			},
@@ -212,7 +218,7 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		identities map[string]api.PlatformWorkloadIdentity
-		roles      map[string]api.PlatformWorkloadIdentityRole
+		roles      map[string][]api.PlatformWorkloadIdentityRole
 		want       []*corev1.Secret
 	}{
 		{
@@ -228,26 +234,32 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00d00d00-0d00-0d00-0d00-d00d00d00d00",
 				},
 			},
-			roles: map[string]api.PlatformWorkloadIdentityRole{
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
 				"foo": {
-					OperatorName: "foo",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-foo",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: "foo",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-foo",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 				"bar": {
-					OperatorName: "bar",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: "bar",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-bar",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 				pkgoperator.OperatorIdentityName: {
-					OperatorName: pkgoperator.OperatorIdentityName,
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-azure-operator",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: pkgoperator.OperatorIdentityName,
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-azure-operator",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 			},
@@ -372,7 +384,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		identities     map[string]api.PlatformWorkloadIdentity
-		roles          map[string]api.PlatformWorkloadIdentityRole
+		roles          map[string][]api.PlatformWorkloadIdentityRole
 		wantSecrets    []*corev1.Secret
 		wantNamespaces []*corev1.Namespace
 		wantErr        string
@@ -380,7 +392,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 		{
 			name:           "no identities, no secrets",
 			identities:     map[string]api.PlatformWorkloadIdentity{},
-			roles:          map[string]api.PlatformWorkloadIdentityRole{},
+			roles:          map[string][]api.PlatformWorkloadIdentityRole{},
 			wantSecrets:    []*corev1.Secret{},
 			wantNamespaces: []*corev1.Namespace{},
 		},
@@ -394,19 +406,23 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
-			roles: map[string]api.PlatformWorkloadIdentityRole{
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
 				"foo": {
-					OperatorName: "foo",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-foo",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: "foo",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-foo",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 				"bar": {
-					OperatorName: "bar",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: "bar",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-bar",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 			},
@@ -476,7 +492,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
 			},
-			roles:          map[string]api.PlatformWorkloadIdentityRole{},
+			roles:          map[string][]api.PlatformWorkloadIdentityRole{},
 			wantSecrets:    []*corev1.Secret{},
 			wantNamespaces: []*corev1.Namespace{},
 			wantErr:        fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
@@ -491,19 +507,23 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
-			roles: map[string]api.PlatformWorkloadIdentityRole{
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
 				"foo": {
-					OperatorName: "foo",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-foo",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: "foo",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-foo",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 				"aro-operator": {
-					OperatorName: "aro-operator",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
+					{
+						OperatorName: "aro-operator",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-bar",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 			},
@@ -794,7 +814,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 	for _, tt := range []struct {
 		name                    string
 		oc                      *api.OpenShiftCluster
-		roles                   map[string]api.PlatformWorkloadIdentityRole
+		roles                   map[string][]api.PlatformWorkloadIdentityRole
 		existingRoleAssignments []mgmtauthorization.RoleAssignment
 		wantDeleted             []mgmtauthorization.RoleAssignment
 		wantAdded               []*arm.Resource
@@ -832,14 +852,18 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					},
 				},
 			},
-			roles: map[string]api.PlatformWorkloadIdentityRole{
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
 				"1": {
-					OperatorName:     "1",
-					RoleDefinitionID: roleDefinitionId1,
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
 				},
 				"2": {
-					OperatorName:     "2",
-					RoleDefinitionID: roleDefinitionId2,
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId2,
+					},
 				},
 			},
 			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
@@ -880,14 +904,18 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					},
 				},
 			},
-			roles: map[string]api.PlatformWorkloadIdentityRole{
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
 				"1": {
-					OperatorName:     "1",
-					RoleDefinitionID: roleDefinitionId1,
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
 				},
 				"2": {
-					OperatorName:     "2",
-					RoleDefinitionID: roleDefinitionId2,
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId2,
+					},
 				},
 			},
 			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
@@ -905,7 +933,54 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 			},
 		},
 		{
-			name: "identity object id replaced - deletes old roleassignment and creates new",
+			name: "identity object id replaced & old object id reused for other operator using same role - doesn't delete old roleassignment and creates new roleassignment",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId2,
+							},
+							"2": {
+								ObjectID: objectId1,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+				"2": {
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+			},
+		},
+		{
+			name: "identity object id replaced - doesn't delete old roleassignment as old object id is lost and creates new",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{
@@ -920,10 +995,59 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					},
 				},
 			},
-			roles: map[string]api.PlatformWorkloadIdentityRole{
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
 				"1": {
-					OperatorName:     "1",
-					RoleDefinitionID: roleDefinitionId1,
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+			},
+		},
+		{
+			name: "identity object id replaced & old object id reused for other operator - delete old roleassignment and create new roleassignments",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId2,
+							},
+							"2": {
+								ObjectID: objectId1,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+				"2": {
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId2,
+					},
 				},
 			},
 			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
@@ -948,6 +1072,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 			},
 			wantAdded: []*arm.Resource{
 				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId1),
 			},
 		},
 	} {
@@ -1004,6 +1129,6 @@ func workloadIdentityResourceGroupRBAC(roleID, objID string) *arm.Resource {
 	return rbac.ResourceGroupRoleAssignmentWithName(
 		roleID,
 		"'"+objID+"'",
-		"guid(resourceGroup().id, '"+roleID+"')",
+		"guid(resourceGroup().id, '"+roleID+"', '"+objID+"')",
 	)
 }

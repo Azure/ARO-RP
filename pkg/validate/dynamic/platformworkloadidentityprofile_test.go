@@ -274,9 +274,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			ClientID:   dummyClientId,
 		},
 	}
-	desiredPlatformWorkloadIdentitiesMap := map[string]api.PlatformWorkloadIdentityRole{
+	desiredPlatformWorkloadIdentitiesMap := map[string][]api.PlatformWorkloadIdentityRole{
 		"Dummy1": {
-			OperatorName: "Dummy1",
+			{
+				OperatorName: "Dummy1",
+			},
 		},
 	}
 	clusterMSI := map[string]api.UserAssignedIdentity{
@@ -285,10 +287,12 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			PrincipalID: dummyObjectId,
 		},
 	}
-	validRolesForVersion := map[string]api.PlatformWorkloadIdentityRole{
+	validRolesForVersion := map[string][]api.PlatformWorkloadIdentityRole{
 		"Dummy1": {
-			OperatorName:    "Dummy1",
-			ServiceAccounts: []string{platformIdentity1SAName},
+			{
+				OperatorName:    "Dummy1",
+				ServiceAccounts: []string{platformIdentity1SAName},
+			},
 		},
 	}
 	openShiftVersion := "4.14.40"
@@ -315,7 +319,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                             string
-		platformIdentityRoles            map[string]api.PlatformWorkloadIdentityRole
+		platformIdentityRoles            map[string][]api.PlatformWorkloadIdentityRole
 		oc                               *api.OpenShiftCluster
 		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient, *mock_armmsi.MockFederatedIdentityCredentialsClient)
 		wantPlatformIdentities           map[string]api.PlatformWorkloadIdentity
@@ -860,9 +864,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 		{
 			name: "Fail - UpgradeableTo is provided, but desired identities are not fulfilled",
-			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+			platformIdentityRoles: map[string][]api.PlatformWorkloadIdentityRole{
 				"Dummy3": {
-					OperatorName: "Dummy3",
+					{
+						OperatorName: "Dummy3",
+					},
 				},
 			},
 			oc: &api.OpenShiftCluster{
@@ -887,9 +893,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 		{
 			name: "Fail - UpgradeableTo is provided(ignored because minor version is equal to cluster minor version), but desired identities are not fulfilled",
-			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+			platformIdentityRoles: map[string][]api.PlatformWorkloadIdentityRole{
 				"Dummy3": {
-					OperatorName: "Dummy3",
+					{
+						OperatorName: "Dummy3",
+					},
 				},
 			},
 			oc: &api.OpenShiftCluster{
@@ -914,9 +922,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 		{
 			name: "Fail - UpgradeableTo is provided(ignored because upgradeable version is smaller than cluster version), but desired identities are not fulfilled",
-			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+			platformIdentityRoles: map[string][]api.PlatformWorkloadIdentityRole{
 				"Dummy3": {
-					OperatorName: "Dummy3",
+					{
+						OperatorName: "Dummy3",
+					},
 				},
 			},
 			oc: &api.OpenShiftCluster{
