@@ -39,7 +39,7 @@
         },
         "aroLogLevel": {
             "type": "string",
-            "defaultValue": "info"
+            "defaultValue": "debug"
         },
         "azureCloudName": {
             "type": "string"
