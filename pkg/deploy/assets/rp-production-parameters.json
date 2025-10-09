@@ -21,7 +21,7 @@
             "value": ""
         },
         "aroLogLevel": {
-            "value": "info"
+            "value": "debug"
         },
         "azureCloudName": {
             "value": ""
