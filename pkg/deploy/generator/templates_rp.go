@@ -150,7 +150,7 @@ func (g *generator) rpTemplate() *arm.Template {
 				"uaecentral",
 			}
 		case "aroLogLevel":
-			p.DefaultValue = "info"
+			p.DefaultValue = "debug"
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		case "clustersInstallViaHive",
