@@ -215,7 +215,7 @@ func TestConcurrentUpsert(t *testing.T) {
 
 	doc := createMockClusterDoc("cluster-concurrent", 1, api.ProvisioningStateSucceeded)
 	mon := env.CreateTestMonitor("cluster-concurrent")
-
+	mon.buckets[1] = struct{}{}
 	wg := sync.WaitGroup{}
 	for i := 0; i < 3; i++ {
 		wg.Add(1)
@@ -233,6 +233,68 @@ func TestConcurrentUpsert(t *testing.T) {
 	if len(mon.docs) != 1 {
 		t.Errorf("Expected 1 doc after the same concurrent upsert, found %d", len(mon.docs))
 	}
+}
+
+func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
+	env := SetupTestEnvironment(t)
+	defer env.Cleanup()
+
+	mon := env.CreateTestMonitor("test-channel-safety")
+
+	mon.buckets[5] = struct{}{}
+
+	doc := createMockClusterDoc("cluster-1", 5, api.ProvisioningStateSucceeded)
+	mon.mu.Lock()
+	mon.upsertDoc(doc)
+	mon.mu.Unlock()
+
+	mon.mu.Lock()
+	if mon.docs["cluster-1"].stop == nil {
+		t.Fatal("worker should have been created")
+	}
+	mon.mu.Unlock()
+
+	// Now have multiple goroutines try to delete the same document concurrently
+	numGoroutines := 10
+	wg := sync.WaitGroup{}
+	panicChan := make(chan interface{}, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() {
+				// Catch any panic from double-closing channel
+				if r := recover(); r != nil {
+					panicChan <- r
+				}
+			}()
+
+			mon.mu.Lock()
+			mon.deleteDoc(doc)
+			mon.mu.Unlock()
+		}()
+	}
+
+	wg.Wait()
+	close(panicChan)
+
+	// Check if any goroutine panicked
+	var panics []interface{}
+	for p := range panicChan {
+		panics = append(panics, p)
+	}
+
+	if len(panics) > 0 {
+		t.Errorf("Expected no panics from concurrent deletes, but got %d panic(s): %v",
+			len(panics), panics)
+	}
+
+	mon.mu.Lock()
+	if _, exists := mon.docs["cluster-1"]; exists {
+		t.Error("document should have been deleted")
+	}
+	mon.mu.Unlock()
 }
 
 func createMockClusterDoc(clusterID string, bucket int, provisioningState api.ProvisioningState) *api.OpenShiftClusterDocument {
