@@ -37,6 +37,7 @@ type FakeSubscriptionDocumentClient struct {
 	queryHandlers         map[string]fakeSubscriptionDocumentQueryHandler
 	sorter                func([]*pkg.SubscriptionDocument)
 	etag                  int
+	changeFeedIterators   []*fakeSubscriptionDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.SubscriptionDocument, *pkg.SubscriptionDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeSubscriptionDocumentClient) apply(ctx context.Context, partitionkey
 
 	c.subscriptionDocuments[subscriptionDocument.ID] = subscriptionDocument
 
+	if err = c.updateChangeFeeds(subscriptionDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(subscriptionDocument)
 }
 
@@ -237,7 +242,9 @@ func (c *FakeSubscriptionDocumentClient) Delete(ctx context.Context, partitionKe
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a SubscriptionDocument does not remove it from the existing change feeds
+// - when a SubscriptionDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a subscriptionDocument from the changefeed is actually the most recent version.
 func (c *FakeSubscriptionDocumentClient) ChangeFeed(*Options) SubscriptionDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -246,7 +253,26 @@ func (c *FakeSubscriptionDocumentClient) ChangeFeed(*Options) SubscriptionDocume
 		return NewFakeSubscriptionDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeSubscriptionDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeSubscriptionDocumentIterator)
+	if !ok {
+		return NewFakeSubscriptionDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeSubscriptionDocumentClient) updateChangeFeeds(subscriptionDocument *pkg.SubscriptionDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(subscriptionDocument)
+		if err != nil {
+			return err
+		}
+
+		currentIterator.subscriptionDocuments = append(currentIterator.subscriptionDocuments, newTpl)
+		currentIterator.done = false
+	}
+	return nil
 }
 
 func (c *FakeSubscriptionDocumentClient) processPreTriggers(ctx context.Context, subscriptionDocument *pkg.SubscriptionDocument, options *Options) error {
@@ -321,7 +347,7 @@ func (i *fakeSubscriptionDocumentIterator) Next(ctx context.Context, maxItemCoun
 			max = len(i.subscriptionDocuments)
 		}
 		subscriptionDocuments = i.subscriptionDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

@@ -39,7 +39,7 @@ type Monitor struct {
 	hiveClusterManager hive.ClusterManager
 }
 
-func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (*Monitor, error) {
+func NewHiveMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (monitoring.Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
