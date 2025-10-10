@@ -17,13 +17,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/mimo"
+	utilmimo "github.com/Azure/ARO-RP/pkg/util/mimo"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 type th struct {
 	originalCtx context.Context
 	ctx         context.Context
+
+	taskID api.MIMOTaskID
 
 	env env.Interface
 	log *logrus.Entry
@@ -36,12 +38,13 @@ type th struct {
 }
 
 // force interface checking
-var _ mimo.TaskContext = &th{}
+var _ utilmimo.TaskContext = &th{}
 
-func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument) *th {
+func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, taskID api.MIMOTaskID, oc *api.OpenShiftClusterDocument) *th {
 	return &th{
 		originalCtx: ctx,
 		ctx:         ctx,
+		taskID:      taskID,
 		env:         env,
 		log:         log,
 		oc:          oc,
@@ -142,4 +145,10 @@ func (t *th) LocalFpAuthorizer() (autorest.Authorizer, error) {
 // GetOpenshiftClusterDocument implements mimo.TaskContext.
 func (t *th) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
 	return t.oc
+}
+
+// TODO: Return task ID
+// TaskID implements mimo.TaskContext
+func (t *th) TaskID() api.MIMOTaskID {
+	return t.taskID
 }

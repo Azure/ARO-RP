@@ -24,6 +24,7 @@ type TaskContext interface {
 	ClientHelper() (clienthelper.Interface, error)
 	Log() *logrus.Entry
 	LocalFpAuthorizer() (autorest.Authorizer, error)
+	TaskID() api.MIMOTaskID
 
 	// OpenShiftCluster
 	GetClusterUUID() string

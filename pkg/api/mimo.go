@@ -23,11 +23,14 @@ type MaintenanceManifest struct {
 	State      MaintenanceManifestState `json:"state,omitempty"`
 	StatusText string                   `json:"statusText,omitempty"`
 
-	MaintenanceTaskID string `json:"maintenanceTaskID,omitempty"`
-	Priority          int    `json:"priority,omitempty"`
+	MaintenanceTaskID MIMOTaskID `json:"maintenanceTaskID,omitempty"`
+	Priority          int        `json:"priority,omitempty"`
 
 	// RunAfter defines the earliest that this manifest should start running
 	RunAfter int `json:"runAfter,omitempty"`
 	// RunBefore defines the latest that this manifest should start running
 	RunBefore int `json:"runBefore,omitempty"`
 }
+
+// MIMOTaskID defines a mimo Task
+type MIMOTaskID string

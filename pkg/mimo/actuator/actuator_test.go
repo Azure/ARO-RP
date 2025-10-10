@@ -86,7 +86,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			mmf: manifests,
 			oc:  clusters,
 
-			tasks: map[string]tasks.MaintenanceTask{},
+			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
 			now:   now,
 		}
 	})
@@ -211,7 +211,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		})
 
 		It("runs them", func() {
-			a.AddMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					// check that we are in progress during this
 					Expect(mmd.MaintenanceManifest.State).To(Equal(api.MaintenanceManifestStateInProgress))
@@ -274,7 +274,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			})
 		})
 		It("stops after retries exceeded", func() {
-			a.AddMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					return mimo.TransientError(errors.New("oh no"))
 				},
@@ -382,7 +382,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		It("runs them in priority order", func() {
 			ordering := []string{}
 
-			a.AddMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					ordering = append(ordering, "0")
 					th.SetResultMessage("done")
