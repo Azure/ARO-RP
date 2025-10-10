@@ -11,6 +11,7 @@ func TestRedactPullSecretBasic(t *testing.T) {
 	oc := &api.OpenShiftCluster{}
 	oc.Properties.ClusterProfile.PullSecret = api.SecureString("pull-secret")
 	oc.Properties.AdminKubeconfig = []byte("admin-kube")
+	oc.Properties.KubeadminPassword = api.SecureString("kubeadmin")
 	oc.Properties.AROServiceKubeconfig = []byte("aro-kube")
 	oc.Properties.AROSREKubeconfig = []byte("sre-kube")
 	oc.Properties.UserAdminKubeconfig = []byte("user-kube")
