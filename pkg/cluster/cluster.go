@@ -136,6 +136,8 @@ type manager struct {
 
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion
 	platformWorkloadIdentities             map[string]api.PlatformWorkloadIdentity
+
+	time time.Time
 }
 
 // New returns a cluster manager
@@ -302,6 +304,8 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 		fpServicePrincipalID:                   fpspID,
+
+		time: time.Now(),
 	}
 
 	if doc.OpenShiftCluster.UsesWorkloadIdentity() {

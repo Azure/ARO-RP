@@ -256,9 +256,10 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				doc:                     tt.doc,
 				msiDataplane:            factory,
 				clusterMsiKeyVaultStore: mockKvClient,
+				time:                    now,
 			}
 
-			err := m.ensureClusterMsiCertificate(ctx, now)
+			err := m.ensureClusterMsiCertificate(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

@@ -29,7 +29,9 @@ var (
 // vault. If the certificate stored in keyvault is eligible for renewal, the
 // certificate is empty or the certificate is for a different identity, this
 // function will request and persist a new certificate.
-func (m *manager) ensureClusterMsiCertificate(ctx context.Context, now time.Time) error {
+func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
+	now := m.time
+
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
 	existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil)

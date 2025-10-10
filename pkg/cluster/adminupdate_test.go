@@ -45,7 +45,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action ensureBillingRecord]",
 		"[Action ensureDefaults]",
 		"[Action fixupClusterMsiTenantID]",
-		"[Action getZerothSteps.func1]", // ensureClusterMsiCertificate uses closure
+		"[Action ensureClusterMsiCertificate]",
 		"[Action initializeClusterMsiClients]",
 		"[AuthorizationRetryingAction clusterIdentityIDs]",
 		"[AuthorizationRetryingAction platformWorkloadIdentityIDs]",
