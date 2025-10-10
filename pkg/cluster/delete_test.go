@@ -528,7 +528,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
 	placeholderString := "placeholder"
 	placeholderTime := time.Now().Format(time.RFC3339)
-	now := time.Date(2025, time.September, 29, 16, 0, 0, 0, time.UTC)
+	now := func() time.Time {
+		return time.Date(2025, time.September, 29, 16, 0, 0, 0, time.UTC)
+	}
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
@@ -561,8 +563,8 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			Value:      &credentialsObjectString,
 			Attributes: &azsecrets.SecretAttributes{},
 			Tags: map[string]*string{
-				dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
-				dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
+				dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+				dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
 			},
 		},
 	}
@@ -969,6 +971,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				clusterMsiFederatedIdentityCredentials: federatedIdentityCredentials,
 				clusterMsiKeyVaultStore:                mockKvClient,
 				msiDataplane:                           factory,
+				now:                                    now,
 			}
 
 			err := m.deleteFederatedCredentials(ctx)

@@ -31,7 +31,9 @@ import (
 
 func TestEnsureClusterMsiCertificate(t *testing.T) {
 	ctx := context.Background()
-	now := time.Date(2025, time.September, 29, 16, 0, 0, 0, time.UTC)
+	now := func() time.Time {
+		return time.Date(2025, time.September, 29, 16, 0, 0, 0, time.UTC)
+	}
 
 	mockGuid := "00000000-0000-0000-0000-000000000000"
 	clusterRGName := "aro-cluster"
@@ -46,7 +48,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	}
 
 	placeholderString := "placeholder"
-	placeholderTime := now.Format(time.RFC3339)
+	placeholderTime := now().Format(time.RFC3339)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
@@ -143,8 +145,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(-1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -172,8 +174,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -223,8 +225,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -256,7 +258,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				doc:                     tt.doc,
 				msiDataplane:            factory,
 				clusterMsiKeyVaultStore: mockKvClient,
-				time:                    now,
+				now:                     now,
 			}
 
 			err := m.ensureClusterMsiCertificate(ctx)
