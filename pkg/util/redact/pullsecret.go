@@ -9,8 +9,6 @@ import (
 const (
 	// RedactedString is the token used to replace sensitive data.
 	RedactedString = "##REDACTED##"
-	// MaxSecretSizeBytes aims to defend from excessive memory allocation.
-	MaxSecretSizeBytes = 10 * 1024 * 1024 // 10MB
 )
 
 // RedactPullSecret creates a deep c of the OpenshiftCluster with the pull secret redacted.
