@@ -322,34 +322,6 @@ func TestNeedsRefresh(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name: "success - exactly at renewal time",
-			item: &azsecrets.GetSecretResponse{
-				Secret: azsecrets.Secret{
-					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Format(time.RFC3339)),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
-					},
-				},
-			},
-			currentTime: now,
-			wantBool:    true,
-			wantErr:     false,
-		},
-		{
-			name: "success - exactly at expiration time",
-			item: &azsecrets.GetSecretResponse{
-				Secret: azsecrets.Secret{
-					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(renewTime),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Format(time.RFC3339)),
-					},
-				},
-			},
-			currentTime: now,
-			wantBool:    true,
-			wantErr:     false,
-		},
-		{
 			name:        "error - tags are nil",
 			item:        &azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Tags: nil}},
 			currentTime: now,

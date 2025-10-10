@@ -139,7 +139,7 @@ func (m *manager) needsRefresh(item *azsecrets.GetSecretResponse, now time.Time)
 		*timeVarPtr = parsedTime
 	}
 
-	inRenewalWindow := !renewAfter.After(now) && !now.After(cannotRenewAfter)
+	inRenewalWindow := now.After(renewAfter) && now.Before(cannotRenewAfter)
 
 	return inRenewalWindow, nil
 }
