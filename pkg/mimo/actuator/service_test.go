@@ -275,7 +275,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		It("expires them", func() {
 			svc.pollTime = time.Millisecond
 
-			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					// once we've run this task, stop the worker
 					svc.stopping.Store(true)
@@ -297,7 +297,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		It("loads the full cluster document", func() {
 			svc.pollTime = time.Millisecond
 
-			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					// Only the ClusterResourceID is available to the bucket
 					// worker, so make sure this is the full document

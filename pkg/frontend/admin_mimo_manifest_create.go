@@ -32,7 +32,7 @@ func (f *frontend) putAdminMaintManifestCreate(w http.ResponseWriter, r *http.Re
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Request, resourceID string, maintenanceTaskID string) ([]byte, error) {
+func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Request, resourceID string, maintenanceTaskID api.MIMOTaskID) ([]byte, error) {
 	converter := f.apis[admin.APIVersion].MaintenanceManifestConverter
 	validator := f.apis[admin.APIVersion].MaintenanceManifestStaticValidator
 
@@ -58,7 +58,7 @@ func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Req
 	var ext *admin.MaintenanceManifest
 
 	if maintenanceTaskID != "" {
-		ext = &admin.MaintenanceManifest{MaintenanceTaskID: maintenanceTaskID}
+		ext = &admin.MaintenanceManifest{MaintenanceTaskID: string(maintenanceTaskID)}
 	} else {
 		body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 		if len(body) == 0 || !json.Valid(body) {

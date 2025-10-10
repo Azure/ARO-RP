@@ -24,7 +24,7 @@ const maxDequeueCount = 5
 
 type Actuator interface {
 	Process(context.Context) (bool, error)
-	AddMaintenanceTasks(map[string]tasks.MaintenanceTask)
+	AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask)
 }
 
 type actuator struct {
@@ -37,7 +37,7 @@ type actuator struct {
 	oc  database.OpenShiftClusters
 	mmf database.MaintenanceManifests
 
-	tasks map[string]tasks.MaintenanceTask
+	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 }
 
 func NewActuator(
@@ -54,7 +54,7 @@ func NewActuator(
 		clusterResourceID: strings.ToLower(clusterResourceID),
 		oc:                oc,
 		mmf:               mmf,
-		tasks:             make(map[string]tasks.MaintenanceTask),
+		tasks:             make(map[api.MIMOTaskID]tasks.MaintenanceTask),
 
 		now: now,
 	}
@@ -62,7 +62,7 @@ func NewActuator(
 	return a, nil
 }
 
-func (a *actuator) AddMaintenanceTasks(tasks map[string]tasks.MaintenanceTask) {
+func (a *actuator) AddMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.MaintenanceTask) {
 	maps.Copy(a.tasks, tasks)
 }
 
@@ -162,10 +162,9 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	taskContext := newTaskContext(ctx, a.env, a.log, oc)
-
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
+		taskContext := newTaskContext(ctx, a.env, a.log, doc.MaintenanceManifest.MaintenanceTaskID, oc)
 		taskLog := a.log.WithFields(logrus.Fields{
 			"manifestID": doc.ID,
 			"taskID":     doc.MaintenanceManifest.MaintenanceTaskID,

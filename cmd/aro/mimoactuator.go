@@ -42,6 +42,7 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 	}
 
 	log := _env.Logger()
+	log = log.WithField("component", "actuator")
 
 	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 	go m.Run(stop)

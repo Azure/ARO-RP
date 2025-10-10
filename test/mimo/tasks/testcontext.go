@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	utilmimo "github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
 type fakeTestContext struct {
@@ -26,10 +27,13 @@ type fakeTestContext struct {
 
 	clusterUUID       string
 	clusterResourceID string
+	taskID            api.MIMOTaskID
 	properties        api.OpenShiftClusterProperties
 
 	resultMessage string
 }
+
+var _ utilmimo.TaskContext = &fakeTestContext{}
 
 type Option func(*fakeTestContext)
 
@@ -60,6 +64,7 @@ func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entr
 		env:     env,
 		log:     log,
 		now:     now,
+		taskID:  api.MIMOTaskID(""),
 	}
 	for _, i := range o {
 		i(ftc)
@@ -118,4 +123,8 @@ func (t *fakeTestContext) SetResultMessage(s string) {
 
 func (t *fakeTestContext) GetResultMessage() string {
 	return t.resultMessage
+}
+
+func (t *fakeTestContext) TaskID() api.MIMOTaskID {
+	return t.taskID
 }
