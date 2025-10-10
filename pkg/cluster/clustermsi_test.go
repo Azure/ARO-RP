@@ -321,7 +321,7 @@ func TestNeedsRefresh(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name: "exactly at renewal time",
+			name: "success - exactly at renewal time",
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
@@ -335,7 +335,7 @@ func TestNeedsRefresh(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name: "exactly at expiration time",
+			name: "success - exactly at expiration time",
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
@@ -349,7 +349,7 @@ func TestNeedsRefresh(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:        "tags are nil",
+			name:        "error - tags are nil",
 			item:        &azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Tags: nil}},
 			currentTime: now,
 			wantBool:    false,

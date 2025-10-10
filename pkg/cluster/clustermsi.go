@@ -98,21 +98,14 @@ func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse,
 	if err != nil {
 		return false, err
 	}
-	if *keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterMsiResourceId.String() {
+	if keyvaultCredentials.ExplicitIdentities[0].ResourceID == nil ||
+		*keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterMsiResourceId.String() {
 		return true, nil
 	}
 
 	// Check if the certificate is within its renewal window.
 	// In the future, certificate refreshing will be handled by the Certificate Refresher. For now, handle it here.
-	refreshNeeded, err := m.needsRefresh(cert, now)
-	if err != nil {
-		return false, err
-	}
-	if refreshNeeded {
-		return true, nil
-	}
-
-	return false, nil
+	return m.needsRefresh(cert, now)
 }
 
 // https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation

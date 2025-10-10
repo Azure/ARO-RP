@@ -391,14 +391,9 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 }
 
 func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() || m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil {
-		return nil
-	}
-
-	// If there's nothing in the platform workload identity profile, there's nothing to do.
-	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil ||
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() ||
+		m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil ||
 		len(m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities) == 0 {
-		m.log.Info("no platform workload identities found, skipping federated credential deletion")
 		return nil
 	}
 
