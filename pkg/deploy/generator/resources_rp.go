@@ -935,6 +935,7 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 	r := &arm.Resource{
 		Resource:   cosmosdb,
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		Type:       "Microsoft.DocumentDB/databaseAccounts",
 	}
 	if g.production {
 		cosmosdb.Properties.IPRules = []*sdkcosmos.IPAddressOrRange{}
@@ -1005,6 +1006,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		Type:       "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 	hashPartitionKey := sdkcosmos.PartitionKindHash
 	portal := &arm.Resource{
@@ -1032,6 +1034,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
 	gateway := &arm.Resource{
@@ -1059,6 +1062,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
 	mimo := &arm.Resource{
@@ -1086,6 +1090,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
 	if !g.production {
@@ -1124,6 +1129,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
@@ -1148,6 +1154,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
@@ -1172,6 +1179,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
@@ -1195,6 +1203,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		gateway,
 		{
@@ -1220,6 +1229,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
@@ -1262,6 +1272,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		portal,
 		{
@@ -1286,6 +1297,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		mimo,
 	}
@@ -1337,6 +1349,7 @@ func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, t
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), " + databaseName + ", '" + containerName + "')]",
 		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
 	}
 }
 
