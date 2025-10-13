@@ -268,7 +268,6 @@ const (
 
 func sshKexAlgorithms() []string {
 	return []string{
-		cryptossh.KeyExchangeMLKEM768X25519,
 		cryptossh.KeyExchangeECDHP256,
 		cryptossh.KeyExchangeECDHP384,
 		cryptossh.KeyExchangeECDHP521,

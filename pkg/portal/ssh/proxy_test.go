@@ -423,7 +423,7 @@ func TestProxy(t *testing.T) {
 			wantLogs:      []map[string]types.GomegaMatcher{},
 			ciphers: cryptossh.Algorithms{
 				Ciphers:      []string{cryptossh.CipherChaCha20Poly1305},
-				KeyExchanges: []string{cryptossh.KeyExchangeMLKEM768X25519},
+				KeyExchanges: []string{cryptossh.KeyExchangeECDHP256},
 				MACs:         []string{cryptossh.HMACSHA256ETM},
 				HostKeys:     []string{cryptossh.KeyAlgoRSASHA512},
 			},
@@ -441,7 +441,7 @@ func TestProxy(t *testing.T) {
 			wantLogs:      []map[string]types.GomegaMatcher{},
 			ciphers: cryptossh.Algorithms{
 				Ciphers:      []string{cryptossh.CipherAES256CTR},
-				KeyExchanges: []string{cryptossh.InsecureKeyExchangeDHGEXSHA1},
+				KeyExchanges: []string{cryptossh.KeyExchangeMLKEM768X25519},
 				MACs:         []string{cryptossh.HMACSHA256ETM},
 				HostKeys:     []string{cryptossh.KeyAlgoRSASHA512},
 			},
@@ -478,7 +478,7 @@ func TestProxy(t *testing.T) {
 			wantLogs:      []map[string]types.GomegaMatcher{},
 			ciphers: cryptossh.Algorithms{
 				Ciphers:      []string{cryptossh.CipherAES256CTR},
-				KeyExchanges: []string{cryptossh.KeyExchangeMLKEM768X25519},
+				KeyExchanges: []string{cryptossh.KeyExchangeECDHP256},
 				MACs:         []string{cryptossh.HMACSHA256ETM},
 				HostKeys:     []string{cryptossh.KeyAlgoED25519},
 			},
