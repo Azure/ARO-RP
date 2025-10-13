@@ -646,8 +646,115 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, testModeCreate, tests)
-	runTests(t, testModeUpdate, tests)
+	// OVN CIDR validation should only block during creation, allow during updates to support SDN->OVN migrations
+	createOnlyCIDRTests := []*validateTest{
+		{
+			name: "podCidr invalid CIDR-1",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/18"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.64.0.0/18' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "podCidr invalid CIDR-2",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "169.254.169.0/29"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '169.254.169.0/29' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "podCidr invalid CIDR-3",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.88.0.0/16"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.88.0.0/16' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "serviceCidr invalid CIDR-1",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/16"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.64.0.0/16' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "serviceCidr invalid CIDR-2",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "169.254.169.1/29"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '169.254.169.1/29' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "serviceCidr invalid CIDR-3",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.88.0.0/32"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.88.0.0/32' IP address range in any other CIDR definitions in your cluster.",
+		},
+	}
+
+	// OVN CIDR ranges should be allowed during updates to support existing clusters with overlapping ranges
+	updateOnlyCIDRTests := []*validateTest{
+		{
+			name: "existing cluster with overlapping podCidr allowed on update-1",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/15" // Overlaps with 100.64.0.0/16
+			},
+			wantErr: "", // Should be allowed on updates - existing overlap tolerated
+		},
+		{
+			name: "existing cluster with overlapping podCidr allowed on update-2",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.88.0.0/15" // Overlaps with 100.88.0.0/16
+			},
+			wantErr: "", // Should be allowed on updates - existing overlap tolerated
+		},
+		{
+			name: "existing cluster with overlapping serviceCidr allowed on update-1",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/15" // Overlaps with 100.64.0.0/16
+			},
+			wantErr: "", // Should be allowed on updates - existing overlap tolerated
+		},
+		{
+			name: "existing cluster with overlapping serviceCidr allowed on update-2",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.88.0.0/15" // Overlaps with 100.88.0.0/16
+			},
+			wantErr: "", // Should be allowed on updates - existing overlap tolerated
+		},
+		{
+			name: "existing cluster with small overlapping range allowed on update",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "169.254.128.0/18" // Properly aligned, overlaps with 169.254.169.0/29
+			},
+			wantErr: "", // Should be allowed on updates - existing overlap tolerated
+		},
+		{
+			name: "existing cluster with service update - no network changes",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/15" // Existing overlapping range
+			},
+			modify: func(oc *OpenShiftCluster) {
+				// Simulate service principal update - network profile unchanged
+				oc.Properties.ServicePrincipalProfile.ClientSecret = "new-secret"
+			},
+			wantErr: "", // Should be allowed - updating other fields with existing overlapping CIDR
+		},
+	}
+
+	// Filter out the OVN CIDR tests from the common tests since they now have different behavior for create vs update
+	commonTests := make([]*validateTest, 0)
+	for _, test := range tests {
+		// Skip the OVN CIDR range tests - they're now handled separately
+		if !strings.Contains(test.name, "invalid CIDR-") {
+			commonTests = append(commonTests, test)
+		}
+	}
+
+	runTests(t, testModeCreate, createOnlyCIDRTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, updateOnlyCIDRTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {

@@ -95,7 +95,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", p.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile); err != nil {
+	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, isCreate); err != nil {
 		return err
 	}
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile, p.ClusterProfile.Version); err != nil {
@@ -190,7 +190,7 @@ func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path s
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
+func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile, isCreate bool) error {
 	podIP, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", fmt.Sprintf("The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err))
@@ -200,7 +200,9 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", fmt.Sprintf("The provided pod CIDR '%s' is invalid: must be IPv4.", np.PodCIDR))
 	}
 
-	if np.SoftwareDefinedNetwork == SoftwareDefinedNetworkOVNKubernetes {
+	// Only validate against JoinCIDRRange during cluster creation
+	// For existing clusters, allow OVN default ranges to support SDN->OVN migrations
+	if isCreate && np.SoftwareDefinedNetwork == SoftwareDefinedNetworkOVNKubernetes {
 		for _, s := range api.JoinCIDRRange {
 			_, cidr, _ := net.ParseCIDR(s)
 			if cidr.Contains(pod.IP) || pod.Contains(cidr.IP) {
@@ -229,7 +231,9 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".serviceCidr", fmt.Sprintf("The provided service CIDR '%s' is invalid: must be IPv4.", np.ServiceCIDR))
 	}
 
-	if np.SoftwareDefinedNetwork == SoftwareDefinedNetworkOVNKubernetes {
+	// Only validate against JoinCIDRRange during cluster creation
+	// For existing clusters, allow OVN default ranges to support SDN->OVN migrations
+	if isCreate && np.SoftwareDefinedNetwork == SoftwareDefinedNetworkOVNKubernetes {
 		for _, s := range api.JoinCIDRRange {
 			_, cidr, _ := net.ParseCIDR(s)
 			if cidr.Contains(service.IP) || service.Contains(cidr.IP) {

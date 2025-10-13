@@ -615,8 +615,110 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, testModeCreate, tests)
-	runTests(t, testModeUpdate, tests)
+	createOnlyCIDRTests := []*validateTest{
+		{
+			name: "podCidr invalid CIDR-1",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/18"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.64.0.0/18' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "podCidr invalid CIDR-2",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "169.254.169.0/29"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '169.254.169.0/29' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "podCidr invalid CIDR-3",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.88.0.0/16"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.88.0.0/16' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "serviceCidr invalid CIDR-1",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/16"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.64.0.0/16' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "serviceCidr invalid CIDR-2",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "169.254.169.1/29"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '169.254.169.1/29' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "serviceCidr invalid CIDR-3",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.88.0.0/32"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.88.0.0/32' IP address range in any other CIDR definitions in your cluster.",
+		},
+	}
+
+	updateOnlyCIDRTests := []*validateTest{
+		{
+			name: "existing cluster with overlapping podCidr allowed on update-1",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/15"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with overlapping podCidr allowed on update-2",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.88.0.0/15"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with overlapping serviceCidr allowed on update-1",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/15"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with overlapping serviceCidr allowed on update-2",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.88.0.0/15"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with small overlapping range allowed on update",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "169.254.128.0/18"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with service update - no network changes",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/15"
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientSecret = "new-secret"
+			},
+			wantErr: "",
+		},
+	}
+
+	commonTests := make([]*validateTest, 0)
+	for _, test := range tests {
+		if !strings.Contains(test.name, "invalid CIDR-") {
+			commonTests = append(commonTests, test)
+		}
+	}
+
+	runTests(t, testModeCreate, createOnlyCIDRTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, updateOnlyCIDRTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
