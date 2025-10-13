@@ -68,7 +68,7 @@ func TestNew(t *testing.T) {
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody: `{
-    "command": "echo '` + khline + `' > localhost_known_host ; ssh -o UserKnownHostsFile=localhost_known_host -o Ciphers=aes256-ctr -o HostKeyAlgorithms=rsa-sha2-512 -o KexAlgorithms=mlkem768x25519-sha256 -o MACs=hmac-sha2-256-etm@openssh.com username@localhost",
+    "command": "echo '` + khline + `' > localhost_known_host ; ssh -o UserKnownHostsFile=localhost_known_host -o Ciphers=aes256-ctr -o HostKeyAlgorithms=rsa-sha2-512 -o KexAlgorithms=ecdh-sha2-nistp256 -o MACs=hmac-sha2-256-etm@openssh.com username@localhost",
     "password": "03030303-0303-0303-0303-030303030001"
 }
 `,
