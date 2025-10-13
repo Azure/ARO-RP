@@ -85,7 +85,12 @@ func (g *generator) rpTemplate() *arm.Template {
 			"msiRpEndpoint",
 			"tokenContributorRoleID",
 			"tokenContributorRoleName",
-			"aroLogLevel",
+
+			// Log levels
+			"rpLogLevel",
+			"monitorLogLevel",
+			"portalLogLevel",
+			"mimoActuatorLogLevel",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
@@ -149,8 +154,8 @@ func (g *generator) rpTemplate() *arm.Template {
 				"japanwest",
 				"uaecentral",
 			}
-		case "aroLogLevel":
-			p.DefaultValue = "debug"
+		case "rpLogLevel", "portalLogLevel", "monitorLogLevel", "mimoActuatorLogLevel":
+			p.DefaultValue = "info"
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		case "clustersInstallViaHive",

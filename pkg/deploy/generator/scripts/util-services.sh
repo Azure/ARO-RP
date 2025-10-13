@@ -37,7 +37,8 @@ configure_service_aro_gateway() {
     local -r aro_gateway_conf_filename='/etc/sysconfig/aro-gateway'
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
-ROLE='${role,,}'"
+ROLE='${role,,}'
+ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'"
 
     write_file aro_gateway_conf_filename conf_file true
     write_file aro_gateway_conf_filename add_conf_file false
@@ -107,7 +108,8 @@ configure_service_aro_rp() {
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
-ROLE='${role,,}'"
+ROLE='${role,,}'
+ARO_LOG_LEVEL='$RPLOGLEVEL'"
 
     write_file aro_rp_conf_filename conf_file true
     write_file aro_rp_conf_filename add_conf_file false
@@ -213,7 +215,8 @@ PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
 ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
-ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'"
+ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
+ARO_LOG_LEVEL='$MONITORLOGLEVEL'"
 
     write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
 
@@ -293,7 +296,8 @@ PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
 OTEL_AUDIT_QUEUE_SIZE='$OTELAUDITQUEUESIZE'
 RPIMAGE='$image'
 PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+IPADDRESS='$ipaddress'
+ARO_LOG_LEVEL='$PORTALLOGLEVEL'"
 
     write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 
@@ -358,7 +362,8 @@ configure_service_aro_mimo_actuator() {
 
     local -r aro_mimo_actuator_conf_filename='/etc/sysconfig/aro-mimo-actuator'
     local -r add_conf_file="PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+IPADDRESS='$ipaddress'
+ARO_LOG_LEVEL='$MIMOACTUATORLOGLEVEL'"
 
     write_file aro_mimo_actuator_conf_filename conf_file true
     write_file aro_mimo_actuator_conf_filename add_conf_file false

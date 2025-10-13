@@ -102,7 +102,6 @@ main() {
 
     # shellcheck disable=SC2034
     local -r aro_gateway_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
-ARO_LOG_LEVEL='$AROLOGLEVEL'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE='${role_gateway^}'
