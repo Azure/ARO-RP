@@ -197,9 +197,10 @@ input_allowed_ns = "openshift-marketplace"
 input_disallowed_ns = "openshift-apiserver"
 
 priv_user = "system:admin"
+aro_service_user = "system:aro-service"
 non_priv_user = "testuser"
 
-# priv_groups = ["system:master", "system:authenticated"]
+# priv_groups = ["system:masters", "system:authenticated"]
 # priv_groups = ["system:serviceaccounts", "system:authenticated"]
 priv_groups = ["system:serviceaccount:openshift-machine-config-operator:machine-config-controller", "system:authenticated"]
 non_priv_groups = ["system:cluster-admins", "system:authenticated"]
@@ -231,3 +232,43 @@ nonpriv_username_empty_priv_group_userinfo = {
 priv_username_empty_priv_group_userinfo = {
           "username":priv_user
         }
+
+# ARO Service user info structures
+aro_service_username_nonpriv_group_userinfo = {
+          "groups":non_priv_groups,
+          "username":aro_service_user
+        }
+
+aro_service_username_priv_group_userinfo = {
+          "groups":priv_groups,
+          "username":aro_service_user
+        }
+
+aro_service_username_empty_priv_group_userinfo = {
+          "username":aro_service_user
+        }
+
+# Test cases for system:aro-service
+test_input_allowed_aro_service_ns {
+  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, aro_service_username_priv_group_userinfo) }
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_allowed_aro_service_pullsecret {
+  input := delete_pullsecret_with_userinfo(aro_service_username_priv_group_userinfo)
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_allowed_aro_service_ns_nonpriv_group {
+  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, aro_service_username_nonpriv_group_userinfo) }
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_allowed_aro_service_pullsecret_nonpriv_group {
+  input := delete_pullsecret_with_userinfo(aro_service_username_nonpriv_group_userinfo)
+  results := violation with input as input
+  count(results) == 0
+}
