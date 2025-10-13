@@ -152,6 +152,7 @@ require (
 	github.com/elazarl/goproxy v1.7.2 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
+	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -757,7 +758,7 @@ replace (
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.25.16
 	k8s.io/kubectl => k8s.io/kubectl v0.25.16
 	k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.13.2
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
