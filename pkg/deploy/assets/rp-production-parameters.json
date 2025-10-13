@@ -20,9 +20,6 @@
         "armClientId": {
             "value": ""
         },
-        "aroLogLevel": {
-            "value": "debug"
-        },
         "azureCloudName": {
             "value": ""
         },
@@ -108,11 +105,17 @@
         "mdsdEnvironment": {
             "value": ""
         },
+        "mimoActuatorLogLevel": {
+            "value": "info"
+        },
         "miseValidAppIDs": {
             "value": ""
         },
         "miseValidAudiences": {
             "value": ""
+        },
+        "monitorLogLevel": {
+            "value": "info"
         },
         "msiRpEndpoint": {
             "value": ""
@@ -152,11 +155,17 @@
         "portalElevatedGroupIds": {
             "value": ""
         },
+        "portalLogLevel": {
+            "value": "info"
+        },
         "rpFeatures": {
             "value": ""
         },
         "rpImage": {
             "value": ""
+        },
+        "rpLogLevel": {
+            "value": "info"
         },
         "rpMdmAccount": {
             "value": ""
