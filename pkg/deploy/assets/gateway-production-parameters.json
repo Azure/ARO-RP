@@ -5,9 +5,6 @@
         "acrResourceId": {
             "value": ""
         },
-        "aroLogLevel": {
-            "value": "info"
-        },
         "azureCloudName": {
             "value": ""
         },
@@ -28,6 +25,9 @@
         },
         "gatewayFeatures": {
             "value": ""
+        },
+        "gatewayLogLevel": {
+            "value": "info"
         },
         "gatewayMdsdConfigVersion": {
             "value": ""
