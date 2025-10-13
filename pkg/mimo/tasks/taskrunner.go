@@ -4,6 +4,7 @@ package tasks
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -23,8 +24,12 @@ var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 }
 
 func run(t utilmimo.TaskContext, s []steps.Step) error {
+	if t.GetOpenshiftClusterDocument() == nil {
+		return fmt.Errorf("unexpected nil openshift cluster")
+	}
+
 	_, err := steps.Run(t,
-		t.Log().WithField("clusterUUID", t.GetClusterUUID()).WithField("taskID", t.TaskID()),
+		t.Log().WithField("clusterUUID", t.GetClusterUUID()).WithField("taskID", t.TaskID()).WithField("resourceID", t.GetOpenshiftClusterDocument().ResourceID),
 		DEFAULT_POLL_TIME, s, t.Now)
 	return err
 }
