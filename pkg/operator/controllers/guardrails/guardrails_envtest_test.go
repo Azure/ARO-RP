@@ -11,13 +11,12 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
@@ -25,6 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
