@@ -60,14 +60,15 @@ is_priv_namespace(ns) = true {
 exempted_user = {
   "system:kube-controller-manager",
   "system:kube-scheduler",
-  "system:admin"
+  "system:admin",
+  "system:aro-service"
 }
 
 exempted_groups = {
   # "system:cluster-admins", # dont allow kube:admin
   "system:node",
   "system:serviceaccount", # allow all system service accounts
-  "system:master"
+  "system:masters"
 }
 privileged_ns = {
   # Kubernetes specific namespaces
