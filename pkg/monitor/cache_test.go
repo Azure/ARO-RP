@@ -12,6 +12,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+type cacheTestOperation int
+
+const (
+	Upsert cacheTestOperation = iota
+	Delete
+	Noop
+)
+
 func TestUpsertAndDelete(t *testing.T) {
 	// Setup single monitor for all test operations
 	env := SetupTestEnvironment(t)
@@ -25,7 +33,7 @@ func TestUpsertAndDelete(t *testing.T) {
 
 	type operation struct {
 		name      string
-		action    string // "upsert", "delete", "fixDoc", "validate"
+		action    cacheTestOperation
 		clusterID string
 		bucket    int
 		state     api.ProvisioningState
@@ -35,7 +43,7 @@ func TestUpsertAndDelete(t *testing.T) {
 	operations := []operation{
 		{
 			name:      "upsert new document in owned bucket",
-			action:    "upsert",
+			action:    Upsert,
 			clusterID: "cluster-1",
 			bucket:    5,
 			state:     api.ProvisioningStateSucceeded,
@@ -57,7 +65,7 @@ func TestUpsertAndDelete(t *testing.T) {
 		},
 		{
 			name:      "upsert document in non-owned bucket",
-			action:    "upsert",
+			action:    Upsert,
 			clusterID: "cluster-2",
 			bucket:    10, // not in owned buckets
 			state:     api.ProvisioningStateSucceeded,
@@ -76,7 +84,7 @@ func TestUpsertAndDelete(t *testing.T) {
 		},
 		{
 			name:      "update existing document state",
-			action:    "upsert",
+			action:    Upsert,
 			clusterID: "cluster-1",
 			bucket:    5,
 			state:     api.ProvisioningStateUpdating,
@@ -98,7 +106,7 @@ func TestUpsertAndDelete(t *testing.T) {
 		},
 		{
 			name:      "add third document",
-			action:    "upsert",
+			action:    Upsert,
 			clusterID: "cluster-3",
 			bucket:    2,
 			state:     api.ProvisioningStateSucceeded,
@@ -117,7 +125,7 @@ func TestUpsertAndDelete(t *testing.T) {
 		},
 		{
 			name:      "delete document with worker",
-			action:    "delete",
+			action:    Delete,
 			clusterID: "cluster-1",
 			bucket:    5,
 			state:     api.ProvisioningStateDeleting,
@@ -139,7 +147,7 @@ func TestUpsertAndDelete(t *testing.T) {
 		},
 		{
 			name:      "delete non-existent document",
-			action:    "delete",
+			action:    Delete,
 			clusterID: "non-existent",
 			bucket:    5,
 			state:     api.ProvisioningStateDeleting,
@@ -158,7 +166,7 @@ func TestUpsertAndDelete(t *testing.T) {
 		},
 		{
 			name:      "test fixDoc - remove bucket ownership",
-			action:    "fixDoc",
+			action:    Noop,
 			clusterID: "cluster-3",
 			bucket:    2,
 			state:     api.ProvisioningStateSucceeded,
@@ -190,15 +198,14 @@ func TestUpsertAndDelete(t *testing.T) {
 			doc := createMockClusterDoc(op.clusterID, op.bucket, op.state)
 
 			switch op.action {
-			case "upsert":
+			case Upsert:
 				testMon.upsertDoc(doc)
-			case "delete":
+			case Delete:
 				testMon.deleteDoc(doc)
-			case "fixDoc":
-				// fixDoc validation is handled inside the validate function
-				// because it needs to manipulate state before calling fixDoc
+			case Noop:
+				// Do nothing, we don't need to call any func for the test to run
 			default:
-				t.Fatalf("unknown action: %s", op.action)
+				t.Fatalf("unknown test action")
 			}
 
 			if op.validate != nil {
