@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configv1 "github.com/openshift/api/config/v1"
 
@@ -128,6 +130,10 @@ func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1
 }
 
 func (r *Reconciler) gatekeeperDeploymentIsReady(ctx context.Context, deployConfig *config.GuardRailsDeploymentConfig) (bool, error) {
+	if r.skipGatekeeperReadinessCheck {
+		return true, nil
+	}
+
 	if ready, err := r.deployer.IsReady(ctx, deployConfig.Namespace, "gatekeeper-audit"); !ready || err != nil {
 		return ready, err
 	}
