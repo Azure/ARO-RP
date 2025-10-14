@@ -24,7 +24,7 @@ const maxDequeueCount = 5
 
 type Actuator interface {
 	Process(context.Context) (bool, error)
-	AddMaintenanceTasks(map[string]tasks.MaintenanceTask)
+	AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask)
 }
 
 type actuator struct {
@@ -37,8 +37,10 @@ type actuator struct {
 	oc  database.OpenShiftClusters
 	mmf database.MaintenanceManifests
 
-	tasks map[string]tasks.MaintenanceTask
+	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 }
+
+var _ Actuator = (*actuator)(nil)
 
 func NewActuator(
 	ctx context.Context,
@@ -54,7 +56,7 @@ func NewActuator(
 		clusterResourceID: strings.ToLower(clusterResourceID),
 		oc:                oc,
 		mmf:               mmf,
-		tasks:             make(map[string]tasks.MaintenanceTask),
+		tasks:             make(map[api.MIMOTaskID]tasks.MaintenanceTask),
 
 		now: now,
 	}
@@ -62,7 +64,7 @@ func NewActuator(
 	return a, nil
 }
 
-func (a *actuator) AddMaintenanceTasks(tasks map[string]tasks.MaintenanceTask) {
+func (a *actuator) AddMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.MaintenanceTask) {
 	maps.Copy(a.tasks, tasks)
 }
 

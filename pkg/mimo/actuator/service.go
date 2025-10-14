@@ -60,10 +60,12 @@ type service struct {
 	now         func() time.Time
 	workerDelay func() time.Duration
 
-	tasks map[string]tasks.MaintenanceTask
+	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 
 	serveHealthz bool
 }
+
+var _ Runnable = (*service)(nil)
 
 type actuatorDBs interface {
 	database.DatabaseGroupWithOpenShiftClusters
@@ -97,7 +99,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 	return s
 }
 
-func (s *service) SetMaintenanceTasks(tasks map[string]tasks.MaintenanceTask) {
+func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.MaintenanceTask) {
 	s.tasks = tasks
 }
 
