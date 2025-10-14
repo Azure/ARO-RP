@@ -107,8 +107,12 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	// Check for manifests that have timed out first
 	for _, doc := range docList {
 		if evaluationTime.After(time.Unix(int64(doc.MaintenanceManifest.RunBefore), 0)) {
+			taskLog := a.log.WithFields(logrus.Fields{
+				"manifestID": doc.ID,
+				"taskID":     doc.MaintenanceManifest.MaintenanceTaskID,
+			})
 			// timed out, mark as such
-			a.log.Infof("marking %v as outdated: %v older than %v", doc.ID, doc.MaintenanceManifest.RunBefore, evaluationTime.UTC())
+			taskLog.Infof("marking as outdated: %v older than %v", doc.MaintenanceManifest.RunBefore, evaluationTime.UTC())
 
 			_, err := a.mmf.Patch(ctx, a.clusterResourceID, doc.ID, func(d *api.MaintenanceManifestDocument) error {
 				d.MaintenanceManifest.State = api.MaintenanceManifestStateTimedOut
@@ -116,7 +120,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 				return nil
 			})
 			if err != nil {
-				a.log.Error(fmt.Errorf("failed to patch manifest %s with state TimedOut; will still attempt to process other manifests: %w", doc.ID, err))
+				taskLog.Error(fmt.Errorf("failed to patch manifest with state TimedOut; will still attempt to process other manifests: %w", err))
 			}
 		} else {
 			// not timed out, do something about it
@@ -162,8 +166,6 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	taskContext := newTaskContext(ctx, a.env, a.log, oc)
-
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
 		taskLog := a.log.WithFields(logrus.Fields{
@@ -176,26 +178,28 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		doc, err = a.mmf.Lease(ctx, a.clusterResourceID, doc.ID)
 		if err != nil {
 			// log and continue to the next task if it doesn't work
-			a.log.Error(err)
+			taskLog.Error(err)
 			continue
 		}
 
 		// error if we don't know what this task is, then continue
 		f, ok := a.tasks[doc.MaintenanceManifest.MaintenanceTaskID]
 		if !ok {
-			a.log.Errorf("not found %v", doc.MaintenanceManifest.MaintenanceTaskID)
+			taskLog.Errorf("task %v not found", doc.MaintenanceManifest.MaintenanceTaskID)
 			msg := "task ID not registered"
 			_, err = a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, api.MaintenanceManifestStateFailed, &msg)
 			if err != nil {
-				a.log.Error(fmt.Errorf("failed ending lease early on manifest: %w", err))
+				taskLog.Error(fmt.Errorf("failed ending lease early on manifest: %w", err))
 			}
 			continue
 		}
 
-		var state api.MaintenanceManifestState
-		var msg string
-
 		taskLog.Info("executing manifest")
+
+		// Create task context containing the environment, logger, cluster doc,
+		// etc -- this is the only way we pass information, to reduce the
+		// surface area for dependencies in tests
+		taskContext := newTaskContext(ctx, a.env, taskLog, oc)
 
 		// Perform the task with a timeout
 		err = taskContext.RunInTimeout(time.Minute*60, func() error {
@@ -206,8 +210,9 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 			return taskContext.Err()
 		})
 
+		var state api.MaintenanceManifestState
 		// Pull the result message out of the task context to save, if it is set
-		msg = taskContext.GetResultMessage()
+		msg := taskContext.GetResultMessage()
 
 		if err != nil {
 			if doc.Dequeues >= maxDequeueCount {
