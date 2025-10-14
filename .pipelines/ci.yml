@@ -413,4 +413,3 @@ stages:
 
           # AZ CLI Logout
           - template: ./templates/template-az-cli-logout.yml
-          
