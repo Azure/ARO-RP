@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -67,8 +68,10 @@ func SetupEnvtestDefaultBinaryAssetsDirectory() (string, error) {
 	}
 }
 
-var _ = Describe("Guardrails", Ordered, func() {
+var setupTime = time.Second * 70
 
+var _ = Describe("Guardrails", Ordered, Serial, func() {
+	var r *Reconciler
 	var restConfig *rest.Config
 	var k8sClient client.Client
 	var _ch clienthelper.Interface
@@ -78,14 +81,18 @@ var _ = Describe("Guardrails", Ordered, func() {
 	var hook *test.Hook
 
 	BeforeAll(func(ctx SpecContext) {
-		var err error
+		if os.Getenv("USE_ENVTEST") == "" {
+			Skip("Not running tests using envtest, set USE_ENVTEST to enable")
+		}
 
+		var err error
 		hook, log = testlog.New()
 
 		dir, err := SetupEnvtestDefaultBinaryAssetsDirectory()
 		Expect(err).ToNot(HaveOccurred())
 
 		testEnv = &envtest.Environment{
+			// aro.openshift.io CRDs
 			CRDDirectoryPaths:     []string{filepath.Join("..", "..", "deploy", "staticresources")},
 			BinaryAssetsDirectory: dir,
 		}
@@ -117,34 +124,30 @@ var _ = Describe("Guardrails", Ordered, func() {
 
 		err = _ch.Ensure(ctx, cluster)
 		Expect(err).ToNot(HaveOccurred())
+	}, NodeTimeout(setupTime))
 
-		fmt.Println(":)")
+	BeforeEach(func(ctx SpecContext) {
+		// TODO: do some cleanup here
+		r = NewReconciler(log, k8sClient)
 
+		r.skipGatekeeperReadinessCheck = true
+		r.skipPolicyDeployment = true
 	})
 
 	AfterAll(func() {
 		testEnv.Stop()
 
+		fmt.Println("logs:")
 		for _, i := range hook.AllEntries() {
 			fmt.Println(i)
 		}
 	})
 
-	When("the operator is run", func() {
+	It("will create the deployment when run", func(ctx SpecContext) {
+		_, err := r.Reconcile(ctx, reconcile.Request{})
+		Expect(err).ToNot(HaveOccurred())
 
-		r := &Reconciler{
-			log: log,
-			ch:  _ch,
-		}
-
-		It("will create the deployment", func(ctx SpecContext) {
-			fmt.Println(_ch, r)
-
-			_, err := r.Reconcile(ctx, reconcile.Request{})
-			Expect(err).ToNot(HaveOccurred())
-
-		})
-	})
+	}, SpecTimeout(setupTime+10*time.Second))
 
 })
 
