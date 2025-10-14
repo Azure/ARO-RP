@@ -356,6 +356,7 @@ stages:
               export SKIP_MIWI_ROLE_ASSIGNMENT=true
               . ./hack/devtools/local_dev_env.sh
               create_miwi_env_file
+              echo "created miwi env file successfully"
               . ./env
               az acr login --name arosvcdev
               az acr login --name arointsvc
