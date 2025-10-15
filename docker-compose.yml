@@ -112,6 +112,9 @@ services:
       MOCK_MSI_OBJECT_ID:
       MOCK_MSI_TENANT_ID:
       OIDC_STORAGE_ACCOUNT_NAME:
+      PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS:
+      SKIP_MIWI_ROLE_ASSIGNMENT:
+      USE_WI:
     ports:
       - "8443:8443"
     healthcheck:
@@ -184,6 +187,13 @@ services:
       WORKER_VM_SIZE:
       PORTAL_HOSTNAME: "https://localhost:8444"
       RP_BASE_URL: "https://localhost:8443"
+      MOCK_MSI_CERT:
+      MOCK_MSI_CLIENT_ID:
+      MOCK_MSI_OBJECT_ID:
+      MOCK_MSI_TENANT_ID:
+      PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS:
+      SKIP_MIWI_ROLE_ASSIGNMENT:
+      USE_WI:
     entrypoint: "/usr/local/bin/e2e.test"
     command:
       [
