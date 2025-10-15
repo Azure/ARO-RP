@@ -33,7 +33,6 @@ const (
 	installConfigName     = "aro-installconfig"
 	imageHostedOnBehalfOf = "kubernetes.azure.com/managedby"
 	installConfigTemplate = `apiVersion: v1
-	
 platform:
   azure:
     region: "%s"
