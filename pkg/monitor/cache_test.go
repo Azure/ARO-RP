@@ -17,7 +17,7 @@ type cacheTestOperation int
 const (
 	Upsert cacheTestOperation = iota
 	Delete
-	Noop
+	NoOp
 )
 
 func TestUpsertAndDelete(t *testing.T) {
@@ -166,7 +166,7 @@ func TestUpsertAndDelete(t *testing.T) {
 		},
 		{
 			name:      "test fixDoc - remove bucket ownership",
-			action:    Noop,
+			action:    NoOp,
 			clusterID: "cluster-3",
 			bucket:    2,
 			state:     api.ProvisioningStateSucceeded,
@@ -202,7 +202,7 @@ func TestUpsertAndDelete(t *testing.T) {
 				testMon.upsertDoc(doc)
 			case Delete:
 				testMon.deleteDoc(doc)
-			case Noop:
+			case NoOp:
 				// Do nothing, we don't need to call any func for the test to run
 			default:
 				t.Fatalf("unknown test action")
