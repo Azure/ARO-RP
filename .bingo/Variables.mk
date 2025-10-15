@@ -47,11 +47,11 @@ $(FIPS_DETECT): $(BINGO_DIR)/fips-detect.mod
 	@echo "(re)installing $(GOBIN)/fips-detect-v0.0.0-20230309083406-7157dae5bafd"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=fips-detect.mod -o=$(GOBIN)/fips-detect-v0.0.0-20230309083406-7157dae5bafd "github.com/acardace/fips-detect"
 
-GENCOSMOSDB := $(GOBIN)/gencosmosdb-v0.0.0-20250203190900-6f9d371594d6
+GENCOSMOSDB := $(GOBIN)/gencosmosdb-v0.0.0-20251002164525-db0ff9dc7ecc
 $(GENCOSMOSDB): $(BINGO_DIR)/gencosmosdb.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/gencosmosdb-v0.0.0-20250203190900-6f9d371594d6"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gencosmosdb.mod -o=$(GOBIN)/gencosmosdb-v0.0.0-20250203190900-6f9d371594d6 "github.com/bennerv/go-cosmosdb/cmd/gencosmosdb"
+	@echo "(re)installing $(GOBIN)/gencosmosdb-v0.0.0-20251002164525-db0ff9dc7ecc"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gencosmosdb.mod -o=$(GOBIN)/gencosmosdb-v0.0.0-20251002164525-db0ff9dc7ecc "github.com/bennerv/go-cosmosdb/cmd/gencosmosdb"
 
 GO_BINDATA := $(GOBIN)/go-bindata-v3.1.2+incompatible
 $(GO_BINDATA): $(BINGO_DIR)/go-bindata.mod

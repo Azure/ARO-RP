@@ -37,6 +37,7 @@ type FakeOpenShiftClusterDocumentClient struct {
 	queryHandlers             map[string]fakeOpenShiftClusterDocumentQueryHandler
 	sorter                    func([]*pkg.OpenShiftClusterDocument)
 	etag                      int
+	changeFeedIterators       []*fakeOpenShiftClusterDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.OpenShiftClusterDocument, *pkg.OpenShiftClusterDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeOpenShiftClusterDocumentClient) apply(ctx context.Context, partitio
 
 	c.openShiftClusterDocuments[openShiftClusterDocument.ID] = openShiftClusterDocument
 
+	if err = c.updateChangeFeeds(openShiftClusterDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(openShiftClusterDocument)
 }
 
@@ -237,7 +242,9 @@ func (c *FakeOpenShiftClusterDocumentClient) Delete(ctx context.Context, partiti
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a OpenShiftClusterDocument does not remove it from the existing change feeds
+// - when a OpenShiftClusterDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a openShiftClusterDocument from the changefeed is actually the most recent version.
 func (c *FakeOpenShiftClusterDocumentClient) ChangeFeed(*Options) OpenShiftClusterDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -246,7 +253,26 @@ func (c *FakeOpenShiftClusterDocumentClient) ChangeFeed(*Options) OpenShiftClust
 		return NewFakeOpenShiftClusterDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeOpenShiftClusterDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeOpenShiftClusterDocumentIterator)
+	if !ok {
+		return NewFakeOpenShiftClusterDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeOpenShiftClusterDocumentClient) updateChangeFeeds(openShiftClusterDocument *pkg.OpenShiftClusterDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(openShiftClusterDocument)
+		if err != nil {
+			return err
+		}
+
+		currentIterator.openShiftClusterDocuments = append(currentIterator.openShiftClusterDocuments, newTpl)
+		currentIterator.done = false
+	}
+	return nil
 }
 
 func (c *FakeOpenShiftClusterDocumentClient) processPreTriggers(ctx context.Context, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) error {
@@ -321,7 +347,7 @@ func (i *fakeOpenShiftClusterDocumentIterator) Next(ctx context.Context, maxItem
 			max = len(i.openShiftClusterDocuments)
 		}
 		openShiftClusterDocuments = i.openShiftClusterDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

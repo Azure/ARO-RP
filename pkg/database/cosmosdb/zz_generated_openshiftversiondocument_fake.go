@@ -37,6 +37,7 @@ type FakeOpenShiftVersionDocumentClient struct {
 	queryHandlers             map[string]fakeOpenShiftVersionDocumentQueryHandler
 	sorter                    func([]*pkg.OpenShiftVersionDocument)
 	etag                      int
+	changeFeedIterators       []*fakeOpenShiftVersionDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.OpenShiftVersionDocument, *pkg.OpenShiftVersionDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeOpenShiftVersionDocumentClient) apply(ctx context.Context, partitio
 
 	c.openShiftVersionDocuments[openShiftVersionDocument.ID] = openShiftVersionDocument
 
+	if err = c.updateChangeFeeds(openShiftVersionDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(openShiftVersionDocument)
 }
 
@@ -237,7 +242,9 @@ func (c *FakeOpenShiftVersionDocumentClient) Delete(ctx context.Context, partiti
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a OpenShiftVersionDocument does not remove it from the existing change feeds
+// - when a OpenShiftVersionDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a openShiftVersionDocument from the changefeed is actually the most recent version.
 func (c *FakeOpenShiftVersionDocumentClient) ChangeFeed(*Options) OpenShiftVersionDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -246,7 +253,26 @@ func (c *FakeOpenShiftVersionDocumentClient) ChangeFeed(*Options) OpenShiftVersi
 		return NewFakeOpenShiftVersionDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeOpenShiftVersionDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeOpenShiftVersionDocumentIterator)
+	if !ok {
+		return NewFakeOpenShiftVersionDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeOpenShiftVersionDocumentClient) updateChangeFeeds(openShiftVersionDocument *pkg.OpenShiftVersionDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(openShiftVersionDocument)
+		if err != nil {
+			return err
+		}
+
+		currentIterator.openShiftVersionDocuments = append(currentIterator.openShiftVersionDocuments, newTpl)
+		currentIterator.done = false
+	}
+	return nil
 }
 
 func (c *FakeOpenShiftVersionDocumentClient) processPreTriggers(ctx context.Context, openShiftVersionDocument *pkg.OpenShiftVersionDocument, options *Options) error {
@@ -321,7 +347,7 @@ func (i *fakeOpenShiftVersionDocumentIterator) Next(ctx context.Context, maxItem
 			max = len(i.openShiftVersionDocuments)
 		}
 		openShiftVersionDocuments = i.openShiftVersionDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

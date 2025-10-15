@@ -4,9 +4,6 @@ package monitor
 // Licensed under the Apache License 2.0.
 
 import (
-	"math/rand"
-	"time"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -64,9 +61,6 @@ func (mon *monitor) fixDoc(doc *api.OpenShiftClusterDocument) {
 	} else if ours && v.stop == nil {
 		ch := make(chan struct{})
 		v.stop = ch
-
-		delay := time.Duration(rand.Intn(60)) * time.Second
-
-		go mon.worker(ch, delay, doc.ID)
+		go mon.worker(ch, doc.ID)
 	}
 }

@@ -37,6 +37,7 @@ type FakeMaintenanceManifestDocumentClient struct {
 	queryHandlers                map[string]fakeMaintenanceManifestDocumentQueryHandler
 	sorter                       func([]*pkg.MaintenanceManifestDocument)
 	etag                         int
+	changeFeedIterators          []*fakeMaintenanceManifestDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.MaintenanceManifestDocument, *pkg.MaintenanceManifestDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeMaintenanceManifestDocumentClient) apply(ctx context.Context, parti
 
 	c.maintenanceManifestDocuments[maintenanceManifestDocument.ID] = maintenanceManifestDocument
 
+	if err = c.updateChangeFeeds(maintenanceManifestDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(maintenanceManifestDocument)
 }
 
@@ -237,7 +242,9 @@ func (c *FakeMaintenanceManifestDocumentClient) Delete(ctx context.Context, part
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a MaintenanceManifestDocument does not remove it from the existing change feeds
+// - when a MaintenanceManifestDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a maintenanceManifestDocument from the changefeed is actually the most recent version.
 func (c *FakeMaintenanceManifestDocumentClient) ChangeFeed(*Options) MaintenanceManifestDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -246,7 +253,26 @@ func (c *FakeMaintenanceManifestDocumentClient) ChangeFeed(*Options) Maintenance
 		return NewFakeMaintenanceManifestDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeMaintenanceManifestDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeMaintenanceManifestDocumentIterator)
+	if !ok {
+		return NewFakeMaintenanceManifestDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeMaintenanceManifestDocumentClient) updateChangeFeeds(maintenanceManifestDocument *pkg.MaintenanceManifestDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(maintenanceManifestDocument)
+		if err != nil {
+			return err
+		}
+
+		currentIterator.maintenanceManifestDocuments = append(currentIterator.maintenanceManifestDocuments, newTpl)
+		currentIterator.done = false
+	}
+	return nil
 }
 
 func (c *FakeMaintenanceManifestDocumentClient) processPreTriggers(ctx context.Context, maintenanceManifestDocument *pkg.MaintenanceManifestDocument, options *Options) error {
@@ -321,7 +347,7 @@ func (i *fakeMaintenanceManifestDocumentIterator) Next(ctx context.Context, maxI
 			max = len(i.maintenanceManifestDocuments)
 		}
 		maintenanceManifestDocuments = i.maintenanceManifestDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 
