@@ -33,6 +33,7 @@ func HasLinkedAuthorizationFailedError(err error) bool {
 }
 
 func deploymentFailedDueToAuthError(err error, authCode string) bool {
+	// Check go-autorest SDK errors (old SDK)
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
 			if serviceErr.Code == authCode {
@@ -63,6 +64,14 @@ func deploymentFailedDueToAuthError(err error, authCode string) bool {
 		}
 	}
 
+	// Check azcore SDK errors (new SDK)
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		if responseError.ErrorCode == authCode {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -71,6 +80,7 @@ func deploymentFailedDueToAuthError(err error, authCode string) bool {
 // assignments.
 // This can be an indicator of role assignment propagation delay.
 func IsDeploymentMissingPermissionsError(err error) bool {
+	// Check go-autorest SDK errors (old SDK)
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
 			if serviceErr.Code == CodeInvalidTemplateDeployment && strings.Contains(serviceErr.Message, "Authorization failed for template resource") {
@@ -79,11 +89,20 @@ func IsDeploymentMissingPermissionsError(err error) bool {
 		}
 	}
 
+	// Check azcore SDK errors (new SDK)
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		if responseError.ErrorCode == CodeInvalidTemplateDeployment && strings.Contains(err.Error(), "Authorization failed for template resource") {
+			return true
+		}
+	}
+
 	return false
 }
 
 // IsDeploymentActiveError returns true it the error is a DeploymentActive error
 func IsDeploymentActiveError(err error) bool {
+	// Check go-autorest SDK errors (old SDK)
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
 			requestErr.ServiceError != nil &&
@@ -91,6 +110,15 @@ func IsDeploymentActiveError(err error) bool {
 			return true
 		}
 	}
+
+	// Check azcore SDK errors (new SDK)
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		if responseError.ErrorCode == "DeploymentActive" {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -135,6 +163,7 @@ func IsClientSecretKeysExpired(err error) bool {
 
 // ResourceGroupNotFound returns true if the error is an ResourceGroupNotFound error
 func ResourceGroupNotFound(err error) bool {
+	// Check go-autorest SDK errors (old SDK)
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
 			if serviceErr.Code == "ResourceGroupNotFound" {
@@ -147,6 +176,15 @@ func ResourceGroupNotFound(err error) bool {
 			return true
 		}
 	}
+
+	// Check azcore SDK errors (new SDK)
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		if responseError.ErrorCode == "ResourceGroupNotFound" {
+			return true
+		}
+	}
+
 	return false
 }
 

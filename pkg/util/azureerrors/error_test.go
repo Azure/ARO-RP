@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
@@ -76,6 +77,17 @@ func TestHasAuthorizationFailedError(t *testing.T) {
 			},
 			want: true,
 		},
+		{
+			name: "azcore ResponseError with AuthorizationFailed",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusForbidden,
+				ErrorCode:  "AuthorizationFailed",
+				RawResponse: &http.Response{
+					StatusCode: http.StatusForbidden,
+				},
+			},
+			want: true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := HasAuthorizationFailedError(tt.err)
@@ -111,6 +123,13 @@ func TestIsDeploymentActiveError(t *testing.T) {
 			},
 			want: true,
 		},
+		{
+			name: "azcore ResponseError with DeploymentActive",
+			err: &azcore.ResponseError{
+				ErrorCode: "DeploymentActive",
+			},
+			want: true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := IsDeploymentActiveError(autorest.NewErrorWithError(tt.err, "", "", nil, ""))
@@ -143,6 +162,13 @@ func TestIsDeploymentMissingPermissionsError(t *testing.T) {
 				},
 			},
 			want: true,
+		},
+		{
+			name: "azcore ResponseError with InvalidTemplateDeployment",
+			err: &azcore.ResponseError{
+				ErrorCode: CodeInvalidTemplateDeployment,
+			},
+			want: false, // Should be false because it's missing the "Authorization failed for template resource" message
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
