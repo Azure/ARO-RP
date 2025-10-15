@@ -9,8 +9,8 @@ then
     exit 1
 fi
 
-# e.g. "USERNAME/ARO-1234", "USERNAME/hotfix-v20240321.00", or "USERNAME/gh-issue-123"
-valid_branch_regex="^${git_username_lower}\/(ARO-[0-9]{4}[a-z0-9._-]*|hotfix-[a-z0-9._-]+|gh-issue-[0-9]+[a-z0-9._-]*)$"
+# e.g. "USERNAME/ARO-1234", "USERNAME/ARO-12345", "USERNAME/hotfix-v20240321.00", or "USERNAME/gh-issue-123"
+valid_branch_regex="^${git_username_lower}\/(ARO-[0-9]{4,}[a-z0-9._-]*|hotfix-[a-z0-9._-]+|gh-issue-[0-9]+[a-z0-9._-]*)$"
 
 local_branch="$(git rev-parse --abbrev-ref HEAD)"
 

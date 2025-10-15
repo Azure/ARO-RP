@@ -31,6 +31,7 @@ const (
 	envSecretsName        = "aro-env-secret"
 	pullsecretSecretName  = "aro-pullsecret"
 	installConfigName     = "aro-installconfig"
+	imageHostedOnBehalfOf = "kubernetes.azure.com/managedby"
 	installConfigTemplate = `apiVersion: v1
 platform:
   azure:
@@ -68,7 +69,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 		return err
 	}
 
-	cd := c.clusterDeploymentForInstall(doc, version, c.env.IsLocalDevelopmentMode())
+	cd := c.clusterDeploymentForInstall(doc, version, sub, c.env.IsLocalDevelopmentMode())
 
 	// Enrich the cluster deployment with the correlation data so that logs are
 	// properly annotated
@@ -171,7 +172,7 @@ func azureCredentialSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscrip
 	return azureCredentialSecret, nil
 }
 
-func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, isDevelopment bool) *hivev1.ClusterDeployment {
+func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, sub *api.SubscriptionDocument, isDevelopment bool) *hivev1.ClusterDeployment {
 	var envVars = []corev1.EnvVar{
 		{
 			Name:  "ARO_UUID",
@@ -207,6 +208,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				hiveClusterPlatformLabel: "azure",
 				hiveClusterRegionLabel:   doc.OpenShiftCluster.Location,
 				createdByHiveLabelKey:    "true",
+				imageHostedOnBehalfOf:    "sub_" + sub.ID,
 			},
 			Annotations: map[string]string{
 				// https://github.com/openshift/hive/pull/2157
