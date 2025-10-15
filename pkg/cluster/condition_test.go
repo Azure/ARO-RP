@@ -412,3 +412,81 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 		})
 	}
 }
+
+func TestApiServersReadyAfterCertificateConfig(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name                 string
+		availableCondition   configv1.ConditionStatus
+		progressingCondition configv1.ConditionStatus
+		degradedCondition    configv1.ConditionStatus
+		want                 bool
+	}{
+		{
+			name:                 "Available, not progressing, not degraded - ready",
+			availableCondition:   configv1.ConditionTrue,
+			progressingCondition: configv1.ConditionFalse,
+			degradedCondition:    configv1.ConditionFalse,
+			want:                 true,
+		},
+		{
+			name:                 "Available but still progressing - not ready",
+			availableCondition:   configv1.ConditionTrue,
+			progressingCondition: configv1.ConditionTrue,
+			degradedCondition:    configv1.ConditionFalse,
+			want:                 false,
+		},
+		{
+			name:                 "Available but degraded - not ready",
+			availableCondition:   configv1.ConditionTrue,
+			progressingCondition: configv1.ConditionFalse,
+			degradedCondition:    configv1.ConditionTrue,
+			want:                 false,
+		},
+		{
+			name:                 "Not available - not ready",
+			availableCondition:   configv1.ConditionFalse,
+			progressingCondition: configv1.ConditionFalse,
+			degradedCondition:    configv1.ConditionFalse,
+			want:                 false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			configcli := configfake.NewSimpleClientset(&configv1.ClusterOperator{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "kube-apiserver",
+				},
+				Status: configv1.ClusterOperatorStatus{
+					Conditions: []configv1.ClusterOperatorStatusCondition{
+						{
+							Type:   configv1.OperatorAvailable,
+							Status: tt.availableCondition,
+						},
+						{
+							Type:   configv1.OperatorProgressing,
+							Status: tt.progressingCondition,
+						},
+						{
+							Type:   configv1.OperatorDegraded,
+							Status: tt.degradedCondition,
+						},
+					},
+				},
+			})
+
+			m := &manager{
+				log:       logrus.NewEntry(logrus.StandardLogger()),
+				configcli: configcli,
+			}
+
+			result, err := m.apiServersReadyAfterCertificateConfig(ctx)
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if result != tt.want {
+				t.Errorf("Result was %v, wanted %v", result, tt.want)
+			}
+		})
+	}
+}
