@@ -1,5 +1,5 @@
-ARG MARINER_VERSION
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0.${MARINER_VERSION}-amd64 AS builder
+ARG AZURELINUX_VERSION
+FROM mcr.microsoft.com/azurelinux/base/core:${AZURELINUX_VERSION}-amd64 AS builder
 RUN tdnf repolist --refresh && tdnf update -yq
 RUN tdnf install -yq ca-certificates flex build-essential systemd-devel cmake wget tar c-ares-devel sqlite-devel openssl-devel zstd-devel nghttp2-devel
 ARG VERSION
@@ -172,7 +172,7 @@ RUN cmake -B build/ \
 RUN make -C build
 RUN make -C build install
 
-FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0.${MARINER_VERSION}-amd64
+FROM mcr.microsoft.com/azurelinux/distroless/base:${AZURELINUX_VERSION}-amd64
 COPY --from=builder \
     /lib/libcap.so.2 \
     /lib/libcares.so.2 \
