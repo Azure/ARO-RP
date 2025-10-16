@@ -61,7 +61,7 @@ func TestAdminMdsdCertificateRenew(t *testing.T) {
 			},
 			wantResponse: &admin.MaintenanceManifest{
 				ID:                "07070707-0707-0707-0707-070707070001",
-				MaintenanceTaskID: mimo.MDSD_CERT_ROTATION_ID,
+				MaintenanceTaskID: admin.MIMOTaskID(mimo.MDSD_CERT_ROTATION_ID),
 				State:             admin.MaintenanceManifestStatePending,
 				RunAfter:          int(now().Unix()),
 				RunBefore:         int(now().Add(time.Hour * 7 * 24).Unix()),
@@ -94,7 +94,7 @@ func TestAdminMdsdCertificateRenew(t *testing.T) {
 			},
 			wantResponse: &admin.MaintenanceManifest{
 				ID:                "07070707-0707-0707-0707-070707070001",
-				MaintenanceTaskID: mimo.MDSD_CERT_ROTATION_ID,
+				MaintenanceTaskID: admin.MIMOTaskID(mimo.MDSD_CERT_ROTATION_ID),
 				State:             admin.MaintenanceManifestStatePending,
 				RunAfter:          int(now().Unix()),
 				RunBefore:         int(now().Add(time.Hour * 7 * 24).Unix()),

@@ -13,6 +13,7 @@ import (
 
 	_ "net/http/pprof"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -38,45 +39,48 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-	audit := utillog.GetAuditEntry()
-	log := utillog.GetLogger()
+	serviceName := serviceForCommand(flag.Arg(0))
+	log := env.LoggerForService(serviceName, utillog.GetLogger())
 
 	go func() {
 		log.Warn(http.ListenAndServe("localhost:6060", nil))
 	}()
 
 	log.Printf("starting, git commit %s", version.GitCommit)
+	log.Printf("command line: '%s'", strings.Join(os.Args, " "))
 
 	var err error
-	switch strings.ToLower(flag.Arg(0)) {
-	case "deploy":
+	switch serviceName {
+	case env.SERVICE_DEPLOY:
 		checkArgs(3)
 		err = deploy(ctx, log)
-	case "gateway":
+	case env.SERVICE_GATEWAY:
 		checkArgs(1)
 		err = gateway(ctx, log)
-	case "mirror":
+	case env.SERVICE_MIRROR:
 		checkMinArgs(1)
 		err = mirror(ctx, log)
-	case "monitor":
+	case env.SERVICE_MONITOR:
 		checkArgs(1)
 		err = monitor(ctx, log)
-	case "rp":
+	case env.SERVICE_RP:
 		checkArgs(1)
+		audit := utillog.GetAuditEntry()
 		err = rp(ctx, log, audit)
-	case "portal":
+	case env.SERVICE_PORTAL:
 		checkArgs(1)
+		audit := utillog.GetAuditEntry()
 		err = portal(ctx, log, audit)
-	case "operator":
+	case env.SERVICE_OPERATOR:
 		checkArgs(2)
 		err = operator(ctx, log)
-	case "update-versions":
+	case env.SERVICE_UPDATE_OCP_VERSIONS:
 		checkArgs(1)
 		err = updateOCPVersions(ctx, log)
-	case "update-role-sets":
+	case env.SERVICE_UPDATE_ROLE_SETS:
 		checkArgs(1)
 		err = updatePlatformWorkloadIdentityRoleSets(ctx, log)
-	case "mimo-actuator":
+	case env.SERVICE_MIMO_ACTUATOR:
 		checkArgs(1)
 		err = mimoActuator(ctx, log)
 	default:
@@ -101,4 +105,30 @@ func checkMinArgs(required int) {
 		usage()
 		os.Exit(2)
 	}
+}
+
+func serviceForCommand(cmd string) env.ServiceName {
+	switch strings.ToLower(cmd) {
+	case "deploy":
+		return env.SERVICE_DEPLOY
+	case "gateway":
+		return env.SERVICE_GATEWAY
+	case "mirror":
+		return env.SERVICE_MIRROR
+	case "monitor":
+		return env.SERVICE_MONITOR
+	case "rp":
+		return env.SERVICE_RP
+	case "portal":
+		return env.SERVICE_PORTAL
+	case "operator":
+		return env.SERVICE_OPERATOR
+	case "update-versions":
+		return env.SERVICE_UPDATE_OCP_VERSIONS
+	case "update-role-sets":
+		return env.SERVICE_UPDATE_ROLE_SETS
+	case "mimo-actuator":
+		return env.SERVICE_MIMO_ACTUATOR
+	}
+	return ""
 }

@@ -30,6 +30,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"fluentbitImage",
 		"gatewayDomains",
 		"gatewayFeatures",
+		"gatewayLogLevel",
 		"gatewayMdsdConfigVersion",
 		"gatewayServicePrincipalId",
 		"gatewayVmSize",
@@ -78,6 +79,8 @@ func (g *generator) gatewayTemplate() *arm.Template {
 				"japanwest",
 				"uaecentral",
 			}
+		case "gatewayLogLevel":
+			p.DefaultValue = "info"
 		}
 		t.Parameters[param] = p
 	}

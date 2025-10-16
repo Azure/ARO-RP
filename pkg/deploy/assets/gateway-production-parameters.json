@@ -26,6 +26,9 @@
         "gatewayFeatures": {
             "value": ""
         },
+        "gatewayLogLevel": {
+            "value": "info"
+        },
         "gatewayMdsdConfigVersion": {
             "value": ""
         },

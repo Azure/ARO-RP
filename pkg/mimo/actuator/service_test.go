@@ -275,7 +275,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		It("expires them", func() {
 			svc.pollTime = time.Millisecond
 
-			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					// once we've run this task, stop the worker
 					svc.stopping.Store(true)
@@ -297,7 +297,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		It("loads the full cluster document", func() {
 			svc.pollTime = time.Millisecond
 
-			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					// Only the ClusterResourceID is available to the bucket
 					// worker, so make sure this is the full document
@@ -322,7 +322,6 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 })
 
 var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
-
 	var controller *gomock.Controller
 	var _env *mock_env.MockInterface
 	var log *logrus.Entry
@@ -335,7 +334,6 @@ var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
 		_env = mock_env.NewMockInterface(controller)
 
 		_env.EXPECT().Logger().Return(log).AnyTimes()
-
 	})
 
 	BeforeEach(func() {
@@ -345,9 +343,9 @@ var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
 	It("serves all buckets with 3 workers", func() {
 		_env.EXPECT().IsLocalDevelopmentMode().Return(false).Times(3)
 
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-01", nil })
-		b2 := DetermineBuckets(_env, func() (string, error) { return "vm-02", nil })
-		b3 := DetermineBuckets(_env, func() (string, error) { return "vm-03", nil })
+		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-00", nil })
+		b2 := DetermineBuckets(_env, func() (string, error) { return "vm-01", nil })
+		b3 := DetermineBuckets(_env, func() (string, error) { return "vm-02", nil })
 
 		all := slices.Concat(b1, b2, b3)
 
@@ -384,9 +382,9 @@ var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
 		}
 	})
 
-	It("will serve all buckets if the hostname ending in a number that is not 1-3", func() {
+	It("will serve all buckets if the hostname ending in a number that is not 0-2", func() {
 		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-04", nil })
+		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-03", nil })
 
 		for i := range 256 {
 			Expect(b1).To(ContainElement(i))

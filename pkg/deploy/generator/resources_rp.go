@@ -401,6 +401,12 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"tokenContributorRoleID",
 		"tokenContributorRoleName",
 
+		// Log levels
+		"rpLogLevel",
+		"monitorLogLevel",
+		"portalLogLevel",
+		"mimoActuatorLogLevel",
+
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",
 		"clustersAdoptByHive",

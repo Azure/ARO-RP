@@ -6,6 +6,7 @@ package tasks
 import (
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/mimo"
 	utilmimo "github.com/Azure/ARO-RP/pkg/util/mimo"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
@@ -14,7 +15,7 @@ import (
 const DEFAULT_POLL_TIME = time.Second * 10
 const DEFAULT_TIMEOUT_DURATION = time.Minute * 20
 
-var DEFAULT_MAINTENANCE_TASKS = map[string]MaintenanceTask{
+var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 	mimo.TLS_CERT_ROTATION_ID:     TLSCertRotation,
 	mimo.ACR_TOKEN_CHECKER_ID:     ACRTokenChecker,
 	mimo.OPERATOR_FLAGS_UPDATE_ID: UpdateOperatorFlags,

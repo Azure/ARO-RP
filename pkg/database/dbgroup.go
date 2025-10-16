@@ -77,7 +77,7 @@ type dbGroup struct {
 
 func (d *dbGroup) OpenShiftClusters() (OpenShiftClusters, error) {
 	if d.openShiftClusters == nil {
-		return nil, errors.New("no OpenShiftClusters defined")
+		return nil, errors.New("no OpenShiftClusters database client set")
 	}
 	return d.openShiftClusters, nil
 }
@@ -89,7 +89,7 @@ func (d *dbGroup) WithOpenShiftClusters(db OpenShiftClusters) DatabaseGroup {
 
 func (d *dbGroup) Subscriptions() (Subscriptions, error) {
 	if d.subscriptions == nil {
-		return nil, errors.New("no Subscriptions defined")
+		return nil, errors.New("no Subscriptions database client set")
 	}
 	return d.subscriptions, nil
 }
@@ -101,7 +101,7 @@ func (d *dbGroup) WithSubscriptions(db Subscriptions) DatabaseGroup {
 
 func (d *dbGroup) Monitors() (Monitors, error) {
 	if d.monitors == nil {
-		return nil, errors.New("no Monitors defined")
+		return nil, errors.New("no Monitors database client set")
 	}
 	return d.monitors, nil
 }
@@ -113,7 +113,7 @@ func (d *dbGroup) WithMonitors(db Monitors) DatabaseGroup {
 
 func (d *dbGroup) OpenShiftVersions() (OpenShiftVersions, error) {
 	if d.openShiftVersions == nil {
-		return nil, errors.New("no OpenShiftVersions defined")
+		return nil, errors.New("no OpenShiftVersions database client set")
 	}
 	return d.openShiftVersions, nil
 }
@@ -125,7 +125,7 @@ func (d *dbGroup) WithOpenShiftVersions(db OpenShiftVersions) DatabaseGroup {
 
 func (d *dbGroup) PlatformWorkloadIdentityRoleSets() (PlatformWorkloadIdentityRoleSets, error) {
 	if d.platformWorkloadIdentityRoleSets == nil {
-		return nil, errors.New("no PlatformWorkloadIdentityRoleSets defined")
+		return nil, errors.New("no PlatformWorkloadIdentityRoleSets database client set")
 	}
 	return d.platformWorkloadIdentityRoleSets, nil
 }
@@ -137,7 +137,7 @@ func (d *dbGroup) WithPlatformWorkloadIdentityRoleSets(db PlatformWorkloadIdenti
 
 func (d *dbGroup) AsyncOperations() (AsyncOperations, error) {
 	if d.asyncOperations == nil {
-		return nil, errors.New("no AsyncOperations defined")
+		return nil, errors.New("no AsyncOperations database client set")
 	}
 	return d.asyncOperations, nil
 }
@@ -149,7 +149,7 @@ func (d *dbGroup) WithAsyncOperations(db AsyncOperations) DatabaseGroup {
 
 func (d *dbGroup) Billing() (Billing, error) {
 	if d.billing == nil {
-		return nil, errors.New("no Billing defined")
+		return nil, errors.New("no Billing database client set")
 	}
 	return d.billing, nil
 }
@@ -161,7 +161,7 @@ func (d *dbGroup) WithBilling(db Billing) DatabaseGroup {
 
 func (d *dbGroup) Portal() (Portal, error) {
 	if d.portal == nil {
-		return nil, errors.New("no Portal defined")
+		return nil, errors.New("no Portal database client set")
 	}
 	return d.portal, nil
 }
@@ -173,7 +173,7 @@ func (d *dbGroup) WithPortal(db Portal) DatabaseGroup {
 
 func (d *dbGroup) MaintenanceManifests() (MaintenanceManifests, error) {
 	if d.maintenanceManifests == nil {
-		return nil, errors.New("no MaintenanceManifests defined")
+		return nil, errors.New("no MaintenanceManifests database client set")
 	}
 	return d.maintenanceManifests, nil
 }

@@ -15,6 +15,8 @@ const (
 	MaintenanceManifestStateCancelled       MaintenanceManifestState = "Cancelled"
 )
 
+type MIMOTaskID string
+
 // MaintenanceManifest represents an instance of a MaintenanceTask running on a
 // given cluster.
 type MaintenanceManifest struct {
@@ -23,8 +25,8 @@ type MaintenanceManifest struct {
 	State      MaintenanceManifestState `json:"state,omitempty"`
 	StatusText string                   `json:"statusText,omitempty"`
 
-	MaintenanceTaskID string `json:"maintenanceTaskID,omitempty"`
-	Priority          int    `json:"priority,omitempty"`
+	MaintenanceTaskID MIMOTaskID `json:"maintenanceTaskID,omitempty"`
+	Priority          int        `json:"priority,omitempty"`
 
 	// RunAfter defines the earliest that this manifest should start running
 	RunAfter int `json:"runAfter,omitempty"`
