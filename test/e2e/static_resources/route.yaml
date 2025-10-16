@@ -33,8 +33,13 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: mcr.microsoft.com/cbl-mariner/base/nginx:1
-          command: ["/bin/sh", "-c", "mkdir -p /usr/share/nginx/html && echo 'hello world' > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"]
+          image: mcr.microsoft.com/azurelinux/base/nginx:1
+          command:
+            [
+              "/bin/sh",
+              "-c",
+              "mkdir -p /usr/share/nginx/html && echo 'hello world' > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'",
+            ]
           securityContext:
             runAsUser: 0
           ports:
