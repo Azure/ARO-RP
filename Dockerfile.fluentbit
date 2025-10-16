@@ -177,16 +177,15 @@ COPY --from=builder \
     /lib/libcap.so.2 \
     /lib/libcares.so.2 \
     /lib/libstdc++.so.6 \
-    /lib/libgcrypt.so.20 \
-    /lib/libgpg-error.so.0 \
     /lib/liblz4.so.1 \
     /lib/liblzma.so.5 \
     /lib/libnghttp2.so.14 \
     /lib/libsqlite3.so.0  \
-    /lib/libssl.so.1.1 \
+    /lib/libssl.so.3 \
     /lib/libsystemd.so.0 \
     /lib/libzstd.so.1 \
     /lib/libz.so.1 \
     /lib/
 COPY --from=builder /opt/td-agent-bit/bin/fluent-bit /opt/td-agent-bit/bin/td-agent-bit
+RUN ["/opt/td-agent-bit/bin/td-agent-bit", "--version"]
 ENTRYPOINT ["/opt/td-agent-bit/bin/td-agent-bit"]
