@@ -38,7 +38,7 @@ dnf_install_pkgs() {
         -y
         install
     )
-    
+
     # Reference: https://www.shellcheck.net/wiki/SC2206
     # append pkgs array to cmd
     mapfile -O $(( ${#cmd[@]} + 1 )) -d ' ' cmd <<< "${pkgs[@]}"
@@ -52,7 +52,7 @@ dnf_install_pkgs() {
 # dnf_update_pkgs
 # args:
 # 1) excludes - nameref, string array, optional; Packages to exclude from updating
-#       Each index must be prefixed with -x 
+#       Each index must be prefixed with -x
 # 2) wait_time - nameref, integer; Time to wait before retrying command
 # 3) retries - integer, optional; Ammount of times to retry command, defaults to 5
 dnf_update_pkgs() {
