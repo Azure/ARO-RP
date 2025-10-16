@@ -32,27 +32,6 @@ fips_verify() {
     log "FIPS mode is enabled"
 }
 
-# fips_configure
-# Configures VM to run with fips mode enabled
-# Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
-# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-# Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
-fips_configure() {
-    # shellcheck disable=SC2034
-    local boot_uuid
-    get_boot_dev_uuid boot_uuid
-
-    local grub2_env
-    if grub2_env="$(grub2-editenv - list | grep kernelopts)"; then
-        grub2-editenv - set "$grub2_env fips=1 $boot_uuid"
-    else
-        grubby --update-kernel=ALL --args="fips=1 $boot_uuid"
-    fi
-
-    # fips mode verification will fail until after the vm has been rebooted
-    # fips_verify
-}
-
 # configure_sshd
 # We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
 configure_sshd() {
