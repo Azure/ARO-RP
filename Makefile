@@ -312,8 +312,9 @@ validate-fips: $(BINGO)
 	hack/fips/validate-fips.sh ./aro
 
 .PHONY: unit-test-go
-unit-test-go: $(GOTESTSUM)
-	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+unit-test-go: $(GOTESTSUM) start-local-cosmosdb
+	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... || ($(MAKE) stop-and-delete-local-cosmosdb && exit 1)
+	$(MAKE) stop-and-delete-local-cosmosdb
 
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg: $(GOTESTSUM)
@@ -422,6 +423,16 @@ install-tools: $(BINGO)
 ifeq ($(shell uname -s),Darwin)
 	codesign -f -s - ${GOPATH}/bin/mockgen
 endif
+
+.PHONY: start-local-cosmosdb
+start-local-cosmosdb:
+	docker run --detach --publish 8081:8081 --publish 10250-10255:10250-10255 --name local-cosmosdb mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+	while ! curl -s -k -o /dev/null https://localhost:8081/_explorer/index.html; do sleep 1; done
+
+.PHONY: stop-and-delete-local-cosmosdb
+stop-and-delete-local-cosmosdb:
+	docker stop local-cosmosdb
+	docker rm local-cosmosdb
 
 ###############################################################################
 # Containerized CI/CD RP

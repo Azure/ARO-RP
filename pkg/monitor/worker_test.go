@@ -52,7 +52,7 @@ func TestExecute(t *testing.T) {
 
 func TestChangefeedOperations(t *testing.T) {
 	// Setup test environment
-	env := SetupTestEnvironment(t)
+	env := createTestEnvironmentWithLocalCosmos(t)
 	defer env.Cleanup()
 
 	// Create single monitor for changefeed testing
