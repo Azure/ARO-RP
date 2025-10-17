@@ -1,5 +1,4 @@
-autopep8==1.6.0
-azdev==0.2.4
+azdev==0.2.7
 azure-mgmt-loganalytics==13.0.0b4
-colorama==0.4.5
-ruamel.yaml==0.17.21
+# azure-batch 15.0.0b3 has breaking API changes for azcli 2.78.0
+azure-batch==15.0.0b2
