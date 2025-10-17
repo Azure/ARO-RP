@@ -266,6 +266,15 @@ echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
 
+# If running MIWI e2e tests, append -miwi to CLUSTER
+if [[ "${USE_WI:-}" == "true" || "${USE_WI:-}" == "1" ]]; then
+    # Only append if not already suffixed
+    if [[ "$CLUSTER" != *-miwi ]]; then
+        CLUSTER="${CLUSTER}-miwi"
+        CLUSTER_RESOURCEGROUP="$CLUSTER"
+    fi
+fi
+
 [[ $LOCATION ]] || (
     echo ">> LOCATION is not set please validate your ./secrets/env"
     return 128

@@ -291,8 +291,6 @@ stages:
           # AZ CLI Logout
           - template: ./templates/template-az-cli-logout.yml
       - job: Run_E2E_Tests_For_MIWI
-        dependsOn: Run_E2E_Tests_For_CSP
-        condition: always()
         timeoutInMinutes: 0
         pool:
           name: 1es-aro-ci-pool
@@ -353,8 +351,6 @@ stages:
           - bash: |
               . secrets/env
               . ./hack/e2e/run-rp-and-e2e.sh
-              export CLUSTER=${CLUSTER}-miwi
-              export CLUSTER_RESOURCEGROUP=${CLUSTER}
               export SKIP_MIWI_ROLE_ASSIGNMENT=true
               . ./hack/devtools/local_dev_env.sh
               create_miwi_env_file
