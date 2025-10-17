@@ -229,7 +229,7 @@ update_role_sets() {
         fi
     fi
 
-    ./aro update-role-sets
+    ./cmd/aro update-role-sets
 }
 
 # TODO: CLUSTER and is also recalculated in multiple places
