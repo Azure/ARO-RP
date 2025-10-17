@@ -302,6 +302,8 @@ az acr login --name <TARGET_ACR>
 > source pyenv/bin/activate
 > pip install azure-cli
 > ```
+>
+> Note: If you encounter issues with pre-release package versions, check `requirements.txt` for version constraints.
 
 5. Login to Azure
 
