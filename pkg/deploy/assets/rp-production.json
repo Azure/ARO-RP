@@ -1237,6 +1237,39 @@
             ]
         },
         {
+            "apiVersion": "2024-07-01",
+            "location": "[resourceGroup().location]",
+            "name": "cosmos-nsp",
+            "properties": {},
+            "type": "Microsoft.Network/networkSecurityPerimeters"
+        },
+        {
+            "apiVersion": "2024-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters', 'cosmos-nsp')]"
+            ],
+            "name": "cosmos-nsp/default",
+            "type": "Microsoft.Network/networkSecurityPerimeters/profiles"
+        },
+        {
+            "apiVersion": "2024-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'cosmos-nsp', 'default')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
+            "name": "cosmos-nsp/cosmos-nsp-association",
+            "properties": {
+                "accessMode": "Learning",
+                "privateLinkResource": {
+                    "id": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+                },
+                "profile": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', 'cosmos-nsp', 'default')]"
+                }
+            },
+            "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations"
+        },
+        {
             "name": "[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
