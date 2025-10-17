@@ -390,9 +390,9 @@ func TestGetPlatformWorkloadIdentityMismatchError(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			pir := &PlatformWorkloadIdentityRolesByVersionService{
-				platformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-					{OperatorName: "foo"},
-					{OperatorName: "bar"},
+				platformWorkloadIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+					"foo": {OperatorName: "foo"},
+					"bar": {OperatorName: "bar"},
 				},
 			}
 			iteration := 1
