@@ -54,6 +54,8 @@ func (m *manager) denyAssignment() *arm.Resource {
 							"*/write",
 						},
 						NotActions: &[]string{
+							"Microsoft.Authorization/policyExemptions/write",
+							"Microsoft.Authorization/policyExemptions/delete",
 							"Microsoft.Compute/disks/beginGetAccess/action",
 							"Microsoft.Compute/disks/endGetAccess/action",
 							"Microsoft.Compute/disks/write",
