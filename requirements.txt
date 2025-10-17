@@ -3,3 +3,4 @@ azdev==0.2.4
 azure-mgmt-loganalytics==13.0.0b4
 colorama==0.4.5
 ruamel.yaml==0.17.21
+setuptools==70.0.0
