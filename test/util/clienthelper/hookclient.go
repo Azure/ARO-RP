@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type getFunc func(key client.ObjectKey, obj client.Object) error
+type getFunc func(key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
 type listFunc func(obj client.ObjectList, opts *client.ListOptions) error
 type hookFunc func(obj client.Object) error
 
@@ -121,21 +121,21 @@ func (c *HookingClient) WithPrePatchHook(f hookFunc) *HookingClient {
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.Get]
-func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	for _, h := range c.preGetHook {
-		err := h(key, obj)
+		err := h(key, obj, opts...)
 		if err != nil {
 			return err
 		}
 	}
 
-	err := c.f.Get(ctx, key, obj)
+	err := c.f.Get(ctx, key, obj, opts...)
 	if err != nil {
 		return err
 	}
 
 	for _, h := range c.postGetHook {
-		err := h(key, obj)
+		err := h(key, obj, opts...)
 		if err != nil {
 			return err
 		}
