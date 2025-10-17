@@ -18,6 +18,13 @@ if [[ $CI ]]; then
     PRIVATE_CLUSTER=true
     E2E_DELETE_CLUSTER=true # any value other than "false" ensures the cluster is deleted
     set +a
+
+    # for MIWI e2e tests, append -miwi to CLUSTER, RESOURCEGROUP, and DATABASE_NAME
+    if [[ $USE_WI ]]; then
+        CLUSTER="${CLUSTER}-miwi"
+        CLUSTER_RESOURCEGROUP="$CLUSTER"
+        DATABASE_NAME="${DATABASE_NAME}-miwi"
+    fi
 fi
 
 validate_rp_running() {
@@ -229,7 +236,16 @@ update_role_sets() {
         fi
     fi
 
-    ./cmd/aro update-role-sets
+    echo "Starting aro build"
+    if make aro; then
+        echo "aro build completed successfully"
+    else
+        echo "aro build FAILED"
+        return 1 
+    fi
+
+    echo "Running ./aro update-role-sets..."
+    ./aro update-role-sets
 }
 
 # TODO: CLUSTER and is also recalculated in multiple places

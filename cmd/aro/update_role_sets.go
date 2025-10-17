@@ -6,6 +6,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -48,6 +50,15 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, _log *logru
 }
 
 func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, log *logrus.Entry) error {
+	// Log env state at the start of the DB sync stage
+	if v, ok := os.LookupEnv(envPlatformWorkloadIdentityRoleSets); !ok || strings.TrimSpace(v) == "" {
+		log.Infof("(DB sync start) env %s is not set or empty", envPlatformWorkloadIdentityRoleSets)
+	} else if strings.Contains(v, "\"4.16\"") {
+		log.Infof("(DB sync start) env %s contains 4.16", envPlatformWorkloadIdentityRoleSets)
+	} else {
+		log.Infof("(DB sync start) env %s does NOT contain 4.16", envPlatformWorkloadIdentityRoleSets)
+	}
+
 	existingRoleSets, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
 		return nil
@@ -56,6 +67,15 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 	incomingRoleSets, err := getRoleSetsFromEnv()
 	if err != nil {
 		return err
+	}
+
+	// Also log the presence of 4.16 immediately after unmarshalling the env payload
+	if v, ok := os.LookupEnv(envPlatformWorkloadIdentityRoleSets); !ok || strings.TrimSpace(v) == "" {
+		log.Infof("(after unmarshal) env %s is not set or empty", envPlatformWorkloadIdentityRoleSets)
+	} else if strings.Contains(v, "\"4.16\"") {
+		log.Infof("(after unmarshal) env %s contains 4.16", envPlatformWorkloadIdentityRoleSets)
+	} else {
+		log.Infof("(after unmarshal) env %s does NOT contain 4.16", envPlatformWorkloadIdentityRoleSets)
 	}
 
 	newRoleSets := make(map[string]api.PlatformWorkloadIdentityRoleSetProperties)
@@ -120,6 +140,17 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 }
 
 func updatePlatformWorkloadIdentityRoleSets(ctx context.Context, log *logrus.Entry) error {
+	// Log whether the environment variable is present and contains 4.16
+	if v, ok := os.LookupEnv(envPlatformWorkloadIdentityRoleSets); !ok || strings.TrimSpace(v) == "" {
+		log.Infof("env %s is not set or empty", envPlatformWorkloadIdentityRoleSets)
+	} else {
+		if strings.Contains(v, "\"openShiftVersion\"") && strings.Contains(v, "\"4.16\"") {
+			log.Infof("env %s contains openShiftVersion 4.16", envPlatformWorkloadIdentityRoleSets)
+		} else {
+			log.Infof("env %s does NOT contain openShiftVersion 4.16", envPlatformWorkloadIdentityRoleSets)
+		}
+	}
+
 	if err := env.ValidateVars("PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"); err != nil {
 		return err
 	}
@@ -127,6 +158,17 @@ func updatePlatformWorkloadIdentityRoleSets(ctx context.Context, log *logrus.Ent
 	dbRoleSets, err := getPlatformWorkloadIdentityRoleSetDatabase(ctx, log)
 	if err != nil {
 		return err
+	}
+
+	// Re-check the env var here after acquiring DB client so CI logs show state at this stage
+	if v, ok := os.LookupEnv(envPlatformWorkloadIdentityRoleSets); !ok || strings.TrimSpace(v) == "" {
+		log.Infof("(after DB client) env %s is not set or empty", envPlatformWorkloadIdentityRoleSets)
+	} else {
+		if strings.Contains(v, "\"openShiftVersion\"") && strings.Contains(v, "\"4.16\"") {
+			log.Infof("(after DB client) env %s contains openShiftVersion 4.16", envPlatformWorkloadIdentityRoleSets)
+		} else {
+			log.Infof("(after DB client) env %s does NOT contain openShiftVersion 4.16", envPlatformWorkloadIdentityRoleSets)
+		}
 	}
 
 	err = updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx, dbRoleSets, log)
