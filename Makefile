@@ -236,8 +236,8 @@ pyenv:
 	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
-		pip install -r requirements.txt && \
-		azdev setup -r . && \
+		PIP_CONSTRAINT=$(PWD)/requirements.txt pip install -r requirements.txt && \
+		PIP_CONSTRAINT=$(PWD)/requirements.txt azdev setup -r . && \
 		az config set extension.dev_sources=$(PWD)/python
 
 .PHONY: secrets

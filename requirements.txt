@@ -3,3 +3,9 @@ azdev==0.2.4
 azure-mgmt-loganalytics==13.0.0b4
 colorama==0.4.5
 ruamel.yaml==0.17.21
+# Pin azure SDK packages to stable versions to prevent beta versions from breaking azure-cli
+# See: https://github.com/Azure/azure-sdk-for-python/commit/5d2658a3f685f8efeac594a28e0f2a105f11217b
+# Beta versions like azure-batch 15.0.0b3 break Azure CLI due to incompatible API changes
+azure-core<2.0.0,>=1.30.0
+azure-identity<2.0.0,>=1.15.0
+azure-batch<15.0.0
