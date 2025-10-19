@@ -87,6 +87,13 @@ az: pyenv
 	python3 ./setup.py bdist_wheel || true && \
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
 
+# Freeze the dependencies of the current pyenv for hoped-for reproducibility.
+# Don't depend on az as that will reinstall the requirements.txt which makes this pointless.
+.PHONY: az-freeze
+az-freeze:
+	. pyenv/bin/activate && \
+	pip freeze > requirements.txt
+
 .PHONY: clean
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
