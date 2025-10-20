@@ -70,11 +70,13 @@ func TestGetOperations(t *testing.T) {
 
 			// Sort slices for consistent ordering
 			if resp.StatusCode == http.StatusOK && b != nil {
-				var actualOperations []api.Operation
-				err = json.Unmarshal(b, &actualOperations)
+				var operationsList api.OperationList
+				err = json.Unmarshal(b, &operationsList)
 				if err != nil {
 					t.Error(err)
 				}
+
+				actualOperations := operationsList.Operations
 
 				slices.SortFunc(actualOperations, sortFunc)
 				b, err = json.Marshal(actualOperations)
