@@ -83,6 +83,7 @@ func (cc *ClusterConfig) IsLocalDevelopmentMode() bool {
 	return strings.EqualFold(cc.RpMode, "development")
 }
 
+
 type Cluster struct {
 	log                *logrus.Entry
 	Config             *ClusterConfig
