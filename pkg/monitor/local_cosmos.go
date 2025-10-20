@@ -68,7 +68,7 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 	mockEnv.EXPECT().LiveConfig().Return(testliveconfig.NewTestLiveConfig(false, false)).AnyTimes()
 	mockEnv.EXPECT().LoggerForComponent(gomock.Any()).Return(testlogger).AnyTimes()
 
-	dbName := "local-test"
+	dbName := "local-unit-test-database"
 	noopMetricsEmitter := noop.Noop{}
 	noopClusterMetricsEmitter := noop.Noop{}
 
@@ -81,13 +81,9 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to create local Cosmos client: %v", err)
 	}
 
-	// Clean up: drop and recreate the database for a fresh state
-	// This ensures tests start with a clean slate every time
-	_ = localCosmosClient.Delete(ctx, &cosmosdb.Database{ID: dbName})
-
 	// Create the database in CosmosDB
-	_, err = localCosmosClient.Create(ctx, &cosmosdb.Database{ID: dbName})
-	if err != nil {
+	localCosmosDB, err := localCosmosClient.Create(ctx, &cosmosdb.Database{ID: dbName})
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
@@ -179,7 +175,20 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		NoopMetricsEmitter:   noopMetricsEmitter,
 		NoopClusterMetrics:   noopClusterMetricsEmitter,
 		DBGroup:              dbs,
+		localCosmosClient:    localCosmosClient,
+		localCosmosDB:        localCosmosDB,
 	}
 }
 
-// TO-DO: clean up
+func (env *TestEnvironment) LocalCosmosCleanup() error {
+	ctx := context.Background()
+	// Clean up: drop the database
+	// This ensures tests start with a clean slate every time
+	err := env.localCosmosClient.Delete(ctx, env.localCosmosDB)
+	if err != nil {
+		return err
+	}
+
+	env.Controller.Finish()
+	return err
+}

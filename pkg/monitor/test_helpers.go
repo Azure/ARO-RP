@@ -43,6 +43,8 @@ type TestEnvironment struct {
 	NoopMetricsEmitter   noop.Noop
 	NoopClusterMetrics   noop.Noop
 	DBGroup              monitorDBs
+	localCosmosClient    cosmosdb.DatabaseClient
+	localCosmosDB        *cosmosdb.Database
 }
 
 // SetupTestEnvironment creates a common test environment for monitor tests
