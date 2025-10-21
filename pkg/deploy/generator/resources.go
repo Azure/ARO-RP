@@ -6,7 +6,7 @@ package generator
 import (
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v7"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
@@ -41,6 +41,55 @@ func (g *generator) dnsZone(name string) *arm.Resource {
 			Location:       pointerutils.ToPtr("global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
+	}
+}
+
+func (g *generator) networkSecurityPerimeter(name string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &armnetwork.SecurityPerimeter{
+			Location:   pointerutils.ToPtr("[resourceGroup().location]"),
+			Properties: &armnetwork.SecurityPerimeterProperties{},
+			Name:       &name,
+			Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityPerimeters"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters"),
+	}
+}
+
+// networkSecurityPerimeterProfile creates a new nsp profile with the hardcoded name `default`.
+func (g *generator) networkSecurityPerimeterProfile(nspName string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &armnetwork.NspProfile{
+			Name: pointerutils.ToPtr(fmt.Sprintf("%s/default", nspName)),
+			Type: pointerutils.ToPtr("Microsoft.Network/networkSecurityPerimeters/profiles"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters/profiles"),
+		DependsOn: []string{
+			fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityPerimeters', '%s')]", nspName),
+		},
+	}
+}
+
+func (g *generator) networkSecurityPerimeterAssociation(nspName string, associationName string, targetResourceId string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &armnetwork.NspAssociation{
+			Properties: &armnetwork.NspAssociationProperties{
+				AccessMode: pointerutils.ToPtr(armnetwork.AssociationAccessModeLearning),
+				PrivateLinkResource: &armnetwork.SubResource{
+					ID: &targetResourceId,
+				},
+				Profile: &armnetwork.SubResource{
+					ID: pointerutils.ToPtr(fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', '%s', 'default')]", nspName)),
+				},
+			},
+			Name: pointerutils.ToPtr(fmt.Sprintf("%s/%s", nspName, associationName)),
+			Type: pointerutils.ToPtr("Microsoft.Network/networkSecurityPerimeters/resourceAssociations"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network/networkSecurityPerimeters/resourceAssociations"),
+		DependsOn: []string{
+			fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', '%s', 'default')]", nspName),
+			targetResourceId,
+		},
 	}
 }
 
