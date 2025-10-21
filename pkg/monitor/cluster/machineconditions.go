@@ -11,24 +11,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 )
-
-// machinePhaseExpected defines the expected status for each machine phase
-// Phase represents the current phase of machine actuation.
-// One of: Failed, Provisioning, Provisioned, Running, Deleting
-// Reference: https://pkg.go.dev/github.com/openshift/api@v0.0.0-20240103200955-7ca3a4634e46/machine/v1beta1#MachineStatus
-var machineConditionsExpected = map[string]corev1.ConditionStatus{
-	"Running":      corev1.ConditionTrue,  // Running - Machine is running (expected state)
-	"Provisioned":  corev1.ConditionTrue,  // Provisioned - Machine is provisioned (transitional but acceptable)
-	"Provisioning": corev1.ConditionTrue,  // Provisioning - Machine is being provisioned (transitional but acceptable)
-	"Deleting":     corev1.ConditionTrue,  // Deleting - Machine is being deleted (transitional but acceptable)
-	"Failed":       corev1.ConditionFalse, // Failed - Machine has failed (unexpected state)
-}
 
 // Helper function for iterating over machines in a paginated fashion
 func (mon *Monitor) iterateOverMachines(ctx context.Context, onEach func(*machinev1beta1.Machine)) error {
@@ -38,9 +24,6 @@ func (mon *Monitor) iterateOverMachines(ctx context.Context, onEach func(*machin
 	for {
 		err := mon.ocpclientset.List(ctx, l, client.InNamespace("openshift-machine-api"), client.Continue(cont), client.Limit(mon.queryLimit))
 		if err != nil {
-			// Log error but don't stop monitoring completely
-			// This allows other metrics to continue being collected
-			mon.log.WithError(err).Error("failed to list machines")
 			return fmt.Errorf("error in Machine list operation: %w", err)
 		}
 
@@ -70,16 +53,16 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 
 		// Unmarshal the provider spec to properly detect spot instances
 		var spec machinev1beta1.AzureMachineProviderSpec
-		err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
-		if err != nil {
-			mon.log.WithError(err).WithField("machineName", machine.Name).Error("failed to unmarshal machine provider spec")
-			// Continue without spot instance detection for this machine
-		} else {
-			machine.Spec.ProviderSpec.Value.Object = &spec
+		if machine.Spec.ProviderSpec.Value != nil && machine.Spec.ProviderSpec.Value.Raw != nil {
+			err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
+			if err != nil {
+				mon.log.WithError(err).WithField("machineName", machine.Name).Error("failed to unmarshal machine provider spec")
+			} else {
+				machine.Spec.ProviderSpec.Value.Object = &spec
+			}
 		}
 
 		// Detect if this is a spot VM instance
-		// Will return false if unmarshal failed (safe default)
 		isSpot := isSpotInstance(*machine)
 
 		// Get the phase from machine status for additional tracking
@@ -89,12 +72,8 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 			countByPhase[phase]++
 		}
 
-		// Emit conditions (similar to node conditions logic)
+		// Emit conditions for all machine conditions
 		for _, c := range machine.Status.Conditions {
-			if c.Status == machineConditionsExpected[string(c.Type)] {
-				continue
-			}
-
 			mon.emitGauge("machine.conditions", 1, map[string]string{
 				"machineName":  machine.Name,
 				"status":       string(c.Status),
