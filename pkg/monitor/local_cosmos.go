@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -81,9 +82,18 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to create local Cosmos client: %v", err)
 	}
 
-	// Create the database in CosmosDB
+	// Delete the database if it exists from a previous test run (cleanup)
+	existingDB, err := localCosmosClient.Get(ctx, dbName)
+	if err == nil && existingDB != nil {
+		err = localCosmosClient.Delete(ctx, existingDB)
+		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+			t.Logf("Warning: failed to delete existing database: %v", err)
+		}
+		// to-do: what about other errs
+	}
+
 	localCosmosDB, err := localCosmosClient.Create(ctx, &cosmosdb.Database{ID: dbName})
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
@@ -99,6 +109,19 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
 		t.Fatalf("Failed to create Monitors collection: %v", err)
+	}
+
+	// Create renewLease trigger for Monitors collection
+	// note: definitions can be found on pkg/deploy/assets/databases-development.json
+	triggerClient := cosmosdb.NewTriggerClient(collectionClient, "Monitors")
+	_, err = triggerClient.Create(ctx, &cosmosdb.Trigger{
+		ID:               "renewLease",
+		Body:             "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+		TriggerOperation: cosmosdb.TriggerOperationAll,
+		TriggerType:      cosmosdb.TriggerTypePre,
+	})
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+		t.Fatalf("Failed to create renewLease trigger for Monitors: %v", err)
 	}
 
 	_, err = collectionClient.Create(ctx, &cosmosdb.Collection{
@@ -123,6 +146,18 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to create Subscriptions collection: %v", err)
 	}
 
+	// Create renewLease trigger for Subscriptions collection
+	subscriptionTriggerClient := cosmosdb.NewTriggerClient(collectionClient, "Subscriptions")
+	_, err = subscriptionTriggerClient.Create(ctx, &cosmosdb.Trigger{
+		ID:               "renewLease",
+		Body:             "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+		TriggerOperation: cosmosdb.TriggerOperationAll,
+		TriggerType:      cosmosdb.TriggerTypePre,
+	})
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+		t.Fatalf("Failed to create renewLease trigger for Subscriptions: %v", err)
+	}
+
 	// Create ALL databases using the real local Cosmos client
 	monitorsDB, err := database.NewMonitors(ctx, localCosmosClient, dbName)
 	if err != nil {
@@ -145,16 +180,18 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		WithOpenShiftClusters(openShiftClusterDB).
 		WithSubscriptions(subscriptionsDB)
 
-	// Create master monitor document
-	// _, err = monitorsDB.Create(ctx, &api.MonitorDocument{
-	// 	ID: "master",
-	// 	Monitor: &api.Monitor{
-	// 		Buckets: make([]string, 256),
-	// 	},
-	// })
-	// if err != nil {
-	// 	t.Fatalf("Failed to create master monitor document: %v", err)
-	// }
+	// Create master monitor document - REQUIRED by monitor code
+	// Initialize with empty buckets - monitors will allocate buckets dynamically
+	_, err = monitorsDB.Create(ctx, &api.MonitorDocument{
+		ID: "master",
+		Monitor: &api.Monitor{
+			Buckets: make([]string, 256),
+		},
+		LeaseExpires: 0, // Ensure lease is available for first monitor to claim
+	})
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
+		t.Fatalf("Failed to create master monitor document: %v", err)
+	}
 
 	// Initialize database fixtures
 	f := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClusterDB)
@@ -182,13 +219,19 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 
 func (env *TestEnvironment) LocalCosmosCleanup() error {
 	ctx := context.Background()
-	// Clean up: drop the database
-	// This ensures tests start with a clean slate every time
-	err := env.localCosmosClient.Delete(ctx, env.localCosmosDB)
-	if err != nil {
-		return err
+
+	// Only attempt to delete the database if both client and DB were created
+	if env.localCosmosClient != nil && env.localCosmosDB != nil {
+		err := env.localCosmosClient.Delete(ctx, env.localCosmosDB)
+		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+			return err
+		}
 	}
 
-	env.Controller.Finish()
-	return err
+	// Always finish the controller if it exists
+	if env.Controller != nil {
+		env.Controller.Finish()
+	}
+
+	return nil
 }

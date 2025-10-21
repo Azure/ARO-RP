@@ -31,8 +31,8 @@ func TestMonitor(t *testing.T) {
 	numWorker := 3
 
 	// Setup test environment
-	env := SetupTestEnvironment(t)
-	defer env.Cleanup()
+	env := createTestEnvironmentWithLocalCosmos(t)
+	defer env.LocalCosmosCleanup()
 
 	// Create multiple monitors for worker testing
 	workers := make([]Runnable, numWorker)
@@ -94,12 +94,12 @@ func TestMonitor(t *testing.T) {
 
 	for k, v := range fakeClusterVisitMonitoringAttempts {
 		if *v < 1 {
-			t.Errorf("Expected that cluster %s got visits, but it got %v", k, v)
+			t.Errorf("Expected that cluster %s got visits, but it got %d", k, *v)
 		}
 	}
 
 	if *fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] < 1 {
-		t.Errorf("Last added cluster %s didn't get any visit: %v", clusterDoc.ResourceID, fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID])
+		t.Errorf("Last added cluster %s didn't get any visit: %d", clusterDoc.ResourceID, *fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID])
 	}
 }
 
