@@ -18,6 +18,13 @@ if [[ $CI ]]; then
     PRIVATE_CLUSTER=true
     E2E_DELETE_CLUSTER=true # any value other than "false" ensures the cluster is deleted
     set +a
+
+    # for MIWI e2e tests, append -miwi to CLUSTER, RESOURCEGROUP, and DATABASE_NAME
+    if [[ $USE_WI ]]; then
+        CLUSTER="${CLUSTER}-miwi"
+        CLUSTER_RESOURCEGROUP="$CLUSTER"
+        DATABASE_NAME="${DATABASE_NAME}-miwi"
+    fi
 fi
 
 validate_rp_running() {
@@ -265,15 +272,6 @@ echo "CLUSTER=$CLUSTER"
 echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
-
-# If running MIWI e2e tests, append -miwi to CLUSTER
-if [[ "${USE_WI:-}" == "true" || "${USE_WI:-}" == "1" ]]; then
-    # Only append if not already suffixed
-    if [[ "$CLUSTER" != *-miwi ]]; then
-        CLUSTER="${CLUSTER}-miwi"
-        CLUSTER_RESOURCEGROUP="$CLUSTER"
-    fi
-fi
 
 [[ $LOCATION ]] || (
     echo ">> LOCATION is not set please validate your ./secrets/env"
