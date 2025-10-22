@@ -427,7 +427,18 @@ endif
 .PHONY: start-local-cosmosdb
 start-local-cosmosdb:
 	docker run --detach --publish 8081:8081 --publish 10250-10255:10250-10255 --name local-cosmosdb mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-	while ! curl -s -k -o /dev/null https://localhost:8081/_explorer/index.html; do sleep 1; done
+	@echo "Waiting for CosmosDB emulator to be ready..."
+	@timeout=180; \
+	elapsed=0; \
+	while ! curl -s -k -o /dev/null https://localhost:8081/_explorer/index.html; do \
+		if [ $$elapsed -ge $$timeout ]; then \
+			echo "ERROR: CosmosDB emulator failed to start after $$timeout seconds"; \
+			exit 1; \
+		fi; \
+		sleep 1; \
+		elapsed=$$((elapsed + 1)); \
+	done; \
+	echo "CosmosDB emulator is ready"
 
 .PHONY: stop-and-delete-local-cosmosdb
 stop-and-delete-local-cosmosdb:

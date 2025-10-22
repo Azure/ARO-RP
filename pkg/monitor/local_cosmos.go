@@ -35,13 +35,13 @@ func localCosmosNewClient(_env env.Core, m metrics.Emitter, aead encryption.AEAD
 		return nil, err
 	}
 
-	h, err := database.NewJSONHandle(aead)
+	handle, err := database.NewJSONHandle(aead)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create HTTP client with custom transport
-	c := &http.Client{
+	httpClient := &http.Client{
 		Transport: &http.Transport{
 			// disable HTTP/2 for now: https://github.com/golang/go/issues/36026
 			TLSNextProto:        map[string]func(string, *tls.Conn) http.RoundTripper{},
@@ -54,7 +54,7 @@ func localCosmosNewClient(_env env.Core, m metrics.Emitter, aead encryption.AEAD
 
 	databaseHostname := "127.0.0.1:8081"
 
-	return cosmosdb.NewDatabaseClient(logrusEntry, c, h, databaseHostname, dbAuthorizer), nil
+	return cosmosdb.NewDatabaseClient(logrusEntry, httpClient, handle, databaseHostname, dbAuthorizer), nil
 }
 
 func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
@@ -89,7 +89,6 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 			t.Logf("Warning: failed to delete existing database: %v", err)
 		}
-		// to-do: what about other errs
 	}
 
 	localCosmosDB, err := localCosmosClient.Create(ctx, &cosmosdb.Database{ID: dbName})
