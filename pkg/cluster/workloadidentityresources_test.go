@@ -1075,6 +1075,152 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId1),
 			},
 		},
+		{
+			name: "operator with multiple role definitions - creates role assignments for all roles",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId1,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId1),
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId1),
+			},
+		},
+		{
+			name: "operator with multiple role definitions - one role already exists, creates assignment for new role only",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId1,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId1),
+			},
+		},
+		{
+			name: "operator with multiple role definitions - role2 moved from operator 1 to 2, deletes old assignment and creates new ones",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId1,
+							},
+							"2": {
+								ObjectID: objectId2,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+				"2": {
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+				{
+					Name: &roleName2,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantDeleted: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName2,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId2),
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
