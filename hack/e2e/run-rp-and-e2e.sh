@@ -236,7 +236,15 @@ update_role_sets() {
         fi
     fi
 
-    make aro
+    echo "Starting aro build"
+    if make aro; then
+        echo "aro build completed successfully"
+    else
+        echo "aro build FAILED"
+        return 1 
+    fi
+
+    echo "Running ./aro update-role-sets..."
     ./aro update-role-sets
 }
 
