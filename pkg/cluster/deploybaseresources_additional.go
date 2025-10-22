@@ -109,7 +109,7 @@ func (m *manager) platformWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
 
 	for name, identity := range platformWorkloadIdentities {
-		role, exists := platformWIRolesByRoleName[name]
+		roles, exists := platformWIRolesByRoleName[name]
 		if !exists {
 			return nil, platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(m.doc.OpenShiftCluster, platformWIRolesByRoleName)
 		}
@@ -118,8 +118,10 @@ func (m *manager) platformWorkloadIdentityRBAC() ([]*arm.Resource, error) {
 			return nil, fmt.Errorf("WI object ID '%s' is invalid for WI with resource ID %s", identity.ObjectID, identity.ResourceID)
 		}
 
-		roleID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
-		resources = append(resources, m.workloadIdentityResourceGroupRBAC(roleID, identity.ObjectID))
+		for _, role := range roles {
+			roleID := stringutils.LastTokenByte(role.RoleDefinitionID, '/')
+			resources = append(resources, m.workloadIdentityResourceGroupRBAC(roleID, identity.ObjectID))
+		}
 	}
 	return resources, nil
 }
@@ -132,7 +134,7 @@ func (m *manager) workloadIdentityResourceGroupRBAC(roleID, objID string) *arm.R
 	r := rbac.ResourceGroupRoleAssignmentWithName(
 		roleID,
 		"'"+objID+"'",
-		"guid(resourceGroup().id, '"+roleID+"')",
+		"guid(resourceGroup().id, '"+roleID+"', '"+objID+"')",
 	)
 	return r
 }
