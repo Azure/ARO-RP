@@ -41,9 +41,9 @@ var _ = Describe("Alerts", Label(smoke), Serial, func() {
 			g.Expect(err).NotTo(HaveOccurred())
 		}, DefaultEventuallyTimeout, 10*time.Second, ctx).Should(Succeed())
 
-		// Skip TLS verification in dev env
+		// Skip TLS verification in dev and CI environments
 		var roundTripper http.RoundTripper
-		if _env.IsLocalDevelopmentMode() {
+		if _env.IsLocalDevelopmentMode() || _env.IsCI() {
 			rt := api.DefaultRoundTripper.(*http.Transport).Clone()
 			rt.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 			roundTripper = rt

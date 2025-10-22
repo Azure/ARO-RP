@@ -326,10 +326,10 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	// In development e2e the certificate is not always created with a publicly
-	// verifiable TLS certificate.
-	if _env.IsLocalDevelopmentMode() {
-		restconfig.Insecure = true // CodeQL [SM03511] only used in local development
+	// In development e2e and CI environments, the certificate is not always created
+	// with a publicly verifiable TLS certificate. Skip TLS verification in these cases.
+	if _env.IsLocalDevelopmentMode() || _env.IsCI() {
+		restconfig.Insecure = true // CodeQL [SM03511] only used in local development and CI
 	}
 
 	cli, err := kubernetes.NewForConfig(restconfig)
