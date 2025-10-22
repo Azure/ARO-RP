@@ -15,10 +15,14 @@ import (
 )
 
 const (
-	MaintenanceManifestDequeueQueryForCluster = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterResourceID = @clusterResourceID`
-	MaintenanceManifestQueryForCluster        = `SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterResourceID`
-	MaintenanceManifestQueueOverallQuery      = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
-	MaintenanceManifestQueueLengthQuery       = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	manifestPendingFragment           = `doc.maintenanceManifest.state IN ("Pending")`
+	manifestExpiryFragment            = "(doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000"
+	manifestFetchOnlyRunAfterFragment = "doc.maintenanceManifest.runAfter > GetCurrentTimestamp() / 1000"
+
+	MaintenanceManifestDequeueQueryForCluster = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND doc.clusterResourceID = @clusterResourceID AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
+	MaintenanceManifestQueryForCluster        = "SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterResourceID"
+	MaintenanceManifestQueueOverallQuery      = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment
+	MaintenanceManifestQueueLengthQuery       = "SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
 )
 
 type MaintenanceManifestDocumentMutator func(*api.MaintenanceManifestDocument) error
