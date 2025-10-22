@@ -236,7 +236,8 @@ update_role_sets() {
         fi
     fi
 
-    go run ./cmd/aro update-role-sets
+    make aro
+    ./aro update-role-sets
 }
 
 # TODO: CLUSTER and is also recalculated in multiple places
