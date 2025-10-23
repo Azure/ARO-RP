@@ -92,9 +92,19 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	})
 
 	JustBeforeEach(func() {
+		// After the the fixtures are created in each test's BeforeEach, load
+		// them into the database
 		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).Create()
 		Expect(err).ToNot(HaveOccurred())
 	})
+
+	verifyDatabaseState := func() {
+		errs := checker.CheckMaintenanceManifests(manifestsClient)
+		Expect(errs).To(BeNil(), "MaintenanceManifests don't match")
+
+		errs = checker.CheckOpenShiftClusters(clustersClient)
+		Expect(errs).To(BeNil(), "OpenShiftClusters don't match")
+	}
 
 	When("old manifest", func() {
 		var manifestID string
@@ -149,11 +159,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(didWork).To(BeFalse())
 
-			errs := checker.CheckMaintenanceManifests(manifestsClient)
-			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
-
-			errs = checker.CheckOpenShiftClusters(clustersClient)
-			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+			verifyDatabaseState()
 		})
 	})
 
@@ -225,11 +231,102 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(didWork).To(BeTrue())
 
-			errs := checker.CheckMaintenanceManifests(manifestsClient)
-			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+			verifyDatabaseState()
+		})
+	})
 
-			errs = checker.CheckOpenShiftClusters(clustersClient)
-			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+	When("new manifest with runAfter later than now", func() {
+		var manifestID string
+		var manifestThatRunsID string
+
+		BeforeEach(func() {
+			fixtures.Clear()
+			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key: strings.ToLower(clusterResourceID),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+						MaintenanceState:  api.MaintenanceStateNone,
+					},
+				},
+			})
+
+			manifestID = manifests.NewUUID()
+			manifestThatRunsID = manifests.NewUUID()
+			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         1200,
+					RunAfter:          600,
+				},
+			})
+			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestThatRunsID,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+
+			checker.Clear()
+			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				Dequeues:          0,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         1200,
+					RunAfter:          600,
+				},
+			})
+			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestThatRunsID,
+				Dequeues:          1,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStateCompleted,
+					MaintenanceTaskID: "0",
+					StatusText:        "done",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+			checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key: strings.ToLower(clusterResourceID),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+						MaintenanceState:  api.MaintenanceStateNone,
+					},
+				},
+			})
+		})
+
+		It("does not run the task that is not scheduled yet", func() {
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					// check that we are in progress during this
+					Expect(mmd.MaintenanceManifest.State).To(Equal(api.MaintenanceManifestStateInProgress))
+
+					th.SetResultMessage("done")
+					return nil
+				},
+			})
+
+			didWork, err := a.Process(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(didWork).To(BeTrue())
+
+			verifyDatabaseState()
 		})
 	})
 
@@ -284,8 +381,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(didWork).To(BeTrue())
 
-			errs := checker.CheckMaintenanceManifests(manifestsClient)
-			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+			verifyDatabaseState()
 		})
 	})
 
@@ -409,8 +505,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			// priority)
 			Expect(ordering).To(BeEquivalentTo([]string{"1", "0", "2"}))
 
-			errs := checker.CheckMaintenanceManifests(manifestsClient)
-			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+			verifyDatabaseState()
 		})
 	})
 
