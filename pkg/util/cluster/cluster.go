@@ -1057,7 +1057,7 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 	defaultVersion := version.DefaultInstallStream
 
-	c.log.Infof("ensureDefaultRoleSetInCosmosdb: entry; defaultVersion=%s", defaultVersion.Version.String())
+	c.log.Infof("ensureDefaultRoleSetInCosmosdb: entry; defaultVersion=%s", defaultVersion.Version.MinorVersion())
 
 	existing, err := getPlatformWIRoleSetsInCosmosDB(ctx)
 	if err != nil {
@@ -1070,19 +1070,20 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 				ver = rs.Properties.OpenShiftVersion
 			}
 			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existing[%d].OpenShiftVersion=%s", i, ver)
-			if ver == defaultVersion.Version.String() {
-				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.String())
+			if ver == defaultVersion.Version.MinorVersion() {
+				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.MinorVersion())
 				return nil
 			}
 		}
 	}
 
-	c.log.Infof("ensureDefaultRoleSetInCosmosdb: building default payload for OpenShift version %s", defaultVersion.Version.String())
+	c.log.Infof("ensureDefaultRoleSetInCosmosdb: building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
 
 	// Build the payload (copied from env examples)
 	b, err := json.Marshal(&api.PlatformWorkloadIdentityRoleSet{
 		Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-			OpenShiftVersion: defaultVersion.Version.String(),
+			// Use minor version (e.g. "4.16") for default payload
+			OpenShiftVersion: defaultVersion.Version.MinorVersion(),
 			PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
 				{
 					OperatorName:       "cloud-controller-manager",
