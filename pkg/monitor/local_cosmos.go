@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -52,7 +53,12 @@ func localCosmosNewClient(_env env.Core, m metrics.Emitter, aead encryption.AEAD
 		Timeout: 30 * time.Second,
 	}
 
-	databaseHostname := "127.0.0.1:8081"
+	// Read hostname from environment variable, this is specific to have local testing and CI testing
+	host := os.Getenv("LOCAL_COSMOS_FOR_TEST_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	databaseHostname := host + ":8081"
 
 	return cosmosdb.NewDatabaseClient(logrusEntry, httpClient, handle, databaseHostname, dbAuthorizer), nil
 }

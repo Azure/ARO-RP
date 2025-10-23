@@ -483,20 +483,14 @@ ci-clean:
 
 .PHONY: ci-rp
 ci-rp:
-	docker build . ${DOCKER_BUILD_CI_ARGS} \
-		-f Dockerfile.ci-rp \
-		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=$(REGISTRY) \
-		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
-		--build-arg ARO_VERSION=$(VERSION) \
-		--no-cache=$(NO_CACHE) \
-		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
-
-	# Extract test coverage files from build to local filesystem
-	docker create --name extract_cover_out ${LOCAL_ARO_RP_IMAGE}:${VERSION}; \
-	docker cp extract_cover_out:/app/report.xml ./report.xml; \
-	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
-	docker rm extract_cover_out;
+	@NO_CACHE=$(NO_CACHE) \
+	REGISTRY=$(REGISTRY) \
+	BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
+	LOCAL_ARO_RP_IMAGE=$(LOCAL_ARO_RP_IMAGE) \
+	LOCAL_E2E_IMAGE=$(LOCAL_E2E_IMAGE) \
+	VERSION=$(VERSION) \
+	DOCKER_BUILD_CI_ARGS="$(DOCKER_BUILD_CI_ARGS)" \
+	hack/ci-rp.sh
 
 .PHONY: aro-e2e
 aro-e2e:

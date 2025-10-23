@@ -1,79 +1,18 @@
 ARG REGISTRY
-ARG BUILDER_REGISTRY
-ARG ARO_VERSION
+ARG BUILD_IMAGE
 
 ###############################################################################
-# Stage 1: Build the SRE Portal Assets
+# Stage 1: final is our slim image with minimal layers and tools
 ###############################################################################
-FROM ${REGISTRY}/ubi9/nodejs-18  AS portal-build
-LABEL aro-portal-build=true
-WORKDIR /build/portal/v2
-USER root
-
-# Copying package files and installing dependencies
-COPY portal/v2/package*.json ./
-
-# Combine npm install and audit in one step to reduce layers and clean cache
-RUN npm ci \
-    && npm audit --audit-level high --omit=dev
-
-# Copying the rest of the source and build
-COPY --chown=root:root portal/v2/ ./
-RUN npm run lint && npm run build
+FROM ${BUILD_IMAGE} AS builder
 
 ###############################################################################
-# Stage 2: Compile the Golang RP code
-###############################################################################
-FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20 AS builder
-ARG ARO_VERSION
-LABEL aro-builder=true
-USER root
-WORKDIR /app
-ENV GO_COMPLIANCE_INFO=0
-
-# golang config and build steps
-ENV GOPATH=/root/go
-ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
-
-COPY .bingo .bingo
-RUN source .bingo/variables.env \
-    # install bingo itself
-    && make -f .bingo/Variables.mk ${BINGO} \
-    # and all the tools it manages
-    && ${BINGO} get -l
-ENV PATH=$PATH:${GOPATH}/bin/
-
-# Copy dependencies and source files
-COPY go.mod go.sum ./
-COPY swagger swagger
-COPY hack hack
-COPY cmd cmd
-COPY pkg pkg
-COPY test test
-
-# Ensure JS assets are available before generating Go code
-COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build
-
-# Build RP and E2E test suite bins
-RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./cmd/aro
-
-RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
-
-# Additional tests
-RUN gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... \
-    && gocov convert cover.out | gocov-xml > coverage.xml
-
-# Validate FIPS
-RUN hack/fips/validate-fips.sh ./aro
-
-###############################################################################
-# Stage 3: final is our slim image with minimal layers and tools
+# Stage 2: Create the final runtime image
 ###############################################################################
 FROM ${REGISTRY}/ubi9/ubi-minimal AS final
 LABEL aro-final=true
 RUN microdnf update -y && microdnf clean all -y
-COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
-COPY --from=builder /app/report.xml /app/coverage.xml /app/
+COPY --from=builder /app/aro /usr/local/bin/
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
 USER 1000
