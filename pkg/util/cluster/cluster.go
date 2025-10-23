@@ -1055,21 +1055,30 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 // admin endpoint.
 func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 	defaultVersion := version.DefaultInstallStream
+
+	c.log.Infof("ensureDefaultRoleSetInCosmosdb: entry; defaultVersion=%s", defaultVersion.Version.String())
+
 	existing, err := getPlatformWIRoleSetsInCosmosDB(ctx)
-	if err == nil {
-		for _, rs := range existing {
-			if rs.Properties.OpenShiftVersion == defaultVersion.Version.String() {
-				c.log.Debugf("PlatformWorkloadIdentityRoleSet for version %s already in DB. Not overwriting existing one.", defaultVersion.Version.String())
+	if err != nil {
+		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: getPlatformWIRoleSetsInCosmosDB returned error: %v; will attempt to PUT default", err)
+	} else {
+		c.log.Infof("ensureDefaultRoleSetInCosmosdb: got %d existing platform WI role sets from local RP", len(existing))
+		for i, rs := range existing {
+			var ver string
+			if rs != nil {
+				ver = rs.Properties.OpenShiftVersion
+			}
+			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existing[%d].OpenShiftVersion=%s", i, ver)
+			if ver == defaultVersion.Version.String() {
+				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.String())
 				return nil
 			}
 		}
-	} else {
-		c.log.Debugf("couldn't query platform WI role sets in cosmosdb: %v; attempting to PUT default", err)
 	}
 
-	// Build a default PlatformWorkloadIdentityRoleSet payload containing the
-	// standard managed identities used in our env examples for 4.16. This is
-	// copied from `env` to make local dev behaviour consistent with CI.
+	c.log.Infof("ensureDefaultRoleSetInCosmosdb: building default payload for OpenShift version %s", defaultVersion.Version.String())
+
+	// Build the payload (copied from env examples)
 	b, err := json.Marshal(&api.PlatformWorkloadIdentityRoleSet{
 		Properties: api.PlatformWorkloadIdentityRoleSetProperties{
 			OpenShiftVersion: defaultVersion.Version.String(),
@@ -1148,7 +1157,6 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
 	return resp.Body.Close()
 }
 
