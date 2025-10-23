@@ -362,10 +362,7 @@ stages:
               register_sub
               docker compose build vpn
               docker compose up -d vpn --wait
-              echo "Updating role sets"
-              update_role_sets
-              echo "Updated role sets"
-              docker compose up --quiet-pull --exit-code-from e2e portal selenium rp e2e
+              docker compose up --quiet-pull --exit-code-from e2e e2e
               # Check if the E2E tests failed
               E2E_EXIT_CODE=$?
               if [ $E2E_EXIT_CODE -ne 0 ]; then
