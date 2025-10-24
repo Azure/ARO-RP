@@ -937,7 +937,7 @@ Once the new manifest completes successfully, you can delete the old failed one:
 
 For additional MIMO information, see the following documentation in this folder:
 
-### For SREs and Operators:
+### For SREs
 - **[MIMO Overview (README.md)](./README.md)** - High-level overview of MIMO architecture, components, and concepts. Read this first to understand the fundamentals of how MIMO works.
 - **[Admin API Reference (admin-api.md)](./admin-api.md)** - Technical reference for Admin API endpoints. Note that SREs should use PowerShell scripts instead of calling these APIs directly.
 - **[Actuator Documentation (actuator.md)](./actuator.md)** - Detailed explanation of the Actuator component, including a flowchart showing how tasks are processed from the queue.
