@@ -160,7 +160,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		err = fmt.Errorf("failed setting provisioning state on cluster document: %w", err)
 		a.log.Error(err)
 
-		// attempt to dequeue the document, for what it's worth
+		// attempt to end the lease on the document, for what it's worth
 		_, leaseErr := a.oc.EndLease(ctx, a.clusterResourceID, oc.OpenShiftCluster.Properties.LastProvisioningState, oc.OpenShiftCluster.Properties.FailedProvisioningState, nil)
 		if leaseErr != nil {
 			return false, fmt.Errorf("failed ending lease early on cluster document: %w", leaseErr)

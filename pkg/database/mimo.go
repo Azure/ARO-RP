@@ -17,7 +17,7 @@ import (
 const (
 	manifestPendingFragment           = `doc.maintenanceManifest.state IN ("Pending")`
 	manifestExpiryFragment            = "(doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000"
-	manifestFetchOnlyRunAfterFragment = "doc.maintenanceManifest.runAfter > GetCurrentTimestamp() / 1000"
+	manifestFetchOnlyRunAfterFragment = "doc.maintenanceManifest.runAfter < GetCurrentTimestamp() / 1000"
 
 	MaintenanceManifestDequeueQueryForCluster = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND doc.clusterResourceID = @clusterResourceID AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
 	MaintenanceManifestQueryForCluster        = "SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterResourceID"
