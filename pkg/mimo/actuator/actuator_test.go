@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var _ = Describe("MIMO Actuator", Ordered, func() {
@@ -41,7 +40,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	var ctx context.Context
 	var cancel context.CancelFunc
 
-	//var hook *test.Hook
 	var log *logrus.Entry
 	var _env env.Interface
 
@@ -66,7 +64,12 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 		ctx, cancel = context.WithCancel(context.Background())
 
-		_, log = testlog.New()
+		log = logrus.NewEntry(&logrus.Logger{
+			Out:       GinkgoWriter,
+			Formatter: new(logrus.TextFormatter),
+			Hooks:     make(logrus.LevelHooks),
+			Level:     logrus.DebugLevel,
+		})
 
 		fixtures = testdatabase.NewFixture()
 		checker = testdatabase.NewChecker()
@@ -89,16 +92,44 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
 			now:   now,
 		}
+		fixtures.Clear()
+		checker.Clear()
+
 	})
 
 	JustBeforeEach(func() {
+		// The cluster fixture is always the same
+		fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(clusterResourceID),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: clusterResourceID,
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState: api.ProvisioningStateSucceeded,
+					MaintenanceState:  api.MaintenanceStateNone,
+				},
+			},
+		})
+
 		// After the the fixtures are created in each test's BeforeEach, load
 		// them into the database
 		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).Create()
 		Expect(err).ToNot(HaveOccurred())
+
+		checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(clusterResourceID),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: clusterResourceID,
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState: api.ProvisioningStateSucceeded,
+					MaintenanceState:  api.MaintenanceStateNone,
+				},
+			},
+		})
 	})
 
 	verifyDatabaseState := func() {
+		GinkgoHelper()
+
 		errs := checker.CheckMaintenanceManifests(manifestsClient)
 		Expect(errs).To(BeNil(), "MaintenanceManifests don't match")
 
@@ -110,17 +141,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		var manifestID string
 
 		BeforeEach(func() {
-			fixtures.Clear()
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-					Properties: api.OpenShiftClusterProperties{
-						ProvisioningState: api.ProvisioningStateSucceeded,
-					},
-				},
-			})
-
 			manifestID = manifests.NewUUID()
 			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:                manifestID,
@@ -132,7 +152,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				},
 			})
 
-			checker.Clear()
 			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:                manifestID,
 				ClusterResourceID: strings.ToLower(clusterResourceID),
@@ -141,15 +160,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 					StatusText: "timed out at 1970-01-01 00:02:00 +0000 UTC",
 					RunBefore:  60,
 					RunAfter:   0,
-				},
-			})
-			checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-					Properties: api.OpenShiftClusterProperties{
-						ProvisioningState: api.ProvisioningStateSucceeded,
-					},
 				},
 			})
 		})
@@ -167,18 +177,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		var manifestID string
 
 		BeforeEach(func() {
-			fixtures.Clear()
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-					Properties: api.OpenShiftClusterProperties{
-						ProvisioningState: api.ProvisioningStateSucceeded,
-						MaintenanceState:  api.MaintenanceStateNone,
-					},
-				},
-			})
-
 			manifestID = manifests.NewUUID()
 			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:                manifestID,
@@ -191,7 +189,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				},
 			})
 
-			checker.Clear()
 			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:                manifestID,
 				Dequeues:          1,
@@ -202,16 +199,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 					StatusText:        "done",
 					RunBefore:         600,
 					RunAfter:          0,
-				},
-			})
-			checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-					Properties: api.OpenShiftClusterProperties{
-						ProvisioningState: api.ProvisioningStateSucceeded,
-						MaintenanceState:  api.MaintenanceStateNone,
-					},
 				},
 			})
 		})
@@ -240,18 +227,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		var manifestThatRunsID string
 
 		BeforeEach(func() {
-			fixtures.Clear()
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-					Properties: api.OpenShiftClusterProperties{
-						ProvisioningState: api.ProvisioningStateSucceeded,
-						MaintenanceState:  api.MaintenanceStateNone,
-					},
-				},
-			})
-
 			manifestID = manifests.NewUUID()
 			manifestThatRunsID = manifests.NewUUID()
 			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
@@ -275,7 +250,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				},
 			})
 
-			checker.Clear()
 			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:                manifestID,
 				Dequeues:          0,
@@ -297,16 +271,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 					StatusText:        "done",
 					RunBefore:         600,
 					RunAfter:          0,
-				},
-			})
-			checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-					Properties: api.OpenShiftClusterProperties{
-						ProvisioningState: api.ProvisioningStateSucceeded,
-						MaintenanceState:  api.MaintenanceStateNone,
-					},
 				},
 			})
 		})
@@ -334,14 +298,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		var manifestID string
 
 		BeforeEach(func() {
-			fixtures.Clear()
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-				},
-			})
-
 			manifestID = manifests.NewUUID()
 			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID: manifestID,
@@ -356,7 +312,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				},
 			})
 
-			checker.Clear()
 			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:                manifestID,
 				Dequeues:          maxDequeueCount,
@@ -389,14 +344,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		var manifestIDs []string
 
 		BeforeEach(func() {
-			fixtures.Clear()
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-				},
-			})
-
 			manifestIDs = []string{manifests.NewUUID(), manifests.NewUUID(), manifests.NewUUID()}
 			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:                manifestIDs[0],
@@ -432,7 +379,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 					},
 				})
 
-			checker.Clear()
 			checker.AddMaintenanceManifestDocuments(
 				&api.MaintenanceManifestDocument{
 					ID:                manifestIDs[0],
