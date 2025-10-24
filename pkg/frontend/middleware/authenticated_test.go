@@ -89,6 +89,46 @@ func TestAuthenticate(t *testing.T) {
 			isArmAuth:    false,
 			expectStatus: http.StatusForbidden,
 		},
+		{
+			name:         "ARM authentication MISE enforced - success",
+			enableMISE:   true,
+			enforceMISE:  true,
+			isMiseAuth:   true,
+			isArmAuth:    false,
+			expectStatus: http.StatusOK,
+		},
+		{
+			name:         "ARM authentication MISE enforced - failure, no TLS fallback",
+			enableMISE:   true,
+			enforceMISE:  true,
+			isMiseAuth:   false,
+			isArmAuth:    true, // TLS would succeed but should be ignored
+			expectStatus: http.StatusForbidden,
+		},
+		{
+			name:         "ARM authentication MISE enforced - both would fail",
+			enableMISE:   true,
+			enforceMISE:  true,
+			isMiseAuth:   false,
+			isArmAuth:    false,
+			expectStatus: http.StatusForbidden,
+		},
+		{
+			name:         "ARM authentication MISE disabled, TLS success",
+			enableMISE:   false,
+			enforceMISE:  false,
+			isMiseAuth:   false,
+			isArmAuth:    true,
+			expectStatus: http.StatusOK,
+		},
+		{
+			name:         "ARM authentication MISE disabled, TLS failure",
+			enableMISE:   false,
+			enforceMISE:  false,
+			isMiseAuth:   false,
+			isArmAuth:    false,
+			expectStatus: http.StatusForbidden,
+		},
 	}
 
 	for _, tt := range tests {

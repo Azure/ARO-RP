@@ -6,10 +6,15 @@ package miseadapter
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"sort"
+	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
+	"github.com/sirupsen/logrus"
 )
 
 func Test_createRequest(t *testing.T) {
@@ -253,5 +258,255 @@ func Test_parseResponseIntoResult(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
+	for _, tt := range []struct {
+		name             string
+		serverBehavior   func(*atomic.Int32) http.HandlerFunc
+		wantAuthorized   bool
+		wantErr          bool
+		wantAttemptCount int32
+		minDuration      time.Duration
+	}{
+		{
+			name: "success on first attempt",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 1,
+			minDuration:      0,
+		},
+		{
+			name: "retry on 503 then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 2 {
+						w.WriteHeader(http.StatusServiceUnavailable)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 2,
+			minDuration:      100 * time.Millisecond,
+		},
+		{
+			name: "retry on 500 then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 3 {
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 3,
+			minDuration:      300 * time.Millisecond, // 100ms + 200ms
+		},
+		{
+			name: "retry on 408 timeout then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 2 {
+						w.WriteHeader(http.StatusRequestTimeout)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 2,
+			minDuration:      100 * time.Millisecond,
+		},
+		{
+			name: "retry on 429 rate limit then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 2 {
+						w.WriteHeader(http.StatusTooManyRequests)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 2,
+			minDuration:      100 * time.Millisecond,
+		},
+		{
+			name: "no retry on 401 unauthorized",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.Header().Set("Error-Description", "invalid token")
+					w.WriteHeader(http.StatusUnauthorized)
+				}
+			},
+			wantAuthorized:   false,
+			wantErr:          false,
+			wantAttemptCount: 1,
+			minDuration:      0,
+		},
+		{
+			name: "no retry on 403 forbidden",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusForbidden)
+				}
+			},
+			wantAuthorized:   false,
+			wantErr:          false,
+			wantAttemptCount: 1,
+			minDuration:      0,
+		},
+		{
+			name: "max retries exhausted on 503",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusServiceUnavailable)
+				}
+			},
+			wantAuthorized:   false,
+			wantErr:          false,
+			wantAttemptCount: 3,
+			minDuration:      300 * time.Millisecond, // 100ms + 200ms
+		},
+		{
+			name: "retry on connection error then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 3 {
+						// Simulate network error by hijacking and closing connection
+						hj, ok := w.(http.Hijacker)
+						if !ok {
+							return
+						}
+						conn, _, err := hj.Hijack()
+						if err != nil {
+							return
+						}
+						conn.Close()
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 3,
+			minDuration:      300 * time.Millisecond, // 100ms + 200ms
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			log := logrus.NewEntry(logrus.StandardLogger())
+			var attemptCount atomic.Int32
+
+			server := httptest.NewServer(tt.serverBehavior(&attemptCount))
+			defer server.Close()
+
+			adapter := NewAuthorizer(server.URL, log)
+
+			req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+			req.RemoteAddr = "1.2.3.4:12345"
+			req.Header.Set("Authorization", "Bearer token")
+
+			start := time.Now()
+			authorized, err := adapter.IsAuthorized(context.Background(), req)
+			duration := time.Since(start)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("unexpected error state: got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+
+			if authorized != tt.wantAuthorized {
+				t.Errorf("unexpected authorized: got %v, want %v", authorized, tt.wantAuthorized)
+			}
+
+			finalCount := attemptCount.Load()
+			if finalCount != tt.wantAttemptCount {
+				t.Errorf("unexpected attempt count: got %d, want %d", finalCount, tt.wantAttemptCount)
+			}
+
+			if duration < tt.minDuration {
+				t.Errorf("unexpected duration: got %v, want at least %v", duration, tt.minDuration)
+			}
+		})
+	}
+}
+
+func TestMiseAdapterIsAuthorizedNetworkError(t *testing.T) {
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	// Point to non-existent server to trigger network errors
+	adapter := NewAuthorizer("http://localhost:1", log)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	req.RemoteAddr = "1.2.3.4:12345"
+	req.Header.Set("Authorization", "Bearer token")
+
+	start := time.Now()
+	authorized, err := adapter.IsAuthorized(context.Background(), req)
+	duration := time.Since(start)
+
+	if err == nil {
+		t.Error("expected error for network failure")
+	}
+
+	if authorized {
+		t.Error("expected authorized to be false")
+	}
+
+	// Should have attempted retries with backoff (100ms + 200ms = 300ms minimum)
+	if duration < 300*time.Millisecond {
+		t.Logf("warning: duration %v is less than expected 300ms, network errors might be very fast", duration)
+	}
+}
+
+func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Delay to allow context cancellation
+		time.Sleep(50 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	adapter := NewAuthorizer(server.URL, log)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	req.RemoteAddr = "1.2.3.4:12345"
+	req.Header.Set("Authorization", "Bearer token")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	authorized, err := adapter.IsAuthorized(ctx, req)
+	if err == nil {
+		t.Error("expected context error")
+	}
+
+	if !strings.Contains(err.Error(), "context") && !strings.Contains(err.Error(), "deadline") {
+		t.Logf("got unexpected error type: %v", err)
+	}
+
+	if authorized {
+		t.Error("expected authorized to be false")
 	}
 }
