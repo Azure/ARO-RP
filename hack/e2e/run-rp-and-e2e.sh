@@ -224,28 +224,7 @@ delete_e2e_cluster() {
 }
 
 update_role_sets() {
-    # check whether the env var is present and contains 4.16
-    if [[ -z "${PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS:-}" ]]; then
-        echo "PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS is not set or empty"
-    else
-        echo "PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS is set"
-        if echo "$PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS" | grep -q '"openShiftVersion"[[:space:]]*:[[:space:]]*"4.16"'; then
-            echo "PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS contains openShiftVersion 4.16"
-        else
-            echo "PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS does NOT contain openShiftVersion 4.16"
-        fi
-    fi
-
-    echo "Starting aro build"
-    if make aro; then
-        echo "aro build completed successfully"
-    else
-        echo "aro build FAILED"
-        return 1 
-    fi
-
-    echo "Running ./aro update-role-sets..."
-    ./aro update-role-sets
+    ./aro update-role-sets 
 }
 
 # TODO: CLUSTER and is also recalculated in multiple places
