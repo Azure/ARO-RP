@@ -224,7 +224,7 @@ delete_e2e_cluster() {
 }
 
 update_role_sets() {
-    ./aro update-role-sets 
+    ./aro update-role-sets
 }
 
 # TODO: CLUSTER and is also recalculated in multiple places
