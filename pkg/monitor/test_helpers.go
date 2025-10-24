@@ -5,7 +5,6 @@ package monitor
 
 import (
 	"context"
-	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -23,8 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/Azure/ARO-RP/test/util/testliveconfig"
 )
 
 // Global test variables
@@ -43,58 +40,8 @@ type TestEnvironment struct {
 	NoopMetricsEmitter   noop.Noop
 	NoopClusterMetrics   noop.Noop
 	DBGroup              monitorDBs
-}
-
-// SetupTestEnvironment creates a common test environment for monitor tests
-func SetupTestEnvironment(t *testing.T) *TestEnvironment {
-	// Create databases
-	openShiftClusterDB, _ := testdatabase.NewFakeOpenShiftClusters()
-	subscriptionsDB, _ := testdatabase.NewFakeSubscriptions()
-	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors()
-
-	// Create mocks
-	ctrl := gomock.NewController(t)
-	testlogger := logrus.NewEntry(logrus.StandardLogger())
-	testlogger.Logger.SetLevel(logrus.DebugLevel)
-	dialer := mock_proxy.NewMockDialer(ctrl)
-	mockEnv := mock_env.NewMockInterface(ctrl)
-	mockEnv.EXPECT().LiveConfig().Return(testliveconfig.NewTestLiveConfig(false, false)).AnyTimes()
-
-	// Create metrics emitters
-	noopMetricsEmitter := noop.Noop{}
-	noopClusterMetricsEmitter := noop.Noop{}
-
-	// Create database group
-	dbs := database.NewDBGroup().
-		WithMonitors(testdatabase.NewFakeMonitorWithExistingClient(fakeMonitorsDBClient)).
-		WithOpenShiftClusters(openShiftClusterDB).
-		WithSubscriptions(subscriptionsDB)
-
-	// Create master monitor document
-	monitorsDB.Create(context.TODO(), &api.MonitorDocument{
-		ID: "master",
-		Monitor: &api.Monitor{
-			Buckets: make([]string, 256),
-		},
-	})
-
-	// Initialize database fixtures
-	f := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClusterDB)
-	f.Create()
-
-	return &TestEnvironment{
-		OpenShiftClusterDB:   openShiftClusterDB,
-		SubscriptionsDB:      subscriptionsDB,
-		MonitorsDB:           monitorsDB,
-		FakeMonitorsDBClient: fakeMonitorsDBClient,
-		Controller:           ctrl,
-		TestLogger:           testlogger,
-		Dialer:               dialer,
-		MockEnv:              mockEnv,
-		NoopMetricsEmitter:   noopMetricsEmitter,
-		NoopClusterMetrics:   noopClusterMetricsEmitter,
-		DBGroup:              dbs,
-	}
+	localCosmosClient    cosmosdb.DatabaseClient
+	localCosmosDB        *cosmosdb.Database
 }
 
 // CreateTestMonitor creates a single monitor with test configuration
@@ -117,11 +64,6 @@ func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
 	mon.changefeedInterval = time.Second
 
 	return mon
-}
-
-// Cleanup performs test cleanup
-func (env *TestEnvironment) Cleanup() {
-	env.Controller.Finish()
 }
 
 // Fake monitoring builders for testing

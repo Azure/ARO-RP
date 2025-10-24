@@ -22,8 +22,8 @@ const (
 
 func TestUpsertAndDelete(t *testing.T) {
 	// Setup single monitor for all test operations
-	env := SetupTestEnvironment(t)
-	defer env.Cleanup()
+	env := createTestEnvironmentWithLocalCosmos(t)
+	defer env.LocalCosmosCleanup()
 	testMon := env.CreateTestMonitor("test-cache")
 	// Set owned buckets for the entire test sequence
 	ownedBuckets := []int{1, 2, 5}
@@ -217,8 +217,8 @@ func TestUpsertAndDelete(t *testing.T) {
 }
 
 func TestConcurrentUpsert(t *testing.T) {
-	env := SetupTestEnvironment(t)
-	defer env.Cleanup()
+	env := createTestEnvironmentWithLocalCosmos(t)
+	defer env.LocalCosmosCleanup()
 
 	doc := createMockClusterDoc("cluster-concurrent", 1, api.ProvisioningStateSucceeded)
 	mon := env.CreateTestMonitor("cluster-concurrent")
@@ -243,8 +243,8 @@ func TestConcurrentUpsert(t *testing.T) {
 }
 
 func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
-	env := SetupTestEnvironment(t)
-	defer env.Cleanup()
+	env := createTestEnvironmentWithLocalCosmos(t)
+	defer env.LocalCosmosCleanup()
 
 	mon := env.CreateTestMonitor("test-channel-safety")
 

@@ -1,0 +1,63 @@
+ARG REGISTRY
+ARG BUILDER_REGISTRY
+ARG ARO_VERSION
+ARG LOCAL_COSMOS_FOR_TEST_HOST
+
+###############################################################################
+# Stage 1: Build the SRE Portal Assets
+###############################################################################
+FROM ${REGISTRY}/ubi9/nodejs-18  AS portal-build
+LABEL aro-portal-build=true
+WORKDIR /build/portal/v2
+USER root
+
+# Copying package files and installing dependencies
+COPY portal/v2/package*.json ./
+
+# Combine npm install and audit in one step to reduce layers and clean cache
+RUN npm ci \
+    && npm audit --audit-level high --omit=dev
+
+# Copying the rest of the source and build
+COPY --chown=root:root portal/v2/ ./
+RUN npm run lint && npm run build
+
+###############################################################################
+# Stage 2: Compile the Golang RP code
+###############################################################################
+FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20 AS builder
+ARG ARO_VERSION
+ARG LOCAL_COSMOS_FOR_TEST_HOST
+LABEL aro-builder=true
+USER root
+WORKDIR /app
+ENV GO_COMPLIANCE_INFO=0
+
+# golang config and build steps
+ENV GOPATH=/root/go
+ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
+
+COPY .bingo .bingo
+RUN source .bingo/variables.env \
+    # install bingo itself
+    && make -f .bingo/Variables.mk ${BINGO} \
+    # and all the tools it manages
+    && ${BINGO} get -l
+ENV PATH=$PATH:${GOPATH}/bin/
+
+# Copy dependencies and source files
+COPY go.mod go.sum ./
+COPY swagger swagger
+COPY hack hack
+COPY cmd cmd
+COPY pkg pkg
+COPY test test
+
+# Ensure JS assets are available before generating Go code
+COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build
+
+# Build RP binary
+RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./cmd/aro
+
+# Set environment for test execution (to be run via docker run)
+ENV LOCAL_COSMOS_FOR_TEST_HOST=${LOCAL_COSMOS_FOR_TEST_HOST}
