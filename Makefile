@@ -312,9 +312,17 @@ validate-fips: $(BINGO)
 	hack/fips/validate-fips.sh ./aro
 
 .PHONY: unit-test-go
-unit-test-go: $(GOTESTSUM) start-local-cosmosdb
-	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... || ($(MAKE) stop-and-delete-local-cosmosdb && exit 1)
-	$(MAKE) stop-and-delete-local-cosmosdb
+unit-test-go: $(GOTESTSUM) 
+	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+
+# .PHONY: unit-test-go-local-cosmosdb
+# unit-test-go-local-cosmosdb: $(GOTESTSUM) start-local-cosmosdb
+# 	LOCAL_COSMOS_FOR_TEST_HOST=127.0.0.1 $(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... || ($(MAKE) stop-and-delete-local-cosmosdb && exit 1)
+# 	$(MAKE) stop-and-delete-local-cosmosdb
+.PHONY: unit-test-go-local-cosmosdb
+unit-test-go-local-cosmosdb:
+	USE_LOCAL_COSMOS_FOR_TEST="true" $(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+
 
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg: $(GOTESTSUM)

@@ -31,7 +31,7 @@ func TestMonitor(t *testing.T) {
 	numWorker := 3
 
 	// Setup test environment
-	env := createTestEnvironmentWithLocalCosmos(t)
+	env := SetupTestEnvironment(t)
 	defer env.LocalCosmosCleanup()
 
 	// Create multiple monitors for worker testing
@@ -44,12 +44,12 @@ func TestMonitor(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		subDoc := newFakeSubscription()
 		clusterDoc := newFakeCluster(subDoc.ResourceID)
-		_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
+		_, err := env.OpenShiftClusterDB.Create(env.ctx, clusterDoc)
 		if err != nil {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
 		}
-		_, err = env.SubscriptionsDB.Create(context.Background(), subDoc)
+		_, err = env.SubscriptionsDB.Create(env.ctx, subDoc)
 		if err != nil {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
@@ -57,7 +57,7 @@ func TestMonitor(t *testing.T) {
 		fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = pointerutils.ToPtr(0)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(env.ctx, 10*time.Second)
 	defer cancel()
 
 	wg := sync.WaitGroup{}
@@ -78,12 +78,12 @@ func TestMonitor(t *testing.T) {
 
 	subDoc := newFakeSubscription()
 	clusterDoc := newFakeCluster(subDoc.ResourceID)
-	_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
+	_, err := env.OpenShiftClusterDB.Create(env.ctx, clusterDoc)
 	if err != nil {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
 	}
-	_, err = env.SubscriptionsDB.Create(context.Background(), subDoc)
+	_, err = env.SubscriptionsDB.Create(env.ctx, subDoc)
 	if err != nil {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
