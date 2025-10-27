@@ -5,7 +5,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -39,7 +38,6 @@ func TestExecute(t *testing.T) {
 
 	triggeredFail := false
 	onPanic := func(m monitoring.Monitor) {
-		fmt.Println("failed")
 		triggeredFail = true
 	}
 
@@ -50,17 +48,132 @@ func TestExecute(t *testing.T) {
 	assert.True(t, triggeredFail)
 }
 
-func TestClusterOperationFlow(t *testing.T) {
-	// Setup test environment
-	ctx := context.Background()
-	env := createTestEnvironmentWithLocalCosmos(t)
-	defer env.LocalCosmosCleanup()
+func TestChangefeedOperations(t *testing.T) {
+	// Previous version of the tests
+	// Setup test environment using the old fake client (to maintain these checks in the CI)
+	env := SetupTestEnvironmentWithFakeClient(t)
+	defer env.Cleanup()
 
 	// Create single monitor for changefeed testing
 	mon := env.CreateTestMonitor("changefeed")
 
 	// Start changefeed
-	ctxChangeFeed, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctxChangeFeed, cancel := context.WithTimeout(env.ctx, 20*time.Second)
+	defer cancel()
+
+	stopChan := make(chan struct{})
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		<-ctxChangeFeed.Done()
+		close(stopChan)
+	}()
+
+	mon.changefeedInterval = time.Second / 2
+	go func() {
+		// Running changefeed loop every second
+		mon.changefeed(ctxChangeFeed, mon.baseLog.WithField("component", "changefeed"), stopChan)
+		wg.Done()
+	}()
+
+	type operation struct {
+		name                          string
+		action                        string // "create"
+		clusterProvisioningState      api.ProvisioningState
+		subscriptionProvisioningState api.SubscriptionState
+		expectDocs                    int
+		expectSubs                    int
+	}
+
+	operations := []operation{
+		{
+			name:                          "create first cluster with subscription",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateSucceeded,
+			subscriptionProvisioningState: api.SubscriptionStateRegistered,
+			expectDocs:                    1,
+			expectSubs:                    1,
+		},
+		{
+			name:                          "create second cluster with new subscription",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateSucceeded,
+			subscriptionProvisioningState: api.SubscriptionStateRegistered,
+			expectDocs:                    2,
+			expectSubs:                    2,
+		},
+		{
+			name:                          "create cluster in Deleting state - should be ignored",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateDeleting,
+			subscriptionProvisioningState: api.SubscriptionStateRegistered,
+			expectDocs:                    2,
+			expectSubs:                    3,
+		}, {
+			name:                          "create cluster in creating state - should be ignored",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateCreating,
+			subscriptionProvisioningState: api.SubscriptionStateRegistered,
+			expectDocs:                    2,
+			expectSubs:                    4,
+		}, {
+			name:                          "subscription and cluster in Deleting state - BOTH should be ignored",
+			action:                        "create",
+			clusterProvisioningState:      api.ProvisioningStateDeleting,
+			subscriptionProvisioningState: api.SubscriptionStateDeleted,
+			expectDocs:                    2,
+			expectSubs:                    4,
+		},
+	}
+
+	// Execute operations in sequence
+	for _, op := range operations {
+		t.Run(op.name, func(t *testing.T) {
+			// Create subscription and cluster documents
+			subDoc := newFakeSubscription()
+			subDoc.Subscription.State = op.subscriptionProvisioningState
+			clusterDoc := newFakeCluster(subDoc.ResourceID)
+			clusterDoc.OpenShiftCluster.Properties.ProvisioningState = op.clusterProvisioningState
+
+			switch op.action {
+			case "create":
+				_, err := env.OpenShiftClusterDB.Create(env.ctx, clusterDoc)
+				if err != nil {
+					t.Fatalf("Couldn't create cluster doc: %v", err)
+				}
+				_, err = env.SubscriptionsDB.Create(env.ctx, subDoc)
+				if err != nil {
+					t.Fatalf("Couldn't create subscription doc: %v", err)
+				}
+			}
+
+			// Wait for changefeed to process
+			time.Sleep(2 * time.Second)
+
+			// Validate expected results
+			if len(mon.docs) != op.expectDocs {
+				t.Errorf("%s: expected %d documents in cache, got %d", op.name, op.expectDocs, len(mon.docs))
+			}
+			if len(mon.subs) != op.expectSubs {
+				t.Errorf("%s: expected %d subscriptions in cache, got %d", op.name, op.expectSubs, len(mon.subs))
+			}
+		})
+	}
+}
+
+func TestClusterOperationFlow(t *testing.T) {
+	// Setup test environment
+	env := SetupTestEnvironment(t)
+	defer env.LocalCosmosCleanup()
+	if env.localCosmosClient == nil && env.localCosmosDB == nil {
+		return // this only works with a local cosmosdb
+	}
+
+	// Create single monitor for changefeed testing
+	mon := env.CreateTestMonitor("changefeed")
+
+	// Start changefeed
+	ctxChangeFeed, cancel := context.WithTimeout(env.ctx, 20*time.Second)
 	defer cancel()
 
 	stopChan := make(chan struct{})
@@ -79,7 +192,7 @@ func TestClusterOperationFlow(t *testing.T) {
 
 	// Create an initial subscription and cluster
 	subDoc := newFakeSubscription()
-	_, err := env.SubscriptionsDB.Create(ctx, subDoc)
+	_, err := env.SubscriptionsDB.Create(env.ctx, subDoc)
 	if err != nil {
 		t.Fatalf("Couldn't create subscription in cosmos: %v", err)
 	}
@@ -87,7 +200,7 @@ func TestClusterOperationFlow(t *testing.T) {
 	clusterDoc := newFakeCluster(subDoc.ResourceID)
 	clusterDoc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
 
-	generatedCluster, err := env.OpenShiftClusterDB.Create(ctx, clusterDoc)
+	generatedCluster, err := env.OpenShiftClusterDB.Create(env.ctx, clusterDoc)
 	if err != nil {
 		t.Fatalf("Couldn't create cluster in cosmos: %v", err)
 	}
@@ -127,7 +240,7 @@ func TestClusterOperationFlow(t *testing.T) {
 			// Update cluster to the new state (skip for first step since we already created it)
 			if step.clusterState != api.ProvisioningStateCreating {
 				generatedCluster.OpenShiftCluster.Properties.ProvisioningState = step.clusterState
-				generatedCluster, err = env.OpenShiftClusterDB.Update(ctx, generatedCluster)
+				generatedCluster, err = env.OpenShiftClusterDB.Update(env.ctx, generatedCluster)
 				if err != nil {
 					t.Fatalf("Couldn't update cluster in cosmos: %v", err)
 				}
@@ -149,15 +262,17 @@ func TestClusterOperationFlow(t *testing.T) {
 
 func TestSubscriptionFlow(t *testing.T) {
 	// Setup test environment
-	ctx := context.Background()
-	env := createTestEnvironmentWithLocalCosmos(t)
+	env := SetupTestEnvironment(t)
 	defer env.LocalCosmosCleanup()
+	if env.localCosmosClient == nil && env.localCosmosDB == nil {
+		return // this only works with a local cosmosdb
+	}
 
 	// Create single monitor for changefeed testing
 	mon := env.CreateTestMonitor("changefeed")
 
 	// Start changefeed
-	ctxChangeFeed, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctxChangeFeed, cancel := context.WithTimeout(env.ctx, 20*time.Second)
 	defer cancel()
 
 	stopChan := make(chan struct{})
@@ -178,7 +293,7 @@ func TestSubscriptionFlow(t *testing.T) {
 	subDoc := newFakeSubscription()
 	subDoc.Subscription.State = api.SubscriptionStateRegistered
 
-	generatedSub, err := env.SubscriptionsDB.Create(ctx, subDoc)
+	generatedSub, err := env.SubscriptionsDB.Create(env.ctx, subDoc)
 	if err != nil {
 		t.Fatalf("Couldn't create subscription in cosmos: %v", err)
 	}
@@ -209,7 +324,7 @@ func TestSubscriptionFlow(t *testing.T) {
 			// Update subscription to the new state (skip for first step since we already created it)
 			if step.subscriptionState != api.SubscriptionStateRegistered {
 				generatedSub.Subscription.State = step.subscriptionState
-				generatedSub, err = env.SubscriptionsDB.Update(ctx, generatedSub)
+				generatedSub, err = env.SubscriptionsDB.Update(env.ctx, generatedSub)
 				if err != nil {
 					t.Fatalf("Couldn't update subscription in cosmos: %v", err)
 				}
