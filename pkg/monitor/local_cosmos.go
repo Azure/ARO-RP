@@ -57,7 +57,7 @@ func localCosmosNewClient(_env env.Core, m metrics.Emitter, aead encryption.AEAD
 	return cosmosdb.NewDatabaseClient(logrusEntry, httpClient, handle, databaseHostname, dbAuthorizer), nil
 }
 
-func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
+func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 
@@ -213,6 +213,7 @@ func createTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		DBGroup:              dbs,
 		localCosmosClient:    localCosmosClient,
 		localCosmosDB:        localCosmosDB,
+		ctx:                  ctx,
 	}
 }
 
