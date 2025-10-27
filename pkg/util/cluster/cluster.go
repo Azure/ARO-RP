@@ -756,6 +756,12 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs,
 				c.deleteVnetPeerings(ctx, vnetResourceGroup),
 			)
+
+			if oc.UsesWorkloadIdentity() {
+				errs = append(errs,
+					c.deleteMockMSIServicePrincipal(ctx),
+				)
+			}
 		}
 	} else {
 		errs = append(errs,
@@ -793,6 +799,25 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (c *Cluster) deleteMockMSIServicePrincipal(ctx context.Context) error {
+	if c.Config.MockMSIObjectID == "" {
+		c.log.Info("no mock msi object id configured, skipping")
+		return nil
+	}
+
+	c.log.Infof("deleting mock msi service principal id=%s", c.Config.MockMSIObjectID)
+
+	// Delete the service principal by its object ID using the Graph client.
+	err := c.spGraphClient.ServicePrincipals().ByServicePrincipalId(c.Config.MockMSIObjectID).Delete(ctx, nil)
+	if err != nil {
+		c.log.WithError(err).Warn("failed to delete mock msi service principal")
+		return err
+	}
+
+	c.log.Info("deleted mock msi service principal")
 	return nil
 }
 
@@ -1158,7 +1183,22 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return resp.Body.Close()
+	defer resp.Body.Close()
+	c.log.Infof("ensureDefaultRoleSetInCosmosdb: PUT request returned status %s", resp.Status)
+
+	updated, err := getPlatformWIRoleSetsInCosmosDB(ctx)
+	if err != nil {
+		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: failed to fetch role sets: %v", err)
+	} else {
+		c.log.Infof("ensureDefaultRoleSetInCosmosdb: found %d platform WI role sets after PUT", len(updated))
+		for i, rs := range updated {
+			if rs != nil {
+				c.log.Debugf("ensureDefaultRoleSetInCosmosdb: updated[%d].OpenShiftVersion=%s", i, rs.Properties.OpenShiftVersion)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName string) error {
