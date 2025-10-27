@@ -192,7 +192,7 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 							PublicIPAddress: &armnetwork.PublicIPAddress{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]"),
 							},
 						},
 						Name: pointerutils.ToPtr("rp-frontend"),
@@ -200,7 +200,7 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 							PublicIPAddress: &armnetwork.PublicIPAddress{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]"),
 							},
 						},
 						Name: pointerutils.ToPtr("portal-frontend"),
@@ -302,8 +302,8 @@ func (g *generator) rpLB() *arm.Resource {
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
-			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
-			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]",
 		},
 	}
 }

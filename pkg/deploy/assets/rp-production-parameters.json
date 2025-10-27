@@ -108,11 +108,17 @@
         "mdsdEnvironment": {
             "value": ""
         },
+        "mimoActuatorLogLevel": {
+            "value": "info"
+        },
         "miseValidAppIDs": {
             "value": ""
         },
         "miseValidAudiences": {
             "value": ""
+        },
+        "monitorLogLevel": {
+            "value": "info"
         },
         "msiRpEndpoint": {
             "value": ""
@@ -155,6 +161,9 @@
         "portalLbIpTags": {
             "value": []
         },
+        "portalLogLevel": {
+            "value": "info"
+        },
         "rpFeatures": {
             "value": ""
         },
@@ -163,6 +172,9 @@
         },
         "rpLbIpTags": {
             "value": []
+        },
+        "rpLogLevel": {
+            "value": "info"
         },
         "rpMdmAccount": {
             "value": ""
