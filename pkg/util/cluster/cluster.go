@@ -811,7 +811,7 @@ func (c *Cluster) deleteMockMSIServicePrincipal(ctx context.Context) error {
 	c.log.Infof("deleting mock msi service principal id=%s", c.Config.MockMSIObjectID)
 
 	// Delete the service principal by its object ID using the Graph client.
-	err := c.spGraphClient.ServicePrincipals().ByServicePrincipalId(c.Config.MockMSIObjectID).Delete(ctx, nil)
+	err := c.spGraphClient.Applications().ByApplicationId(c.Config.MockMSIObjectID).Delete(ctx, nil)
 	if err != nil {
 		c.log.WithError(err).Warn("failed to delete mock msi service principal")
 		return err
@@ -1103,10 +1103,8 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 
 	c.log.Infof("ensureDefaultRoleSetInCosmosdb: building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
 
-	// Build the payload (copied from env examples)
 	b, err := json.Marshal(&api.PlatformWorkloadIdentityRoleSet{
 		Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-			// Use minor version (e.g. "4.16") for default payload
 			OpenShiftVersion: defaultVersion.Version.MinorVersion(),
 			PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
 				{
@@ -1194,6 +1192,8 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 		for i, rs := range updated {
 			if rs != nil {
 				c.log.Debugf("ensureDefaultRoleSetInCosmosdb: updated[%d].OpenShiftVersion=%s", i, rs.Properties.OpenShiftVersion)
+			} else {
+				c.log.Debugf("ensureDefaultRoleSetInCosmosdb: updated[%d] is nil", i)
 			}
 		}
 	}
