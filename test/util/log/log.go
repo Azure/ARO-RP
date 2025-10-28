@@ -6,6 +6,7 @@ package log
 import (
 	"fmt"
 	"strings"
+	"testing"
 
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
@@ -63,4 +64,22 @@ func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher
 	}
 
 	return nil
+}
+
+func LogForTesting(t *testing.T) (*test.Hook, *logrus.Entry) {
+	t.Helper()
+	hook, log := New()
+	t.Cleanup(func() {
+		t.Helper()
+		if t.Failed() {
+			t.Log("=== LOG ENTRIES ===")
+			for _, i := range hook.Entries {
+				b, _ := i.Logger.Formatter.Format(&i)
+				t.Logf("%s", string(b))
+			}
+			t.Log("=== END LOG ENTRIES ===")
+		}
+	})
+
+	return hook, log
 }
