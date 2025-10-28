@@ -50,20 +50,24 @@ type MaintenanceManifests interface {
 	NewUUID() string
 }
 
-func NewMaintenanceManifests(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (MaintenanceManifests, error) {
+func NewMaintenanceManifests(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (*maintenanceManifests, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	documentClient := cosmosdb.NewMaintenanceManifestDocumentClient(collc, collMaintenanceManifests)
 	return NewMaintenanceManifestsWithProvidedClient(documentClient, collc, uuid.DefaultGenerator.Generate(), uuid.DefaultGenerator), nil
 }
 
-func NewMaintenanceManifestsWithProvidedClient(client cosmosdb.MaintenanceManifestDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator) MaintenanceManifests {
+func NewMaintenanceManifestsWithProvidedClient(client cosmosdb.MaintenanceManifestDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator) *maintenanceManifests {
 	return &maintenanceManifests{
 		c:             client,
 		uuid:          uuid,
 		collc:         collectionClient,
 		uuidGenerator: uuidGenerator,
 	}
+}
+
+func (c *maintenanceManifests) Client() cosmosdb.MaintenanceManifestDocumentClient {
+	return c.c
 }
 
 func (c *maintenanceManifests) NewUUID() string {

@@ -5,11 +5,8 @@ package actuator
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -22,49 +19,23 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlocalcosmos "github.com/Azure/ARO-RP/test/localcosmos"
 )
 
-type fakeMetricsEmitter struct {
-	Metrics map[string]int64
-	m       sync.RWMutex
-}
-
-func newfakeMetricsEmitter() *fakeMetricsEmitter {
-	m := make(map[string]int64)
-	return &fakeMetricsEmitter{
-		Metrics: m,
-		m:       sync.RWMutex{},
-	}
-}
-
-func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
-	e.m.Lock()
-	defer e.m.Unlock()
-	e.Metrics[metricName] = metricValue
-}
-
-func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
-}
-
-func (e *fakeMetricsEmitter) Clear() {
-	e.m.Lock()
-	defer e.m.Unlock()
-	e.Metrics = make(map[string]int64)
-}
-
-var _ = Describe("MIMO Actuator Service", Ordered, func() {
+var _ = Describe("MIMO Actuator Service (CosmosDB Emulator)", Ordered, func() {
 	var fixtures *testdatabase.Fixture
 	var checker *testdatabase.Checker
+	var dbConn cosmosdb.DatabaseClient
 	var manifests database.MaintenanceManifests
-	var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
+	var manifestsClient cosmosdb.MaintenanceManifestDocumentClient
 	var clusters database.OpenShiftClusters
-	//var clustersClient cosmosdb.OpenShiftClusterDocumentClient
-	var m metrics.Emitter
+	var m *fakeMetricsEmitter
+
+	var cosmosDBEmulator testlocalcosmos.LocalCosmosDB
 
 	var svc *service
 
@@ -80,6 +51,11 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
 
 	AfterAll(func() {
+		// err := cosmosDBEmulator.Stop()
+		// if err != nil {
+		// 	GinkgoWriter.Printf("Error stopping CosmosDB emulator: %v\n", err)
+		// }
+
 		if cancel != nil {
 			cancel()
 		}
@@ -90,11 +66,6 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	})
 
 	BeforeAll(func() {
-		controller = gomock.NewController(nil)
-		_env = mock_env.NewMockInterface(controller)
-
-		ctx, cancel = context.WithCancel(context.Background())
-
 		log = logrus.NewEntry(&logrus.Logger{
 			Out:       GinkgoWriter,
 			Formatter: new(logrus.TextFormatter),
@@ -102,16 +73,49 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			Level:     logrus.DebugLevel,
 		})
 
+		controller = gomock.NewController(nil)
+		_e := mock_env.NewMockInterface(controller)
+		_e.EXPECT().LoggerForComponent(gomock.Any()).Return(log).AnyTimes()
+		_env = _e
+
+		ctx, cancel = context.WithCancel(context.Background())
+
+		conn, err := testlocalcosmos.GetPodmanConnection(ctx)
+		Expect(err).ToNot(HaveOccurred())
+
+		cosmosDBEmulator = testlocalcosmos.NewLocalCosmos(conn)
+
+		err = cosmosDBEmulator.Start(ctx)
+		Expect(err).ToNot(HaveOccurred())
+
+		m = newfakeMetricsEmitter()
+
+		dbConn, err = testlocalcosmos.GetConnection(_env, m, testdatabase.NewFakeAEAD())
+		Expect(err).ToNot(HaveOccurred())
+
 		fixtures = testdatabase.NewFixture()
 		checker = testdatabase.NewChecker()
 	})
 
 	BeforeEach(func() {
-		m = newfakeMetricsEmitter()
+		id, err := testlocalcosmos.CreateFreshDB(ctx, dbConn)
+		Expect(err).ToNot(HaveOccurred())
+
+		GinkgoWriter.Printf("Using CosmosDB database %s\n", id)
+
+		// Want to have a method that's not a part of the interface, but is
+		// usable in tests? Just don't declare it as a part of the interface
+		// until you've used the methods on the struct but not on the interface!
+		cl, err := database.NewOpenShiftClusters(ctx, dbConn, id)
+		Expect(err).ToNot(HaveOccurred())
+		clusters = cl
+
+		manifestsObject, err := database.NewMaintenanceManifests(ctx, dbConn, id)
+		Expect(err).ToNot(HaveOccurred())
+		manifestsClient = manifestsObject.Client()
+		manifests = manifestsObject
 
 		now := func() time.Time { return time.Unix(120, 0) }
-		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
-		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
 		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
 
 		svc = NewService(_env, log, nil, dbg, m, []int{1})
@@ -121,6 +125,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	})
 
 	JustBeforeEach(func() {
+		m.Clear()
+
 		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).Create()
 		Expect(err).ToNot(HaveOccurred())
 	})
@@ -131,8 +137,12 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 				Key:    strings.ToLower(clusterResourceID),
 				Bucket: 1,
+
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+					},
 				},
 			})
 			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -140,6 +150,9 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				Bucket: 2,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: clusterResourceID + "ignored",
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+					},
 				},
 			})
 		})
@@ -208,6 +221,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				},
 			)
 
+			futureTime := int(time.Now().Add(60 * time.Second).Unix())
+
 			manifestID = manifests.NewUUID()
 			manifestID2 := manifests.NewUUID()
 			manifestID3 := manifests.NewUUID()
@@ -219,7 +234,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:     api.MaintenanceManifestStatePending,
 						RunBefore: 60,
-						RunAfter:  0,
+						RunAfter:  1,
 					},
 				},
 				&api.MaintenanceManifestDocument{
@@ -227,8 +242,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
-						RunBefore:         300,
-						RunAfter:          0,
+						RunBefore:         futureTime,
+						RunAfter:          1,
 						MaintenanceTaskID: "0000-0000-0001",
 					},
 				},
@@ -238,8 +253,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					ClusterResourceID: strings.ToLower(clusterResourceID + "ignored"),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
-						RunBefore:         300,
-						RunAfter:          0,
+						RunBefore:         futureTime,
+						RunAfter:          1,
 						MaintenanceTaskID: "0000-0000-0001",
 					},
 				},
@@ -254,7 +269,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 						State:      api.MaintenanceManifestStateTimedOut,
 						StatusText: "timed out at 1970-01-01 00:02:00 +0000 UTC",
 						RunBefore:  60,
-						RunAfter:   0,
+						RunAfter:   1,
 					},
 				},
 				&api.MaintenanceManifestDocument{
@@ -264,8 +279,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStateCompleted,
 						StatusText:        "ok",
-						RunBefore:         300,
-						RunAfter:          0,
+						RunBefore:         futureTime,
+						RunAfter:          1,
 						MaintenanceTaskID: "0000-0000-0001",
 					},
 				},
@@ -275,8 +290,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					ClusterResourceID: strings.ToLower(clusterResourceID + "ignored"),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
-						RunBefore:         300,
-						RunAfter:          0,
+						RunBefore:         futureTime,
+						RunAfter:          1,
 						MaintenanceTaskID: "0000-0000-0001",
 					},
 				},
@@ -284,7 +299,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		})
 
 		It("expires them", func() {
-			svc.pollTime = time.Millisecond
+			svc.pollTime = time.Second
 
 			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
@@ -306,7 +321,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		})
 
 		It("loads the full cluster document", func() {
-			svc.pollTime = time.Millisecond
+			svc.pollTime = time.Second
 
 			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
@@ -329,85 +344,5 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
 		})
-	})
-})
-
-var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
-	var controller *gomock.Controller
-	var _env *mock_env.MockInterface
-	var log *logrus.Entry
-
-	BeforeAll(func() {
-		log = logrus.NewEntry(&logrus.Logger{
-			Out:       GinkgoWriter,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.DebugLevel,
-		})
-
-		controller = gomock.NewController(nil)
-		_env = mock_env.NewMockInterface(controller)
-
-		_env.EXPECT().Logger().Return(log).AnyTimes()
-	})
-
-	It("serves all buckets with 3 workers", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false).Times(3)
-
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-00", nil })
-		b2 := DetermineBuckets(_env, func() (string, error) { return "vm-01", nil })
-		b3 := DetermineBuckets(_env, func() (string, error) { return "vm-02", nil })
-
-		all := slices.Concat(b1, b2, b3)
-
-		Expect(all).To(HaveLen(256))
-		for i := range 256 {
-			Expect(all).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets if it cannot get the hostname", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "", errors.New("boo") })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets if it does not understand the hostname", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "foobar", nil })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets if the hostname does not end in a number", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-bar", nil })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets if the hostname ending in a number that is not 0-2", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-03", nil })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets in local dev", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(true)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-01", nil })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
 	})
 })

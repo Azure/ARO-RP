@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -207,42 +208,42 @@ func (f *Fixture) Create() error {
 		}
 		_, err := f.openShiftClustersDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating OpenShiftClusterDocument: %w", err)
 		}
 	}
 
 	for _, i := range f.subscriptionDocuments {
 		_, err := f.subscriptionsDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating SubscriptionDocument: %w", err)
 		}
 	}
 
 	for _, i := range f.billingDocuments {
 		_, err := f.billingDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating BillingDocument: %w", err)
 		}
 	}
 
 	for _, i := range f.asyncOperationDocuments {
 		_, err := f.asyncOperationsDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating AsyncOperationDocument: %w", err)
 		}
 	}
 
 	for _, i := range f.portalDocuments {
 		_, err := f.portalDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating PortalDocument: %w", err)
 		}
 	}
 
 	for _, i := range f.gatewayDocuments {
 		_, err := f.gatewayDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating GatewayDocument: %w", err)
 		}
 	}
 
@@ -252,7 +253,7 @@ func (f *Fixture) Create() error {
 		}
 		_, err := f.openShiftVersionsDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating OpenShiftVersionDocument: %w", err)
 		}
 	}
 
@@ -262,7 +263,7 @@ func (f *Fixture) Create() error {
 		}
 		_, err := f.platformWorkloadIdentityRoleSetsDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating PlatformWorkloadIdentityRoleSetDocument: %w", err)
 		}
 	}
 
@@ -272,7 +273,7 @@ func (f *Fixture) Create() error {
 		}
 		_, err := f.maintenanceManifestsDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure creating MaintenanceManifestDocument: %w", err)
 		}
 	}
 

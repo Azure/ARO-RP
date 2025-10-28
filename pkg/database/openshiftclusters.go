@@ -59,20 +59,24 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (*openShiftClusters, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collOpenShiftClusters)
 	return NewOpenShiftClustersWithProvidedClient(documentClient, collc, uuid.DefaultGenerator.Generate(), uuid.DefaultGenerator), nil
 }
 
-func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator) OpenShiftClusters {
+func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator) *openShiftClusters {
 	return &openShiftClusters{
 		c:             client,
 		collc:         collectionClient,
 		uuid:          uuid,
 		uuidGenerator: uuidGenerator,
 	}
+}
+
+func (c *openShiftClusters) Client() cosmosdb.OpenShiftClusterDocumentClient {
+	return c.c
 }
 
 func (c *openShiftClusters) NewUUID() string {

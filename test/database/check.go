@@ -335,7 +335,7 @@ func (f *Checker) CheckPlatformWorkloadIdentityRoleSets(roleSets *cosmosdb.FakeP
 	return errs
 }
 
-func (f *Checker) CheckMaintenanceManifests(client *cosmosdb.FakeMaintenanceManifestDocumentClient) (errs []error) {
+func (f *Checker) CheckMaintenanceManifests(client cosmosdb.MaintenanceManifestDocumentClient) (errs []error) {
 	ctx := context.Background()
 
 	all, err := client.ListAll(ctx, nil)
