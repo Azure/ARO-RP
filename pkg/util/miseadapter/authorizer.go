@@ -31,7 +31,10 @@ func NewAuthorizer(miseAddress string, log *logrus.Entry) MISEAdapter {
 }
 
 func (m *miseAdapter) IsAuthorized(ctx context.Context, r *http.Request) (bool, error) {
-	remoteAddr, _, _ := strings.Cut(r.RemoteAddr, ":")
+	remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return false, fmt.Errorf("invalid remote address %q: %w", r.RemoteAddr, err)
+	}
 
 	i := Input{
 		OriginalUri:         fmt.Sprintf("http://%s%s", r.Host, r.URL.Path),

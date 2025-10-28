@@ -268,7 +268,8 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 		wantAuthorized   bool
 		wantErr          bool
 		wantAttemptCount int32
-		minDuration      time.Duration
+		expectedDuration time.Duration
+		remoteAddr       string
 	}{
 		{
 			name: "success on first attempt",
@@ -410,7 +411,35 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   true,
 			wantErr:          false,
 			wantAttemptCount: 3,
-			minDuration:      300 * time.Millisecond, // 100ms + 200ms
+			expectedDuration: 300 * time.Millisecond, // 100ms + 200ms
+		},
+		{
+			name: "valid remote addr (IPv6)",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 1,
+			expectedDuration: 0,
+			remoteAddr:       "[2001:db8::2001]:12345",
+		},
+		{
+			name: "invalid remote addr (IPv6)",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   false,
+			wantErr:          true,
+			wantAttemptCount: 0,
+			expectedDuration: 0,
+			remoteAddr:       "2001:db8::2001:12345",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -423,10 +452,13 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			adapter := NewAuthorizer(server.URL, log)
 
 			req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
-			req.RemoteAddr = "1.2.3.4:12345"
+			if tt.remoteAddr != "" {
+				req.RemoteAddr = tt.remoteAddr
+			} else {
+				req.RemoteAddr = "1.2.3.4:12345"
+			}
 			req.Header.Set("Authorization", "Bearer token")
 
-			start := time.Now()
 			authorized, err := adapter.IsAuthorized(context.Background(), req)
 			duration := time.Since(start)
 
