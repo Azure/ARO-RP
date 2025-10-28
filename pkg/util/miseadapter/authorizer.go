@@ -40,17 +40,50 @@ func (m *miseAdapter) IsAuthorized(ctx context.Context, r *http.Request) (bool, 
 		AuthorizationHeader: r.Header.Get("Authorization"),
 	}
 
-	result, err := m.client.ValidateRequest(ctx, i, m.log)
-	if err != nil {
-		return false, err
+	const maxRetries = 3
+	const retryDelayMs = 100
+
+	var result Result
+	var err error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// Linear backoff: 100ms, 200ms for retries
+			sleepDuration := time.Duration(attempt*retryDelayMs) * time.Millisecond
+			m.log.Infof("mise authentication retry attempt %d/%d after %v", attempt+1, maxRetries, sleepDuration)
+			time.Sleep(sleepDuration)
+		}
+
+		result, err = m.client.ValidateRequest(ctx, i, m.log)
+		if err != nil {
+			// Retry on network errors or context deadline exceeded
+			m.log.Warnf("mise authentication attempt %d/%d failed with error: %v", attempt+1, maxRetries, err)
+			if attempt < maxRetries-1 {
+				continue
+			}
+			return false, err
+		}
+
+		if result.StatusCode == http.StatusOK {
+			if attempt > 0 {
+				m.log.Infof("mise authentication succeeded on attempt %d/%d", attempt+1, maxRetries)
+			}
+			return true, nil
+		}
+
+		// Don't retry on non-transient errors (4xx client errors except for specific cases)
+		if result.StatusCode >= 400 && result.StatusCode < 500 && result.StatusCode != http.StatusRequestTimeout && result.StatusCode != http.StatusTooManyRequests {
+			m.log.Errorf("mise authentication failed with %d: %s", result.StatusCode, result.ErrorDescription)
+			return false, nil
+		}
+
+		// Retry on 5xx server errors, 408 Request Timeout, and 429 Too Many Requests
+		m.log.Warnf("mise authentication attempt %d/%d failed with status %d: %s", attempt+1, maxRetries, result.StatusCode, result.ErrorDescription)
 	}
 
-	if result.StatusCode != http.StatusOK {
-		m.log.Errorf("mise authentication failed with %d: %s", result.StatusCode, result.ErrorDescription)
-		return false, nil
-	}
-
-	return true, nil
+	// All retries exhausted
+	m.log.Errorf("mise authentication failed after %d attempts with %d: %s", maxRetries, result.StatusCode, result.ErrorDescription)
+	return false, nil
 }
 
 func (m *miseAdapter) IsReady() bool {
