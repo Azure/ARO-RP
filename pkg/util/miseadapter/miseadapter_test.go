@@ -5,6 +5,7 @@ package miseadapter
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -14,13 +15,16 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/sirupsen/logrus"
+
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func Test_createRequest(t *testing.T) {
 	miseAddress := "http://localhost:5000"
 
-	translatedRequest, err := http.NewRequestWithContext(context.Background(), http.MethodPost, miseAddress+"/ValidateRequest", nil)
+	ctx := t.Context()
+
+	translatedRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, miseAddress+"/ValidateRequest", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +38,7 @@ func Test_createRequest(t *testing.T) {
 		"Return-All-Subject-Token-Claims": []string{"1"},
 	}
 
-	translatedRequestWithSpecificClaims, err := http.NewRequestWithContext(context.Background(), http.MethodPost, miseAddress+"/ValidateRequest", nil)
+	translatedRequestWithSpecificClaims, err := http.NewRequestWithContext(ctx, http.MethodPost, miseAddress+"/ValidateRequest", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +53,6 @@ func Test_createRequest(t *testing.T) {
 	}
 
 	type args struct {
-		ctx         context.Context
 		miseAddress string
 		input       Input
 	}
@@ -62,7 +65,6 @@ func Test_createRequest(t *testing.T) {
 		{
 			name: "Input is translated",
 			args: args{
-				ctx:         context.Background(),
 				miseAddress: miseAddress,
 				input: Input{
 					OriginalUri:            "http://1.2.3.4/view",
@@ -79,7 +81,6 @@ func Test_createRequest(t *testing.T) {
 		{
 			name: "Input is translated with specific claims",
 			args: args{
-				ctx:         context.Background(),
 				miseAddress: miseAddress,
 				input: Input{
 					OriginalUri:           "http://1.2.3.4/view",
@@ -96,7 +97,7 @@ func Test_createRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := createRequest(tt.args.ctx, tt.args.miseAddress, tt.args.input)
+			got, err := createRequest(ctx, tt.args.miseAddress, tt.args.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -282,7 +283,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   true,
 			wantErr:          false,
 			wantAttemptCount: 1,
-			minDuration:      0,
+			expectedDuration: 0,
 		},
 		{
 			name: "retry on 503 then success",
@@ -298,7 +299,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   true,
 			wantErr:          false,
 			wantAttemptCount: 2,
-			minDuration:      100 * time.Millisecond,
+			expectedDuration: 100 * time.Millisecond,
 		},
 		{
 			name: "retry on 500 then success",
@@ -314,7 +315,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   true,
 			wantErr:          false,
 			wantAttemptCount: 3,
-			minDuration:      300 * time.Millisecond, // 100ms + 200ms
+			expectedDuration: 300 * time.Millisecond, // 100ms + 200ms
 		},
 		{
 			name: "retry on 408 timeout then success",
@@ -330,7 +331,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   true,
 			wantErr:          false,
 			wantAttemptCount: 2,
-			minDuration:      100 * time.Millisecond,
+			expectedDuration: 100 * time.Millisecond,
 		},
 		{
 			name: "retry on 429 rate limit then success",
@@ -346,7 +347,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   true,
 			wantErr:          false,
 			wantAttemptCount: 2,
-			minDuration:      100 * time.Millisecond,
+			expectedDuration: 100 * time.Millisecond,
 		},
 		{
 			name: "no retry on 401 unauthorized",
@@ -360,7 +361,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   false,
 			wantErr:          false,
 			wantAttemptCount: 1,
-			minDuration:      0,
+			expectedDuration: 0,
 		},
 		{
 			name: "no retry on 403 forbidden",
@@ -373,7 +374,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   false,
 			wantErr:          false,
 			wantAttemptCount: 1,
-			minDuration:      0,
+			expectedDuration: 0,
 		},
 		{
 			name: "max retries exhausted on 503",
@@ -386,7 +387,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			wantAuthorized:   false,
 			wantErr:          false,
 			wantAttemptCount: 3,
-			minDuration:      300 * time.Millisecond, // 100ms + 200ms
+			expectedDuration: 300 * time.Millisecond, // 100ms + 200ms
 		},
 		{
 			name: "retry on connection error then success",
@@ -443,13 +444,17 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			var attemptCount atomic.Int32
 
 			server := httptest.NewServer(tt.serverBehavior(&attemptCount))
 			defer server.Close()
 
+			totalSleptMs := 0
 			adapter := NewAuthorizer(server.URL, log)
+			adapter.sleep = func(d time.Duration) {
+				totalSleptMs += int(d.Milliseconds())
+			}
 
 			req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
 			if tt.remoteAddr != "" {
@@ -460,7 +465,6 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer token")
 
 			authorized, err := adapter.IsAuthorized(context.Background(), req)
-			duration := time.Since(start)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("unexpected error state: got err=%v, wantErr=%v", err, tt.wantErr)
@@ -475,26 +479,29 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 				t.Errorf("unexpected attempt count: got %d, want %d", finalCount, tt.wantAttemptCount)
 			}
 
-			if duration < tt.minDuration {
-				t.Errorf("unexpected duration: got %v, want at least %v", duration, tt.minDuration)
+			if totalSleptMs != int(tt.expectedDuration.Milliseconds()) {
+				t.Errorf("unexpected duration: got %v, want %v", totalSleptMs, int(tt.expectedDuration.Milliseconds()))
 			}
 		})
 	}
 }
 
 func TestMiseAdapterIsAuthorizedNetworkError(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
+
+	totalSleptMs := 0
 
 	// Point to non-existent server to trigger network errors
 	adapter := NewAuthorizer("http://localhost:1", log)
+	adapter.sleep = func(d time.Duration) {
+		totalSleptMs += int(d.Milliseconds())
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
 	req.RemoteAddr = "1.2.3.4:12345"
 	req.Header.Set("Authorization", "Bearer token")
 
-	start := time.Now()
 	authorized, err := adapter.IsAuthorized(context.Background(), req)
-	duration := time.Since(start)
 
 	if err == nil {
 		t.Error("expected error for network failure")
@@ -505,29 +512,33 @@ func TestMiseAdapterIsAuthorizedNetworkError(t *testing.T) {
 	}
 
 	// Should have attempted retries with backoff (100ms + 200ms = 300ms minimum)
-	if duration < 300*time.Millisecond {
-		t.Logf("warning: duration %v is less than expected 300ms, network errors might be very fast", duration)
+	if totalSleptMs != 300 {
+		t.Logf("warning: duration %v is less than expected 300ms, network errors might be very fast", totalSleptMs)
 	}
 }
 
 func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Delay to allow context cancellation
-		time.Sleep(50 * time.Millisecond)
+		// cancel the context
+		cancel()
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
+	totalSleptMs := 0
 	adapter := NewAuthorizer(server.URL, log)
+	adapter.sleep = func(d time.Duration) {
+		totalSleptMs += int(d.Milliseconds())
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
 	req.RemoteAddr = "1.2.3.4:12345"
 	req.Header.Set("Authorization", "Bearer token")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
 
 	authorized, err := adapter.IsAuthorized(ctx, req)
 	if err == nil {
@@ -540,5 +551,52 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 
 	if authorized {
 		t.Error("expected authorized to be false")
+	}
+
+	if totalSleptMs != 0 {
+		t.Error("expected no retries on context cancellation")
+	}
+}
+
+func TestMiseAdapterIsNotReadyOnConnectionFailure(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	// Point to non-existent server to trigger network errors
+	adapter := NewAuthorizer("http://localhost:1", log)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	req.RemoteAddr = "1.2.3.4:12345"
+	req.Header.Set("Authorization", "Bearer token")
+
+	isReady := adapter.IsReady()
+
+	if isReady {
+		t.Error("adapter is not meant to be ready")
+	}
+}
+
+func TestMiseAdapterIsNotReadyOnConnectionTimeoutOnHeaders(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	block := make(chan struct{})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-block
+	}))
+	defer server.Close()
+
+	// Point to non-existent server to trigger network errors
+	adapter := NewAuthorizer(server.URL, log)
+	adapter.client.httpClient.Timeout = 1 * time.Microsecond
+
+	isReady, err := adapter.isReady()
+	close(block)
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected timeout error, got %v", err)
+	}
+
+	if isReady {
+		t.Error("adapter is not meant to be ready")
 	}
 }
