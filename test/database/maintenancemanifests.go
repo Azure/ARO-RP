@@ -54,7 +54,10 @@ func fakeMaintenanceManifestsDequeueForCluster(client cosmosdb.MaintenanceManife
 		if r.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
 			continue
 		}
-		if r.LeaseExpires > 0 && int64(r.LeaseExpires) < time.Now().Unix() {
+		if r.LeaseExpires > 0 && int64(r.LeaseExpires) < now().Unix() {
+			continue
+		}
+		if int64(r.MaintenanceManifest.RunAfter) > now().Unix() {
 			continue
 		}
 		results = append(results, r)
@@ -109,7 +112,7 @@ func fakeMaintenanceManifestsQueuedAll(client cosmosdb.MaintenanceManifestDocume
 		if r.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
 			continue
 		}
-		if r.LeaseExpires > 0 && int64(r.LeaseExpires) < time.Now().Unix() {
+		if r.LeaseExpires > 0 && int64(r.LeaseExpires) < now().Unix() {
 			continue
 		}
 

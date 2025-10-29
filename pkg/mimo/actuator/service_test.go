@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -27,21 +27,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type fakeMetricsEmitter struct {
 	Metrics map[string]int64
+	m       sync.RWMutex
 }
 
 func newfakeMetricsEmitter() *fakeMetricsEmitter {
 	m := make(map[string]int64)
 	return &fakeMetricsEmitter{
 		Metrics: m,
+		m:       sync.RWMutex{},
 	}
 }
 
 func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
+	e.m.Lock()
+	defer e.m.Unlock()
 	e.Metrics[metricName] = metricValue
 }
 
@@ -62,7 +65,6 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var ctx context.Context
 	var cancel context.CancelFunc
 
-	//var hook *test.Hook
 	var log *logrus.Entry
 	var _env env.Interface
 
@@ -87,17 +89,20 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 
 		ctx, cancel = context.WithCancel(context.Background())
 
-		//hook, log = testlog.New()
-		log = logrus.NewEntry(logrus.StandardLogger())
-		log.Logger.Level = logrus.DebugLevel
-
-		m = newfakeMetricsEmitter()
+		log = logrus.NewEntry(&logrus.Logger{
+			Out:       GinkgoWriter,
+			Formatter: new(logrus.TextFormatter),
+			Hooks:     make(logrus.LevelHooks),
+			Level:     logrus.DebugLevel,
+		})
 
 		fixtures = testdatabase.NewFixture()
 		checker = testdatabase.NewChecker()
 	})
 
 	BeforeEach(func() {
+		m = newfakeMetricsEmitter()
+
 		now := func() time.Time { return time.Unix(120, 0) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
@@ -325,19 +330,19 @@ var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
 	var controller *gomock.Controller
 	var _env *mock_env.MockInterface
 	var log *logrus.Entry
-	var hook *test.Hook
 
 	BeforeAll(func() {
-		hook, log = testlog.New()
+		log = logrus.NewEntry(&logrus.Logger{
+			Out:       GinkgoWriter,
+			Formatter: new(logrus.TextFormatter),
+			Hooks:     make(logrus.LevelHooks),
+			Level:     logrus.DebugLevel,
+		})
 
 		controller = gomock.NewController(nil)
 		_env = mock_env.NewMockInterface(controller)
 
 		_env.EXPECT().Logger().Return(log).AnyTimes()
-	})
-
-	BeforeEach(func() {
-		hook.Reset()
 	})
 
 	It("serves all buckets with 3 workers", func() {
