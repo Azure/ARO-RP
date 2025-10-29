@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configv1 "github.com/openshift/api/config/v1"
 
@@ -128,6 +130,10 @@ func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1
 }
 
 func (r *Reconciler) gatekeeperDeploymentIsReady(ctx context.Context, deployConfig *config.GuardRailsDeploymentConfig) (bool, error) {
+	if r.skipGatekeeperReadinessCheck {
+		return true, nil
+	}
+
 	if ready, err := r.deployer.IsReady(ctx, deployConfig.Namespace, "gatekeeper-audit"); !ready || err != nil {
 		return ready, err
 	}
@@ -136,7 +142,7 @@ func (r *Reconciler) gatekeeperDeploymentIsReady(ctx context.Context, deployConf
 
 func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
 	cv := &configv1.ClusterVersion{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	err := r.ch.Get(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
 		return false, err
 	}
@@ -151,33 +157,23 @@ func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
 
 func (r *Reconciler) getGatekeeperDeployedNs(ctx context.Context, instance *arov1alpha1.Cluster) (string, error) {
 	name := ""
-	if r.kubernetescli == nil {
-		r.log.Debug("nil kubernetescli object")
-		return "", nil
-	}
 	start := time.Now()
-	namespaces, err := r.kubernetescli.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+
+	deployments := &appsv1.DeploymentList{}
+	err := r.ch.List(ctx, deployments, client.MatchingLabels{"gatekeeper.sh/system": "yes"})
 	if err != nil {
-		r.log.Warnf("Error retrieving namespaces: %v", err)
+		r.log.Warnf("Error retrieving deployments with gatekeeper label: %v", err)
 		return "", err
 	}
+
 	guardrails_namespace := instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)
-	for _, ns := range namespaces.Items {
-		if ns.Name == guardrails_namespace {
+	for _, deployment := range deployments.Items {
+		if deployment.Namespace == guardrails_namespace {
 			// skip guardrails ns
 			continue
 		}
-		deployments, err := r.kubernetescli.AppsV1().Deployments(ns.Name).List(ctx, metav1.ListOptions{
-			LabelSelector: "gatekeeper.sh/system=yes",
-		})
-		if err != nil {
-			r.log.Warnf("Error retrieving deployments in namespace %s: %v", ns.Name, err)
-			continue
-		}
-		if len(deployments.Items) > 0 {
-			name = ns.Name
-			break
-		}
+		name = deployment.Namespace
+		break
 	}
 	dura := time.Since(start)
 	msg := "Gatekeeper not found"

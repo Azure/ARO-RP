@@ -13,7 +13,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -25,46 +24,47 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 type Reconciler struct {
 	log              *logrus.Entry
 	deployer         deployer.Deployer
 	gkPolicyTemplate deployer.Deployer
-	client           client.Client
 
 	readinessPollTime     time.Duration
 	readinessTimeout      time.Duration
-	dh                    dynamichelper.Interface
+	ch                    clienthelper.Interface
 	namespace             string
 	policyTickerDone      chan bool
 	reconciliationMinutes int
 	cleanupNeeded         bool
-	kubernetescli         kubernetes.Interface
+
+	// for testing
+	skipGatekeeperReadinessCheck bool
+	skipPolicyDeployment         bool
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface, k8scli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
 		log: log,
 
-		deployer:         deployer.NewDeployer(client, dh, staticFiles, gkDeploymentPath),
-		gkPolicyTemplate: deployer.NewDeployer(client, dh, gkPolicyTemplates, gkTemplatePath),
-		dh:               dh,
-
-		client: client,
+		deployer:         deployer.NewDeployer(log, client, staticFiles, gkDeploymentPath),
+		gkPolicyTemplate: deployer.NewDeployer(log, client, gkPolicyTemplates, gkTemplatePath),
+		ch:               clienthelper.NewWithClient(log, client),
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
 		cleanupNeeded:     false,
-		kubernetescli:     k8scli,
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	fmt.Println("ch:", r.ch)
+
+	err := r.ch.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -115,16 +115,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
+				if r.skipGatekeeperReadinessCheck {
+					return true, nil
+				}
 				return r.gkPolicyTemplate.IsConstraintTemplateReady(ctx, policyConfig)
 			}, timeoutCtx.Done())
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)
 			}
 
-			// Deploy the GateKeeper Constraint
-			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
-			if err != nil {
-				return reconcile.Result{}, err
+			// In a test environment we will not be running the Gatekeeper
+			// controller which is responsible for turning the policy templates
+			// above into CRDs, so skip creating the policies themselves.
+			if !r.skipPolicyDeployment {
+				// Deploy the GateKeeper Constraint
+				err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
+				if err != nil {
+					return reconcile.Result{}, err
+				}
 			}
 		}
 

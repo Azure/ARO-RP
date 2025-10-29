@@ -16,6 +16,7 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
+KUBERNETES_MAJOR_VERSION=1.25
 
 # Golang version go mod tidy compatibility
 GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
@@ -416,6 +417,14 @@ install-tools: $(BINGO)
 # Fixes https://github.com/uber-go/mock/issues/185 for MacOS users
 ifeq ($(shell uname -s),Darwin)
 	codesign -f -s - ${GOPATH}/bin/mockgen
+endif
+
+.PHONY: envtest
+envtest: $(SETUP_ENVTEST)
+ifeq ($(shell uname -s),Darwin)
+	$(SETUP_ENVTEST) use ~$(KUBERNETES_MAJOR_VERSION) --os darwin
+else
+	$(SETUP_ENVTEST) use ~$(KUBERNETES_MAJOR_VERSION) --os linux
 endif
 
 ###############################################################################

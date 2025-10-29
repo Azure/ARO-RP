@@ -16,12 +16,13 @@ import (
 	"time"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 func (r *Reconciler) getPolicyConfig(ctx context.Context, instance *arov1alpha1.Cluster, na string) (string, string, error) {
@@ -47,7 +48,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 	}
 
 	instance := &arov1alpha1.Cluster{}
-	err = r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err = r.ch.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return err
 	}
@@ -68,13 +69,14 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 		}
 		data := buffer.Bytes()
 
-		uns, err := dynamichelper.DecodeUnstructured(data)
+		uns := &unstructured.Unstructured{}
+		_, _, err = scheme.Codecs.UniversalDeserializer().Decode(data, nil, uns)
 		if err != nil {
 			return err
 		}
 
 		if managed != "true" {
-			err := r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
+			err := r.ch.EnsureDeleted(ctx, uns.GroupVersionKind(), types.NamespacedName{Namespace: uns.GetNamespace(), Name: uns.GetName()})
 			if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 				return err
 			}
@@ -83,7 +85,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 
 		creates = append(creates, uns)
 	}
-	err = r.dh.Ensure(ctx, creates...)
+	err = r.ch.Ensure(ctx, creates...)
 	if err != nil {
 		return err
 	}
@@ -102,11 +104,13 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 			return err
 		}
 		data := buffer.Bytes()
-		uns, err := dynamichelper.DecodeUnstructured(data)
+		uns := &unstructured.Unstructured{}
+		_, _, err = scheme.Codecs.UniversalDeserializer().Decode(data, nil, uns)
 		if err != nil {
 			return err
 		}
-		err = r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
+
+		err = r.ch.EnsureDeleted(ctx, uns.GroupVersionKind(), types.NamespacedName{Namespace: uns.GetNamespace(), Name: uns.GetName()})
 		if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 			return err
 		}

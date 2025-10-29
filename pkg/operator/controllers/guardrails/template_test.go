@@ -10,19 +10,19 @@ import (
 	_ "embed"
 
 	"github.com/go-test/deep"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
@@ -37,30 +37,23 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	}
 
 	clientFake := ctrlfake.NewClientBuilder().Build()
-	dh := mock_dynamichelper.NewMockInterface(controller)
+	log := logrus.NewEntry(logrus.StandardLogger())
 
 	// When the DynamicHelper is called, count the number of objects it creates
 	// and capture any deployments so that we can check the pullspec
 	var deployments []*appsv1.Deployment
 	deployedObjects := make(map[string]int)
-	check := func(ctx context.Context, objs ...kruntime.Object) error {
-		m := meta.NewAccessor()
-		for _, i := range objs {
-			kind, err := m.Kind(i)
-			if err != nil {
-				return err
-			}
-			if d, ok := i.(*appsv1.Deployment); ok {
+	ch := testclienthelper.NewHookingClient(clientFake).
+		WithPostCreateHook(testclienthelper.TallyCounts(deployedObjects)).
+		WithPostCreateHook(func(o client.Object) error {
+			if d, ok := o.(*appsv1.Deployment); ok {
 				deployments = append(deployments, d)
 			}
-			deployedObjects[kind] = deployedObjects[kind] + 1
-		}
-		return nil
-	}
-	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
+			return nil
+		})
 
-	deployer := deployer.NewDeployer(clientFake, dh, staticFiles, "staticresources")
-	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.GuardRailsDeploymentConfig{Pullspec: setPullSpec})
+	deployer := deployer.NewDeployer(log, ch, staticFiles, "staticresources")
+	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.GuardRailsDeploymentConfig{Pullspec: setPullSpec, Namespace: "test-namespace"})
 	if err != nil {
 		t.Error(err)
 	}

@@ -101,3 +101,9 @@ $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@echo "(re)installing $(GOBIN)/mockgen-v0.5.2"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.5.2 "go.uber.org/mock/mockgen"
 
+SETUP_ENVTEST := $(GOBIN)/setup-envtest-v0.0.0-20250308055145-5fe7bb3edc86
+$(SETUP_ENVTEST): $(BINGO_DIR)/setup-envtest.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/setup-envtest-v0.0.0-20250308055145-5fe7bb3edc86"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=setup-envtest.mod -o=$(GOBIN)/setup-envtest-v0.0.0-20250308055145-5fe7bb3edc86 "sigs.k8s.io/controller-runtime/tools/setup-envtest"
+
