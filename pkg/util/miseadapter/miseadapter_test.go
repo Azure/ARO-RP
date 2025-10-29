@@ -464,7 +464,7 @@ func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
 			}
 			req.Header.Set("Authorization", "Bearer token")
 
-			authorized, err := adapter.IsAuthorized(context.Background(), req)
+			authorized, err := adapter.IsAuthorized(log, req)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("unexpected error state: got err=%v, wantErr=%v", err, tt.wantErr)
@@ -501,7 +501,7 @@ func TestMiseAdapterIsAuthorizedNetworkError(t *testing.T) {
 	req.RemoteAddr = "1.2.3.4:12345"
 	req.Header.Set("Authorization", "Bearer token")
 
-	authorized, err := adapter.IsAuthorized(context.Background(), req)
+	authorized, err := adapter.IsAuthorized(log, req)
 
 	if err == nil {
 		t.Error("expected error for network failure")
@@ -536,11 +536,11 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 		totalSleptMs += int(d.Milliseconds())
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "http://example.com/test", nil)
 	req.RemoteAddr = "1.2.3.4:12345"
 	req.Header.Set("Authorization", "Bearer token")
 
-	authorized, err := adapter.IsAuthorized(ctx, req)
+	authorized, err := adapter.IsAuthorized(log, req)
 	if err == nil {
 		t.Error("expected context error")
 	}

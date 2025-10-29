@@ -19,7 +19,7 @@ const MISE_RETRY_DELAY = time.Millisecond * 100
 const MISE_RETRY_COUNT = 3
 
 type MISEAdapter interface {
-	IsAuthorized(ctx context.Context, r *http.Request) (bool, error)
+	IsAuthorized(log *logrus.Entry, r *http.Request) (bool, error)
 	IsReady() bool
 }
 
@@ -44,7 +44,9 @@ func NewAuthorizer(miseAddress string, log *logrus.Entry) *miseAdapter {
 	}
 }
 
-func (m *miseAdapter) IsAuthorized(ctx context.Context, r *http.Request) (bool, error) {
+func (m *miseAdapter) IsAuthorized(log *logrus.Entry, r *http.Request) (bool, error) {
+	ctx := r.Context()
+
 	remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return false, fmt.Errorf("invalid remote address %q: %w", r.RemoteAddr, err)
@@ -63,11 +65,11 @@ func (m *miseAdapter) IsAuthorized(ctx context.Context, r *http.Request) (bool, 
 		if attempt > 0 {
 			// Linear backoff: 100ms, 200ms for retries
 			sleepDuration := MISE_RETRY_DELAY * time.Duration(attempt)
-			m.log.Infof("mise authentication retry attempt %d/%d after %v", attempt+1, MISE_RETRY_COUNT, sleepDuration)
+			log.Infof("mise authentication retry attempt %d/%d after %v", attempt+1, MISE_RETRY_COUNT, sleepDuration)
 			m.sleep(sleepDuration)
 		}
 
-		result, err = m.client.ValidateRequest(ctx, i, m.log)
+		result, err = m.client.ValidateRequest(ctx, i, log)
 		if err != nil {
 			// fail without retry if te context is cancelled
 			if errors.Is(err, context.Canceled) {
@@ -75,7 +77,7 @@ func (m *miseAdapter) IsAuthorized(ctx context.Context, r *http.Request) (bool, 
 			}
 
 			// Retry on network errors or context deadline exceeded
-			m.log.Warnf("mise authentication attempt %d/%d failed with error: %v", attempt+1, MISE_RETRY_COUNT, err)
+			log.Warnf("mise authentication attempt %d/%d failed with error: %v", attempt+1, MISE_RETRY_COUNT, err)
 			if attempt < MISE_RETRY_COUNT-1 {
 				continue
 			}
@@ -84,23 +86,23 @@ func (m *miseAdapter) IsAuthorized(ctx context.Context, r *http.Request) (bool, 
 
 		if result.StatusCode == http.StatusOK {
 			if attempt > 0 {
-				m.log.Infof("mise authentication succeeded on attempt %d/%d", attempt+1, MISE_RETRY_COUNT)
+				log.Infof("mise authentication succeeded on attempt %d/%d", attempt+1, MISE_RETRY_COUNT)
 			}
 			return true, nil
 		}
 
 		// Don't retry on non-transient errors (4xx client errors except for specific cases)
 		if result.StatusCode >= 400 && result.StatusCode < 500 && result.StatusCode != http.StatusRequestTimeout && result.StatusCode != http.StatusTooManyRequests {
-			m.log.Errorf("mise authentication failed with %d: %s", result.StatusCode, result.ErrorDescription)
+			log.Errorf("mise authentication failed with %d: %s", result.StatusCode, result.ErrorDescription)
 			return false, nil
 		}
 
 		// Retry on 5xx server errors, 408 Request Timeout, and 429 Too Many Requests
-		m.log.Warnf("mise authentication attempt %d/%d failed with status %d: %s", attempt+1, MISE_RETRY_COUNT, result.StatusCode, result.ErrorDescription)
+		log.Warnf("mise authentication attempt %d/%d failed with status %d: %s", attempt+1, MISE_RETRY_COUNT, result.StatusCode, result.ErrorDescription)
 	}
 
 	// All retries exhausted
-	m.log.Errorf("mise authentication failed after %d attempts with %d: %s", MISE_RETRY_COUNT, result.StatusCode, result.ErrorDescription)
+	log.Errorf("mise authentication failed after %d attempts with %d: %s", MISE_RETRY_COUNT, result.StatusCode, result.ErrorDescription)
 	return false, nil
 }
 
