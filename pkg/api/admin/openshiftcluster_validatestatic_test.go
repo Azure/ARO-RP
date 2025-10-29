@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
@@ -172,6 +173,22 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleProfile.URL = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.consoleProfile.url: Changing property 'properties.consoleProfile.url' is not allowed.",
+		},
+		{
+			name: "oidc url change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						ClusterProfile: ClusterProfile{
+							OIDCIssuer: (*OIDCIssuer)(pointerutils.ToPtr("validurl")),
+						},
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.OIDCIssuer = (*OIDCIssuer)(pointerutils.ToPtr("invalid"))
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.oidcIssuer: Changing property 'properties.clusterProfile.oidcIssuer' is not allowed.",
 		},
 		{
 			name: "domain change is not allowed",
