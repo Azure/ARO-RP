@@ -137,6 +137,8 @@ func (m *manager) needsRefresh(item *azsecrets.GetSecretResponse, now time.Time)
 		*timeVarPtr = parsedTime
 	}
 
+	// We renew if we are within the renewal window (either after or before). We won't renew if we are exactly
+	// at either, but this should never happen.
 	inRenewalWindow := now.After(renewAfter) && now.Before(cannotRenewAfter)
 
 	return inRenewalWindow, nil
