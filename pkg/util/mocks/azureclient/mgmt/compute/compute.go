@@ -409,6 +409,20 @@ func (mr *MockVirtualMachineScaleSetsClientMockRecorder) List(ctx, resourceGroup
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).List), ctx, resourceGroupName)
 }
 
+// UpdateAndWait mocks base method.
+func (m *MockVirtualMachineScaleSetsClient) UpdateAndWait(ctx context.Context, resourceGroupName, vmScaleSetName string, parameters compute.VirtualMachineScaleSetUpdate) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAndWait", ctx, resourceGroupName, vmScaleSetName, parameters)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAndWait indicates an expected call of UpdateAndWait.
+func (mr *MockVirtualMachineScaleSetsClientMockRecorder) UpdateAndWait(ctx, resourceGroupName, vmScaleSetName, parameters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndWait", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).UpdateAndWait), ctx, resourceGroupName, vmScaleSetName, parameters)
+}
+
 // MockDiskEncryptionSetsClient is a mock of DiskEncryptionSetsClient interface.
 type MockDiskEncryptionSetsClient struct {
 	ctrl     *gomock.Controller

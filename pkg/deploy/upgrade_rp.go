@@ -30,7 +30,10 @@ func (d *deployer) UpgradeRP(ctx context.Context) error {
 		return err
 	}
 
-	return d.rpRemoveOldScalesets(ctx)
+	// Create a separate timeout for cleanup phase
+	cleanupCtx, cleanupCancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cleanupCancel()
+	return d.rpRemoveOldScalesets(cleanupCtx)
 }
 
 func (d *deployer) rpWaitForReadiness(ctx context.Context, vmssName string) error {
@@ -73,6 +76,12 @@ func (d *deployer) rpRemoveOldScalesets(ctx context.Context) error {
 }
 
 func (d *deployer) rpRemoveOldScaleset(ctx context.Context, vmssName string) error {
+	// Disable automatic repairs on the old VMSS to prevent race conditions during teardown
+	err := d.disableAutomaticRepairsOnVMSS(ctx, d.config.RPResourceGroupName, vmssName)
+	if err != nil {
+		return err
+	}
+
 	scalesetVMs, err := d.vmssvms.List(ctx, d.config.RPResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
@@ -82,7 +91,7 @@ func (d *deployer) rpRemoveOldScaleset(ctx context.Context, vmssName string) err
 	errors := make(chan error, len(scalesetVMs))
 	for _, vm := range scalesetVMs {
 		go func(id string) {
-			errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
+			errors <- d.runCommandWithRetry(ctx, d.config.RPResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
 				CommandID: pointerutils.ToPtr("RunShellScript"),
 				Script:    &[]string{"systemctl stop aro-rp"},
 			})
