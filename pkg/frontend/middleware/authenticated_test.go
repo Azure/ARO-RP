@@ -10,10 +10,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // MockClientAuthorizer mocks ClientAuthorizer for testing.
@@ -29,23 +32,7 @@ func (m *MockClientAuthorizer) IsReady() bool {
 	return true
 }
 
-// MockMISEAdapter mocks MISEAdapter for testing.
-type MockMISEAdapter struct {
-	isAuthorized bool
-	err          error
-}
-
-func (m *MockMISEAdapter) IsAuthorized(_ context.Context, _ *http.Request) (bool, error) {
-	return m.isAuthorized, m.err
-}
-
-func (m *MockMISEAdapter) IsReady() bool {
-	return true
-}
-
 func TestAuthenticate(t *testing.T) {
-	logger := logrus.NewEntry(logrus.New())
-
 	tests := []struct {
 		name         string
 		apiVersion   string
@@ -56,24 +43,40 @@ func TestAuthenticate(t *testing.T) {
 		enforceMISE  bool
 		enableMISE   bool
 		expectStatus int
+		expectLogs   []testlog.ExpectedLogEntry
 	}{
 		{
 			name:         "Admin authentication success",
 			apiVersion:   admin.APIVersion,
 			isAdminAuth:  true,
 			expectStatus: http.StatusOK,
+			expectLogs:   []testlog.ExpectedLogEntry{},
 		},
 		{
 			name:         "Admin authentication failure",
 			apiVersion:   admin.APIVersion,
 			isAdminAuth:  false,
 			expectStatus: http.StatusForbidden,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("Authentication Failed"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 		{
 			name:         "ARM authentication success via MISE",
 			enableMISE:   true,
 			isMiseAuth:   true,
 			expectStatus: http.StatusOK,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.InfoLevel),
+					"msg":       gomega.Equal("MISE authorization successful"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 		{
 			name:         "ARM authentication failure via MISE, fallback to TLS success",
@@ -81,6 +84,18 @@ func TestAuthenticate(t *testing.T) {
 			isMiseAuth:   false,
 			isArmAuth:    true,
 			expectStatus: http.StatusOK,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("MISE authorization unsuccessful, enforcing: false, error: %!s(<nil>)"),
+					"requestID": gomega.Equal("1234"),
+				},
+				{
+					"level":     gomega.Equal(logrus.WarnLevel),
+					"msg":       gomega.Equal("MISE authorization unsuccessful/disabled, fallback to TLS certificate authentication"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 		{
 			name:         "ARM authentication failure via MISE, TLS also fails",
@@ -88,6 +103,23 @@ func TestAuthenticate(t *testing.T) {
 			isMiseAuth:   false,
 			isArmAuth:    false,
 			expectStatus: http.StatusForbidden,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("MISE authorization unsuccessful, enforcing: false, error: %!s(<nil>)"),
+					"requestID": gomega.Equal("1234"),
+				},
+				{
+					"level":     gomega.Equal(logrus.WarnLevel),
+					"msg":       gomega.Equal("MISE authorization unsuccessful/disabled, fallback to TLS certificate authentication"),
+					"requestID": gomega.Equal("1234"),
+				},
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("Authentication Failed"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 		{
 			name:         "ARM authentication MISE enforced - success",
@@ -96,6 +128,13 @@ func TestAuthenticate(t *testing.T) {
 			isMiseAuth:   true,
 			isArmAuth:    false,
 			expectStatus: http.StatusOK,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.InfoLevel),
+					"msg":       gomega.Equal("MISE authorization successful"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 		{
 			name:         "ARM authentication MISE enforced - failure, no TLS fallback",
@@ -104,6 +143,18 @@ func TestAuthenticate(t *testing.T) {
 			isMiseAuth:   false,
 			isArmAuth:    true, // TLS would succeed but should be ignored
 			expectStatus: http.StatusForbidden,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("MISE authorization unsuccessful, enforcing: true, error: %!s(<nil>)"),
+					"requestID": gomega.Equal("1234"),
+				},
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("Authentication Failed"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 		{
 			name:         "ARM authentication MISE enforced - both would fail",
@@ -112,6 +163,18 @@ func TestAuthenticate(t *testing.T) {
 			isMiseAuth:   false,
 			isArmAuth:    false,
 			expectStatus: http.StatusForbidden,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("MISE authorization unsuccessful, enforcing: true, error: %!s(<nil>)"),
+					"requestID": gomega.Equal("1234"),
+				},
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("Authentication Failed"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 		{
 			name:         "ARM authentication MISE disabled, TLS success",
@@ -120,6 +183,13 @@ func TestAuthenticate(t *testing.T) {
 			isMiseAuth:   false,
 			isArmAuth:    true,
 			expectStatus: http.StatusOK,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.WarnLevel),
+					"msg":       gomega.Equal("MISE authorization unsuccessful/disabled, fallback to TLS certificate authentication"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 		{
 			name:         "ARM authentication MISE disabled, TLS failure",
@@ -128,6 +198,18 @@ func TestAuthenticate(t *testing.T) {
 			isMiseAuth:   false,
 			isArmAuth:    false,
 			expectStatus: http.StatusForbidden,
+			expectLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":     gomega.Equal(logrus.WarnLevel),
+					"msg":       gomega.Equal("MISE authorization unsuccessful/disabled, fallback to TLS certificate authentication"),
+					"requestID": gomega.Equal("1234"),
+				},
+				{
+					"level":     gomega.Equal(logrus.ErrorLevel),
+					"msg":       gomega.Equal("Authentication Failed"),
+					"requestID": gomega.Equal("1234"),
+				},
+			},
 		},
 	}
 
@@ -135,10 +217,12 @@ func TestAuthenticate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			adminAuth := &MockClientAuthorizer{isAuthorized: tt.isAdminAuth}
 			armAuth := &MockClientAuthorizer{isAuthorized: tt.isArmAuth}
-			miseAuth := &MockMISEAdapter{isAuthorized: tt.isMiseAuth, err: nil}
+			miseAuth := miseadapter.NewFakeAuthorizer(true, tt.isMiseAuth)
+
+			hook, log := testlog.LogForTesting(t)
 
 			middleware := AuthMiddleware{
-				Log:         logger,
+				Log:         log,
 				EnableMISE:  tt.enableMISE,
 				EnforceMISE: tt.enforceMISE,
 				AdminAuth:   adminAuth,
@@ -150,7 +234,13 @@ func TestAuthenticate(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}))
 
-			r := httptest.NewRequest(http.MethodGet, "http://localhost"+tt.urlPath, nil)
+			// Create a logger which we attach onto the request context similar
+			// to how the log middleware would, and then we can check for the
+			// log key set
+			requestLog := log.WithField("requestID", "1234")
+			reqctx := context.WithValue(context.Background(), ContextKeyLog, requestLog)
+
+			r := httptest.NewRequestWithContext(reqctx, http.MethodGet, "http://localhost"+tt.urlPath, nil)
 			r.URL.RawQuery = api.APIVersionKey + "=" + tt.apiVersion
 			w := httptest.NewRecorder()
 
@@ -158,6 +248,11 @@ func TestAuthenticate(t *testing.T) {
 
 			if w.Code != tt.expectStatus {
 				t.Errorf("%s: expected status %d, got %d", tt.name, tt.expectStatus, w.Code)
+			}
+
+			err := testlog.AssertLoggingOutput(hook, tt.expectLogs)
+			if err != nil {
+				t.Error(err)
 			}
 		})
 	}
