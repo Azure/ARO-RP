@@ -233,6 +233,7 @@ stages:
           # Run the E2E test suite
           - bash: |
               . ./hack/e2e/run-rp-and-e2e.sh
+              echo "##vso[task.setvariable variable=CLUSTER]${CLUSTER}"
               az acr login --name arosvcdev
               az acr login --name arointsvc
 
@@ -262,6 +263,10 @@ stages:
 
           # Collect must-gather logs
           - bash: |
+              . secrets/env
+              go build ./hack/db
+              . ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
+              export KUBECONFIG=admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               ./oc adm must-gather --image arointsvc.azurecr.io/openshift4/ose-must-gather:latest
@@ -351,6 +356,7 @@ stages:
           - bash: |
               . secrets/env
               . ./hack/e2e/run-rp-and-e2e.sh
+              echo "##vso[task.setvariable variable=CLUSTER]${CLUSTER}"
               export SKIP_MIWI_ROLE_ASSIGNMENT=true
               . ./hack/devtools/local_dev_env.sh
               create_miwi_env_file
@@ -385,6 +391,10 @@ stages:
 
           # Collect must-gather logs
           - bash: |
+              . secrets/env
+              go build ./hack/db
+              . ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
+              export KUBECONFIG=admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               ./oc adm must-gather --image arointsvc.azurecr.io/openshift4/ose-must-gather:latest

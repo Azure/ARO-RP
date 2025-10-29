@@ -759,7 +759,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 
 			if oc.UsesWorkloadIdentity() {
 				errs = append(errs,
-					c.deleteMockMSIServicePrincipal(ctx),
+					c.deleteServicePrincipalByClientID(ctx, os.Getenv("MOCK_MSI_CLIENT_ID")),
 				)
 			}
 		}
@@ -799,25 +799,6 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 			return err
 		}
 	}
-	return nil
-}
-
-func (c *Cluster) deleteMockMSIServicePrincipal(ctx context.Context) error {
-	if c.Config.MockMSIObjectID == "" {
-		c.log.Info("no mock msi object id configured, skipping")
-		return nil
-	}
-
-	c.log.Infof("deleting mock msi service principal id=%s", c.Config.MockMSIObjectID)
-
-	// Delete the service principal by its object ID using the Graph client.
-	err := c.spGraphClient.Applications().ByApplicationId(c.Config.MockMSIObjectID).Delete(ctx, nil)
-	if err != nil {
-		c.log.WithError(err).Warn("failed to delete mock msi service principal")
-		return err
-	}
-
-	c.log.Info("deleted mock msi service principal")
 	return nil
 }
 
@@ -1081,19 +1062,17 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 	defaultVersion := version.DefaultInstallStream
 
-	c.log.Infof("ensureDefaultRoleSetInCosmosdb: entry; defaultVersion=%s", defaultVersion.Version.MinorVersion())
-
-	existing, err := getPlatformWIRoleSetsInCosmosDB(ctx)
+	existingRoleSets, err := getPlatformWIRoleSetsInCosmosDB(ctx)
 	if err != nil {
 		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: getPlatformWIRoleSetsInCosmosDB returned error: %v; will attempt to PUT default", err)
 	} else {
-		c.log.Infof("ensureDefaultRoleSetInCosmosdb: got %d existing platform WI role sets from local RP", len(existing))
-		for i, rs := range existing {
+		c.log.Infof("ensureDefaultRoleSetInCosmosdb: got %d existing platform WI role sets from local RP", len(existingRoleSets))
+		for i, rs := range existingRoleSets {
 			var ver string
 			if rs != nil {
 				ver = rs.Properties.OpenShiftVersion
 			}
-			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existing[%d].OpenShiftVersion=%s", i, ver)
+			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existingRoleSets[%d].OpenShiftVersion=%s", i, ver)
 			if ver == defaultVersion.Version.MinorVersion() {
 				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.MinorVersion())
 				return nil
@@ -1181,24 +1160,7 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	c.log.Infof("ensureDefaultRoleSetInCosmosdb: PUT request returned status %s", resp.Status)
-
-	updated, err := getPlatformWIRoleSetsInCosmosDB(ctx)
-	if err != nil {
-		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: failed to fetch role sets: %v", err)
-	} else {
-		c.log.Infof("ensureDefaultRoleSetInCosmosdb: found %d platform WI role sets after PUT", len(updated))
-		for i, rs := range updated {
-			if rs != nil {
-				c.log.Debugf("ensureDefaultRoleSetInCosmosdb: updated[%d].OpenShiftVersion=%s", i, rs.Properties.OpenShiftVersion)
-			} else {
-				c.log.Debugf("ensureDefaultRoleSetInCosmosdb: updated[%d] is nil", i)
-			}
-		}
-	}
-
-	return nil
+	return resp.Body.Close()
 }
 
 func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName string) error {
