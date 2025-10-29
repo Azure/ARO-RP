@@ -18,7 +18,6 @@ import (
 	"github.com/containers/podman/v5/pkg/bindings/secrets"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
-	"github.com/onsi/gomega/types"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -98,7 +97,7 @@ var _ = Describe("Podman", Ordered, func() {
 			hook.Reset()
 			err = getContainerLogs(conn, log, containerID)
 			g.Expect(err).ToNot(HaveOccurred())
-			entries := []map[string]types.GomegaMatcher{
+			entries := []testlog.ExpectedLogEntry{
 				{
 					"msg":   Equal("stdout: hello\n"),
 					"level": Equal(logrus.InfoLevel),

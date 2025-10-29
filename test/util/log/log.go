@@ -13,6 +13,8 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
+type ExpectedLogEntry map[string]types.GomegaMatcher
+
 // New creates a logging hook and entry suitable for passing to functions and
 // asserting on.
 func New() (*test.Hook, *logrus.Entry) {
@@ -24,7 +26,7 @@ func New() (*test.Hook, *logrus.Entry) {
 // AssertLoggingOutput compares the logs on `h` with the expected entries in
 // `expected`. It returns a slice of errors encountered, with a zero length if
 // no assertions failed.
-func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher) error {
+func AssertLoggingOutput(h *test.Hook, expected []ExpectedLogEntry) error {
 	var (
 		problems []string
 		entries  = h.Entries
