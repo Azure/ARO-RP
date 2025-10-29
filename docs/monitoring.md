@@ -72,3 +72,32 @@ make stop-and-delete-local-cosmosdb
 The emulator can be kept running (schema is deleted on each test run) if
 further testing is needed. Currently the CI does not support testing with a
 CosmosDB emulator.
+
+## Running monitor locally and capturing metrics
+
+### Pre-requisites
+
+- [Prepare Your Development Environment](https://github.com/Azure/ARO-RP/blob/master/docs/prepare-your-dev-environment.md).
+- Start the local RP and create a cluster
+- Stop the local RP
+
+### Capturing the metrics from the monitor
+
+Run the following commands (install `socat` in your system if it's not present)
+
+```
+socat -v UNIX-LISTEN:mdm_statsd.socket,fork STDOUT
+```
+
+In another terminal:
+
+```
+make runlocal-monitor
+````
+
+Monitor will start sending metrics about itself and any cluster that has been created
+by the local RP.
+
+`socat` will start displaying the raw statsd packets, containing metric name, labels
+and values for each metric gathered by monitor. If you are interested into specifics,
+you may need to grep by the metric name or string that you're looking for.
