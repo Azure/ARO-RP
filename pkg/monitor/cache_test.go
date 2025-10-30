@@ -216,7 +216,6 @@ func TestUpsertAndDelete(t *testing.T) {
 	testMon.mu.Unlock()
 
 	// Give any workers time to fully exit after lock is released
-	// Workers were blocked waiting for the lock during the test
 	time.Sleep(200 * time.Millisecond)
 }
 
