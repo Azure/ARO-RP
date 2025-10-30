@@ -30,8 +30,8 @@ func (g *generator) rpTemplate() *arm.Template {
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
 		"globalDevopsServicePrincipalId",
-		"vmssIpTags",
-		"vmssIpTagsDisabledRegions",
+		"rpVmssIpTags",
+		"rpVmssIpTagsDisabledRegions",
 	}
 	if g.production {
 		params = append(params,
@@ -136,10 +136,10 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.Type = "array"
 		case "miseValidAppIDs":
 			p.Type = "array"
-		case "vmssIpTags":
+		case "rpVmssIpTags":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
-		case "vmssIpTagsDisabledRegions":
+		case "rpVmssIpTagsDisabledRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{}
 		case "nonZonalRegions":

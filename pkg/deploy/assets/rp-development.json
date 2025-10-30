@@ -18,11 +18,11 @@
         "rpServicePrincipalId": {
             "type": "string"
         },
-        "vmssIpTags": {
+        "rpVmssIpTags": {
             "type": "array",
             "defaultValue": []
         },
-        "vmssIpTagsDisabledRegions": {
+        "rpVmssIpTagsDisabledRegions": {
             "type": "array",
             "defaultValue": []
         }

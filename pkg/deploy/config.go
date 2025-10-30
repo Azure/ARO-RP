@@ -101,8 +101,10 @@ type Configuration struct {
 	SubscriptionResourceGroupLocation  *string                `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string                `json:"vmSize,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool                  `json:"vmssCleanupEnabled,omitempty"`
-	VmssIpTags                         []IPTag                `json:"vmssIpTags,omitempty"`
-	VmssIpTagsDisabledRegions          []string               `json:"vmssIpTagsDisabledRegions,omitempty"`
+	RPVmssIpTags                       []IPTag                `json:"rpVmssIpTags,omitempty"`
+	RPVmssIpTagsDisabledRegions        []string               `json:"rpVmssIpTagsDisabledRegions,omitempty"`
+	GwyVmssIpTags                      []IPTag                `json:"gwyVmssIpTags,omitempty"`
+	GwyVmssIpTagsDisabledRegions       []string               `json:"gwyVmssIpTagsDisabledRegions,omitempty"`
 	OIDCStorageAccountName             *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
 	OtelAuditQueueSize                 *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
 	MsiRpEndpoint                      *string                `json:"msiRpEndpoint,omitempty" value:"required"`

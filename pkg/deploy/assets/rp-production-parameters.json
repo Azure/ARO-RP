@@ -188,6 +188,12 @@
         "rpVmssCapacity": {
             "value": 3
         },
+        "rpVmssIpTags": {
+            "value": []
+        },
+        "rpVmssIpTagsDisabledRegions": {
+            "value": []
+        },
         "sshPublicKey": {
             "value": ""
         },
@@ -205,12 +211,6 @@
         },
         "vmssCleanupEnabled": {
             "value": true
-        },
-        "vmssIpTags": {
-            "value": []
-        },
-        "vmssIpTagsDisabledRegions": {
-            "value": []
         },
         "vmssName": {
             "value": ""

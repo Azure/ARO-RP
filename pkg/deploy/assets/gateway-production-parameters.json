@@ -41,6 +41,12 @@
         "gatewayVmssCapacity": {
             "value": 3
         },
+        "gwyVmssIpTags": {
+            "value": []
+        },
+        "gwyVmssIpTagsDisabledRegions": {
+            "value": []
+        },
         "keyvaultDNSSuffix": {
             "value": ""
         },
@@ -90,12 +96,6 @@
         },
         "vmssCleanupEnabled": {
             "value": true
-        },
-        "vmssIpTags": {
-            "value": []
-        },
-        "vmssIpTagsDisabledRegions": {
-            "value": []
         },
         "vmssName": {
             "value": ""

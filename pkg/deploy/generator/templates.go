@@ -53,8 +53,15 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte(`"throughput": `+strconv.Itoa(cosmosDbGatewayProvisionedThroughputHack)), []byte(`"throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"`))
 	// pickZones doesn't work for regions that don't have zones.  We have created param nonZonalRegions in both rp and gateway and set default values to include all those regions.  It cannot be passed in-line to contains function, has to be created as an array in a parameter :(
 	b = bytes.ReplaceAll(b, []byte(`"zones": []`), []byte(`"zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"`))
-	// IP tags conditional logic: if region is disabled OR no IP tags configured, use empty array, otherwise use configured tags
-	b = bytes.ReplaceAll(b, []byte(`"ipTags": []`), []byte(`"ipTags": "[if(or(contains(parameters('vmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('vmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('vmssIpTags')[0].type, 'tag', parameters('vmssIpTags')[0].value)))]"`))
+	// IP tags conditional logic: use context from surrounding VMSS name to determine which parameters to use
+	// For RP VMSS (rp-vmss-pip)
+	if bytes.Contains(b, []byte(`"name": "rp-vmss-pip"`)) {
+		b = bytes.ReplaceAll(b, []byte(`"ipTags": []`), []byte(`"ipTags": "[if(or(contains(parameters('rpVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpVmssIpTags')[0].type, 'tag', parameters('rpVmssIpTags')[0].value)))]"`))
+	}
+	// For Gateway VMSS (gateway-vmss-pip)
+	if bytes.Contains(b, []byte(`"name": "gateway-vmss-pip"`)) {
+		b = bytes.ReplaceAll(b, []byte(`"ipTags": []`), []byte(`"ipTags": "[if(or(contains(parameters('gwyVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('gwyVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('gwyVmssIpTags')[0].type, 'tag', parameters('gwyVmssIpTags')[0].value)))]"`))
+	}
 	b = bytes.ReplaceAll(b, []byte(`"routes": []`), []byte(`"routes": "[parameters('routes')]"`))
 
 	if g.production {
