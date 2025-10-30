@@ -599,7 +599,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 			Name: mcpName,
 		},
 		Spec: mcv1.MachineConfigPoolSpec{
-			// OCP 4.18.26+ ValidatingAdmissionPolicy requires custom MCPs to inherit from worker pool
+			// OCP 4.18+ ValidatingAdmissionPolicy requires custom MCPs to inherit from worker pool
 			// Using matchExpressions to include both "worker" and custom role
 			MachineConfigSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
