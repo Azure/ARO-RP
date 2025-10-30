@@ -37,9 +37,6 @@ import (
 //go:embed staticresources/machinehealthcheck.yaml
 var machinehealthcheckYaml []byte
 
-//go:embed staticresources/mhcremediationalert.yaml
-var mhcremediationalertYaml []byte
-
 const (
 	ControllerName      string = "MachineHealthCheck"
 	MHCPausedAnnotation string = "cluster.x-k8s.io/paused"
@@ -100,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	var resources []kruntime.Object
 
-	for _, asset := range [][]byte{machinehealthcheckYaml, mhcremediationalertYaml} {
+	for _, asset := range [][]byte{machinehealthcheckYaml} {
 		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(asset, nil, nil)
 		if err != nil {
 			r.Log.Error(err)
