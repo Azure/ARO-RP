@@ -598,7 +598,24 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mcpName,
 		},
-		Spec: mcv1.MachineConfigPoolSpec{},
+		Spec: mcv1.MachineConfigPoolSpec{
+			// OCP 4.18.26+ ValidatingAdmissionPolicy requires custom MCPs to inherit from worker pool
+			// Using matchExpressions to include both "worker" and custom role
+			MachineConfigSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "machineconfiguration.openshift.io/role",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"worker", mcpName},
+					},
+				},
+			},
+			NodeSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"node-role.kubernetes.io/" + mcpName: "",
+				},
+			},
+		},
 	}
 
 	getMachineConfigNames := func(g Gomega, ctx context.Context) []string {
