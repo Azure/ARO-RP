@@ -127,9 +127,14 @@ discoverycache:
 	$(MAKE) generate
 
 .PHONY: generate
-generate: install-tools
+generate: install-tools generate-swagger
 	go generate ./...
 	$(MAKE) imports
+
+.PHONY: generate-swagger
+generate-swagger:
+	go run ./hack/swagger github.com/Azure/ARO-RP/pkg/api/v20240812preview ./swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/preview/2024-08-12-preview
+	go run ./hack/swagger github.com/Azure/ARO-RP/pkg/api/v20250725 ./swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/stable/2025-07-25
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.

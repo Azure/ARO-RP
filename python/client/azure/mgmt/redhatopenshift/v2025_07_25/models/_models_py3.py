@@ -115,6 +115,8 @@ class CloudErrorBody(_serialization.Model):
 class ClusterProfile(_serialization.Model):
     """ClusterProfile represents a cluster profile.
 
+    Variables are only populated by the server, and will be ignored when sending a request.
+
     :ivar pull_secret: The pull secret for the cluster.
     :vartype pull_secret: str
     :ivar domain: The domain for the cluster.
@@ -130,6 +132,10 @@ class ClusterProfile(_serialization.Model):
     :ivar oidc_issuer: The URL of the managed OIDC issuer in a workload identity cluster.
     :vartype oidc_issuer: str
     """
+
+    _validation = {
+        "oidc_issuer": {"readonly": True},
+    }
 
     _attribute_map = {
         "pull_secret": {"key": "pullSecret", "type": "str"},
@@ -148,7 +154,6 @@ class ClusterProfile(_serialization.Model):
         version: Optional[str] = None,
         resource_group_id: Optional[str] = None,
         fips_validated_modules: Optional[Union[str, "_models.FipsValidatedModules"]] = None,
-        oidc_issuer: Optional[str] = None,
         **kwargs: Any
     ) -> None:
         """
@@ -164,8 +169,6 @@ class ClusterProfile(_serialization.Model):
          "Disabled" and "Enabled".
         :paramtype fips_validated_modules: str or
          ~azure.mgmt.redhatopenshift.v2025_07_25.models.FipsValidatedModules
-        :keyword oidc_issuer: The URL of the managed OIDC issuer in a workload identity cluster.
-        :paramtype oidc_issuer: str
         """
         super().__init__(**kwargs)
         self.pull_secret = pull_secret
@@ -173,7 +176,7 @@ class ClusterProfile(_serialization.Model):
         self.version = version
         self.resource_group_id = resource_group_id
         self.fips_validated_modules = fips_validated_modules
-        self.oidc_issuer = oidc_issuer
+        self.oidc_issuer = None
 
 
 class ConsoleProfile(_serialization.Model):
