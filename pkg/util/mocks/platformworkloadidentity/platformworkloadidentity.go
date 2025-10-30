@@ -44,10 +44,10 @@ func (m *MockPlatformWorkloadIdentityRolesByVersion) EXPECT() *MockPlatformWorkl
 }
 
 // GetPlatformWorkloadIdentityRolesByRoleName mocks base method.
-func (m *MockPlatformWorkloadIdentityRolesByVersion) GetPlatformWorkloadIdentityRolesByRoleName() map[string]api.PlatformWorkloadIdentityRole {
+func (m *MockPlatformWorkloadIdentityRolesByVersion) GetPlatformWorkloadIdentityRolesByRoleName() map[string][]api.PlatformWorkloadIdentityRole {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPlatformWorkloadIdentityRolesByRoleName")
-	ret0, _ := ret[0].(map[string]api.PlatformWorkloadIdentityRole)
+	ret0, _ := ret[0].(map[string][]api.PlatformWorkloadIdentityRole)
 	return ret0
 }
 

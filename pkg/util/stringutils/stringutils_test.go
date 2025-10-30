@@ -73,3 +73,79 @@ func TestIndentLines(t *testing.T) {
 	out = IndentLines(in, "  ")
 	assert.Equal(t, expected, out)
 }
+
+func TestGroupsUnion(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		as   []string
+		bs   []string
+		want []string
+	}{
+		{
+			name: "Empty arrays Union",
+			as:   []string{},
+			bs:   []string{},
+			want: []string{},
+		},
+		{
+			name: "First array empty",
+			as:   []string{},
+			bs:   []string{"a", "b", "c"},
+			want: []string{"a", "b", "c"},
+		},
+		{
+			name: "Second array empty",
+			as:   []string{"a", "b", "c"},
+			bs:   []string{},
+			want: []string{"a", "b", "c"},
+		},
+		{
+			name: "Identical arrays Union",
+			as:   []string{"a", "b", "c"},
+			bs:   []string{"a", "b", "c"},
+			want: []string{"a", "b", "c"},
+		},
+		{
+			name: "Partial overlap arrays Union",
+			as:   []string{"a", "b", "c"},
+			bs:   []string{"b", "c", "d", "e"},
+			want: []string{"a", "b", "c", "d", "e"},
+		},
+		{
+			name: "No overlap arrays Union",
+			as:   []string{"a", "b", "c"},
+			bs:   []string{"d", "e", "f"},
+			want: []string{"a", "b", "c", "d", "e", "f"},
+		},
+		{
+			name: "Nil arrays Union",
+			as:   nil,
+			bs:   nil,
+			want: []string{},
+		},
+		{
+			name: "First array nil",
+			as:   nil,
+			bs:   []string{"a", "b"},
+			want: []string{"a", "b"},
+		},
+		{
+			name: "Second array nil",
+			as:   []string{"a", "b"},
+			bs:   nil,
+			want: []string{"a", "b"},
+		},
+		{
+			name: "Arrays with duplicates within themselves",
+			as:   []string{"a", "a", "b", "c"},
+			bs:   []string{"b", "b", "d"},
+			want: []string{"d", "c", "b", "a"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GroupsUnion(tt.as, tt.bs)
+			// Since map iteration order is non-deterministic, we need to compare as sets
+			assert.ElementsMatch(t, tt.want, result, "Union result should contain all unique elements from both arrays")
+		})
+	}
+}
