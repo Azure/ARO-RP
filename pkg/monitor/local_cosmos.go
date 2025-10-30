@@ -40,14 +40,12 @@ func localCosmosNewClient(_env env.Core, m metrics.Emitter, aead encryption.AEAD
 		return nil, err
 	}
 
-	// Create HTTP client with custom transport
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			// disable HTTP/2 for now: https://github.com/golang/go/issues/36026
 			TLSNextProto:        map[string]func(string, *tls.Conn) http.RoundTripper{},
 			MaxIdleConnsPerHost: 20,
-			// Skip TLS verification for local emulator with self-signed cert
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 		},
 		Timeout: 30 * time.Second,
 	}
@@ -58,6 +56,7 @@ func localCosmosNewClient(_env env.Core, m metrics.Emitter, aead encryption.AEAD
 }
 
 func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
+	// Note for future: all CosmosDB schema creation stuff should be done from the result of This should be done from https://issues.redhat.com/browse/ARO-21854
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 
@@ -73,10 +72,8 @@ func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 	noopMetricsEmitter := noop.Noop{}
 	noopClusterMetricsEmitter := noop.Noop{}
 
-	// No encryption needed for local testing
 	var aead encryption.AEAD = nil
 
-	// Create real CosmosDB client pointing to local emulator
 	localCosmosClient, err := localCosmosNewClient(mockEnv, &noopMetricsEmitter, aead)
 	if err != nil {
 		t.Fatalf("Failed to create local Cosmos client: %v", err)
@@ -96,7 +93,6 @@ func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
-	// Create collections for each entity type
 	collectionClient := cosmosdb.NewCollectionClient(localCosmosClient, dbName)
 
 	_, err = collectionClient.Create(ctx, &cosmosdb.Collection{
@@ -110,7 +106,7 @@ func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to create Monitors collection: %v", err)
 	}
 
-	// Create renewLease trigger for Monitors collection
+	// Create renewLease trigger for Monitors collection - As noted, full schema creation should happen elsewhere
 	// note: definitions can be found on pkg/deploy/assets/databases-development.json
 	triggerClient := cosmosdb.NewTriggerClient(collectionClient, "Monitors")
 	_, err = triggerClient.Create(ctx, &cosmosdb.Trigger{
@@ -157,7 +153,6 @@ func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to create renewLease trigger for Subscriptions: %v", err)
 	}
 
-	// Create ALL databases using the real local Cosmos client
 	monitorsDB, err := database.NewMonitors(ctx, localCosmosClient, dbName)
 	if err != nil {
 		t.Fatalf("Failed to create monitors DB: %v", err)
@@ -173,14 +168,12 @@ func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to create subscriptions DB: %v", err)
 	}
 
-	// Create database group
 	dbs := database.NewDBGroup().
 		WithMonitors(monitorsDB).
 		WithOpenShiftClusters(openShiftClusterDB).
 		WithSubscriptions(subscriptionsDB)
 
 	// Create master monitor document - REQUIRED by monitor code
-	// Initialize with empty buckets - monitors will allocate buckets dynamically
 	_, err = monitorsDB.Create(ctx, &api.MonitorDocument{
 		ID: "master",
 		Monitor: &api.Monitor{
@@ -192,7 +185,6 @@ func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to create master monitor document: %v", err)
 	}
 
-	// Initialize database fixtures
 	f := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClusterDB)
 	err = f.Create()
 	if err != nil {
@@ -203,7 +195,7 @@ func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 		OpenShiftClusterDB:   openShiftClusterDB,
 		SubscriptionsDB:      subscriptionsDB,
 		MonitorsDB:           monitorsDB,
-		FakeMonitorsDBClient: nil, // Not using fake client
+		FakeMonitorsDBClient: nil,
 		Controller:           ctrl,
 		TestLogger:           testlogger,
 		Dialer:               dialer,
@@ -218,17 +210,13 @@ func setupTestEnvironmentWithLocalCosmos(t *testing.T) *TestEnvironment {
 }
 
 func (env *TestEnvironment) LocalCosmosCleanup() error {
-	ctx := context.Background()
-
-	// Only attempt to delete the database if both client and DB were created
 	if env.localCosmosClient != nil && env.localCosmosDB != nil {
-		err := env.localCosmosClient.Delete(ctx, env.localCosmosDB)
+		err := env.localCosmosClient.Delete(env.ctx, env.localCosmosDB)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 			return err
 		}
 	}
 
-	// Always finish the controller if it exists
 	if env.Controller != nil {
 		env.Controller.Finish()
 	}

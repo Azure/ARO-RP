@@ -162,17 +162,14 @@ func TestChangefeedOperations(t *testing.T) {
 }
 
 func TestClusterOperationFlow(t *testing.T) {
-	// Setup test environment
 	env := SetupTestEnvironment(t)
 	defer env.LocalCosmosCleanup()
 	if env.localCosmosClient == nil && env.localCosmosDB == nil {
 		return // this only works with a local cosmosdb
 	}
 
-	// Create single monitor for changefeed testing
 	mon := env.CreateTestMonitor("changefeed")
 
-	// Start changefeed
 	ctxChangeFeed, cancel := context.WithTimeout(env.ctx, 20*time.Second)
 	defer cancel()
 
@@ -185,12 +182,11 @@ func TestClusterOperationFlow(t *testing.T) {
 	}()
 
 	mon.changefeedInterval = time.Second / 2
-	go func() {
+	go func() { // We need a changefeed goroutine to retrieve changes in CosmosDB
 		mon.changefeed(ctxChangeFeed, mon.baseLog.WithField("component", "changefeed"), stopChan)
 		wg.Done()
 	}()
 
-	// Create an initial subscription and cluster
 	subDoc := newFakeSubscription()
 	_, err := env.SubscriptionsDB.Create(env.ctx, subDoc)
 	if err != nil {
@@ -205,7 +201,6 @@ func TestClusterOperationFlow(t *testing.T) {
 		t.Fatalf("Couldn't create cluster in cosmos: %v", err)
 	}
 
-	// we'll go over these steps and evaluate if the cache is being populated or not
 	type lifecycleStep struct {
 		name              string
 		clusterState      api.ProvisioningState
@@ -234,7 +229,6 @@ func TestClusterOperationFlow(t *testing.T) {
 		},
 	}
 
-	// Execute lifecycle steps
 	for _, step := range steps {
 		t.Run(step.name, func(t *testing.T) {
 			// Update cluster to the new state (skip for first step since we already created it)
@@ -249,7 +243,6 @@ func TestClusterOperationFlow(t *testing.T) {
 			// Wait for changefeed to process
 			time.Sleep(time.Second)
 
-			// Validate expected results
 			if len(mon.docs) != step.expectDocsInCache {
 				t.Errorf("expected %d clusters in cache, got %d", step.expectDocsInCache, len(mon.docs))
 			}
@@ -261,17 +254,14 @@ func TestClusterOperationFlow(t *testing.T) {
 }
 
 func TestSubscriptionFlow(t *testing.T) {
-	// Setup test environment
 	env := SetupTestEnvironment(t)
 	defer env.LocalCosmosCleanup()
 	if env.localCosmosClient == nil && env.localCosmosDB == nil {
 		return // this only works with a local cosmosdb
 	}
 
-	// Create single monitor for changefeed testing
 	mon := env.CreateTestMonitor("changefeed")
 
-	// Start changefeed
 	ctxChangeFeed, cancel := context.WithTimeout(env.ctx, 20*time.Second)
 	defer cancel()
 
@@ -284,12 +274,11 @@ func TestSubscriptionFlow(t *testing.T) {
 	}()
 
 	mon.changefeedInterval = time.Second / 2
-	go func() {
+	go func() { // We need a changefeed goroutine to retrieve changes in CosmosDB
 		mon.changefeed(ctxChangeFeed, mon.baseLog.WithField("component", "changefeed"), stopChan)
 		wg.Done()
 	}()
 
-	// Create initial subscription
 	subDoc := newFakeSubscription()
 	subDoc.Subscription.State = api.SubscriptionStateRegistered
 
@@ -298,7 +287,6 @@ func TestSubscriptionFlow(t *testing.T) {
 		t.Fatalf("Couldn't create subscription in cosmos: %v", err)
 	}
 
-	// Define subscription lifecycle steps
 	type lifecycleStep struct {
 		name              string
 		subscriptionState api.SubscriptionState
@@ -318,7 +306,6 @@ func TestSubscriptionFlow(t *testing.T) {
 		},
 	}
 
-	// Execute lifecycle steps
 	for _, step := range steps {
 		t.Run(step.name, func(t *testing.T) {
 			// Update subscription to the new state (skip for first step since we already created it)
@@ -333,7 +320,6 @@ func TestSubscriptionFlow(t *testing.T) {
 			// Wait for changefeed to process
 			time.Sleep(time.Second)
 
-			// Validate expected results
 			if len(mon.subs) != step.expectSubsInCache {
 				t.Errorf("expected %d subscriptions in cache, got %d", step.expectSubsInCache, len(mon.subs))
 			}
