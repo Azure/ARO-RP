@@ -1,0 +1,119 @@
+# ARO Installer OneBranch Official Build Pipeline
+
+name: $(Date:yyyyMMdd).$(Rev:r)
+
+trigger:
+  branches:
+    include:
+      - master
+  paths:
+    include:
+      - .pipelines/onebranch/pipeline.installer.official.yml
+      - .pipelines/onebranch/templates/template-build-installer.yml
+
+pr: none
+
+parameters:
+  - name: ARO_INSTALLER_BRANCH
+    displayName: 'ARO Installer Branch (e.g., release-4.17)'
+    type: string
+    default: 'release-4.17'
+  - name: ARO_INSTALLER_VERSION
+    displayName: 'ARO Installer Version (e.g., 4.17)'
+    type: string
+    default: '4.17'
+  - name: REGISTRY
+    displayName: 'Base Registry'
+    type: string
+    default: 'arointsvc.azurecr.io'
+
+variables:
+  - name: LinuxContainerImage
+    value: "mcr.microsoft.com/onebranch/azurelinux/build:3.0"
+  - name: BUILD_TAG
+    value: '${{ parameters.ARO_INSTALLER_BRANCH }}'
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
+    - repository: installer-aro-wrapper
+      type: github
+      name: openshift/installer-aro-wrapper
+      endpoint: github.com_Azure
+      ref: refs/heads/${{ parameters.ARO_INSTALLER_BRANCH }}
+
+extends:
+  template: v2/OneBranch.Official.CrossPlat.yml@templates
+  parameters:
+    featureFlags:
+      LinuxHostVersion:
+        Network: KS3
+    globalSdl:
+      policheck:
+        break: true
+    stages:
+      - stage: BuildInstallerImage
+        displayName: 'Build ARO Installer Container Image'
+        jobs:
+          - job: BuildImage
+            displayName: 'Build and Package ARO Installer Image'
+            pool:
+              type: docker
+              os: Linux
+            variables:
+              ob_git_checkout: true
+              ob_outputDirectory: '$(Build.ArtifactStagingDirectory)/image'
+            steps:
+              - checkout: installer-aro-wrapper
+                displayName: 'Checkout installer-aro-wrapper'
+
+              - task: onebranch.pipeline.imagebuildinfo@1
+                displayName: 'Build ARO Installer Docker Image'
+                inputs:
+                  repositoryName: aro-installer
+                  dockerFileRelPath: Dockerfile.aro
+                  dockerFileContextPath: .
+                  enable_network: true
+                  enable_isolated_acr_push: false
+                  build_tag: $(BUILD_TAG)
+                  saveImageToPath: $(ob_outputDirectory)/image.tar
+                  buildkit: 1
+                  enable_service_tree_acr_path: false
+                  arguments: --build-arg VERSION=${{ parameters.ARO_INSTALLER_VERSION }} --build-arg REGISTRY=${{ parameters.REGISTRY }} --build-arg BUILDER_REGISTRY=${{ parameters.REGISTRY }}/openshift-release-dev/golang-builder--partner-share
+
+              - task: Bash@3
+                displayName: 'Create Image Metadata'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    set -euo pipefail
+                    echo "Creating image metadata..."
+                    cat > $(ob_outputDirectory)/image-metadata.json << EOF
+                    {
+                      "build_tag": "$(BUILD_TAG)",
+                      "installer_version": "${{ parameters.ARO_INSTALLER_VERSION }}",
+                      "installer_branch": "${{ parameters.ARO_INSTALLER_BRANCH }}",
+                      "registry": "${{ parameters.REGISTRY }}",
+                      "build_id": "$(Build.BuildId)",
+                      "build_number": "$(Build.BuildNumber)",
+                      "source_version": "$(Build.SourceVersion)",
+                      "source_branch": "$(Build.SourceBranchName)",
+                      "repository": "aro-installer",
+                      "dockerfile": "Dockerfile.aro"
+                    }
+                    EOF
+                    echo "Image metadata created:"
+                    cat $(ob_outputDirectory)/image-metadata.json
+                    echo ""
+                    echo "Artifact contents:"
+                    ls -lh $(ob_outputDirectory)/
+
+              - task: PublishPipelineArtifact@1
+                displayName: 'Publish ARO Installer Image Artifact'
+                inputs:
+                  targetPath: '$(ob_outputDirectory)'
+                  artifact: 'aro-installer-image'
+                  publishLocation: 'pipeline'
