@@ -263,6 +263,7 @@ stages:
           # Collect must-gather logs
           - bash: |
               . secrets/env
+              go build ./hack/db
               . ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
@@ -389,6 +390,7 @@ stages:
           # Collect must-gather logs
           - bash: |
               . secrets/env
+              go build ./hack/db
               . ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
