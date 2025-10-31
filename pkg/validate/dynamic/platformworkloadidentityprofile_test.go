@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
@@ -274,9 +275,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			ClientID:   dummyClientId,
 		},
 	}
-	desiredPlatformWorkloadIdentitiesMap := map[string]api.PlatformWorkloadIdentityRole{
+	desiredPlatformWorkloadIdentitiesMap := map[string][]api.PlatformWorkloadIdentityRole{
 		"Dummy1": {
-			OperatorName: "Dummy1",
+			{
+				OperatorName: "Dummy1",
+			},
 		},
 	}
 	clusterMSI := map[string]api.UserAssignedIdentity{
@@ -285,10 +288,12 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			PrincipalID: dummyObjectId,
 		},
 	}
-	validRolesForVersion := map[string]api.PlatformWorkloadIdentityRole{
+	validRolesForVersion := map[string][]api.PlatformWorkloadIdentityRole{
 		"Dummy1": {
-			OperatorName:    "Dummy1",
-			ServiceAccounts: []string{platformIdentity1SAName},
+			{
+				OperatorName:    "Dummy1",
+				ServiceAccounts: []string{platformIdentity1SAName},
+			},
 		},
 	}
 	openShiftVersion := "4.14.40"
@@ -315,7 +320,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                             string
-		platformIdentityRoles            map[string]api.PlatformWorkloadIdentityRole
+		platformIdentityRoles            map[string][]api.PlatformWorkloadIdentityRole
 		oc                               *api.OpenShiftCluster
 		mocks                            func(*mock_armauthorization.MockRoleDefinitionsClient, *mock_armmsi.MockFederatedIdentityCredentialsClient)
 		wantPlatformIdentities           map[string]api.PlatformWorkloadIdentity
@@ -502,6 +507,67 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
 			wantPlatformIdentitiesActionsMap: map[string][]string{
 				"Dummy1": platformIdentityRequiredPermissionsList,
+			},
+		},
+		{
+			name: "Success - Operator with multiple roles merges actions correctly",
+			platformIdentityRoles: map[string][]api.PlatformWorkloadIdentityRole{
+				"Dummy1": {
+					{
+						OperatorName:     "Dummy1",
+						RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/role1",
+						ServiceAccounts:  []string{platformIdentity1SAName},
+					},
+					{
+						OperatorName:     "Dummy1",
+						RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/role2",
+						ServiceAccounts:  []string{platformIdentity1SAName},
+					},
+				},
+			},
+			oc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"Dummy1": {
+								ResourceID: platformIdentity1,
+							},
+						},
+					},
+					ClusterProfile: api.ClusterProfile{
+						Version:    openShiftVersion,
+						OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer(expectedOIDCIssuer)),
+					},
+				},
+				Identity: &api.ManagedServiceIdentity{
+					UserAssignedIdentities: clusterMSI,
+				},
+			},
+			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient, federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
+				// Second role definition with some overlapping and some new actions
+				platformIdentityRequiredPermissions2 := sdkauthorization.RoleDefinitionsClientGetByIDResponse{
+					RoleDefinition: sdkauthorization.RoleDefinition{
+						Properties: &sdkauthorization.RoleDefinitionProperties{
+							Permissions: []*sdkauthorization.Permission{
+								{
+									Actions: []*string{
+										pointerutils.ToPtr("FakeAction2"), // Duplicate
+										pointerutils.ToPtr("FakeAction3"), // New
+									},
+									// No DataActions
+								},
+							},
+						},
+					},
+				}
+				roleDefinitions.EXPECT().GetByID(ctx, "role1", &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(platformIdentityRequiredPermissions, nil)
+				roleDefinitions.EXPECT().GetByID(ctx, "role2", &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(platformIdentityRequiredPermissions2, nil)
+				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+			},
+			wantPlatformIdentities: desiredPlatformWorkloadIdentities,
+			wantPlatformIdentitiesActionsMap: map[string][]string{
+				"Dummy1": {"FakeAction1", "FakeAction2", "FakeAction3", "FakeDataAction1", "FakeDataAction2"},
 			},
 		},
 		{
@@ -860,9 +926,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 		{
 			name: "Fail - UpgradeableTo is provided, but desired identities are not fulfilled",
-			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+			platformIdentityRoles: map[string][]api.PlatformWorkloadIdentityRole{
 				"Dummy3": {
-					OperatorName: "Dummy3",
+					{
+						OperatorName: "Dummy3",
+					},
 				},
 			},
 			oc: &api.OpenShiftCluster{
@@ -887,9 +955,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 		{
 			name: "Fail - UpgradeableTo is provided(ignored because minor version is equal to cluster minor version), but desired identities are not fulfilled",
-			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+			platformIdentityRoles: map[string][]api.PlatformWorkloadIdentityRole{
 				"Dummy3": {
-					OperatorName: "Dummy3",
+					{
+						OperatorName: "Dummy3",
+					},
 				},
 			},
 			oc: &api.OpenShiftCluster{
@@ -914,9 +984,11 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 		{
 			name: "Fail - UpgradeableTo is provided(ignored because upgradeable version is smaller than cluster version), but desired identities are not fulfilled",
-			platformIdentityRoles: map[string]api.PlatformWorkloadIdentityRole{
+			platformIdentityRoles: map[string][]api.PlatformWorkloadIdentityRole{
 				"Dummy3": {
-					OperatorName: "Dummy3",
+					{
+						OperatorName: "Dummy3",
+					},
 				},
 			},
 			oc: &api.OpenShiftCluster{
@@ -1101,8 +1173,15 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			if tt.wantPlatformIdentities != nil && !reflect.DeepEqual(tt.wantPlatformIdentities, dv.platformIdentities) {
 				t.Fatalf("Expected platform identities are not populated in dv object")
 			}
-			if tt.wantPlatformIdentitiesActionsMap != nil && !reflect.DeepEqual(tt.wantPlatformIdentitiesActionsMap, dv.platformIdentitiesActionsMap) {
-				t.Fatalf("Expected platform identities to permissions mapping is not populated in dv object")
+			if tt.wantPlatformIdentitiesActionsMap != nil {
+				assert.Len(t, tt.wantPlatformIdentitiesActionsMap, len(dv.platformIdentitiesActionsMap), "Operator count mismatch")
+				for operatorName, wantActions := range tt.wantPlatformIdentitiesActionsMap {
+					gotActions, ok := dv.platformIdentitiesActionsMap[operatorName]
+					if !ok {
+						t.Fatalf("Expected operator %s not found in platformIdentitiesActionsMap", operatorName)
+					}
+					assert.ElementsMatch(t, wantActions, gotActions, "Actions for operator %s don't match", operatorName)
+				}
 			}
 		})
 	}

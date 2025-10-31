@@ -87,7 +87,7 @@ type Dynamic interface {
 	ValidatePlatformWorkloadIdentityProfile(
 		ctx context.Context,
 		oc *api.OpenShiftCluster,
-		platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole,
+		platformWorkloadIdentityRolesByRoleName map[string][]api.PlatformWorkloadIdentityRole,
 		roleDefinitions armauthorization.RoleDefinitionsClient,
 		clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
 		platformWorkloadIdentities map[string]api.PlatformWorkloadIdentity,
