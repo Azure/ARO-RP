@@ -756,12 +756,6 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs,
 				c.deleteVnetPeerings(ctx, vnetResourceGroup),
 			)
-
-			if oc.UsesWorkloadIdentity() {
-				errs = append(errs,
-					c.deleteServicePrincipalByClientID(ctx, os.Getenv("MOCK_MSI_CLIENT_ID")),
-				)
-			}
 		}
 	} else {
 		errs = append(errs,
