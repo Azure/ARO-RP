@@ -803,52 +803,18 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 }
 
 func (c *Cluster) deleteMockMSIServicePrincipal(ctx context.Context) error {
-	if c.Config.MockMSIObjectID == "" {
-		c.log.Info("no mock msi object id configured, skipping")
+	clientID := os.Getenv("MOCK_MSI_CLIENT_ID")
+	if clientID == "" {
+		c.log.Info("no mock msi client id configured, skipping")
 		return nil
 	}
 
-	c.log.Infof("deleting mock msi service principal id=%s", c.Config.MockMSIObjectID)
+	c.log.Infof("deleting mock msi service principal")
 
-	sp, err := c.spGraphClient.ServicePrincipals().ByServicePrincipalId(c.Config.MockMSIObjectID).Get(ctx, nil)
-	if err != nil {
-		c.log.Infof("service principal not found id=%s: %v", c.Config.MockMSIObjectID, err)
-		return nil
-	}
-
-	// Attempt to delete the service principal
-	c.log.Infof("attempting to delete service principal id=%s", c.Config.MockMSIObjectID)
-	if derr := c.spGraphClient.ServicePrincipals().ByServicePrincipalId(c.Config.MockMSIObjectID).Delete(ctx, nil); derr != nil {
-		c.log.WithError(derr).Warnf("failed to delete service principal id=%s (skipping)", c.Config.MockMSIObjectID)
+	if err := c.deleteServicePrincipalByClientID(ctx, clientID); err != nil {
+		c.log.Warnf("failed to delete the mock msi service principal using the client id=%s", clientID)
 	} else {
-		c.log.Infof("successfully deleted service principal id=%s", c.Config.MockMSIObjectID)
-	}
-
-	// get AppId from SP
-	var appID string
-	if sp != nil && sp.GetAppId() != nil {
-		appID = *sp.GetAppId()
-		c.log.Infof("resolved appId=%s for service principal id=%s", appID, c.Config.MockMSIObjectID)
-	} else {
-		c.log.Warnf("no appId found for service principal id=%s", c.Config.MockMSIObjectID)
-	}
-
-	//try deleting using app id
-	if appID != "" {
-		c.log.Infof("Attempt 1 to delete using AppID=%s", appID)
-		if derr := c.spGraphClient.Applications().ByApplicationId(appID).Delete(ctx, nil); derr != nil {
-			c.log.WithError(derr).Warnf("failed to delete using app id=%s (skipping)", appID)
-			c.log.Infof("Attempt 2 to delete using AppID=%s using the deleteApplication() function", appID)
-			if aerr := c.deleteApplication(ctx, appID); aerr != nil {
-				c.log.WithError(aerr).Warnf("failed to delete linked application appId=%s in attempt 2", appID)
-			} else {
-				c.log.Infof("successfully deleted linked application appId=%s in attempt 2", appID)
-			}
-		} else {
-			c.log.Infof("successfully deleted service principal using app id=%s", appID)
-		}
-	} else {
-		c.log.Info("no linked appId found, skipping application deletion")
+		c.log.Infof("successfully deleted service principal using client id=%s", clientID)
 	}
 	return nil
 }

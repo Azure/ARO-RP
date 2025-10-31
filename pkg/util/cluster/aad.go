@@ -13,6 +13,7 @@ import (
 	msgraph_apps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/applications"
 	msgraph_models "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
+	msgraph_sps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/serviceprincipals"
 )
 
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
@@ -106,5 +107,33 @@ func (c *Cluster) deleteApplication(ctx context.Context, appID string) error {
 		return c.spGraphClient.Applications().ByApplicationId(*apps[0].GetId()).Delete(ctx, nil)
 	default:
 		return fmt.Errorf("%d applications found for appId %s", len(apps), appID)
+	}
+}
+
+func (c *Cluster) deleteServicePrincipalByClientID(ctx context.Context, clientID string) error {
+	filter := fmt.Sprintf("appId eq '%s'", clientID)
+	requestConfiguration := &msgraph_sps.ServicePrincipalsRequestBuilderGetRequestConfiguration{
+		QueryParameters: &msgraph_sps.ServicePrincipalsRequestBuilderGetQueryParameters{
+			Filter: &filter,
+			Select: []string{"id"},
+		},
+	}
+	result, err := c.spGraphClient.ServicePrincipals().Get(ctx, requestConfiguration)
+	if err != nil {
+		return err
+	}
+
+	sps := result.GetValue()
+	switch len(sps) {
+	case 0:
+		return nil
+	case 1:
+		c.log.Printf("deleting service principal with client ID %s", clientID)
+		// ByServicePrincipalId is confusingly named, but it refers to
+		// the service principal's Object ID, not to the Application ID.
+		// https://learn.microsoft.com/en-us/graph/api/serviceprincipal-delete?view=graph-rest-1.0&tabs=http#http-request
+		return c.spGraphClient.ServicePrincipals().ByServicePrincipalId(*sps[0].GetId()).Delete(ctx, nil)
+	default:
+		return fmt.Errorf("%d service principals found for clientID %s", len(sps), clientID)
 	}
 }
