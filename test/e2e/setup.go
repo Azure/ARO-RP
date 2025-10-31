@@ -26,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -50,6 +51,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
@@ -330,11 +332,59 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	// verifiable TLS certificate.
 	if _env.IsLocalDevelopmentMode() {
 		restconfig.Insecure = true // CodeQL [SM03511] only used in local development
+	} else {
+		// In prod e2e there is sometimes a lag between cluster creation and the
+		// TLS certificate being presented by the APIServer
+		configShallowCopy := *restconfig
+
+		// Create a HTTPClient which we can
+		httpClient, err := rest.HTTPClientFor(&configShallowCopy)
+		if err != nil {
+			return nil, err
+		}
+		configShallowCopy.GroupVersion = &schema.GroupVersion{}
+		configShallowCopy.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+		configShallowCopy.UserAgent = rest.DefaultKubernetesUserAgent()
+		rawClient, err := rest.RESTClientForConfigAndClient(&configShallowCopy, httpClient)
+		if err != nil {
+			return nil, err
+		}
+
+		now := time.Now()
+		timeoutDuration := 20 * time.Minute
+		sleepAmount := 10 * time.Second
+		maxRetryCount := int(timeoutDuration) / int(sleepAmount)
+		passed := false
+
+		for i := range maxRetryCount {
+			var statusCode int
+			err = rawClient.
+				Get().
+				AbsPath("/healthz").
+				Do(ctx).
+				StatusCode(&statusCode).
+				Error()
+
+			if err != nil {
+				log.Warnf("API Server not ready (try %d/%d): %s", i+1, maxRetryCount, err.Error())
+			} else if statusCode != 200 {
+				log.Warnf("API Server not ready (try %d/%d): status code %d", i+1, maxRetryCount, statusCode)
+			} else {
+				passed = true
+				break
+			}
+		}
+
+		if passed {
+			log.Infof("API Server ready after %s", time.Since(now).String())
+		} else {
+			return nil, fmt.Errorf("timed out waiting for API server to be ready after %s", timeoutDuration.String())
+		}
 	}
 
 	cli, err := kubernetes.NewForConfig(restconfig)
 	if err != nil {
-		return nil, fmt.Errorf("error building kubernetes client: %w", err)
+		return nil, fmt.Errorf("error building kubernetes clientset: %w", err)
 	}
 
 	controllerRuntimeClient, err := client.New(restconfig, client.Options{})
