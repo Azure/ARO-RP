@@ -880,6 +880,11 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		if err != nil {
 			return err
 		}
+
+		err = c.ensureDefaultRoleSetInCosmosdb(ctx)
+		if err != nil {
+			return err
+		}
 		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
 		if c.Config.WorkerVMSize == DefaultWorkerVmSize.String() {
 			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
@@ -968,6 +973,32 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 	return parsedResponse.Value, err
 }
 
+// getPlatformWIRoleSetsInCosmosDB queries the local RP admin endpoint for
+// PlatformWorkloadIdentityRoleSet documents and returns them.
+func getPlatformWIRoleSetsInCosmosDB(ctx context.Context) ([]*api.PlatformWorkloadIdentityRoleSet, error) {
+	type getRoleSetResponse struct {
+		Value []*api.PlatformWorkloadIdentityRoleSet `json:"value"`
+	}
+
+	getRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, localDefaultURL+"/admin/platformworkloadidentityrolesets", &bytes.Buffer{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating get platform WI rolesets request: %w", err)
+	}
+
+	getRequest.Header.Set("Content-Type", "application/json")
+
+	getResponse, err := insecureLocalClient().Do(getRequest)
+	if err != nil {
+		return nil, fmt.Errorf("error couldn't retrieve platform WI role sets in cosmos db: %w", err)
+	}
+
+	parsedResponse := getRoleSetResponse{}
+	decoder := json.NewDecoder(getResponse.Body)
+	err = decoder.Decode(&parsedResponse)
+
+	return parsedResponse.Value, err
+}
+
 // ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
 // cosmos DB IF it doesn't already contain an entry for the default version. It
 // is hardcoded to use the local-RP endpoint
@@ -1014,6 +1045,115 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 		return err
 	}
 
+	return resp.Body.Close()
+}
+
+// ensureDefaultRoleSetInCosmosdb puts a default PlatformWorkloadIdentityRoleSet
+// into the cosmos DB via the local RP admin endpoint IF it doesn't already
+// contain an entry for the default OpenShift version. It mirrors the behaviour
+// of ensureDefaultVersionInCosmosdb but targets the platformworkloadidentityrolesets
+// admin endpoint.
+func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
+	defaultVersion := version.DefaultInstallStream
+
+	existingRoleSets, err := getPlatformWIRoleSetsInCosmosDB(ctx)
+	if err != nil {
+		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: getPlatformWIRoleSetsInCosmosDB returned error: %v; will attempt to PUT default", err)
+	} else {
+		c.log.Infof("ensureDefaultRoleSetInCosmosdb: got %d existing platform WI role sets from local RP", len(existingRoleSets))
+		for i, rs := range existingRoleSets {
+			var ver string
+			if rs != nil {
+				ver = rs.Properties.OpenShiftVersion
+			}
+			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existingRoleSets[%d].OpenShiftVersion=%s", i, ver)
+			if ver == defaultVersion.Version.MinorVersion() {
+				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.MinorVersion())
+				return nil
+			}
+		}
+	}
+
+	c.log.Infof("ensureDefaultRoleSetInCosmosdb: building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
+
+	b, err := json.Marshal(&api.PlatformWorkloadIdentityRoleSet{
+		Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+			OpenShiftVersion: defaultVersion.Version.MinorVersion(),
+			PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+				{
+					OperatorName:       "cloud-controller-manager",
+					RoleDefinitionName: "Azure Red Hat OpenShift Cloud Controller Manager",
+					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+					ServiceAccounts:    []string{"system:serviceaccount:openshift-cloud-controller-manager:cloud-controller-manager"},
+					SecretLocation:     api.SecretLocation{Namespace: "openshift-cloud-controller-manager", Name: "azure-cloud-credentials"},
+				},
+				{
+					OperatorName:       "ingress",
+					RoleDefinitionName: "Azure Red Hat OpenShift Cluster Ingress Operator",
+					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
+					ServiceAccounts:    []string{"system:serviceaccount:openshift-ingress-operator:ingress-operator"},
+					SecretLocation:     api.SecretLocation{Namespace: "openshift-ingress-operator", Name: "cloud-credentials"},
+				},
+				{
+					OperatorName:       "machine-api",
+					RoleDefinitionName: "Azure Red Hat OpenShift Machine API Operator",
+					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0358943c-7e01-48ba-8889-02cc51d78637",
+					ServiceAccounts:    []string{"system:serviceaccount:openshift-machine-api:machine-api-controllers"},
+					SecretLocation:     api.SecretLocation{Namespace: "openshift-machine-api", Name: "azure-cloud-credentials"},
+				},
+				{
+					OperatorName:       "disk-csi-driver",
+					RoleDefinitionName: "Azure Red Hat OpenShift Disk Storage Operator",
+					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/5b7237c5-45e1-49d6-bc18-a1f62f400748",
+					ServiceAccounts:    []string{"system:serviceaccount:openshift-cluster-csi-drivers:azure-disk-csi-driver-operator", "system:serviceaccount:openshift-cluster-csi-drivers:azure-disk-csi-driver-controller-sa"},
+					SecretLocation:     api.SecretLocation{Namespace: "openshift-cluster-csi-drivers", Name: "azure-disk-credentials"},
+				},
+				{
+					OperatorName:       "cloud-network-config",
+					RoleDefinitionName: "Azure Red Hat OpenShift Network Operator",
+					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/be7a6435-15ae-4171-8f30-4a343eff9e8f",
+					ServiceAccounts:    []string{"system:serviceaccount:openshift-cloud-network-config-controller:cloud-network-config-controller"},
+					SecretLocation:     api.SecretLocation{Namespace: "openshift-cloud-network-config-controller", Name: "cloud-credentials"},
+				},
+				{
+					OperatorName:       "image-registry",
+					RoleDefinitionName: "Azure Red Hat OpenShift Image Registry Operator",
+					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/8b32b316-c2f5-4ddf-b05b-83dacd2d08b5",
+					ServiceAccounts:    []string{"system:serviceaccount:openshift-image-registry:cluster-image-registry-operator", "system:serviceaccount:openshift-image-registry:registry"},
+					SecretLocation:     api.SecretLocation{Namespace: "openshift-image-registry", Name: "installer-cloud-credentials"},
+				},
+				{
+					OperatorName:       "file-csi-driver",
+					RoleDefinitionName: "Azure Red Hat OpenShift File Storage Operator",
+					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0d7aedc0-15fd-4a67-a412-efad370c947e",
+					ServiceAccounts:    []string{"system:serviceaccount:openshift-cluster-csi-drivers:azure-file-csi-driver-operator", "system:serviceaccount:openshift-cluster-csi-drivers:azure-file-csi-driver-controller-sa", "system:serviceaccount:openshift-cluster-csi-drivers:azure-file-csi-driver-node-sa"},
+					SecretLocation:     api.SecretLocation{Namespace: "openshift-cluster-csi-drivers", Name: "azure-file-credentials"},
+				},
+				{
+					OperatorName:       "aro-operator",
+					RoleDefinitionName: "Azure Red Hat OpenShift Service Operator",
+					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/4436bae4-7702-4c84-919b-c4069ff25ee2",
+					ServiceAccounts:    []string{"system:serviceaccount:openshift-azure-operator:aro-operator-master"},
+					SecretLocation:     api.SecretLocation{Namespace: "openshift-azure-operator", Name: "azure-cloud-credentials"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/platformworkloadidentityrolesets", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := insecureLocalClient().Do(req)
+	if err != nil {
+		return err
+	}
 	return resp.Body.Close()
 }
 
