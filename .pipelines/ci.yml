@@ -379,10 +379,12 @@ stages:
               else
                 echo "E2E tests passed."
               fi
+            displayName: ⚙️  Run E2E Test Suite for MIWI
           - bash: |
               . ./env
+              echo "deleting mock msi service principal $MOCK_MSI_OBJECT_ID"
               az ad sp delete --id $MOCK_MSI_OBJECT_ID
-            displayName: ⚙️  Run E2E Test Suite for MIWI
+            displayName: Delete Mock MSI Service Principal
 
           # Log the output from the services in case of failure
           - bash: |
