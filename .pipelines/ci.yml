@@ -234,6 +234,7 @@ stages:
           - bash: |
               . ./hack/e2e/run-rp-and-e2e.sh
               echo "##vso[task.setvariable variable=CLUSTER]${CLUSTER}"
+              echo "###vso[task.setvariable variable=DATABASE_NAME]{$DATABASE_NAME}"
               az acr login --name arosvcdev
               az acr login --name arointsvc
 
@@ -357,6 +358,7 @@ stages:
               . secrets/env
               . ./hack/e2e/run-rp-and-e2e.sh
               echo "##vso[task.setvariable variable=CLUSTER]${CLUSTER}"
+              echo "###vso[task.setvariable variable=DATABASE_NAME]{$DATABASE_NAME}"
               export SKIP_MIWI_ROLE_ASSIGNMENT=true
               . ./hack/devtools/local_dev_env.sh
               create_miwi_env_file
@@ -377,6 +379,9 @@ stages:
               else
                 echo "E2E tests passed."
               fi
+          - bash: |
+              . ./env
+              az ad sp delete --id $MOCK_MSI_OBJECT_ID
             displayName: ⚙️  Run E2E Test Suite for MIWI
 
           # Log the output from the services in case of failure
