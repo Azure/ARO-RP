@@ -89,6 +89,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	var resources []kruntime.Object
 
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MachineHealthCheckManaged) {
+		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
+		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
+			return reconcile.Result{RequeueAfter: time.Hour}, err
+		}
+	}
+
 	for _, asset := range [][]byte{machinehealthcheckYaml} {
 		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(asset, nil, nil)
 		if err != nil {
