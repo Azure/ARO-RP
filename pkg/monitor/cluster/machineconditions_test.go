@@ -24,9 +24,17 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
+// Phase constants
+const (
+	phaseRunning      = "Running"
+	phaseFailed       = "Failed"
+	phaseProvisioning = "Provisioning"
+	phaseDeleting     = "Deleting"
+	phaseDeleted      = "Deleted"
+)
+
 func TestEmitMachineConditions(t *testing.T) {
 	ctx := context.Background()
-	phaseFailed := "Failed"
 
 	for _, tt := range []struct {
 		name        string
@@ -36,103 +44,48 @@ func TestEmitMachineConditions(t *testing.T) {
 		{
 			name: "master machines - unexpected condition should emit conditions",
 			machines: []client.Object{
-				&machinev1beta1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "aro-master-0",
-						Namespace: "openshift-machine-api",
-						Labels: map[string]string{
-							machineRoleLabelKey: "master",
-						},
-					},
-					Status: machinev1beta1.MachineStatus{
-						Phase: &phaseFailed,
-						Conditions: machinev1beta1.Conditions{
-							{Type: "Ready", Status: corev1.ConditionFalse, Message: "Machine not ready"},
-						},
-					},
-					Spec: machinev1beta1.MachineSpec{
-						ProviderSpec: validMachineProviderSpec(t),
-					},
-				},
+				newTestMachine(t, "aro-master-0", "master", "", phaseFailed, "Ready", corev1.ConditionFalse, "Machine not ready", false),
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("machine.count", int64(1), map[string]string{})
-				m.EXPECT().EmitGauge("machine.conditions", int64(1), map[string]string{
-					"machineName":  "aro-master-0",
-					"status":       "False",
-					"type":         "Ready",
-					"spotInstance": "false",
-					"role":         "master",
-					"machineset":   "",
-				})
-				m.EXPECT().EmitGauge("machine.count.phase", int64(1), map[string]string{
-					"phase": "Failed",
-				})
+				expectMachineCount(m, 1)
+				expectMachineCondition(m, "aro-master-0", "False", "Ready", "master", "", "false")
+				expectPhaseCount(m, phaseFailed, 1)
 			},
 		},
 		{
 			name: "worker spot machine - unexpected condition should emit conditions with spot information",
 			machines: []client.Object{
-				&machinev1beta1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "aro-worker-spot-failed",
-						Namespace: "openshift-machine-api",
-						Labels: map[string]string{
-							machineRoleLabelKey: "worker",
-							machinesetLabelKey:  "spot-workers-failed",
-						},
-					},
-					Status: machinev1beta1.MachineStatus{
-						Phase: &phaseFailed,
-						Conditions: machinev1beta1.Conditions{
-							{Type: "Ready", Status: corev1.ConditionFalse, Message: "Machine failed"},
-						},
-					},
-					Spec: machinev1beta1.MachineSpec{
-						ProviderSpec: validMachineProviderSpecSpotVM(t),
-					},
-				},
+				newTestMachine(t, "aro-worker-spot-failed", "worker", "spot-workers-failed", phaseFailed, "Ready", corev1.ConditionFalse, "Machine failed", true),
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("machine.count", int64(1), map[string]string{})
-				m.EXPECT().EmitGauge("machine.conditions", int64(1), map[string]string{
-					"machineName":  "aro-worker-spot-failed",
-					"status":       "False",
-					"type":         "Ready",
-					"spotInstance": "true",
-					"role":         "worker",
-					"machineset":   "spot-workers-failed",
-				})
-				m.EXPECT().EmitGauge("machine.count.phase", int64(1), map[string]string{
-					"phase": "Failed",
-				})
+				expectMachineCount(m, 1)
+				expectMachineCondition(m, "aro-worker-spot-failed", "False", "Ready", "worker", "spot-workers-failed", "true")
+				expectPhaseCount(m, phaseFailed, 1)
+			},
+		},
+		{
+			name: "different phases - should emit accurate phase counts",
+			machines: []client.Object{
+				newTestMachine(t, "aro-master-running", "master", "", phaseRunning, "Ready", corev1.ConditionTrue, "Machine is ready", false),
+				newTestMachine(t, "aro-worker-provisioning", "worker", "workers", phaseProvisioning, "Ready", corev1.ConditionFalse, "Provisioning in progress", false),
+				newTestMachine(t, "aro-worker-deleting", "worker", "workers", phaseDeleting, "Ready", corev1.ConditionFalse, "Machine is being deleted", false),
+				newTestMachine(t, "aro-worker-deleted", "worker", "workers-old", phaseDeleted, "Ready", corev1.ConditionFalse, "Machine has been deleted", false),
+			},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				expectMachineCount(m, 4)
+				expectMachineCondition(m, "aro-master-running", "True", "Ready", "master", "", "false")
+				expectMachineCondition(m, "aro-worker-provisioning", "False", "Ready", "worker", "workers", "false")
+				expectMachineCondition(m, "aro-worker-deleting", "False", "Ready", "worker", "workers", "false")
+				expectMachineCondition(m, "aro-worker-deleted", "False", "Ready", "worker", "workers-old", "false")
+				expectPhaseCount(m, phaseRunning, 1)
+				expectPhaseCount(m, phaseProvisioning, 1)
+				expectPhaseCount(m, phaseDeleting, 1)
+				expectPhaseCount(m, phaseDeleted, 1)
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			m := mock_metrics.NewMockEmitter(controller)
-			_, log := testlog.New()
-
-			scheme := kruntime.NewScheme()
-			_ = machinev1beta1.AddToScheme(scheme)
-			_ = corev1.AddToScheme(scheme)
-
-			ocpclientset := clienthelper.NewWithClient(log, fake.
-				NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.machines...).
-				Build())
-
-			mon := &Monitor{
-				log:          log,
-				ocpclientset: ocpclientset,
-				m:            m,
-				queryLimit:   1,
-			}
-
+			mon, m := setupTestMonitor(t, tt.machines)
 			tt.wantEmitted(m)
 
 			err := mon.emitMachineConditions(ctx)
@@ -141,6 +94,106 @@ func TestEmitMachineConditions(t *testing.T) {
 			}
 		})
 	}
+}
+
+// setupTestMonitor creates a Monitor instance with a fake client and mock metrics emitter
+func setupTestMonitor(t *testing.T, machines []client.Object) (*Monitor, *mock_metrics.MockEmitter) {
+	t.Helper()
+
+	controller := gomock.NewController(t)
+	t.Cleanup(func() { controller.Finish() })
+
+	m := mock_metrics.NewMockEmitter(controller)
+	_, log := testlog.New()
+
+	scheme := kruntime.NewScheme()
+	_ = machinev1beta1.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(machines...).
+		Build())
+
+	mon := &Monitor{
+		log:          log,
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	return mon, m
+}
+
+// newTestMachine creates a Machine object for testing
+func newTestMachine(t *testing.T, name, role, machineset, phase, conditionType string, conditionStatus corev1.ConditionStatus, conditionMessage string, isSpot bool) *machinev1beta1.Machine {
+	t.Helper()
+
+	labels := make(map[string]string)
+	if role != "" {
+		labels[machineRoleLabelKey] = role
+	}
+	if machineset != "" {
+		labels[machinesetLabelKey] = machineset
+	}
+
+	var providerSpec machinev1beta1.ProviderSpec
+	if isSpot {
+		providerSpec = validMachineProviderSpecSpotVM(t)
+	} else {
+		providerSpec = validMachineProviderSpec(t)
+	}
+
+	machine := &machinev1beta1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "openshift-machine-api",
+			Labels:    labels,
+		},
+		Status: machinev1beta1.MachineStatus{
+			Conditions: machinev1beta1.Conditions{
+				{
+					Type:    machinev1beta1.ConditionType(conditionType),
+					Status:  conditionStatus,
+					Message: conditionMessage,
+				},
+			},
+		},
+		Spec: machinev1beta1.MachineSpec{
+			ProviderSpec: providerSpec,
+		},
+	}
+
+	if phase != "" {
+		machine.Status.Phase = &phase
+	}
+
+	return machine
+}
+
+// expectMachineCount sets up expectation for machine.count metric
+func expectMachineCount(m *mock_metrics.MockEmitter, count int64) {
+	m.EXPECT().EmitGauge("machine.count", count, map[string]string{})
+}
+
+// expectMachineCondition sets up expectation for machine.conditions metric
+func expectMachineCondition(m *mock_metrics.MockEmitter, machineName, status, conditionType, role, machineset, spotInstance string) {
+	m.EXPECT().EmitGauge("machine.conditions", int64(1), map[string]string{
+		"machineName":  machineName,
+		"status":       status,
+		"type":         conditionType,
+		"spotInstance": spotInstance,
+		"role":         role,
+		"machineset":   machineset,
+	})
+}
+
+// expectPhaseCount sets up expectation for machine.count.phase metric
+func expectPhaseCount(m *mock_metrics.MockEmitter, phase string, count int64) {
+	m.EXPECT().EmitGauge("machine.count.phase", count, map[string]string{
+		"phase": phase,
+	})
 }
 
 func validMachineProviderSpec(t *testing.T) machinev1beta1.ProviderSpec {
