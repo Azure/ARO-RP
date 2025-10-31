@@ -373,6 +373,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 				passed = true
 				break
 			}
+
+			time.Sleep(sleepAmount)
 		}
 
 		if passed {
