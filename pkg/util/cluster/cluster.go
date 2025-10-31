@@ -759,7 +759,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 
 			if oc.UsesWorkloadIdentity() {
 				errs = append(errs,
-					c.deleteMockMSIServicePrincipal(ctx),
+					c.deleteServicePrincipalByClientID(ctx, os.Getenv("MOCK_MSI_CLIENT_ID")),
 				)
 			}
 		}
@@ -798,23 +798,6 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 		if err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-func (c *Cluster) deleteMockMSIServicePrincipal(ctx context.Context) error {
-	clientID := os.Getenv("MOCK_MSI_CLIENT_ID")
-	if clientID == "" {
-		c.log.Info("no mock msi client id configured, skipping")
-		return nil
-	}
-
-	c.log.Infof("deleting mock msi service principal")
-
-	if err := c.deleteServicePrincipalByClientID(ctx, clientID); err != nil {
-		c.log.Warnf("failed to delete the mock msi service principal using the client id=%s", clientID)
-	} else {
-		c.log.Infof("successfully deleted service principal using client id=%s", clientID)
 	}
 	return nil
 }
