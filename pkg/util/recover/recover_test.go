@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -21,7 +20,7 @@ func TestPanic(t *testing.T) {
 		panic("random error")
 	}()
 
-	expected := []map[string]types.GomegaMatcher{
+	expected := []testlog.ExpectedLogEntry{
 		{
 			"msg":   gomega.Equal("random error"),
 			"level": gomega.Equal(logrus.ErrorLevel),

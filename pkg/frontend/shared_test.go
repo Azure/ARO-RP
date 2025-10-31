@@ -123,7 +123,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
-	_env.EXPECT().MISEAuthorizer().AnyTimes().Return(miseadapter.NewFakeAuthorizer("http://aro-mise-test:5000", log, http.DefaultClient))
+	_env.EXPECT().MISEAuthorizer().AnyTimes().Return(miseadapter.NewFakeAuthorizer(true, true))
 	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	for f, val := range features {

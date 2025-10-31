@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -89,7 +88,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
 		steps         []steps.Step
-		wantEntries   []map[string]types.GomegaMatcher
+		wantEntries   []testlog.ExpectedLogEntry
 		wantErr       string
 		kubernetescli *fake.Clientset
 		configcli     *configfake.Clientset
@@ -102,7 +101,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				steps.Action(failingFunc),
 			},
 			wantErr: "oh no!",
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`running step [Action pkg/cluster.failingFunc]`),
@@ -159,7 +158,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				steps.Action(failingFunc),
 			},
 			wantErr: "oh no!",
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`running step [Action pkg/cluster.failingFunc]`),
@@ -208,7 +207,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				steps.Action(failingFunc),
 			},
 			wantErr: "oh no!",
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`running step [Action pkg/cluster.failingFunc]`),

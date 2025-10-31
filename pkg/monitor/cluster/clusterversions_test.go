@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -228,7 +227,7 @@ func TestPrefetchClusterVersion(t *testing.T) {
 		wantActualVersion  version.Version
 		wantDesiredVersion version.Version
 		wantErr            error
-		wantLogs           []map[string]types.GomegaMatcher
+		wantLogs           []testlog.ExpectedLogEntry
 	}{
 		{
 			name: "happy path",
@@ -285,7 +284,7 @@ func TestPrefetchClusterVersion(t *testing.T) {
 					},
 				},
 			},
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.ErrorLevel),
 					"msg":   gomega.Equal("failure parsing desired ClusterVersion: could not parse version \"sporngs\""),
@@ -319,7 +318,7 @@ func TestPrefetchClusterVersion(t *testing.T) {
 					},
 				},
 			},
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.ErrorLevel),
 					"msg":   gomega.Equal("failure parsing ClusterVersion: could not parse version \"sporngs\""),

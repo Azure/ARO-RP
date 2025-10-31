@@ -16,7 +16,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -37,7 +36,7 @@ func TestAdminReply(t *testing.T) {
 		err            error
 		wantStatusCode int
 		wantBody       interface{}
-		wantEntries    []map[string]types.GomegaMatcher
+		wantEntries    []testlog.ExpectedLogEntry
 	}{
 		{
 			name: "kubernetes error",
@@ -61,7 +60,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "routes.route.openshift.io/doesntexist",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`404: NotFound: routes.route.openshift.io/doesntexist: routes.route.openshift.io "doesntexist" not found`),
@@ -86,7 +85,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "thing",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`400: RequestNotAllowed: thing: You can't do that.`),
@@ -108,7 +107,7 @@ func TestAdminReply(t *testing.T) {
 					"message": "Internal server error.",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.ErrorLevel),
 					"msg":   gomega.Equal(`random error`),

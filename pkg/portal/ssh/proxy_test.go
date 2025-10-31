@@ -16,7 +16,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 	cryptossh "golang.org/x/crypto/ssh"
@@ -216,7 +215,7 @@ func TestProxy(t *testing.T) {
 		fixtureChecker func(*test, *testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient, *cosmosdb.FakePortalDocumentClient)
 		mocks          func(*mock_proxy.MockDialer)
 		wantErrPrefix  string
-		wantLogs       []map[string]types.GomegaMatcher
+		wantLogs       []testlog.ExpectedLogEntry
 		ciphers        cryptossh.Algorithms
 	}
 
@@ -238,7 +237,7 @@ func TestProxy(t *testing.T) {
 			mocks: func(dialer *mock_proxy.MockDialer) {
 				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
 			},
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.InfoLevel),
 					"msg":         gomega.Equal("authentication succeeded"),
@@ -279,7 +278,7 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 			},
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -294,7 +293,7 @@ func TestProxy(t *testing.T) {
 			username:      username,
 			password:      "bad",
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -309,7 +308,7 @@ func TestProxy(t *testing.T) {
 			username:      username,
 			password:      password,
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -330,7 +329,7 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 			},
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -354,7 +353,7 @@ func TestProxy(t *testing.T) {
 				openShiftClustersClient.SetError(fmt.Errorf("sad"))
 			},
 			wantErrPrefix: "EOF",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.InfoLevel),
 					"msg":         gomega.Equal("authentication succeeded"),
@@ -372,7 +371,7 @@ func TestProxy(t *testing.T) {
 				portalClient.SetError(fmt.Errorf("sad"))
 			},
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -400,7 +399,7 @@ func TestProxy(t *testing.T) {
 				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(nil, fmt.Errorf("sad"))
 			},
 			wantErrPrefix: "EOF",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.InfoLevel),
 					"msg":         gomega.Equal("authentication succeeded"),
@@ -420,7 +419,7 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 			},
 			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for client to server cipher;",
-			wantLogs:      []map[string]types.GomegaMatcher{},
+			wantLogs:      []testlog.ExpectedLogEntry{},
 			ciphers: cryptossh.Algorithms{
 				Ciphers:      []string{cryptossh.CipherChaCha20Poly1305},
 				KeyExchanges: []string{cryptossh.KeyExchangeECDHP256},
@@ -438,7 +437,7 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 			},
 			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for key exchange;",
-			wantLogs:      []map[string]types.GomegaMatcher{},
+			wantLogs:      []testlog.ExpectedLogEntry{},
 			ciphers: cryptossh.Algorithms{
 				Ciphers:      []string{cryptossh.CipherAES256CTR},
 				KeyExchanges: []string{cryptossh.KeyExchangeMLKEM768X25519},
@@ -457,7 +456,7 @@ func TestProxy(t *testing.T) {
 		// 		checker.AddPortalDocuments(portalDocument)
 		// 	},
 		// 	wantErrPrefix: "ssh: handshake failed: no common algorithm for mac;",
-		// 	wantLogs:      []map[string]types.GomegaMatcher{},
+		// 	wantLogs:      []testlog.ExpectedLogEntry{},
 		// 	ciphers: ciphers{
 		// 		Ciphers:           []string{cryptossh.CipherAES256CTR},
 		// 		KexAlgorithms:     []string{cryptossh.KeyExchangeMLKEM768X25519},
@@ -475,7 +474,7 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 			},
 			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for host key;",
-			wantLogs:      []map[string]types.GomegaMatcher{},
+			wantLogs:      []testlog.ExpectedLogEntry{},
 			ciphers: cryptossh.Algorithms{
 				Ciphers:      []string{cryptossh.CipherAES256CTR},
 				KeyExchanges: []string{cryptossh.KeyExchangeECDHP256},
