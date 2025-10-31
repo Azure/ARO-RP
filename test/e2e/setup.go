@@ -318,12 +318,12 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 	kubeconfig, err := clientcmd.NewClientConfigFromBytes(kubeConfigFile)
 	if err != nil {
-		return nil, fmt.Errorf("error building clientconfig: %w", err)
+		return nil, fmt.Errorf("error building clientconfig from bytes: %w", err)
 	}
 
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building clientconfig: %w", err)
 	}
 
 	// In development e2e the certificate is not always created with a publicly
@@ -334,57 +334,57 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 	cli, err := kubernetes.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building kubernetes client: %w", err)
 	}
 
 	controllerRuntimeClient, err := client.New(restconfig, client.Options{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building controller runtime client: %w", err)
 	}
 
 	monitoring, err := monitoringclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building monitoring client: %w", err)
 	}
 
 	machineapicli, err := machineclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building machine API client: %w", err)
 	}
 
 	mcocli, err := mcoclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building MCO client: %w", err)
 	}
 
 	projectcli, err := projectclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building project client: %w", err)
 	}
 
 	routecli, err := routeclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building route client: %w", err)
 	}
 
 	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building ARO k8s client: %w", err)
 	}
 
 	configcli, err := configclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building config client: %w", err)
 	}
 
 	securitycli, err := securityclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building security client: %w", err)
 	}
 
 	dynamiccli, err := dynamic.NewDynamicClient(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building dynamic k8s client: %w", err)
 	}
 
 	var hiveRestConfig *rest.Config
@@ -411,22 +411,22 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		hiveShard := 1
 		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting hive RESTConfig: %w", err)
 		}
 
 		hiveClientSet, err = client.New(hiveRestConfig, client.Options{})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive client: %w", err)
 		}
 
 		hiveAKS, err = kubernetes.NewForConfig(hiveRestConfig)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive AKS client: %w", err)
 		}
 
 		hiveCM, err = hive.NewFromConfigClusterManager(log, _env, hiveRestConfig)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive cluster manager: %w", err)
 		}
 	}
 
