@@ -100,7 +100,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			wantErr:        "",
 		},
 		{
-			name: "Managed Feature Flag is false: ensure mhc and its alert are deleted",
+			name: "Managed Feature Flag is false: ensure MHC is deleted",
 			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
@@ -117,13 +117,35 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Times(1)
 			},
 			wantConditions: defaultConditions,
 			wantErr:        "",
 		},
 		{
-			name: "Managed Feature Flag is false: mhc fails to delete, an error is returned",
+			name: "Managed Feature Flag is true: ensure Prometheus Alert is deleted",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+				Status: arov1alpha1.ClusterStatus{
+					Conditions: defaultConditions,
+				},
+			},
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantConditions: defaultConditions,
+			wantErr:        "",
+		},
+		{
+			name: "Managed Feature Flag is false: MHC fails to delete, an error is returned",
 			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
@@ -155,39 +177,6 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			wantRequeueAfter: time.Hour,
 		},
 		{
-			name: "Managed Feature Flag is false: mhc deletes but mhc alert fails to delete, an error is returned",
-			instance: &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: arov1alpha1.SingletonClusterName,
-				},
-				Spec: arov1alpha1.ClusterSpec{
-					OperatorFlags: arov1alpha1.OperatorFlags{
-						operator.MachineHealthCheckEnabled: operator.FlagTrue,
-						operator.MachineHealthCheckManaged: operator.FlagFalse,
-					},
-				},
-				Status: arov1alpha1.ClusterStatus{
-					Conditions: defaultConditions,
-				},
-			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(errors.New("Could not delete mhc alert"))
-			},
-			wantErr: "Could not delete mhc alert",
-			wantConditions: []operatorv1.OperatorCondition{
-				defaultAvailable,
-				defaultProgressing,
-				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: transitionTime,
-					Message:            "Could not delete mhc alert",
-				},
-			},
-			wantRequeueAfter: time.Hour,
-		},
-		{
 			name: "Managed Feature Flag is true: dynamic helper ensures resources",
 			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -201,6 +190,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
 				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(false)).Return(nil).Times(1)
 			},
 			wantConditions: defaultConditions,
@@ -221,6 +211,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			},
 			clusterversion: clusterversionUpgrading,
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
 				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(true)).Return(nil).Times(1)
 			},
 			wantErr: "",
@@ -242,6 +233,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(errors.New("failed to ensure"))
 			},
 			wantErr: "failed to ensure",
