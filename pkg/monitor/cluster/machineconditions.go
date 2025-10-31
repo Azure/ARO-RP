@@ -5,11 +5,12 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,8 +28,8 @@ func (mon *Monitor) iterateOverMachines(ctx context.Context, onEach func(*machin
 			return fmt.Errorf("error in Machine list operation: %w", err)
 		}
 
-		for _, machine := range l.Items {
-			onEach(&machine)
+		for _, machineObj := range l.Items {
+			onEach(&machineObj)
 		}
 
 		cont = l.Continue
@@ -43,39 +44,34 @@ func (mon *Monitor) iterateOverMachines(ctx context.Context, onEach func(*machin
 func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 	count := 0
 	countByPhase := make(map[string]int)
+	machines := mon.getMachines(ctx)
 
-	err := mon.iterateOverMachines(ctx, func(machine *machinev1beta1.Machine) {
-		// Get the role from machine labels
-		role := machine.Labels[machineRoleLabelKey]
+	err := mon.iterateOverMachines(ctx, func(machineObj *machinev1beta1.Machine) {
+		machineKey := types.NamespacedName{Namespace: machineObj.Namespace, Name: machineObj.Name}.String()
+		machine, hasMachine := machines[machineKey]
+		isSpot := hasMachine && isSpotInstance(*machine)
 
-		// Get the machineset from machine labels
-		machineset := machine.Labels[machinesetLabelKey]
-
-		// Unmarshal the provider spec to properly detect spot instances
-		var spec machinev1beta1.AzureMachineProviderSpec
-		if machine.Spec.ProviderSpec.Value != nil && machine.Spec.ProviderSpec.Value.Raw != nil {
-			err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
-			if err != nil {
-				mon.log.WithError(err).WithField("machineName", machine.Name).Error("failed to unmarshal machine provider spec")
-			} else {
-				machine.Spec.ProviderSpec.Value.Object = &spec
-			}
+		role := ""
+		if hasMachine {
+			role = machine.Labels[machineRoleLabelKey]
 		}
 
-		// Detect if this is a spot VM instance
-		isSpot := isSpotInstance(*machine)
+		machineset := ""
+		if hasMachine {
+			machineset = machine.Labels[machinesetLabelKey]
+		}
 
 		// Get the phase from machine status for additional tracking
 		phase := ""
-		if machine.Status.Phase != nil {
-			phase = *machine.Status.Phase
+		if machineObj.Status.Phase != nil {
+			phase = *machineObj.Status.Phase
 			countByPhase[phase]++
 		}
 
 		// Emit conditions for all machine conditions
-		for _, c := range machine.Status.Conditions {
+		for _, c := range machineObj.Status.Conditions {
 			mon.emitGauge("machine.conditions", 1, map[string]string{
-				"machineName":  machine.Name,
+				"machineName":  machineObj.Name,
 				"status":       string(c.Status),
 				"type":         string(c.Type),
 				"spotInstance": strconv.FormatBool(isSpot),
@@ -86,7 +82,7 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
 					"metric":       "machine.conditions",
-					"machineName":  machine.Name,
+					"machineName":  machineObj.Name,
 					"status":       c.Status,
 					"type":         c.Type,
 					"message":      c.Message,
