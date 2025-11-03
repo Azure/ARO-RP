@@ -1,0 +1,368 @@
+# Default values for mimo.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 1
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: nginx # TODO replace repository
+  # This sets the pull policy for images.
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+# This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "aro-mimo-sa"
+  workloadClientId: ""
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ 
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 8443
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+
+# Additional volume claim templates
+volumeClaimTemplates: {}
+# - metadata:
+#     name: foo
+#   spec:
+#     accessModes: [ "ReadWriteOnce" ]
+#     storageClassName: "my-storage-class"
+#     resources:
+#       requests:
+#         storage: 1Gi
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+terminationGracePeriodSeconds: 30
+
+# Update settings
+# There may be manual intervention needed in the cluster if there's an issue with the pod template
+# https://github.com/kubernetes/kubernetes/issues/67250
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
+autoscaling:
+  enabled: false
+
+mimo:
+  command: ["aro"]
+  args: ["mimo-actuator"]
+
+mdm:
+  tenantId: ""
+  keyvaultName: ""
+
+configmap:
+  azure_fp_client_id: ""
+  azure_arm_client_id: ""
+  azure_subscription_id: ""
+  azure_environment: "AzurePublicCloud"
+  azure_location: ""
+  azure_resource_group: ""
+  domain_name: ""
+  acr_resource_id: ""
+  database_account_name: ""
+  keyvault_prefix: ""
+  keyvault_rp_workload_identity: ""
+  keyvault_rp_workload_client_id: ""
+  rp_features: ""
+  msi_rp_endpoint: ""
+
+  mdm_account: "AzureRedHatOpenShiftRP"
+  mdm_namespace: "ARORPLogs"
+  mdm_statsd_socket: ""
+
+  cluster_mdm_environment: ""
+  cluster_mdm_account: ""
+  cluster_mdm_namespace: ""
+
+  mdsd_environment: ""
+
+  cluster_mdsd_account: ""
+  cluster_mdsd_namespace: ""
+  cluster_mdsd_config_version: ""
+
+  gateway_resource_group: ""
+  gateway_domains: ""
+
+  oidc_afd_endpoint: ""
+  oidc_storage_account_name: ""
+
+  hive_status: "enabled"
+  hive_default_pullspec: ""
+  hive_adopt: "enabled"
+
+  certs_admin_api_common_name: ""
+  certs_arm_api_common_name: ""
+
+env:
+  # General Configs
+  - name: AZURE_FP_CLIENT_ID
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_fp_client_id
+  - name: DOMAIN_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: domain_name
+  - name: ADMIN_API_CLIENT_CERT_COMMON_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: certs_admin_api_common_name
+  - name: ARM_API_CLIENT_CERT_COMMON_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: certs_arm_api_common_name
+  - name: AZURE_ARM_CLIENT_ID
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_arm_client_id
+  - name: ACR_RESOURCE_ID
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: acr_resource_id
+  - name: DATABASE_ACCOUNT_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: database_account_name
+  - name: KEYVAULT_PREFIX
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: keyvault_prefix
+  - name: RP_FEATURES
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: rp_features
+  - name: MSI_RP_ENDPOINT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: msi_rp_endpoint
+
+  # Gateway configs
+  - name: GATEWAY_DOMAINS
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: gateway_domains
+  - name: GATEWAY_RESOURCEGROUP
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: gateway_resource_group
+
+  # MDM configs
+  - name: MDM_ACCOUNT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: mdm_account
+  - name: MDM_NAMESPACE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: mdm_namespace
+  
+  # MDSD configs
+  - name: MDSD_ENVIRONMENT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: mdsd_environment
+  
+  # Cluster MDM Configs
+  - name: CLUSTER_MDM_ACCOUNT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdm_account
+  - name: CLUSTER_MDM_NAMESPACE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdm_namespace
+  
+  # Cluster MDSD configs
+  - name: CLUSTER_MDSD_NAMESPACE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdsd_namespace
+  - name: CLUSTER_MDSD_ACCOUNT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdsd_account
+  - name: CLUSTER_MDSD_CONFIG_VERSION
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: cluster_mdsd_config_version
+  
+  # OIDC config
+  - name: OIDC_AFD_ENDPOINT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: oidc_afd_endpoint
+  - name: OIDC_STORAGE_ACCOUNT_NAME
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: oidc_storage_account_name
+
+  # Hive config
+  - name: ARO_INSTALL_VIA_HIVE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: hive_status
+  - name: ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: hive_default_pullspec
+  - name: ARO_ADOPT_BY_HIVE
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: hive_adopt
+
+  # Keyvault config
+  - name: ARO_RP_WORKLOAD_IDENTITY
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: keyvault_rp_workload_identity
+  # - name: AZURE_CLIENT_ID
+  #   valueFrom:
+  #     configMapKeyRef:
+  #       name: mimo-config
+  #       key: keyvault_rp_workload_client_id
+  # # Despite it's name, this is needed to work with MSI
+  - name: AZURE_EV2
+    value: "Use MSI"
+  - name: AZURE_ENVIRONMENT
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_environment
+  - name: AZURE_SUBSCRIPTION_ID
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_subscription_id
+  - name: LOCATION
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_location
+  - name: RESOURCEGROUP
+    valueFrom:
+      configMapKeyRef:
+        name: mimo-config
+        key: azure_resource_group
+  
+
+mdm:
+  securityContext: {}
+  image: linuxgeneva-microsoft.azurecr.io/genevamdm:master_20211120.1
+  env:
+    - name: MDM_CERTFILE
+      value: /secrets/mdm.pem
+    - name: MDM_FRONTENDURL
+      value: https://global.ppe.microsoftmetrics.com/
+    - name: MDM_LOGGER
+      value: Console
+    - name: MDM_LOGLEVEL
+      value: DEBUG
+    - name: MDM_PRIVATEKEYFILE
+      value: /secrets/mdm.pem
+    - name: MDM_SOURCEENVIRONMENT
+      value: 
+    - name: MDM_SOURCEROLE
+      value: 
+    - name: MDM_SOURCEROLEINSTANCE
+      value: $HOSTNAME

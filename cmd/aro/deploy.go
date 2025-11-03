@@ -38,7 +38,7 @@ func deploy(ctx context.Context, _log *logrus.Entry) error {
 		if err != nil {
 			return err
 		}
-		options := _env.Environment().ManagedIdentityCredentialOptions()
+		options := _env.Environment().ManagedIdentityCredentialOptions("")
 		tokenCredential, err = azidentity.NewManagedIdentityCredential(options)
 		if err != nil {
 			return err
