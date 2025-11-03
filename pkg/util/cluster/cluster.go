@@ -1074,71 +1074,29 @@ func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
 		}
 	}
 
-	c.log.Infof("ensureDefaultRoleSetInCosmosdb: building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
+	c.log.Infof("building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
 
-	b, err := json.Marshal(&api.PlatformWorkloadIdentityRoleSet{
-		Properties: api.PlatformWorkloadIdentityRoleSetProperties{
-			OpenShiftVersion: defaultVersion.Version.MinorVersion(),
-			PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
-				{
-					OperatorName:       "cloud-controller-manager",
-					RoleDefinitionName: "Azure Red Hat OpenShift Cloud Controller Manager",
-					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
-					ServiceAccounts:    []string{"system:serviceaccount:openshift-cloud-controller-manager:cloud-controller-manager"},
-					SecretLocation:     api.SecretLocation{Namespace: "openshift-cloud-controller-manager", Name: "azure-cloud-credentials"},
-				},
-				{
-					OperatorName:       "ingress",
-					RoleDefinitionName: "Azure Red Hat OpenShift Cluster Ingress Operator",
-					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
-					ServiceAccounts:    []string{"system:serviceaccount:openshift-ingress-operator:ingress-operator"},
-					SecretLocation:     api.SecretLocation{Namespace: "openshift-ingress-operator", Name: "cloud-credentials"},
-				},
-				{
-					OperatorName:       "machine-api",
-					RoleDefinitionName: "Azure Red Hat OpenShift Machine API Operator",
-					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0358943c-7e01-48ba-8889-02cc51d78637",
-					ServiceAccounts:    []string{"system:serviceaccount:openshift-machine-api:machine-api-controllers"},
-					SecretLocation:     api.SecretLocation{Namespace: "openshift-machine-api", Name: "azure-cloud-credentials"},
-				},
-				{
-					OperatorName:       "disk-csi-driver",
-					RoleDefinitionName: "Azure Red Hat OpenShift Disk Storage Operator",
-					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/5b7237c5-45e1-49d6-bc18-a1f62f400748",
-					ServiceAccounts:    []string{"system:serviceaccount:openshift-cluster-csi-drivers:azure-disk-csi-driver-operator", "system:serviceaccount:openshift-cluster-csi-drivers:azure-disk-csi-driver-controller-sa"},
-					SecretLocation:     api.SecretLocation{Namespace: "openshift-cluster-csi-drivers", Name: "azure-disk-credentials"},
-				},
-				{
-					OperatorName:       "cloud-network-config",
-					RoleDefinitionName: "Azure Red Hat OpenShift Network Operator",
-					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/be7a6435-15ae-4171-8f30-4a343eff9e8f",
-					ServiceAccounts:    []string{"system:serviceaccount:openshift-cloud-network-config-controller:cloud-network-config-controller"},
-					SecretLocation:     api.SecretLocation{Namespace: "openshift-cloud-network-config-controller", Name: "cloud-credentials"},
-				},
-				{
-					OperatorName:       "image-registry",
-					RoleDefinitionName: "Azure Red Hat OpenShift Image Registry Operator",
-					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/8b32b316-c2f5-4ddf-b05b-83dacd2d08b5",
-					ServiceAccounts:    []string{"system:serviceaccount:openshift-image-registry:cluster-image-registry-operator", "system:serviceaccount:openshift-image-registry:registry"},
-					SecretLocation:     api.SecretLocation{Namespace: "openshift-image-registry", Name: "installer-cloud-credentials"},
-				},
-				{
-					OperatorName:       "file-csi-driver",
-					RoleDefinitionName: "Azure Red Hat OpenShift File Storage Operator",
-					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0d7aedc0-15fd-4a67-a412-efad370c947e",
-					ServiceAccounts:    []string{"system:serviceaccount:openshift-cluster-csi-drivers:azure-file-csi-driver-operator", "system:serviceaccount:openshift-cluster-csi-drivers:azure-file-csi-driver-controller-sa", "system:serviceaccount:openshift-cluster-csi-drivers:azure-file-csi-driver-node-sa"},
-					SecretLocation:     api.SecretLocation{Namespace: "openshift-cluster-csi-drivers", Name: "azure-file-credentials"},
-				},
-				{
-					OperatorName:       "aro-operator",
-					RoleDefinitionName: "Azure Red Hat OpenShift Service Operator",
-					RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/4436bae4-7702-4c84-919b-c4069ff25ee2",
-					ServiceAccounts:    []string{"system:serviceaccount:openshift-azure-operator:aro-operator-master"},
-					SecretLocation:     api.SecretLocation{Namespace: "openshift-azure-operator", Name: "azure-cloud-credentials"},
-				},
-			},
-		},
-	})
+	var roleSets []api.PlatformWorkloadIdentityRoleSetProperties
+	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &roleSets); err != nil {
+		return fmt.Errorf("failed to unmarshal platform workload identity role sets from config: %w", err)
+	}
+
+	var defaultRoleSetProperties *api.PlatformWorkloadIdentityRoleSetProperties
+	for i := range roleSets {
+		if roleSets[i].OpenShiftVersion == defaultVersion.Version.MinorVersion() {
+			defaultRoleSetProperties = &roleSets[i]
+			break
+		}
+	}
+	if defaultRoleSetProperties == nil {
+		return fmt.Errorf("no platform workload identity role set for version %s found", defaultVersion.Version.MinorVersion())
+	}
+
+	defaultRoleSet := api.PlatformWorkloadIdentityRoleSet{
+		Properties: *defaultRoleSetProperties,
+	}
+
+	b, err := json.Marshal(&defaultRoleSet)
 	if err != nil {
 		return err
 	}
