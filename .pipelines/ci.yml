@@ -413,7 +413,7 @@ stages:
               # Since must-gather runs independently, we rebuild the binary on-demand.
               . secrets/env
               go build ./hack/db
-              ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig 
+              ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=$(pwd)/admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
               tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
