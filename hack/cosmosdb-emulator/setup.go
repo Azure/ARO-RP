@@ -220,8 +220,8 @@ func createTrigger(ctx context.Context, client cosmosdb.DatabaseClient, dbName s
 
 	logrus.Infof("Creating trigger: %s on collection %s", triggerID, collectionName)
 
-	collClient := cosmosdb.NewCollectionClient(client, dbName)
-	triggerClient := cosmosdb.NewTriggerClient(collClient, collectionName)
+	collectionClient := cosmosdb.NewCollectionClient(client, dbName)
+	triggerClient := cosmosdb.NewTriggerClient(collectionClient, collectionName)
 
 	_, err := triggerClient.Create(ctx, trigger)
 	if err != nil && !strings.Contains(err.Error(), "Conflict") {
