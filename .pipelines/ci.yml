@@ -365,6 +365,8 @@ stages:
           - bash: |
               # Set SKIP_MIWI_ROLE_ASSIGNMENT=true to avoid creating platform identities and assigning Azure roles during
               # MIWI pipeline runs. These operations are handled as part of cluster creation, within the e2e's BeforeSuite.
+              . secrets/env
+              . ./hack/e2e/run-rp-and-e2e.sh
               export SKIP_MIWI_ROLE_ASSIGNMENT=true
               . ./hack/devtools/local_dev_env.sh
               echo "Creating MIWI env file"
