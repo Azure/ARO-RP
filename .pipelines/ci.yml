@@ -337,7 +337,7 @@ stages:
             displayName: Enable regression tests in CI
             condition: in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI')
 
-          # Get Kubeconfig for AKS Cluster with corrected Key Vault configuration
+          # Get Kubeconfig for AKS Cluster
           - bash: |
               . secrets/env
 
@@ -363,9 +363,8 @@ stages:
               echo "##vso[task.setvariable variable=DATABASE_NAME]{$DATABASE_NAME}"
             displayName: Set CLUSTER and DATABASE_NAME
           - bash: |
-              # CI sets SKIP_MIWI_ROLE_ASSIGNMENT=true to avoid creating platform identities and assigning Azure roles
-              # during MIWI pipeline runs. Those operations require elevated permissions and are slow/flaky in CI;
-              # identities/roles should be pre-provisioned for CI jobs.
+              # Set SKIP_MIWI_ROLE_ASSIGNMENT=true to avoid creating platform identities and assigning Azure roles during
+              # MIWI pipeline runs. These operations are handled as part of cluster creation, within the e2e's BeforeSuite.
               export SKIP_MIWI_ROLE_ASSIGNMENT=true
               . ./hack/devtools/local_dev_env.sh
               echo "Creating MIWI env file"
