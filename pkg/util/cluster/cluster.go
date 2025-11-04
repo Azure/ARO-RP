@@ -738,10 +738,12 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			c.log.Errorf("CI E2E cluster %s not found in resource group %s", clusterName, vnetResourceGroup)
 			errs = append(errs, err)
 		}
-		if oc.Properties.ServicePrincipalProfile != nil {
-			errs = append(errs,
-				c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
-			)
+		if oc != nil {
+			if oc.Properties.ServicePrincipalProfile != nil {
+				errs = append(errs,
+					c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
+				)
+			}
 		}
 
 		errs = append(errs,
