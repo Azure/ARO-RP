@@ -37,10 +37,6 @@ func main() {
 	ctx := context.Background()
 	log := logrus.New().WithField("component", "cosmosdb-setup")
 
-	if !database.IsLocalCosmosDBEnabled() {
-		log.Fatal("USE_COSMOS_DB_EMULATOR must be set to 'true' or '1'")
-	}
-
 	templatePath := "pkg/deploy/assets/databases-development.json"
 	template, err := readARMTemplate(templatePath)
 	if err != nil {
