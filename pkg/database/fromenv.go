@@ -6,6 +6,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -13,8 +14,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
+func IsLocalCosmosDBEnabled() bool {
+	envValue := os.Getenv("USE_COSMOS_DB_EMULATOR")
+	return envValue == "true" || envValue == "1"
+}
+
 // NewDatabaseClient creates a CosmosDB database client from the environment configuration.
 func NewDatabaseClientFromEnv(ctx context.Context, _env env.Core, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
+	if IsLocalCosmosDBEnabled() {
+		return NewLocalDatabaseClient(_env.LoggerForComponent("database"), m, aead)
+	}
+
 	dbAccountName, err := env.DBAccountName()
 	if err != nil {
 		return nil, err

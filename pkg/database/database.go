@@ -6,7 +6,9 @@ package database
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
+	"os"
 	"reflect"
 	"time"
 
@@ -38,22 +40,22 @@ const (
 	collMaintenanceManifests            = "MaintenanceManifests"
 )
 
-func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD, databaseAccountName string) (cosmosdb.DatabaseClient, error) {
-	h, err := NewJSONHandle(aead)
+func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, metrics metrics.Emitter, aead encryption.AEAD, databaseAccountName string) (cosmosdb.DatabaseClient, error) {
+	jsonHandle, err := NewJSONHandle(aead)
 	if err != nil {
 		return nil, err
 	}
 
-	c := &http.Client{
+	httpClient := &http.Client{
 		Transport: dbmetrics.New(log, &http.Transport{
 			// disable HTTP/2 for now: https://github.com/golang/go/issues/36026
 			TLSNextProto:        map[string]func(string, *tls.Conn) http.RoundTripper{},
 			MaxIdleConnsPerHost: 20,
-		}, m),
+		}, metrics),
 		Timeout: 30 * time.Second,
 	}
 
-	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
+	return cosmosdb.NewDatabaseClient(log, httpClient, jsonHandle, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
 }
 
 func NewTokenAuthorizer(ctx context.Context, log *logrus.Entry, cred azcore.TokenCredential, databaseAccountName string, scopes []string) (cosmosdb.Authorizer, error) {
@@ -78,21 +80,73 @@ func getDatabaseKey(keys sdkcosmos.DatabaseAccountsClientListKeysResponse, log *
 }
 
 func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
-	h := &codec.JsonHandle{}
+	jsonHandle := &codec.JsonHandle{}
 
 	if aead == nil {
-		return h, nil
+		return jsonHandle, nil
 	}
 
-	err := h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{aead: aead})
+	err := jsonHandle.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{aead: aead})
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{aead: aead})
+	err = jsonHandle.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{aead: aead})
 	if err != nil {
 		return nil, err
 	}
 
-	return h, nil
+	return jsonHandle, nil
+}
+
+func GetLocalCosmosDBEmulatorEndpoint() (string, error) {
+	endpoint := os.Getenv("COSMOSDB_EMULATOR_ENDPOINT")
+	if endpoint == "" {
+		return "", fmt.Errorf("COSMOSDB_EMULATOR_ENDPOINT environment variable must be set when using local Cosmos DB emulator")
+	}
+	return endpoint, nil
+}
+
+func GetLocalCosmosDBEmulatorKey() (string, error) {
+	key := os.Getenv("COSMOSDB_EMULATOR_KEY")
+	if key == "" {
+		return "", fmt.Errorf("COSMOSDB_EMULATOR_KEY environment variable must be set when using local Cosmos DB emulator")
+	}
+	return key, nil
+}
+
+func NewLocalDatabaseClient(log *logrus.Entry, metrics metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
+	jsonHandle, err := NewJSONHandle(aead)
+	if err != nil {
+		return nil, err
+	}
+
+	httpClient := &http.Client{
+		Transport: dbmetrics.New(log, &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+			TLSNextProto:        map[string]func(string, *tls.Conn) http.RoundTripper{},
+			MaxIdleConnsPerHost: 20,
+		}, metrics),
+		Timeout: 30 * time.Second,
+	}
+
+	key, err := GetLocalCosmosDBEmulatorKey()
+	if err != nil {
+		return nil, err
+	}
+
+	authorizer, err := cosmosdb.NewMasterKeyAuthorizer(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create master key authorizer: %w", err)
+	}
+
+	endpoint, err := GetLocalCosmosDBEmulatorEndpoint()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof("Using local Cosmos DB emulator at %s", endpoint)
+	return cosmosdb.NewDatabaseClient(log, httpClient, jsonHandle, endpoint, authorizer), nil
 }

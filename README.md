@@ -20,6 +20,9 @@ service, please see the following links:
 * If you want to deploy a development RP, follow [deploy development
   RP](docs/deploy-development-rp.md).
 
+* For local development with Cosmos DB emulator, see [Using local CosmosDB 
+  emulator](docs/local-cosmosdb-emulator.md).
+
 [1]: https://docs.microsoft.com/en-us/azure/openshift/howto-using-azure-redhat-openshift
 
 ## Contributing

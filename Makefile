@@ -75,6 +75,26 @@ aro: check-release generate
 runlocal-rp:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} rp
 
+.PHONY: start-cosmos-emulator
+start-cosmos-emulator:
+	./hack/cosmosdb-emulator/start-cosmos-emulator.sh
+
+.PHONY: stop-cosmos-emulator
+stop-cosmos-emulator:
+	./hack/cosmosdb-emulator/stop-cosmos-emulator.sh
+
+.PHONY: init-cosmos-structure
+init-cosmos-structure:
+	./hack/cosmosdb-emulator/init-db-structure.sh
+
+.PHONY: runlocal-rp-cosmos
+runlocal-rp-cosmos: start-cosmos-emulator
+	@if [ "${INIT_COSMOSDB_STRUCTURE}" = "true" ]; then \
+		echo "Initializing Cosmos DB structure..."; \
+		$(MAKE) init-cosmos-structure; \
+	fi
+	RP_MODE=development USE_COSMOS_DB_EMULATOR=true go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} rp
+
 .PHONY: runlocal-monitor
 runlocal-monitor:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} monitor
