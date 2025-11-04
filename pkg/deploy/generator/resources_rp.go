@@ -192,7 +192,7 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 							PublicIPAddress: &armnetwork.PublicIPAddress{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"),
 							},
 						},
 						Name: pointerutils.ToPtr("rp-frontend"),
@@ -200,10 +200,26 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 							PublicIPAddress: &armnetwork.PublicIPAddress{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]"),
 							},
 						},
 						Name: pointerutils.ToPtr("portal-frontend"),
+					},
+					{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &armnetwork.PublicIPAddress{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]"),
+							},
+						},
+						Name: pointerutils.ToPtr("rp-frontend-tagged"),
+					},
+					{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &armnetwork.PublicIPAddress{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]"),
+							},
+						},
+						Name: pointerutils.ToPtr("portal-frontend-tagged"),
 					},
 				},
 				BackendAddressPools: []*armnetwork.BackendAddressPool{
@@ -229,6 +245,42 @@ func (g *generator) rpLB() *arm.Resource {
 							BackendPort:      pointerutils.ToPtr(int32(443)),
 						},
 						Name: pointerutils.ToPtr("rp-lbrule"),
+					},
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+							},
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							FrontendPort:     pointerutils.ToPtr(int32(8443)),
+							BackendPort:      pointerutils.ToPtr(int32(8443)),
+						},
+						Name: pointerutils.ToPtr("rp-lbrule-8443"),
+					},
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+							},
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							FrontendPort:     pointerutils.ToPtr(int32(8444)),
+							BackendPort:      pointerutils.ToPtr(int32(8444)),
+						},
+						Name: pointerutils.ToPtr("rp-lbrule-8444"),
 					},
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
@@ -302,8 +354,10 @@ func (g *generator) rpLB() *arm.Resource {
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
-			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]",
 		},
 	}
 }
