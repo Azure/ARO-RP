@@ -101,36 +101,34 @@ func (m *manager) generatePlatformWorkloadIdentitySecretsAndNamespaces(isCreate 
 			continue
 		}
 
-		if len(roles) > 0 {
-			secrets = append(secrets, &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.Identifier(),
-					Kind:       "Secret",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: roles[0].SecretLocation.Namespace,
-					Name:      roles[0].SecretLocation.Name,
-				},
-				Type: corev1.SecretTypeOpaque,
-				StringData: map[string]string{
-					"azure_client_id":            identity.ClientID,
-					"azure_subscription_id":      subscriptionId,
-					"azure_tenant_id":            tenantId,
-					"azure_region":               region,
-					"azure_federated_token_file": azureFederatedTokenFileLocation,
-				},
-			})
+		secrets = append(secrets, &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.Identifier(),
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: roles[0].SecretLocation.Namespace,
+				Name:      roles[0].SecretLocation.Name,
+			},
+			Type: corev1.SecretTypeOpaque,
+			StringData: map[string]string{
+				"azure_client_id":            identity.ClientID,
+				"azure_subscription_id":      subscriptionId,
+				"azure_tenant_id":            tenantId,
+				"azure_region":               region,
+				"azure_federated_token_file": azureFederatedTokenFileLocation,
+			},
+		})
 
-			namespaces = append(namespaces, &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.Identifier(),
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: roles[0].SecretLocation.Namespace,
-				},
-			})
-		}
+		namespaces = append(namespaces, &corev1.Namespace{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.Identifier(),
+				Kind:       "Namespace",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: roles[0].SecretLocation.Namespace,
+			},
+		})
 	}
 
 	return secrets, namespaces, nil
