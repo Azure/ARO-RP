@@ -234,7 +234,9 @@ stages:
           - bash: |
               . ./hack/e2e/run-rp-and-e2e.sh
               echo "##vso[task.setvariable variable=CLUSTER]${CLUSTER}"
-              echo "###vso[task.setvariable variable=DATABASE_NAME]{$DATABASE_NAME}"
+              echo "##vso[task.setvariable variable=DATABASE_NAME]{$DATABASE_NAME}"
+            displayName: Set CLUSTER and DATABASE_NAME
+          - bash: |
               az acr login --name arosvcdev
               az acr login --name arointsvc
 
@@ -358,11 +360,16 @@ stages:
               . secrets/env
               . ./hack/e2e/run-rp-and-e2e.sh
               echo "##vso[task.setvariable variable=CLUSTER]${CLUSTER}"
-              echo "###vso[task.setvariable variable=DATABASE_NAME]{$DATABASE_NAME}"
+              echo "##vso[task.setvariable variable=DATABASE_NAME]{$DATABASE_NAME}"
+            displayName: Set CLUSTER and DATABASE_NAME
+          - bash: |
+              # CI sets SKIP_MIWI_ROLE_ASSIGNMENT=true to avoid creating platform identities and assigning Azure roles
+              # during MIWI pipeline runs. Those operations require elevated permissions and are slow/flaky in CI;
+              # identities/roles should be pre-provisioned for CI jobs.
               export SKIP_MIWI_ROLE_ASSIGNMENT=true
               . ./hack/devtools/local_dev_env.sh
+              echo "Creating MIWI env file"
               create_miwi_env_file
-              echo "created miwi env file successfully"
               . ./env
               az acr login --name arosvcdev
               az acr login --name arointsvc
@@ -398,6 +405,8 @@ stages:
 
           # Collect must-gather logs
           - bash: |
+              # The script calls ./db <resource-id> which connects to the CosmosDB to fetch cluster details.
+              # Since must-gather runs independently, we rebuild the binary on-demand.
               . secrets/env
               go build ./hack/db
               . ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig

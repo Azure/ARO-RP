@@ -881,10 +881,13 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 
-		err = c.ensureDefaultRoleSetInCosmosdb(ctx)
-		if err != nil {
-			return err
+		if c.Config.UseWorkloadIdentity {
+			err = c.ensureDefaultRoleSetInCosmosdb(ctx)
+			if err != nil {
+				return err
+			}
 		}
+
 		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
 		if c.Config.WorkerVMSize == DefaultWorkerVmSize.String() {
 			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
