@@ -88,7 +88,6 @@ When `USE_COSMOS_DB_EMULATOR=true`, these must be set:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `COSMOSDB_EMULATOR_CONTAINER_NAME` | Container name | `aro-cosmosdb-emulator` |
-| `COSMOSDB_EMULATOR_DATABASE_NAME` | Database name | `ARO` |
 | `COSMOSDB_EMULATOR_IMAGE` | Docker image | `mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest` |
 | `CONTAINER_RUNTIME` | Docker or Podman | Auto-detected |
 | `INIT_COSMOSDB_STRUCTURE` | Initialize DB on startup | `false` |

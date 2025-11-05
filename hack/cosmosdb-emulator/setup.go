@@ -48,7 +48,7 @@ func main() {
 		log.Fatalf("Failed to create database client: %v", err)
 	}
 
-	dbName := os.Getenv("COSMOSDB_EMULATOR_DATABASE_NAME")
+	dbName := os.Getenv("DATABASE_NAME")
 	if dbName == "" {
 		dbName = "ARO"
 	}
