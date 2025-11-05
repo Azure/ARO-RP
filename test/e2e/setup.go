@@ -26,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -50,6 +51,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
@@ -318,73 +320,123 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 	kubeconfig, err := clientcmd.NewClientConfigFromBytes(kubeConfigFile)
 	if err != nil {
-		return nil, fmt.Errorf("error building clientconfig: %w", err)
+		return nil, fmt.Errorf("error building clientconfig from bytes: %w", err)
 	}
 
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building clientconfig: %w", err)
 	}
 
 	// In development e2e the certificate is not always created with a publicly
 	// verifiable TLS certificate.
 	if _env.IsLocalDevelopmentMode() {
 		restconfig.Insecure = true // CodeQL [SM03511] only used in local development
+	} else {
+		// In prod e2e there is sometimes a lag between cluster creation and the
+		// TLS certificate being presented by the APIServer
+		configShallowCopy := *restconfig
+
+		// Create a HTTPClient which we can
+		httpClient, err := rest.HTTPClientFor(&configShallowCopy)
+		if err != nil {
+			return nil, err
+		}
+		configShallowCopy.GroupVersion = &schema.GroupVersion{}
+		configShallowCopy.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+		configShallowCopy.UserAgent = rest.DefaultKubernetesUserAgent()
+		rawClient, err := rest.RESTClientForConfigAndClient(&configShallowCopy, httpClient)
+		if err != nil {
+			return nil, err
+		}
+
+		now := time.Now()
+		timeoutDuration := 20 * time.Minute
+		sleepAmount := 10 * time.Second
+		maxRetryCount := int(timeoutDuration) / int(sleepAmount)
+		passed := false
+
+		for i := range maxRetryCount {
+			var statusCode int
+			err = rawClient.
+				Get().
+				AbsPath("/healthz").
+				Do(ctx).
+				StatusCode(&statusCode).
+				Error()
+
+			if err != nil {
+				log.Warnf("API Server not ready (try %d/%d): %s", i+1, maxRetryCount, err.Error())
+			} else if statusCode != 200 {
+				log.Warnf("API Server not ready (try %d/%d): status code %d", i+1, maxRetryCount, statusCode)
+			} else {
+				passed = true
+				break
+			}
+
+			time.Sleep(sleepAmount)
+		}
+
+		if passed {
+			log.Infof("API Server ready after %s", time.Since(now).String())
+		} else {
+			return nil, fmt.Errorf("timed out waiting for API server to be ready after %s", timeoutDuration.String())
+		}
 	}
 
 	cli, err := kubernetes.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building kubernetes clientset: %w", err)
 	}
 
 	controllerRuntimeClient, err := client.New(restconfig, client.Options{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building controller runtime client: %w", err)
 	}
 
 	monitoring, err := monitoringclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building monitoring client: %w", err)
 	}
 
 	machineapicli, err := machineclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building machine API client: %w", err)
 	}
 
 	mcocli, err := mcoclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building MCO client: %w", err)
 	}
 
 	projectcli, err := projectclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building project client: %w", err)
 	}
 
 	routecli, err := routeclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building route client: %w", err)
 	}
 
 	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building ARO k8s client: %w", err)
 	}
 
 	configcli, err := configclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building config client: %w", err)
 	}
 
 	securitycli, err := securityclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building security client: %w", err)
 	}
 
 	dynamiccli, err := dynamic.NewDynamicClient(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building dynamic k8s client: %w", err)
 	}
 
 	var hiveRestConfig *rest.Config
@@ -411,22 +463,22 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		hiveShard := 1
 		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting hive RESTConfig: %w", err)
 		}
 
 		hiveClientSet, err = client.New(hiveRestConfig, client.Options{})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive client: %w", err)
 		}
 
 		hiveAKS, err = kubernetes.NewForConfig(hiveRestConfig)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive AKS client: %w", err)
 		}
 
 		hiveCM, err = hive.NewFromConfigClusterManager(log, _env, hiveRestConfig)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive cluster manager: %w", err)
 		}
 	}
 
