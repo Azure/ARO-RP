@@ -16,60 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Helper function for iterating over machines in a paginated fashion
-func (mon *Monitor) iterateOverMachines(ctx context.Context, onEach func(*machinev1beta1.Machine)) error {
-	var cont string
-	l := &machinev1beta1.MachineList{}
-
-	for {
-		err := mon.ocpclientset.List(ctx, l, client.InNamespace("openshift-machine-api"), client.Continue(cont), client.Limit(mon.queryLimit))
-		if err != nil {
-			return fmt.Errorf("error in Machine list operation: %w", err)
-		}
-
-		for _, machine := range l.Items {
-			onEach(&machine)
-		}
-
-		cont = l.Continue
-		if cont == "" {
-			break
-		}
-	}
-
-	return nil
-}
-
-func (mon *Monitor) getMachines(ctx context.Context) map[string]*machinev1beta1.Machine {
-	machinesMap := make(map[string]*machinev1beta1.Machine)
-
-	// Reuse the iterator instead of duplicating pagination logic
-	err := mon.iterateOverMachines(ctx, func(machine *machinev1beta1.Machine) {
-		key := types.NamespacedName{Namespace: machine.Namespace, Name: machine.Name}.String()
-
-		var spec machinev1beta1.AzureMachineProviderSpec
-		err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
-		if err != nil {
-			mon.log.Error(err)
-			return // Skip this machine (don't add to map)
-		}
-		machine.Spec.ProviderSpec.Value.Object = &spec
-		machinesMap[key] = machine
-	})
-
-	if err != nil {
-		// when this call fails we may report spot vms as non spot until the next successful call
-		mon.log.Error(err)
-	}
-
-	return machinesMap
-}
-
-func isSpotInstance(m machinev1beta1.Machine) bool {
-	amps, ok := m.Spec.ProviderSpec.Value.Object.(*machinev1beta1.AzureMachineProviderSpec)
-	return ok && amps.SpotVMOptions != nil
-}
-
 func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 	count := 0
 	countByPhase := make(map[string]int)
@@ -137,4 +83,58 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// Helper functions
+func (mon *Monitor) iterateOverMachines(ctx context.Context, onEach func(*machinev1beta1.Machine)) error {
+	var cont string
+	l := &machinev1beta1.MachineList{}
+
+	for {
+		err := mon.ocpclientset.List(ctx, l, client.InNamespace("openshift-machine-api"), client.Continue(cont), client.Limit(mon.queryLimit))
+		if err != nil {
+			return fmt.Errorf("error in Machine list operation: %w", err)
+		}
+
+		for _, machine := range l.Items {
+			onEach(&machine)
+		}
+
+		cont = l.Continue
+		if cont == "" {
+			break
+		}
+	}
+
+	return nil
+}
+
+func (mon *Monitor) getMachines(ctx context.Context) map[string]*machinev1beta1.Machine {
+	machinesMap := make(map[string]*machinev1beta1.Machine)
+
+	// Reuse the iterator instead of duplicating pagination logic
+	err := mon.iterateOverMachines(ctx, func(machine *machinev1beta1.Machine) {
+		key := types.NamespacedName{Namespace: machine.Namespace, Name: machine.Name}.String()
+
+		var spec machinev1beta1.AzureMachineProviderSpec
+		err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
+		if err != nil {
+			mon.log.Error(err)
+			return // Skip this machine (don't add to map)
+		}
+		machine.Spec.ProviderSpec.Value.Object = &spec
+		machinesMap[key] = machine
+	})
+
+	if err != nil {
+		// when this call fails we may report spot vms as non spot until the next successful call
+		mon.log.Error(err)
+	}
+
+	return machinesMap
+}
+
+func isSpotInstance(m machinev1beta1.Machine) bool {
+	amps, ok := m.Spec.ProviderSpec.Value.Object.(*machinev1beta1.AzureMachineProviderSpec)
+	return ok && amps.SpotVMOptions != nil
 }

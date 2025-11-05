@@ -26,30 +26,6 @@ var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus
 	corev1.NodeReady:          corev1.ConditionTrue,
 }
 
-// Helper function for iterating over nodes in a paginated fashion
-func (mon *Monitor) iterateOverNodes(ctx context.Context, onEach func(*corev1.Node)) error {
-	var cont string
-	l := &corev1.NodeList{}
-
-	for {
-		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
-		if err != nil {
-			return fmt.Errorf("error in Node list operation: %w", err)
-		}
-
-		for _, n := range l.Items {
-			onEach(&n)
-		}
-
-		cont = l.Continue
-		if cont == "" {
-			break
-		}
-	}
-
-	return nil
-}
-
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	count := 0
 	machines := mon.getMachines(ctx)
@@ -110,6 +86,30 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	}
 
 	mon.emitGauge("node.count", int64(count), nil)
+
+	return nil
+}
+
+// Helper function for iterating over nodes in a paginated fashion
+func (mon *Monitor) iterateOverNodes(ctx context.Context, onEach func(*corev1.Node)) error {
+	var cont string
+	l := &corev1.NodeList{}
+
+	for {
+		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
+		if err != nil {
+			return fmt.Errorf("error in Node list operation: %w", err)
+		}
+
+		for _, n := range l.Items {
+			onEach(&n)
+		}
+
+		cont = l.Continue
+		if cont == "" {
+			break
+		}
+	}
 
 	return nil
 }
