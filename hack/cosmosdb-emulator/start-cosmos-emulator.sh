@@ -49,10 +49,6 @@ while [ $attempt -lt $max_attempts ]; do
         echo "  Endpoint: https://${EMULATOR_ENDPOINT}"
         echo "  Database Explorer: https://${EMULATOR_ENDPOINT}/_explorer/index.html"
         echo ""
-        echo "To connect from ARO-RP, set these environment variables:"
-        echo "  export COSMOSDB_EMULATOR_ENDPOINT=${EMULATOR_ENDPOINT}"
-        echo "  export COSMOSDB_EMULATOR_KEY=${COSMOSDB_EMULATOR_KEY}"
-        echo ""
         echo "To initialize database structure, run: make init-cosmos-structure"
         echo ""
         exit 0
