@@ -5,18 +5,12 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 )
 
 const (
@@ -118,46 +112,4 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	mon.emitGauge("node.count", int64(count), nil)
 
 	return nil
-}
-
-func (mon *Monitor) getMachines(ctx context.Context) map[string]*machinev1beta1.Machine {
-	machinesMap := make(map[string]*machinev1beta1.Machine)
-
-	var cont string
-	l := &machinev1beta1.MachineList{}
-
-	for {
-		err := mon.ocpclientset.List(ctx, l, client.InNamespace("openshift-machine-api"), client.Continue(cont), client.Limit(mon.queryLimit))
-		if err != nil {
-			// when this call fails we may report spot vms as non spot until the next successful call
-			mon.log.Error(err)
-			return machinesMap
-		}
-
-		for _, machine := range l.Items {
-			key := types.NamespacedName{Namespace: machine.Namespace, Name: machine.Name}.String()
-
-			var spec machinev1beta1.AzureMachineProviderSpec
-			err = json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
-			if err != nil {
-				mon.log.Error(err)
-				continue
-			}
-			machine.Spec.ProviderSpec.Value.Object = &spec
-
-			machinesMap[key] = &machine
-		}
-
-		cont = l.Continue
-		if cont == "" {
-			break
-		}
-	}
-
-	return machinesMap
-}
-
-func isSpotInstance(m machinev1beta1.Machine) bool {
-	amps, ok := m.Spec.ProviderSpec.Value.Object.(*machinev1beta1.AzureMachineProviderSpec)
-	return ok && amps.SpotVMOptions != nil
 }
