@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/types"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	"github.com/sirupsen/logrus"
 )
 
 func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
