@@ -50,10 +50,11 @@ func New(ctx context.Context, env env.Core, account, namespace string, mdmSocket
 		mdmSocketEnv: mdmSocketEnv,
 
 		extraDimensions: map[string]string{
-			"hostname": env.Hostname(),
-			"location": env.Location(),
-			"service":  env.Service(),
-			"version":  version.GitCommit,
+			"hostname":        env.Hostname(),
+			"location":        env.Location(),
+			"service":         env.Service(),
+			"version":         version.GitCommit,
+			"environmentType": env.EnvironmentType(),
 		},
 
 		ch: make(chan *metric, 1024),
@@ -83,7 +84,8 @@ func NewMetricsForCluster(ctx context.Context, env env.Core, account, namespace 
 		mdmSocketEnv: mdmSocketEnv,
 
 		extraDimensions: map[string]string{
-			"location": env.Location(),
+			"location":        env.Location(),
+			"environmentType": env.EnvironmentType(),
 		},
 
 		ch: make(chan *metric, 1024),
