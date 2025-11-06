@@ -72,6 +72,10 @@ func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, o
 			RoleDefinitionName: r.RoleDefinitionName,
 			RoleDefinitionID:   r.RoleDefinitionID,
 			ServiceAccounts:    make([]string, 0, len(r.ServiceAccounts)),
+			SecretLocation: api.SecretLocation{
+				Namespace: r.SecretLocation.Namespace,
+				Name:      r.SecretLocation.Name,
+			},
 		}
 
 		role.ServiceAccounts = append(role.ServiceAccounts, r.ServiceAccounts...)
