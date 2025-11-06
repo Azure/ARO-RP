@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,6 +23,8 @@ const minimumWorkerNodes = 2
 const workerMachineRoleLabel = "machine.openshift.io/cluster-api-machine-role=worker"
 const workerNodeRoleLabel = "node-role.kubernetes.io/worker"
 const phaseRunning = "Running"
+
+var clusterOperatorsToRequireSettled = []string{"kube-controller-manager", "kube-apiserver", "kube-scheduler", "console", "authentication"}
 
 // condition functions should return an error only if it's not able to be retried
 // if a condition function encounters a error when retrying it should return false, nil.
@@ -160,4 +164,32 @@ func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, er
 
 	timeSinceLastSync := time.Since(timestamp)
 	return timeSinceLastSync.Minutes() < 5, nil
+}
+
+// Check if all ClusterOperators have settled (i.e. are available and not
+// progressing).
+func (m *manager) clusterOperatorsHaveSettled(ctx context.Context) (bool, error) {
+	coList := &configv1.ClusterOperatorList{}
+
+	err := m.ch.List(ctx, coList)
+	if err != nil {
+		// Be resilient to failures as kube-apiserver might drop connections while it's reconciling
+		m.log.Errorf("failure listing cluster operators, retrying: %s", err.Error())
+		return false, nil
+	}
+
+	allSettled := true
+
+	// Only check the COs we care about to prevent added ones in new OpenShift
+	// versions perhaps tripping us up later
+	for _, co := range coList.Items {
+		if slices.Contains(clusterOperatorsToRequireSettled, strings.ToLower(co.Name)) {
+			if !clusteroperators.IsOperatorAvailable(&co) {
+				allSettled = false
+				m.log.Warnf("ClusterOperator not yet settled: %s", clusteroperators.OperatorStatusText(&co))
+			}
+		}
+	}
+
+	return allSettled, nil
 }
