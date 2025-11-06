@@ -33,39 +33,6 @@ func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
 	return clusteroperators.IsOperatorAvailable(apiserver), nil
 }
 
-// apiServersReadyAfterCertificateConfig provides a more robust check for apiserver readiness
-// after certificate configuration. It waits for the operator to be available and not progressing,
-// and also ensures that any new revisions triggered by certificate changes have completed.
-func (m *manager) apiServersReadyAfterCertificateConfig(ctx context.Context) (bool, error) {
-	apiserver, err := m.configcli.ConfigV1().ClusterOperators().Get(ctx, "kube-apiserver", metav1.GetOptions{})
-	if err != nil {
-		return false, nil
-	}
-
-	// First check if the operator is available and not progressing
-	if !clusteroperators.IsOperatorAvailable(apiserver) {
-		m.log.Infof("kube-apiserver operator not yet available: %s", clusteroperators.OperatorStatusText(apiserver))
-		return false, nil
-	}
-
-	// Additional check: ensure that all conditions are stable
-	// This helps catch cases where the operator reports as available but is still
-	// processing certificate-related revisions
-	for _, condition := range apiserver.Status.Conditions {
-		if condition.Type == configv1.OperatorProgressing && condition.Status == configv1.ConditionTrue {
-			m.log.Infof("kube-apiserver operator still progressing: %s", clusteroperators.OperatorStatusText(apiserver))
-			return false, nil
-		}
-		if condition.Type == configv1.OperatorDegraded && condition.Status == configv1.ConditionTrue {
-			m.log.Infof("kube-apiserver operator degraded: %s", clusteroperators.OperatorStatusText(apiserver))
-			return false, nil
-		}
-	}
-
-	m.log.Infof("kube-apiserver operator is ready: %s", clusteroperators.OperatorStatusText(apiserver))
-	return true, nil
-}
-
 func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 	machines, err := m.maocli.MachineV1beta1().Machines("openshift-machine-api").List(ctx, metav1.ListOptions{
 		LabelSelector: workerMachineRoleLabel,
