@@ -61,6 +61,20 @@ func (mr *MockCoreMockRecorder) Environment() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockCore)(nil).Environment))
 }
 
+// EnvironmentType mocks base method.
+func (m *MockCore) EnvironmentType() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentType")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// EnvironmentType indicates an expected call of EnvironmentType.
+func (mr *MockCoreMockRecorder) EnvironmentType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentType", reflect.TypeOf((*MockCore)(nil).EnvironmentType))
+}
+
 // Hostname mocks base method.
 func (m *MockCore) Hostname() string {
 	m.ctrl.T.Helper()

@@ -47,6 +47,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdConfigVersion",
 			"clusterMdsdNamespace",
 			"cosmosDB",
+			"environmentType",
 			"disableCosmosDBFirewall",
 			"fluentbitImage",
 			"fpClientId",
