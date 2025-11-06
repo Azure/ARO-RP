@@ -187,6 +187,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitIngressAndAPIServerCertificateExpiry,
 		mon.emitEtcdCertificateExpiry,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
+		mon.emitPrometheusMetrics,
 		mon.emitCWPStatus,
 		mon.emitClusterAuthenticationType,
 	}
