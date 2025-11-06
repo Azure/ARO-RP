@@ -42,7 +42,7 @@ func TestEmitMachineConditions(t *testing.T) {
 		wantEmitted func(m *mock_metrics.MockEmitter)
 	}{
 		{
-			name: "master machines - unexpected condition should emit conditions",
+			name: "master machine - should emit conditions",
 			machines: []client.Object{
 				newTestMachine(t, "aro-master-0", "master", "", phaseFailed, "Ready", corev1.ConditionFalse, "Machine not ready", false),
 			},
@@ -53,7 +53,7 @@ func TestEmitMachineConditions(t *testing.T) {
 			},
 		},
 		{
-			name: "worker spot machine - unexpected condition should emit conditions with spot information",
+			name: "worker spot machine - should emit conditions with spot information",
 			machines: []client.Object{
 				newTestMachine(t, "aro-worker-spot-failed", "worker", "spot-workers-failed", phaseFailed, "Ready", corev1.ConditionFalse, "Machine failed", true),
 			},
