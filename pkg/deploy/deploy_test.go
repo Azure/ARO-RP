@@ -5,17 +5,22 @@ package deploy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -377,5 +382,201 @@ func TestGetParameters(t *testing.T) {
 				t.Errorf("%#v", got)
 			}
 		})
+	}
+}
+
+func TestDisableAutomaticRepairsOnVMSS(t *testing.T) {
+	ctx := context.Background()
+	resourceGroupName := "rg"
+	vmssName := "vmss"
+
+	for _, tt := range []struct {
+		name      string
+		updateErr error
+	}{
+		{
+			name: "success",
+		},
+		{
+			name:      "azure error returns nil",
+			updateErr: errors.New("update failed"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
+
+			mockVMSS.EXPECT().UpdateAndWait(ctx, resourceGroupName, vmssName, gomock.AssignableToTypeOf(mgmtcompute.VirtualMachineScaleSetUpdate{})).DoAndReturn(
+				func(_ context.Context, rg, name string, update mgmtcompute.VirtualMachineScaleSetUpdate) error {
+					if update.VirtualMachineScaleSetUpdateProperties == nil {
+						t.Fatalf("expected VirtualMachineScaleSetUpdateProperties to be set")
+					}
+					policy := update.VirtualMachineScaleSetUpdateProperties.AutomaticRepairsPolicy
+					if policy == nil || policy.Enabled == nil {
+						t.Fatalf("expected AutomaticRepairsPolicy.Enabled to be set")
+					}
+					if *policy.Enabled {
+						t.Fatalf("expected AutomaticRepairsPolicy.Enabled to be false")
+					}
+					return tt.updateErr
+				},
+			)
+
+			d := deployer{
+				log:  logrus.NewEntry(logrus.StandardLogger()),
+				vmss: mockVMSS,
+			}
+
+			if err := d.disableAutomaticRepairsOnVMSS(ctx, resourceGroupName, vmssName); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestRunCommandWithRetrySuccess(t *testing.T) {
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	input := mgmtcompute.RunCommandInput{}
+	resourceGroupName := "rg"
+	vmssName := "vmss"
+	instanceID := "1"
+
+	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
+	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(nil)
+
+	d := deployer{
+		log:     logrus.NewEntry(logrus.StandardLogger()),
+		vmssvms: mockVMSSVMs,
+	}
+
+	if err := d.runCommandWithRetry(ctx, resourceGroupName, vmssName, instanceID, input); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRunCommandWithRetryRetriesOnOperationPreempted(t *testing.T) {
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	input := mgmtcompute.RunCommandInput{}
+	resourceGroupName := "rg"
+	vmssName := "vmss"
+	instanceID := "1"
+
+	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
+	gomock.InOrder(
+		mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(newOperationPreemptedError()),
+		mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(nil),
+	)
+
+	d := deployer{
+		log:     logrus.NewEntry(logrus.StandardLogger()),
+		vmssvms: mockVMSSVMs,
+	}
+
+	start := time.Now()
+	if err := d.runCommandWithRetry(ctx, resourceGroupName, vmssName, instanceID, input); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	duration := time.Since(start)
+	if duration < 10*time.Second {
+		t.Fatalf("expected retry delay of at least 10s, got %v", duration)
+	}
+}
+
+func TestRunCommandWithRetryReturnsLastError(t *testing.T) {
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	input := mgmtcompute.RunCommandInput{}
+	resourceGroupName := "rg"
+	vmssName := "vmss"
+	instanceID := "1"
+	wantErr := newOperationPreemptedError()
+
+	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
+	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(wantErr).Times(3)
+
+	d := deployer{
+		log:     logrus.NewEntry(logrus.StandardLogger()),
+		vmssvms: mockVMSSVMs,
+	}
+
+	start := time.Now()
+	err := d.runCommandWithRetry(ctx, resourceGroupName, vmssName, instanceID, input)
+	duration := time.Since(start)
+	if err != wantErr {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+	if duration < 20*time.Second {
+		t.Fatalf("expected retry delay of at least 20s (2 retries), got %v", duration)
+	}
+}
+
+func TestRunCommandWithRetryReturnsNonRetryableError(t *testing.T) {
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	input := mgmtcompute.RunCommandInput{}
+	resourceGroupName := "rg"
+	vmssName := "vmss"
+	instanceID := "1"
+	wantErr := errors.New("boom")
+
+	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
+	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(wantErr)
+
+	d := deployer{
+		log:     logrus.NewEntry(logrus.StandardLogger()),
+		vmssvms: mockVMSSVMs,
+	}
+
+	err := d.runCommandWithRetry(ctx, resourceGroupName, vmssName, instanceID, input)
+	if err != wantErr {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+}
+
+func TestRunCommandWithRetryContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	input := mgmtcompute.RunCommandInput{}
+	resourceGroupName := "rg"
+	vmssName := "vmss"
+	instanceID := "1"
+
+	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
+	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).DoAndReturn(
+		func(context.Context, string, string, string, mgmtcompute.RunCommandInput) error {
+			// Cancel context during the first call to simulate cancellation during retry
+			cancel()
+			return newOperationPreemptedError()
+		},
+	)
+
+	d := deployer{
+		log:     logrus.NewEntry(logrus.StandardLogger()),
+		vmssvms: mockVMSSVMs,
+	}
+
+	err := d.runCommandWithRetry(ctx, resourceGroupName, vmssName, instanceID, input)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled error, got %v", err)
+	}
+}
+
+func newOperationPreemptedError() error {
+	return &autorest.DetailedError{
+		Original: &azure.ServiceError{Code: "OperationPreempted"},
 	}
 }
