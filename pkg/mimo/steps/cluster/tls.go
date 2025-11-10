@@ -17,10 +17,35 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
+func isManagedDomain(tc mimo.TaskContext) (string, error) {
+	env := tc.Environment()
+	clusterProperties := tc.GetOpenShiftClusterProperties()
+
+	managedDomain, err := dns.ManagedDomain(env, clusterProperties.ClusterProfile.Domain)
+	if err != nil {
+		// if it fails the belt&braces check then not much we can do
+		return "", err
+	}
+
+	if managedDomain == "" {
+		return "", nil
+	}
+	return managedDomain, nil
+}
+
 func RotateAPIServerCertificate(ctx context.Context) error {
 	th, err := mimo.GetTaskContext(ctx)
 	if err != nil {
 		return mimo.TerminalError(err)
+	}
+
+	managedDomain, err := isManagedDomain(th)
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+	if managedDomain == "" {
+		th.SetResultMessage("apiserver certificate is not managed")
+		return nil
 	}
 
 	ch, err := th.ClientHelper()
@@ -36,7 +61,7 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 			ctx, env.ClusterKeyvault(), ch, types.NamespacedName{Namespace: namespace, Name: secretName}, secretName,
 		)
 		if err != nil {
-			return err
+			return mimo.TransientError(err)
 		}
 	}
 
@@ -54,15 +79,10 @@ func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
 		return mimo.TerminalError(err)
 	}
 
-	env := th.Environment()
-	clusterProperties := th.GetOpenShiftClusterProperties()
-
-	managedDomain, err := dns.ManagedDomain(env, clusterProperties.ClusterProfile.Domain)
+	managedDomain, err := isManagedDomain(th)
 	if err != nil {
-		// if it fails the belt&braces check then not much we can do
 		return mimo.TerminalError(err)
 	}
-
 	if managedDomain == "" {
 		th.SetResultMessage("apiserver certificate is not managed")
 		return nil
