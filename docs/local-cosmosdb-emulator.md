@@ -54,7 +54,7 @@ make init-cosmos-structure
 ```
 
 This creates:
-- Database
+- Database (from `DATABASE_NAME` environment variable)
 - Collections
 - JavaScript triggers
 
@@ -86,7 +86,7 @@ When `USE_COSMOS_DB_EMULATOR=true`, these must be set:
 ### Optional Environment Variables
 
 | Variable | Description | Default |
-|----------|-------------|---------|
+|----------|-------------|--git -------|
 | `COSMOSDB_EMULATOR_CONTAINER_NAME` | Container name | `aro-cosmosdb-emulator` |
 | `COSMOSDB_EMULATOR_IMAGE` | Docker image | `mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest` |
 | `CONTAINER_RUNTIME` | Docker or Podman | Auto-detected |
