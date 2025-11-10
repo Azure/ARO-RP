@@ -35,7 +35,7 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	err := mon.iterateOverNodes(ctx, func(n *corev1.Node) {
 		machineNamespacedName := n.Annotations[machineAnnotationKey]
 		machine, hasMachine := machines[machineNamespacedName]
-		isSpotInstance := hasMachine && isSpotInstance(*machine)
+		isSpotInstance := hasMachine && isSpotInstance(machine)
 
 		role := ""
 		if hasMachine {
