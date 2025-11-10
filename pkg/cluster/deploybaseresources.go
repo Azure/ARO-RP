@@ -524,31 +524,29 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 			return platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(m.doc.OpenShiftCluster, platformWIRolesByRoleName)
 		}
 
-		if len(platformWIRoles) > 0 {
-			for _, sa := range platformWIRoles[0].ServiceAccounts {
-				federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
-				if err != nil {
-					return err
-				}
+		for _, sa := range platformWIRoles[0].ServiceAccounts {
+			federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
+			if err != nil {
+				return err
+			}
 
-				_, err = m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
-					ctx,
-					identityResourceId.ResourceGroup,
-					identityResourceId.ResourceName,
-					federatedIdentityCredentialResourceName,
-					armmsi.FederatedIdentityCredential{
-						Properties: &armmsi.FederatedIdentityCredentialProperties{
-							Audiences: []*string{pointerutils.ToPtr("openshift")},
-							Issuer:    issuer,
-							Subject:   pointerutils.ToPtr(sa),
-						},
+			_, err = m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
+				ctx,
+				identityResourceId.ResourceGroup,
+				identityResourceId.ResourceName,
+				federatedIdentityCredentialResourceName,
+				armmsi.FederatedIdentityCredential{
+					Properties: &armmsi.FederatedIdentityCredentialProperties{
+						Audiences: []*string{pointerutils.ToPtr("openshift")},
+						Issuer:    issuer,
+						Subject:   pointerutils.ToPtr(sa),
 					},
-					&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
-				)
+				},
+				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
+			)
 
-				if err != nil {
-					return err
-				}
+			if err != nil {
+				return err
 			}
 		}
 	}

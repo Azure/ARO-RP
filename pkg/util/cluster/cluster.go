@@ -738,10 +738,12 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			c.log.Errorf("CI E2E cluster %s not found in resource group %s", clusterName, vnetResourceGroup)
 			errs = append(errs, err)
 		}
-		if oc.Properties.ServicePrincipalProfile != nil {
-			errs = append(errs,
-				c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
-			)
+		if oc != nil {
+			if oc.Properties.ServicePrincipalProfile != nil {
+				errs = append(errs,
+					c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
+				)
+			}
 		}
 
 		errs = append(errs,
@@ -880,6 +882,14 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		if err != nil {
 			return err
 		}
+
+		if c.Config.UseWorkloadIdentity {
+			err = c.ensureDefaultRoleSetInCosmosdb(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
 		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
 		if c.Config.WorkerVMSize == DefaultWorkerVmSize.String() {
 			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
@@ -968,6 +978,32 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 	return parsedResponse.Value, err
 }
 
+// getPlatformWIRoleSetsInCosmosDB queries the local RP admin endpoint for
+// PlatformWorkloadIdentityRoleSet documents and returns them.
+func getPlatformWIRoleSetsInCosmosDB(ctx context.Context) ([]*api.PlatformWorkloadIdentityRoleSet, error) {
+	type getRoleSetResponse struct {
+		Value []*api.PlatformWorkloadIdentityRoleSet `json:"value"`
+	}
+
+	getRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, localDefaultURL+"/admin/platformworkloadidentityrolesets", &bytes.Buffer{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating get platform WI rolesets request: %w", err)
+	}
+
+	getRequest.Header.Set("Content-Type", "application/json")
+
+	getResponse, err := insecureLocalClient().Do(getRequest)
+	if err != nil {
+		return nil, fmt.Errorf("error couldn't retrieve platform WI role sets in cosmos db: %w", err)
+	}
+
+	parsedResponse := getRoleSetResponse{}
+	decoder := json.NewDecoder(getResponse.Body)
+	err = decoder.Decode(&parsedResponse)
+
+	return parsedResponse.Value, err
+}
+
 // ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
 // cosmos DB IF it doesn't already contain an entry for the default version. It
 // is hardcoded to use the local-RP endpoint
@@ -1014,6 +1050,73 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 		return err
 	}
 
+	return resp.Body.Close()
+}
+
+// ensureDefaultRoleSetInCosmosdb puts a default PlatformWorkloadIdentityRoleSet
+// into the cosmos DB via the local RP admin endpoint IF it doesn't already
+// contain an entry for the default OpenShift version. It mirrors the behaviour
+// of ensureDefaultVersionInCosmosdb but targets the platformworkloadidentityrolesets
+// admin endpoint.
+func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
+	defaultVersion := version.DefaultInstallStream
+
+	existingRoleSets, err := getPlatformWIRoleSetsInCosmosDB(ctx)
+	if err != nil {
+		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: getPlatformWIRoleSetsInCosmosDB returned error: %v; will attempt to PUT default", err)
+	} else {
+		c.log.Infof("ensureDefaultRoleSetInCosmosdb: got %d existing platform WI role sets from local RP", len(existingRoleSets))
+		for i, rs := range existingRoleSets {
+			var ver string
+			if rs != nil {
+				ver = rs.Properties.OpenShiftVersion
+			}
+			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existingRoleSets[%d].OpenShiftVersion=%s", i, ver)
+			if ver == defaultVersion.Version.MinorVersion() {
+				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.MinorVersion())
+				return nil
+			}
+		}
+	}
+
+	c.log.Infof("building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
+
+	var roleSets []api.PlatformWorkloadIdentityRoleSetProperties
+	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &roleSets); err != nil {
+		return fmt.Errorf("failed to unmarshal platform workload identity role sets from config: %w", err)
+	}
+
+	var defaultRoleSetProperties *api.PlatformWorkloadIdentityRoleSetProperties
+	for i := range roleSets {
+		if roleSets[i].OpenShiftVersion == defaultVersion.Version.MinorVersion() {
+			defaultRoleSetProperties = &roleSets[i]
+			break
+		}
+	}
+	if defaultRoleSetProperties == nil {
+		return fmt.Errorf("no platform workload identity role set for version %s found", defaultVersion.Version.MinorVersion())
+	}
+
+	defaultRoleSet := api.PlatformWorkloadIdentityRoleSet{
+		Properties: *defaultRoleSetProperties,
+	}
+
+	b, err := json.Marshal(&defaultRoleSet)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/platformworkloadidentityrolesets", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := insecureLocalClient().Do(req)
+	if err != nil {
+		return err
+	}
 	return resp.Body.Close()
 }
 
