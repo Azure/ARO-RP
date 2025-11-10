@@ -127,7 +127,7 @@ func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
 		Type:    arov1alpha1.ServicePrincipalValid,
 		Status:  operatorv1.ConditionTrue,
 		Message: "Service Principal is valid",
-		Reason:  "CheckDone",
+		Reason:  "Validation Successful",
 	}
 }
 
