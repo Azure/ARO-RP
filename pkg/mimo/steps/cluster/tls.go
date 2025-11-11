@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
-func isManagedDomain(tc mimo.TaskContext) (string, error) {
+func managedDomain(tc mimo.TaskContext) (string, error) {
 	env := tc.Environment()
 	clusterProperties := tc.GetOpenShiftClusterProperties()
 
@@ -39,7 +39,7 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 		return mimo.TerminalError(err)
 	}
 
-	managedDomain, err := isManagedDomain(th)
+	managedDomain, err := managedDomain(th)
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
@@ -79,7 +79,7 @@ func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
 		return mimo.TerminalError(err)
 	}
 
-	managedDomain, err := isManagedDomain(th)
+	managedDomain, err := managedDomain(th)
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
