@@ -33,6 +33,7 @@ func TestAdminGetEffectiveRouteTable(t *testing.T) {
 		resourceID     string
 		fixture        func(*testdatabase.Fixture)
 		nicName        string
+		extraParams    string // for additional query parameters
 		mocks          func(*test, *mock_adminactions.MockAzureActions)
 		wantStatusCode int
 		wantResponse   interface{}
@@ -47,6 +48,40 @@ func TestAdminGetEffectiveRouteTable(t *testing.T) {
 			name:       "successful effective route table retrieval",
 			nicName:    "aro-worker-nic-123",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GetEffectiveRouteTable(gomock.Any(), tt.nicName).Return(mockRouteTableData, nil)
+			},
+			wantStatusCode: http.StatusOK,
+			validateJSON:   true,
+		},
+		{
+			name:        "successful with additional query parameters",
+			nicName:     "aro-worker-nic-123",
+			extraParams: "subid=00000000-0000-0000-0000-000000000000&rgn=resourceName",
+			resourceID:  testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -222,6 +257,39 @@ func TestAdminGetEffectiveRouteTable(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 			validateJSON:   true,
 		},
+		{
+			name:       "invalid nic name too long",
+			nicName:    strings.Repeat("a", 81), // 81 characters, exceeds 80 limit
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				// No expectations - should fail before calling Azure
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidParameter: nic: Network interface name must be between 1-80 characters",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
@@ -245,10 +313,15 @@ func TestAdminGetEffectiveRouteTable(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			// Build the URL with the nic parameter
+			// Build the URL with the nic parameter and any extra parameters
 			url := fmt.Sprintf("https://server/admin%s/effectiveRouteTable", tt.resourceID)
 			if tt.nicName != "" {
 				url += fmt.Sprintf("?nic=%s", tt.nicName)
+				if tt.extraParams != "" {
+					url += "&" + tt.extraParams
+				}
+			} else if tt.extraParams != "" {
+				url += "?" + tt.extraParams
 			}
 
 			resp, b, err := ti.request(http.MethodGet, url, nil, nil)

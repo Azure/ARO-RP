@@ -177,13 +177,29 @@ func (a *azureActions) GetEffectiveRouteTable(ctx context.Context, nicName strin
 	// Call GetEffectiveRouteTableAndWait using the ARO-RP utility pattern
 	result, err := a.networkInterfaces.GetEffectiveRouteTableAndWait(ctx, clusterRGName, nicName, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Azure API call failed: %w", err)
 	}
 
-	// Marshal the result to JSON
+	// Validate result before marshaling
+	if result == nil {
+		return nil, fmt.Errorf("received nil result from Azure API")
+	}
+
+	// Marshal the result to JSON with error handling
 	jsonData, err := result.MarshalJSON()
 	if err != nil {
-		return nil, err
+		// Try to provide a more informative error message
+		routeCount := 0
+		if result.Value != nil {
+			routeCount = len(result.Value)
+		}
+		return nil, fmt.Errorf("failed to marshal route table data (routes: %d): %w", routeCount, err)
+	}
+
+	// Check response size limit (10MB)
+	const maxResponseSize = 10 * 1024 * 1024
+	if len(jsonData) > maxResponseSize {
+		return nil, fmt.Errorf("route table response too large: %d bytes exceeds %d byte limit", len(jsonData), maxResponseSize)
 	}
 
 	return jsonData, nil
