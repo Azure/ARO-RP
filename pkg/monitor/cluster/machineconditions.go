@@ -73,19 +73,19 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 
 func (mon *Monitor) getMachines(ctx context.Context) map[string]*machinev1beta1.Machine {
 	machinesMap := make(map[string]*machinev1beta1.Machine)
-	var cont string
-	l := &machinev1beta1.MachineList{}
+	var continuationToken string
+	machinesList := &machinev1beta1.MachineList{}
 
 	for {
-		err := mon.ocpclientset.List(ctx, l, client.InNamespace("openshift-machine-api"), client.Continue(cont), client.Limit(mon.queryLimit))
+		err := mon.ocpclientset.List(ctx, machinesList, client.InNamespace("openshift-machine-api"), client.Continue(continuationToken), client.Limit(mon.queryLimit))
 		if err != nil {
 			// when this call fails we may report spot vms as non spot until the next successful call
 			mon.log.Error(err)
 			return machinesMap
 		}
 
-		for i := range l.Items {
-			machine := &l.Items[i]
+		for i := range machinesList.Items {
+			machine := &machinesList.Items[i]
 			key := types.NamespacedName{Namespace: machine.Namespace, Name: machine.Name}.String()
 
 			var spec machinev1beta1.AzureMachineProviderSpec
@@ -99,8 +99,8 @@ func (mon *Monitor) getMachines(ctx context.Context) map[string]*machinev1beta1.
 			machinesMap[key] = machine
 		}
 
-		cont = l.Continue
-		if cont == "" {
+		continuationToken = machinesList.Continue
+		if continuationToken == "" {
 			break
 		}
 	}
