@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -41,8 +43,23 @@ const (
 	ControllerName = "PullSecret"
 )
 
-var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
-var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"}
+var (
+	pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
+	rhKeys         = []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"}
+
+	// Prometheus metrics
+	pullSecretRemediation = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aro_pullsecret_remediation",
+			Help: "Total number of times the pull secret was fixed/recreated by the ARO operator",
+		},
+		[]string{"result"},
+	)
+)
+
+func init() {
+	metrics.Registry.MustRegister(pullSecretRemediation)
+}
 
 // Reconciler reconciles a Cluster object
 type Reconciler struct {
@@ -195,6 +212,9 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		err = r.Client.Create(ctx, secret)
 		if err == nil {
 			r.Log.Info("Global Pull secret Created")
+			pullSecretRemediation.WithLabelValues("success").Inc()
+		} else {
+			pullSecretRemediation.WithLabelValues("error").Inc()
 		}
 		return secret, err
 	}
@@ -202,6 +222,9 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 	err = r.Client.Update(ctx, secret)
 	if err == nil {
 		r.Log.Info("Updated Existing Global Pull secret")
+		pullSecretRemediation.WithLabelValues("success").Inc()
+	} else {
+		pullSecretRemediation.WithLabelValues("error").Inc()
 	}
 	return secret, err
 }
