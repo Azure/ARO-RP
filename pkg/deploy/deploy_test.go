@@ -577,6 +577,6 @@ func TestRunCommandWithRetryContextCancelled(t *testing.T) {
 
 func newOperationPreemptedError() error {
 	return &autorest.DetailedError{
-		Original: &azure.ServiceError{Code: "OperationPreempted"},
+		Original: &azure.ServiceError{Code: OperationPreemptedCode},
 	}
 }
