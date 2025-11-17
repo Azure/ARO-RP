@@ -413,7 +413,7 @@ func TestDisableAutomaticRepairsOnVMSS(t *testing.T) {
 					if update.VirtualMachineScaleSetUpdateProperties == nil {
 						t.Fatalf("expected VirtualMachineScaleSetUpdateProperties to be set")
 					}
-					policy := update.VirtualMachineScaleSetUpdateProperties.AutomaticRepairsPolicy
+					policy := update.AutomaticRepairsPolicy
 					if policy == nil || policy.Enabled == nil {
 						t.Fatalf("expected AutomaticRepairsPolicy.Enabled to be set")
 					}
