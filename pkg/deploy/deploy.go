@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var _ Deployer = (*deployer)(nil)
@@ -265,4 +268,62 @@ func (d *deployer) checkForKnownError(serviceErr *azure.ServiceError, deployAtte
 	}
 
 	return "", nil
+}
+
+// disableAutomaticRepairsOnVMSS disables automatic repairs on a VMSS to prevent
+// race conditions during teardown when stopping services causes health probe failures.
+// This is a best-effort operation - we log errors as warnings but don't fail the
+// teardown, allowing cleanup to proceed even if we can't disable repairs.
+func (d *deployer) disableAutomaticRepairsOnVMSS(ctx context.Context, resourceGroupName, vmssName string) error {
+	d.log.Printf("disabling automatic repairs on scaleset %s", vmssName)
+	start := time.Now()
+	err := d.vmss.UpdateAndWait(ctx, resourceGroupName, vmssName, mgmtcompute.VirtualMachineScaleSetUpdate{
+		VirtualMachineScaleSetUpdateProperties: &mgmtcompute.VirtualMachineScaleSetUpdateProperties{
+			AutomaticRepairsPolicy: &mgmtcompute.AutomaticRepairsPolicy{
+				Enabled: pointerutils.ToPtr(false),
+			},
+		},
+	})
+	d.log.Printf("disabling automatic repairs on %s took %v", vmssName, time.Since(start))
+
+	if err != nil {
+		// Log as warning but don't fail the teardown - we want to proceed with
+		// stopping services and deleting the VMSS even if we couldn't disable repairs
+		d.log.Warnf("failed to disable automatic repairs on %s, proceeding with teardown anyway: %v", vmssName, err)
+		return nil
+	}
+	return nil
+}
+
+// runCommandWithRetry runs a command on a VMSS instance with retry logic for
+// OperationPreempted errors that can occur when Azure repair operations race
+// with our shutdown commands.
+func (d *deployer) runCommandWithRetry(ctx context.Context, resourceGroupName, vmssName, instanceID string, input mgmtcompute.RunCommandInput) error {
+	const maxRetries = 3
+	const retryDelaySecs = 10
+
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input)
+		if err == nil || !isOperationPreemptedError(err) {
+			break
+		}
+		if i == maxRetries-1 {
+			break
+		}
+		d.log.Printf("RunCommand preempted on instance %s, retrying (%d/%d)", instanceID, i+1, maxRetries)
+		timer := time.NewTimer(retryDelaySecs * time.Second)
+		select {
+		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
+			return err
+		case <-timer.C:
+		}
+	}
+	return err
 }

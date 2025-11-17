@@ -30,7 +30,10 @@ func (d *deployer) UpgradeGateway(ctx context.Context) error {
 		return err
 	}
 
-	return d.gatewayRemoveOldScalesets(ctx)
+	// Create a separate timeout for cleanup phase
+	cleanupCtx, cleanupCancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cleanupCancel()
+	return d.gatewayRemoveOldScalesets(cleanupCtx)
 }
 
 func (d *deployer) gatewayWaitForReadiness(ctx context.Context, vmssName string) error {
@@ -73,6 +76,12 @@ func (d *deployer) gatewayRemoveOldScalesets(ctx context.Context) error {
 }
 
 func (d *deployer) gatewayRemoveOldScaleset(ctx context.Context, vmssName string) error {
+	// Disable automatic repairs on the old VMSS to prevent race conditions during teardown
+	err := d.disableAutomaticRepairsOnVMSS(ctx, d.config.GatewayResourceGroupName, vmssName)
+	if err != nil {
+		return err
+	}
+
 	scalesetVMs, err := d.vmssvms.List(ctx, d.config.GatewayResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
@@ -84,7 +93,7 @@ func (d *deployer) gatewayRemoveOldScaleset(ctx context.Context, vmssName string
 		if d.isVMInstanceHealthy(ctx, d.config.GatewayResourceGroupName, vmssName, *vm.InstanceID) {
 			d.log.Printf("stopping gateway service on %s", *vm.Name)
 			go func(id string) {
-				errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.GatewayResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
+				errors <- d.runCommandWithRetry(ctx, d.config.GatewayResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
 					CommandID: pointerutils.ToPtr("RunShellScript"),
 					Script:    &[]string{"systemctl stop aro-gateway"},
 				})
