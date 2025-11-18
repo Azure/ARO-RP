@@ -113,6 +113,11 @@ main() {
 	Remove TIMESTAMP
 
 [FILTER]
+	Name modify
+	Match journald
+	Add ENVIRONMENT_TYPE \${ENVIRONMENT_TYPE}
+
+[FILTER]
 	Name rewrite_tag
 	Match journald
 	Rule \$LOGKIND asyncqos asyncqos true
