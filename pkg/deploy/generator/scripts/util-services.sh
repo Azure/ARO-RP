@@ -38,7 +38,8 @@ configure_service_aro_gateway() {
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
 ROLE='${role,,}'
-ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'"
+ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
 
     write_file aro_gateway_conf_filename conf_file true
     write_file aro_gateway_conf_filename add_conf_file false
@@ -68,6 +69,7 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e ARO_LOG_LEVEL \
+  -e ENVIRONMENT_TYPE \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -463,7 +465,8 @@ MISEVALIDAUDIENCES='$MISEVALIDAUDIENCES'
 MISEVALIDAPPIDS='$MISEVALIDAPPIDS'
 LOGININSTANCE='$LOGININSTANCE'
 PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+IPADDRESS='$ipaddress'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
 
     write_file aro_mise_service_conf_filename aro_mise_service_conf_file true
 
@@ -557,6 +560,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   --rm \
+  -e ENVIRONMENT_TYPE \
   ${MISEIMAGE}
 ExecStop=/usr/bin/podman stop %N
 Restart=always
@@ -585,7 +589,8 @@ configure_service_aro_otel_collector() {
     local -r aro_otel_collector_service_conf_file="GOMEMLIMIT=1000MiB
 OTELIMAGE='$image'
 PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+IPADDRESS='$ipaddress'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
 
     write_file aro_otel_collector_service_conf_filename aro_otel_collector_service_conf_file true
 
@@ -655,6 +660,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -m 2g \
+  -e ENVIRONMENT_TYPE \
   -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml:z \
   ${OTELIMAGE}
 ExecStop=/usr/bin/podman stop %N
