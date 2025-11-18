@@ -12,8 +12,8 @@ ARM_TEMPLATE="./pkg/deploy/assets/databases-development.json"
 echo "Initializing Cosmos DB database structure..."
 
 # Check if the emulator is running
-if ! curl -k -s https://${EMULATOR_ENDPOINT}/_explorer/emulator.pem > /dev/null 2>&1; then
-    echo "ERROR: Cosmos DB emulator is not running at https://${EMULATOR_ENDPOINT}"
+if ! curl -s http://localhost:1234 > /dev/null 2>&1; then
+    echo "ERROR: Cosmos DB emulator is not running"
     echo "Please start the emulator first with: make start-cosmos-emulator"
     exit 1
 fi
