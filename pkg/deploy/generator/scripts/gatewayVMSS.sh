@@ -95,6 +95,11 @@ main() {
 	Remove_wildcard _
 	Remove TIMESTAMP
 
+[FILTER]
+	Name modify
+	Match journald
+	Add ENVIRONMENT_TYPE \${ENVIRONMENT_TYPE}
+
 [OUTPUT]
 	Name forward
 	Match *
