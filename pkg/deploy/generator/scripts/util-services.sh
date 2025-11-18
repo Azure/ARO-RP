@@ -736,7 +736,8 @@ configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -r sysconfig_filename='/etc/sysconfig/fluentbit'
     # shellcheck disable=SC2034
-    local -r sysconfig_file="FLUENTBITIMAGE=$image"
+    local -r sysconfig_file="FLUENTBITIMAGE='$image'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
 
     write_file sysconfig_filename sysconfig_file true
 
@@ -746,7 +747,6 @@ configure_service_fluentbit() {
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r service_file='[Unit]
-ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
