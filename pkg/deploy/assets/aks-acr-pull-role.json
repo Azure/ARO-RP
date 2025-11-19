@@ -1,0 +1,52 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "aksClusterName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the AKS cluster"
+            }
+        },
+        "acrName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the ACR to grant pull access to"
+            }
+        },
+        "acrResourceGroup": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().name]",
+            "metadata": {
+                "description": "Resource group containing the ACR"
+            }
+        }
+    },
+    "variables": {
+        "aksClusterId": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]",
+        "acrResourceId": "[resourceId(parameters('acrResourceGroup'), 'Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
+        "acrPullRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "roleAssignmentName": "[guid(variables('aksClusterId'), variables('acrResourceId'), variables('acrPullRoleDefinitionId'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[variables('roleAssignmentName')]",
+            "scope": "[variables('acrResourceId')]",
+            "properties": {
+                "roleDefinitionId": "[variables('acrPullRoleDefinitionId')]",
+                "principalId": "[reference(variables('aksClusterId'), '2023-01-01', 'Full').properties.identityProfile.kubeletidentity.objectId]",
+                "principalType": "ServicePrincipal",
+                "description": "Allows AKS cluster to pull images from ACR for Hive deployment"
+            }
+        }
+    ],
+    "outputs": {
+        "roleAssignmentId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.Authorization/roleAssignments', variables('roleAssignmentName'))]"
+        }
+    }
+}
+
