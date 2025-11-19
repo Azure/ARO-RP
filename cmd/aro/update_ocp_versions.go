@@ -181,6 +181,11 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 
 	newVersions := make(map[string]api.OpenShiftVersion)
 	for _, doc := range latestVersions {
+		_, found := newVersions[doc.Properties.Version]
+		// if version is in default and in install lists, we should keep only the default one.
+		if found && !doc.Properties.Default {
+			continue
+		}
 		newVersions[doc.Properties.Version] = doc
 	}
 
