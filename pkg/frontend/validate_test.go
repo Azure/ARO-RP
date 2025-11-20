@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -274,6 +275,7 @@ func TestValidateInstallVersion(t *testing.T) {
 	for _, tt := range []struct {
 		test              string
 		version           string
+		defaultOcpVersion string
 		availableVersions []string
 		wantVersion       string
 		wantErr           string
@@ -281,27 +283,44 @@ func TestValidateInstallVersion(t *testing.T) {
 		{
 			test:              "Valid and available OCP version specified returns no error",
 			version:           "4.12.25",
+			defaultOcpVersion: defaultOcpVersion,
 			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16"},
 		},
 		{
 			test:              "No version specified, uses default and returns no error",
+			defaultOcpVersion: defaultOcpVersion,
 			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16"},
 			wantVersion:       "4.12.25",
 		},
 		{
+			test:              "No version specified, defaultOcpVersion empty, no versions available, returns helpful error",
+			defaultOcpVersion: "",
+			availableVersions: []string{},
+			wantErr:           "500: InternalServerError: properties.clusterProfile.version: No default OpenShift version is available. Please specify a version explicitly using the --version parameter.",
+		},
+		{
+			test:              "No version specified, defaultOcpVersion empty, versions available but no default, returns error",
+			defaultOcpVersion: "",
+			availableVersions: []string{"4.12.25", "4.13.40"},
+			wantErr:           "500: InternalServerError: properties.clusterProfile.version: No default OpenShift version is available. Please specify a version explicitly using the --version parameter.",
+		},
+		{
 			test:              "Valid version specified but not available returns error",
 			version:           "4.14.16",
+			defaultOcpVersion: defaultOcpVersion,
 			availableVersions: []string{"4.12.25", "4.13.40"},
 			wantErr:           "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.14.16' is invalid.",
 		},
 		{
 			test:              "Prerelease version returns no error",
 			version:           "4.14.0-0.nightly-2024-01-01-000000",
+			defaultOcpVersion: defaultOcpVersion,
 			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16", "4.14.0-0.nightly-2024-01-01-000000"},
 		},
 		{
 			test:              "Version with metadata returns no error",
 			version:           "4.14.16+installerref-abcdef",
+			defaultOcpVersion: defaultOcpVersion,
 			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16", "4.14.16+installerref-abcdef"},
 		},
 	} {
@@ -315,7 +334,8 @@ func TestValidateInstallVersion(t *testing.T) {
 
 			f := frontend{
 				enabledOcpVersions: enabledOcpVersions,
-				defaultOcpVersion:  defaultOcpVersion,
+				defaultOcpVersion:  tt.defaultOcpVersion,
+				baseLog:            logrus.NewEntry(logrus.StandardLogger()),
 			}
 
 			oc := &api.OpenShiftCluster{
