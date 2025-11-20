@@ -249,7 +249,7 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend-tagged')]"),
 							},
 							BackendAddressPool: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
@@ -259,7 +259,7 @@ func (g *generator) rpLB() *arm.Resource {
 							},
 							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-							FrontendPort:     pointerutils.ToPtr(int32(8443)),
+							FrontendPort:     pointerutils.ToPtr(int32(443)),
 							BackendPort:      pointerutils.ToPtr(int32(8443)),
 						},
 						Name: pointerutils.ToPtr("rp-lbrule-8443"),
@@ -267,17 +267,17 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend-tagged')]"),
 							},
 							BackendAddressPool: &armnetwork.SubResource{
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
 							Probe: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
 							},
 							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-							FrontendPort:     pointerutils.ToPtr(int32(8444)),
+							FrontendPort:     pointerutils.ToPtr(int32(443)),
 							BackendPort:      pointerutils.ToPtr(int32(8444)),
 						},
 						Name: pointerutils.ToPtr("rp-lbrule-8444"),

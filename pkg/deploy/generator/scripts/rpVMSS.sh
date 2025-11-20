@@ -77,7 +77,7 @@ main() {
         "443/tcp"
         # RP additional frontend
         "8443/tcp"
-        # RP additional frontend
+        # Portal additional frontend
         "8444/tcp"
         # Portal web
         "444/tcp"
