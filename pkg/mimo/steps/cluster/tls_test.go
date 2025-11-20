@@ -32,18 +32,50 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 	clusterUUID := "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
 
 	for _, tt := range []struct {
-		name    string
-		objects []runtime.Object
-		check   func(clienthelper.Interface, Gomega) error
-		wantErr string
+		name              string
+		clusterproperties api.OpenShiftClusterProperties
+		objects           []runtime.Object
+		check             func(clienthelper.Interface, Gomega) error
+		wantMsg           string
+		wantErr           string
 	}{
 		{
-			name:    "not found",
+			name: "not found",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
 			objects: []runtime.Object{},
 			wantErr: `TerminalError: apiservers.config.openshift.io "cluster" not found`,
 		},
 		{
+			name: "not managed",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something.unmanaged",
+				},
+			},
+			objects: []runtime.Object{},
+			wantMsg: "apiserver certificate is not managed",
+		},
+		{
+			name: "invalid domain",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something.",
+				},
+			},
+			objects: []runtime.Object{},
+			wantErr: `TerminalError: invalid domain "something."`,
+		},
+		{
 			name: "secrets referenced",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
 			objects: []runtime.Object{
 				&configv1.APIServer{
 					ObjectMeta: metav1.ObjectMeta{
@@ -85,14 +117,65 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 			tc := testtasks.NewFakeTestContext(
 				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
 				testtasks.WithClientHelper(ch),
-				testtasks.WithOpenShiftClusterProperties(clusterUUID, api.OpenShiftClusterProperties{
-					ClusterProfile: api.ClusterProfile{
-						Domain: "something",
-					},
-				}),
+				testtasks.WithOpenShiftClusterProperties(clusterUUID, tt.clusterproperties),
 			)
 
 			err := EnsureAPIServerServingCertificateConfiguration(tc)
+			if tt.wantErr != "" && err != nil {
+				g.Expect(err).To(MatchError(tt.wantErr))
+			} else if tt.wantErr != "" && err == nil {
+				t.Errorf("wanted error %s", tt.wantErr)
+			} else if tt.wantErr == "" {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			if tt.check != nil {
+				g.Expect(tt.check(ch, g)).ToNot(HaveOccurred())
+			}
+		})
+	}
+}
+
+func TestRotateAPIServerCertificate(t *testing.T) {
+	ctx := context.Background()
+	clusterUUID := "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
+
+	for _, tt := range []struct {
+		name              string
+		clusterproperties api.OpenShiftClusterProperties
+		objects           []runtime.Object
+		check             func(clienthelper.Interface, Gomega) error
+		wantMsg           string
+		wantErr           string
+	}{
+		{
+			name: "not managed",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something.unmanaged",
+				},
+			},
+			objects: []runtime.Object{},
+			wantMsg: "apiserver certificate is not managed",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			controller := gomock.NewController(t)
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().Domain().AnyTimes().Return("example.com")
+
+			_, log := testlog.New()
+
+			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.objects...)
+			ch := clienthelper.NewWithClient(log, builder.Build())
+			tc := testtasks.NewFakeTestContext(
+				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
+				testtasks.WithClientHelper(ch),
+				testtasks.WithOpenShiftClusterProperties(clusterUUID, tt.clusterproperties),
+			)
+
+			err := RotateAPIServerCertificate(tc)
 			if tt.wantErr != "" && err != nil {
 				g.Expect(err).To(MatchError(tt.wantErr))
 			} else if tt.wantErr != "" && err == nil {
