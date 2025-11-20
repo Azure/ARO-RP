@@ -97,7 +97,7 @@ func (f *frontend) updateOcpVersions(docs []*api.OpenShiftVersionDocument) {
 		} else {
 			f.enabledOcpVersions[doc.OpenShiftVersion.Properties.Version] = doc.OpenShiftVersion
 			if doc.OpenShiftVersion.Properties.Default {
-				if f.defaultOcpVersion != "" && f.defaultOcpVersion != doc.OpenShiftVersion.Properties.Version {
+				if f.defaultOcpVersion != doc.OpenShiftVersion.Properties.Version {
 					if f.baseLog != nil {
 						f.baseLog.Warnf("Default OpenShift version changed from '%s' to '%s'", f.defaultOcpVersion, doc.OpenShiftVersion.Properties.Version)
 					}
