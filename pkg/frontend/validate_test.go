@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
