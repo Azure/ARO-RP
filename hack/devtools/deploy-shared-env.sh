@@ -94,9 +94,10 @@ deploy_hive_acr_dev() {
     echo "########## Created ACR: $acr_name ##########"
 }
 
-deploy_hive_artifact_cache_credentials() {
-    echo "########## Deploying Hive artifact cache credentials in RG $RESOURCEGROUP ##########"
+deploy_hive_acr_cache_and_access() {
+    echo "########## Deploying Hive artifact cache and AKS access in RG $RESOURCEGROUP ##########"
     local acr_name="arolocaldev${LOCATION}"
+    local aks_cluster="${AKS_CLUSTER_NAME:-aro-aks-cluster-001}"
     
     if [ -z "$HIVE_PULL_USERNAME" ] || [ -z "$HIVE_PULL_PASSWORD" ]; then
         echo "ERROR: HIVE_PULL_USERNAME and HIVE_PULL_PASSWORD must be set"
@@ -106,54 +107,14 @@ deploy_hive_artifact_cache_credentials() {
     
     az deployment group create \
         -g "$RESOURCEGROUP" \
-        -n hive-artifact-cache-credentials \
-        --template-file pkg/deploy/assets/artifact-cache-credential-set.bicep \
+        -n hive-acr-cache-and-access \
+        --template-file pkg/deploy/assets/hive-acr-cache-and-access.bicep \
         --parameters \
             "acrName=$acr_name" \
-            "username=$HIVE_PULL_USERNAME" \
-            "password=$HIVE_PULL_PASSWORD" >/dev/null
-    echo "########## Credential set created for $acr_name ##########"
-}
-
-deploy_hive_artifact_cache_rules() {
-    echo "########## Deploying Hive artifact cache rules in RG $RESOURCEGROUP ##########"
-    local acr_name="arolocaldev${LOCATION}"
-    
-    local credential_set_id=$(az acr credential-set show \
-        --registry "$acr_name" \
-        --name hive-pull-credentials \
-        --query id -o tsv 2>/dev/null)
-    
-    if [ -z "$credential_set_id" ]; then
-        echo "ERROR: Credential set not found for $acr_name"
-        echo "Run deploy_hive_artifact_cache_credentials first"
-        return 1
-    fi
-    
-    az deployment group create \
-        -g "$RESOURCEGROUP" \
-        -n hive-artifact-cache-rules \
-        --template-file pkg/deploy/assets/artifact-cache-rules.bicep \
-        --parameters \
-            "acrName=$acr_name" \
-            "credentialSetResourceId=$credential_set_id" >/dev/null
-    echo "########## Artifact cache rules created for $acr_name ##########"
-}
-
-deploy_hive_aks_acr_pull_role() {
-    echo "########## Granting AKS cluster ACR pull access for Hive in RG $RESOURCEGROUP ##########"
-    local aks_cluster="${AKS_CLUSTER_NAME:-aro-aks-cluster-001}"
-    local acr_name="arolocaldev${LOCATION}"
-    
-    az deployment group create \
-        -g "$RESOURCEGROUP" \
-        -n hive-aks-acr-pull-role \
-        --template-file pkg/deploy/assets/aks-acr-pull-role.json \
-        --parameters \
             "aksClusterName=$aks_cluster" \
-            "acrName=$acr_name" \
-            "acrResourceGroup=$RESOURCEGROUP" >/dev/null
-    echo "########## AKS cluster $aks_cluster granted pull access to $acr_name ##########"
+            "hiveRegistryUsername=$HIVE_PULL_USERNAME" \
+            "hiveRegistryPassword=$HIVE_PULL_PASSWORD" >/dev/null
+    echo "########## Hive artifact cache and AKS access configured for $acr_name ##########"
 }
 
 deploy_vpn_for_dedicated_rp() {
