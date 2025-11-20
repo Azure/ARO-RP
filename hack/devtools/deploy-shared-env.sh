@@ -101,7 +101,7 @@ deploy_hive_acr_cache_and_access() {
     
     if [ -z "$HIVE_PULL_USERNAME" ] || [ -z "$HIVE_PULL_PASSWORD" ]; then
         echo "ERROR: HIVE_PULL_USERNAME and HIVE_PULL_PASSWORD must be set"
-        echo "Contact Kipp/Adam for Hive pull secret credentials"
+        echo "See team wiki for Hive pull secret credentials"
         return 1
     fi
     
