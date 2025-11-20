@@ -9,19 +9,16 @@ main() {
     trap "cleanup $tmpdir" EXIT
 
     # This is the commit sha that the image was built from and ensures we use the correct configs for the release
-    # Production version as of Nov 5th: f84d11f6765b20de5a6c66998f2114b6855e94e0
     local -r default_commit="f84d11f6765b20de5a6c66998f2114b6855e94e0"
     local -r hive_image_commit_hash="${1:-$default_commit}"
     log "Using hive commit: $hive_image_commit_hash"
     # shellcheck disable=SC2034
     local -r hive_operator_namespace="hive"
 
-    # Hive images are now pulled from ACR using artifact cache rules
-    # The new Hive repository: quay.io/redhat-services-prod/crt-redhat-acm-tenant/hive-operator/hive
-    # is mirrored to ACR via artifact cache rules set up on arolocaldevsvc (dev) and arosvcdev (e2e)
-    # For dev environments, use arolocaldevsvc; for E2E, use arosvcdev
+    # Hive images pulled from ACR via artifact cache rules
+    # Override with HIVE_ACR_REGISTRY (e.g., arosvcdev.azurecr.io for E2E)
     # shellcheck disable=SC2034
-    local -r acr_registry="${HIVE_ACR_REGISTRY:-arolocaldevsvc.azurecr.io}"
+    local -r acr_registry="${HIVE_ACR_REGISTRY:-arolocaldeveastus.azurecr.io}"
     local -r hive_image="${acr_registry}/redhat-services-prod/crt-redhat-acm-tenant/hive-operator/hive:${hive_image_commit_hash}"
 
 
