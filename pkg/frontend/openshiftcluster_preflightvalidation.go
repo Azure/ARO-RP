@@ -132,6 +132,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 				},
 			}
 		}
+		ext := converter.ToExternal(oc)
 
 		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, resourceID); err != nil {
 			return api.ValidationResult{
