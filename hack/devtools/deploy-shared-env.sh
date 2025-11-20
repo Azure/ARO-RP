@@ -85,7 +85,7 @@ deploy_aks_dev() {
 
 deploy_hive_acr_dev() {
     echo "########## Deploying Hive ACR in RG $RESOURCEGROUP ##########"
-    local acr_name="arolocaldev${LOCATION}"
+    local acr_name="${HIVE_ACR_NAME:-arolocaldev${LOCATION}}"
     az deployment group create \
         -g "$RESOURCEGROUP" \
         -n hive-acr \
@@ -96,7 +96,7 @@ deploy_hive_acr_dev() {
 
 deploy_hive_acr_cache_and_access() {
     echo "########## Deploying Hive artifact cache and AKS access in RG $RESOURCEGROUP ##########"
-    local acr_name="arolocaldev${LOCATION}"
+    local acr_name="${HIVE_ACR_NAME:-arolocaldev${LOCATION}}"
     local aks_cluster="${AKS_CLUSTER_NAME:-aro-aks-cluster-001}"
     
     if [ -z "$HIVE_PULL_USERNAME" ] || [ -z "$HIVE_PULL_PASSWORD" ]; then
