@@ -2,6 +2,8 @@ ARG REGISTRY
 ARG BUILDER_REGISTRY
 ARG BUILDER_REPOSITORY=openshift-release-dev/golang-builder--partner-share
 ARG BUILDER_TAG=rhel-9-golang-1.24-openshift-4.20
+ARG REPOSITORY=ubi9/ubi-minimal
+ARG TAG=latest
 FROM ${BUILDER_REGISTRY}/${BUILDER_REPOSITORY}:${BUILDER_TAG} AS builder
 ARG GATEKEEPER_VERSION
 ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
@@ -21,8 +23,6 @@ RUN curl -Lq $DOWNLOAD_URL | tar -xz --strip-components=1
 RUN go build -mod vendor -a -ldflags "-X github.com/open-policy-agent/gatekeeper/pkg/version.Version=$GATEKEEPER_VERSION" -o manager
 
 #### Runtime container
-ARG REPOSITORY=ubi9/ubi-minimal
-ARG TAG=latest
 FROM ${REGISTRY}/${REPOSITORY}:${TAG}
 
 ENV USER_UID=1001 \
