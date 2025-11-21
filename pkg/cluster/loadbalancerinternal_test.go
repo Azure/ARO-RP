@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -43,7 +42,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 		architectureVersion api.ArchitectureVersion
 		mocks               func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient, plses *mock_armnetwork.MockPrivateLinkServicesClient)
 		wantErrs            []error
-		expectedLogs        []map[string]types.GomegaMatcher
+		expectedLogs        []testlog.ExpectedLogEntry
 	}{
 		{
 			name:                "noop -- already zone redundant",
@@ -66,7 +65,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("internal load balancer frontend IP already zone-redundant, no need to continue"),
@@ -108,7 +107,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("non-zonal control plane SKU, not adding zone-redundant frontend IP"),
@@ -146,7 +145,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			wantErrs:     []error{errVMAvailability},
 		},
 		{
@@ -172,7 +171,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 
 				sku.EXPECT().List(gomock.Any(), "location eq eastus").Return([]mgmtcompute.ResourceSku{}, errTestSKUFetchError)
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			wantErrs:     []error{errListVMResourceSKUs, errTestSKUFetchError},
 		},
 	} {
@@ -259,14 +258,14 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 		backendPoolName     string
 		mocks               func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient, plses *mock_armnetwork.MockPrivateLinkServicesClient)
 		wantErr             error
-		expectedLogs        []map[string]types.GomegaMatcher
+		expectedLogs        []testlog.ExpectedLogEntry
 	}{
 		{
 			name:                "performed, zonal, v2",
 			architectureVersion: api.ArchitectureVersionV2,
 			internalLBName:      infraID + "-internal",
 			backendPoolName:     infraID,
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("load balancer zonal migration: starting critical section"),
@@ -302,7 +301,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 			architectureVersion: api.ArchitectureVersionV1,
 			internalLBName:      infraID + "-internal-lb",
 			backendPoolName:     infraID + "-internal-controlplane-v4",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("load balancer zonal migration: starting critical section"),

@@ -6,11 +6,14 @@ package log
 import (
 	"fmt"
 	"strings"
+	"testing"
 
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 )
+
+type ExpectedLogEntry map[string]types.GomegaMatcher
 
 // New creates a logging hook and entry suitable for passing to functions and
 // asserting on.
@@ -23,7 +26,7 @@ func New() (*test.Hook, *logrus.Entry) {
 // AssertLoggingOutput compares the logs on `h` with the expected entries in
 // `expected`. It returns a slice of errors encountered, with a zero length if
 // no assertions failed.
-func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher) error {
+func AssertLoggingOutput(h *test.Hook, expected []ExpectedLogEntry) error {
 	var (
 		problems []string
 		entries  = h.Entries
@@ -63,4 +66,22 @@ func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher
 	}
 
 	return nil
+}
+
+func LogForTesting(t *testing.T) (*test.Hook, *logrus.Entry) {
+	t.Helper()
+	hook, log := New()
+	t.Cleanup(func() {
+		t.Helper()
+		if t.Failed() {
+			t.Log("=== LOG ENTRIES ===")
+			for _, i := range hook.Entries {
+				b, _ := i.Logger.Formatter.Format(&i)
+				t.Logf("%s", string(b))
+			}
+			t.Log("=== END LOG ENTRIES ===")
+		}
+	})
+
+	return hook, log
 }

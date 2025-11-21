@@ -74,7 +74,7 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validclientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
-	_env.EXPECT().MISEAuthorizer().AnyTimes().Return(miseadapter.NewFakeAuthorizer("http://aro-mise-test:5000", log, http.DefaultClient))
+	_env.EXPECT().MISEAuthorizer().AnyTimes().Return(miseadapter.NewFakeAuthorizer(true, true))
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
 	_env.EXPECT().FeatureIsSet(env.FeatureEnableMISE).AnyTimes().Return(false)

@@ -4,32 +4,24 @@ package miseadapter
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
 )
 
-type FakeMISEAdapter interface {
-	IsAuthorized(ctx context.Context, r *http.Request) (bool, error)
-	IsReady() bool
-}
-
 type fakemiseAdapter struct {
-	client     *Client
-	log        *logrus.Entry
 	authorized bool
 	ready      bool
 }
 
-func NewFakeAuthorizer(miseAddress string, log *logrus.Entry, fakeclient *http.Client) MISEAdapter {
+func NewFakeAuthorizer(ready bool, authorized bool) MISEAdapter {
 	return &fakemiseAdapter{
-		client: New(fakeclient, miseAddress),
-		log:    log,
+		ready:      ready,
+		authorized: authorized,
 	}
 }
 
-func (fake *fakemiseAdapter) IsAuthorized(ctx context.Context, r *http.Request) (bool, error) {
+func (fake *fakemiseAdapter) IsAuthorized(log *logrus.Entry, r *http.Request) (bool, error) {
 	return fake.authorized, nil
 }
 

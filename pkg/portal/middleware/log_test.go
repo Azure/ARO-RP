@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -60,7 +59,7 @@ func TestLog(t *testing.T) {
 		t.Error(w.Code)
 	}
 
-	expected := []map[string]types.GomegaMatcher{
+	expected := []testlog.ExpectedLogEntry{
 		{
 			"msg":                 gomega.Equal("read request"),
 			"level":               gomega.Equal(logrus.InfoLevel),
