@@ -647,7 +647,6 @@ func done(ctx context.Context) error {
 		return err
 	}
 
-	// Only delete in CI if the flag isn’t set to false
 	if conf.IsCI && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
@@ -657,13 +656,10 @@ func done(ctx context.Context) error {
 		// Attempt deletion
 		err = cluster.Delete(ctx, conf.VnetResourceGroup, conf.ClusterName)
 		if err != nil {
-			// If the cluster truly isn’t there, that’s fine—skip without panicking
-			if strings.Contains(err.Error(), "not found") {
-				log.Infof("Cluster %s already gone, skipping delete", conf.ClusterName)
-				return nil
-			}
+			log.Errorf("Cluster deletion failed with errors: %v", err)
 			return err
 		}
+		log.Info("Cluster deletion completed successfully")
 	}
 
 	return nil
