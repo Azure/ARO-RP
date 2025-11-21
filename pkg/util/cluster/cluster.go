@@ -735,42 +735,90 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err != nil {
-			c.log.Errorf("CI E2E cluster %s not found in resource group %s", clusterName, vnetResourceGroup)
-			errs = append(errs, err)
+			if azureerrors.IsNotFoundError(err) {
+				c.log.Infof("Cluster %s not found in resource group %s, assuming already deleted", clusterName, vnetResourceGroup)
+			} else {
+				c.log.Errorf("Failed to get cluster %s in resource group %s: %v", clusterName, vnetResourceGroup, err)
+				errs = append(errs, fmt.Errorf("failed to get cluster: %w", err))
+			}
 		}
 		if oc != nil {
 			if oc.Properties.ServicePrincipalProfile != nil {
-				errs = append(errs,
-					c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
-				)
+				if err := c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID); err != nil {
+					c.log.Errorf("Failed to delete application: %v", err)
+					errs = append(errs, fmt.Errorf("failed to delete application: %w", err))
+				}
 			}
 		}
 
-		errs = append(errs,
-			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteWimiRoleAssignments(ctx, vnetResourceGroup),
-			c.deleteWI(ctx, vnetResourceGroup),
-			c.ensureResourceGroupDeleted(ctx, clusterResourceGroup),
-			c.deleteResourceGroup(ctx, vnetResourceGroup),
-		)
+		if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete cluster: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
+		}
+
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
+		}
+
+		if err := c.deleteWI(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identities: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
+		}
+
+		if err := c.ensureResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
+			c.log.Errorf("Failed to ensure resource group %s deleted: %v", clusterResourceGroup, err)
+			errs = append(errs, fmt.Errorf("failed to ensure resource group %s deleted: %w", clusterResourceGroup, err))
+		}
+
+		if err := c.deleteResourceGroup(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete resource group %s: %v", vnetResourceGroup, err)
+			errs = append(errs, fmt.Errorf("failed to delete resource group %s: %w", vnetResourceGroup, err))
+		}
 
 		if env.IsLocalDevelopmentMode() { //PR E2E
-			errs = append(errs,
-				c.deleteVnetPeerings(ctx, vnetResourceGroup),
-			)
+			if err := c.deleteVnetPeerings(ctx, vnetResourceGroup); err != nil {
+				c.log.Errorf("Failed to delete VNet peerings: %v", err)
+				errs = append(errs, fmt.Errorf("failed to delete VNet peerings: %w", err))
+			}
 		}
 	} else {
-		errs = append(errs,
-			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
-			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteWimiRoleAssignments(ctx, vnetResourceGroup),
-			c.deleteWI(ctx, vnetResourceGroup),
-			c.deleteDeployment(ctx, vnetResourceGroup, clusterName), // Deleting the deployment does not clean up the associated resources
-			c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName),
-		)
+		if err := c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete role assignments: %w", err))
+		}
+
+		if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete cluster: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
+		}
+
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
+		}
+
+		if err := c.deleteWI(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identities: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
+		}
+
+		if err := c.deleteDeployment(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete deployment: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete deployment: %w", err))
+		}
+
+		if err := c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName); err != nil {
+			c.log.Errorf("Failed to delete VNet resources: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete VNet resources: %w", err))
+		}
 	}
 
-	c.log.Info("done")
+	if len(errs) > 0 {
+		c.log.Errorf("Delete failed with %d error(s)", len(errs))
+	} else {
+		c.log.Info("Delete completed successfully")
+	}
 	return errors.Join(errs...)
 }
 
@@ -1281,7 +1329,6 @@ func (c *Cluster) deleteVnetPeerings(ctx context.Context, resourceGroup string) 
 	if err != nil {
 		return fmt.Errorf("error deleting vnet peerings: %w", err)
 	}
-
 	return nil
 }
 
