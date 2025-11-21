@@ -47,7 +47,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
+	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -57,7 +57,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	redhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2024-08-12-preview/redhatopenshift"
+	redhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	utilcluster "github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
@@ -83,8 +83,8 @@ var (
 )
 
 type clientSet struct {
-	Operations        redhatopenshift20240812preview.OperationsClient
-	OpenshiftClusters redhatopenshift20240812preview.OpenShiftClustersClient
+	Operations        redhatopenshift20250725.OperationsClient
+	OpenshiftClusters redhatopenshift20250725.OpenShiftClustersClient
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient
@@ -306,7 +306,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	clusters := redhatopenshift20240812preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer)
+	clusters := redhatopenshift20250725.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer)
 
 	r, err := clusters.ListAdminCredentials(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {
@@ -516,7 +516,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		Operations:        redhatopenshift20240812preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operations:        redhatopenshift20250725.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		OpenshiftClusters: clusters,
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -581,7 +581,7 @@ func setup(ctx context.Context) error {
 	}
 	scopes := []string{_env.Environment().ResourceManagerScope}
 	authAdapter := azidext.NewTokenCredentialAdapter(tokenCred, scopes)
-	azOCClient := redhatopenshift20240812preview.NewOpenShiftClustersClient(
+	azOCClient := redhatopenshift20250725.NewOpenShiftClustersClient(
 		_env.Environment(), _env.SubscriptionID(), authAdapter)
 
 	// Only check for leftover clusters in local dev CI, not in release E2E
@@ -602,7 +602,7 @@ func setup(ctx context.Context) error {
 				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
 			}
 
-			if doc.ProvisioningState != mgmtredhatopenshift20240812preview.Deleting {
+			if doc.ProvisioningState != mgmtredhatopenshift20250725.Deleting {
 				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
 			}
 
