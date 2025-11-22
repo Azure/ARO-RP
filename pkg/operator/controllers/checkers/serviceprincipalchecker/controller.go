@@ -5,6 +5,8 @@ package serviceprincipalchecker
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -22,9 +24,11 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
@@ -100,18 +104,29 @@ func (r *Reconciler) reconcileDisabled(ctx context.Context) (ctrl.Result, error)
 
 func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
 	if checkErr != nil {
+		// Only mark as False for errors we're CERTAIN are credential issues
+		if isCredentialFailure(checkErr) {
+			r.log.Errorf("service principal is invalid: %v", checkErr)
+			return &operatorv1.OperatorCondition{
+				Type:    arov1alpha1.ServicePrincipalValid,
+				Status:  operatorv1.ConditionFalse,
+				Message: checkErr.Error(),
+				Reason:  "Service Principal invalid",
+			}
+		}
+
 		return &operatorv1.OperatorCondition{
 			Type:    arov1alpha1.ServicePrincipalValid,
-			Status:  operatorv1.ConditionFalse,
-			Message: checkErr.Error(),
-			Reason:  "CheckFailed",
+			Status:  operatorv1.ConditionUnknown,
+			Message: fmt.Sprintf("Unable to validate: %s", checkErr.Error()),
+			Reason:  "Validation Unavailable",
 		}
 	}
 
 	return &operatorv1.OperatorCondition{
 		Type:    arov1alpha1.ServicePrincipalValid,
 		Status:  operatorv1.ConditionTrue,
-		Message: "service principal is valid",
+		Message: "Service Principal is valid",
 		Reason:  "CheckDone",
 	}
 }
@@ -131,4 +146,25 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	return builder.Named(ControllerName).Complete(r)
+}
+
+func isCredentialFailure(err error) bool {
+	// Only returns true on specific errors
+
+	if azureerrors.IsInvalidSecretError(err) {
+		return true
+	}
+
+	if azureerrors.IsClientSecretKeysExpired(err) {
+		return true
+	}
+
+	// Check for our specific Application.ReadWrite.OwnedBy error
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) &&
+		cloudErr.Code == api.CloudErrorCodeInvalidServicePrincipalCredentials {
+		return true
+	}
+
+	return false
 }
