@@ -80,15 +80,40 @@ func (f *frontend) updateOcpVersions(docs []*api.OpenShiftVersionDocument) {
 	f.ocpVersionsMu.Lock()
 	defer f.ocpVersionsMu.Unlock()
 
+	hadCachedDefaultVersionBefore := f.defaultOcpVersion != ""
+	foundDefaultInUpdate := false
+
 	for _, doc := range docs {
 		if doc.OpenShiftVersion.Deleting || !doc.OpenShiftVersion.Properties.Enabled {
 			// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 			delete(f.enabledOcpVersions, doc.OpenShiftVersion.Properties.Version)
+			// If we're deleting the current default version, clear it
+			if doc.OpenShiftVersion.Properties.Version == f.defaultOcpVersion {
+				if f.baseLog != nil {
+					f.baseLog.Errorf("Default OpenShift version '%s' is being deleted from enabled versions", f.defaultOcpVersion)
+				}
+				f.defaultOcpVersion = ""
+			}
 		} else {
 			f.enabledOcpVersions[doc.OpenShiftVersion.Properties.Version] = doc.OpenShiftVersion
 			if doc.OpenShiftVersion.Properties.Default {
+				if f.defaultOcpVersion != "" && f.defaultOcpVersion != doc.OpenShiftVersion.Properties.Version {
+					if f.baseLog != nil {
+						f.baseLog.Warnf("Default OpenShift version changed from '%s' to '%s'", f.defaultOcpVersion, doc.OpenShiftVersion.Properties.Version)
+					}
+				}
 				f.defaultOcpVersion = doc.OpenShiftVersion.Properties.Version
+				foundDefaultInUpdate = true
 			}
+		}
+	}
+
+	// After processing all documents, check if we have a valid default version
+	if f.baseLog != nil {
+		if len(f.enabledOcpVersions) > 0 && f.defaultOcpVersion == "" {
+			f.baseLog.Errorf("No default OpenShift version is set in CosmosDB. %d enabled version(s) available but none marked as default. Clusters created without --version parameter will fail.", len(f.enabledOcpVersions))
+		} else if hadCachedDefaultVersionBefore && !foundDefaultInUpdate && f.defaultOcpVersion == "" {
+			f.baseLog.Error("Default OpenShift version was removed and no replacement was set. Clusters created without --version parameter will fail.")
 		}
 	}
 }

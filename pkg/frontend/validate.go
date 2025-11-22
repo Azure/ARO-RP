@@ -228,15 +228,23 @@ func validateAdminMasterVMSize(vmSize string) error {
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided vmSize '%s' is unsupported for master.", vmSize))
 }
 
+// setDefaultVersionIfEmpty sets the default OpenShift version if not provided by the user.
+// This is called before validation to ensure all validation logic has access to a valid version.
+func (f *frontend) setDefaultVersionIfEmpty(oc *api.OpenShiftCluster) {
+	if oc.Properties.ClusterProfile.Version == "" {
+		f.ocpVersionsMu.RLock()
+		oc.Properties.ClusterProfile.Version = f.defaultOcpVersion
+		f.ocpVersionsMu.RUnlock()
+	}
+}
+
 // validateInstallVersion validates the install version set in the clusterprofile.version
 // TODO convert this into static validation instead of this receiver function in the validation for frontend.
 func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster) error {
+	// Set default version if not provided by the user
+	f.setDefaultVersionIfEmpty(oc)
+
 	f.ocpVersionsMu.RLock()
-	// If this request is from an older API or the user did not specify
-	// the version to install, use the default version.
-	if oc.Properties.ClusterProfile.Version == "" {
-		oc.Properties.ClusterProfile.Version = f.defaultOcpVersion
-	}
 	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
 	f.ocpVersionsMu.RUnlock()
 

@@ -251,6 +251,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 	if isCreate {
 		putOrPatchClusterParameters.converter.ToInternal(ext, doc.OpenShiftCluster)
+
+		// Set default version before validation if not provided by user
+		// This ensures VM size validation has a valid version to check against
+		f.setDefaultVersionIfEmpty(doc.OpenShiftCluster)
+
 		err = f.ValidateNewCluster(ctx, subscription, doc.OpenShiftCluster, putOrPatchClusterParameters.staticValidator, ext, putOrPatchClusterParameters.path)
 		if err != nil {
 			return nil, err
