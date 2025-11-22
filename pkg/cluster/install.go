@@ -495,10 +495,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureAPIServerCertificate),
 			// Use a more robust check after certificate configuration to handle race conditions
 			// where the apiserver is still processing certificate-related revisions
-			steps.Condition(m.apiServersReadyAfterCertificateConfig, 30*time.Minute, true),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
-			// Additional check after worker nodes are ready to ensure certificate revisions have fully propagated
-			steps.Condition(m.apiServersReadyAfterCertificateConfig, 30*time.Minute, true),
 			steps.Condition(m.operatorConsoleExists, 30*time.Minute, true),
 			steps.Action(m.updateConsoleBranding),
 			steps.Condition(m.operatorConsoleReady, 20*time.Minute, true),
@@ -513,8 +511,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureDefaultStorageClass),
 			steps.Action(m.removeAzureFileCSIStorageClass),
 			steps.Action(m.disableOperatorReconciliation),
-			// Final check before finishing installation to ensure apiserver is fully stable
-			steps.Condition(m.apiServersReadyAfterCertificateConfig, 30*time.Minute, true),
+			// Ensure that the cluster operators have settled
+			steps.Condition(m.clusterOperatorsHaveSettled, 30*time.Minute, true),
 			steps.Action(m.finishInstallation),
 		},
 	}

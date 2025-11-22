@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +24,8 @@ const workerMachineRoleLabel = "machine.openshift.io/cluster-api-machine-role=wo
 const workerNodeRoleLabel = "node-role.kubernetes.io/worker"
 const phaseRunning = "Running"
 
+var clusterOperatorsToRequireSettled = []string{"kube-controller-manager", "kube-apiserver", "kube-scheduler", "console", "authentication"}
+
 // condition functions should return an error only if it's not able to be retried
 // if a condition function encounters a error when retrying it should return false, nil.
 
@@ -31,39 +35,6 @@ func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	return clusteroperators.IsOperatorAvailable(apiserver), nil
-}
-
-// apiServersReadyAfterCertificateConfig provides a more robust check for apiserver readiness
-// after certificate configuration. It waits for the operator to be available and not progressing,
-// and also ensures that any new revisions triggered by certificate changes have completed.
-func (m *manager) apiServersReadyAfterCertificateConfig(ctx context.Context) (bool, error) {
-	apiserver, err := m.configcli.ConfigV1().ClusterOperators().Get(ctx, "kube-apiserver", metav1.GetOptions{})
-	if err != nil {
-		return false, nil
-	}
-
-	// First check if the operator is available and not progressing
-	if !clusteroperators.IsOperatorAvailable(apiserver) {
-		m.log.Infof("kube-apiserver operator not yet available: %s", clusteroperators.OperatorStatusText(apiserver))
-		return false, nil
-	}
-
-	// Additional check: ensure that all conditions are stable
-	// This helps catch cases where the operator reports as available but is still
-	// processing certificate-related revisions
-	for _, condition := range apiserver.Status.Conditions {
-		if condition.Type == configv1.OperatorProgressing && condition.Status == configv1.ConditionTrue {
-			m.log.Infof("kube-apiserver operator still progressing: %s", clusteroperators.OperatorStatusText(apiserver))
-			return false, nil
-		}
-		if condition.Type == configv1.OperatorDegraded && condition.Status == configv1.ConditionTrue {
-			m.log.Infof("kube-apiserver operator degraded: %s", clusteroperators.OperatorStatusText(apiserver))
-			return false, nil
-		}
-	}
-
-	m.log.Infof("kube-apiserver operator is ready: %s", clusteroperators.OperatorStatusText(apiserver))
-	return true, nil
 }
 
 func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
@@ -193,4 +164,32 @@ func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, er
 
 	timeSinceLastSync := time.Since(timestamp)
 	return timeSinceLastSync.Minutes() < 5, nil
+}
+
+// Check if all ClusterOperators have settled (i.e. are available and not
+// progressing).
+func (m *manager) clusterOperatorsHaveSettled(ctx context.Context) (bool, error) {
+	coList := &configv1.ClusterOperatorList{}
+
+	err := m.ch.List(ctx, coList)
+	if err != nil {
+		// Be resilient to failures as kube-apiserver might drop connections while it's reconciling
+		m.log.Errorf("failure listing cluster operators, retrying: %s", err.Error())
+		return false, nil
+	}
+
+	allSettled := true
+
+	// Only check the COs we care about to prevent added ones in new OpenShift
+	// versions perhaps tripping us up later
+	for _, co := range coList.Items {
+		if slices.Contains(clusterOperatorsToRequireSettled, strings.ToLower(co.Name)) {
+			if !clusteroperators.IsOperatorAvailable(&co) {
+				allSettled = false
+				m.log.Warnf("ClusterOperator not yet settled: %s", clusteroperators.OperatorStatusText(&co))
+			}
+		}
+	}
+
+	return allSettled, nil
 }
