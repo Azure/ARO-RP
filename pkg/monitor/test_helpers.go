@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -43,11 +44,25 @@ type TestEnvironment struct {
 	NoopMetricsEmitter   noop.Noop
 	NoopClusterMetrics   noop.Noop
 	DBGroup              monitorDBs
+	localCosmosClient    cosmosdb.DatabaseClient
+	localCosmosDB        *cosmosdb.Database
+	ctx                  context.Context
 }
 
-// SetupTestEnvironment creates a common test environment for monitor tests
+// / This function creates the test environment. It creates a fake client when running on the CI
+// / Or a local cosmosdb client if running tests locally with the specified make command
 func SetupTestEnvironment(t *testing.T) *TestEnvironment {
+	// Check if we need to use the local cosmosdb. CI can't use it yet
+	useLocal := os.Getenv("USE_LOCAL_COSMOS_FOR_TEST")
+	if useLocal == "" {
+		return SetupTestEnvironmentWithFakeClient(t)
+	}
+	return setupTestEnvironmentWithLocalCosmos(t)
+}
+
+func SetupTestEnvironmentWithFakeClient(t *testing.T) *TestEnvironment {
 	// Create databases
+	ctx := context.Background()
 	openShiftClusterDB, _ := testdatabase.NewFakeOpenShiftClusters()
 	subscriptionsDB, _ := testdatabase.NewFakeSubscriptions()
 	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors()
@@ -71,7 +86,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 		WithSubscriptions(subscriptionsDB)
 
 	// Create master monitor document
-	monitorsDB.Create(context.TODO(), &api.MonitorDocument{
+	monitorsDB.Create(ctx, &api.MonitorDocument{
 		ID: "master",
 		Monitor: &api.Monitor{
 			Buckets: make([]string, 256),
@@ -94,6 +109,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 		NoopMetricsEmitter:   noopMetricsEmitter,
 		NoopClusterMetrics:   noopClusterMetricsEmitter,
 		DBGroup:              dbs,
+		ctx:                  ctx,
 	}
 }
 
@@ -119,7 +135,6 @@ func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
 	return mon
 }
 
-// Cleanup performs test cleanup
 func (env *TestEnvironment) Cleanup() {
 	env.Controller.Finish()
 }
