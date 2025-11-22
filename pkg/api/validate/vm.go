@@ -388,7 +388,10 @@ func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool
 
 	clusterVersion, err := version.ParseVersion(v)
 	if err != nil {
-		return false
+		// return false
+		// As temporary fix for itn-2025-00300, we will use version 4.16 for the following check if version cannot be determined
+		// This must be changed before we have 4.19 as default version or if we add some SKU that requires minimum version other than 4.19
+		clusterVersion = version.NewVersion(4, 16, 0)
 	}
 	// Check version-specific restrictions
 	if isMaster {
