@@ -48,6 +48,13 @@ else
 	BUILDER_REGISTRY = quay.io/openshift-release-dev
 endif
 
+# (workaround) use git commit sha without dirty suffix for FULL RP Dev automation
+ifeq ($(FULL_RP_DEV),)
+	DEPLOY_COMMIT = $(VERSION)
+else
+	DEPLOY_COMMIT = $(shell git rev-parse --short=7 HEAD)
+endif
+
 # prod images
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
@@ -114,7 +121,7 @@ client-generate:
 # override COMMIT.
 .PHONY: deploy
 deploy:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(DEPLOY_COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml
 dev-config.yaml:
