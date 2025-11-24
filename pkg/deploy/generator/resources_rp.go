@@ -400,7 +400,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"otelAuditQueueSize",
 		"tokenContributorRoleID",
 		"tokenContributorRoleName",
-		"environmentType",
 
 		// Log levels
 		"rpLogLevel",

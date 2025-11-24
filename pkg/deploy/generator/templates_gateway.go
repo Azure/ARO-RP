@@ -27,7 +27,6 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
 		"databaseAccountName",
-		"environmentType",
 		"fluentbitImage",
 		"gatewayDomains",
 		"gatewayFeatures",

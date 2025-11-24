@@ -106,7 +106,6 @@ type Configuration struct {
 	MsiRpEndpoint                      *string                `json:"msiRpEndpoint,omitempty" value:"required"`
 	TokenContributorRoleID             *string                `json:"tokenContributorRoleID,omitempty" value:"required"`
 	TokenContributorRoleName           *string                `json:"tokenContributorRoleName,omitempty" value:"required"`
-	EnvironmentType                    *string                `json:"environmentType,omitempty" value:"required"`
 
 	// Log levels for ARO services running on the VMSSes
 	RPLogLevel           *string `json:"rpLogLevel,omitempty"`
