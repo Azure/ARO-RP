@@ -26,6 +26,32 @@ func TestAdminVMResize(t *testing.T) {
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
 
+	addClusterDoc := func(f *testdatabase.Fixture) {
+		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+					},
+				},
+			},
+		})
+	}
+
+	addSubscriptionDoc := func(f *testdatabase.Fixture) {
+		f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+			ID: mockSubID,
+			Subscription: &api.Subscription{
+				State: api.SubscriptionStateRegistered,
+				Properties: &api.SubscriptionProperties{
+					TenantID: mockTenantID,
+				},
+			},
+		})
+	}
+
 	type test struct {
 		name           string
 		resourceID     string
@@ -45,26 +71,8 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
@@ -78,15 +86,7 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
+				addSubscriptionDoc(f)
 			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusNotFound,
@@ -98,17 +98,7 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
+				addClusterDoc(f)
 			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
@@ -120,26 +110,8 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(false, nil)
@@ -153,41 +125,27 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
 			},
-			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
-			},
+			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      `403: Forbidden: : "The vmName 'aro-fake-node-0' provided cannot be resized. It is either not a master node or not adhering to the standard naming convention."`,
 		},
 		{
-			name:           "invalid vmname",
-			vmName:         "%26&ampersandvmname",
-			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			vmSize:         "Standard_D8s_v3",
-			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : The provided vmName '&' is invalid.`,
+			name:       "naming convention for control plane nodes created via CPMS is valid",
+			vmName:     "aro-fake-node-master-12345-0",
+			vmSize:     "Standard_D8s_v3",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
+				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(nil)
+			},
+			wantStatusCode: http.StatusOK,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

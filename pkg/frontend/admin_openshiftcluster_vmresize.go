@@ -32,6 +32,13 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 
+	if !nodeIsMaster(vmName) {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "",
+			fmt.Sprintf(
+				`"The vmName '%s' provided cannot be resized. It is either not a master node or not adhering to the standard naming convention."`,
+				vmName))
+	}
+
 	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
@@ -55,20 +62,12 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 				vmName, resourceGroupName))
 	}
 
-	if !nodeIsMaster(vmName) {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "",
-			fmt.Sprintf(
-				`"The vmName '%s' provided cannot be resized. It is either not a master node or not adhering to the standard naming convention."`,
-				vmName))
-	}
-
 	return action.VMResize(ctx, vmName, vmSize)
 }
 
-// A bland check, to validate if the node is master by checking vmName ends with pattern "-master-[0-9]"
-// return false, when the node is either not a master node or not adhering to the standard naming convention.
-// return true, if regexp satisfies
+// Check if VM name follows standard control plane node naming convention
+// vmName is expected to end with pattern "-master-[0-9]" or "-master-[0-9A-Za-z]{5}-[0-9]" for nodes created via CPMS
 func nodeIsMaster(vmName string) bool {
-	r := regexp.MustCompile(`.*-master-[0-9]{1,}$`)
+	r := regexp.MustCompile(`.*-master-([0-9A-Za-z]{5}-)?[0-9]$`)
 	return r.MatchString(vmName)
 }
