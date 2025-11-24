@@ -12,13 +12,13 @@ NODEIP=$(/sbin/ip --json route get 168.63.129.16 | /bin/jq -r ".[].prefsrc")
 
 if [ "$NODEIP" != "" ]; then
     /bin/cp -Z /etc/resolv.conf /etc/resolv.conf.dnsmasq
-    SEARCHDOMAIN=$(awk '/^search/ { print $2; }' /etc/resolv.conf.dnsmasq)
+    SEARCHDOMAIN=$(awk '/^search/ { $1=""; print $0 }' /etc/resolv.conf.dnsmasq)
     /bin/chmod 0744 /etc/resolv.conf.dnsmasq
 
     cat <<EOF | /bin/tee /etc/NetworkManager/conf.d/aro-dns.conf
 # Added by dnsmasq.service
 [global-dns]
-searches=$SEARCHDOMAIN
+searches=$(for i in ${SEARCHDOMAIN}; do echo -n ${i},; done)
 
 [global-dns-domain-*]
 servers=$NODEIP
