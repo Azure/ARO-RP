@@ -181,6 +181,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitReplicasetStatuses,
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
+		mon.emitCNVVirtualMachineInstanceStatuses,
 		mon.emitSummary,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitMaintenanceState,

@@ -6,6 +6,7 @@ package scheme
 import (
 	templatesv1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	kubevirtv1 "kubevirt.io/api/core/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,4 +58,5 @@ func init() {
 	utilruntime.Must(hivev1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(imageregistryv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(templatesv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(kubevirtv1.AddToScheme(scheme.Scheme))
 }
