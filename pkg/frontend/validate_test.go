@@ -270,7 +270,7 @@ func TestValidateAdminMasterVMSize(t *testing.T) {
 	}
 }
 
-func TestValidateInstallVersion(t *testing.T) {
+func TestSetDefaultAndValidateInstallVersion(t *testing.T) {
 	defaultOcpVersion := "4.12.25"
 
 	for _, tt := range []struct {
@@ -347,7 +347,7 @@ func TestValidateInstallVersion(t *testing.T) {
 				},
 			}
 
-			err := f.validateInstallVersion(ctx, oc)
+			err := f.setDefaultAndValidateInstallVersion(ctx, oc)
 			if tt.wantVersion != "" && oc.Properties.ClusterProfile.Version != tt.wantVersion {
 				t.Errorf("wanted clusterdoc updated with version %s but got %s", tt.wantVersion, oc.Properties.ClusterProfile.Version)
 			}

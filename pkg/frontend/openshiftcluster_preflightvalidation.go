@@ -123,7 +123,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 	}
 	if isCreate {
 		converter.ToInternal(ext, oc)
-		if err := f.validateInstallVersion(ctx, oc); err != nil {
+		if err := f.setDefaultAndValidateInstallVersion(ctx, oc); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.CloudErrorBody{

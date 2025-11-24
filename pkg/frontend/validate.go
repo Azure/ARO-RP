@@ -230,7 +230,7 @@ func validateAdminMasterVMSize(vmSize string) error {
 
 // validateInstallVersion validates the install version set in the clusterprofile.version
 // TODO convert this into static validation instead of this receiver function in the validation for frontend.
-func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster) error {
+func (f *frontend) setDefaultAndValidateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster) error {
 	f.ocpVersionsMu.RLock()
 	defer f.ocpVersionsMu.RUnlock()
 
