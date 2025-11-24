@@ -622,9 +622,6 @@ processors:
       - key: \"host\"
         action: insert
         value: \"$(hostname)\"
-      - key: \"environmentType\"
-        action: insert
-        value: \"$ENVIRONMENTTYPE\"
 extensions:
   health_check:
     endpoint: $ipaddress:13133
