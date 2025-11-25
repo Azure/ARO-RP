@@ -21,6 +21,7 @@ const (
 	MachineHealthCheckEnabled          = "aro.machinehealthcheck.enabled"
 	MachineHealthCheckManaged          = "aro.machinehealthcheck.managed"
 	MonitoringEnabled                  = "aro.monitoring.enabled"
+	NICEnabled                         = "aro.nic.enabled"
 	NodeDrainerEnabled                 = "aro.nodedrainer.enabled"
 	PullSecretEnabled                  = "aro.pullsecret.enabled"
 	PullSecretManaged                  = "aro.pullsecret.managed"
@@ -73,6 +74,7 @@ func DefaultOperatorFlags() map[string]string {
 		MachineHealthCheckEnabled:          FlagTrue,
 		MachineHealthCheckManaged:          FlagTrue,
 		MonitoringEnabled:                  FlagFalse,
+		NICEnabled:                         FlagTrue,
 		NodeDrainerEnabled:                 FlagTrue,
 		PullSecretEnabled:                  FlagTrue,
 		PullSecretManaged:                  FlagTrue,
