@@ -231,6 +231,25 @@ func validateAdminMasterVMSize(vmSize string) error {
 // validateInstallVersion validates the install version set in the clusterprofile.version
 // TODO convert this into static validation instead of this receiver function in the validation for frontend.
 func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster) error {
+	if err := f.setDefaultVersionIfEmpty(oc); err != nil {
+		return err
+	}
+
+	f.ocpVersionsMu.RLock()
+	defer f.ocpVersionsMu.RUnlock()
+
+	// Validate the version (whether user-provided or default)
+	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
+	_, err := semver.NewVersion(oc.Properties.ClusterProfile.Version)
+
+	if !ok || err != nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", fmt.Sprintf("The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version))
+	}
+
+	return nil
+}
+
+func (f *frontend) setDefaultVersionIfEmpty(oc *api.OpenShiftCluster) error {
 	f.ocpVersionsMu.RLock()
 	defer f.ocpVersionsMu.RUnlock()
 
@@ -242,14 +261,6 @@ func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShift
 			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "properties.clusterProfile.version", "No default OpenShift version is available. Please specify a version explicitly using the --version parameter.")
 		}
 		oc.Properties.ClusterProfile.Version = f.defaultOcpVersion
-	}
-
-	// Validate the version (whether user-provided or default)
-	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
-	_, err := semver.NewVersion(oc.Properties.ClusterProfile.Version)
-
-	if !ok || err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", fmt.Sprintf("The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version))
 	}
 
 	return nil

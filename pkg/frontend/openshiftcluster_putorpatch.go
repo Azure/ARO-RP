@@ -252,10 +252,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	if isCreate {
 		putOrPatchClusterParameters.converter.ToInternal(ext, doc.OpenShiftCluster)
 
-		err = f.validateInstallVersion(ctx, doc.OpenShiftCluster)
+		err = f.setDefaultVersionIfEmpty(doc.OpenShiftCluster)
 		if err != nil {
 			return nil, err
 		}
+		ext = putOrPatchClusterParameters.converter.ToExternal(doc.OpenShiftCluster)
 
 		err = f.ValidateNewCluster(ctx, subscription, doc.OpenShiftCluster, putOrPatchClusterParameters.staticValidator, ext, putOrPatchClusterParameters.path)
 		if err != nil {
@@ -283,6 +284,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	if isCreate {
+		err = f.validateInstallVersion(ctx, doc.OpenShiftCluster)
+		if err != nil {
+			return nil, err
+		}
+
 		// on create, make the cluster resourcegroup ID lower case to work
 		// around LB/PLS bug
 		doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
