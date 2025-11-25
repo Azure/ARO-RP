@@ -176,7 +176,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitMachineConditions,
 		mon.emitNodeConditions,
 		mon.emitPodConditions,
-		mon.emitDebugPodsCount,
 		mon.detectQuotaFailure,
 		mon.emitReplicasetStatuses,
 		mon.emitStatefulsetStatuses,
