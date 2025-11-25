@@ -5,7 +5,6 @@ package serviceprincipalchecker
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -24,7 +23,6 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
@@ -64,7 +62,6 @@ func NewReconciler(log *logrus.Entry, client client.Client, role string) *Reconc
 	}
 }
 
-// Reconcile will keep checking that the cluster has a valid cluster service principal.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
@@ -77,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return r.reconcileDisabled(ctx)
 	}
 
-	r.log.Debug("running")
+	r.log.Debug("Operator is enabled, checking service principal")
 	checkErr := r.checker.Check(ctx, instance.Spec.AZEnvironment)
 	condition := r.condition(checkErr)
 
@@ -104,7 +101,6 @@ func (r *Reconciler) reconcileDisabled(ctx context.Context) (ctrl.Result, error)
 
 func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
 	if checkErr != nil {
-		// Only mark as False for errors we're CERTAIN are credential issues
 		if isCredentialFailure(checkErr) {
 			r.log.Errorf("service principal is invalid: %v", checkErr)
 			return &operatorv1.OperatorCondition{
@@ -149,8 +145,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func isCredentialFailure(err error) bool {
-	// Only returns true on specific errors
-
 	if azureerrors.IsInvalidSecretError(err) {
 		return true
 	}
@@ -158,13 +152,5 @@ func isCredentialFailure(err error) bool {
 	if azureerrors.IsClientSecretKeysExpired(err) {
 		return true
 	}
-
-	// Check for our specific Application.ReadWrite.OwnedBy error
-	var cloudErr *api.CloudError
-	if errors.As(err, &cloudErr) &&
-		cloudErr.Code == api.CloudErrorCodeInvalidServicePrincipalCredentials {
-		return true
-	}
-
 	return false
 }
