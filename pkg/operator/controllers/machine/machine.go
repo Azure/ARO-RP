@@ -14,7 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	machineutil "github.com/Azure/ARO-RP/pkg/util/machine"
+	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -84,7 +84,7 @@ func (r *Reconciler) checkMachines(ctx context.Context) (errs []error) {
 	}
 
 	for _, machine := range machines.Items {
-		isMaster, err := machineutil.IsMasterRole(&machine)
+		isMaster, err := utilmachine.IsMasterRole(&machine)
 		if err != nil {
 			errs = append(errs, err)
 			continue

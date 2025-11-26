@@ -18,7 +18,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	aromachine "github.com/Azure/ARO-RP/pkg/util/machine"
+	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 )
 
 func (f *frontend) postAdminOpenShiftClusterVMResize(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +56,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode machine object for %s, %s", vmName, err.Error()))
 	}
 
-	isControlPlaneMachine, err := aromachine.IsMasterRole(machine)
+	isControlPlaneMachine, err := utilmachine.IsMasterRole(machine)
 	if err != nil {
 		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
