@@ -183,6 +183,10 @@ func deleteSecrets(ctx context.Context, log *logrus.Entry, kubeActions adminacti
 }
 
 func getPeerPods(pods []corev1.Pod, de *degradedEtcd, cluster string) (string, error) {
+	regNode, err := regexp.Compile(".master-[0-9]$")
+	if err != nil {
+		return "", err
+	}
 	regPod, err := regexp.Compile("etcd-" + cluster + "-[0-9A-Za-z]*-master-[0-9]$")
 	if err != nil {
 		return "", err
@@ -190,7 +194,7 @@ func getPeerPods(pods []corev1.Pod, de *degradedEtcd, cluster string) (string, e
 
 	var peerPods string
 	for _, p := range pods {
-		if nodeIsMaster(p.Spec.NodeName) &&
+		if regNode.MatchString(p.Spec.NodeName) &&
 			regPod.MatchString(p.Name) &&
 			p.Name != de.Pod {
 			peerPods += p.Name + " "
