@@ -65,6 +65,7 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 	if err != nil {
 		return mimo.TransientError(err)
 	}
+
 	if isCustom {
 		th.SetResultMessage("apiserver certificate is custom; skipping rotation")
 		return nil
