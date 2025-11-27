@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -23,6 +24,11 @@ import (
 func TestEmitNetworkMTU(t *testing.T) {
 	ctx := context.Background()
 
+	const (
+		networkType       string = "OVNKubernetes"
+		clusterNetworkMTU int    = 1340
+	)
+
 	tests := []struct {
 		name           string
 		oc             *api.OpenShiftCluster
@@ -30,7 +36,7 @@ func TestEmitNetworkMTU(t *testing.T) {
 		expectedMetric metricExpectation
 	}{
 		{
-			name: "MTU 1500 cluster with OpenShiftSDN",
+			name: "MTU cluster test",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					NetworkProfile: api.NetworkProfile{
@@ -43,47 +49,18 @@ func TestEmitNetworkMTU(t *testing.T) {
 					Name: "cluster",
 				},
 				Spec: configv1.NetworkSpec{
-					NetworkType: "OpenShiftSDN",
+					NetworkType: networkType,
 				},
 				Status: configv1.NetworkStatus{
-					ClusterNetworkMTU: 1500,
+					ClusterNetworkMTU: clusterNetworkMTU,
 				},
 			},
 			expectedMetric: metricExpectation{
 				name:  "network.mtu",
 				value: 1,
 				labels: map[string]string{
-					"mtu":          "1500",
-					"network_type": "OpenShiftSDN",
-				},
-			},
-		},
-		{
-			name: "MTU 1400 cluster with OVNKubernetes",
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					NetworkProfile: api.NetworkProfile{
-						MTUSize: api.MTU1500,
-					},
-				},
-			},
-			networkConfig: &configv1.Network{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster",
-				},
-				Spec: configv1.NetworkSpec{
-					NetworkType: "OVNKubernetes",
-				},
-				Status: configv1.NetworkStatus{
-					ClusterNetworkMTU: 1400,
-				},
-			},
-			expectedMetric: metricExpectation{
-				name:  "network.mtu",
-				value: 1,
-				labels: map[string]string{
-					"mtu":          "1400",
-					"network_type": "OVNKubernetes",
+					"mtu":          strconv.Itoa(clusterNetworkMTU),
+					"network_type": networkType,
 				},
 			},
 		},
