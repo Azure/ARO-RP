@@ -83,10 +83,6 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 }
 
 func isCustomAPIServerCertificate(ctx context.Context, kv azsecrets.Client, secretName, managedDomain string) (bool, error) {
-	if managedDomain == "" {
-		return false, nil
-	}
-
 	bundle, err := kv.GetSecret(ctx, secretName, "", nil)
 	if err != nil {
 		return false, err
