@@ -4,6 +4,7 @@ __pycache__
 *.pyc
 gomock_reflect_*
 /.vscode
+**/__debug_bin*
 /*.crt
 /*.key
 /*kubeconfig

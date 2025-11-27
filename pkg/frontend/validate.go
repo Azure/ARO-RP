@@ -231,19 +231,36 @@ func validateAdminMasterVMSize(vmSize string) error {
 // validateInstallVersion validates the install version set in the clusterprofile.version
 // TODO convert this into static validation instead of this receiver function in the validation for frontend.
 func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster) error {
-	f.ocpVersionsMu.RLock()
-	// If this request is from an older API or the user did not specify
-	// the version to install, use the default version.
-	if oc.Properties.ClusterProfile.Version == "" {
-		oc.Properties.ClusterProfile.Version = f.defaultOcpVersion
+	if err := f.setDefaultVersionIfEmpty(oc); err != nil {
+		return err
 	}
-	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
-	f.ocpVersionsMu.RUnlock()
 
+	f.ocpVersionsMu.RLock()
+	defer f.ocpVersionsMu.RUnlock()
+
+	// Validate the version (whether user-provided or default)
+	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
 	_, err := semver.NewVersion(oc.Properties.ClusterProfile.Version)
 
 	if !ok || err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", fmt.Sprintf("The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version))
+	}
+
+	return nil
+}
+
+func (f *frontend) setDefaultVersionIfEmpty(oc *api.OpenShiftCluster) error {
+	f.ocpVersionsMu.RLock()
+	defer f.ocpVersionsMu.RUnlock()
+
+	// If user did not specify a version, use the default version from cache
+	if oc.Properties.ClusterProfile.Version == "" {
+		if f.defaultOcpVersion == "" {
+			// No default version available in cache
+			f.baseLog.Error("Cluster creation attempted without --version parameter, but no default OpenShift version is available in cache.")
+			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "properties.clusterProfile.version", "No default OpenShift version is available. Please specify a version explicitly using the --version parameter.")
+		}
+		oc.Properties.ClusterProfile.Version = f.defaultOcpVersion
 	}
 
 	return nil
