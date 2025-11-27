@@ -18,9 +18,20 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/installer"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (m *manager) fixMCSCert(ctx context.Context) error {
+	// Clusters at version 4.19 or greater do not need to have the MCS certificate updated
+	cvlt, err := version.ClusterVersionLessThan(ctx, m.configcli, version.OCPv4190)
+	if err != nil {
+		return err
+	}
+	if !cvlt {
+		m.log.Print("Skipping FixMCSCert step for cluster version >= 4.19.0")
+		return nil
+	}
+
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
@@ -34,7 +45,7 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 	var rootCA *installer.RootCA
 	var certChanged bool
 
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		s, err := m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Get(ctx, "machine-config-server-tls", metav1.GetOptions{})
 		if err != nil {
 			return err

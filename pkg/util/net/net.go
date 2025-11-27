@@ -147,14 +147,14 @@ func RemovePrivateDNSZone(ctx context.Context, config PrivateZoneRemovalConfig) 
 		return nil
 	}
 
-	clusterVersionIsLessThan4_4, err := version.ClusterVersionIsLessThan4_4(ctx, config.Configcli)
+	cvlt, err := version.ClusterVersionLessThan(ctx, config.Configcli, version.OCPv440)
 	if err != nil {
 		config.Log.Print(err)
 		return nil
 	}
 
-	if clusterVersionIsLessThan4_4 {
-		config.Log.Printf("cluster version < 4.4, not removing private DNS zone")
+	if cvlt {
+		config.Log.Printf("cluster version < %s, not removing private DNS zone", version.OCPv440.String())
 		return nil
 	}
 

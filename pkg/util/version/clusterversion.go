@@ -39,7 +39,8 @@ func GetClusterVersion(cv *configv1.ClusterVersion) (Version, error) {
 	return nil, unknownErr
 }
 
-func ClusterVersionIsLessThan4_4(ctx context.Context, configcli configclient.Interface) (bool, error) {
+// ClusterVersionLessThan checks if the current cluster version is less than the specified version
+func ClusterVersionLessThan(ctx context.Context, configcli configclient.Interface, version Version) (bool, error) {
 	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
 		return false, err
@@ -49,8 +50,7 @@ func ClusterVersionIsLessThan4_4(ctx context.Context, configcli configclient.Int
 		return false, err
 	}
 
-	// 4.3 uses SRV records for etcd
-	return v.Lt(NewVersion(4, 4)), nil
+	return v.Lt(version), nil
 }
 
 func IsClusterUpgrading(cv *configv1.ClusterVersion) bool {
