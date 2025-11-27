@@ -5,6 +5,12 @@ package cluster
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"testing"
 	"time"
 
@@ -12,16 +18,20 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	azsecretsdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+
 	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -132,6 +142,12 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 			if tt.check != nil {
 				g.Expect(tt.check(ch, g)).ToNot(HaveOccurred())
 			}
+
+			if tt.wantMsg != "" {
+				g.Expect(tc.GetResultMessage()).To(Equal(tt.wantMsg))
+			} else {
+				g.Expect(tc.GetResultMessage()).To(BeEmpty())
+			}
 		})
 	}
 }
@@ -139,12 +155,15 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 func TestRotateAPIServerCertificate(t *testing.T) {
 	ctx := context.Background()
 	clusterUUID := "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
+	secretName := clusterUUID + "-apiserver"
 
 	for _, tt := range []struct {
 		name              string
 		clusterproperties api.OpenShiftClusterProperties
 		objects           []runtime.Object
 		check             func(clienthelper.Interface, Gomega) error
+		secretDNSNames    []string
+		secretFetches     int
 		wantMsg           string
 		wantErr           string
 	}{
@@ -158,12 +177,66 @@ func TestRotateAPIServerCertificate(t *testing.T) {
 			objects: []runtime.Object{},
 			wantMsg: "apiserver certificate is not managed",
 		},
+		{
+			name: "managed certificate rotated",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			objects: []runtime.Object{},
+			check: func(ch clienthelper.Interface, g Gomega) error {
+				for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
+					secret := &corev1.Secret{}
+					err := ch.GetOne(ctx, types.NamespacedName{Namespace: namespace, Name: secretName}, secret)
+					if err != nil {
+						return err
+					}
+
+					g.Expect(secret.Type).To(Equal(corev1.SecretTypeTLS))
+					g.Expect(secret.Data[corev1.TLSCertKey]).ToNot(BeEmpty())
+					g.Expect(secret.Data[corev1.TLSPrivateKeyKey]).ToNot(BeEmpty())
+				}
+				return nil
+			},
+			secretDNSNames: []string{"api.something.example.com"},
+			secretFetches:  3,
+		},
+		{
+			name: "custom certificate - skip rotation",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			objects:        []runtime.Object{},
+			secretDNSNames: []string{"custom.example.com"},
+			secretFetches:  1,
+			wantMsg:        "apiserver certificate is custom; skipping rotation",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			controller := gomock.NewController(t)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().Domain().AnyTimes().Return("example.com")
+
+			if len(tt.secretDNSNames) > 0 {
+				if tt.secretFetches == 0 {
+					t.Fatalf("secretFetches must be set when secretDNSNames are provided")
+				}
+
+				kv := mock_azsecrets.NewMockClient(controller)
+				_env.EXPECT().ClusterKeyvault().Return(kv)
+
+				secretValue := newCertificatePEM(t, tt.secretDNSNames)
+				kv.EXPECT().GetSecret(gomock.Any(), secretName, "", gomock.Nil()).
+					Return(azsecretsdk.GetSecretResponse{
+						Secret: azsecretsdk.Secret{
+							Value: &secretValue,
+						},
+					}, nil).Times(tt.secretFetches)
+			}
 
 			_, log := testlog.New()
 
@@ -187,6 +260,59 @@ func TestRotateAPIServerCertificate(t *testing.T) {
 			if tt.check != nil {
 				g.Expect(tt.check(ch, g)).ToNot(HaveOccurred())
 			}
+
+			if tt.wantMsg != "" {
+				g.Expect(tc.GetResultMessage()).To(Equal(tt.wantMsg))
+			} else {
+				g.Expect(tc.GetResultMessage()).To(BeEmpty())
+			}
 		})
 	}
+}
+
+func newCertificatePEM(t *testing.T, dnsNames []string) string {
+	t.Helper()
+
+	if len(dnsNames) == 0 {
+		t.Fatal("dnsNames must not be empty")
+	}
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		DNSNames:              dnsNames,
+		Subject:               pkix.Name{CommonName: dnsNames[0]},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("failed to create certificate: %v", err)
+	}
+
+	keyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
+	if keyPEM == nil {
+		t.Fatal("failed to encode private key")
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: der,
+	})
+	if certPEM == nil {
+		t.Fatal("failed to encode certificate")
+	}
+
+	return string(keyPEM) + string(certPEM)
 }
