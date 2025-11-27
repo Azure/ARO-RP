@@ -6,13 +6,13 @@ package frontend
 import (
 	"context"
 	"fmt"
-	"github.com/ugorji/go/codec"
 	"net/http"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
+	"github.com/ugorji/go/codec"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 

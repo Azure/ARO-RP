@@ -1,10 +1,12 @@
 package machine
 
 import (
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	"testing"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"testing"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 )
 
 func TestIsMasterRole(t *testing.T) {
