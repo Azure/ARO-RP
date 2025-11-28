@@ -5,8 +5,6 @@ package cluster
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,10 +13,8 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/cluster"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
-	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 func managedDomain(tc mimo.TaskContext) (string, error) {
@@ -59,20 +55,10 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 
 	env := th.Environment()
 	secretName := th.GetClusterUUID() + "-apiserver"
-	kv := env.ClusterKeyvault()
-
-	isCustom, err := isCustomAPIServerCertificate(ctx, kv, secretName, managedDomain)
-	if err != nil {
-		return mimo.TransientError(err)
-	}
-	if isCustom {
-		th.SetResultMessage("apiserver certificate is custom; skipping rotation")
-		return nil
-	}
 
 	for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
 		err = cluster.EnsureTLSSecretFromKeyvault(
-			ctx, kv, ch, types.NamespacedName{Namespace: namespace, Name: secretName}, secretName,
+			ctx, env.ClusterKeyvault(), ch, types.NamespacedName{Namespace: namespace, Name: secretName}, secretName,
 		)
 		if err != nil {
 			return mimo.TransientError(err)
@@ -80,36 +66,6 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func isCustomAPIServerCertificate(ctx context.Context, kv azsecrets.Client, secretName, managedDomain string) (bool, error) {
-	bundle, err := kv.GetSecret(ctx, secretName, "", nil)
-	if err != nil {
-		return false, err
-	}
-	if bundle.Value == nil {
-		return false, fmt.Errorf("secret %s has no value", secretName)
-	}
-
-	cert, err := utilpem.ParseFirstCertificate([]byte(*bundle.Value))
-	if err != nil {
-		return false, err
-	}
-
-	expectedDNS := "api." + managedDomain
-	foundExpected := false
-	for _, dnsName := range cert.DNSNames {
-		if strings.EqualFold(dnsName, expectedDNS) {
-			foundExpected = true
-			continue
-		}
-		return true, nil
-	}
-
-	if foundExpected {
-		return false, nil
-	}
-	return true, nil
 }
 
 func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
