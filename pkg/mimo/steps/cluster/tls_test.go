@@ -203,6 +203,31 @@ func TestRotateAPIServerCertificate(t *testing.T) {
 			secretFetches:  3,
 		},
 		{
+			name: "managed certificate rotated with duplicate SAN entries",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			objects: []runtime.Object{},
+			check: func(ch clienthelper.Interface, g Gomega) error {
+				for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
+					secret := &corev1.Secret{}
+					err := ch.GetOne(ctx, types.NamespacedName{Namespace: namespace, Name: secretName}, secret)
+					if err != nil {
+						return err
+					}
+
+					g.Expect(secret.Type).To(Equal(corev1.SecretTypeTLS))
+					g.Expect(secret.Data[corev1.TLSCertKey]).ToNot(BeEmpty())
+					g.Expect(secret.Data[corev1.TLSPrivateKeyKey]).ToNot(BeEmpty())
+				}
+				return nil
+			},
+			secretDNSNames: []string{"api.something.example.com", "api.something.example.com"},
+			secretFetches:  3,
+		},
+		{
 			name: "custom certificate - skip rotation",
 			clusterproperties: api.OpenShiftClusterProperties{
 				ClusterProfile: api.ClusterProfile{
@@ -211,6 +236,18 @@ func TestRotateAPIServerCertificate(t *testing.T) {
 			},
 			objects:        []runtime.Object{},
 			secretDNSNames: []string{"custom.example.com"},
+			secretFetches:  1,
+			wantMsg:        "apiserver certificate is custom; skipping rotation",
+		},
+		{
+			name: "custom certificate - skip rotation when extra SAN present",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			objects:        []runtime.Object{},
+			secretDNSNames: []string{"api.something.example.com", "custom.example.com"},
 			secretFetches:  1,
 			wantMsg:        "apiserver certificate is custom; skipping rotation",
 		},

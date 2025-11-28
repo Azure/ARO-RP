@@ -65,7 +65,6 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 	if err != nil {
 		return mimo.TransientError(err)
 	}
-
 	if isCustom {
 		th.SetResultMessage("apiserver certificate is custom; skipping rotation")
 		return nil
@@ -98,12 +97,18 @@ func isCustomAPIServerCertificate(ctx context.Context, kv azsecrets.Client, secr
 	}
 
 	expectedDNS := "api." + managedDomain
+	foundExpected := false
 	for _, dnsName := range cert.DNSNames {
 		if strings.EqualFold(dnsName, expectedDNS) {
-			return false, nil
+			foundExpected = true
+			continue
 		}
+		return true, nil
 	}
 
+	if foundExpected {
+		return false, nil
+	}
 	return true, nil
 }
 
