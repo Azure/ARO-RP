@@ -199,7 +199,7 @@ func TestFixMCSCert(t *testing.T) {
 					}),
 				}, nil
 			},
-			want: "Skipping FixMCSCert step for cluster version >= 4.19.0",
+			want: "Skipping FixMCSCert step for cluster version",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -40,17 +40,17 @@ func GetClusterVersion(cv *configv1.ClusterVersion) (Version, error) {
 }
 
 // ClusterVersionLessThan checks if the current cluster version is less than the specified version
-func ClusterVersionLessThan(ctx context.Context, configcli configclient.Interface, version Version) (bool, error) {
+func ClusterVersionLessThan(ctx context.Context, configcli configclient.Interface, checkVersion Version) (bool, Version, error) {
 	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
-	v, err := GetClusterVersion(cv)
+	clusterVersion, err := GetClusterVersion(cv)
 	if err != nil {
-		return false, err
+		return false, clusterVersion, err
 	}
 
-	return v.Lt(version), nil
+	return clusterVersion.Lt(checkVersion), clusterVersion, nil
 }
 
 func IsClusterUpgrading(cv *configv1.ClusterVersion) bool {

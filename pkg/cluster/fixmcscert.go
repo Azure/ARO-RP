@@ -22,13 +22,13 @@ import (
 )
 
 func (m *manager) fixMCSCert(ctx context.Context) error {
-	// Clusters at version 4.19 or greater do not need to have the MCS certificate updated
-	cvlt, err := version.ClusterVersionLessThan(ctx, m.configcli, version.OCPv4190)
+	// Machine config operator handles MCS cert renewal for clusters > 4.19, so we skip this step
+	cvlt, clusterVersion, err := version.ClusterVersionLessThan(ctx, m.configcli, version.OCPv4190)
 	if err != nil {
 		return err
 	}
 	if !cvlt {
-		m.log.Print("Skipping FixMCSCert step for cluster version >= 4.19.0")
+		m.log.Printf("Skipping FixMCSCert step for cluster version %s >= 4.19.0", clusterVersion.String())
 		return nil
 	}
 
