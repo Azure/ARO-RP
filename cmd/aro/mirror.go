@@ -160,7 +160,7 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.1202-g118c178",
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.1297-ge922e64",
 
 		// https://registry.redhat.io/openshift4/ose-must-gather (standard OpenShift must-gather)
 		"registry.redhat.io/openshift4/ose-must-gather:latest",
