@@ -113,6 +113,32 @@
                         }
                     },
                     {
+                        "name": "rp_in_arm_tagged",
+                        "properties": {
+                            "access": "Allow",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "8443",
+                            "direction": "Inbound",
+                            "priority": 121,
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "AzureResourceManager",
+                            "sourcePortRange": "*"
+                        }
+                    },
+                    {
+                        "name": "rp_in_geneva_tagged",
+                        "properties": {
+                            "access": "Allow",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "8443",
+                            "direction": "Inbound",
+                            "priority": 131,
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "GenevaActions",
+                            "sourcePortRange": "*"
+                        }
+                    },
+                    {
                         "name": "deny_in_gateway",
                         "properties": {
                             "access": "Deny",

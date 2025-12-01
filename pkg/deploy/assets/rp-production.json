@@ -398,7 +398,7 @@
                         }
                     },
                     {
-                        "name": "rp-lbrule-8444",
+                        "name": "portal-lbrule-8444",
                         "properties": {
                             "backendAddressPool": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"

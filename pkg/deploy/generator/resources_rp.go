@@ -78,6 +78,32 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 			},
 			Name: pointerutils.ToPtr("rp_in_geneva"),
 		},
+		{
+			Properties: &armnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+				SourcePortRange:          pointerutils.ToPtr("*"),
+				DestinationPortRange:     pointerutils.ToPtr("8443"),
+				SourceAddressPrefix:      pointerutils.ToPtr("AzureResourceManager"),
+				DestinationAddressPrefix: pointerutils.ToPtr("*"),
+				Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
+				Priority:                 pointerutils.ToPtr(int32(121)),
+				Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+			},
+			Name: pointerutils.ToPtr("rp_in_arm_tagged"),
+		},
+		{
+			Properties: &armnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+				SourcePortRange:          pointerutils.ToPtr("*"),
+				DestinationPortRange:     pointerutils.ToPtr("8443"),
+				SourceAddressPrefix:      pointerutils.ToPtr("GenevaActions"),
+				DestinationAddressPrefix: pointerutils.ToPtr("*"),
+				Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
+				Priority:                 pointerutils.ToPtr(int32(131)),
+				Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+			},
+			Name: pointerutils.ToPtr("rp_in_geneva_tagged"),
+		},
 	}
 
 	if !g.production {
@@ -280,7 +306,7 @@ func (g *generator) rpLB() *arm.Resource {
 							FrontendPort:     pointerutils.ToPtr(int32(443)),
 							BackendPort:      pointerutils.ToPtr(int32(8444)),
 						},
-						Name: pointerutils.ToPtr("rp-lbrule-8444"),
+						Name: pointerutils.ToPtr("portal-lbrule-8444"),
 					},
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{

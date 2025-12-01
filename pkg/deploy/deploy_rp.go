@@ -120,12 +120,12 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
-	rpPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip", nil)
+	rpPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip-tagged", nil)
 	if err != nil {
 		return err
 	}
 
-	portalPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip", nil)
+	portalPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip-tagged", nil)
 	if err != nil {
 		return err
 	}
