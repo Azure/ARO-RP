@@ -72,6 +72,10 @@ const (
 	// break before we go to release, but doesn't need to be validated in every
 	// PR.
 	regressiontest = "regressiontest"
+	// ring2rpdeploy is for tests that validate system health after RP deployment
+	// in ring 2 regions. These tests focus on health checks rather than
+	// functionality testing.
+	ring2rpdeploy = "ring2rpdeploy"
 )
 
 //go:embed static_resources
